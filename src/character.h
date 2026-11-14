@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CHARACTER_H
 #define CATA_SRC_CHARACTER_H
 
+#include <crafting_enums.h>
 #include <item_components.h>
 #include <algorithm>
 #include <bitset>
@@ -31,8 +32,6 @@
 #include "cata_utility.h"
 #include "character_attire.h"
 #include "character_id.h"
-#include "kill_statistics.h"
-#include "lua_platform_state.h"
 #include "city.h"  // IWYU pragma: keep
 #include "compatibility.h"
 #include "coordinates.h"
@@ -47,6 +46,8 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "kill_statistics.h"
+#include "lua_platform_state.h"
 #include "memory_fast.h"
 #include "monster.h"
 #include "pimpl.h"
@@ -67,8 +68,6 @@
 #include "weakpoint.h"
 #include "weighted_list.h"
 
-struct item_activation_choices;
-
 class JsonObject;
 class JsonOut;
 class SkillLevel;
@@ -82,11 +81,14 @@ class dispersion_sources;
 class effect;
 class enchant_cache;
 class faction;
+class gun_mode;
+struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;
 class map;
 class mission;
+struct item_activation_choices;
 
 namespace debug_menu
 {
@@ -100,7 +102,6 @@ class spell;
 class ui_adaptor;
 class vehicle;
 class vpart_reference;
-
 enum scaling_stat : int;
 
 namespace catacurses
@@ -117,17 +118,15 @@ enum class magic_energy_type : int;
 enum class recipe_filter_flags : int;
 enum class steed_type : int;
 enum npc_attitude : int;
-struct attention_plan;
 struct bionic;
+struct bionic_activation_choices;
 struct construction;
 struct crafting_cost_context;
-struct bionic_activation_choices;
 struct dealt_projectile_attack;
 struct disassembly_preparation;
 /// @brief Item slot used to apply modifications from food and meds
 struct islot_comestible;
 struct item_comp;
-struct vitamin_resource_cost;
 struct itype;
 struct mutation_branch;
 struct mutation_category_trait;
@@ -139,6 +138,7 @@ struct requirement_data;
 struct tool_comp;
 struct trait_and_var;
 struct trap;
+struct vitamin_resource_cost;
 struct w_point;
 template <typename E> struct enum_traits;
 
@@ -1253,6 +1253,12 @@ class Character : public Creature, public visitable
         int active_technique_range( const matec_id &technique ) const;
         /** Executes one selected technique after checking its current target requirements. */
         bool use_active_technique( Creature &target, const matec_id &technique );
+        bool can_use_active_technique_at( const tripoint_bub_ms &position,
+                                          const matec_id &technique ) const;
+        bool use_active_technique( const tripoint_bub_ms &position, const matec_id &technique );
+        time_duration technique_cooldown_remaining( const matec_id &technique ) const;
+        void start_technique_cooldown( const matec_id &technique );
+        std::vector<std::pair<matec_id, time_duration>> active_technique_cooldowns() const;
         void perform_technique( const ma_technique &technique, Creature &t, damage_instance &di,
                                 int &move_cost, item_location &cur_weapon );
 
@@ -2070,7 +2076,8 @@ class Character : public Creature, public visitable
         bool gunmod_remove( item_location gun_loc, item &mod );
 
         /** Starts activity to install gunmod having warned user about any risk of failure or irremovable mods s*/
-        void gunmod_add( item &gun, item &mod );
+        void gunmod_add( item &gun, item &mod,
+                         const std::optional<itype_id> &tool = std::nullopt );
 
         /** Starts activity to install toolmod */
         void toolmod_add( item_location tool, item_location mod );
@@ -2469,13 +2476,14 @@ class Character : public Creature, public visitable
         /** How much dispersion does one point of target's dodge add when throwing at said target? */
         int throw_dispersion_per_dodge( bool add_encumbrance = true ) const;
 
-        /** Multipliers from the currently wielded item that affect throwing. */
-        float throw_damage_multiplier() const;
-        float throw_range_multiplier() const;
-        float throw_stamina_multiplier() const;
-        float throw_dispersion_multiplier() const;
-        float throw_speed_multiplier() const;
-        float throw_weight_multiplier() const;
+        /** Multipliers from the currently wielded item that affect a compatible thrown item. */
+        float throw_damage_multiplier( const item &thrown ) const;
+        float throw_range_multiplier( const item &thrown ) const;
+        float throw_stamina_multiplier( const item &thrown ) const;
+        float throw_dispersion_multiplier( const item &thrown ) const;
+        float throw_speed_multiplier( const item &thrown ) const;
+        /** Weight has opposite benefit directions for damage and handling costs. */
+        float throw_weight_multiplier( const item &thrown, bool for_damage = false ) const;
         bool is_fcl_railgun_throw( const item &thrown ) const;
 
         /** True if unarmed */
@@ -3105,8 +3113,8 @@ class Character : public Creature, public visitable
         void refresh_carried_item_caches();
         // Portable body, abilities and carried state. Identity, position,
         // activities and other world relationships remain owned by the receiver.
-        void store_player_state( JsonOut &json ) const;
-        void load_player_state( const JsonObject &data );
+        void store_player_state( JsonOut &out ) const;
+        void load_player_state( const JsonObject &snapshot );
 
         // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
         void store_needs_state( JsonOut &json ) const;
@@ -3117,8 +3125,8 @@ class Character : public Creature, public visitable
         // Activity result projection; restore progress without practicing again.
         void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
-        void store_turn_state( JsonOut &json ) const;
-        void load_turn_state( const JsonObject &data );
+        void store_turn_state( JsonOut &out ) const;
+        void load_turn_state( const JsonObject &snapshot );
 
         int scent = 0;
         pimpl < bionic_collection > my_bionics;
@@ -3553,6 +3561,11 @@ class Character : public Creature, public visitable
          */
 
         int fire_gun( const tripoint_bub_ms &target, int shots = 1 );
+        /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
+        int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
+                      const item_location &ammo = item_location(), int burst_rounds = 0 );
+        int fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                            int round_limit, bool protect_friendlies );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3566,6 +3579,13 @@ class Character : public Creature, public visitable
         /** Execute a throw */
         dealt_projectile_attack throw_item( const tripoint_bub_ms &target, const item &to_throw,
                                             const std::optional < tripoint_bub_ms > &blind_throw_from_pos = std::nullopt );
+
+    private:
+        int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
+                           item_location ammo, bool spend_attack_moves, int firing_rpm = 0,
+                           bool spend_burst_moves = false,
+                           const std::vector<tripoint_bub_ms> *sweep_targets = nullptr,
+                           bool protect_friendlies = false );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,
@@ -4497,7 +4517,7 @@ class Character : public Creature, public visitable
         mutable std::optional < units::mass > cached_weight_carried = std::nullopt;
 
         void store( JsonOut &json ) const;
-        void load( const JsonObject &data );
+        void load( const JsonObject &data, const JsonObject *legacy_kills = nullptr );
 
         // --------------- Values ---------------
         pimpl < SkillLevelMap > _skills;

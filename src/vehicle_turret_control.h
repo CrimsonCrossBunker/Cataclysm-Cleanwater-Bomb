@@ -36,6 +36,8 @@ struct vehicle_turret_selection {
     tripoint_abs_ms operator_position;
     std::vector<vehicle_turret_choice> turrets;
     std::optional<tripoint_abs_ms> target;
+    std::optional<tripoint_abs_ms> sweep_end;
+    int sweep_speed = 0;
 
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
@@ -49,9 +51,10 @@ bool execute_vehicle_turret_control( Character &who, map &here, vehicle &target,
                                      const vehicle_turret_selection &choice );
 std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, map &here,
         vehicle &target, const tripoint_abs_ms &position, const std::string &operation = {},
-        const item_location *remote_source = nullptr );
+        const item_location *remote_source = nullptr, bool sweeping = false, bool reaiming = false );
 // Returns whether this action was handled, including canceling its target UI.
 bool use_vehicle_turrets( Character &who, map &here, vehicle &target,
-                          const tripoint_abs_ms &position, const std::string &operation, bool show_message = true );
+                          const tripoint_abs_ms &position, const std::string &operation, bool show_message = true,
+                          bool sweeping = false, bool reaiming = false );
 
 #endif // CATA_SRC_VEHICLE_TURRET_CONTROL_H

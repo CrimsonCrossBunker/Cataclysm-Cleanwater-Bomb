@@ -106,6 +106,7 @@
     "description": "A ball of lead roughly the size of a baseball.  Traditionally thrown from a sling, and hits a lot harder than any old rock.",
     "material": "lead",
     "ammo_type": "rock",
+    "flags": [ "SLING_PROJECTILE" ],
     "weight": "150 g",
     "volume": "50 ml",
     "melee_damage": { "bash": 14 },

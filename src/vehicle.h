@@ -49,12 +49,14 @@
 #include "type_id.h"
 #include "units.h"
 #include "veh_type.h"
+#include "vehicle_turning.h"
 #include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
 // IWYU pragma: no_forward_declare npc // behind unique_ptr
 class Character;
+struct firearm_sweep;
 class Creature;
 class JsonArray;
 class JsonObject;
@@ -710,7 +712,7 @@ class turret_data
          * and performs any other actions that must be done before firing a turret.
          * @param p the player that is firing the gun, subject to recoil adjustment.
          */
-        void prepare_fire( Character &you );
+        void prepare_fire( Character &you, int sweep_rounds = 0 );
 
         /**
          * Reset state after firing a prepared turret, called by the firing function.
@@ -725,7 +727,8 @@ class turret_data
          * @param target coordinates that will be fired on.
          * @return the number of shots actually fired (may be zero).
          */
-        int fire( Character &c, map *here, const tripoint_bub_ms &target );
+        int fire( Character &c, map *here, const tripoint_bub_ms &target,
+                  const firearm_sweep *sweep = nullptr, bool automatic = false );
 
         bool can_reload() const;
         bool can_unload() const;
@@ -2014,7 +2017,8 @@ class vehicle
          * @param acceleration is acceleration
          * @param z for vertical movement - e.g helicopters
          */
-        void pldrive( map &here, Character &driver, int trn, int acceleration, int z = 0 );
+        void pldrive( map &here, Character &driver, int trn, int acceleration, int z = 0,
+                      std::optional<vehicle_turning_arc> assisted_arc = std::nullopt );
 
         /**
         * Flags item \p tool with PSEUDO, if it has MOD pocket then a `pseudo_magazine_mod` is
@@ -2562,8 +2566,10 @@ class vehicle
         // id of the om_vehicle struct corresponding to this vehicle
         int om_id = 0;
         // direction, to which vehicle is turning (player control). will rotate frame on next move
-        // must be a multiple of 15 degrees
+        // Manual steering uses 15 degree increments; assisted arcs use smaller steps.
         units::angle turn_dir = 0_degrees;
+        // A local driving gesture, deliberately not restored from a save.
+        std::optional<vehicle_turning_arc> turning_arc; // NOLINT(cata-serialize)
         // amount of last turning (for calculate skidding due to handbrake)
         units::angle last_turn = 0_degrees;
         // goes from ~1 to ~0 while proceeding every turn

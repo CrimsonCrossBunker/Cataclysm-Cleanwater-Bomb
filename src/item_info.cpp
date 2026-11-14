@@ -1510,7 +1510,7 @@ void item::gun_info( const item *mod, std::vector<iteminfo> &info, const iteminf
         std::vector<std::string> fm;
         for( const std::pair<const gun_mode_id, gun_mode> &e : fire_modes ) {
             if( e.second.target == this && !e.second.melee() ) {
-                fm.emplace_back( string_format( "%s (%i)", e.second.tname(), e.second.qty ) );
+                fm.emplace_back( e.second.firing_label( e.second.tname() ) );
             }
         }
         if( !fm.empty() ) {
@@ -3852,19 +3852,24 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     }
 
     const itype *t = type;
-    const bool has_bonus = t->throw_damage_multiplier != 1.0f ||
-                           t->throw_range_multiplier != 1.0f ||
-                           t->throw_stamina_multiplier != 1.0f ||
-                           t->throw_dispersion_multiplier != 1.0f ||
-                           t->throw_speed_multiplier != 1.0f ||
-                           t->throw_weight_multiplier != 1.0f;
-    const bool has_mod_bonus = t->gunmod &&
-                               ( t->gunmod->throw_damage_multiplier != 1.0f ||
-                                 t->gunmod->throw_range_multiplier != 1.0f ||
-                                 t->gunmod->throw_stamina_multiplier != 1.0f ||
-                                 t->gunmod->throw_dispersion_multiplier != 1.0f ||
-                                 t->gunmod->throw_speed_multiplier != 1.0f ||
-                                 t->gunmod->throw_weight_multiplier != 1.0f ||
+    const throw_correction_data *base_correction = t->throw_correction ?
+            &*t->throw_correction : nullptr;
+    const bool has_bonus = base_correction &&
+                           ( base_correction->damage_multiplier != 1.0f ||
+                             base_correction->range_multiplier != 1.0f ||
+                             base_correction->stamina_multiplier != 1.0f ||
+                             base_correction->dispersion_multiplier != 1.0f ||
+                             base_correction->speed_multiplier != 1.0f ||
+                             base_correction->weight_multiplier != 1.0f );
+    const throw_correction_data *mod_correction = t->gunmod && t->gunmod->throw_correction ?
+            &*t->gunmod->throw_correction : nullptr;
+    const bool has_mod_bonus = mod_correction &&
+                               ( mod_correction->damage_multiplier != 1.0f ||
+                                 mod_correction->range_multiplier != 1.0f ||
+                                 mod_correction->stamina_multiplier != 1.0f ||
+                                 mod_correction->dispersion_multiplier != 1.0f ||
+                                 mod_correction->speed_multiplier != 1.0f ||
+                                 mod_correction->weight_multiplier != 1.0f ||
                                  t->gunmod->throw_damage_add != 0.0f ||
                                  t->gunmod->throw_range_add != 0.0f ||
                                  t->gunmod->throw_stamina_add != 0.0f ||
@@ -3878,86 +3883,96 @@ void item::throwing_info( std::vector<iteminfo> &info, const iteminfo_query *par
     insert_separation_line( info );
     info.emplace_back( "DESCRIPTION", _( "<bold>Throwing aid bonuses</bold>" ) );
 
-    if( t->throw_damage_multiplier != 1.0f ) {
+    if( base_correction && base_correction->full_bonus_skill &&
+        *base_correction->full_bonus_skill > 0 ) {
+        info.emplace_back( "BASE", _( "Throwing skill for full bonuses: " ), "<num>",
+                           iteminfo::lower_is_better, *base_correction->full_bonus_skill );
+    }
+
+    if( base_correction && base_correction->damage_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
-                           iteminfo::is_decimal, t->throw_damage_multiplier );
+                           iteminfo::is_decimal, base_correction->damage_multiplier );
     }
-    if( t->throw_range_multiplier != 1.0f ) {
+    if( base_correction && base_correction->range_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing range: " ), "x<num>",
-                           iteminfo::is_decimal, t->throw_range_multiplier );
+                           iteminfo::is_decimal, base_correction->range_multiplier );
     }
-    if( t->throw_stamina_multiplier != 1.0f ) {
+    if( base_correction && base_correction->stamina_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
-                           t->throw_stamina_multiplier );
+                           base_correction->stamina_multiplier );
     }
-    if( t->throw_dispersion_multiplier != 1.0f ) {
+    if( base_correction && base_correction->dispersion_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing dispersion: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
-                           t->throw_dispersion_multiplier );
+                           base_correction->dispersion_multiplier );
     }
-    if( t->throw_speed_multiplier != 1.0f ) {
+    if( base_correction && base_correction->speed_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing time: " ), "x<num>",
                            iteminfo::is_decimal | iteminfo::lower_is_better,
-                           t->throw_speed_multiplier );
+                           base_correction->speed_multiplier );
     }
-    if( t->throw_weight_multiplier != 1.0f ) {
+    if( base_correction && base_correction->weight_multiplier != 1.0f ) {
         info.emplace_back( "BASE", _( "Throwing effective weight: " ), "x<num>",
-                           iteminfo::is_decimal, t->throw_weight_multiplier );
+                           iteminfo::is_decimal, base_correction->weight_multiplier );
     }
 
     if( has_mod_bonus ) {
         const islot_gunmod &mod = *t->gunmod;
         info.emplace_back( "DESCRIPTION", _( "When installed on a wielded gun:" ) );
-        if( mod.throw_damage_multiplier != 1.0f ) {
+        if( mod_correction->full_bonus_skill && *mod_correction->full_bonus_skill > 0 ) {
+            info.emplace_back( "BASE", _( "Throwing skill for full bonuses: " ), "<num>",
+                               iteminfo::lower_is_better, *mod_correction->full_bonus_skill );
+        }
+        if( mod_correction->damage_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing damage: " ), "x<num>",
-                               iteminfo::is_decimal, mod.throw_damage_multiplier );
+                               iteminfo::is_decimal, mod_correction->damage_multiplier );
         }
         if( mod.throw_damage_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing damage: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::show_plus, mod.throw_damage_add );
         }
-        if( mod.throw_range_multiplier != 1.0f ) {
+        if( mod_correction->range_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing range: " ), "x<num>",
-                               iteminfo::is_decimal, mod.throw_range_multiplier );
+                               iteminfo::is_decimal, mod_correction->range_multiplier );
         }
         if( mod.throw_range_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing range: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::show_plus, mod.throw_range_add );
         }
-        if( mod.throw_stamina_multiplier != 1.0f ) {
+        if( mod_correction->stamina_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "x<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better,
-                               mod.throw_stamina_multiplier );
+                               mod_correction->stamina_multiplier );
         }
         if( mod.throw_stamina_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing stamina cost: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
                                mod.throw_stamina_add );
         }
-        if( mod.throw_dispersion_multiplier != 1.0f ) {
+        if( mod_correction->dispersion_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing dispersion: " ), "x<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better,
-                               mod.throw_dispersion_multiplier );
+                               mod_correction->dispersion_multiplier );
         }
         if( mod.throw_dispersion_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing dispersion: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
                                mod.throw_dispersion_add );
         }
-        if( mod.throw_speed_multiplier != 1.0f ) {
+        if( mod_correction->speed_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing time: " ), "x<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better,
-                               mod.throw_speed_multiplier );
+                               mod_correction->speed_multiplier );
         }
         if( mod.throw_speed_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing time: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better | iteminfo::show_plus,
                                mod.throw_speed_add );
         }
-        if( mod.throw_weight_multiplier != 1.0f ) {
+        if( mod_correction->weight_multiplier != 1.0f ) {
             info.emplace_back( "BASE", _( "Throwing effective weight: " ), "x<num>",
-                               iteminfo::is_decimal, mod.throw_weight_multiplier );
+                               iteminfo::is_decimal, mod_correction->weight_multiplier );
         }
         if( mod.throw_weight_add != 0.0f ) {
             info.emplace_back( "BASE", _( "Throwing effective weight: " ), "<num>",

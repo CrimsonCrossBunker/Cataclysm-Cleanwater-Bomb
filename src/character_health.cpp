@@ -714,9 +714,9 @@ void Character::apply_murder_penalties( Creature *victim )
         if( morale_effect == 0 ) {
             // No morale effect
         } else if( morale_effect <= -50 ) {
-            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 14_days, 7_days );
+            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 10_days, 5_days );
         } else if( morale_effect > -50 && morale_effect < 0 ) {
-            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 10_days, 7_days );
+            player_character.add_morale( morale_killed_innocent, morale_effect, 0, 7_days, 5_days );
         }
     }
 }
@@ -1624,9 +1624,13 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 0.75f;
                     }
                 }
-                sleepiness_multiplier += comfort * 0.025f;
+                const float comfort_bonus = comfort <= 10 ? comfort * 0.025f
+                                            : 0.25f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 10.0f ) / 5.0f );
+                sleepiness_multiplier += std::min( 1.0f, comfort_bonus );
                 if( comfort >= 5 ) {
-                    rest_modifier += std::min( 1.0f, ( comfort - 5 ) * 0.025f );
+                    const float deprivation_bonus = comfort <= 35 ? ( comfort - 5 ) * 0.025f
+                                                    : 0.75f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 35.0f ) / 5.0f );
+                    rest_modifier += std::min( 1.5f, deprivation_bonus );
                 }
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
@@ -1638,8 +1642,7 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 1.0f;
                     }
                 }
-                int sleepiness_recovered =
-                    static_cast<int>( std::round( recovered * sleepiness_multiplier ) );
+                int sleepiness_recovered = roll_remainder( recovered * sleepiness_multiplier );
                 mod_sleepiness( -sleepiness_recovered );
 
                 // REDUCE SLEEP DEPRIVATION
@@ -1664,7 +1667,7 @@ void Character::update_needs( int rate_multiplier )
                 }
 
                 // Recovered is multiplied by 2 as well, since we spend 1/3 of the day sleeping
-                mod_sleep_deprivation( -rest_modifier * ( recovered * 2 ) );
+                mod_sleep_deprivation( -roll_remainder( rest_modifier * ( recovered * 2 ) ) );
 
             }
         }

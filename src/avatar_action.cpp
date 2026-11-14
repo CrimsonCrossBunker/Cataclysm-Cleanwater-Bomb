@@ -1,4 +1,5 @@
 #include <coordinates.h>
+#include <cstdint>
 #include <input_enums.h>
 #include <item_disposition.h>
 #include <item_uid.h>
@@ -7,7 +8,6 @@
 #include <mp_peek.h>
 #include <player_activity.h>
 #include <safe_reference.h>
-#include <stdint.h>
 #include <translation.h>
 #include <algorithm>
 #include <climits>
@@ -43,6 +43,7 @@
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "gun_mode.h"
+#include "gunmod_ui.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"
@@ -1198,15 +1199,32 @@ void avatar_action::active_technique( avatar &you, map &m )
         return;
     }
 
-    const auto eligible_target = [&you, &m]( const tripoint_bub_ms & p ) {
+    if( technique->targets_position() ) {
+        if( cata_mp::is_client_mode() ) {
+            add_msg( m_info, _( "Position techniques are not available to remote players yet." ) );
+            return;
+        }
+        const auto eligible_position = [&you, &technique]( const tripoint_bub_ms & position ) {
+            return you.can_use_active_technique_at( position, technique );
+        };
+        const std::optional<tripoint_bub_ms> position = choose_adjacent_highlight(
+                    m, _( "Use the technique where?" ), _( "No eligible position is adjacent." ),
+                    eligible_position, false, false );
+        if( position && eligible_position( *position ) &&
+            you.try_break_relax_gas( _( "Your willpower asserts itself, and so do you!" ),
+                                     _( "You're too pacified to strike anything." ) ) &&
+            !you.use_active_technique( *position, technique ) ) {
+            add_msg( m_info, _( "You cannot use that technique at this position right now." ) );
+        }
+        return;
+    }
+
+    const auto eligible_target = [&you, &m, &technique]( const tripoint_bub_ms & p ) {
         Creature *const target = get_creature_tracker().creature_at( p, true );
-        if( !target || !you.sees( m, *target ) ) {
+        if( !target || target == &you || target->is_dead_state() || !you.sees( m, *target ) ) {
             return false;
         }
-        if( const npc *const np = target->as_npc() ) {
-            return np->is_enemy();
-        }
-        return target->attitude_to( you ) == Creature::Attitude::HOSTILE;
+        return technique->activation_allowed( you, "target", target );
     };
     bool has_target = false;
     for( const tripoint_bub_ms &p : m.points_in_radius( you.pos_bub( m ), 1 ) ) {
@@ -1216,7 +1234,7 @@ void avatar_action::active_technique( avatar &you, map &m )
         }
     }
     if( !has_target && you.active_technique_range( technique ) <= 1 ) {
-        add_msg( m_info, _( "No hostile creature is adjacent." ) );
+        add_msg( m_info, _( "No eligible creature is adjacent." ) );
         return;
     }
     std::optional<tripoint_bub_ms> target_pos;
@@ -1228,7 +1246,7 @@ void avatar_action::active_technique( avatar &you, map &m )
         }
     } else {
         target_pos = choose_adjacent_highlight(
-                         m, _( "Use the technique on whom?" ), _( "No hostile creature is adjacent." ),
+                         m, _( "Use the technique on whom?" ), _( "No eligible creature is adjacent." ),
                          eligible_target, false, false );
     }
     if( !target_pos || !eligible_target( *target_pos ) ) {
@@ -1237,6 +1255,16 @@ void avatar_action::active_technique( avatar &you, map &m )
 
     Creature *const target = get_creature_tracker().creature_at( *target_pos, true );
     if( !target ) {
+        return;
+    }
+    if( const monster *const creature = target->as_monster();
+        creature && !confirm_non_hostile_melee_attack( you, *creature ) ) {
+        return;
+    }
+    if( const npc *const person = target->as_npc();
+        person && !person->is_enemy() &&
+        !query_yn( _( "Really use %1$s on the non-hostile %2$s?" ),
+                   technique->name.translated(), person->disp_name() ) ) {
         return;
     }
     if( cata_mp::is_client_mode() ) {
@@ -1250,9 +1278,6 @@ void avatar_action::active_technique( avatar &you, map &m )
     if( !you.use_active_technique( *target, technique ) ) {
         add_msg( m_info, _( "You cannot use that technique on this target right now." ) );
         return;
-    }
-    if( npc *const np = target->as_npc() ) {
-        np->make_angry();
     }
 }
 
@@ -1333,7 +1358,7 @@ bool avatar_action::can_fire_weapon( avatar &you, const map &m, const item &weap
     return false;
 }
 
-void avatar_action::fire_wielded_weapon( avatar &you )
+void avatar_action::fire_wielded_weapon( avatar &you, bool sweeping )
 {
     const item_location weapon = you.get_wielded_item();
 
@@ -1362,7 +1387,7 @@ void avatar_action::fire_wielded_weapon( avatar &you )
         return;
     }
 
-    you.assign_activity( aim_activity_actor::use_wielded() );
+    you.assign_activity( aim_activity_actor::use_wielded( sweeping ) );
 }
 
 void avatar_action::fire_ranged_mutation( Character &you, const item &fake_gun )
@@ -1375,10 +1400,11 @@ void avatar_action::fire_ranged_bionic( avatar &you, const item &fake_gun, unsig
     you.assign_activity( aim_activity_actor::use_bionic( fake_gun, uid ) );
 }
 
-bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret )
+bool avatar_action::fire_turret_manual( avatar &you, map &m, turret_data &turret, bool sweeping )
 {
     const optional_vpart_position at = m.veh_at( you.pos_abs() );
-    return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct" );
+    return turret && at && use_vehicle_turrets( you, m, at->vehicle(), you.pos_abs(), "fire_direct",
+            true, sweeping );
 }
 
 void avatar_action::mend( avatar &you, item_location loc )
@@ -1723,6 +1749,27 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
         if( !loc ) {
             add_msg( _( "Never mind." ) );
+            return;
+        }
+    }
+
+    if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
+        bool manage = true;
+        if( loc->type->has_use() || loc->has_relic_activation() ) {
+            uilist actions;
+            actions.text = loc->tname();
+            actions.addentry( 0, true, 'm', _( "Manage gun modifications" ) );
+            actions.addentry( 1, true, 'a', _( "Activate item" ) );
+            actions.query();
+            if( actions.ret < 0 ) {
+                return;
+            }
+            manage = actions.ret == 0;
+        }
+        if( manage ) {
+            if( avatar_action::check_stealing( get_player_character(), *loc.get_item() ) ) {
+                gunmod_ui::show( you, loc );
+            }
             return;
         }
     }

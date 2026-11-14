@@ -2152,6 +2152,36 @@ void npc::execute_action( npc_action action )
                 move_pause();
                 break;
             }
+            if( !is_hallucination() && rules.has_flag( ally_rule::use_guns ) &&
+                ( !is_player_ally() || rules.allow_sweep ) &&
+                ai_cache.current_attack_evaluation.value() ) {
+                const auto mount = here.veh_at( pos_bub( here ) );
+                if( mount && ( !mount->vehicle().has_owner() || mount->vehicle().is_owned_by( *this ) ) ) {
+                    turret_data turret = mount->vehicle().turret_query( pos_abs() );
+                    if( turret && turret.query() == turret_data::status::ready ) {
+                        const gun_mode mode = turret.base()->gun_current_mode();
+                        const auto effects = turret.ammo_effects();
+                        if( mode && mode.full_auto() && !mode.flags.count( "NPC_AVOID" ) &&
+                            can_use( *mode ) && max_aoe_size( effects ) == 0 &&
+                            !effects.count( ammo_effect_str_id( "BOUNCE" ) ) &&
+                            ( !is_player_ally() || !rules.has_flag( ally_rule::use_silent ) ||
+                              mode->is_silent() ) ) {
+                            const auto sweep = find_firearm_sweep( *this, here,
+                                                                   ai_cache.current_attack_evaluation.target(), turret.range(), mode.rpm,
+                                                                   mode.shots_available( calendar::turn ) );
+                            const int moves_before_fire = get_moves();
+                            if( sweep ) {
+                                turret.fire( *this, &here, sweep->start, &*sweep, true );
+                            }
+                            if( get_moves() < moves_before_fire ) {
+                                ai_cache.current_attack.reset();
+                                ai_cache.current_attack_evaluation = npc_attack_rating{};
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
             ai_cache.current_attack->use( *this, ai_cache.current_attack_evaluation.target() );
             ai_cache.current_attack.reset();
             ai_cache.current_attack_evaluation = npc_attack_rating{};
@@ -2351,9 +2381,9 @@ void npc::execute_action( npc_action action )
             }
             aim( Target_attributes( pos_bub(), tar ) );
             if( is_hallucination() ) {
-                pretend_fire( this, mode.qty, *mode );
+                pretend_fire( mode );
             } else {
-                fire_gun( here, tar, mode.qty, *mode );
+                fire_gun( here, tar, mode );
                 // "discard" the fake bio weapon after shooting it
                 if( is_using_bionic_weapon() ) {
                     discharge_cbm_weapon();
@@ -2674,7 +2704,8 @@ void npc::evaluate_best_attack( const Creature *target )
                            ( rules.has_flag( ally_rule::use_silent ) && is_player_ally() &&
                              !mode.second->is_silent() ) ) ) {
                         if( it->shots_remaining( here, this ) > 0 || can_reload_current() ) {
-                            compare( std::make_shared<npc_attack_gun>( *it, mode.second ), "(as FIRED) ", it );
+                            compare( std::make_shared<npc_attack_gun>( *it, mode.first, mode.second ),
+                                     "(as FIRED) ", it );
                         } else {
                             compare( std::make_shared<npc_attack_melee>( *it ), "(as MELEE) ", it );
                         }

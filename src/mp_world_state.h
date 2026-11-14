@@ -377,6 +377,7 @@ struct client_admission_state {
     // generated so the client's terrain matches the host's. 0 = not yet received.
     unsigned int client_host_seed = 0;
     bool client_host_seed_applied = false;
+    bool client_host_north_america_world = false;
     // Client: the raw join 'welcome' stashed at connect time so start_game() can
     // adopt the host seed + spawn-omt BEFORE worldgen. The welcome's own arrival on
     // the first do_turn is too late — start_game has already built the host-area

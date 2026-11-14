@@ -227,7 +227,7 @@ void game::unserialize( std::istream &fin, const cata_path &path )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -239,7 +239,7 @@ void game::unserialize( std::string fin )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -312,15 +312,8 @@ void game::unserialize_impl( const JsonObject &data )
     // before native loading/cache reconstruction, which can query that count.
     const JsonObject player_data = data.get_object( "player" );
     if( !player_data.has_member( "kill_tracker" ) && data.has_object( "kill_tracker" ) ) {
-        player_data.allow_omitted_members();
-        // Preserve the complete object representation: individual JsonMember
-        // values intentionally do not expose raw JSON serialization.
-        std::string migrated = player_data.str();
-        const std::string legacy_kills = data.get_object( "kill_tracker" ).str();
-        migrated.insert( migrated.find_last_of( '}' ),
-                         std::string( player_data.size() == 0 ? "" : "," ) +
-                         "\"kill_tracker\":" + legacy_kills );
-        u.deserialize( json_loader::from_string( migrated ).get_object() );
+        const JsonObject legacy_kills = data.get_object( "kill_tracker" );
+        u.load( player_data, &legacy_kills );
     } else {
         u.deserialize( player_data );
     }
@@ -1711,6 +1704,7 @@ void game::unserialize_master( const JsonValue &jv )
     // Reset state that has no clear-on-load hook of its own; otherwise a
     // save without the field inherits the previous game's queue.
     get_item_wakeups().clear();
+    north_america_world = false;
     JsonObject game_json = jv;
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
@@ -1732,6 +1726,10 @@ void game::unserialize_master( const JsonValue &jv )
             jsin.read( *faction_manager_ptr );
         } else if( name == "seed" ) {
             jsin.read( seed );
+        } else if( name == "north_america_world" ) {
+            north_america_world = jsin.get_bool();
+        } else if( name == "climate_origin" ) {
+            jsin.read( weather.climate_origin );
         } else if( name == "weather" ) {
             weather_manager::unserialize_all( jsin );
         } else if( name == "timed_events" ) {
@@ -1779,7 +1777,7 @@ void game::unserialize_dimension_data( const JsonValue &jv )
 void mission::serialize_all( JsonOut &json )
 {
     json.start_array();
-    for( mission*&e : get_all_active() ) {
+    for( mission *&e : get_all_active() ) {
         e->serialize( json );
     }
     json.end_array();
@@ -1795,6 +1793,9 @@ void weather_manager::serialize_all( JsonOut &json )
     json.member( "temperature", units::to_fahrenheit( weather.temperature ) );
     json.member( "winddirection", weather.winddirection );
     json.member( "windspeed", weather.windspeed );
+    if( weather.climate_precipitation_mm_per_hour ) {
+        json.member( "climate_precipitation_mm_per_hour", *weather.climate_precipitation_mm_per_hour );
+    }
     if( weather.forced_temperature ) {
         json.member( "forced_temperature", units::to_fahrenheit( *weather.forced_temperature ) );
     }
@@ -1826,6 +1827,8 @@ void weather_manager::unserialize_all( const JsonObject &w )
     get_weather().temperature = units::from_fahrenheit( read_temperature );
     w.read( "winddirection", get_weather().winddirection );
     w.read( "windspeed", get_weather().windspeed );
+    get_weather().climate_precipitation_mm_per_hour.reset();
+    w.read( "climate_precipitation_mm_per_hour", get_weather().climate_precipitation_mm_per_hour );
     if( w.has_member( "forced_temperature" ) ) {
         float read_forced_temp;
         w.read( "forced_temperature", read_forced_temp );
@@ -1957,6 +1960,12 @@ void game::serialize_master( std::ostream &fout )
 
         json.member( "factions", *faction_manager_ptr );
         json.member( "seed", seed );
+        if( north_america_world ) {
+            json.member( "north_america_world", north_america_world );
+        }
+        if( weather.climate_origin ) {
+            json.member( "climate_origin", *weather.climate_origin );
+        }
 
         json.end_object();
     } catch( const JsonError &e ) {

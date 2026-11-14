@@ -3352,8 +3352,8 @@ TEST_CASE( "variant_crafting_recipes", "[crafting][slow]" )
         CHECK( basic_recipe.obj().result_name() == "long waist apron" );
         const recipe_id variant_recipe = recipe_test_waist_apron_long_pink_apron_cotton;
         CHECK( variant_recipe.obj().result_name() == "pink long waist apron" );
-        const recipe_id variant_prefix_recipe = recipe_test_xl_waist_apron_long_pink_apron_cotton;
-        CHECK( variant_prefix_recipe.obj().result_name() == "XL pink long waist apron" );
+        const recipe_id sized_variant_recipe = recipe_test_xl_waist_apron_long_pink_apron_cotton;
+        CHECK( sized_variant_recipe.obj().result_name() == "pink long waist apron XL" );
     }
 }
 

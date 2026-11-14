@@ -3,10 +3,13 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "avatar.h"
+#include "calendar.h"
 #include "character.h"
 #include "creature.h"
 #include "debug.h"
@@ -403,7 +406,8 @@ turret_data::status turret_data::query() const
         }
     }
 
-    const units::energy energy_drain = gun.get_gun_energy_drain() * gun.gun_current_mode().qty;
+    const int shots = gun.gun_current_mode().shots_available( calendar::turn );
+    const units::energy energy_drain = gun.get_gun_energy_drain() * shots;
     if( energy_drain > units::from_kilojoule( veh->fuel_left( here, fuel_type_battery ) ) ) {
         return status::no_power;
     }
@@ -411,7 +415,7 @@ turret_data::status turret_data::query() const
     return status::ready;
 }
 
-void turret_data::prepare_fire( Character &you )
+void turret_data::prepare_fire( Character &you, int sweep_rounds )
 {
     map &here = get_map();
 
@@ -433,9 +437,11 @@ void turret_data::prepare_fire( Character &you )
     // set fuel tank fluid as ammo, if appropriate
     if( uses_vehicle_tanks_or_batteries() ) {
         gun_mode mode = base()->gun_current_mode();
-        int qty  = mode->ammo_required();
-        int fuel_left = veh->fuel_left( here, ammo_current() );
-        mode->ammo_set( ammo_current(), std::min( qty * mode.qty, fuel_left ) );
+        const int qty = mode->ammo_required();
+        const int fuel_left = veh->fuel_left( here, ammo_current() );
+        const int64_t requested = static_cast<int64_t>( qty ) *
+                                  ( sweep_rounds > 0 ? sweep_rounds : mode.shots_available( calendar::turn ) );
+        mode->ammo_set( ammo_current(), static_cast<int>( std::min<int64_t>( requested, fuel_left ) ) );
     }
 }
 
@@ -483,16 +489,43 @@ void turret_data::post_fire( map *here, Character &you, int shots )
     veh->drain( here, fuel_type_battery, units::to_kilojoule( mode->get_gun_energy_drain() * shots ) );
 }
 
-int turret_data::fire( Character &c, map *here, const tripoint_bub_ms &target )
+int turret_data::fire( Character &c, map *here, const tripoint_bub_ms &target,
+                       const firearm_sweep *sweep, bool automatic )
 {
     if( !veh || !part ) {
         return 0;
     }
-    int shots = 0;
-    gun_mode mode = base()->gun_current_mode();
+    const gun_mode mode = base()->gun_current_mode();
+    if( !mode || mode.shots_available( calendar::turn ) <= 0 ) {
+        return 0;
+    }
 
-    prepare_fire( c );
-    shots = c.fire_gun( *here, target, mode.qty, *mode );
+    int limit = 0;
+    if( sweep ) {
+        if( !mode.full_auto() || !in_range( here->get_abs( sweep->start ) ) ||
+            !in_range( here->get_abs( sweep->end ) ) ) {
+            return 0;
+        }
+        limit = sweep->rounds( c.pos_bub( *here ), mode.rpm );
+        if( automatic ) {
+            limit = std::min( limit, mode.shots_available( calendar::turn ) );
+        }
+        const auto battery = units::from_kilojoule( veh->fuel_left( *here, fuel_type_battery ) );
+        const auto drain = mode->get_gun_energy_drain();
+        while( limit > 0 && drain * limit > battery ) {
+            --limit;
+        }
+        if( limit == 0 ) {
+            return 0;
+        }
+    }
+
+    prepare_fire( c, limit );
+    if( sweep && automatic ) {
+        mode.start_firing( calendar::turn );
+    }
+    const int shots = sweep ? c.fire_gun_sweep( *here, *sweep, mode, limit, automatic ) :
+                      c.fire_gun( *here, target, mode );
     post_fire( here, c, shots );
     return shots;
 }
@@ -600,6 +633,7 @@ int vehicle::automatic_fire_turret( vehicle_part &pt )
     const bool u_hear = !player_character.is_deaf();
     // The current target of the turret.
     auto &target = pt.target;
+    const bool automatic_target = target.first == target.second;
     if( target.first == target.second ) {
         // Manual target not set, find one automatically.
         // BEWARE: Calling turret_data.fire on tripoint min coordinates starts a crash
@@ -646,7 +680,12 @@ int vehicle::automatic_fire_turret( vehicle_part &pt )
     tripoint_bub_ms targ( here.get_bub( target.second ) );
     pt.reset_target( here.get_abs( pos ) );
 
-    shots = gun.fire( cpu, &here, targ );
+    const gun_mode mode = gun.base()->gun_current_mode();
+    const auto sweep = automatic_target && mode && mode.full_auto() && area == 0 &&
+                       !gun.ammo_effects().count( ammo_effect_str_id( "BOUNCE" ) )
+                       ? find_firearm_sweep( cpu, here, targ, gun.range(), mode.rpm,
+                               mode.shots_available( calendar::turn ) ) : std::nullopt;
+    shots = gun.fire( cpu, &here, targ, sweep ? &*sweep : nullptr, true );
 
     if( shots && u_see ) {
         add_msg_if_player_sees( targ, _( "The %1$s fires its %2$s!" ), name, pt.name() );

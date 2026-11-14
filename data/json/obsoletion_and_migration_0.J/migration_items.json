@@ -1,6 +1,16 @@
 [
   {
     "type": "MIGRATION",
+    "id": "mounted_lance",
+    "replace": "spear_steel"
+  },
+  {
+    "type": "MIGRATION",
+    "id": "mounted_saber",
+    "replace": "mc_cavalry_sabre"
+  },
+  {
+    "type": "MIGRATION",
     "//CCB": "撤销 PR #86581 #86067 #86231 — 移除迁移条目，恢复原始物品",
     "id": "shot_he",
     "replace": "shot_dragon"

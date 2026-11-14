@@ -1,18 +1,15 @@
-#include "character_action_guard.h"
-#include "vertical_movement.h"
-#include "deployed_furniture.h"
-#include "iexamine.h"
-
-#include "activity_handlers.h"
-
+#include <cata_scope_helpers.h>
+#include <item_uid.h>
 #include <ret_val.h>
+#include <safe_reference.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <functional>
 #include <iterator>
 #include <map>
@@ -22,35 +19,32 @@
 #include <utility>
 
 #include "activity_actor_definitions.h"
+#include "activity_handlers.h"
 #include "ammo.h"
 #include "avatar.h"
 #include "basecamp.h"
-#include "bionics.h"
 #include "bionic_activation.h"
-#include "mp_inventory_activity.h"
-#include "mp_client_conn.h"
-#include "item_source.h"
-#include "item_consumption.h"
-#include "item_unload.h"
-#include "farming.h"
-#include "craft_reservation.h"
+#include "bionics.h"
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "color.h"
 #include "condition.h"
 #include "construction.h"
 #include "coordinates.h"
 #include "craft_command.h"
+#include "craft_reservation.h"
 #include "crafting.h"
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
-#include "damage.h"
 #include "cursesdef.h"
+#include "damage.h"
 #include "debug.h"
+#include "deployed_furniture.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
 #include "effect.h"
@@ -59,6 +53,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
+#include "farming.h"
 #include "field_type.h"
 #include "finite_water.h"
 #include "flag.h"
@@ -69,17 +64,21 @@
 #include "game_inventory.h"
 #include "handle_liquid.h"
 #include "harvest.h"
-#include "liquid_transfer.h"
+#include "iexamine.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "input_popup.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_components.h"
+#include "item_consumption.h"
 #include "item_location.h"
+#include "item_source.h"
+#include "item_unload.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "liquid_transfer.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic_teleporter_list.h"
@@ -91,6 +90,8 @@
 #include "memory_fast.h"
 #include "messages.h"
 #include "mission_companion.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -125,6 +126,7 @@
 #include "value_ptr.h"
 #include "vehicle.h"
 #include "vehicle_selector.h"
+#include "vertical_movement.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
@@ -3385,16 +3387,18 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !lifetime || !context || !plot.matches( here ) ) {
         return;
     }
-    item_location watered = resolve_item_source( you, here, original );
-    if( !watered || !watered->is_seed() ) {
+    item *watered = resolve_planted_seed( here, original );
+    if( !watered ) {
         return;
     }
     if( !watered->has_var( "seed_last_water_check" ) ) {
         set_plant_last_water_check( *watered, calendar::turn );
     }
-    set_plant_water( *watered, std::min( max_water, current_water + irrigation::WATER_PER_POUR ) );
+    set_plant_water( *watered, std::min( max_water,
+                                         get_plant_water( *watered ) + irrigation::WATER_PER_POUR ) );
     const itype_id seed_type = watered->typeId();
-    const int stage_idx = get_plant_current_stage_idx_from_effective( here, examp );
+    const int stage_idx = get_plant_current_stage_idx_from_effective( here,
+                          here.get_bub( plot.position ) );
     const std::string stage = stage_idx >= 0 ?
                               seed_type->seed->get_growth_stages()[stage_idx].first.str() : "";
     you.add_msg_if_player( m_good, _( "You pour some water on the %s." ), watered->get_plant_name() );
@@ -3403,7 +3407,7 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !lifetime || !context || !plot.matches( here ) ) {
         return;
     }
-    const item_location current = resolve_item_source( you, here, original );
+    item *current = resolve_planted_seed( here, original );
     if( current && current->typeId() == seed_type ) {
         run_plant_lifecycle_event( "water", you, here, here.get_bub( plot.position ), *current,
         stage, stage, {},
@@ -5084,7 +5088,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         std::vector<std::string> drink_names;
         std::vector<double> drink_rot;
         std::vector<time_point> drink_bday;
-        for( item*&drink : drinks_inv ) {
+        for( item *&drink : drinks_inv ) {
             auto found_drink = std::find( drink_types.begin(), drink_types.end(), drink->typeId() );
             if( found_drink == drink_types.end() ) {
                 drink_types.push_back( drink->typeId() );
@@ -5123,13 +5127,19 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         item drink( drink_type, drink_bday[ drink_index ] );
         drink.set_relative_rot( drink_rot[ drink_index ] );
         drink.charges = 0;
-        bool keg_full = false;
+        item probe( drink );
+        const int amount = liquid_handler::charges_until_full( charges_held, [&]( int added ) {
+            probe.charges = added;
+            return probe.volume() >= keg_cap;
+        } );
         Character &player_character = get_player_character();
-        for( int i = 0; i < charges_held && !keg_full; i++ ) {
-            player_character.use_charges( drink.typeId(), 1 );
-            drink.charges++;
-            keg_full = drink.volume() >= keg_cap;
+        if( amount > 0 ) {
+            const std::list<item> used = player_character.use_charges( drink.typeId(), amount );
+            for( const item &portion : used ) {
+                drink.charges += portion.charges;
+            }
         }
+        const bool keg_full = drink.volume() >= keg_cap;
         if( keg_full ) {
             add_msg( _( "You completely fill the %1$s with %2$s." ),
                      keg_name, item::nname( drink_type ) );
@@ -5243,10 +5253,14 @@ bool iexamine::pour_into_keg( const tripoint_bub_ms &pos, item &liquid, bool sil
     if( !silent ) {
         add_msg( _( "You pour %1$s into the %2$s." ), liquid.tname(), keg_name );
     }
-    while( liquid.charges > 0 && drink.volume() < keg_cap ) {
-        drink.charges++;
-        liquid.charges--;
-    }
+    item probe( drink );
+    const int available = std::min( liquid.charges, INT_MAX - drink.charges );
+    const int amount = liquid_handler::charges_until_full( available, [&]( int added ) {
+        probe.charges = drink.charges + added;
+        return probe.volume() >= keg_cap;
+    } );
+    drink.charges += amount;
+    liquid.charges -= amount;
     return true;
 }
 

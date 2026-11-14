@@ -2,6 +2,9 @@
 #ifndef CATA_SRC_SDLSOUND_H
 #define CATA_SRC_SDLSOUND_H
 
+#include <chrono>
+#include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #if defined(SDL_SOUND)
@@ -23,10 +26,14 @@ extern bool sound_init_success;
 namespace sfx
 {
 struct melee_sound_sequence;
+struct queued_sound;
 void queue_melee_sound( melee_sound_sequence sequence );
+void queue_gunshot( queued_sound sound, std::chrono::steady_clock::time_point burst_start,
+                    int rpm, int shot_index );
 // Main-thread presentation pump and world/audio lifetime cleanup.
-void process_melee_sounds();
-void clear_melee_sounds();
+void process_queued_sounds();
+std::optional<uint32_t> queued_sound_wait_ms();
+void clear_queued_sounds();
 }
 
 #else

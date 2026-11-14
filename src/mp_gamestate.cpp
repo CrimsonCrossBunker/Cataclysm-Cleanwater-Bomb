@@ -1112,6 +1112,7 @@ static void parse_welcome_fields( const std::string &msg, bool apply_seed_now )
         JsonValue jv = json_loader::from_string( msg );
         JsonObject jo = jv.get_object();
         jo.allow_omitted_members();
+        mp_session().admission.client_host_north_america_world = jo.get_bool( "north_america_world", false );
         const std::string wn = jo.get_string( "world", "" );
         if( !wn.empty() && wn != "default" ) {
             mp_session().admission.client_host_world_name = wn;
@@ -1181,6 +1182,7 @@ void mp_client_prepare_spawn()
         return;
     }
     mp_client_apply_host_seed();
+    g->north_america_world = mp_session().admission.client_host_north_america_world;
 }
 
 // Server: per-tile baseline (ter + furn + item fingerprint) for dirty-tile tracking.
@@ -2701,6 +2703,7 @@ static void handle_remote_action( remote_player_session &recipient,  const std::
             jo.read( "bionic", intent.bionic );
             intent.request = jo.get_int64( "request" );
             intent.mode = gun_mode_id( jo.get_string( "mode" ) );
+            intent.burst_rounds = jo.get_int( "burst_rounds", 0 );
             jo.read( "ammo", intent.ammo, false );
             jo.read( "origin", intent.origin, true );
             jo.read( "target", intent.target, true );
@@ -4406,6 +4409,7 @@ void grant_client_turn()
     // game state. Runs before the connected-check so it's current the moment a
     // client joins. Seed is constant for a session; the store is idempotent.
     mp_session().host_info.seed = g->get_seed();
+    mp_session().host_info.north_america_world = g->north_america_world;
     // Capture the host avatar's OMT for the join 'welcome' so a client spawns into
     // the host's area, not its own scenario start_location.
     mp_capture_host_omt( get_avatar().pos_abs_omt() );
@@ -5159,6 +5163,7 @@ static void mp_start_pending_host()
             throw std::runtime_error( "No active world" );
         }
         mp_session().host_info.world = world_generator->active_world->identity();
+        mp_session().host_info.north_america_world = g->north_america_world;
     } catch( const std::exception &error ) {
         add_msg( m_bad, _( "Unable to start multiplayer host: %s" ), error.what() );
         set_host_mode( false );
@@ -8059,7 +8064,7 @@ void client_cancel_firearm_activity( bool unload_ras )
 }
 
 void client_request_firearm( const tripoint_bub_ms &target, const std::string &action,
-                             const item_location &ammo )
+                             const item_location &ammo, int burst_rounds )
 {
     avatar &who = get_avatar();
     const item_location weapon = client_firearm_weapon();
@@ -8085,6 +8090,9 @@ void client_request_firearm( const tripoint_bub_ms &target, const std::string &a
     view.pending_request = view.next_request++;
     out.member( "request", view.pending_request );
     out.member( "mode", weapon->gun_get_mode_id() );
+    if( burst_rounds != 0 ) {
+        out.member( "burst_rounds", burst_rounds );
+    }
     if( ammo ) {
         out.member( "ammo", capture_item_source( who, ammo ) );
     }

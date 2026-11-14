@@ -64,6 +64,7 @@
 #include "overmap_map_data_cache.h"
 #include "overmap_noise.h"
 #include "overmap_types.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "regional_settings.h"
@@ -1047,19 +1048,25 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         }
     }
 
+    const bool atlas = north_america::active();
+    if( atlas && !place_north_american_water() ) {
+        return;
+    }
     std::vector<Highway_path> highway_paths;
-    calculate_urbanity();
-    calculate_forestosity();
+    if( !atlas ) {
+        calculate_urbanity();
+        calculate_forestosity();
+    }
     if( settings->neighbor_connections ) {
         populate_connections_out_from_neighbors( neighbor_overmaps );
     }
-    if( settings->overmap_river ) {
+    if( !atlas && settings->overmap_river ) {
         place_rivers( neighbor_overmaps );
     }
-    if( settings->overmap_lake ) {
+    if( !atlas && settings->overmap_lake ) {
         place_lakes( neighbor_overmaps );
     }
-    if( settings->overmap_ocean ) {
+    if( !atlas && settings->overmap_ocean ) {
         place_oceans( neighbor_overmaps );
     }
     if( settings->overmap_forest ) {
@@ -1068,10 +1075,10 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     if( settings->overmap_forest && settings->place_swamps ) {
         place_swamps();
     }
-    if( settings->overmap_ravine ) {
+    if( !atlas && settings->overmap_ravine ) {
         place_ravines();
     }
-    if( settings->overmap_river ) {
+    if( !atlas && settings->overmap_river ) {
         // Polish rivers now so highways get the correct predecessors rather than river_center
         polish_river( neighbor_overmaps );
     }

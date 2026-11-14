@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:a8e3cce387814a823040a024b6c572bb18845c4b9118ec8e840e5f55cf3eb1a6",
+    "source_fingerprint": "sha256:805fa5ef3b96f13ef1b9b49197f847d1043ac87a5a2c36e3aba65bccbdaf2db7",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -15,10 +15,10 @@
     "registrations": "src/init.cpp#DynamicDataLoader::initialize"
   },
   "summary": {
-    "registration_calls": 193,
-    "registered_types": 192,
-    "observed_types": 185,
-    "registered_and_observed": 185,
+    "registration_calls": 194,
+    "registered_types": 193,
+    "observed_types": 186,
+    "registered_and_observed": 186,
     "registered_not_observed": [
       "TRAIT_BLACKLIST",
       "WORLD_OPTION",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6849,
-    "top_level_objects": 95442,
+    "tracked_json_files": 6858,
+    "top_level_objects": 95554,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -52,7 +52,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 286,
+            "line": 287,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -98,7 +98,7 @@
       "type": "ITEM",
       "registrations": [
         {
-          "registration_order": 83,
+          "registration_order": 84,
           "type": "ITEM",
           "handler_kind": "direct_function",
           "handler_symbol": "items::load",
@@ -106,14 +106,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 385,
+            "line": 387,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15224,
+        "occurrences": 15237,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -137,7 +137,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 95
+            "line": 96
           }
         ],
         "confidence": "lexical_only"
@@ -157,7 +157,7 @@
       "type": "ITEM_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 143,
+          "registration_order": 144,
           "type": "ITEM_BLACKLIST",
           "handler_kind": "lambda",
           "handler_symbol": "load_item_blacklist",
@@ -165,7 +165,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 467,
+            "line": 469,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -211,7 +211,7 @@
       "type": "ITEM_CATEGORY",
       "registrations": [
         {
-          "registration_order": 84,
+          "registration_order": 85,
           "type": "ITEM_CATEGORY",
           "handler_kind": "direct_function",
           "handler_symbol": "item_category::load_item_cat",
@@ -219,7 +219,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 386,
+            "line": 388,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -265,7 +265,7 @@
       "type": "LOOT_ZONE",
       "registrations": [
         {
-          "registration_order": 92,
+          "registration_order": 93,
           "type": "LOOT_ZONE",
           "handler_kind": "direct_function",
           "handler_symbol": "zone_type::load_zones",
@@ -273,7 +273,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 404,
+            "line": 406,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -304,7 +304,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1667
+            "line": 1668
           }
         ],
         "confidence": "lexical_only"
@@ -324,7 +324,7 @@
       "type": "MIGRATION",
       "registrations": [
         {
-          "registration_order": 85,
+          "registration_order": 86,
           "type": "MIGRATION",
           "handler_kind": "lambda",
           "handler_symbol": "load_migration",
@@ -332,14 +332,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 388,
+            "line": 390,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1103,
+        "occurrences": 1105,
         "examples": [
           {
             "path": "data/json/items/comestibles/irradiated_fruit_migration.json",
@@ -363,7 +363,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 64
+            "line": 65
           }
         ],
         "confidence": "lexical_only"
@@ -383,7 +383,7 @@
       "type": "MOD_INFO",
       "registrations": [
         {
-          "registration_order": 147,
+          "registration_order": 148,
           "type": "MOD_INFO",
           "handler_kind": "direct_function",
           "handler_symbol": "load_ignored_type",
@@ -391,7 +391,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 481,
+            "line": 483,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -422,7 +422,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 411
+            "line": 412
           }
         ],
         "confidence": "lexical_only"
@@ -442,7 +442,7 @@
       "type": "MONSTER",
       "registrations": [
         {
-          "registration_order": 89,
+          "registration_order": 90,
           "type": "MONSTER",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -450,7 +450,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 396,
+            "line": 398,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -481,7 +481,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM_SPAWN.md",
-            "line": 307
+            "line": 308
           }
         ],
         "confidence": "lexical_only"
@@ -501,7 +501,7 @@
       "type": "MONSTER_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 50,
+          "registration_order": 51,
           "type": "MONSTER_BLACKLIST",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterBlacklist",
@@ -509,7 +509,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 335,
+            "line": 337,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -555,7 +555,7 @@
       "type": "MONSTER_FACTION",
       "registrations": [
         {
-          "registration_order": 153,
+          "registration_order": 154,
           "type": "MONSTER_FACTION",
           "handler_kind": "direct_function",
           "handler_symbol": "monfactions::load_monster_faction",
@@ -563,7 +563,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 489,
+            "line": 491,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -594,7 +594,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INHERITANCE.md",
-            "line": 183
+            "line": 184
           }
         ],
         "confidence": "lexical_only"
@@ -614,7 +614,7 @@
       "type": "MONSTER_WHITELIST",
       "registrations": [
         {
-          "registration_order": 51,
+          "registration_order": 52,
           "type": "MONSTER_WHITELIST",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterWhitelist",
@@ -622,7 +622,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 336,
+            "line": 338,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -668,7 +668,7 @@
       "type": "SCENARIO_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 56,
+          "registration_order": 57,
           "type": "SCENARIO_BLACKLIST",
           "handler_kind": "direct_function",
           "handler_symbol": "scen_blacklist::load_scen_blacklist",
@@ -676,7 +676,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 341,
+            "line": 343,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -722,7 +722,7 @@
       "type": "SPECIES",
       "registrations": [
         {
-          "registration_order": 90,
+          "registration_order": 91,
           "type": "SPECIES",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -730,7 +730,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 399,
+            "line": 401,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -761,7 +761,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MAGIC.md",
-            "line": 291
+            "line": 292
           }
         ],
         "confidence": "lexical_only"
@@ -781,7 +781,7 @@
       "type": "SPELL",
       "registrations": [
         {
-          "registration_order": 173,
+          "registration_order": 174,
           "type": "SPELL",
           "handler_kind": "direct_function",
           "handler_symbol": "spell_type::load_spell",
@@ -789,7 +789,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 515,
+            "line": 517,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -820,7 +820,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3812
+            "line": 3813
           }
         ],
         "confidence": "lexical_only"
@@ -840,7 +840,7 @@
       "type": "TRAIT_BLACKLIST",
       "registrations": [
         {
-          "registration_order": 144,
+          "registration_order": 145,
           "type": "TRAIT_BLACKLIST",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_blacklist",
@@ -848,7 +848,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 470,
+            "line": 472,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -889,7 +889,7 @@
       "type": "TRAIT_MIGRATION",
       "registrations": [
         {
-          "registration_order": 145,
+          "registration_order": 146,
           "type": "TRAIT_MIGRATION",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_migration",
@@ -897,7 +897,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 474,
+            "line": 476,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -928,7 +928,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MUTATIONS.md",
-            "line": 442
+            "line": 443
           }
         ],
         "confidence": "lexical_only"
@@ -956,7 +956,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 285,
+            "line": 286,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -997,7 +997,7 @@
       "type": "achievement",
       "registrations": [
         {
-          "registration_order": 181,
+          "registration_order": 182,
           "type": "achievement",
           "handler_kind": "direct_function",
           "handler_symbol": "achievement::load_achievement",
@@ -1005,7 +1005,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 523,
+            "line": 525,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1036,7 +1036,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1891
+            "line": 1892
           }
         ],
         "confidence": "lexical_only"
@@ -1056,7 +1056,7 @@
       "type": "activity_type",
       "registrations": [
         {
-          "registration_order": 21,
+          "registration_order": 22,
           "type": "activity_type",
           "handler_kind": "direct_function",
           "handler_symbol": "activity_type::load_all",
@@ -1064,7 +1064,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 306,
+            "line": 308,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1095,7 +1095,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 88
+            "line": 89
           }
         ],
         "confidence": "lexical_only"
@@ -1115,7 +1115,7 @@
       "type": "addiction_type",
       "registrations": [
         {
-          "registration_order": 22,
+          "registration_order": 23,
           "type": "addiction_type",
           "handler_kind": "direct_function",
           "handler_symbol": "add_type::load_add_types",
@@ -1123,7 +1123,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 307,
+            "line": 309,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1154,7 +1154,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 90
+            "line": 91
           }
         ],
         "confidence": "lexical_only"
@@ -1174,7 +1174,7 @@
       "type": "ammo_effect",
       "registrations": [
         {
-          "registration_order": 17,
+          "registration_order": 18,
           "type": "ammo_effect",
           "handler_kind": "direct_function",
           "handler_symbol": "ammo_effects::load",
@@ -1182,14 +1182,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 302,
+            "line": 304,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 122,
+        "occurrences": 123,
         "examples": [
           {
             "path": "data/json/ammo_effects.json",
@@ -1213,7 +1213,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 100
+            "line": 101
           }
         ],
         "confidence": "lexical_only"
@@ -1233,7 +1233,7 @@
       "type": "ammunition_type",
       "registrations": [
         {
-          "registration_order": 53,
+          "registration_order": 54,
           "type": "ammunition_type",
           "handler_kind": "direct_function",
           "handler_symbol": "ammunition_type::load_ammunition_type",
@@ -1241,14 +1241,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 338,
+            "line": 340,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 230,
+        "occurrences": 231,
         "examples": [
           {
             "path": "data/core/sentinels.json",
@@ -1272,7 +1272,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 239
+            "line": 298
           }
         ],
         "confidence": "lexical_only"
@@ -1292,7 +1292,7 @@
       "type": "anatomy",
       "registrations": [
         {
-          "registration_order": 171,
+          "registration_order": 172,
           "type": "anatomy",
           "handler_kind": "direct_function",
           "handler_symbol": "anatomy::load_anatomy",
@@ -1300,7 +1300,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 513,
+            "line": 515,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1331,7 +1331,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 475
+            "line": 534
           }
         ],
         "confidence": "lexical_only"
@@ -1351,7 +1351,7 @@
       "type": "ascii_art",
       "registrations": [
         {
-          "registration_order": 64,
+          "registration_order": 65,
           "type": "ascii_art",
           "handler_kind": "direct_function",
           "handler_symbol": "ascii_art::load_ascii_art",
@@ -1359,7 +1359,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 349,
+            "line": 351,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1390,7 +1390,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 667
+            "line": 668
           }
         ],
         "confidence": "lexical_only"
@@ -1410,7 +1410,7 @@
       "type": "attack_vector",
       "registrations": [
         {
-          "registration_order": 105,
+          "registration_order": 106,
           "type": "attack_vector",
           "handler_kind": "direct_function",
           "handler_symbol": "attack_vector::load_attack_vectors",
@@ -1418,7 +1418,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 418,
+            "line": 420,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1449,7 +1449,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MARTIALART_JSON.md",
-            "line": 277
+            "line": 331
           }
         ],
         "confidence": "lexical_only"
@@ -1469,7 +1469,7 @@
       "type": "bash_damage_profile",
       "registrations": [
         {
-          "registration_order": 26,
+          "registration_order": 27,
           "type": "bash_damage_profile",
           "handler_kind": "direct_function",
           "handler_symbol": "bash_damage_profile::load_all",
@@ -1477,7 +1477,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 311,
+            "line": 313,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1508,7 +1508,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MAP_SMASHING.md",
-            "line": 28
+            "line": 29
           }
         ],
         "confidence": "lexical_only"
@@ -1528,7 +1528,7 @@
       "type": "behavior",
       "registrations": [
         {
-          "registration_order": 152,
+          "registration_order": 153,
           "type": "behavior",
           "handler_kind": "direct_function",
           "handler_symbol": "behavior::load_behavior",
@@ -1536,7 +1536,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 487,
+            "line": 489,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1567,7 +1567,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 97
+            "line": 98
           }
         ],
         "confidence": "lexical_only"
@@ -1587,7 +1587,7 @@
       "type": "bionic",
       "registrations": [
         {
-          "registration_order": 27,
+          "registration_order": 28,
           "type": "bionic",
           "handler_kind": "direct_function",
           "handler_symbol": "bionic_data::load_bionic",
@@ -1595,14 +1595,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 312,
+            "line": 314,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 245,
+        "occurrences": 246,
         "examples": [
           {
             "path": "data/json/bionics.json",
@@ -1626,7 +1626,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 46
+            "line": 47
           }
         ],
         "confidence": "lexical_only"
@@ -1646,7 +1646,7 @@
       "type": "bionic_migration",
       "registrations": [
         {
-          "registration_order": 28,
+          "registration_order": 29,
           "type": "bionic_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "bionic_data::load_bionic_migration",
@@ -1654,7 +1654,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 313,
+            "line": 315,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1685,7 +1685,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 131
+            "line": 132
           }
         ],
         "confidence": "lexical_only"
@@ -1705,7 +1705,7 @@
       "type": "body_graph",
       "registrations": [
         {
-          "registration_order": 170,
+          "registration_order": 171,
           "type": "body_graph",
           "handler_kind": "direct_function",
           "handler_symbol": "bodygraph::load_bodygraphs",
@@ -1713,7 +1713,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 512,
+            "line": 514,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1744,7 +1744,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 975
+            "line": 976
           }
         ],
         "confidence": "lexical_only"
@@ -1764,7 +1764,7 @@
       "type": "body_part",
       "registrations": [
         {
-          "registration_order": 168,
+          "registration_order": 169,
           "type": "body_part",
           "handler_kind": "direct_function",
           "handler_symbol": "body_part_type::load_bp",
@@ -1772,7 +1772,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 510,
+            "line": 512,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1803,7 +1803,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1803
+            "line": 1804
           }
         ],
         "confidence": "lexical_only"
@@ -1823,7 +1823,7 @@
       "type": "butchery_requirement",
       "registrations": [
         {
-          "registration_order": 160,
+          "registration_order": 161,
           "type": "butchery_requirement",
           "handler_kind": "direct_function",
           "handler_symbol": "butchery_requirements::load_butchery_req",
@@ -1831,7 +1831,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 500,
+            "line": 502,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1877,7 +1877,7 @@
       "type": "camp_migration",
       "registrations": [
         {
-          "registration_order": 109,
+          "registration_order": 110,
           "type": "camp_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap::load_oter_id_camp_migration",
@@ -1885,7 +1885,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 422,
+            "line": 424,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1931,7 +1931,7 @@
       "type": "character_mod",
       "registrations": [
         {
-          "registration_order": 167,
+          "registration_order": 168,
           "type": "character_mod",
           "handler_kind": "direct_function",
           "handler_symbol": "character_modifier::load_character_modifiers",
@@ -1939,7 +1939,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 509,
+            "line": 511,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -1970,7 +1970,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1252
+            "line": 1253
           }
         ],
         "confidence": "lexical_only"
@@ -1990,7 +1990,7 @@
       "type": "charge_removal_blacklist",
       "registrations": [
         {
-          "registration_order": 86,
+          "registration_order": 87,
           "type": "charge_removal_blacklist",
           "handler_kind": "callable",
           "handler_symbol": "load_charge_removal_blacklist",
@@ -1998,7 +1998,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 392,
+            "line": 394,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2029,7 +2029,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 86
+            "line": 87
           }
         ],
         "confidence": "lexical_only"
@@ -2049,7 +2049,7 @@
       "type": "city",
       "registrations": [
         {
-          "registration_order": 119,
+          "registration_order": 120,
           "type": "city",
           "handler_kind": "direct_function",
           "handler_symbol": "city::load_city",
@@ -2057,7 +2057,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 432,
+            "line": 434,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2088,7 +2088,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 107
+            "line": 108
           }
         ],
         "confidence": "lexical_only"
@@ -2108,7 +2108,7 @@
       "type": "city_building",
       "registrations": [
         {
-          "registration_order": 122,
+          "registration_order": 123,
           "type": "city_building",
           "handler_kind": "direct_function",
           "handler_symbol": "city_buildings::load",
@@ -2116,7 +2116,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 435,
+            "line": 437,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2167,7 +2167,7 @@
       "type": "climbing_aid",
       "registrations": [
         {
-          "registration_order": 104,
+          "registration_order": 105,
           "type": "climbing_aid",
           "handler_kind": "direct_function",
           "handler_symbol": "climbing_aid::load_climbing_aid",
@@ -2175,7 +2175,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 417,
+            "line": 419,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2206,7 +2206,7 @@
         "evidence": [
           {
             "path": "doc/JSON/CLIMBING.md",
-            "line": 19
+            "line": 20
           }
         ],
         "confidence": "lexical_only"
@@ -2226,7 +2226,7 @@
       "type": "clothing_mod",
       "registrations": [
         {
-          "registration_order": 176,
+          "registration_order": 177,
           "type": "clothing_mod",
           "handler_kind": "direct_function",
           "handler_symbol": "clothing_mods::load",
@@ -2234,7 +2234,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 518,
+            "line": 520,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2265,7 +2265,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 198
+            "line": 199
           }
         ],
         "confidence": "lexical_only"
@@ -2285,7 +2285,7 @@
       "type": "colordef",
       "registrations": [
         {
-          "registration_order": 146,
+          "registration_order": 147,
           "type": "colordef",
           "handler_kind": "direct_function",
           "handler_symbol": "load_ignored_type",
@@ -2293,7 +2293,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 479,
+            "line": 481,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2334,7 +2334,7 @@
       "type": "conduct",
       "registrations": [
         {
-          "registration_order": 182,
+          "registration_order": 183,
           "type": "conduct",
           "handler_kind": "direct_function",
           "handler_symbol": "achievement::load_achievement",
@@ -2342,7 +2342,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 524,
+            "line": 526,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2373,7 +2373,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1890
+            "line": 1891
           }
         ],
         "confidence": "lexical_only"
@@ -2401,7 +2401,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 291,
+            "line": 292,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2432,7 +2432,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_FLAGS.md",
-            "line": 684
+            "line": 685
           }
         ],
         "confidence": "lexical_only"
@@ -2452,7 +2452,7 @@
       "type": "construction",
       "registrations": [
         {
-          "registration_order": 114,
+          "registration_order": 115,
           "type": "construction",
           "handler_kind": "direct_function",
           "handler_symbol": "load_construction",
@@ -2460,7 +2460,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 427,
+            "line": 429,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2491,7 +2491,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 360
+            "line": 361
           }
         ],
         "confidence": "lexical_only"
@@ -2511,7 +2511,7 @@
       "type": "construction_category",
       "registrations": [
         {
-          "registration_order": 112,
+          "registration_order": 113,
           "type": "construction_category",
           "handler_kind": "direct_function",
           "handler_symbol": "construction_categories::load",
@@ -2519,7 +2519,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 425,
+            "line": 427,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2565,7 +2565,7 @@
       "type": "construction_group",
       "registrations": [
         {
-          "registration_order": 113,
+          "registration_order": 114,
           "type": "construction_group",
           "handler_kind": "direct_function",
           "handler_symbol": "construction_groups::load",
@@ -2573,7 +2573,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 426,
+            "line": 428,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2619,7 +2619,7 @@
       "type": "damage_info_order",
       "registrations": [
         {
-          "registration_order": 186,
+          "registration_order": 187,
           "type": "damage_info_order",
           "handler_kind": "direct_function",
           "handler_symbol": "damage_info_order::load_damage_info_orders",
@@ -2627,7 +2627,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 528,
+            "line": 530,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2658,7 +2658,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1502
+            "line": 1503
           }
         ],
         "confidence": "lexical_only"
@@ -2678,7 +2678,7 @@
       "type": "damage_type",
       "registrations": [
         {
-          "registration_order": 185,
+          "registration_order": 186,
           "type": "damage_type",
           "handler_kind": "direct_function",
           "handler_symbol": "damage_type::load_damage_types",
@@ -2686,7 +2686,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 527,
+            "line": 529,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2717,7 +2717,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1918
+            "line": 1919
           }
         ],
         "confidence": "lexical_only"
@@ -2737,7 +2737,7 @@
       "type": "dimension",
       "registrations": [
         {
-          "registration_order": 141,
+          "registration_order": 142,
           "type": "dimension",
           "handler_kind": "direct_function",
           "handler_symbol": "dimension_world::load_dimensions",
@@ -2745,7 +2745,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 464,
+            "line": 466,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2776,7 +2776,7 @@
         "evidence": [
           {
             "path": "doc/JSON/DIMENSIONS.md",
-            "line": 17
+            "line": 18
           }
         ],
         "confidence": "lexical_only"
@@ -2796,7 +2796,7 @@
       "type": "dimension_region_layout",
       "registrations": [
         {
-          "registration_order": 142,
+          "registration_order": 143,
           "type": "dimension_region_layout",
           "handler_kind": "direct_function",
           "handler_symbol": "dimension_region_layout::load_dimension_regions",
@@ -2804,7 +2804,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 465,
+            "line": 467,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2835,7 +2835,7 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_LAYOUT.md",
-            "line": 19
+            "line": 20
           }
         ],
         "confidence": "lexical_only"
@@ -2855,7 +2855,7 @@
       "type": "disease_type",
       "registrations": [
         {
-          "registration_order": 63,
+          "registration_order": 64,
           "type": "disease_type",
           "handler_kind": "direct_function",
           "handler_symbol": "disease_type::load_disease_type",
@@ -2863,7 +2863,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 348,
+            "line": 350,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2894,7 +2894,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1561
+            "line": 1562
           }
         ],
         "confidence": "lexical_only"
@@ -2914,7 +2914,7 @@
       "type": "dream",
       "registrations": [
         {
-          "registration_order": 42,
+          "registration_order": 43,
           "type": "dream",
           "handler_kind": "direct_function",
           "handler_symbol": "dream::load",
@@ -2922,7 +2922,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 327,
+            "line": 329,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -2953,7 +2953,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 515
+            "line": 516
           }
         ],
         "confidence": "lexical_only"
@@ -2973,7 +2973,7 @@
       "type": "effect_migration",
       "registrations": [
         {
-          "registration_order": 107,
+          "registration_order": 108,
           "type": "effect_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "effect_migration::load",
@@ -2981,7 +2981,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 420,
+            "line": 422,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3012,7 +3012,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 116
+            "line": 117
           }
         ],
         "confidence": "lexical_only"
@@ -3040,7 +3040,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 297,
+            "line": 298,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3071,7 +3071,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 15
+            "line": 16
           }
         ],
         "confidence": "lexical_only"
@@ -3201,7 +3201,7 @@
       "type": "effect_type",
       "registrations": [
         {
-          "registration_order": 106,
+          "registration_order": 107,
           "type": "effect_type",
           "handler_kind": "direct_function",
           "handler_symbol": "load_effect_type",
@@ -3209,7 +3209,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 419,
+            "line": 421,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3240,7 +3240,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECTS_JSON.md",
-            "line": 124
+            "line": 125
           }
         ],
         "confidence": "lexical_only"
@@ -3260,7 +3260,7 @@
       "type": "emit",
       "registrations": [
         {
-          "registration_order": 19,
+          "registration_order": 20,
           "type": "emit",
           "handler_kind": "direct_function",
           "handler_symbol": "emit::load_emit",
@@ -3268,7 +3268,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 304,
+            "line": 306,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3299,7 +3299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5827
+            "line": 5828
           }
         ],
         "confidence": "lexical_only"
@@ -3319,7 +3319,7 @@
       "type": "enchantment",
       "registrations": [
         {
-          "registration_order": 60,
+          "registration_order": 61,
           "type": "enchantment",
           "handler_kind": "direct_function",
           "handler_symbol": "enchantment::load_enchantment",
@@ -3327,7 +3327,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 345,
+            "line": 347,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3358,7 +3358,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 122
+            "line": 123
           }
         ],
         "confidence": "lexical_only"
@@ -3378,7 +3378,7 @@
       "type": "end_screen",
       "registrations": [
         {
-          "registration_order": 65,
+          "registration_order": 66,
           "type": "end_screen",
           "handler_kind": "direct_function",
           "handler_symbol": "end_screen::load_end_screen",
@@ -3386,7 +3386,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 350,
+            "line": 352,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3417,7 +3417,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1586
+            "line": 1587
           }
         ],
         "confidence": "lexical_only"
@@ -3437,7 +3437,7 @@
       "type": "event_statistic",
       "registrations": [
         {
-          "registration_order": 179,
+          "registration_order": 180,
           "type": "event_statistic",
           "handler_kind": "direct_function",
           "handler_symbol": "event_statistic::load_statistic",
@@ -3445,7 +3445,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 521,
+            "line": 523,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3457,6 +3457,65 @@
           {
             "path": "data/json/statistics.json",
             "pointer": "/0"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/JSON_INFO.md",
+            "line": 84
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "event_transformation",
+      "registrations": [
+        {
+          "registration_order": 179,
+          "type": "event_transformation",
+          "handler_kind": "direct_function",
+          "handler_symbol": "event_transformation::load_transformation",
+          "handler_expression": "&event_transformation::load_transformation",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 522,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 181,
+        "examples": [
+          {
+            "path": "data/json/statistics.json",
+            "pointer": "/2"
           }
         ],
         "contract_roots": [
@@ -3493,69 +3552,10 @@
       "contract_status": "partial"
     },
     {
-      "type": "event_transformation",
-      "registrations": [
-        {
-          "registration_order": 178,
-          "type": "event_transformation",
-          "handler_kind": "direct_function",
-          "handler_symbol": "event_transformation::load_transformation",
-          "handler_expression": "&event_transformation::load_transformation",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 520,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 181,
-        "examples": [
-          {
-            "path": "data/json/statistics.json",
-            "pointer": "/2"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/JSON_INFO.md",
-            "line": 82
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
       "type": "explosion_light",
       "registrations": [
         {
-          "registration_order": 18,
+          "registration_order": 19,
           "type": "explosion_light",
           "handler_kind": "direct_function",
           "handler_symbol": "explosion_lights::load",
@@ -3563,7 +3563,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 303,
+            "line": 305,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3609,7 +3609,7 @@
       "type": "faction",
       "registrations": [
         {
-          "registration_order": 148,
+          "registration_order": 149,
           "type": "faction",
           "handler_kind": "direct_function",
           "handler_symbol": "faction_template::load",
@@ -3617,7 +3617,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 483,
+            "line": 485,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3648,7 +3648,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 100
+            "line": 101
           }
         ],
         "confidence": "lexical_only"
@@ -3668,7 +3668,7 @@
       "type": "faction_mission",
       "registrations": [
         {
-          "registration_order": 190,
+          "registration_order": 191,
           "type": "faction_mission",
           "handler_kind": "direct_function",
           "handler_symbol": "faction_mission::load_faction_missions",
@@ -3676,7 +3676,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 532,
+            "line": 534,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3707,7 +3707,7 @@
         "evidence": [
           {
             "path": "doc/JSON/FACTION_MISSIONS.md",
-            "line": 30
+            "line": 31
           }
         ],
         "confidence": "lexical_only"
@@ -3735,7 +3735,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 292,
+            "line": 293,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3766,7 +3766,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5365
+            "line": 5366
           }
         ],
         "confidence": "lexical_only"
@@ -3794,7 +3794,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 294,
+            "line": 295,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3825,7 +3825,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1721
+            "line": 1722
           }
         ],
         "confidence": "lexical_only"
@@ -3853,7 +3853,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 295,
+            "line": 296,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3884,7 +3884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 883
+            "line": 942
           }
         ],
         "confidence": "lexical_only"
@@ -3912,7 +3912,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 298,
+            "line": 299,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -3943,7 +3943,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 280
+            "line": 339
           }
         ],
         "confidence": "lexical_only"
@@ -3971,7 +3971,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 299,
+            "line": 300,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4002,7 +4002,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 303
+            "line": 304
           }
         ],
         "confidence": "lexical_only"
@@ -4022,7 +4022,7 @@
       "type": "forest_biome_component",
       "registrations": [
         {
-          "registration_order": 137,
+          "registration_order": 138,
           "type": "forest_biome_component",
           "handler_kind": "direct_function",
           "handler_symbol": "forest_biome_component::load_forest_biome_feature",
@@ -4030,7 +4030,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 457,
+            "line": 459,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4061,7 +4061,7 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 283
+            "line": 284
           }
         ],
         "confidence": "lexical_only"
@@ -4081,7 +4081,7 @@
       "type": "forest_biome_mapgen",
       "registrations": [
         {
-          "registration_order": 138,
+          "registration_order": 139,
           "type": "forest_biome_mapgen",
           "handler_kind": "direct_function",
           "handler_symbol": "forest_biome_mapgen::load_forest_biome_mapgen",
@@ -4089,7 +4089,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 459,
+            "line": 461,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4120,7 +4120,7 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 231
+            "line": 232
           }
         ],
         "confidence": "lexical_only"
@@ -4140,7 +4140,7 @@
       "type": "furniture",
       "registrations": [
         {
-          "registration_order": 46,
+          "registration_order": 47,
           "type": "furniture",
           "handler_kind": "direct_function",
           "handler_symbol": "load_furniture",
@@ -4148,14 +4148,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 331,
+            "line": 333,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1069,
+        "occurrences": 1070,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -4179,7 +4179,7 @@
         "evidence": [
           {
             "path": "doc/JSON/CLIMBING.md",
-            "line": 58
+            "line": 59
           }
         ],
         "confidence": "lexical_only"
@@ -4199,7 +4199,7 @@
       "type": "gate",
       "registrations": [
         {
-          "registration_order": 157,
+          "registration_order": 158,
           "type": "gate",
           "handler_kind": "direct_function",
           "handler_symbol": "gates::load",
@@ -4207,7 +4207,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 495,
+            "line": 497,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4238,7 +4238,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EXAMINE.md",
-            "line": 71
+            "line": 72
           }
         ],
         "confidence": "lexical_only"
@@ -4258,7 +4258,7 @@
       "type": "harvest",
       "registrations": [
         {
-          "registration_order": 162,
+          "registration_order": 163,
           "type": "harvest",
           "handler_kind": "direct_function",
           "handler_symbol": "harvest_list::load_harvest_list",
@@ -4266,7 +4266,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 502,
+            "line": 504,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4297,7 +4297,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1908
+            "line": 1909
           }
         ],
         "confidence": "lexical_only"
@@ -4317,7 +4317,7 @@
       "type": "harvest_drop_type",
       "registrations": [
         {
-          "registration_order": 161,
+          "registration_order": 162,
           "type": "harvest_drop_type",
           "handler_kind": "direct_function",
           "handler_symbol": "harvest_drop_type::load_harvest_drop_types",
@@ -4325,7 +4325,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 501,
+            "line": 503,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4356,7 +4356,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3228
+            "line": 3229
           }
         ],
         "confidence": "lexical_only"
@@ -4376,7 +4376,7 @@
       "type": "help",
       "registrations": [
         {
-          "registration_order": 20,
+          "registration_order": 21,
           "type": "help",
           "handler_kind": "direct_function",
           "handler_symbol": "help::load",
@@ -4384,7 +4384,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 305,
+            "line": 307,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4415,7 +4415,7 @@
         "evidence": [
           {
             "path": "doc/JSON/GUIDE_COMESTIBLES.md",
-            "line": 15
+            "line": 16
           }
         ],
         "confidence": "lexical_only"
@@ -4435,7 +4435,7 @@
       "type": "hit_range",
       "registrations": [
         {
-          "registration_order": 61,
+          "registration_order": 62,
           "type": "hit_range",
           "handler_kind": "direct_function",
           "handler_symbol": "Creature::load_hit_range",
@@ -4443,7 +4443,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 346,
+            "line": 348,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4489,7 +4489,7 @@
       "type": "item_action",
       "registrations": [
         {
-          "registration_order": 69,
+          "registration_order": 70,
           "type": "item_action",
           "handler_kind": "lambda",
           "handler_symbol": "item_action_generator::generator",
@@ -4497,7 +4497,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 363,
+            "line": 365,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4543,7 +4543,7 @@
       "type": "item_group",
       "registrations": [
         {
-          "registration_order": 67,
+          "registration_order": 68,
           "type": "item_group",
           "handler_kind": "lambda",
           "handler_symbol": "load_item_group",
@@ -4551,14 +4551,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 357,
+            "line": 359,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 7816,
+        "occurrences": 7817,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4582,7 +4582,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2566
+            "line": 2567
           }
         ],
         "confidence": "lexical_only"
@@ -4610,7 +4610,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 289,
+            "line": 290,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4641,7 +4641,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MAGIC.md",
-            "line": 695
+            "line": 696
           }
         ],
         "confidence": "lexical_only"
@@ -4669,14 +4669,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 288,
+            "line": 289,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 929,
+        "occurrences": 930,
         "examples": [
           {
             "path": "data/json/flags.json",
@@ -4700,7 +4700,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_FLAGS.md",
-            "line": 86
+            "line": 87
           }
         ],
         "confidence": "lexical_only"
@@ -4720,7 +4720,7 @@
       "type": "limb_score",
       "registrations": [
         {
-          "registration_order": 166,
+          "registration_order": 167,
           "type": "limb_score",
           "handler_kind": "direct_function",
           "handler_symbol": "limb_score::load_limb_scores",
@@ -4728,7 +4728,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 508,
+            "line": 510,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4759,7 +4759,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECTS_JSON.md",
-            "line": 454
+            "line": 455
           }
         ],
         "confidence": "lexical_only"
@@ -4779,7 +4779,7 @@
       "type": "magic_type",
       "registrations": [
         {
-          "registration_order": 175,
+          "registration_order": 176,
           "type": "magic_type",
           "handler_kind": "direct_function",
           "handler_symbol": "magic_type::load_magic_type",
@@ -4787,7 +4787,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 517,
+            "line": 519,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4818,7 +4818,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MAGIC.md",
-            "line": 92
+            "line": 93
           }
         ],
         "confidence": "lexical_only"
@@ -4838,7 +4838,7 @@
       "type": "map_extra",
       "registrations": [
         {
-          "registration_order": 123,
+          "registration_order": 124,
           "type": "map_extra",
           "handler_kind": "direct_function",
           "handler_symbol": "MapExtras::load",
@@ -4846,7 +4846,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 436,
+            "line": 438,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4877,7 +4877,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MAPGEN.md",
-            "line": 97
+            "line": 98
           }
         ],
         "confidence": "lexical_only"
@@ -4897,7 +4897,7 @@
       "type": "map_extra_collection",
       "registrations": [
         {
-          "registration_order": 139,
+          "registration_order": 140,
           "type": "map_extra_collection",
           "handler_kind": "direct_function",
           "handler_symbol": "map_extra_collection::load_map_extra_collection",
@@ -4905,7 +4905,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 461,
+            "line": 463,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -4936,7 +4936,7 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 521
+            "line": 522
           }
         ],
         "confidence": "lexical_only"
@@ -4956,7 +4956,7 @@
       "type": "mapgen",
       "registrations": [
         {
-          "registration_order": 115,
+          "registration_order": 116,
           "type": "mapgen",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mapgen",
@@ -4964,14 +4964,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 428,
+            "line": 430,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9640,
+        "occurrences": 9645,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -4995,7 +4995,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 159
+            "line": 160
           }
         ],
         "confidence": "lexical_only"
@@ -5015,7 +5015,7 @@
       "type": "martial_art",
       "registrations": [
         {
-          "registration_order": 103,
+          "registration_order": 104,
           "type": "martial_art",
           "handler_kind": "direct_function",
           "handler_symbol": "load_martial_art",
@@ -5023,7 +5023,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 416,
+            "line": 418,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5054,7 +5054,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1882
+            "line": 1883
           }
         ],
         "confidence": "lexical_only"
@@ -5074,7 +5074,7 @@
       "type": "material",
       "registrations": [
         {
-          "registration_order": 25,
+          "registration_order": 26,
           "type": "material",
           "handler_kind": "direct_function",
           "handler_symbol": "materials::load",
@@ -5082,7 +5082,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 310,
+            "line": 312,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5113,7 +5113,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 50
+            "line": 51
           }
         ],
         "confidence": "lexical_only"
@@ -5133,7 +5133,7 @@
       "type": "mission_definition",
       "registrations": [
         {
-          "registration_order": 159,
+          "registration_order": 160,
           "type": "mission_definition",
           "handler_kind": "lambda",
           "handler_symbol": "mission_type::load_mission_type",
@@ -5141,7 +5141,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 497,
+            "line": 499,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5172,7 +5172,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MISSIONS_JSON.md",
-            "line": 50
+            "line": 51
           }
         ],
         "confidence": "lexical_only"
@@ -5192,7 +5192,7 @@
       "type": "mod_migration",
       "registrations": [
         {
-          "registration_order": 189,
+          "registration_order": 190,
           "type": "mod_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "mod_migrations::load",
@@ -5200,7 +5200,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 531,
+            "line": 533,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5231,7 +5231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 447
+            "line": 448
           }
         ],
         "confidence": "lexical_only"
@@ -5251,7 +5251,7 @@
       "type": "mod_tileset",
       "registrations": [
         {
-          "registration_order": 191,
+          "registration_order": 192,
           "type": "mod_tileset",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mod_tileset",
@@ -5261,12 +5261,12 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 534,
+            "line": 536,
             "symbol": "DynamicDataLoader::initialize"
           }
         },
         {
-          "registration_order": 192,
+          "registration_order": 193,
           "type": "mod_tileset",
           "handler_kind": "callable",
           "handler_symbol": "load_ignored_type",
@@ -5276,7 +5276,7 @@
           ],
           "source": {
             "path": "src/init.cpp",
-            "line": 537,
+            "line": 539,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4504
+            "line": 4505
           }
         ],
         "confidence": "lexical_only"
@@ -5327,7 +5327,7 @@
       "type": "monster_adjustment",
       "registrations": [
         {
-          "registration_order": 93,
+          "registration_order": 94,
           "type": "monster_adjustment",
           "handler_kind": "direct_function",
           "handler_symbol": "load_monster_adjustment",
@@ -5335,7 +5335,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 405,
+            "line": 407,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5381,7 +5381,7 @@
       "type": "monster_attack",
       "registrations": [
         {
-          "registration_order": 163,
+          "registration_order": 164,
           "type": "monster_attack",
           "handler_kind": "lambda",
           "handler_symbol": "MonsterGenerator::generator",
@@ -5389,7 +5389,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 503,
+            "line": 505,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5420,7 +5420,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 83
+            "line": 84
           }
         ],
         "confidence": "lexical_only"
@@ -5440,7 +5440,7 @@
       "type": "monster_flag",
       "registrations": [
         {
-          "registration_order": 91,
+          "registration_order": 92,
           "type": "monster_flag",
           "handler_kind": "direct_function",
           "handler_symbol": "mon_flag::load_mon_flags",
@@ -5448,7 +5448,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 402,
+            "line": 404,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5479,7 +5479,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MONSTERS.md",
-            "line": 575
+            "line": 576
           }
         ],
         "confidence": "lexical_only"
@@ -5499,7 +5499,7 @@
       "type": "monstergroup",
       "registrations": [
         {
-          "registration_order": 49,
+          "registration_order": 50,
           "type": "monstergroup",
           "handler_kind": "direct_function",
           "handler_symbol": "MonsterGroupManager::LoadMonsterGroup",
@@ -5507,7 +5507,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 334,
+            "line": 336,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5538,7 +5538,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2566
+            "line": 2567
           }
         ],
         "confidence": "lexical_only"
@@ -5558,7 +5558,7 @@
       "type": "mood_face",
       "registrations": [
         {
-          "registration_order": 39,
+          "registration_order": 40,
           "type": "mood_face",
           "handler_kind": "direct_function",
           "handler_symbol": "mood_face::load_mood_faces",
@@ -5566,7 +5566,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 324,
+            "line": 326,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5597,7 +5597,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2665
+            "line": 2666
           }
         ],
         "confidence": "lexical_only"
@@ -5617,7 +5617,7 @@
       "type": "morale_type",
       "registrations": [
         {
-          "registration_order": 172,
+          "registration_order": 173,
           "type": "morale_type",
           "handler_kind": "direct_function",
           "handler_symbol": "morale_type_data::load_type",
@@ -5625,7 +5625,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 514,
+            "line": 516,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5656,7 +5656,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4420
+            "line": 4421
           }
         ],
         "confidence": "lexical_only"
@@ -5676,7 +5676,7 @@
       "type": "movement_mode",
       "registrations": [
         {
-          "registration_order": 23,
+          "registration_order": 24,
           "type": "movement_mode",
           "handler_kind": "direct_function",
           "handler_symbol": "move_mode::load_move_mode",
@@ -5684,7 +5684,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 308,
+            "line": 310,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5715,7 +5715,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1799
+            "line": 1800
           }
         ],
         "confidence": "lexical_only"
@@ -5735,7 +5735,7 @@
       "type": "mutation",
       "registrations": [
         {
-          "registration_order": 45,
+          "registration_order": 46,
           "type": "mutation",
           "handler_kind": "direct_function",
           "handler_symbol": "mutation_branch::load_trait",
@@ -5743,7 +5743,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 330,
+            "line": 332,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5774,7 +5774,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 94
+            "line": 95
           }
         ],
         "confidence": "lexical_only"
@@ -5794,7 +5794,7 @@
       "type": "mutation_category",
       "registrations": [
         {
-          "registration_order": 43,
+          "registration_order": 44,
           "type": "mutation_category",
           "handler_kind": "direct_function",
           "handler_symbol": "mutation_category_trait::load",
@@ -5802,7 +5802,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 328,
+            "line": 330,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5833,7 +5833,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 573
+            "line": 574
           }
         ],
         "confidence": "lexical_only"
@@ -5853,7 +5853,7 @@
       "type": "mutation_type",
       "registrations": [
         {
-          "registration_order": 44,
+          "registration_order": 45,
           "type": "mutation_type",
           "handler_kind": "direct_function",
           "handler_symbol": "load_mutation_type",
@@ -5861,7 +5861,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 329,
+            "line": 331,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5907,7 +5907,7 @@
       "type": "named_color",
       "registrations": [
         {
-          "registration_order": 79,
+          "registration_order": 80,
           "type": "named_color",
           "handler_kind": "direct_function",
           "handler_symbol": "RGBColor::load_named_color",
@@ -5915,7 +5915,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 377,
+            "line": 379,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -5961,7 +5961,7 @@
       "type": "nested_category",
       "registrations": [
         {
-          "registration_order": 98,
+          "registration_order": 99,
           "type": "nested_category",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_nested_category",
@@ -5969,7 +5969,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 410,
+            "line": 412,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6000,7 +6000,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md",
-            "line": 354
+            "line": 355
           }
         ],
         "confidence": "lexical_only"
@@ -6020,7 +6020,7 @@
       "type": "npc",
       "registrations": [
         {
-          "registration_order": 149,
+          "registration_order": 150,
           "type": "npc",
           "handler_kind": "direct_function",
           "handler_symbol": "npc_template::load",
@@ -6028,14 +6028,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 484,
+            "line": 486,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 305,
+        "occurrences": 306,
         "examples": [
           {
             "path": "data/json/npcs/Kindred/NPC_Brigitte_LaCroix.json",
@@ -6059,7 +6059,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 15
+            "line": 16
           }
         ],
         "confidence": "lexical_only"
@@ -6079,7 +6079,7 @@
       "type": "npc_class",
       "registrations": [
         {
-          "registration_order": 150,
+          "registration_order": 151,
           "type": "npc_class",
           "handler_kind": "direct_function",
           "handler_symbol": "npc_class::load_npc_class",
@@ -6087,14 +6087,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 485,
+            "line": 487,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 286,
+        "occurrences": 287,
         "examples": [
           {
             "path": "data/json/npcs/Kindred/NPC_Brigitte_LaCroix.json",
@@ -6118,7 +6118,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 41
+            "line": 42
           }
         ],
         "confidence": "lexical_only"
@@ -6138,7 +6138,7 @@
       "type": "omt_placeholder",
       "registrations": [
         {
-          "registration_order": 124,
+          "registration_order": 125,
           "type": "omt_placeholder",
           "handler_kind": "direct_function",
           "handler_symbol": "map_data_placeholders::load",
@@ -6146,7 +6146,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 437,
+            "line": 439,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6200,7 +6200,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 287,
+            "line": 288,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4705
+            "line": 4706
           }
         ],
         "confidence": "lexical_only"
@@ -6251,7 +6251,7 @@
       "type": "oter_id_migration",
       "registrations": [
         {
-          "registration_order": 108,
+          "registration_order": 109,
           "type": "oter_id_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap::load_oter_id_migration",
@@ -6259,7 +6259,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 421,
+            "line": 423,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6290,7 +6290,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 338
+            "line": 339
           }
         ],
         "confidence": "lexical_only"
@@ -6310,7 +6310,7 @@
       "type": "oter_vision",
       "registrations": [
         {
-          "registration_order": 111,
+          "registration_order": 112,
           "type": "oter_vision",
           "handler_kind": "direct_function",
           "handler_symbol": "oter_vision::load_oter_vision",
@@ -6318,7 +6318,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 424,
+            "line": 426,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6349,7 +6349,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OVERMAP.md",
-            "line": 25
+            "line": 26
           }
         ],
         "confidence": "lexical_only"
@@ -6369,7 +6369,7 @@
       "type": "overlay_order",
       "registrations": [
         {
-          "registration_order": 158,
+          "registration_order": 159,
           "type": "overlay_order",
           "handler_kind": "direct_function",
           "handler_symbol": "load_overlay_ordering",
@@ -6377,7 +6377,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 496,
+            "line": 498,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4468
+            "line": 4469
           }
         ],
         "confidence": "lexical_only"
@@ -6428,7 +6428,7 @@
       "type": "overmap_connection",
       "registrations": [
         {
-          "registration_order": 117,
+          "registration_order": 118,
           "type": "overmap_connection",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_connections::load",
@@ -6436,7 +6436,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 430,
+            "line": 432,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6467,7 +6467,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OVERMAP.md",
-            "line": 23
+            "line": 24
           }
         ],
         "confidence": "lexical_only"
@@ -6487,7 +6487,7 @@
       "type": "overmap_land_use_code",
       "registrations": [
         {
-          "registration_order": 116,
+          "registration_order": 117,
           "type": "overmap_land_use_code",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_land_use_codes::load",
@@ -6495,7 +6495,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 429,
+            "line": 431,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6541,7 +6541,7 @@
       "type": "overmap_location",
       "registrations": [
         {
-          "registration_order": 118,
+          "registration_order": 119,
           "type": "overmap_location",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_locations::load",
@@ -6549,7 +6549,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 431,
+            "line": 433,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6580,7 +6580,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OVERMAP.md",
-            "line": 24
+            "line": 25
           }
         ],
         "confidence": "lexical_only"
@@ -6600,7 +6600,7 @@
       "type": "overmap_special",
       "registrations": [
         {
-          "registration_order": 120,
+          "registration_order": 121,
           "type": "overmap_special",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_specials::load",
@@ -6608,7 +6608,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 433,
+            "line": 435,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6659,7 +6659,7 @@
       "type": "overmap_special_migration",
       "registrations": [
         {
-          "registration_order": 121,
+          "registration_order": 122,
           "type": "overmap_special_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_special_migration::load_migrations",
@@ -6667,7 +6667,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 434,
+            "line": 436,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6698,7 +6698,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 349
+            "line": 350
           }
         ],
         "confidence": "lexical_only"
@@ -6718,7 +6718,7 @@
       "type": "overmap_terrain",
       "registrations": [
         {
-          "registration_order": 110,
+          "registration_order": 111,
           "type": "overmap_terrain",
           "handler_kind": "direct_function",
           "handler_symbol": "overmap_terrains::load",
@@ -6726,7 +6726,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 423,
+            "line": 425,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6757,7 +6757,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 374
+            "line": 375
           }
         ],
         "confidence": "lexical_only"
@@ -6777,7 +6777,7 @@
       "type": "palette",
       "registrations": [
         {
-          "registration_order": 164,
+          "registration_order": 165,
           "type": "palette",
           "handler_kind": "callable",
           "handler_symbol": "mapgen_palette::load",
@@ -6785,14 +6785,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 506,
+            "line": 508,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 667,
+        "occurrences": 668,
         "examples": [
           {
             "path": "data/json/mapgen/abandoned_shopping_plaza.json",
@@ -6816,7 +6816,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_Mapping_Guides/Guide_for_beginning_mapgen.md",
-            "line": 43
+            "line": 44
           }
         ],
         "confidence": "lexical_only"
@@ -6836,7 +6836,7 @@
       "type": "pet_slot",
       "registrations": [
         {
-          "registration_order": 36,
+          "registration_order": 37,
           "type": "pet_slot",
           "handler_kind": "direct_function",
           "handler_symbol": "load_pet_slots",
@@ -6844,7 +6844,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 321,
+            "line": 323,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6890,7 +6890,7 @@
       "type": "playlist",
       "registrations": [
         {
-          "registration_order": 156,
+          "registration_order": 157,
           "type": "playlist",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_playlist",
@@ -6898,7 +6898,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 493,
+            "line": 495,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6952,7 +6952,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 293,
+            "line": 294,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -6983,7 +6983,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OVERMAP.md",
-            "line": 349
+            "line": 350
           }
         ],
         "confidence": "lexical_only"
@@ -7003,7 +7003,7 @@
       "type": "practice",
       "registrations": [
         {
-          "registration_order": 97,
+          "registration_order": 98,
           "type": "practice",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_practice",
@@ -7011,7 +7011,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 409,
+            "line": 411,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7042,7 +7042,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 149
+            "line": 150
           }
         ],
         "confidence": "lexical_only"
@@ -7062,7 +7062,7 @@
       "type": "profession",
       "registrations": [
         {
-          "registration_order": 29,
+          "registration_order": 30,
           "type": "profession",
           "handler_kind": "direct_function",
           "handler_symbol": "profession::load_profession",
@@ -7070,7 +7070,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 314,
+            "line": 316,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7101,7 +7101,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 640
+            "line": 641
           }
         ],
         "confidence": "lexical_only"
@@ -7121,7 +7121,7 @@
       "type": "profession_blacklist",
       "registrations": [
         {
-          "registration_order": 30,
+          "registration_order": 31,
           "type": "profession_blacklist",
           "handler_kind": "direct_function",
           "handler_symbol": "profession_blacklist::load_profession_blacklist",
@@ -7129,7 +7129,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 315,
+            "line": 317,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7175,7 +7175,7 @@
       "type": "profession_group",
       "registrations": [
         {
-          "registration_order": 31,
+          "registration_order": 32,
           "type": "profession_group",
           "handler_kind": "direct_function",
           "handler_symbol": "profession_group::load_profession_group",
@@ -7183,7 +7183,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 316,
+            "line": 318,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7214,7 +7214,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2153
+            "line": 2154
           }
         ],
         "confidence": "lexical_only"
@@ -7234,7 +7234,7 @@
       "type": "profession_item_substitutions",
       "registrations": [
         {
-          "registration_order": 32,
+          "registration_order": 33,
           "type": "profession_item_substitutions",
           "handler_kind": "direct_function",
           "handler_symbol": "profession::load_item_substitutions",
@@ -7242,7 +7242,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 317,
+            "line": 319,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7273,7 +7273,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1984
+            "line": 1985
           }
         ],
         "confidence": "lexical_only"
@@ -7293,7 +7293,7 @@
       "type": "proficiency",
       "registrations": [
         {
-          "registration_order": 33,
+          "registration_order": 34,
           "type": "proficiency",
           "handler_kind": "direct_function",
           "handler_symbol": "proficiency::load_proficiencies",
@@ -7301,7 +7301,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 318,
+            "line": 320,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7332,7 +7332,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 901
+            "line": 902
           }
         ],
         "confidence": "lexical_only"
@@ -7352,7 +7352,7 @@
       "type": "proficiency_category",
       "registrations": [
         {
-          "registration_order": 34,
+          "registration_order": 35,
           "type": "proficiency_category",
           "handler_kind": "direct_function",
           "handler_symbol": "proficiency_category::load_proficiency_categories",
@@ -7360,7 +7360,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 319,
+            "line": 321,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7391,7 +7391,7 @@
         "evidence": [
           {
             "path": "doc/JSON/PROFICIENCY.md",
-            "line": 108
+            "line": 109
           }
         ],
         "confidence": "lexical_only"
@@ -7411,7 +7411,7 @@
       "type": "proficiency_migration",
       "registrations": [
         {
-          "registration_order": 35,
+          "registration_order": 36,
           "type": "proficiency_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "proficiency_migration::load",
@@ -7419,7 +7419,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 320,
+            "line": 322,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7450,7 +7450,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 183
+            "line": 184
           }
         ],
         "confidence": "lexical_only"
@@ -7470,7 +7470,7 @@
       "type": "recipe",
       "registrations": [
         {
-          "registration_order": 95,
+          "registration_order": 96,
           "type": "recipe",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_recipe",
@@ -7478,14 +7478,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 407,
+            "line": 409,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 8216,
+        "occurrences": 8214,
         "examples": [
           {
             "path": "data/json/items/armor/jewelry.json",
@@ -7509,7 +7509,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 20
+            "line": 21
           }
         ],
         "confidence": "lexical_only"
@@ -7529,7 +7529,7 @@
       "type": "recipe_category",
       "registrations": [
         {
-          "registration_order": 94,
+          "registration_order": 95,
           "type": "recipe_category",
           "handler_kind": "direct_function",
           "handler_symbol": "load_recipe_category",
@@ -7537,7 +7537,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 406,
+            "line": 408,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7583,7 +7583,7 @@
       "type": "recipe_group",
       "registrations": [
         {
-          "registration_order": 99,
+          "registration_order": 100,
           "type": "recipe_group",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_group::load",
@@ -7591,7 +7591,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 411,
+            "line": 413,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7622,7 +7622,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 52
+            "line": 53
           }
         ],
         "confidence": "lexical_only"
@@ -7642,7 +7642,7 @@
       "type": "region_settings",
       "registrations": [
         {
-          "registration_order": 140,
+          "registration_order": 141,
           "type": "region_settings",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings::load_region_settings",
@@ -7650,7 +7650,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 463,
+            "line": 465,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7681,7 +7681,7 @@
         "evidence": [
           {
             "path": "doc/JSON/DIMENSIONS.md",
-            "line": 14
+            "line": 15
           }
         ],
         "confidence": "lexical_only"
@@ -7701,7 +7701,7 @@
       "type": "region_settings_city",
       "registrations": [
         {
-          "registration_order": 132,
+          "registration_order": 133,
           "type": "region_settings_city",
           "handler_kind": "direct_function",
           "handler_symbol": "region_settings_city::load_region_settings_city",
@@ -7709,7 +7709,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 447,
+            "line": 449,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -7721,360 +7721,6 @@
           {
             "path": "data/json/region_settings/region_settings/regional_map_settings.json",
             "pointer": "/24"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 46
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_forest",
-      "registrations": [
-        {
-          "registration_order": 129,
-          "type": "region_settings_forest",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_forest::load_region_settings_forest",
-          "handler_expression": "&region_settings_forest::load_region_settings_forest",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 443,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 8,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/6"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 42
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_forest_mapgen",
-      "registrations": [
-        {
-          "registration_order": 135,
-          "type": "region_settings_forest_mapgen",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_forest_mapgen::load_region_settings_forest_mapgen",
-          "handler_expression": "&region_settings_forest_mapgen::load_region_settings_forest_mapgen",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 453,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 7,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/8"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 43
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_forest_trail",
-      "registrations": [
-        {
-          "registration_order": 131,
-          "type": "region_settings_forest_trail",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_forest_trail::load_region_settings_forest_trail",
-          "handler_expression": "&region_settings_forest_trail::load_region_settings_forest_trail",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 445,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 5,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/7"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 44
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_highway",
-      "registrations": [
-        {
-          "registration_order": 130,
-          "type": "region_settings_highway",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_highway::load_region_settings_highway",
-          "handler_expression": "&region_settings_highway::load_region_settings_highway",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 444,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 1,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/4"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 45
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_lake",
-      "registrations": [
-        {
-          "registration_order": 126,
-          "type": "region_settings_lake",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_lake::load_region_settings_lake",
-          "handler_expression": "&region_settings_lake::load_region_settings_lake",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 440,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 4,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/2"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 39
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_map_extras",
-      "registrations": [
-        {
-          "registration_order": 136,
-          "type": "region_settings_map_extras",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_map_extras::load_region_settings_map_extras",
-          "handler_expression": "&region_settings_map_extras::load_region_settings_map_extras",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 455,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 10,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/dimensions/portal_storm_dungeon.json",
-            "pointer": "/7"
           }
         ],
         "contract_roots": [
@@ -8111,18 +7757,136 @@
       "contract_status": "partial"
     },
     {
-      "type": "region_settings_ocean",
+      "type": "region_settings_forest",
       "registrations": [
         {
-          "registration_order": 127,
-          "type": "region_settings_ocean",
+          "registration_order": 130,
+          "type": "region_settings_forest",
           "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_ocean::load_region_settings_ocean",
-          "handler_expression": "&region_settings_ocean::load_region_settings_ocean",
+          "handler_symbol": "region_settings_forest::load_region_settings_forest",
+          "handler_expression": "&region_settings_forest::load_region_settings_forest",
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 441,
+            "line": 445,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 8,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/6"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 43
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_forest_mapgen",
+      "registrations": [
+        {
+          "registration_order": 136,
+          "type": "region_settings_forest_mapgen",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_forest_mapgen::load_region_settings_forest_mapgen",
+          "handler_expression": "&region_settings_forest_mapgen::load_region_settings_forest_mapgen",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 455,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 7,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/8"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 44
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_forest_trail",
+      "registrations": [
+        {
+          "registration_order": 132,
+          "type": "region_settings_forest_trail",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_forest_trail::load_region_settings_forest_trail",
+          "handler_expression": "&region_settings_forest_trail::load_region_settings_forest_trail",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 447,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8133,7 +7897,125 @@
         "examples": [
           {
             "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/3"
+            "pointer": "/7"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 45
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_highway",
+      "registrations": [
+        {
+          "registration_order": 131,
+          "type": "region_settings_highway",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_highway::load_region_settings_highway",
+          "handler_expression": "&region_settings_highway::load_region_settings_highway",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 446,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 1,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/4"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 46
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_lake",
+      "registrations": [
+        {
+          "registration_order": 127,
+          "type": "region_settings_lake",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_lake::load_region_settings_lake",
+          "handler_expression": "&region_settings_lake::load_region_settings_lake",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 442,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 4,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/2"
           }
         ],
         "contract_roots": [
@@ -8170,136 +8052,18 @@
       "contract_status": "partial"
     },
     {
-      "type": "region_settings_ravine",
+      "type": "region_settings_map_extras",
       "registrations": [
         {
-          "registration_order": 128,
-          "type": "region_settings_ravine",
+          "registration_order": 137,
+          "type": "region_settings_map_extras",
           "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_ravine::load_region_settings_ravine",
-          "handler_expression": "&region_settings_ravine::load_region_settings_ravine",
+          "handler_symbol": "region_settings_map_extras::load_region_settings_map_extras",
+          "handler_expression": "&region_settings_map_extras::load_region_settings_map_extras",
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 442,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 5,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
-            "pointer": "/0"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 41
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_river",
-      "registrations": [
-        {
-          "registration_order": 125,
-          "type": "region_settings_river",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_river::load_region_settings_river",
-          "handler_expression": "&region_settings_river::load_region_settings_river",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 439,
-            "symbol": "DynamicDataLoader::initialize"
-          }
-        }
-      ],
-      "compile_conditional_variants": false,
-      "instance_evidence": {
-        "occurrences": 4,
-        "examples": [
-          {
-            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
-            "pointer": "/1"
-          }
-        ],
-        "contract_roots": [
-          "data/core",
-          "data/json",
-          "data/mods",
-          "data/sound"
-        ]
-      },
-      "schema": {
-        "status": "none",
-        "paths": [],
-        "note": "No general validator-backed Schema exists for this object type."
-      },
-      "documentation": {
-        "status": "lexically_mentioned",
-        "evidence": [
-          {
-            "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 38
-          }
-        ],
-        "confidence": "lexical_only"
-      },
-      "field_contract": {
-        "status": "unclassified",
-        "required_fields": [],
-        "optional_fields": [],
-        "inheritance": "unknown",
-        "copy_from": "unknown",
-        "validation": "unknown",
-        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
-      },
-      "contract_status": "partial"
-    },
-    {
-      "type": "region_settings_terrain_furniture",
-      "registrations": [
-        {
-          "registration_order": 133,
-          "type": "region_settings_terrain_furniture",
-          "handler_kind": "direct_function",
-          "handler_symbol": "region_settings_terrain_furniture::load_region_settings_terrain_furniture",
-          "handler_expression": "&region_settings_terrain_furniture::load_region_settings_terrain_furniture",
-          "compile_context": [],
-          "source": {
-            "path": "src/init.cpp",
-            "line": 449,
+            "line": 457,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8309,8 +8073,8 @@
         "occurrences": 10,
         "examples": [
           {
-            "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
-            "pointer": "/1"
+            "path": "data/json/region_settings/region_settings/dimensions/portal_storm_dungeon.json",
+            "pointer": "/7"
           }
         ],
         "contract_roots": [
@@ -8347,10 +8111,246 @@
       "contract_status": "partial"
     },
     {
-      "type": "region_terrain_furniture",
+      "type": "region_settings_ocean",
+      "registrations": [
+        {
+          "registration_order": 128,
+          "type": "region_settings_ocean",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_ocean::load_region_settings_ocean",
+          "handler_expression": "&region_settings_ocean::load_region_settings_ocean",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 443,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 5,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/3"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 41
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_ravine",
+      "registrations": [
+        {
+          "registration_order": 129,
+          "type": "region_settings_ravine",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_ravine::load_region_settings_ravine",
+          "handler_expression": "&region_settings_ravine::load_region_settings_ravine",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 444,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 5,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
+            "pointer": "/0"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 42
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_river",
+      "registrations": [
+        {
+          "registration_order": 126,
+          "type": "region_settings_river",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_river::load_region_settings_river",
+          "handler_expression": "&region_settings_river::load_region_settings_river",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 441,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 4,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/regional_map_settings.json",
+            "pointer": "/1"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 39
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_settings_terrain_furniture",
       "registrations": [
         {
           "registration_order": 134,
+          "type": "region_settings_terrain_furniture",
+          "handler_kind": "direct_function",
+          "handler_symbol": "region_settings_terrain_furniture::load_region_settings_terrain_furniture",
+          "handler_expression": "&region_settings_terrain_furniture::load_region_settings_terrain_furniture",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 451,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 10,
+        "examples": [
+          {
+            "path": "data/json/region_settings/region_settings/dimensions/highland_dimension.json",
+            "pointer": "/1"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "lexically_mentioned",
+        "evidence": [
+          {
+            "path": "doc/JSON/REGION_SETTINGS.md",
+            "line": 49
+          }
+        ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "region_terrain_furniture",
+      "registrations": [
+        {
+          "registration_order": 135,
           "type": "region_terrain_furniture",
           "handler_kind": "direct_function",
           "handler_symbol": "region_terrain_furniture::load_region_terrain_furniture",
@@ -8358,7 +8358,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 451,
+            "line": 453,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8389,9 +8389,63 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 89
+            "line": 90
           }
         ],
+        "confidence": "lexical_only"
+      },
+      "field_contract": {
+        "status": "unclassified",
+        "required_fields": [],
+        "optional_fields": [],
+        "inheritance": "unknown",
+        "copy_from": "unknown",
+        "validation": "unknown",
+        "note": "No field contract is inferred from instance frequency. Only mandatory()/optional() or validator-backed evidence may classify it."
+      },
+      "contract_status": "partial"
+    },
+    {
+      "type": "regional_climate_station",
+      "registrations": [
+        {
+          "registration_order": 17,
+          "type": "regional_climate_station",
+          "handler_kind": "direct_function",
+          "handler_symbol": "regional_climate::load_station",
+          "handler_expression": "&regional_climate::load_station",
+          "compile_context": [],
+          "source": {
+            "path": "src/init.cpp",
+            "line": 303,
+            "symbol": "DynamicDataLoader::initialize"
+          }
+        }
+      ],
+      "compile_conditional_variants": false,
+      "instance_evidence": {
+        "occurrences": 83,
+        "examples": [
+          {
+            "path": "data/json/regional_climate/canada_mexico_stations.json",
+            "pointer": "/0"
+          }
+        ],
+        "contract_roots": [
+          "data/core",
+          "data/json",
+          "data/mods",
+          "data/sound"
+        ]
+      },
+      "schema": {
+        "status": "none",
+        "paths": [],
+        "note": "No general validator-backed Schema exists for this object type."
+      },
+      "documentation": {
+        "status": "not_found",
+        "evidence": [],
         "confidence": "lexical_only"
       },
       "field_contract": {
@@ -8417,7 +8471,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 296,
+            "line": 297,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8448,7 +8502,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 49
+            "line": 50
           }
         ],
         "confidence": "lexical_only"
@@ -8468,7 +8522,7 @@
       "type": "requirement",
       "registrations": [
         {
-          "registration_order": 80,
+          "registration_order": 81,
           "type": "requirement",
           "handler_kind": "lambda",
           "handler_symbol": "requirement_data::load_requirement",
@@ -8476,7 +8530,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 379,
+            "line": 381,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8507,7 +8561,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 269
+            "line": 270
           }
         ],
         "confidence": "lexical_only"
@@ -8527,7 +8581,7 @@
       "type": "riding_config",
       "registrations": [
         {
-          "registration_order": 37,
+          "registration_order": 38,
           "type": "riding_config",
           "handler_kind": "direct_function",
           "handler_symbol": "load_riding_config",
@@ -8535,7 +8589,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 322,
+            "line": 324,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8581,7 +8635,7 @@
       "type": "rotatable_symbol",
       "registrations": [
         {
-          "registration_order": 165,
+          "registration_order": 166,
           "type": "rotatable_symbol",
           "handler_kind": "direct_function",
           "handler_symbol": "rotatable_symbols::load",
@@ -8589,7 +8643,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 507,
+            "line": 509,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8635,7 +8689,7 @@
       "type": "scenario",
       "registrations": [
         {
-          "registration_order": 55,
+          "registration_order": 56,
           "type": "scenario",
           "handler_kind": "direct_function",
           "handler_symbol": "scenario::load_scenario",
@@ -8643,7 +8697,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 340,
+            "line": 342,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8674,7 +8728,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 2717
+            "line": 2718
           }
         ],
         "confidence": "lexical_only"
@@ -8694,7 +8748,7 @@
       "type": "scent_type",
       "registrations": [
         {
-          "registration_order": 62,
+          "registration_order": 63,
           "type": "scent_type",
           "handler_kind": "direct_function",
           "handler_symbol": "scent_type::load_scent_type",
@@ -8702,7 +8756,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 347,
+            "line": 349,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8733,7 +8787,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2256
+            "line": 2257
           }
         ],
         "confidence": "lexical_only"
@@ -8753,7 +8807,7 @@
       "type": "score",
       "registrations": [
         {
-          "registration_order": 180,
+          "registration_order": 181,
           "type": "score",
           "handler_kind": "direct_function",
           "handler_symbol": "score::load_score",
@@ -8761,7 +8815,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 522,
+            "line": 524,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8792,7 +8846,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECTS_JSON.md",
-            "line": 45
+            "line": 46
           }
         ],
         "confidence": "lexical_only"
@@ -8812,7 +8866,7 @@
       "type": "shopkeeper_blacklist",
       "registrations": [
         {
-          "registration_order": 57,
+          "registration_order": 58,
           "type": "shopkeeper_blacklist",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_blacklist::load_blacklist",
@@ -8820,7 +8874,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 342,
+            "line": 344,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8851,7 +8905,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 87
+            "line": 88
           }
         ],
         "confidence": "lexical_only"
@@ -8871,7 +8925,7 @@
       "type": "shopkeeper_consumption_rates",
       "registrations": [
         {
-          "registration_order": 59,
+          "registration_order": 60,
           "type": "shopkeeper_consumption_rates",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_cons_rates::load_rate",
@@ -8879,7 +8933,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 344,
+            "line": 346,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8910,7 +8964,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 83
+            "line": 84
           }
         ],
         "confidence": "lexical_only"
@@ -8930,7 +8984,7 @@
       "type": "shopkeeper_whitelist",
       "registrations": [
         {
-          "registration_order": 58,
+          "registration_order": 59,
           "type": "shopkeeper_whitelist",
           "handler_kind": "direct_function",
           "handler_symbol": "shopkeeper_whitelist::load_whitelist",
@@ -8938,7 +8992,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 343,
+            "line": 345,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -8969,7 +9023,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 101
+            "line": 102
           }
         ],
         "confidence": "lexical_only"
@@ -8989,7 +9043,7 @@
       "type": "skill",
       "registrations": [
         {
-          "registration_order": 40,
+          "registration_order": 41,
           "type": "skill",
           "handler_kind": "direct_function",
           "handler_symbol": "Skill::load_skill",
@@ -8997,7 +9051,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 325,
+            "line": 327,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9028,7 +9082,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 50
+            "line": 51
           }
         ],
         "confidence": "lexical_only"
@@ -9048,7 +9102,7 @@
       "type": "skill_display_type",
       "registrations": [
         {
-          "registration_order": 41,
+          "registration_order": 42,
           "type": "skill_display_type",
           "handler_kind": "direct_function",
           "handler_symbol": "SkillDisplayType::load",
@@ -9056,7 +9110,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 326,
+            "line": 328,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9102,7 +9156,7 @@
       "type": "snippet",
       "registrations": [
         {
-          "registration_order": 66,
+          "registration_order": 67,
           "type": "snippet",
           "handler_kind": "lambda",
           "handler_symbol": "load_snippet",
@@ -9110,14 +9164,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 354,
+            "line": 356,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 929,
+        "occurrences": 933,
         "examples": [
           {
             "path": "data/core/tips.json",
@@ -9141,7 +9195,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4362
+            "line": 4363
           }
         ],
         "confidence": "lexical_only"
@@ -9161,7 +9215,7 @@
       "type": "sound_effect",
       "registrations": [
         {
-          "registration_order": 154,
+          "registration_order": 155,
           "type": "sound_effect",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_sound_effects",
@@ -9169,7 +9223,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 491,
+            "line": 493,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9200,7 +9254,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1926
+            "line": 1927
           }
         ],
         "confidence": "lexical_only"
@@ -9220,7 +9274,7 @@
       "type": "sound_effect_preload",
       "registrations": [
         {
-          "registration_order": 155,
+          "registration_order": 156,
           "type": "sound_effect_preload",
           "handler_kind": "direct_function",
           "handler_symbol": "sfx::load_sound_effect_preload",
@@ -9228,7 +9282,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 492,
+            "line": 494,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9269,7 +9323,7 @@
       "type": "speech",
       "registrations": [
         {
-          "registration_order": 52,
+          "registration_order": 53,
           "type": "speech",
           "handler_kind": "direct_function",
           "handler_symbol": "load_speech",
@@ -9277,7 +9331,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 337,
+            "line": 339,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9308,7 +9362,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3966
+            "line": 3967
           }
         ],
         "confidence": "lexical_only"
@@ -9328,7 +9382,7 @@
       "type": "speed_description",
       "registrations": [
         {
-          "registration_order": 38,
+          "registration_order": 39,
           "type": "speed_description",
           "handler_kind": "direct_function",
           "handler_symbol": "speed_description::load_speed_descriptions",
@@ -9336,7 +9390,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 323,
+            "line": 325,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9367,7 +9421,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 2623
+            "line": 2624
           }
         ],
         "confidence": "lexical_only"
@@ -9387,7 +9441,7 @@
       "type": "spell_migration",
       "registrations": [
         {
-          "registration_order": 174,
+          "registration_order": 175,
           "type": "spell_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "spell_migration::load",
@@ -9395,7 +9449,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 516,
+            "line": 518,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9421,7 +9475,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 199
+            "line": 200
           }
         ],
         "confidence": "lexical_only"
@@ -9441,7 +9495,7 @@
       "type": "start_location",
       "registrations": [
         {
-          "registration_order": 54,
+          "registration_order": 55,
           "type": "start_location",
           "handler_kind": "direct_function",
           "handler_symbol": "start_locations::load",
@@ -9449,7 +9503,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 339,
+            "line": 341,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9480,7 +9534,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4347
+            "line": 4348
           }
         ],
         "confidence": "lexical_only"
@@ -9500,7 +9554,7 @@
       "type": "sub_body_part",
       "registrations": [
         {
-          "registration_order": 169,
+          "registration_order": 170,
           "type": "sub_body_part",
           "handler_kind": "direct_function",
           "handler_symbol": "sub_body_part_type::load_bp",
@@ -9508,7 +9562,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 511,
+            "line": 513,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9539,7 +9593,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 1038
+            "line": 1039
           }
         ],
         "confidence": "lexical_only"
@@ -9559,7 +9613,7 @@
       "type": "talk_topic",
       "registrations": [
         {
-          "registration_order": 151,
+          "registration_order": 152,
           "type": "talk_topic",
           "handler_kind": "direct_function",
           "handler_symbol": "load_talk_topic",
@@ -9567,7 +9621,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 486,
+            "line": 488,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9598,7 +9652,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4313
+            "line": 4314
           }
         ],
         "confidence": "lexical_only"
@@ -9618,7 +9672,7 @@
       "type": "technique",
       "registrations": [
         {
-          "registration_order": 101,
+          "registration_order": 102,
           "type": "technique",
           "handler_kind": "direct_function",
           "handler_symbol": "load_technique",
@@ -9626,18 +9680,18 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 414,
+            "line": 416,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 360,
+        "occurrences": 355,
         "examples": [
           {
-            "path": "data/json/martial_grappling.json",
-            "pointer": "/4"
+            "path": "data/json/martialarts_fictional.json",
+            "pointer": "/7"
           }
         ],
         "contract_roots": [
@@ -9657,7 +9711,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1796
+            "line": 1797
           }
         ],
         "confidence": "lexical_only"
@@ -9677,7 +9731,7 @@
       "type": "temperature_removal_blacklist",
       "registrations": [
         {
-          "registration_order": 87,
+          "registration_order": 88,
           "type": "temperature_removal_blacklist",
           "handler_kind": "callable",
           "handler_symbol": "load_temperature_removal_blacklist",
@@ -9685,7 +9739,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 393,
+            "line": 395,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9716,7 +9770,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 91
+            "line": 92
           }
         ],
         "confidence": "lexical_only"
@@ -9736,7 +9790,7 @@
       "type": "ter_furn_migration",
       "registrations": [
         {
-          "registration_order": 48,
+          "registration_order": 49,
           "type": "ter_furn_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "ter_furn_migrations::load",
@@ -9744,7 +9798,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 333,
+            "line": 335,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9775,7 +9829,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 223
+            "line": 224
           }
         ],
         "confidence": "lexical_only"
@@ -9795,7 +9849,7 @@
       "type": "ter_furn_transform",
       "registrations": [
         {
-          "registration_order": 177,
+          "registration_order": 178,
           "type": "ter_furn_transform",
           "handler_kind": "direct_function",
           "handler_symbol": "ter_furn_transform::load_transform",
@@ -9803,7 +9857,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 519,
+            "line": 521,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9834,7 +9888,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 5562
+            "line": 5563
           }
         ],
         "confidence": "lexical_only"
@@ -9854,7 +9908,7 @@
       "type": "terrain",
       "registrations": [
         {
-          "registration_order": 47,
+          "registration_order": 48,
           "type": "terrain",
           "handler_kind": "direct_function",
           "handler_symbol": "load_terrain",
@@ -9862,14 +9916,14 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 332,
+            "line": 334,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1646,
+        "occurrences": 1649,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",
@@ -9893,7 +9947,7 @@
         "evidence": [
           {
             "path": "doc/JSON/BASECAMP.md",
-            "line": 271
+            "line": 272
           }
         ],
         "confidence": "lexical_only"
@@ -9913,7 +9967,7 @@
       "type": "test_data",
       "registrations": [
         {
-          "registration_order": 88,
+          "registration_order": 89,
           "type": "test_data",
           "handler_kind": "direct_function",
           "handler_symbol": "test_data::load",
@@ -9921,7 +9975,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 394,
+            "line": 396,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -9967,7 +10021,7 @@
       "type": "tool_quality",
       "registrations": [
         {
-          "registration_order": 100,
+          "registration_order": 101,
           "type": "tool_quality",
           "handler_kind": "direct_function",
           "handler_symbol": "quality::load_static",
@@ -9975,7 +10029,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 413,
+            "line": 415,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10006,7 +10060,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 1414
+            "line": 1491
           }
         ],
         "confidence": "lexical_only"
@@ -10026,7 +10080,7 @@
       "type": "trait_group",
       "registrations": [
         {
-          "registration_order": 68,
+          "registration_order": 69,
           "type": "trait_group",
           "handler_kind": "lambda",
           "handler_symbol": "mutation_branch::load_trait_group",
@@ -10034,7 +10088,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 360,
+            "line": 362,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10080,7 +10134,7 @@
       "type": "trap",
       "registrations": [
         {
-          "registration_order": 81,
+          "registration_order": 82,
           "type": "trap",
           "handler_kind": "direct_function",
           "handler_symbol": "trap::load_trap",
@@ -10088,7 +10142,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 382,
+            "line": 384,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10119,7 +10173,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 82
+            "line": 83
           }
         ],
         "confidence": "lexical_only"
@@ -10139,7 +10193,7 @@
       "type": "trap_migration",
       "registrations": [
         {
-          "registration_order": 82,
+          "registration_order": 83,
           "type": "trap_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "trap_migrations::load",
@@ -10147,7 +10201,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 383,
+            "line": 385,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10178,7 +10232,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 269
+            "line": 270
           }
         ],
         "confidence": "lexical_only"
@@ -10198,7 +10252,7 @@
       "type": "uncraft",
       "registrations": [
         {
-          "registration_order": 96,
+          "registration_order": 97,
           "type": "uncraft",
           "handler_kind": "direct_function",
           "handler_symbol": "recipe_dictionary::load_uncraft",
@@ -10206,7 +10260,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 408,
+            "line": 410,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10237,7 +10291,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM_CRAFT_AND_DISASSEMBLY.md",
-            "line": 28
+            "line": 29
           }
         ],
         "confidence": "lexical_only"
@@ -10265,7 +10319,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 290,
+            "line": 291,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10296,7 +10350,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 364
+            "line": 365
           }
         ],
         "confidence": "lexical_only"
@@ -10316,7 +10370,7 @@
       "type": "vehicle",
       "registrations": [
         {
-          "registration_order": 74,
+          "registration_order": 75,
           "type": "vehicle",
           "handler_kind": "direct_function",
           "handler_symbol": "vehicles::load_prototype",
@@ -10324,7 +10378,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 371,
+            "line": 373,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10355,7 +10409,7 @@
         "evidence": [
           {
             "path": "doc/JSON/CLIMBING.md",
-            "line": 65
+            "line": 66
           }
         ],
         "confidence": "lexical_only"
@@ -10375,7 +10429,7 @@
       "type": "vehicle_color_palette",
       "registrations": [
         {
-          "registration_order": 78,
+          "registration_order": 79,
           "type": "vehicle_color_palette",
           "handler_kind": "direct_function",
           "handler_symbol": "VehiclePalette::load",
@@ -10383,7 +10437,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 376,
+            "line": 378,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10429,7 +10483,7 @@
       "type": "vehicle_group",
       "registrations": [
         {
-          "registration_order": 75,
+          "registration_order": 76,
           "type": "vehicle_group",
           "handler_kind": "direct_function",
           "handler_symbol": "VehicleGroup::load",
@@ -10437,7 +10491,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 372,
+            "line": 374,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10468,7 +10522,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3084
+            "line": 3085
           }
         ],
         "confidence": "lexical_only"
@@ -10488,7 +10542,7 @@
       "type": "vehicle_part",
       "registrations": [
         {
-          "registration_order": 70,
+          "registration_order": 71,
           "type": "vehicle_part",
           "handler_kind": "direct_function",
           "handler_symbol": "vehicles::parts::load",
@@ -10496,7 +10550,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 367,
+            "line": 369,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10527,7 +10581,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 270
+            "line": 271
           }
         ],
         "confidence": "lexical_only"
@@ -10547,7 +10601,7 @@
       "type": "vehicle_part_category",
       "registrations": [
         {
-          "registration_order": 71,
+          "registration_order": 72,
           "type": "vehicle_part_category",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_category::load_all",
@@ -10555,7 +10609,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 368,
+            "line": 370,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10601,7 +10655,7 @@
       "type": "vehicle_part_location",
       "registrations": [
         {
-          "registration_order": 72,
+          "registration_order": 73,
           "type": "vehicle_part_location",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_location::load_vehicle_part_locations",
@@ -10609,7 +10663,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 369,
+            "line": 371,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10640,7 +10694,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3033
+            "line": 3034
           }
         ],
         "confidence": "lexical_only"
@@ -10660,7 +10714,7 @@
       "type": "vehicle_part_migration",
       "registrations": [
         {
-          "registration_order": 73,
+          "registration_order": 74,
           "type": "vehicle_part_migration",
           "handler_kind": "direct_function",
           "handler_symbol": "vpart_migration::load",
@@ -10668,7 +10722,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 370,
+            "line": 372,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10699,7 +10753,7 @@
         "evidence": [
           {
             "path": "doc/JSON/OBSOLETION_AND_MIGRATION.md",
-            "line": 101
+            "line": 102
           }
         ],
         "confidence": "lexical_only"
@@ -10719,7 +10773,7 @@
       "type": "vehicle_placement",
       "registrations": [
         {
-          "registration_order": 76,
+          "registration_order": 77,
           "type": "vehicle_placement",
           "handler_kind": "direct_function",
           "handler_symbol": "VehiclePlacement::load",
@@ -10727,7 +10781,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 373,
+            "line": 375,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10758,7 +10812,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3085
+            "line": 3086
           }
         ],
         "confidence": "lexical_only"
@@ -10778,7 +10832,7 @@
       "type": "vehicle_spawn",
       "registrations": [
         {
-          "registration_order": 77,
+          "registration_order": 78,
           "type": "vehicle_spawn",
           "handler_kind": "direct_function",
           "handler_symbol": "VehicleSpawn::load",
@@ -10786,7 +10840,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 374,
+            "line": 376,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10817,7 +10871,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3079
+            "line": 3080
           }
         ],
         "confidence": "lexical_only"
@@ -10837,7 +10891,7 @@
       "type": "vitamin",
       "registrations": [
         {
-          "registration_order": 24,
+          "registration_order": 25,
           "type": "vitamin",
           "handler_kind": "direct_function",
           "handler_symbol": "vitamins::load",
@@ -10845,7 +10899,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 309,
+            "line": 311,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10876,7 +10930,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECTS_JSON.md",
-            "line": 43
+            "line": 44
           }
         ],
         "confidence": "lexical_only"
@@ -10896,7 +10950,7 @@
       "type": "weakpoint_set",
       "registrations": [
         {
-          "registration_order": 184,
+          "registration_order": 185,
           "type": "weakpoint_set",
           "handler_kind": "direct_function",
           "handler_symbol": "weakpoints::load_weakpoint_sets",
@@ -10904,7 +10958,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 526,
+            "line": 528,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10935,7 +10989,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 3119
+            "line": 3120
           }
         ],
         "confidence": "lexical_only"
@@ -10955,7 +11009,7 @@
       "type": "weapon_category",
       "registrations": [
         {
-          "registration_order": 102,
+          "registration_order": 103,
           "type": "weapon_category",
           "handler_kind": "direct_function",
           "handler_symbol": "weapon_category::load_weapon_categories",
@@ -10963,7 +11017,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 415,
+            "line": 417,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -10994,7 +11048,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ITEM.md",
-            "line": 163
+            "line": 173
           }
         ],
         "confidence": "lexical_only"
@@ -11022,7 +11076,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 301,
+            "line": 302,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11053,7 +11107,7 @@
         "evidence": [
           {
             "path": "doc/JSON/REGION_SETTINGS.md",
-            "line": 49
+            "line": 50
           }
         ],
         "confidence": "lexical_only"
@@ -11081,7 +11135,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 300,
+            "line": 301,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11112,7 +11166,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4664
+            "line": 4665
           }
         ],
         "confidence": "lexical_only"
@@ -11132,7 +11186,7 @@
       "type": "widget",
       "registrations": [
         {
-          "registration_order": 183,
+          "registration_order": 184,
           "type": "widget",
           "handler_kind": "direct_function",
           "handler_symbol": "widget::load_widget",
@@ -11140,7 +11194,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 525,
+            "line": 527,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11186,7 +11240,7 @@
       "type": "wound",
       "registrations": [
         {
-          "registration_order": 187,
+          "registration_order": 188,
           "type": "wound",
           "handler_kind": "direct_function",
           "handler_symbol": "wound_type::load_wounds",
@@ -11194,7 +11248,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 529,
+            "line": 531,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11220,7 +11274,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 3255
+            "line": 3256
           }
         ],
         "confidence": "lexical_only"
@@ -11240,7 +11294,7 @@
       "type": "wound_fix",
       "registrations": [
         {
-          "registration_order": 188,
+          "registration_order": 189,
           "type": "wound_fix",
           "handler_kind": "direct_function",
           "handler_symbol": "wound_fix::load_wound_fixes",
@@ -11248,7 +11302,7 @@
           "compile_context": [],
           "source": {
             "path": "src/init.cpp",
-            "line": 530,
+            "line": 532,
             "symbol": "DynamicDataLoader::initialize"
           }
         }
@@ -11274,7 +11328,7 @@
         "evidence": [
           {
             "path": "doc/JSON/WOUNDS.md",
-            "line": 15
+            "line": 16
           }
         ],
         "confidence": "lexical_only"

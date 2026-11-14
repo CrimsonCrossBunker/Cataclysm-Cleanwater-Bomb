@@ -57,3 +57,7 @@ local mounted_charge = ccb.content.Technique {
 }
 mounted_charge:attack_vector("vector_null")
 ccb.content.replace(mounted_charge)
+
+require("grappling")
+require("position_techniques")
+require("combat_techniques")

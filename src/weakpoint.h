@@ -47,6 +47,9 @@ struct weakpoint_attack {
     attack_type type;
     // Whether the attack from a thrown object.
     bool is_thrown;
+    // Sweeping shots follow their ray through empty aim tiles.
+    bool sweeping = false;
+    bool protect_friendlies = false;
     /**
     * How accurate the ranged attack is.
     * -1.0 means not a ranged attack.

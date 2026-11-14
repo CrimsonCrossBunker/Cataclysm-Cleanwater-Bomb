@@ -139,7 +139,9 @@ struct mutation_branch;
 struct oter_type_t;
 
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
+static const activity_id ACT_FILL_LIQUID( "ACT_FILL_LIQUID" );
 static const activity_id ACT_MIGRATION_CANCEL( "ACT_MIGRATION_CANCEL" );
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 
 static const addiction_id addiction_alcohol( "alcohol" );
 static const addiction_id addiction_amphetamine( "amphetamine" );
@@ -537,8 +539,7 @@ void player_activity::deserialize( const JsonObject &data )
     // ACT_MIGRATION_CANCEL will clear the backlog and reset npc state
     // this may cause inconvenience but should avoid any lasting damage to npcs
     // Vehicle faucets have an actor; other liquid sources retain their legacy handler.
-    const bool legacy_handler = type == activity_id( "ACT_FILL_LIQUID" ) ||
-                                type == activity_id( "ACT_REPAIR_ITEM" );
+    const bool legacy_handler = type == ACT_FILL_LIQUID || type == ACT_REPAIR_ITEM;
     if( is_obsolete || ( has_actor && !legacy_handler &&
                          ( data.has_null( "actor" ) || !data.has_member( "actor" ) ) ) ) {
         actor = std::make_unique<migration_cancel_activity_actor>( type );
@@ -850,11 +851,15 @@ void Character::load_mission_state( const JsonObject &data )
     }
 }
 
-void Character::load( const JsonObject &data )
+void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     data.allow_omitted_members();
     kill_statistics_.clear();
-    data.read( "kill_tracker", kill_statistics_ );
+    if( data.has_member( "kill_tracker" ) ) {
+        data.read( "kill_tracker", kill_statistics_ );
+    } else if( legacy_kills ) {
+        kill_statistics_.deserialize( *legacy_kills );
+    }
     Creature::load( data );
 
     // stats
@@ -2255,7 +2260,7 @@ void Character::load_player_state( const JsonObject &snapshot )
         morale->on_stat_change( "radiation", radiation );
         morale->load( data );
 
-        auto restored_values = values;
+        global_variables::impl_t restored_values = values;
         read( "values", restored_values );
         // Session ownership belongs to the destination, never to a snapshot.
         for( const std::string key : {
@@ -2410,7 +2415,7 @@ void avatar::deserialize( const JsonObject &data )
     load( data );
 }
 
-void avatar::load( const JsonObject &data )
+void avatar::load( const JsonObject &data, const JsonObject *legacy_kills )
 {
     // Validate before mutating the Character. A corrupt identity must not
     // silently become a new player, and an old save must clear any prior ID.
@@ -2422,7 +2427,7 @@ void avatar::load( const JsonObject &data )
             data.throw_error_at( "local_player_id", "Invalid local player identity" );
         }
     }
-    Character::load( data );
+    Character::load( data, legacy_kills );
     local_player_id = restored_player;
 
     std::string prof_ident = "(null)";
@@ -2519,6 +2524,8 @@ void npc_follower_rules::serialize( JsonOut &json ) const
     json.start_object();
     json.member( "engagement", static_cast<int>( engagement ) );
     json.member( "aim", static_cast<int>( aim ) );
+    json.member( "burst", static_cast<int>( burst ) );
+    json.member( "allow_sweep", allow_sweep );
     json.member( "cbm_reserve", static_cast<int>( cbm_reserve ) );
     json.member( "cbm_recharge", static_cast<int>( cbm_recharge ) );
 
@@ -2547,6 +2554,12 @@ void npc_follower_rules::deserialize( const JsonObject &data )
     int tmpaim = 0;
     data.read( "aim", tmpaim );
     aim = static_cast<aim_rule>( tmpaim );
+    int saved_burst = static_cast<int>( burst_rule::ADAPTIVE );
+    data.read( "burst", saved_burst );
+    allow_sweep = data.get_bool( "allow_sweep", false );
+    burst = saved_burst >= static_cast<int>( burst_rule::ADAPTIVE ) &&
+            saved_burst <= static_cast<int>( burst_rule::FULL_AUTO )
+            ? static_cast<burst_rule>( saved_burst ) : burst_rule::ADAPTIVE;
     int tmpreserve = 50;
     data.read( "cbm_reserve", tmpreserve );
     cbm_reserve = static_cast<cbm_reserve_rule>( tmpreserve );
@@ -5835,9 +5848,7 @@ void serialize( const recipe_subset &value, JsonOut &jsout )
     for( const recipe * const &entry : value ) {
         ids.push_back( entry->ident() );
     }
-    std::sort( ids.begin(), ids.end(), []( const recipe_id & lhs, const recipe_id & rhs ) {
-        return lhs.str() < rhs.str();
-    } );
+    std::sort( ids.begin(), ids.end(), lexicographic<recipe>() );
     jsout.write( ids );
 }
 

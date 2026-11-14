@@ -11,6 +11,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,7 @@
 #include "options.h"
 #include "overmap.h"
 #include "overmap_ui.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -168,10 +170,13 @@ float incident_sun_irradiance( const weather_type_id &wtype, const time_point &t
 }
 
 static void proc_weather_sum( const weather_type_id &wtype, weather_sum &data,
-                              const time_point &t, const time_duration &tick_size )
+                              const time_point &t, const time_duration &tick_size,
+                              std::optional<double> climate_rate )
 {
-    int amount = 0;
-    if( wtype->rains ) {
+    double amount = 0;
+    if( wtype->rains && climate_rate && *climate_rate > 0 ) {
+        amount = *climate_rate * to_turns<int>( tick_size );
+    } else if( wtype->rains ) {
         switch( wtype->precip ) {
             case precip_class::very_light:
                 amount = 1 * to_turns<int>( tick_size );
@@ -195,10 +200,21 @@ static void proc_weather_sum( const weather_type_id &wtype, weather_sum &data,
     data.radiant_exposure += tick_irradiance * to_seconds<int>( tick_size );
 }
 
+static std::optional<double> regional_precipitation_rate( const weather_type_id &type,
+        const w_point &sample )
+{
+    const std::string &id = type.str();
+    if( id == "light_drizzle" || id == "drizzle" || id == "rain" || id == "rainstorm" ||
+        id == "thunder" || id == "lightning" || id == "flurries" || id == "snowing" || id == "snowstorm" ) {
+        return sample.climate_precipitation_mm_per_hour;
+    }
+    return std::nullopt;
+}
+
 weather_type_id current_weather( const tripoint_abs_ms &location, const time_point &t )
 {
     weather_manager &weather = get_weather();
-    const weather_generator wgen = weather.get_cur_weather_gen();
+    const weather_generator &wgen = weather.get_cur_weather_gen();
     if( weather.weather_override != WEATHER_NULL ) {
         return weather.weather_override;
     }
@@ -213,6 +229,10 @@ weather_sum sum_conditions( const time_point &start, const time_point &end,
     weather_sum data;
 
     weather_manager &weather = get_weather();
+    const weather_generator &generator = weather.get_cur_weather_gen();
+    const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
+    const weather_type_id forced = eternal == "normal" ? weather.weather_override :
+                                   weather_type_id( eternal );
     for( time_point t = start; t < end; t += tick_size ) {
         const time_duration diff = end - t;
         if( diff < 10_turns ) {
@@ -223,8 +243,15 @@ weather_sum sum_conditions( const time_point &start, const time_point &end,
             tick_size = 1_minutes;
         }
 
-        weather_type_id wtype = current_weather( location, t );
-        proc_weather_sum( wtype, data, t, tick_size );
+        tick_size = std::min( tick_size, diff );
+        weather_type_id wtype = forced;
+        std::optional<double> climate_rate;
+        if( wtype == WEATHER_NULL ) {
+            const w_point sample = generator.get_weather( location, t, g->get_seed() );
+            wtype = generator.get_weather_conditions( sample );
+            climate_rate = regional_precipitation_rate( wtype, sample );
+        }
+        proc_weather_sum( wtype, data, t, tick_size, climate_rate );
         data.wind_amount += get_local_windpower( weather.windspeed,
                             overmap_buffer.ter( project_to<coords::omt>( location ) ),
                             location,
@@ -337,7 +364,7 @@ double trap::funnel_turns_per_charge( double rain_depth_mm_per_hour ) const
 /**
  * Main routine for filling funnels from weather effects.
  */
-static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr )
+static void fill_funnels( double rain_depth_mm_per_hour, const trap &tr )
 {
     const double turns_per_charge = tr.funnel_turns_per_charge( rain_depth_mm_per_hour );
     map &here = get_map();
@@ -345,7 +372,7 @@ static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr )
     const std::vector<tripoint_bub_ms> &funnel_locs = here.trap_locations( tr.loadid );
     for( const tripoint_bub_ms &loc : funnel_locs ) {
         units::volume maxcontains = 0_ml;
-        if( one_in( turns_per_charge ) ) {
+        if( turns_per_charge > 0.0 && x_in_y( 1.0, turns_per_charge ) ) {
             // FIXME:
             //add_msg("%d mm/h %d tps %.4f: fill",int(calendar::turn),rain_depth_mm_per_hour,turns_per_charge);
             // This funnel has collected some rain! Put the rain in the largest
@@ -371,7 +398,7 @@ static void fill_funnels( int rain_depth_mm_per_hour, const trap &tr )
  * Fill funnels and makeshift funnels from weather effects.
  * @see fill_funnels
  */
-static void fill_water_collectors( int mmPerHour )
+static void fill_water_collectors( double mmPerHour )
 {
     for( const trap * const &e : trap::get_funnels() ) {
         fill_funnels( mmPerHour, *e );
@@ -464,7 +491,8 @@ void handle_weather_effects( const weather_type_id &w )
     map &here = get_map();
     Character &target = get_player_character();
     if( w->rains && w->precip != precip_class::none ) {
-        fill_water_collectors( precip_mm_per_hour( w->precip ) );
+        fill_water_collectors( get_weather_const().climate_precipitation_mm_per_hour.value_or(
+                                   precip_mm_per_hour( w->precip ) ) );
         int wetness = 0;
         time_duration decay_time = 60_turns;
         if( w->precip == precip_class::very_light ) {
@@ -1036,10 +1064,21 @@ void weather_manager::on_game_start()
     }
 }
 
+void weather_manager::update_solar_location()
+{
+    if( north_america::active() ) {
+        const auto solar_location = north_america::location( get_player_character().pos_abs().xy() );
+        calendar::set_location( solar_location.latitude, solar_location.longitude );
+    } else if( g && g->north_america_world ) {
+        calendar::set_location( get_option<float>( "LATITUDE" ), get_option<float>( "LONGITUDE" ) );
+    }
+}
+
 void weather_manager::update_weather()
 {
     CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
+    update_solar_location();
     weather_changed = false;
     if( weather_id == WEATHER_NULL || calendar::turn >= nextweather ) {
         w_point &w = *weather_precise;
@@ -1047,11 +1086,16 @@ void weather_manager::update_weather()
         w = weather_gen.get_weather( player_character.pos_abs(), calendar::turn,
                                      g->get_seed() );
         weather_type_id old_weather = weather_id;
+        climate_precipitation_mm_per_hour.reset();
         std::string eternal_weather_option = get_option<std::string>( "ETERNAL_WEATHER" );
         if( eternal_weather_option != "normal" ) {
             weather_id = static_cast<weather_type_id>( eternal_weather_option );
         } else if( weather_override == WEATHER_NULL ) {
             weather_id = weather_gen.get_weather_conditions( w );
+            const auto rate = regional_precipitation_rate( weather_id, w );
+            if( rate && *rate > 0 ) {
+                climate_precipitation_mm_per_hour = rate;
+            }
         } else {
             weather_id = weather_override;
         }
@@ -1063,6 +1107,14 @@ void weather_manager::update_weather()
         windspeed = windspeed_override ? *windspeed_override : w.windpower;
         lightning_active = false;
         nextweather = calendar::turn + rng( weather_id->duration_min, weather_id->duration_max );
+        if( w.climate_precipitation_mm_per_hour && eternal_weather_option == "normal" &&
+            weather_override == WEATHER_NULL ) {
+            // Climate events start and end on hourly boundaries.
+            const time_duration into_hour = ( time_past_midnight( calendar::turn ) % 1_hours +
+                                              1_hours ) % 1_hours;
+            const time_duration until_hour = 1_hours - into_hour;
+            nextweather = std::min( nextweather, calendar::turn + until_hour );
+        }
         map &here = get_map();
         if( uistate.distraction_weather_change &&
             weather_changed && weather_id->dangerous &&
@@ -1162,7 +1214,8 @@ void weather_manager::update_snow_depth()
 
     const bool is_snowing = weather_id->precip != precip_class::none && !weather_id->rains;
     const double accum_rate = is_snowing ?
-                              precip_mm_per_hour( weather_id->precip ) * snow_water_ratio : 0.0;
+                              climate_precipitation_mm_per_hour.value_or(
+                                  precip_mm_per_hour( weather_id->precip ) ) * snow_water_ratio : 0.0;
     const bool is_melting = temperature > 0_C;
     const double melt_rate = is_melting ?
                              melt_rate_per_deg_per_hour * units::to_celsius( temperature ) : 0.0;

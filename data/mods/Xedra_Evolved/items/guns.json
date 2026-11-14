@@ -48,7 +48,7 @@
     "material": [ "lc_steel" ],
     "dispersion": 358,
     "durability": 7,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "3 rd.", 3 ], [ "AUTO", "auto", 5 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "300", 3 ], [ "AUTO", "auto-rpm", "300" ] ],
     "default_mods": [ "bars" ],
     "barrel_volume": "81 ml",
     "valid_mod_locations": [
@@ -80,7 +80,7 @@
     "material": [ "lc_steel" ],
     "dispersion": 358,
     "durability": 8,
-    "modes": [ [ "DEFAULT", "burst", 10 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "600" ] ],
     "energy_drain": "1 kJ",
     "reload": 200,
     "default_mods": [ "bars" ],

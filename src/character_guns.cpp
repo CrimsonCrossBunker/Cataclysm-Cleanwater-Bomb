@@ -4,6 +4,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -12,13 +13,17 @@
 #include "activity_actor_definitions.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
+#include "crafting.h"
 #include "debug.h"
 #include "enums.h"
 #include "flag.h"
+#include "gunmod_ui.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "itype.h"
 #include "map.h"
 #include "map_selector.h"
@@ -31,9 +36,6 @@
 #include "value_ptr.h"
 #include "vehicle_selector.h"
 #include "visitable.h"
-
-static const itype_id itype_large_repairkit( "large_repairkit" );
-static const itype_id itype_small_repairkit( "small_repairkit" );
 
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 
@@ -187,7 +189,7 @@ std::pair<int, int> Character::gunmod_installation_odds( const item_location &gu
     return std::make_pair( roll, risk );
 }
 
-void Character::gunmod_add( item &gun, item &mod )
+void Character::gunmod_add( item &gun, item &mod, const std::optional<itype_id> &selected_tool )
 {
     if( !gun.is_gunmod_compatible( mod ).success() ) {
         debugmsg( "Tried to add incompatible gunmod" );
@@ -204,8 +206,39 @@ void Character::gunmod_add( item &gun, item &mod )
         return;
     }
 
-    itype_id mod_type = mod.typeId();
+    item_location selected_mod( *this, &mod );
     std::string mod_name = mod.tname();
+
+    const item_location wielded = get_wielded_item();
+    if( !is_wielding( gun ) && ( is_wielding( mod ) ||
+                                 ( wielded && wielded->has_item( mod ) ) || gun.has_item( mod ) ) ) {
+        if( is_wielding( mod ) ) {
+            const ret_val<void> can_stow = can_unwield( mod );
+            if( !can_stow.success() ) {
+                add_msg_if_player( m_info, "%s", can_stow.c_str() );
+                return;
+            }
+        }
+        std::pair<item_location, item_pocket *> destination;
+        worn.best_pocket( *this, mod, &gun, destination );
+        if( !destination.second ) {
+            add_msg_if_player( _( "You have no room to store the %s." ), mod_name );
+            return;
+        }
+        const ret_val<item *> stored = destination.second->insert_item( mod );
+        if( !stored.success() ) {
+            add_msg_if_player( m_info, "%s", stored.c_str() );
+            return;
+        }
+        item_location stowed_mod( destination.first, stored.value() );
+        mod_moves( -item_handling_cost( mod ) );
+        i_rem( &mod );
+        stowed_mod.on_contents_changed();
+        stowed_mod->on_pickup( *this );
+        craft_relocated( stowed_mod );
+        calc_encumbrance();
+        selected_mod = stowed_mod;
+    }
 
     if( !is_wielding( gun ) && !wield( gun ) ) {
         add_msg_if_player( _( "You can't wield the %1$s." ), gun.tname() );
@@ -214,25 +247,20 @@ void Character::gunmod_add( item &gun, item &mod )
 
     // Wielding will create a new gun and/or mod when the item changes location.
     item_location wielded_gun = get_wielded_item();
-    std::vector<item *> mods = items_with( [&mod_type]( const item & it ) {
-        return it.typeId() == mod_type;
-    } );
-
-    if( mods.empty() ) {
+    if( !selected_mod ) {
         add_msg_if_player( _( "You no longer have a %s and can't continue crafting." ), mod_name );
         return;
     }
 
-    item &moved_mod = *mods.front();
+    item &moved_mod = *selected_mod;
     // any (optional) tool charges that are used during installation
-    auto odds = gunmod_installation_odds( wielded_gun, moved_mod );
-    int roll = odds.first;
-    int risk = odds.second;
+    const auto options = gunmod_ui::installation_options( *this, wielded_gun, moved_mod );
+    int option_index = 0;
 
     std::string tool;
     int qty = 0;
 
-    if( mod.is_irremovable() ) {
+    if( moved_mod.is_irremovable() ) {
         if( !query_yn( _( "Permanently install your %1$s in your %2$s?" ),
                        colorize( moved_mod.tname(), moved_mod.color_in_inventory() ),
                        colorize( wielded_gun->tname(), wielded_gun->color_in_inventory() ) ) ) {
@@ -242,44 +270,40 @@ void Character::gunmod_add( item &gun, item &mod )
     }
 
     // if chance of success <100% prompt user to continue
-    if( roll < 100 ) {
+    if( selected_tool ) {
+        const auto found = std::find_if( options.begin(), options.end(),
+        [&selected_tool]( const gunmod_ui::installation_option & option ) {
+            return option.tool == *selected_tool;
+        } );
+        if( found == options.end() || !found->available ) {
+            add_msg_if_player( _( "The selected installation tool is no longer available." ) );
+            return;
+        }
+        option_index = std::distance( options.begin(), found );
+    } else if( options.size() > 1 ) {
         uilist prompt;
         prompt.text = string_format( _( "Attach your %1$s to your %2$s?" ), moved_mod.tname(),
                                      wielded_gun->tname() );
 
-        std::vector<std::function<void()>> actions;
-
-        prompt.addentry( -1, true, 'w',
-                         string_format( _( "Try without tools (%i%%) risking damage (%i%%)" ), roll, risk ) );
-        actions.emplace_back( [&] {} );
-
-        prompt.addentry( -1, has_charges( itype_small_repairkit, 100 ), 'f',
-                         string_format( _( "Use 100 charges of firearm repair kit (%i%%)" ), std::min( roll * 2, 100 ) ) );
-
-        actions.emplace_back( [&] {
-            tool = "small_repairkit";
-            qty = 100;
-            roll *= 2; // firearm repair kit improves success...
-            risk /= 2; // ...and reduces the risk of damage upon failure
-        } );
-
-        prompt.addentry( -1, has_charges( itype_large_repairkit, 25 ), 'g',
-                         string_format( _( "Use 25 charges of gunsmith repair kit (%i%%)" ), std::min( roll * 3, 100 ) ) );
-
-        actions.emplace_back( [&] {
-            tool = "large_repairkit";
-            qty = 25;
-            roll *= 3; // gunsmith repair kit improves success markedly...
-            risk = 0;  // ...and entirely prevents damage upon failure
-        } );
+        const std::vector<int> hotkeys = { 'w', 'f', 'g' };
+        for( size_t index = 0; index < options.size(); ++index ) {
+            const gunmod_ui::installation_option &option = options[index];
+            prompt.addentry( index, option.available, hotkeys[index],
+                             string_format( _( "%1$s (%2$d charges): %3$d%% success, %4$d%% damage on failure" ),
+                                            option.name(), option.charges, option.success, option.damage ) );
+        }
 
         prompt.query();
         if( prompt.ret < 0 ) {
             add_msg_if_player( _( "Never mind." ) );
             return; // player canceled installation
         }
-        actions[prompt.ret]();
+        option_index = prompt.ret;
     }
+
+    const gunmod_ui::installation_option &option = options[option_index];
+    tool = option.tool.is_null() ? "" : option.tool.str();
+    qty = option.charges;
 
     const int moves = !has_trait( trait_DEBUG_HS ) ? to_moves<int>
                       ( moved_mod.type->gunmod->install_time ) : 0;
@@ -288,8 +312,8 @@ void Character::gunmod_add( item &gun, item &mod )
     activity.targets.emplace_back( wielded_gun );
     activity.targets.emplace_back( *this, &moved_mod );
     activity.values.push_back( 0 ); // dummy value
-    activity.values.push_back( roll ); // chance of success (%)
-    activity.values.push_back( risk ); // chance of damage (%)
+    activity.values.push_back( option.success ); // chance of success (%)
+    activity.values.push_back( option.damage ); // chance of damage (%)
     activity.values.push_back( qty ); // tool charges
 }
 
@@ -314,6 +338,12 @@ bool Character::gunmod_remove( item_location gun_loc, item &mod )
     }
     if( gunmod_idx == mods.size() ) {
         debugmsg( "Cannot remove non-existent gunmod" );
+        return false;
+    }
+
+    const std::string denial = gunmod_ui::removal_denial( gun, mod );
+    if( !denial.empty() ) {
+        add_msg_if_player( m_info, "%s", denial );
         return false;
     }
 

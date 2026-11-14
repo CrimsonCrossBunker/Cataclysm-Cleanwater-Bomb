@@ -571,12 +571,18 @@ class aim_activity_actor : public activity_actor
 {
     private:
         std::optional<item> fake_weapon;
+        int64_t turret_vehicle_id = 0;
+        int64_t turret_gun_id = 0;
         unsigned int bionic_uid = 0;
         int64_t bionic_weapon_source = 0;
         std::vector<tripoint_bub_ms> fin_trajectory;
 
     public:
         std::string action;
+        int burst_rounds = 0; // Confirmed rounds while an aim-and-fire action is pending.
+        bool sweeping = false;
+        std::optional<tripoint_abs_ms> sweep_end;
+        int sweep_speed = 0;
         int aif_duration = 0; // Counts aim-and-fire duration
         bool aiming_at_critter = false; // Whether aiming at critter or a tile
         bool should_unload_RAS = false;
@@ -605,7 +611,8 @@ class aim_activity_actor : public activity_actor
         aim_activity_actor();
 
         /** Aiming wielded gun */
-        static aim_activity_actor use_wielded();
+        static aim_activity_actor use_wielded( bool sweeping = false );
+        static aim_activity_actor reaim_turret( int64_t vehicle_id, int64_t gun_id );
 
         /** Aiming fake gun provided by a bionic */
         static aim_activity_actor use_bionic( const item &fake_gun, unsigned int uid );
@@ -742,6 +749,8 @@ class gunmod_remove_activity_actor : public activity_actor
         int gunmod_idx;
 
     public:
+        bool reopen_menu = false;
+
         gunmod_remove_activity_actor(
             int moves_total,
             const item_location &gun,
@@ -960,7 +969,7 @@ class glide_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 };
 
 // Creature::longpull(), but with a waiting period
@@ -2024,6 +2033,9 @@ class close_tile_activity_actor : public activity_actor
         tripoint_bub_ms tile_location;
         close_tile_result close_success = close_tile_result::CLOSE_FAIL;
         int closed_vehicle_part = -1;
+        std::optional<tripoint_abs_ms> target_location;
+        int64_t vehicle_uid = 0;
+        int64_t part_uid = 0;
 };
 
 class consume_activity_actor : public activity_actor
@@ -2064,7 +2076,7 @@ class consume_activity_actor : public activity_actor
             return ACT_CONSUME;
         }
 
-        void start( player_activity &act, Character &guy ) override;
+        void start( player_activity &act, Character &who ) override;
         void do_turn( player_activity &, Character & ) override;
         static consume_activity_actor client_view( bool reprompt = false );
         bool should_reprompt() const {
@@ -2452,8 +2464,8 @@ class stash_activity_actor: public activity_actor
 class harvest_activity_actor : public activity_actor
 {
     public:
-        explicit harvest_activity_actor( const tripoint_bub_ms &target,
-                                         bool auto_forage = false );
+        explicit harvest_activity_actor( const tripoint_bub_ms &position,
+                                         bool automatic = false );
 
         const activity_id &get_type() const override {
             static const activity_id ACT_HARVEST( "ACT_HARVEST" );
@@ -2469,7 +2481,7 @@ class harvest_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 
     private:
         tripoint_abs_ms target;
@@ -2687,7 +2699,7 @@ class disassemble_activity_actor : public activity_actor
 
         explicit disassemble_activity_actor( int moves_total ) :
             moves_total( moves_total ) {}
-        disassemble_activity_actor( std::vector<disassembly_selection> selected, bool recursive );
+        disassemble_activity_actor( std::vector<disassembly_selection> selected, bool repeat );
         const activity_id &get_type() const override {
             static const activity_id ACT_DISASSEMBLE( "ACT_DISASSEMBLE" );
             return ACT_DISASSEMBLE;
@@ -2735,7 +2747,7 @@ class move_furniture_activity_actor : public activity_actor
     public:
         move_furniture_activity_actor( const tripoint_rel_ms &dp, bool via_ramp,
                                        std::optional<walk_move_choices> choices = std::nullopt ) :
-            dp( dp ), via_ramp( via_ramp ), choices( choices ) {}
+            dp( dp ), via_ramp( via_ramp ), choices( std::move( choices ) ) {}
         const activity_id &get_type() const override {
             static const activity_id ACT_FURNITURE_MOVE( "ACT_FURNITURE_MOVE" );
             return ACT_FURNITURE_MOVE;
@@ -2751,7 +2763,7 @@ class move_furniture_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &value );
 };
 
 class insert_item_activity_actor : public activity_actor
@@ -3328,7 +3340,7 @@ class vehicle_unfolding_activity_actor : public activity_actor
         // private empty constructor for deserialization
         explicit vehicle_unfolding_activity_actor() = default;
     public:
-        explicit vehicle_unfolding_activity_actor( item it );
+        explicit vehicle_unfolding_activity_actor( item value );
 
         const activity_id &get_type() const override {
             static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
@@ -4079,7 +4091,7 @@ class firstaid_activity_actor : public activity_actor
             return ACT_FIRSTAID;
         }
 
-        static firstaid_activity_actor client_view( bool reprompt = false );
+        static firstaid_activity_actor client_view( bool reopen = false );
         void set_owned_target( const item_source &source, const itype_id &type,
                                const bodypart_str_id &part, bool allow_theft );
         bool prepare_owned_turn( Character &who );
@@ -4106,7 +4118,7 @@ class firstaid_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 
     private:
         int moves = 0;
@@ -4141,7 +4153,7 @@ class forage_activity_actor : public activity_actor
         }
 
         void serialize( JsonOut &jsout ) const override;
-        static std::unique_ptr<activity_actor> deserialize( JsonValue &jsin );
+        static std::unique_ptr<activity_actor> deserialize( JsonValue &input );
 
     private:
         int moves = 0;
@@ -4219,6 +4231,8 @@ class fix_wound_activity_actor : public activity_actor
 class gunmod_add_activity_actor : public activity_actor
 {
     public:
+        bool reopen_menu = false;
+
         gunmod_add_activity_actor() = default;
         gunmod_add_activity_actor( int moves, std::string name ) : moves( moves ),
             name( std::move( name ) ) {}
@@ -4278,7 +4292,7 @@ class longsalvage_activity_actor : public activity_actor
 {
     public:
         longsalvage_activity_actor() = default;
-        longsalvage_activity_actor( Character &who, const item_location &tool,
+        longsalvage_activity_actor( Character &who, const item_location &source,
                                     const std::vector<salvage_selection> &targets );
 
         const activity_id &get_type() const override {
@@ -4423,10 +4437,10 @@ class butchery_activity_actor : public activity_actor
         explicit butchery_activity_actor( std::vector<butchery_data> bd ) : bd( std::move( bd ) ) {}
 
         const activity_id &get_type() const override;
-        void start( player_activity &act, Character &you ) override;
+        void start( player_activity &act, Character &who ) override;
         void do_turn( player_activity &act, Character &you ) override;
         void finish( player_activity &act, Character & /* you */ ) override;
-        void canceled( player_activity &act, Character &you ) override;
+        void canceled( player_activity &act, Character &who ) override;
         const item *pending_liquid( Character &who ) const;
         bool apply_liquid_choice( Character &who, const unload_liquid_choice &choice,
                                   bool allow_consequences );

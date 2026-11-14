@@ -5,6 +5,7 @@
 #include <climits>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <iterator>
@@ -86,7 +87,7 @@
 #include "item_group.h"
 #include "item_location.h"
 #include "itype.h"
-#include "kill_tracker.h"
+#include "kill_statistics.h"
 #include "line.h"
 #include "localized_comparator.h"
 #include "lua_platform_hooks.h"
@@ -2899,8 +2900,9 @@ void parse_tags( std::string &phrase, const_talker const &u, const_talker const 
             var.pop_back();
             // resolve nest
             parse_tags( var, u, me, d, item_type );
-            // this probably will benefit from grabbing alpha/beta talker instead of avatar
-            phrase.replace( fa, l, me_chr->mutation_desc( trait_id( var ) ) );
+            const trait_id trait( var );
+            const Character *const character = me_chr ? me_chr : u_chr;
+            phrase.replace( fa, l, character ? character->mutation_desc( trait ) : trait->desc() );
         } else if( tag.find( "<spell_name:" ) == 0 ) {
             std::string var = tag.substr( tag.find( ':' ) + 1 );
             // remove the trailing >
@@ -6613,11 +6615,11 @@ talk_effect_fun_t::func f_ranged_attack( bool is_npc )
         if( c ) {
             tripoint_bub_ms target_pos = c->pos_bub();
             item_location wielded = attacker->get_wielded_item();
-            if( wielded->is_gun() ) {
-                gun_mode mode = wielded->gun_current_mode();
-                if( wielded->ammo_sufficient( attacker, mode.qty * 2 ) ) {
-                    attacker->fire_gun( target_pos, mode.qty );
-
+            if( wielded && wielded->is_gun() ) {
+                const gun_mode mode = wielded->gun_current_mode();
+                const int available = mode.shots_available( calendar::turn );
+                if( available > 0 && wielded->ammo_sufficient( attacker, available * 2 ) ) {
+                    attacker->fire_gun( get_map(), target_pos, mode );
                 }
             }
         }
