@@ -283,6 +283,46 @@ void item_pocket::restack()
     restack( nullptr );
 }
 
+item *restack_charge_items( std::list<item> &contents, item *tracked )
+{
+    // Only count_by_charges items can combine (item::can_combine rejects everything else
+    // without side effects), so pair up those alone instead of scanning all of `contents`
+    // for each of them.  The pairs are visited in the same order as before, including the
+    // restart of the outer scan at contents.begin() after every merge.
+    std::vector<std::list<item>::iterator> stackable;
+    for( auto iter = contents.begin(); iter != contents.end(); ++iter ) {
+        if( iter->count_by_charges() ) {
+            stackable.push_back( iter );
+        }
+    }
+    size_t outer = 0;
+    while( outer < stackable.size() ) {
+        bool rescan = false;
+        for( size_t inner = 0; inner < stackable.size(); ) {
+            if( inner == outer || !stackable[outer]->combine( *stackable[inner] ) ) {
+                ++inner;
+                continue;
+            }
+            // inner was placed in outer, check if inner was the item that we track
+            if( &*stackable[inner] == tracked ) {
+                tracked = &*stackable[outer];
+            }
+            contents.erase( stackable[inner] );
+            stackable.erase( stackable.begin() + inner );
+            // The outer scan restarts at contents.begin().  If that item cannot combine,
+            // the rest of this inner pass is a no-op and the scan resumes at the first
+            // stackable item; otherwise it keeps merging into the first item.
+            if( stackable.front() != contents.begin() ) {
+                rescan = true;
+                break;
+            }
+            outer = 0;
+        }
+        outer = rescan ? 0 : outer + 1;
+    }
+    return tracked;
+}
+
 item *item_pocket::restack( /*const*/ item *it )
 {
     item *ret = it;
@@ -314,28 +354,7 @@ item *item_pocket::restack( /*const*/ item *it )
         }
         return ret;
     }
-    for( auto outer_iter = contents.begin(); outer_iter != contents.end(); ++outer_iter ) {
-        if( !outer_iter->count_by_charges() ) {
-            continue;
-        }
-        for( auto inner_iter = contents.begin(); inner_iter != contents.end(); ) {
-            if( outer_iter == inner_iter || !inner_iter->count_by_charges() ) {
-                ++inner_iter;
-                continue;
-            }
-            if( outer_iter->combine( *inner_iter ) ) {
-                // inner was placed in outer, check if inner was the item that we track
-                if( &( *inner_iter ) == ret ) {
-                    ret = &( *outer_iter );
-                }
-                inner_iter = contents.erase( inner_iter );
-                outer_iter = contents.begin();
-            } else {
-                ++inner_iter;
-            }
-        }
-    }
-    return ret;
+    return restack_charge_items( contents, ret );
 }
 
 bool item_pocket::has_item_stacks_with( const item &it ) const
@@ -2390,9 +2409,17 @@ std::pair<item_location, item_pocket *> item_pocket::best_pocket_in_contents(
         ( !ignore_settings && carrier && carrier->is_avatar() && settings.is_disabled() ) ||
         !get_pocket_data()->get_flag_restrictions().empty() ||
         settings.priority() > 0 || is_holster();
+    // item_contents::best_pocket only ever picks CONTAINER pockets, or E_FILE_STORAGE pockets
+    // for estorable-exclusive items.  An item without such a pocket always yields nullptr, so
+    // skip it before building an item_location (a heap allocation) and recursing into it.
+    const bool wants_estorage = it.is_estorable_exclusive();
 
     for( item &contained_item : contents ) {
         if( &contained_item == &it || &contained_item == avoid ) {
+            continue;
+        }
+        if( !contained_item.has_pocket_type( pocket_type::CONTAINER ) &&
+            !( wants_estorage && contained_item.has_pocket_type( pocket_type::E_FILE_STORAGE ) ) ) {
             continue;
         }
         item_location new_loc( this_loc, &contained_item );

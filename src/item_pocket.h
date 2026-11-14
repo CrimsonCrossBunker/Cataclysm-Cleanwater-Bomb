@@ -36,6 +36,11 @@ class map;
 class pocket_data;
 struct iteminfo;
 
+// Merges the count_by_charges items of `contents` into as few stacks as item::combine allows,
+// keeping list order.  Returns the item that `tracked` was merged into (or `tracked`).
+// Used by item_pocket::restack for non-magazine pockets; exposed for tests.
+item *restack_charge_items( std::list<item> &contents, item *tracked );
+
 class item_pocket
 {
     public:
