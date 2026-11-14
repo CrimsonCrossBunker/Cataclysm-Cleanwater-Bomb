@@ -8,8 +8,8 @@ TEST_CASE( "gunshot_sounds_use_each_burst_start_and_rpm", "[gunshot_sound]" )
     using namespace std::chrono_literals;
     sfx::sound_effect_queue queue;
     const sfx::sound_effect_queue::clock::time_point start{};
-    const sfx::queued_sound slow{ "fire_gun", "slow" };
-    const sfx::queued_sound fast{ "fire_gun", "fast" };
+    const sfx::queued_sound slow{ "fire_gun", "slow", "" };
+    const sfx::queued_sound fast{ "fire_gun", "fast", "" };
 
     REQUIRE( queue.enqueue_gunshot( slow, start, 750, 0 ) );
     REQUIRE( queue.enqueue_gunshot( slow, start, 750, 1 ) );
