@@ -37,7 +37,8 @@
     "price": "1 cent",
     "price_postapoc": "1 cent",
     "material": [ "wood" ],
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -254,7 +255,8 @@
     "symbol": "/",
     "material": [ "wood" ],
     "volume": "100 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -267,7 +269,8 @@
     "symbol": ",",
     "material": [ "veggy" ],
     "volume": "100 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -292,7 +295,8 @@
     "symbol": ",",
     "material": [ "dry_plant" ],
     "volume": "10 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -305,7 +309,8 @@
     "symbol": ",",
     "material": [ "dry_plant" ],
     "volume": "200 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD", "TINDER" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -908,7 +913,8 @@
     "longest_side": "122 cm",
     "flags": [ "TRADER_AVOID" ],
     "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
-    "melee_damage": { "bash": 6 }
+    "melee_damage": { "bash": 6 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -921,7 +927,8 @@
     "material": [ "plastic" ],
     "flags": [ "TRADER_AVOID" ],
     "weight": "39 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2045,7 +2052,8 @@
     "material": [ "wood" ],
     "weight": "220 g",
     "volume": "500 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2058,7 +2066,8 @@
     "//": "Commercial pinecones average 300g. We're assuming wild ones weigh less than this.",
     "weight": "200 g",
     "volume": "250 ml",
-    "flags": [ "TRADER_AVOID", "FIREWOOD" ]
+    "flags": [ "TRADER_AVOID", "FIREWOOD" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2173,7 +2182,8 @@
     "material": [ "veggy" ],
     "volume": "1500 ml",
     "price": "0 cent",
-    "price_postapoc": "10 cent"
+    "price_postapoc": "10 cent",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2186,7 +2196,8 @@
     "material": [ "veggy" ],
     "volume": "20 ml",
     "price": "0 cent",
-    "price_postapoc": "0 cent"
+    "price_postapoc": "0 cent",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2199,7 +2210,8 @@
     "material": [ "veggy" ],
     "volume": "250 ml",
     "price": "0 cent",
-    "price_postapoc": "0 cent"
+    "price_postapoc": "0 cent",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2212,7 +2224,8 @@
     "material": [ "veggy" ],
     "volume": "250 ml",
     "price": "0 cent",
-    "price_postapoc": "0 cent"
+    "price_postapoc": "0 cent",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2397,21 +2410,24 @@
     "id": "tanbark",
     "name": { "str": "piece of tanbark", "str_pl": "pieces of tanbark" },
     "description": "A sheet of tannin-rich bark from a tree, useful for tanning leather.",
-    "copy-from": "bark_abstract"
+    "copy-from": "bark_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "birchbark",
     "name": { "str": "piece of birchbark", "str_pl": "pieces of birchbark" },
     "description": "A sheet of tough, water-resistant bark taken from a birch tree.",
-    "copy-from": "bark_abstract"
+    "copy-from": "bark_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "willowbark",
     "name": { "str": "piece of willowbark", "str_pl": "pieces of willowbark" },
     "description": "A sheet of bark taken from a willow tree.  Used in the production of aspirin.",
-    "copy-from": "bark_abstract"
+    "copy-from": "bark_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2424,7 +2440,8 @@
     "price_postapoc": "5 cent",
     "material": [ "wood" ],
     "weight": "85 g",
-    "volume": "109 ml"
+    "volume": "109 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2813,7 +2830,8 @@
     "volume": "1 ml",
     "description": "A true gentleman always finishes his cigars.",
     "category": "other",
-    "flags": [ "TRADER_AVOID" ]
+    "flags": [ "TRADER_AVOID" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2856,7 +2874,8 @@
     "category": "other",
     "weight": "1 g",
     "volume": "1 ml",
-    "flags": [ "TRADER_AVOID" ]
+    "flags": [ "TRADER_AVOID" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2899,7 +2918,8 @@
     "category": "other",
     "weight": "1 g",
     "volume": "1 ml",
-    "flags": [ "TRADER_AVOID" ]
+    "flags": [ "TRADER_AVOID" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2926,7 +2946,8 @@
     "price_postapoc": "50 cent",
     "material": [ "veggy" ],
     "weight": "100 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "abstract": "card_plastic_abstract",
@@ -3450,7 +3471,8 @@
     "id": "alder_bark",
     "name": { "str": "piece of alder bark", "str_pl": "pieces of alder bark" },
     "description": "A strip of bark pulled from an alder tree.  Used in the production of topical hemostatics.",
-    "copy-from": "bark_abstract"
+    "copy-from": "bark_abstract",
+    "stackable": true
   },
   {
     "id": "wallet",
