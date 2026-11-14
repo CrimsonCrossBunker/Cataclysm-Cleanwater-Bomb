@@ -107,6 +107,10 @@ class creature_tracker
          */
         bool add( const shared_ptr_fast<monster> &critter );
         size_t size() const;
+        // Conservative, ordered candidates for friendly-monster target searches.
+        // False asks the caller to use the original full-list traversal.
+        bool nearby_monster_targets( const tripoint_abs_ms &origin,
+                                     std::vector<shared_ptr_fast<monster>> &out );
         /** Updates the position of the given monster to the given point. Returns whether the operation
          *  was successful. */
         bool update_pos( const monster &critter, const tripoint_abs_ms &old_pos,
@@ -209,11 +213,12 @@ class creature_tracker
         passability_bitmap_{};  // NOLINT(cata-serialize)
 
         // Keep preparation and traversal scratch behind the same owner boundary.
-        // This preserves the location/zone cache offsets and tracker footprint.
         struct reachability_state;
         std::unique_ptr<reachability_state> reachability_state_; // NOLINT(cata-serialize)
         double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
         double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
+        struct target_candidate_state;
+        std::unique_ptr<target_candidate_state> target_candidates_; // NOLINT(cata-serialize)
 
         friend game;
 };
