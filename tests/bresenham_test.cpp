@@ -14,23 +14,27 @@ TEST_CASE( "typed_bresenham_matches_same_level_3d_traversal", "[line][bresenham]
     for( int dx = -12; dx <= 12; ++dx ) {
         for( int dy = -12; dy <= 12; ++dy ) {
             const point_bub_ms target = source + point_rel_ms( dx, dy );
-            for( int slope : { -25, -3, 0, 1, 7, 25 } ) {
-                for( int stop_after : { 1, 4, 100 } ) {
+            for( int slope : {
+                     -25, -3, 0, 1, 7, 25
+                     } ) {
+                for( int stop_after : {
+                         1, 4, 100
+                     } ) {
                     CAPTURE( dx, dy, slope, stop_after );
                     std::vector<point> expected;
                     bresenham( tripoint_bub_ms( source, 2 ), tripoint_bub_ms( target, 2 ), slope, 0,
-                    [&]( const tripoint_bub_ms &p ) {
+                    [&]( const tripoint_bub_ms & p ) {
                         expected.push_back( p.xy().raw() );
                         return static_cast<int>( expected.size() ) < stop_after;
                     } );
                     std::vector<point> actual;
-                    bresenham_2d( source, target, slope, [&]( const point_bub_ms &p ) {
+                    bresenham_2d( source, target, slope, [&]( const point_bub_ms & p ) {
                         actual.push_back( p.raw() );
                         return static_cast<int>( actual.size() ) < stop_after;
                     } );
                     CHECK( static_cast<bool>( actual == expected ) );
                     std::vector<point> erased;
-                    bresenham( source, target, slope, [&]( const point_bub_ms &p ) {
+                    bresenham( source, target, slope, [&]( const point_bub_ms & p ) {
                         erased.push_back( p.raw() );
                         return static_cast<int>( erased.size() ) < stop_after;
                     } );
@@ -50,15 +54,15 @@ TEST_CASE( "typed_bresenham_matches_same_level_3d_traversal", "[line][bresenham]
 TEST_CASE( "typed_bresenham_preserves_callback_state_and_early_exit", "[line][bresenham]" )
 {
     std::vector<int> visited;
-    auto callback = [count = std::make_unique<int>( 0 ), &visited]( const point_bub_ms &p ) mutable {
+    auto callback = [count = std::make_unique<int>( 0 ), &visited]( const point_bub_ms & p ) mutable {
         visited.push_back( p.x() );
-        return ++*count < 3;
+        return ++ *count < 3;
     };
     bresenham_2d( point_bub_ms::zero, point_bub_ms( 8, 0 ), 0, callback );
-    CHECK( visited == std::vector<int>{ 1, 2, 3 } );
+    CHECK( visited == std::vector<int> { 1, 2, 3 } );
     visited.clear();
     bresenham_2d( point_bub_ms::zero, point_bub_ms( 8, 0 ), 0, callback );
-    CHECK( visited == std::vector<int>{ 1 } );
+    CHECK( visited == std::vector<int> { 1 } );
     visited.clear();
     bresenham_2d( point_bub_ms::zero, point_bub_ms::zero, 0, callback );
     CHECK( visited.empty() );
@@ -82,7 +86,7 @@ std::uint64_t scan_visibility_rays( bool typed, bool obstacles )
         const point_bub_ms from( 48 + ray % 32, 48 + ( ray / 32 ) % 32 );
         const point_bub_ms to( 4 + ( ray * 17 ) % 120, 4 + ( ray * 29 ) % 120 );
         bool visible = true;
-        auto inspect = [&]( const point_bub_ms &p ) {
+        auto inspect = [&]( const point_bub_ms & p ) {
             if( p == to ) {
                 return false;
             }
