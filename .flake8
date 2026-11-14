@@ -31,12 +31,10 @@ per-file-ignores =
     tools/agent/build_context_pack.py:E501
     tools/agent/generate_migration_reports.py:E501
     tools/agent/finalize_legacy_migration.py:E501
-    tools/agent/import_legacy_audits.py:E501
     tools/agent/generate_markdown_inventory.py:E501
     tools/agent/test_finalize_legacy_migration.py:E501
     tools/agent/test_markdown_inventory.py:E501
     tools/agent/test_context_pack.py:E501
-    tools/agent/test_import_legacy_audits.py:E501
     tools/agent/test_project_metadata.py:E501
     tools/agent/test_repository_governance.py:E501
     # Lua-first extractor: exact emitted Lua/diagnostic strings and matching

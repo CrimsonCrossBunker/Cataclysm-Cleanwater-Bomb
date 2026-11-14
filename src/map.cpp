@@ -5637,7 +5637,7 @@ void map::bash_ter_furn( const tripoint_bub_ms &p, bash_params &params, bool rep
         delete_signage( p );
     } else if( !smash_ter ) {
         // Handle error earlier so that we can assume smash_ter is true below
-        debugmsg( "data/json/terrain.json does not have %s.bash.ter_set set!",
+        debugmsg( "terrain %s does not have bash.ter_set set!",
                   ter( p ).obj().id.c_str() );
     } else if( has_original_terrain_at( p ) && ter( p )->has_flag( "PHASE_BACK" ) ) {
         const ter_id orig = get_original_terrain_at( p );

@@ -321,9 +321,8 @@ TEST_CASE( "cannibalism", "[food][modify_morale][cannibal]" )
     avatar dummy;
     dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
-    // Cleanwater: 撤销 PR #81357 和 #81379
-    // 方法：恢复原始测试断言（食人+精神病+灵性>=25，食人+精神病>=15，精神病+灵性>=5，
-    // 纯食人>=10，普通人<=-60）
+    // CCB: keep the original morale thresholds for cannibalism, psychopathy,
+    // and spirituality.
     item_location human = dummy.i_add( item( itype_bone_human ) );
     REQUIRE( human->has_vitamin( vitamin_human_flesh_vitamin ) );
 

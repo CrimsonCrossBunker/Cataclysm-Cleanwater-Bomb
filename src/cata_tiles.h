@@ -1552,8 +1552,8 @@ class cata_tiles
             float per_ms = 0.0f;                 // advance rate per ms
             // Countdown (ms) before this shot's animation starts. Staggers the
             // rounds of a full-auto burst (which all register in the same tick,
-            // before any frame advances) so they fly in sequence — the "哒哒哒"
-            // rhythm — instead of as one simultaneous wall of bullets. Counts down
+            // before any frame advances) so they fly in sequence with a staccato
+            // rhythm instead of as one simultaneous wall of bullets. Counts down
             // in advance_bullet_anims(); the anim is invisible and frozen until it
             // hits zero.
             float start_delay_ms = 0.0f;

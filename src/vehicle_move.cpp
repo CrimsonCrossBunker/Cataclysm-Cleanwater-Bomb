@@ -1344,12 +1344,8 @@ double vehicle::wheel_damage_chance_vs_item( const item &it, const vehicle_part 
     }
     // Items attempting to do damage use the best/hardest possible value, the pointy bits.
     const double item_hardness = item_hardness_calc( it ).second;
-    // CCB: 大幅降低车轮碾压损坏概率，碾压碎片基本不伤轮胎
-    // 原公式 pow(hardness_ratio, 2.0) → 木材 (30/80)² = 14%，几棵树就废
-    // 新公式 pow(hardness_ratio, 6.0) + 上限 0.2，因为大部分碎片不应损坏轮胎：
-    //   - 木材/家具 (30/80)⁶ ≈ 0.2% — 基本无害
-    //   - 中等硬度 (50/80)⁶ ≈ 5.9% — 偶尔有威胁
-    //   - 钢制碎块 (80/80)⁶ = 100% → 封顶 20% — 即使最硬物品损坏概率也很低
+    // CCB: soften wheel damage from debris by using a sixth-power hardness
+    // ratio capped at 0.2 instead of upstream's squared ratio.
     // It is exponentially more difficult for soft items to damage wheels, even if you're hitting a lot of them.
     const double chance_to_damage = std::min( std::pow( item_hardness / wheel_hardness, 6.0 ), 0.2 );
     add_msg_debug( debugmode::DF_VEHICLE_MOVE,

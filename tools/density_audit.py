@@ -5,9 +5,9 @@ CDDA engine semantics (verified in src/item.cpp):
   * weight():  for count_by_charges, total = type->weight * charges.
                => JSON "weight" is ALREADY per unit.
   * volume():  for count_by_charges, total = type->volume * charges / stack_size.
-               => per-unit volume = JSON "volume" / stack_size.   (item.cpp:2274-2289)
+               => per-unit volume = JSON "volume" / stack_size.   (see item::volume)
   * The same volume/stack_size formula is used for longest_side in
-    item_factory.cpp:868-871.
+    Item_factory::finalize_pre.
 
 So a unit's physical density is:
       density [g/cm3] = weight_mg/1000  /  (volume_ml / stack_size)

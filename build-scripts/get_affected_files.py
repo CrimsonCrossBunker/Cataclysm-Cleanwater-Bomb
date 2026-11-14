@@ -125,8 +125,8 @@ def main():
 
     parser = IncludesParser()
     # Load includes files list.
-    # Lua Platform 构建（CATA_ENABLE_LUA_PLATFORM）时 OBJDIR 为 obj-lua，
-    # 需同时兼容 obj 与 obj-lua。
+    # Lua Platform builds (CATA_ENABLE_LUA_PLATFORM) use obj-lua; accept
+    # either that directory or the regular obj directory.
     if (not parser.parse_includes_files_from("obj", "src", ".") and
             not parser.parse_includes_files_from("obj-lua", "src", ".")):
         return 1

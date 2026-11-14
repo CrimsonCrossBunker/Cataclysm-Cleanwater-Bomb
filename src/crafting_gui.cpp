@@ -2722,7 +2722,6 @@ void crafting_ui_impl::process_action( const std::string &action_in,
             nested_toggle( current[line]->ident(), recalc, keepline );
         } else {
             const int bs = get_batch_size();
-            // Cleanwater: 撤销 PR #87043 — 移除 batch_size 参数和 too_many_results 检查
             craft_confirm_result confirm = can_start_craft(
                                                *current[line], available[line], *crafter );
             switch( confirm ) {

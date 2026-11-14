@@ -149,7 +149,6 @@ static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_photophobia( "photophobia" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-// Cleanwater: 撤销 PR #86067 — 删除 revived_marker 声明
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_run( "run" );
 static const efftype_id effect_spooked( "spooked" );
@@ -3514,7 +3513,6 @@ void monster::die( map *here, Creature *nkiller )
             ch = get_killer()->get_summoner()->as_character();
         }
         if( !is_hallucination() && ch != nullptr ) {
-            // Cleanwater: 撤销 PR #86067 — 恢复无条件击杀经验
             const int kill_xp = compute_kill_xp( type->id );
             cata::event e = cata::event::make<event_type::character_kills_monster>( ch->getID(), type->id,
                             kill_xp );
@@ -4603,7 +4601,6 @@ void monster::hear_sound( const tripoint_bub_ms &source, const int vol, const in
         return;
     }
 
-    // Cleanwater: 撤销 PR #83963 — 僵尸重新受火焰声音吸引
     int tmp_provocative = provocative || volume >= normal_roll( 30, 5 );
     // already following a more interesting sound,
     // so 50% will try to stick to it, and 50% will move in direction of a new sound

@@ -464,7 +464,8 @@ class target_ui
         // Calculates distance from 'src'. For consistency, prefer using this over rl_dist.
         int dist_fn( const tripoint_bub_ms &p );
 
-        // CCB: 判断跨楼层目标是否在武器垂直 reach 内（Reach 模式专用）。
+        // CCB: whether a cross-z target is within the weapon's vertical reach
+        // (Reach mode only).
         bool reach_z_in_range( const tripoint_bub_ms &p );
 
         // Set creature (or tile) under cursor as player's last target
@@ -1242,9 +1243,6 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         }
     }
 
-    // Cleanwater: 撤销 PR #86232 (Remove dumb gun cheese)
-    // 方法：删除 times_shot_target 计数器和射击次数限制，恢复无条件技能训练
-
     // usage of any attached bipod is dependent upon terrain or on being prone
     bool bipod = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_MOUNTABLE, pos_bub( here ) ) ||
                  is_prone();
@@ -1444,7 +1442,6 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, it
         }
     }
 
-    // Cleanwater: 撤销 PR #86232 — 恢复无条件技能训练（删除 times_shot_target < 100 限制）
     // Practice the base gun skill proportionally to number of hits, but always by one.
     if( firing != nullptr && !gun.has_flag( flag_WONT_TRAIN_MARKSMANSHIP ) ) {
         practice( skill_gun, ( hits + 1 ) * 5 );
@@ -3619,11 +3616,8 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
         valid_pos.z() = clamp( valid_pos.z() - src.z(), -fov_3d_z_range, fov_3d_z_range ) + src.z();
         // Or across z-levels (in melee)
         if( mode == TargetMode::Reach && src.z() != valid_pos.z() ) {
-            // CCB: 与 melee.cpp 的 can_reach_attack 保持一致。
-            // 上游默认大部分近战武器垂直延伸为 0（禁止跨楼层），
-            // 但本分叉恢复了"水平延伸>1的武器(长矛等)至少可跨 1 层 Z 轴攻击"。
-            // 此处的光标移动判定必须同步放开，否则会出现：可锁定楼下敌人却无法
-            // 把光标移过去，导致 dst 停在默认值、射程显示异常(如 92)且无法锁定。
+            // CCB: keep cursor movement aligned with can_reach_attack and
+            // reach_z_in_range; long-reach weapons may cross one z-level.
             int vert_reach = relevant ? relevant->current_reach_range( *you ).second :
                              null_item_reference().current_reach_range( *you ).second;
             const int horiz_reach = relevant ? relevant->reach_range( *you ).first :
@@ -3900,18 +3894,16 @@ void target_ui::update_status()
         status = Status::OutOfRange;
     } else if( mode == TargetMode::Reach && src.z() != dst.z() &&
                !reach_z_in_range( dst ) ) {
-        // CCB: 仅当跨楼层超出武器垂直 reach 时才判为超距。
-        // 与 set_cursor_pos / can_reach_attack 保持一致，使长矛等武器
-        // 可以锁定并攻击垂直 reach 之内的楼上/楼下敌人。
+        // CCB: only cross-z targets outside the weapon's vertical reach are
+        // out of range.
         status = Status::OutOfRange;
     } else {
         status = Status::Good;
     }
 }
 
-// CCB: 判断跨楼层目标是否在武器垂直 reach 内。
-// 与 melee.cpp 的 can_reach_attack / set_cursor_pos 的判定保持一致：
-// 水平 reach>1 的武器(长矛等)垂直 reach 至少为 1，可跨 1 层楼攻击。
+// CCB: whether p is within the weapon's vertical reach on another z-level.
+// Matches can_reach_attack and the cursor-movement check in set_cursor_pos.
 bool target_ui::reach_z_in_range( const tripoint_bub_ms &p )
 {
     int vert_reach = relevant ? relevant->current_reach_range( *you ).second :

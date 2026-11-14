@@ -1935,7 +1935,6 @@ void map::monster_in_field( monster &z )
                 cur.set_field_intensity( 0 );
             }
         }
-        // Cleanwater: 撤销 PR #83963 — 恢复火焰对怪物的原始伤害
         if( cur_field_type == fd_fire ) {
             // TODO: MATERIALS Use fire resistance
             if( z.has_flag( mon_flag_FIREPROOF ) || z.has_flag( mon_flag_FIREY ) ) {
@@ -2326,9 +2325,6 @@ std::vector<FieldProcessorPtr> map_field_processing::processors_for_type( const 
     }
     if( ft.id == fd_fire ) {
         processors.push_back( &field_processor_fd_fire );
-        // CCB: 移除 PR #87197 (RenechCDDA/Fungal terrain doesn't spread fire)
-        // 原PR在此处添加了 field_processor_fd_fungicidal_gas，使火焰不蔓延但仍能杀死真菌
-        // 我们恢复原始行为：真菌地形可燃，火焰正常蔓延
     }
     if( ft.id == fd_fungal_haze ) {
         processors.push_back( &field_processor_fd_fungal_haze );

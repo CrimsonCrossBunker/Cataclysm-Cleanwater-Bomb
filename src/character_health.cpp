@@ -2194,7 +2194,7 @@ float Character::get_bmi() const
 float Character::get_bmi_lean() const
 {
     //strength BMIs decrease to zero as you starve (muscle atrophy)
-    // CCB: 调整瘦体重BMI公式，降低力量对体重的贡献
+    // CCB: scale lean BMI with a smaller strength contribution than upstream.
     if( get_bmi_fat() < character_weight_category::normal ) {
         const stat_mod wpen = get_weight_penalty();
         return 14.0f + ( get_str_base() / 4.0f ) - wpen.strength;
@@ -2425,7 +2425,7 @@ int Character::get_stamina_max() const
     }
     // Since adding cardio, 'player_max_stamina' is really 'base max stamina' and gets further modified
     // by your CV fitness.  Name has been kept this way to avoid needing to change the code.
-    // Default base maximum stamina and cardio scaling are defined in data/core/game_balance.json
+    // Default base maximum stamina and cardio scaling are defined in data/core/external_options.json
     static const std::string player_max_stamina( "PLAYER_MAX_STAMINA_BASE" );
     static const std::string player_cardiofit_stamina_scale( "PLAYER_CARDIOFIT_STAMINA_SCALING" );
 
