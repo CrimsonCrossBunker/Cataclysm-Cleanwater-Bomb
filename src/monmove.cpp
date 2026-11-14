@@ -1691,7 +1691,7 @@ tripoint_bub_ms monster::scent_move()
         // Retain duplicate destinations: they weight the random choice.
         for( const tripoint_bub_ms &dest : here.points_in_radius( direction, 1 ) ) {
             const tripoint_rel_ms offset = dest - origin;
-            if( movement_cache.get( offset.x(), offset.y(), offset.z(), [&]() {
+            if( movement_cache.get( offset.raw(), [&]() {
             if( !here.valid_move( origin, dest, can_bash, true ) ) {
                     return false;
                 }
@@ -2018,7 +2018,7 @@ std::map<damage_type_id, int> monster::group_bash_skill( const tripoint_bub_ms &
         monster *mon = nullptr;
         const auto visit = [&]( const tripoint_bub_ms & in_path ) {
             const tripoint_rel_ms offset = in_path - origin;
-            mon = helper_cache.get( offset.x(), offset.y(), offset.z(), [&]() -> monster * {
+            mon = helper_cache.get( offset.raw(), [&]() -> monster * {
                 monster *helper = creatures.creature_at<monster>( in_path );
                 return helper && helper->has_flag( mon_flag_GROUP_BASH ) &&
                 !helper->is_hallucination() ? helper : nullptr;

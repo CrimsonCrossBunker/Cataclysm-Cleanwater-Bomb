@@ -3,6 +3,7 @@
 
 #include "cata_catch.h"
 #include "monster_local_cache.h"
+#include "point.h"
 
 TEST_CASE( "monster_local_cache_preserves_scent_weights", "[monster][local_cache]" )
 {
@@ -21,7 +22,7 @@ TEST_CASE( "monster_local_cache_preserves_scent_weights", "[monster][local_cache
                         if( valid ) {
                             original.push_back( {x, y, z} );
                         }
-                        if( cache.get( x, y, z, [&]() {
+                        if( cache.get( { x, y, z }, [&]() {
                         ++queries;
                         return valid;
                     } ) ) {
@@ -45,7 +46,7 @@ TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
     int queries = 0;
     monster_local_cache<int *, 1, 0> cache;
     for( int i = 0; i < 3; ++i ) {
-        CHECK( cache.get( -1, 1, 0, [&]() -> int* {
+        CHECK( cache.get( { -1, 1, 0 }, [&]() -> int* {
             ++queries;
             return nullptr;
         } ) == nullptr );
@@ -55,14 +56,14 @@ TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
     for( const auto &offset : std::vector<std::array<int, 3>> {
     {2, 0, 0}, {-2, 0, 0}, {0, 2, 0}, {0, -2, 0}, {0, 0, 1}, {0, 0, -1}
 } ) {
-        CHECK( cache.get( offset[0], offset[1], offset[2], [&]() {
+        CHECK( cache.get( { offset[0], offset[1], offset[2] }, [&]() {
             ++queries;
             return &helper;
         } ) == &helper );
     }
     CHECK( queries == 7 );
     monster_local_cache<int *, 1, 0> next_action;
-    CHECK( next_action.get( -1, 1, 0, [&]() {
+    CHECK( next_action.get( { -1, 1, 0 }, [&]() {
         return &helper;
     } ) == &helper );
 }

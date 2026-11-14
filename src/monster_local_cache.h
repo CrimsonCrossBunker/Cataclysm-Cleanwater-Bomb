@@ -5,6 +5,8 @@
 #include <array>
 #include <optional>
 
+#include "point.h"
+
 // Stack-local memoization for one read-only monster query. Store false/null
 // results too, and never reuse entries across movement or gameplay effects.
 template<typename T, int RadiusXY, int RadiusZ>
@@ -12,12 +14,15 @@ class monster_local_cache
 {
     public:
         template<typename Query>
-        T get( int x, int y, int z, Query &&query ) {
-            if( x < -RadiusXY || x > RadiusXY || y < -RadiusXY || y > RadiusXY ||
-                z < -RadiusZ || z > RadiusZ ) {
+        T get( const tripoint &offset, Query &&query ) {
+            if( offset.x < -RadiusXY || offset.x > RadiusXY ||
+                offset.y < -RadiusXY || offset.y > RadiusXY ||
+                offset.z < -RadiusZ || offset.z > RadiusZ ) {
                 return query();
             }
-            auto &entry = values_[( ( z + RadiusZ ) * width + y + RadiusXY ) * width + x + RadiusXY];
+            const int index = ( ( offset.z + RadiusZ ) * width + offset.y + RadiusXY ) * width +
+                              offset.x + RadiusXY;
+            std::optional<T> &entry = values_[index];
             if( !entry ) {
                 entry = query();
             }
