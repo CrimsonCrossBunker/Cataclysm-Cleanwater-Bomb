@@ -61,6 +61,7 @@
 #include "veh_type.h"
 #include "weather.h"
 #include "weather_type.h"
+#include "worldfactory.h"
 
 static const vpart_location_id vpart_location_on_roof( "on_roof" );
 
@@ -319,6 +320,21 @@ bool aabb_in_frustum( const view_frustum &f, const vec3 &min, const vec3 &max )
     return true;
 }
 
+bool aabb_fully_in_frustum( const view_frustum &f, const vec3 &min, const vec3 &max )
+{
+    for( const std::array<float, 4> &p : f.planes ) {
+        // The negative vertex is the worst case. If it is inside, every other
+        // corner is inside this plane too.
+        const vec3 v{ p[0] >= 0.0f ? min.x : max.x,
+                      p[1] >= 0.0f ? min.y : max.y,
+                      p[2] >= 0.0f ? min.z : max.z };
+        if( p[0] * v.x + p[1] * v.y + p[2] * v.z + p[3] < 0.0f ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Generous bounds for every object a tile can emit: the largest current
 // creature billboard is 9m wide, and vehicle/sheet art can spill across tiles.
 // Conservative culling is preferable here to clipping an edge-case sprite.
@@ -330,6 +346,13 @@ bool bounds_in_frustum( const view_frustum &f, const float x0, const float y0,
                         const float x1, const float y1, const float wz )
 {
     return aabb_in_frustum( f, { x0 - CULL_XY_MARGIN, y0 - CULL_XY_MARGIN, wz - CULL_Z_BELOW },
+    { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
+}
+
+bool bounds_fully_in_frustum( const view_frustum &f, const float x0, const float y0,
+                              const float x1, const float y1, const float wz )
+{
+    return aabb_fully_in_frustum( f, { x0 - CULL_XY_MARGIN, y0 - CULL_XY_MARGIN, wz - CULL_Z_BELOW },
     { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
 }
 
@@ -655,6 +678,13 @@ struct frame_profile {
     uint64_t instances = 0;
     uint64_t segments = 0;
     uint64_t upload_bytes = 0;
+    uint64_t far_columns = 0;
+    uint64_t far_submaps = 0;
+    uint64_t far_tiles = 0;
+    uint64_t far_los_calls = 0;
+    uint64_t far_los_hits = 0;
+    uint64_t far_instances = 0;
+    double far_ms = 0.0;
     double memory_ms = 0.0;
     double gather_ms = 0.0;
     double assembly_ms = 0.0;
@@ -677,6 +707,13 @@ struct frame_profile {
         instances += other.instances;
         segments += other.segments;
         upload_bytes += other.upload_bytes;
+        far_columns += other.far_columns;
+        far_submaps += other.far_submaps;
+        far_tiles += other.far_tiles;
+        far_los_calls += other.far_los_calls;
+        far_los_hits += other.far_los_hits;
+        far_instances += other.far_instances;
+        far_ms += other.far_ms;
         memory_ms += other.memory_ms;
         gather_ms += other.gather_ms;
         assembly_ms += other.assembly_ms;
@@ -728,7 +765,14 @@ void publish_profile( const frame_profile &frame )
         << " orientation_hits=" << avg( total.orientation_cache_hits )
         << " instances=" << avg( total.instances )
         << " segments=" << avg( total.segments )
-        << " upload_KiB=" << avg( total.upload_bytes ) / 1024.0;
+        << " upload_KiB=" << avg( total.upload_bytes ) / 1024.0
+        << " | far=" << avg( total.far_ms )
+        << "ms far_cols=" << avg( total.far_columns )
+        << " far_sm=" << avg( total.far_submaps )
+        << " far_tiles=" << avg( total.far_tiles )
+        << " far_los=" << avg( total.far_los_calls )
+        << " far_los_hits=" << avg( total.far_los_hits )
+        << " far_instances=" << avg( total.far_instances );
     write_status( out.str() );
     total = frame_profile{};
     frames = 0;
@@ -2567,20 +2611,50 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         return tone_from_light( smooth_lighting::classify_light_cell(
                                     ll, apparent, vis_vars.vision_threshold ).light );
     };
+    size_t gray_box_bucket = std::numeric_limits<size_t>::max();
+    size_t gray_tree_bucket = std::numeric_limits<size_t>::max();
+    const auto structure_bucket_for = [&]( const int mode ) -> decltype( auto ) {
+        size_t &cached = mode == MODE_BOX ? gray_box_bucket : gray_tree_bucket;
+        if( cached == std::numeric_limits<size_t>::max() ) {
+            bucket_for( mode, nullptr );
+            cached = bucket_index.at( bucket_key{ mode, nullptr } );
+        }
+        return ( buckets[cached].data );
+    };
+    struct structure_traits {
+        bool no_floor = false;
+        bool draw_floor = false;
+        bool is_tree = false;
+        bool is_shrub = false;
+        bool is_wall = false;
+    };
+    std::unordered_map<ter_id, structure_traits> structure_traits_cache;
+    const auto structure_traits_for = [&]( const ter_t & t ) {
+        const ter_id id( t.id );
+        auto iter = structure_traits_cache.find( id );
+        if( iter != structure_traits_cache.end() ) {
+            return iter;
+        }
+        structure_traits traits;
+        traits.no_floor = t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+        traits.draw_floor = !traits.no_floor && !skip_untextured_terrain_surface( t );
+        traits.is_tree = t.has_flag( "TREE" );
+        traits.is_shrub = t.has_flag( "SHRUB" );
+        const bool is_panel = door_or_window( t ) || wall_opening( t );
+        const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
+        const bool is_upright = upright_equipment_terrain( t );
+        traits.is_wall = !traits.is_tree && !traits.is_shrub && !is_panel && !is_fence &&
+                         !is_upright && t.movecost == 0;
+        return structure_traits_cache.emplace( id, traits ).first;
+    };
     // Structural LOD for generated submaps beyond the native 60-tile radius.
     // It avoids sprite, orientation and entity lookups, and uses one neutral gray.
     const auto gather_structure_tile = [&]( const ter_t & t, const point d, const float wz,
     const tile_tone * tone, const bool memory ) -> bool {
-        const bool is_tree = t.has_flag( "TREE" );
-        const bool is_shrub = t.has_flag( "SHRUB" );
-        if( t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) && !is_tree && !is_shrub ) {
+        const structure_traits &traits = structure_traits_for( t )->second;
+        if( traits.no_floor && !traits.is_tree && !traits.is_shrub ) {
             return false;
         }
-        const bool is_panel = door_or_window( t ) || wall_opening( t );
-        const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
-        const bool is_upright = upright_equipment_terrain( t );
-        const bool is_wall = !is_tree && !is_shrub && !is_panel && !is_fence &&
-                             !is_upright && t.movecost == 0;
         const float shade = tone ? tone->shade : 1.0f;
         const float saturation = tone ? tone->sat : 1.0f;
         const float r = 0.45f * shade;
@@ -2588,26 +2662,25 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         const float b = 0.45f * shade;
         const sprite_info untextured;
         bool drew = false;
-        if( !t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
-            !skip_untextured_terrain_surface( t ) && count < MAX_DRAW_INSTANCES ) {
-            std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
+        if( traits.draw_floor && count < MAX_DRAW_INSTANCES ) {
+            std::vector<float> &v = structure_bucket_for( MODE_BOX );
             push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
                            wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, untextured,
                            r, g, b, true, 0, false, -1.0f, false, saturation, memory );
             ++count;
             drew = true;
         }
-        if( is_wall && count < MAX_DRAW_INSTANCES ) {
-            std::vector<float> &v = bucket_for( MODE_BOX, nullptr );
+        if( traits.is_wall && count < MAX_DRAW_INSTANCES ) {
+            std::vector<float> &v = structure_bucket_for( MODE_BOX );
             push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
                            1.0f, 1.0f, WALL_HEIGHT, untextured, r, g, b,
                            true, 0, false, -1.0f, false, saturation, memory );
             ++count;
             drew = true;
         }
-        if( ( is_tree || is_shrub ) && count < MAX_DRAW_INSTANCES ) {
-            const float height = is_shrub ? SHRUB_HEIGHT : TREE_HEIGHT;
-            std::vector<float> &v = bucket_for( MODE_XQUAD, nullptr );
+        if( ( traits.is_tree || traits.is_shrub ) && count < MAX_DRAW_INSTANCES ) {
+            const float height = traits.is_shrub ? SHRUB_HEIGHT : TREE_HEIGHT;
+            std::vector<float> &v = structure_bucket_for( MODE_XQUAD );
             push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
                            1.0f, 1.0f, height, untextured, r, g, b,
                            true, 0, false, -1.0f, false, saturation, memory );
@@ -2617,41 +2690,71 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         return drew;
     };
     const tripoint_bub_ms observer_pos = here.observer_position( you );
+    const uint64_t seen_generation = here.seen_generation();
     bool full_vision = you.sight_range( here.ambient_light_at( observer_pos ) ) >=
                        MAX_VIEW_DISTANCE;
     if( full_vision ) {
         static std::optional<tripoint_bub_ms> last_vision_origin;
         static uint64_t last_seen_generation = 0;
         static int max_seen_radius = 0;
-        const uint64_t seen_generation = here.seen_generation();
         if( last_vision_origin != observer_pos || last_seen_generation != seen_generation ) {
             last_vision_origin = observer_pos;
             last_seen_generation = seen_generation;
             max_seen_radius = 0;
             const level_cache &sight_cache = here.get_cache_ref( observer_pos.z() );
-            for( int y = 0; y < MAPSIZE_Y; ++y ) {
+            for( int y = 0; y < MAPSIZE_Y && max_seen_radius < MAX_VIEW_DISTANCE; ++y ) {
                 for( int x = 0; x < MAPSIZE_X; ++x ) {
+                    const int radius = std::max( std::abs( x - observer_pos.x() ),
+                                                 std::abs( y - observer_pos.y() ) );
+                    if( radius < MAX_VIEW_DISTANCE ) {
+                        continue;
+                    }
                     if( sight_cache.seen_cache[x][y] > 0.0f ||
                         sight_cache.camera_cache[x][y] > 0.0f ) {
-                        max_seen_radius = std::max( max_seen_radius,
-                                                    std::max( std::abs( x - observer_pos.x() ),
-                                                              std::abs( y - observer_pos.y() ) ) );
+                        max_seen_radius = MAX_VIEW_DISTANCE;
+                        break;
                     }
                 }
             }
         }
         full_vision = max_seen_radius >= MAX_VIEW_DISTANCE;
     }
+    static const WORLD *los_world = nullptr;
+    static std::string los_dimension;
+    static std::optional<tripoint_abs_ms> los_origin;
+    static uint64_t los_generation = 0;
+    static std::unordered_map<tripoint_abs_ms, bool> los_cache;
+    const WORLD *current_world = world_generator ? world_generator->active_world : nullptr;
+    const std::string current_dimension = g ? g->get_dimension_prefix().str() : std::string();
+    const tripoint_abs_ms current_origin = here.get_abs( observer_pos );
+    if( los_world != current_world || los_dimension != current_dimension ||
+        los_origin != current_origin || los_generation != seen_generation ) {
+        los_world = current_world;
+        los_dimension = current_dimension;
+        los_origin = current_origin;
+        los_generation = seen_generation;
+        los_cache.clear();
+    }
     const auto gray_los_visible = [&]( const tripoint_abs_ms & target ) {
         if( !full_vision ) {
             return false;
         }
+        const auto cached = los_cache.find( target );
+        if( cached != los_cache.end() ) {
+            ++g_profile.far_los_hits;
+            return cached->second;
+        }
+        ++g_profile.far_los_calls;
+        const auto cache_result = [&]( const bool visible ) {
+            los_cache.emplace( target, visible );
+            return visible;
+        };
         const tripoint_bub_ms target_bub = here.get_bub( target );
         const int dx = target_bub.x() - observer_pos.x();
         const int dy = target_bub.y() - observer_pos.y();
         const int steps = std::max( std::abs( dx ), std::abs( dy ) );
         if( steps == 0 ) {
-            return true;
+            return cache_result( true );
         }
         const level_cache &sight_cache = here.get_cache_ref( observer_pos.z() );
         for( int i = 1; i <= steps; ++i ) {
@@ -2668,10 +2771,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             if( !here.inbounds( p ) ||
                 ( sight_cache.seen_cache[x][y] <= 0.0f &&
                   sight_cache.camera_cache[x][y] <= 0.0f ) ) {
-                return false;
+                return cache_result( false );
             }
         }
-        return true;
+        return cache_result( true );
     };
     // sprite-less tiles (fields) fall back to the tileset's ASCII symbol, drawn
     // from the shared TTF glyph atlas and tinted with the entity color (the
@@ -5015,6 +5118,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     }
 
     if( get_option<bool>( "RENDER3D_FAR_TERRAIN" ) ) {
+        const bool far_profile = profiling_enabled();
+        const Uint64 far_begin = profile_ticks( far_profile );
+        const int far_count_start = count;
         // Generated-map structural LOD beyond the live radius. MAPBUFFER owns all
         // submaps; pointers are borrowed for this gather only and never retained.
         // On or above the surface, include every upper building level. Underground
@@ -5051,14 +5157,12 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( max_corner_range2 <= VIEW_RADIUS * VIEW_RADIUS ) {
                     continue;
                 }
-                // The existing observer-level LOS gate is shared by the column;
-                // memory remains independent of it on every level.
-                const bool gray_visible = gray_los_visible(
-                                              column_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) );
+                ++g_profile.far_columns;
+                // Frustum work precedes LOS. A fully contained submap needs no
+                // per-tile plane tests later; an intersecting one stays conservative.
+                std::array<uint8_t, OVERMAP_LAYERS> z_frustum{};
+                bool any_in_frustum = false;
                 for( int zlev = far_z_min; zlev <= far_z_max; ++zlev ) {
-                    if( count >= MAX_DRAW_INSTANCES ) {
-                        return count;
-                    }
                     const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
                     if( !bounds_in_frustum( frustum, static_cast<float>( smd.x ),
                                             static_cast<float>( smd.y ),
@@ -5066,6 +5170,37 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                             static_cast<float>( smd.y + SEEY ), wz ) ) {
                         continue;
                     }
+                    z_frustum[zlev + OVERMAP_DEPTH] = bounds_fully_in_frustum(
+                                                          frustum, static_cast<float>( smd.x ),
+                                                          static_cast<float>( smd.y ),
+                                                          static_cast<float>( smd.x + SEEX ),
+                                                          static_cast<float>( smd.y + SEEY ), wz ) ? 2 : 1;
+                    any_in_frustum = true;
+                }
+                if( !any_in_frustum ) {
+                    continue;
+                }
+                const int nearest_x = std::clamp( 0, smd.x, smd.x + SEEX - 1 );
+                const int nearest_y = std::clamp( 0, smd.y, smd.y + SEEY - 1 );
+                const bool memory_possible =
+                    nearest_x * nearest_x + nearest_y * nearest_y <= FAR_MEMORY_RADIUS * FAR_MEMORY_RADIUS;
+                // The existing observer-level LOS gate is shared by the column;
+                // memory remains independent of it on every level.
+                const bool gray_visible = gray_los_visible(
+                                              column_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) );
+                if( !gray_visible && !memory_possible ) {
+                    continue;
+                }
+                for( int zlev = far_z_min; zlev <= far_z_max; ++zlev ) {
+                    if( count >= MAX_DRAW_INSTANCES ) {
+                        return count;
+                    }
+                    const uint8_t frustum_state = z_frustum[zlev + OVERMAP_DEPTH];
+                    if( frustum_state == 0 ) {
+                        continue;
+                    }
+                    ++g_profile.far_submaps;
+                    const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
                     const tripoint_abs_sm sm_pos( column_pos.x(), column_pos.y(), zlev );
                     const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
                     const submap *sm = nullptr;
@@ -5093,9 +5228,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                         uniform_open_air = uniform_ter &&
                                            uniform_ter->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
                     }
-                    if( ( !sm || uniform_open_air ) &&
-                        !you.has_map_memory_in_region( sm_abs,
-                                                       sm_abs + point_rel_ms( SEEX - 1, SEEY - 1 ) ) ) {
+                    const bool has_memory = memory_possible && you.has_map_memory_in_region(
+                                                sm_abs, sm_abs + point_rel_ms( SEEX - 1, SEEY - 1 ) );
+                    if( ( !sm || uniform_open_air ) && !has_memory ) {
                         continue;
                     }
                     for( int ly = 0; ly < SEEY; ++ly ) {
@@ -5103,15 +5238,20 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                             const point d( smd.x + lx, smd.y + ly );
                             const int range2 = d.x * d.x + d.y * d.y;
                             if( range2 <= VIEW_RADIUS * VIEW_RADIUS ||
-                                range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ||
-                                !tile_in_frustum( frustum, d, wz ) ) {
+                                range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ) {
                                 continue;
                             }
-                            const tripoint_abs_ms abs_p = sm_abs + point_rel_ms( lx, ly );
-                            const memorized_tile &mem = you.get_memorized_tile( abs_p );
-                            if( !mem.get_ter_id().empty() || !mem.get_dec_id().empty() ) {
-                                gather_memory_tile( here.get_bub( abs_p ), d, wz, zlev <= cz );
+                            if( frustum_state == 1 && !tile_in_frustum( frustum, d, wz ) ) {
                                 continue;
+                            }
+                            ++g_profile.far_tiles;
+                            if( has_memory && range2 <= FAR_MEMORY_RADIUS * FAR_MEMORY_RADIUS ) {
+                                const tripoint_abs_ms abs_p = sm_abs + point_rel_ms( lx, ly );
+                                const memorized_tile &mem = you.get_memorized_tile( abs_p );
+                                if( !mem.get_ter_id().empty() || !mem.get_dec_id().empty() ) {
+                                    gather_memory_tile( here.get_bub( abs_p ), d, wz, zlev <= cz );
+                                    continue;
+                                }
                             }
                             if( gray_visible && sm && !uniform_open_air ) {
                                 const ter_id t = sm->get_ter( point_sm_ms( lx, ly ) );
@@ -5123,6 +5263,10 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     }
                 }
             }
+        }
+        g_profile.far_instances = count - far_count_start;
+        if( far_profile ) {
+            g_profile.far_ms = profile_ms( far_begin, profile_ticks( true ) );
         }
     }
 

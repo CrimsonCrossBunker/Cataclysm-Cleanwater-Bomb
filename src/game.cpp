@@ -11513,18 +11513,22 @@ void game::generate_distant_terrain()
         return;
     }
     const level_cache &sight_cache = m.get_cache_ref( observer_pos.z() );
-    int max_seen_radius = 0;
-    for( int y = 0; y < MAPSIZE_Y; ++y ) {
+    bool full_vision = false;
+    for( int y = 0; y < MAPSIZE_Y && !full_vision; ++y ) {
         for( int x = 0; x < MAPSIZE_X; ++x ) {
+            const int radius = std::max( std::abs( x - observer_pos.x() ),
+                                         std::abs( y - observer_pos.y() ) );
+            if( radius < MAX_VIEW_DISTANCE ) {
+                continue;
+            }
             if( sight_cache.seen_cache[x][y] > 0.0f ||
                 sight_cache.camera_cache[x][y] > 0.0f ) {
-                max_seen_radius = std::max( max_seen_radius,
-                                            std::max( std::abs( x - observer_pos.x() ),
-                                                      std::abs( y - observer_pos.y() ) ) );
+                full_vision = true;
+                break;
             }
         }
     }
-    if( max_seen_radius < MAX_VIEW_DISTANCE ) {
+    if( !full_vision ) {
         return;
     }
 
@@ -11569,17 +11573,25 @@ void game::generate_distant_terrain()
         return a.distance2 < b.distance2;
     } );
 
+    constexpr auto generation_slice = std::chrono::milliseconds( 8 );
+    const auto generation_begin = std::chrono::steady_clock::now();
     int generation_budget = 32;
     for( const candidate &next : candidates ) {
-        if( distant_generated_omts.count( next.pos ) != 0 ||
-            MAPBUFFER.submap_exists_approx( project_to<coords::sm>( next.pos ) ) ) {
+        if( distant_generated_omts.count( next.pos ) != 0 ) {
+            continue;
+        }
+        if( MAPBUFFER.submap_exists_approx( project_to<coords::sm>( next.pos ) ) ) {
+            // Positive results are stable for this save too: avoid probing the same
+            // archive listing every turn while the candidate frontier is scanned.
+            distant_generated_omts.insert( next.pos );
             continue;
         }
         // Record the attempt as well as success: a failed or entirely uniform OMT
         // must not monopolize every later turn's generation budget.
         distant_generated_omts.insert( next.pos );
         m.generate_distant_omt( next.pos );
-        if( --generation_budget <= 0 ) {
+        if( --generation_budget <= 0 ||
+            std::chrono::steady_clock::now() - generation_begin >= generation_slice ) {
             return;
         }
     }
