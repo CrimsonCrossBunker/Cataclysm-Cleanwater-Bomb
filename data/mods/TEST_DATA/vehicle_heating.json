@@ -1,0 +1,12 @@
+[
+  {
+    "id": "test_vehicle_hotplate_startup",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "propane_cooker",
+    "name": { "str": "test legacy hotplate" },
+    "description": "Tests the legacy HOTPLATE startup charge with a vehicle-supported fuel supply.",
+    "charges_per_use": 8,
+    "use_action": [ "HOTPLATE" ]
+  }
+]

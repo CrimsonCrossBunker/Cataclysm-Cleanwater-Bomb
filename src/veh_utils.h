@@ -13,6 +13,7 @@
 #include "type_id.h"
 
 class Character;
+class item_location;
 class map;
 class vehicle;
 class vpart_info;
@@ -85,6 +86,9 @@ class veh_menu
         void sort( const std::function<int( const veh_menu_item &a, const veh_menu_item &b )> &comparer );
 
         int desc_lines_hint = 0;
+
+        // Authenticated one-shot radio access. The handle outlives this menu.
+        const item_location *remote_controller = nullptr;
 
         // don't allow allocating on heap
         static void *operator new( size_t ) = delete;

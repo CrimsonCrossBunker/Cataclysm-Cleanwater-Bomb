@@ -1,5 +1,10 @@
 #include "iuse_actor.h"
 
+#include <cstdint>
+
+#include "item_activation.h"
+#include "inventory_ui.h"
+
 #include <color.h>
 #include <imgui/imgui.h>
 #include <iuse.h>
@@ -28,6 +33,8 @@
 #include "calendar.h"
 #include "cata_imgui.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include "repair_activity.h"
 #include "character_id.h"
 #include "clothing_mod.h"
 #include "clzones.h"
@@ -57,6 +64,7 @@
 #include "iexamine.h"
 #include "input_popup.h"
 #include "item.h"
+#include "item_healing.h"
 #include "item_components.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -67,6 +75,8 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "mp_gamestate.h"
+#include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "map_selector.h"
@@ -115,7 +125,6 @@
 #include "weather.h"
 
 static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
-static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
 
 static const damage_type_id damage_acid( "acid" );
 static const damage_type_id damage_bash( "bash" );
@@ -365,8 +374,52 @@ void iuse_transform::load( const JsonObject &obj, const std::string & )
     optional( obj, false, "menu_text", menu_text );
 }
 
-std::optional<int> iuse_transform::use( Character *p, item &it, map *,
+bool iuse_transform::query_activation_choices( item_activation_choices &choices ) const
+{
+    choices = {};
+    if( !set_timer ) {
+        return true;
+    }
+    int seconds = 0;
+    if( !query_int( seconds, false, _( "Set the timer to how many seconds (0 to cancel)?" ) ) ) {
+        return false;
+    }
+    choices.timer_seconds = seconds;
+    return valid_activation_choices( choices );
+}
+
+bool iuse_transform::valid_activation_choices( const item_activation_choices &choices ) const
+{
+    if( !set_timer ) {
+        return choices.empty();
+    }
+    return !choices.lumber && choices.salvage_batch.empty() && !choices.salvage &&
+           !choices.fire_target &&
+           !choices.fire_tinder &&
+           choices.remote_vehicle_action.empty() &&
+           !choices.remote_vehicle_uid && !choices.radio &&
+           choices.timer_seconds && *choices.timer_seconds > 0 &&
+           static_cast<int64_t>( to_turn<int>( calendar::turn ) ) + *choices.timer_seconds <=
+           to_turn<int>( calendar::turn_max );
+}
+
+std::optional<int> iuse_transform::use_with_choices( Character *p, item &it, map *here,
+        const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    if( !valid_activation_choices( choices ) ) {
+        return std::nullopt;
+    }
+    return use_impl( p, it, here, pos, &choices );
+}
+
+std::optional<int> iuse_transform::use( Character *p, item &it, map *here,
                                         const tripoint_bub_ms &pos ) const
+{
+    return use_impl( p, it, here, pos, nullptr );
+}
+
+std::optional<int> iuse_transform::use_impl( Character *p, item &it, map *,
+        const tripoint_bub_ms &pos, const item_activation_choices *choices ) const
 {
     if( !x_in_y( chance, 100 ) ) {
         return 0;
@@ -406,14 +459,16 @@ std::optional<int> iuse_transform::use( Character *p, item &it, map *,
     int timer_time = 0;
     bool got_timer_value = false;
 
-    if( set_timer && p->is_avatar() ) {
-        got_timer_value = query_int( timer_time, false,
-                                     _( "Set the timer to how many seconds (0 to cancel)?" ) );
-        if( !got_timer_value || timer_time <= 0 ) {
+    if( set_timer && ( choices || p->is_avatar() ) ) {
+        item_activation_choices selected;
+        got_timer_value = choices ? valid_activation_choices( *choices ) :
+                          query_activation_choices( selected );
+        if( !got_timer_value ) {
             p->add_msg_if_player( _( "Never mind." ) );
             return std::nullopt;
         }
 
+        timer_time = *( choices ? choices->timer_seconds : selected.timer_seconds );
         p->add_msg_if_player( n_gettext( "You set the timer to %d second.",
                                          "You set the timer to %d seconds.", timer_time ), timer_time );
     }
@@ -949,7 +1004,7 @@ std::optional<int> explosion_iuse::use( Character *p, item &it, map *here,
     }
     if( do_flashbang ) {
         // TODO: Use map aware 'flashbang' operation when available.
-        explosion_handler::flashbang( pos, flashbang_player_immune );
+        explosion_handler::flashbang( pos, flashbang_player_immune ? &get_player_character() : nullptr );
     }
     if( fields_radius >= 0 && fields_type.id() ) {
         const effect_source field_source = source != nullptr
@@ -1088,6 +1143,11 @@ void consume_drug_iuse::info( const item &, std::vector<iteminfo> &dump ) const
 }
 
 
+bool consume_drug_iuse::is_immediate_consumption() const
+{
+    return true;
+}
+
 std::optional<int> consume_drug_iuse::use( Character *p, item &it, map *here,
         const tripoint_bub_ms & ) const
 {
@@ -1196,6 +1256,15 @@ std::optional<int> delayed_transform_iuse::use( Character *p, item &it,
         return std::nullopt;
     }
     return iuse_transform::use( p, it, here, pos );
+}
+
+std::optional<int> delayed_transform_iuse::use_with_choices( Character *p, item &it,
+        map *here, const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    if( !p || time_to_do( it ) > 0 ) {
+        return std::nullopt;
+    }
+    return iuse_transform::use_with_choices( p, it, here, pos, choices );
 }
 
 std::unique_ptr<iuse_actor> place_monster_iuse::clone() const
@@ -1646,13 +1715,16 @@ std::unique_ptr<iuse_actor> firestarter_actor::clone() const
 }
 
 firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character &p,
-        map *here, tripoint_bub_ms &pos )
+        map *here, tripoint_bub_ms &pos, bool preview, bool confirmed )
 {
     if( here != &reality_bubble() ) { // Unless 'choose_adjacent' gets map aware.
         debugmsg( "Usage outside reality bubble is not supported" );
         return start_type::NONE;
     }
 
+    if( confirmed && pos == p.pos_bub( *here ) ) {
+        return start_type::NONE;
+    }
     // checks for fuel are handled by use and the activity, not here
     if( pos == p.pos_bub( *here ) ) {
         if( const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent( _( "Light where?" ) ) ) {
@@ -1667,6 +1739,9 @@ firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character
         return start_type::NONE;
     }
 
+    if( !here->inbounds( pos ) || pos.z() != p.posz() || rl_dist( p.pos_bub( *here ), pos ) != 1 ) {
+        return start_type::NONE;
+    }
     const furn_id &f_id = here->furn( pos );
     const bool is_smoking_rack = f_id == furn_f_metal_smoking_rack ||
                                  f_id == furn_f_smoking_rack;
@@ -1674,9 +1749,9 @@ firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character
                          f_id == furn_f_kiln_metal_empty || f_id == furn_f_kiln_portable_empty;
 
     if( is_smoking_rack ) {
-        return iexamine::smoker_prep( p, pos ) ? start_type::SMOKER : start_type::NONE;
+        return preview || iexamine::smoker_prep( p, pos ) ? start_type::SMOKER : start_type::NONE;
     } else if( is_kiln ) {
-        return iexamine::kiln_prep( p, pos ) ? start_type::KILN : start_type::NONE;
+        return preview || iexamine::kiln_prep( p, pos ) ? start_type::KILN : start_type::NONE;
     }
 
     if( here->get_field( pos, fd_fire ) ) {
@@ -1695,13 +1770,13 @@ firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character
             target_is_firewood = true;
         }
     }
-    if( target_is_firewood ) {
+    if( target_is_firewood && !confirmed ) {
         if( !query_yn( _( "Do you really want to burn your firewood source?" ) ) ) {
             return start_type::NONE;
         }
     }
     // Don't check if we're setting a fire on top of a fireplace
-    if( !here->has_flag_furn( "FIRE_CONTAINER", pos ) ) {
+    if( !confirmed && !here->has_flag_furn( "FIRE_CONTAINER", pos ) ) {
         // Check for an adjacent fire container
         for( const tripoint_bub_ms &query : here->points_in_radius( pos, 1 ) ) {
             // Skip the position we're trying to light on fire
@@ -1730,7 +1805,7 @@ firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character
             has_unactivated_brazier = true;
         }
     }
-    if( has_unactivated_brazier &&
+    if( !confirmed && has_unactivated_brazier &&
         !query_yn(
             _( "There's a brazier there but you haven't set it up to contain the fire.  Continue?" ) ) ) {
         return start_type::NONE;
@@ -1742,7 +1817,12 @@ firestarter_actor::start_type firestarter_actor::prep_firestarter_use( Character
 void firestarter_actor::resolve_firestarter_use( Character *p, map *here,
         const tripoint_bub_ms &pos, start_type st )
 {
-    if( firestarter_actor::resolve_start( p, here, pos, st ) ) {
+    if( !p || !here ) {
+        return;
+    }
+    const character_action_guard lifetime( *p );
+    const auto context = here->get_context_reference();
+    if( firestarter_actor::resolve_start( p, here, pos, st ) && lifetime && context ) {
         if( !p->has_unfulfilled_pyromania() ) {
             p->add_msg_if_player( _( "You successfully light a fire." ) );
         } else {
@@ -1849,23 +1929,95 @@ int firestarter_actor::moves_cost_by_fuel( const tripoint_bub_ms &pos ) const
 }
 
 
-std::optional<int> firestarter_actor::use( Character *p, item &it,
-        map *here,  const tripoint_bub_ms &spos ) const
+bool firestarter_actor::valid_activation_choices( const item_activation_choices &choices ) const
 {
-    if( !p ) {
-        debugmsg( "%s called action firestarter that requires character but no character is present",
-                  it.typeId().str() );
+    return choices.fire_target && !choices.lumber && choices.salvage_batch.empty() &&
+           !choices.salvage &&
+           !choices.timer_seconds && !choices.radio &&
+           choices.remote_vehicle_action.empty() && !choices.remote_vehicle_uid;
+}
+
+bool firestarter_actor::query_fire_choices( Character &who, const item &tool, map &here,
+        tripoint_bub_ms &position, item_activation_choices &choices ) const
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    choices = {};
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto origin = who.pos_abs();
+    const bool needs_tinder = tool.has_flag( flag_REQUIRES_TINDER );
+    if( !can_use( who, tool, &here, position ).success() ||
+        prep_firestarter_use( who, &here, position, true ) == start_type::NONE ||
+        !lifetime || !context || who.pos_abs() != origin ) {
+        return false;
+    }
+    choices.fire_target = tool_activity_target::capture( here, here.get_abs( position ) );
+    if( needs_tinder ) {
+        inventory_filter_preset preset( []( const item_location & loc ) {
+            return loc->has_flag( flag_TINDER );
+        } );
+        inventory_pick_selector selector( who, preset );
+        selector.add_nearby_items( pickup_range );
+        selector.add_character_items( who );
+        selector.set_title( _( "Select tinder to use for lighting a fire" ) );
+        const item_location tinder = selector.empty() ? item_location() : selector.execute();
+        if( !lifetime || !context || who.pos_abs() != origin || !tinder ||
+            !choices.fire_target->matches( here ) ) {
+            return false;
+        }
+        choices.fire_tinder = capture_item_source( who, tinder );
+    }
+    return true;
+}
+
+std::optional<int> firestarter_actor::use( Character *p, item &it, map *here,
+        const tripoint_bub_ms &spos ) const
+{
+    if( !p || !p->is_avatar() || !here ) {
         return std::nullopt;
     }
-
-    tripoint_bub_ms pos = spos;
-
-    float light = light_mod( here, p->pos_bub( *here ) );
-    start_type st = prep_firestarter_use( *p, here, pos );
-    if( st == start_type::NONE ) {
+    const auto source = it.get_safe_reference();
+    tripoint_bub_ms position = spos;
+    item_activation_choices choices;
+    if( !query_fire_choices( *p, it, *here, position, choices ) || !source ) {
         return std::nullopt;
     }
+    return use_with_choices( p, it, here, position, choices );
+}
 
+std::optional<int> firestarter_actor::use_with_choices( Character *p, item &it, map *here,
+        const tripoint_bub_ms &pos, const item_activation_choices &choices ) const
+{
+    if( !p || !here || !valid_activation_choices( choices ) ||
+        choices.fire_target->position != here->get_abs( pos ) ||
+        !choices.fire_target->matches( *here ) ||
+        !can_use( *p, it, here, pos ).success() ) {
+        return std::nullopt;
+    }
+    item_location tinder;
+    if( it.has_flag( flag_REQUIRES_TINDER ) ) {
+        tinder = choices.fire_tinder ? resolve_item_source( *p, *here, *choices.fire_tinder,
+                 pickup_range ) : item_location();
+        if( !tinder || !tinder->has_flag( flag_TINDER ) || tinder->count() <= 0 ||
+            tinder.get_item() == &it ||
+            !tinder->is_owned_by( *p, true ) ) {
+            return std::nullopt;
+        }
+    } else if( choices.fire_tinder ) {
+        return std::nullopt;
+    }
+    const character_action_guard lifetime( *p );
+    const auto context = here->get_context_reference();
+    const auto source = it.get_safe_reference();
+    tripoint_bub_ms checked_pos = pos;
+    const start_type st = prep_firestarter_use( *p, here, checked_pos, false, true );
+    if( st == start_type::NONE || !lifetime || !context || !source ) {
+        return std::nullopt;
+    }
+    const float light = light_mod( here, p->pos_bub( *here ) );
+    if( light <= 0.0f ) {
+        return std::nullopt;
+    }
     double skill_level = p->get_skill_level( skill_survival );
     /** @EFFECT_SURVIVAL speeds up fire starting */
     float moves_modifier = std::pow( 0.8, std::min( 5.0, skill_level ) );
@@ -1885,15 +2037,22 @@ std::optional<int> firestarter_actor::use( Character *p, item &it,
                               minutes );
     } else if( moves < to_moves<int>( 2_turns ) && here->is_flammable( pos ) ) {
         // If less than 2 turns, don't start a long action
-        resolve_firestarter_use( p, here,  pos, st );
+        if( tinder ) {
+            if( tinder->count_by_charges() && tinder->charges > 1 ) {
+                --tinder->charges;
+            } else {
+                tinder.remove_item();
+            }
+        }
         p->mod_moves( -moves );
+        resolve_firestarter_use( p, here, pos, st );
         return 1;
     }
 
     // skill gains are handled by the activity, but stored here in the index field
     const int potential_skill_gain = moves_modifier * ( std::min( 10.0, moves_cost_fast / 100.0 ) + 2 );
-    p->assign_activity( fire_start_activity_actor( here->get_abs( pos ), form_loc( *p, here, pos, it ),
-                        potential_skill_gain, moves ) );
+    p->assign_activity( fire_start_activity_actor( here->get_abs( pos ), locate_cutting_tool( *p, it ),
+                        potential_skill_gain, moves, false, tinder ) );
     // charges to use are handled by the activity
     return 0;
 }
@@ -1902,6 +2061,13 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
                                         const tripoint_bub_ms &fire_pos ) const
 {
     map &here = get_map();
+    const character_action_guard lifetime( who );
+    const auto context = here.get_context_reference();
+    const auto source = tool.get_safe_reference();
+    if( !here.inbounds( fire_pos ) || fire_pos.z() != who.posz() ||
+        rl_dist( fire_pos, who.pos_bub() ) != 1 ) {
+        return false;
+    }
 
     // Real validation from can_use() -- no UI.
     if( !can_use( who, tool, &here, fire_pos ).success() ) {
@@ -1922,8 +2088,8 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
         // Search inventory and adjacent tiles (same scope as the
         // tinder picker in fire_start_activity_actor::do_turn).
         item_location tinder;
-        who.visit_items( [&tinder, &who]( item * it, item * ) -> VisitResponse {
-            if( it->has_flag( flag_TINDER ) )
+        who.visit_items( [&tinder, &who, &tool]( item * it, item * ) -> VisitResponse {
+            if( it != &tool && it->has_flag( flag_TINDER ) )
             {
                 tinder = item_location( who, it );
                 return VisitResponse::ABORT;
@@ -1958,6 +2124,9 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
         tinder_consumed = true;
     }
 
+    if( !lifetime || !context || !source ) {
+        return false;
+    }
     // Same moves/skill formulas as firestarter_actor::use().
     const float light = light_mod( &here, who.pos_bub() );
     const double skill_level = who.get_skill_level( skill_survival );
@@ -1972,9 +2141,11 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
 
     // Quick resolution: fast tool on flammable terrain skips the activity.
     if( moves < to_moves<int>( 2_turns ) && here.is_flammable( fire_pos ) ) {
-        resolve_firestarter_use( &who, &here, fire_pos, start_type::FIRE );
-        tool.activation_consume( 1, who.pos_bub(), &who );
         who.mod_moves( -moves );
+        tool.activation_consume( 1, who.pos_bub(), &who );
+        if( lifetime && context ) {
+            resolve_firestarter_use( &who, &here, fire_pos, start_type::FIRE );
+        }
         return true;
     }
 
@@ -1997,52 +2168,159 @@ std::unique_ptr<iuse_actor> salvage_actor::clone() const
     return std::make_unique<salvage_actor>( *this );
 }
 
-std::optional<int> salvage_actor::use( Character *p, item &cutter, map *,
-                                       const tripoint_bub_ms & ) const
+bool salvage_actor::valid_activation_choices( const item_activation_choices &choices ) const
 {
-    if( !p ) {
-        debugmsg( "%s called action salvage that requires character but no character is present",
-                  cutter.typeId().str() );
-        return std::nullopt;
-    }
-
-    item_location item_loc = game_menus::inv::salvage( *p, this );
-    if( !item_loc ) {
-        add_msg( _( "Never mind." ) );
-        return std::nullopt;
-    }
-
-    const item &to_cut = *item_loc;
-    if( !to_cut.is_owned_by( *p, true ) ) {
-        if( !query_yn( _( "Cutting the %s may anger the people who own it, continue?" ),
-                       to_cut.tname() ) ) {
-            return false;
-        } else {
-            if( to_cut.get_owner() ) {
-                g->on_witness_theft( to_cut );
-            }
-        }
-    }
-
-    return salvage_actor::try_to_cut_up( *p, cutter, item_loc );
+    return !choices.lumber && ( choices.salvage.has_value() != !choices.salvage_batch.empty() ) &&
+           !choices.timer_seconds && !choices.radio &&
+           choices.remote_vehicle_action.empty() && !choices.remote_vehicle_uid &&
+           !choices.fire_target && !choices.fire_tinder;
 }
 
-std::optional<int> salvage_actor::try_to_cut_up
-( Character &p, item &cutter, item_location &cut ) const
+bool salvage_actor::query_salvage_choices( Character &who, const item &tool,
+        item_activation_choices &choices ) const
 {
-    if( !valid_to_cut_up( &p, *cut.get_item() ) ) {
-        // Messages should have already been displayed.
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    choices = {};
+    const character_action_guard lifetime( who );
+    map &here = get_map();
+    const auto context = here.get_context_reference();
+    item_location selected = game_menus::inv::salvage( who, this );
+    if( !lifetime || !context || !selected || selected.get_item() == &tool ) {
+        return false;
+    }
+    return confirm_salvage_choices( who, tool, { selected }, false, choices );
+}
+
+bool salvage_actor::confirm_salvage_choices( Character &who, const item &tool,
+        const std::vector<item_location> &targets, bool bulk, item_activation_choices &choices ) const
+{
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    choices = {};
+    if( targets.empty() || ( !bulk && targets.size() != 1 ) ) {
+        return false;
+    }
+    const character_action_guard lifetime( who );
+    map &here = get_map();
+    const auto context = here.get_context_reference();
+    std::vector<salvage_selection> selected;
+    bool theft = false;
+    for( const item_location &target : targets ) {
+        if( !target || target.get_item() == &tool ||
+            !valid_to_cut_up( &who, *target ) || !lifetime || !context || !target ) {
+            return false;
+        }
+        salvage_selection entry;
+        entry.target = capture_item_source( who, target );
+        entry.type = target->typeId();
+        entry.allow_equipped = who.is_worn( *target ) || who.is_wielding( *target );
+        entry.allow_theft = !target->is_owned_by( who, true );
+        theft = theft || entry.allow_theft;
+        selected.push_back( entry );
+    }
+    if( theft && !who.query_yn(
+            _( "Cutting these items may anger the people who own them, continue?" ) ) ) {
+        return false;
+    }
+    if( !lifetime || !context ) {
+        return false;
+    }
+    for( size_t i = 0; i < targets.size(); ++i ) {
+        if( !targets[i] || targets[i]->typeId() != selected[i].type ||
+            resolve_item_source( who, here, selected[i].target ) != targets[i] ) {
+            return false;
+        }
+    }
+    if( bulk ) {
+        choices.salvage_batch = std::move( selected );
+    } else {
+        choices.salvage = selected.front();
+    }
+    return true;
+}
+
+std::optional<int> salvage_actor::use( Character *p, item &cutter, map *here,
+                                       const tripoint_bub_ms &position ) const
+{
+    if( !p || !p->is_avatar() || !here ) {
         return std::nullopt;
     }
+    const auto source = cutter.get_safe_reference();
+    item_activation_choices choices;
+    if( !query_salvage_choices( *p, cutter, choices ) || !source ) {
+        return std::nullopt;
+    }
+    return use_with_choices( p, cutter, here, position, choices );
+}
 
+std::optional<int> salvage_actor::use_with_choices( Character *p, item &cutter, map *here,
+        const tripoint_bub_ms &, const item_activation_choices &choices ) const
+{
+    if( !p || !here || !valid_activation_choices( choices ) ) {
+        return std::nullopt;
+    }
+    if( !choices.salvage_batch.empty() ) {
+        if( p->activity || !p->has_morale_to_craft() ||
+            choices.salvage_batch.size() > here->i_at( p->pos_bub() ).size() ) {
+            return std::nullopt;
+        }
+        const item_location source = locate_cutting_tool( *p, cutter );
+        if( !source || !source.held_by( *p ) ) {
+            return std::nullopt;
+        }
+        std::set<int64_t> selected_ids;
+        for( const salvage_selection &entry : choices.salvage_batch ) {
+            // The native batch menu selects only top-level items on the work tile.
+            if( entry.target.kind != "map" || entry.target.path.size() != 1 ||
+                entry.target.position != p->pos_abs() ||
+                !selected_ids.insert( entry.target.path.front() ).second ) {
+                return std::nullopt;
+            }
+            const item_location target = resolve_item_source( *p, *here, entry.target, 0 );
+            if( !target || target->typeId() != entry.type || !valid_to_cut_up( nullptr, *target ) ||
+                ( !entry.allow_theft && !target->is_owned_by( *p, true ) ) ) {
+                return std::nullopt;
+            }
+        }
+        p->assign_activity( longsalvage_activity_actor( *p, source, choices.salvage_batch ) );
+        // Starting a queue does not use the cutter. Each committed cut pays once.
+        return 0;
+    }
+    const salvage_selection &selection = *choices.salvage;
+    item_location selected = resolve_item_source( *p, *here, selection.target );
+    if( !selected || selected->typeId() != selection.type || selected.get_item() == &cutter ||
+        !valid_to_cut_up( nullptr, *selected ) ||
+        ( !selection.allow_equipped && ( p->is_worn( *selected ) || p->is_wielding( *selected ) ) ) ||
+        ( !selection.allow_theft && !selected->is_owned_by( *p, true ) ) ) {
+        return std::nullopt;
+    }
+    const character_action_guard lifetime( *p );
+    const auto context = here->get_context_reference();
+    const auto tool = cutter.get_safe_reference();
+    if( !selected->is_owned_by( *p, true ) && selected->get_owner() ) {
+        g->on_witness_theft( *selected, *p );
+    }
+    if( !lifetime || !context || !tool || !selected ||
+        resolve_item_source( *p, *here, selection.target ) != selected ||
+        selected->typeId() != selection.type ) {
+        return std::nullopt;
+    }
+    return try_to_cut_up( *p, cutter, selected, true );
+}
+
+std::optional<int> salvage_actor::try_to_cut_up( Character &p, item &cutter,
+        item_location &cut, bool confirmed ) const
+{
+    const character_action_guard lifetime( p );
+    const auto source = cutter.get_safe_reference();
+    if( !cut || !valid_to_cut_up( confirmed ? nullptr : &p, *cut ) || !lifetime || !source || !cut ) {
+        return std::nullopt;
+    }
     if( &cutter == cut.get_item() ) {
-        add_msg( m_info, _( "You can not cut the %s with itself." ), cutter.tname() );
+        p.add_msg_if_player( m_info, _( "You can not cut the %s with itself." ), cutter.tname() );
         return std::nullopt;
     }
-
-    salvage_actor::cut_up( p, cut );
-    // Return used charges from cutter
-    return cost >= 0 ? cost : 1;
+    const int charges = cost >= 0 ? cost : 1;
+    return cut_up( p, cutter, cut ) ? std::make_optional( charges ) : std::nullopt;
 }
 
 // Helper to visit instances of all the sub-materials of an item.
@@ -2270,74 +2548,124 @@ std::map<itype_id, int> salvage_actor::salvage_results( item_location cut, doubl
     return salvage;
 }
 
-void salvage_actor::cut_up( Character &p, item_location &cut ) const
+bool salvage_actor::cut_up( Character &p, item &cutter, item_location &cut ) const
 {
     map &here = get_map();
+    const character_action_guard lifetime( p );
+    const auto context = here.get_context_reference();
+    const auto tool = cutter.get_safe_reference();
+    const itype_id cutter_type = cutter.typeId();
+    const auto origin = p.pos_abs();
+    const uint64_t generation = p.activity.identity_generation();
+    const item_source source = capture_item_source( p, cut );
+    if( resolve_item_source( p, here, source ) != cut ) {
+        return false;
+    }
+    item original( *cut );
+    const auto unchanged = [&]() {
+        return lifetime && context && tool && cutter.typeId() == cutter_type && !cutter.is_broken() &&
+               cutter.ammo_sufficient( &p, "salvage" ) && p.pos_abs() == origin &&
+               p.activity.identity_generation() == generation && cut &&
+               resolve_item_source( p, here, source ) == cut && cut->count() == original.count() &&
+               cut->stacks_with( original, true, false, false, 0, 999, true );
+    };
 
-    // Calculate efficiency losses
+    // Retain native loss rolls and practice order. A practice hook may replace
+    // the source or operator; it must not redirect the subsequent destruction.
     float efficiency = 1.0;
-    // Higher fabrication, less chance of entropy, but still a chance.
-    /** @EFFECT_FABRICATION reduces chance of losing components when cutting items up */
-    int entropy_threshold = std::max( 0,
-                                      5 - static_cast<int>( round( p.get_skill_level( skill_fabrication ) ) ) );
+    const int entropy_threshold = std::max( 0,
+                                            5 - static_cast<int>( round( p.get_skill_level( skill_fabrication ) ) ) );
     if( rng( 1, 10 ) <= entropy_threshold ) {
         efficiency *= 0.9;
     }
-
-    // Fail dex roll, potentially lose more parts.
-    /** @EFFECT_DEX randomly reduces component loss when cutting items up */
     if( dice( 3, 4 ) > p.get_dex() ) {
         efficiency *= 0.95;
     }
-
-    // If the item being cut is damaged, additional losses will be incurred.
-    efficiency *= std::pow( 0.8, cut.get_item()->damage_level() );
-
-    // Not much practice, and you won't get very far ripping things up.
+    efficiency *= std::pow( 0.8, original.damage_level() );
     p.practice( skill_fabrication, rng( 0, 5 ), 1 );
-
-    std::map<itype_id, int> salvage = salvage_results( cut, efficiency );
-
-    add_msg( m_info, _( "You try to salvage materials from the %s." ),
-             cut.get_item()->tname() );
-
+    if( !unchanged() ) {
+        return false;
+    }
+    const std::map<itype_id, int> salvage = salvage_results( cut, efficiency );
     const item_location::type cut_type = cut.where();
-    const tripoint_bub_ms pos = cut.pos_bub( here );
-    const bool filthy = cut.get_item()->is_filthy();
+    const tripoint_bub_ms position = cut.pos_bub( here );
+    const bool filthy = original.is_filthy();
+    const int part_cost = moves_per_part;
+    p.add_msg_if_player( m_info, _( "You try to salvage materials from the %s." ), original.tname() );
 
-    // Clean up before removing the item.
-    remove_ammo( *cut.get_item(), p );
-    // Original item has been consumed.
-    cut.remove_item();
-    // Force an encumbrance update in case they were wearing that item.
-    p.calc_encumbrance();
-
-    for( const auto &salvaged_mat : salvage ) {
-        item result( salvaged_mat.first, calendar::turn );
-        int amount = salvaged_mat.second;
-        if( amount > 0 ) {
-            // Time based on number of components.
-            p.mod_moves( -moves_per_part );
-            if( result.count_by_charges() ) {
-                result.charges = amount;
-                amount = 1;
+    // Commit the complete yield before acquisition/drop callbacks. Each staged
+    // item is a real world item, so interruption leaves the unhandled remainder
+    // beside the source rather than destroying it or generating it twice.
+    std::vector<item_location> products;
+    for( const auto &[type, count] : salvage ) {
+        item result( type, calendar::turn );
+        int amount = count;
+        if( amount <= 0 ) {
+            p.add_msg_if_player( m_bad, _( "Could not salvage a %s." ), result.display_name() );
+            continue;
+        }
+        p.mod_moves( -part_cost );
+        if( result.count_by_charges() ) {
+            result.charges = amount;
+            amount = 1;
+        }
+        p.add_msg_if_player( m_good, n_gettext( "Salvaged %1$i %2$s.", "Salvaged %1$i %2$s.", amount ),
+                             amount, result.display_name( amount ) );
+        if( filthy ) {
+            result.set_flag( flag_FILTHY );
+        }
+        for( int i = 0; i < amount; ++i ) {
+            item &placed = here.add_item_unprocessed( position, result );
+            if( !placed.is_null() ) {
+                products.emplace_back( map_cursor( position ), &placed );
             }
-            add_msg( m_good, n_gettext( "Salvaged %1$i %2$s.", "Salvaged %1$i %2$s.", amount ),
-                     amount, result.display_name( amount ) );
-            if( filthy ) {
-                result.set_flag( flag_FILTHY );
-            }
-            if( cut_type == item_location::type::character ) {
-                p.i_add_or_drop( result, amount );
-            } else {
-                for( int i = 0; i < amount; i++ ) {
-                    put_into_vehicle_or_drop( p, item_drop_reason::deliberate, { result }, &here, pos );
-                }
-            }
-        } else {
-            add_msg( m_bad, _( "Could not salvage a %s." ), result.display_name() );
         }
     }
+    // Wielded-item removal emits an event after clearing the original slot.
+    // The committed products must already survive such an interruption.
+    cut.remove_item();
+    if( !lifetime || !context ) {
+        return true;
+    }
+    remove_ammo( original, p );
+    if( !lifetime || !context ) {
+        return true;
+    }
+    p.calc_encumbrance();
+    for( item_location &product : products ) {
+        if( !lifetime || !context || p.pos_abs() != origin ||
+            p.activity.identity_generation() != generation ) {
+            break;
+        }
+        if( !product || product.where() != item_location::type::map ||
+            product.pos_bub( here ) != position ) {
+            continue;
+        }
+        if( cut_type == item_location::type::character &&
+            !product->made_of( phase_id::LIQUID ) && p.can_pickWeight( *product, false ) &&
+            p.can_pickVolume( *product ) && ( product->is_gun() || !product->is_irremovable() ) ) {
+            p.transfer_item_to_inventory( product, item( *product ) );
+            if( !lifetime || !context || p.pos_abs() != origin ||
+                p.activity.identity_generation() != generation ) {
+                break;
+            }
+            if( !product ) {
+                continue;
+            }
+        }
+        if( cut_type != item_location::type::character ) {
+            if( const auto cargo = here.veh_at( position ).cargo(); cargo && !product->is_bucket_nonempty() ) {
+                if( cargo->vehicle().add_item( here, cargo->part(), *product ) ) {
+                    product.remove_item();
+                    continue;
+                }
+            }
+        }
+        // This also invokes native drop actions, settling only the actual
+        // quantity handled. A full tile keeps the staged remainder intact.
+        here.transfer_item_or_charges( position, product, item( *product ), p );
+    }
+    return true;
 }
 
 void inscribe_actor::load( const JsonObject &obj, const std::string & )
@@ -3047,9 +3375,14 @@ std::string cast_spell_actor::get_name() const
 }
 
 
-std::optional<int> cast_spell_actor::use( Character *p, item &it, map * /*here*/,
+std::optional<int> cast_spell_actor::use( Character *p, item &it, map *here,
         const tripoint_bub_ms &pos ) const
 {
+    spell casting( item_spell );
+    if( p == nullptr ) {
+        casting.cast_all_effects( pos );
+        return 0;
+    }
     if( need_worn && !p->is_worn( it ) ) {
         p->add_msg_if_player( m_info, _( "You need to wear the %1$s before activating it." ), it.tname() );
         return std::nullopt;
@@ -3059,19 +3392,15 @@ std::optional<int> cast_spell_actor::use( Character *p, item &it, map * /*here*/
         return std::nullopt;
     }
 
-    spell casting = spell( spell_id( item_spell ) );
-
-    // Spell is being cast from a non-held item
-    if( p == nullptr ) {
-        // TODO: Pass map when cast_all_effects is map aware.
-        casting.cast_all_effects( pos );
-        return 0;
+    const auto source = try_form_loc( *p, here, pos, it );
+    if( !source ) {
+        return std::nullopt;
     }
 
     p->assign_activity( spellcasting_activity_actor(
                             time_duration::from_moves<int>( casting.casting_time( *p ) ),
                             casting.id(), std::nullopt, spell_level,
-                            no_fail, it.has_flag( flag_USE_PLAYER_ENERGY ), item_location( *p, &it ) ) );
+                            no_fail, it.has_flag( flag_USE_PLAYER_ENERGY ), *source ) );
     // Actual handling of charges_to_use is in activity_handlers::spellcasting_finish
     return 0;
 }
@@ -3303,13 +3632,11 @@ std::optional<int> repair_item_actor::use( Character *p, item &it,
         return std::nullopt;
     }
 
-    p->assign_activity( ACT_REPAIR_ITEM, 0, p->get_item_position( &it ), INT_MIN );
-    // We also need to store the repair actor subtype in the activity
-    p->activity.str_values.push_back( type );
-    // storing of item_location to support repairs by tools on the ground
-    p->activity.targets.emplace_back( form_loc( *p, here, pos, it ) );
-    // All repairs are done in the activity, including charge cost and target item selection
-    return 0;
+    if( it.has_flag( flag_PSEUDO ) ) {
+        return query_mounted_repair( *p, it, pos, type ) ? std::optional<int>( 0 ) : std::nullopt;
+    }
+    return start_owned_repair( *p, form_loc( *p, here, pos, it ), type ) ?
+           std::optional<int>( 0 ) : std::nullopt;
 }
 
 std::unique_ptr<iuse_actor> repair_item_actor::clone() const
@@ -3332,7 +3659,8 @@ std::set<itype_id> repair_item_actor::get_valid_repair_materials( const item &fi
 }
 
 bool repair_item_actor::handle_components( Character &pl, const item &fix,
-        bool print_msg, bool just_check, bool check_consumed_available ) const
+        bool print_msg, bool just_check, bool check_consumed_available,
+        const comp_selection<item_comp> *material ) const
 {
     // Entries valid for repaired items
     std::set<itype_id> valid_entries = get_valid_repair_materials( fix );
@@ -3402,6 +3730,26 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
         }
 
         return false;
+    }
+
+    if( material ) {
+        if( ( material->use_from != usage_from::map && material->use_from != usage_from::player &&
+              material->use_from != usage_from::both ) ||
+        std::none_of( comps.begin(), comps.end(), [&]( const item_comp & candidate ) {
+        return candidate.type == material->comp.type;
+    } ) ) {
+            return false;
+        }
+        comp_selection<item_comp> selected = *material;
+        // The player chooses material and source, never the quantity consumed.
+        selected.comp.count = items_needed;
+        if( !pl.preview_crafting_components( { selected }, 1, filter ) ) {
+            return false;
+        }
+        if( !just_check ) {
+            pl.consume_items( selected, 1, filter );
+        }
+        return true;
     }
 
     if( !just_check ) {
@@ -3582,7 +3930,8 @@ std::pair<float, float> repair_item_actor::repair_chance(
     return std::make_pair( success_chance, damage_chance );
 }
 
-repair_item_actor::repair_type repair_item_actor::default_action( const item &fix,
+repair_item_actor::repair_type repair_item_actor::default_action( const Character &who,
+        const item &fix,
         int current_skill_level ) const
 {
     if( fix.damage() > fix.degradation() ) {
@@ -3595,12 +3944,11 @@ repair_item_actor::repair_type repair_item_actor::default_action( const item &fi
         return RT_REFIT;
     }
 
-    Character &player_character = get_player_character();
-    const bool smol = player_character.get_size() == creature_size::tiny;
+    const bool smol = who.get_size() == creature_size::tiny;
 
     const bool is_undersized = fix.has_flag( flag_UNDERSIZE );
     const bool is_oversized = fix.has_flag( flag_OVERSIZE );
-    const bool resizing_matters = fix.get_sizing( player_character ) != item::sizing::ignore;
+    const bool resizing_matters = fix.get_sizing( who ) != item::sizing::ignore;
 
     const bool too_big_while_smol = smol && !is_undersized && !is_oversized;
     if( too_big_while_smol && can_be_refitted && resizing_matters ) {
@@ -3652,12 +4000,13 @@ static bool damage_item( Character &pl, item_location &fix )
 }
 
 repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &tool,
-        item_location &fix, bool refit_only ) const
+        item_location &fix, bool refit_only, const comp_selection<item_comp> *material ) const
 {
     if( !can_use_tool( pl, tool, true ) ) {
         return AS_CANT_USE_TOOL;
     }
-    if( !can_repair_target( pl, *fix, true, true ) ) {
+    if( !fix || !can_repair_target( pl, *fix, true, true ) ||
+        ( material && !handle_components( pl, *fix, false, true, true, material ) ) ) {
         return AS_CANT;
     }
 
@@ -3674,7 +4023,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
             action = RT_REFIT;
         }
     } else {
-        action = default_action( *fix, current_skill_level );
+        action = default_action( pl, *fix, current_skill_level );
     }
     const auto chance = repair_chance( pl, *fix, action );
     int practice_amount = repair_recipe_difficulty( *fix ) / 2 + 1;
@@ -3702,7 +4051,11 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
     if( current_skill_level > trains_skill_to ) {
         practice_amount = 0;
     }
+    const character_action_guard lifetime( pl );
     pl.practice( used_skill, practice_amount, trains_skill_to );
+    if( !lifetime || !fix ) {
+        return AS_CANT;
+    }
 
     if( roll == FAILURE ) {
         if( chance.first <= 0.0f ) {
@@ -3717,10 +4070,16 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
         return AS_RETRY;
     }
 
+    if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
+                             action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
+        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+            return AS_CANT;
+        }
+    }
+
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
-            handle_components( pl, *fix, false, false, true );
 
             fix->mod_damage( -itype::damage_scale );
 
@@ -3747,7 +4106,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
 
@@ -3761,7 +4119,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
         return AS_RETRY;
@@ -3774,7 +4131,6 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            handle_components( pl, *fix, false, false, true );
             return AS_SUCCESS;
         }
         return AS_RETRY;
@@ -3893,17 +4249,21 @@ std::optional<int> heal_actor::use( Character *p, item &it, map *here,
     }
 
     Character &patient = get_patient( *p, here, pos );
+    if( p->is_avatar() && cata_mp::is_client_mode() ) {
+        for( const item_location &source : p->all_items_loc() ) {
+            if( source.get_item() == &it ) {
+                select_client_healing( *p, source, &patient );
+                break;
+            }
+        }
+        return 0;
+    }
     const bodypart_str_id hpp = use_healing_item( *p, patient, it, false ).id();
     if( hpp == bodypart_str_id::NULL_ID() ) {
         return std::nullopt;
     }
 
-    // each tier of proficiency cuts required time by half
-    int cost = move_cost;
-    cost = p->has_proficiency( proficiency_prof_wound_care_expert ) ? cost / 2 : cost;
-    cost = p->has_proficiency( proficiency_prof_wound_care ) ? cost / 2 : cost;
-
-    p->assign_activity( firstaid_activity_actor( cost, it.tname(), patient.getID() ) );
+    p->assign_activity( firstaid_activity_actor( healing_cost( *p ), it.tname(), patient.getID() ) );
 
     // Player: Only time this item_location gets used in firstaid::finish() is when activating the item's
     // container from the inventory window, so an item_on_person impl is all that is needed.
@@ -3913,6 +4273,13 @@ std::optional<int> heal_actor::use( Character *p, item &it, map *here,
     p->activity.str_values.emplace_back( hpp.c_str() );
     p->set_moves( 0 );
     return 0;
+}
+
+int heal_actor::healing_cost( const Character &healer ) const
+{
+    int cost = move_cost;
+    cost = healer.has_proficiency( proficiency_prof_wound_care_expert ) ? cost / 2 : cost;
+    return healer.has_proficiency( proficiency_prof_wound_care ) ? cost / 2 : cost;
 }
 
 std::unique_ptr<iuse_actor> heal_actor::clone() const
@@ -4151,6 +4518,25 @@ int heal_actor::finish_using( Character &healer, Character &patient, item &it,
     return 1;
 }
 
+static bool treatable_part( const Character &patient, const bodypart_id &part,
+                            bool bleed, bool bite, bool infect, bool force )
+{
+    if( !part.is_valid() || !patient.has_part( part ) ||
+        part->has_flag( json_flag_NO_LIMB_FIRST_AID ) ) {
+        return false;
+    }
+    return ( infect && patient.has_effect( effect_infected, part ) ) ||
+           ( bite && patient.has_effect( effect_bite, part ) ) ||
+           ( bleed && patient.has_effect( effect_bleed, part ) ) ||
+           ( !patient.is_limb_broken( part ) &&
+             ( force || patient.get_part_hp_cur( part ) < patient.get_part_hp_max( part ) ) );
+}
+
+bool heal_actor::can_treat_part( const Character &patient, const bodypart_id &part ) const
+{
+    return treatable_part( patient, part, bleed > 0, bite > 0.0f, infect > 0.0f, false );
+}
+
 static bodypart_id pick_part_to_heal(
     const Character &healer, const Character &patient,
     const std::string &menu_header,
@@ -4181,9 +4567,7 @@ static bodypart_id pick_part_to_heal(
             continue;
         }
 
-        if( ( infect && patient.has_effect( effect_infected, healed_part ) ) ||
-            ( bite && patient.has_effect( effect_bite, healed_part ) ) ||
-            ( bleed && patient.has_effect( effect_bleed, healed_part ) ) ) {
+        if( treatable_part( patient, healed_part, bleed, bite, infect, force ) ) {
             return healed_part;
         }
 
@@ -4199,9 +4583,6 @@ static bodypart_id pick_part_to_heal(
             continue;
         }
 
-        if( force || patient.get_part_hp_cur( healed_part ) < patient.get_part_hp_max( healed_part ) ) {
-            return healed_part;
-        }
     }
 }
 

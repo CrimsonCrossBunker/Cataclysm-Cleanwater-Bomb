@@ -83,7 +83,7 @@
     "ammo_to_fire": 15,
     "range": 16,
     "ranged_damage": { "damage_type": "heat", "amount": 25 },
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 5 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1500" ] ],
     "dispersion": 15,
     "durability": 8,
     "loudness": 15,
@@ -372,7 +372,7 @@
     "min_cycle_recoil": 1,
     "flags": [ "TRADER_AVOID", "NO_SALVAGE", "INVENTOR_CRAFTED" ],
     "reload": 400,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "double", 2 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "1000", 2 ], [ "AUTO", "auto-rpm", "1200" ] ],
     "built_in_mods": [ "laser_sight" ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "shot": 240 } } ],
     "valid_mod_locations": [

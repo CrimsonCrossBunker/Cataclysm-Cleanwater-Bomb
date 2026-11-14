@@ -308,10 +308,12 @@ Character::wear( int pos, bool interactive )
 }
 
 std::optional<std::list<item>::iterator>
-Character::wear( item_location item_wear, bool interactive )
+Character::wear( item_location item_wear, bool interactive, std::optional<bool> theft_consent )
 {
     // Need to account for case where we're trying to wear something that belongs to someone else
-    if( !avatar_action::check_stealing( *this, *item_wear ) ) {
+    if( !item_wear || ( theft_consent ?
+                        ( !*theft_consent && !item_wear->is_owned_by( *this, true ) ) :
+                        !avatar_action::check_stealing( *this, *item_wear ) ) ) {
         return std::nullopt;
     }
 

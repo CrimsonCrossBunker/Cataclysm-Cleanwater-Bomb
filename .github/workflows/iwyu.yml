@@ -65,9 +65,19 @@ jobs:
         COMPILER: clang++-19
     steps:
     - name: install LLVM 19
+      timeout-minutes: 10
+      env:
+        DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo apt install llvm-19-dev clang-19 libclang-19-dev
-          sudo apt install cmake
+        apt_options=(
+          -o DPkg::Lock::Timeout=120
+          -o Acquire::Retries=3
+          -o Acquire::http::Timeout=30
+          -o Acquire::https::Timeout=30
+        )
+        sudo -E apt-get "${apt_options[@]}" update
+        sudo -E apt-get "${apt_options[@]}" install -y \
+          llvm-19-dev clang-19 libclang-19-dev cmake
     - name: checkout IWYU repository
       id: iwyu-checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

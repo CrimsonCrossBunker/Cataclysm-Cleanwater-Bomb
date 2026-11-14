@@ -1350,6 +1350,21 @@ TEST_CASE( "multimag_predicates",
     }
 }
 
+TEST_CASE( "multimag_energy_consumption_reaches_the_battery_well", "[multimag][battery]" )
+{
+    clear_map();
+    item gun = make_multimag_consume_gun( 15, 10 );
+    const int requested = GENERATE( 3, 10, 15 );
+    const int consumed = std::min( requested, 10 );
+    REQUIRE( gun.energy_remaining( nullptr ) == 10_kJ );
+    CHECK( gun.energy_consume( requested * 1_kJ, tripoint_bub_ms::zero,
+                               nullptr ) == consumed * 1_kJ );
+    CHECK( gun.energy_remaining( nullptr ) == ( 10 - consumed ) * 1_kJ );
+    CHECK( gun.ammo_remaining_in_pocket( "ammo" ) == 15 );
+    CHECK( gun.ammo_remaining_in_pocket( "power" ) == 10 - consumed );
+}
+
+
 TEST_CASE( "primary_ammo_pocket_selection_order",
            "[multimag][consume]" )
 {

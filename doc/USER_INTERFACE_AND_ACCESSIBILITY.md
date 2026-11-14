@@ -1,14 +1,15 @@
 <!-- CCB-DOC-MOVED-START -->
-> [!IMPORTANT] **Moved / 已迁移**
+> [!IMPORTANT] **Migration in progress / 迁移中**
 >
 > Stable document ID / 稳定文档 ID: `ui-accessibility`
 > 中文: https://crimsoncrossbunker.github.io/CCB-Docs/ui/accessibility/
 > English: https://crimsoncrossbunker.github.io/CCB-Docs/en/ui/accessibility/
-> Moved date / 迁移日期: `2026-08-02`
-> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
-> The maintained documentation now lives in CCB-Docs.
-> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
-> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+> Migration start date / 开始迁移日期: `2026-08-02`
+> Source commit referenced by the last migration record / 上次迁移记录参考 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> CCB-Docs is still a work in progress; the links above are migration targets.
+> CCB-Docs 仍在整理中；上方链接为迁移目标。
+> Updates to this in-repository body are optional for now, and no comprehensive revision is currently planned. Developers may update it as needed. Some content has not been checked against the current CCB implementation; consult the relevant source code when using or updating it. Documentation may be updated alongside new or changed features. The retained body will serve as a reference for later documentation migration and reorganization, which may rewrite or omit the original text.
+> 本仓库正文暂不列入必须更新项，暂不安排全面整理，是否更新由开发者按实际需要决定。部分内容尚未按当前 CCB 实现核实，使用和更新时应检查相关源码。新增或改动功能时，可同步更新相关文档。保留正文将作为后续文档迁移与整理的参考来源，后续整理不保证原文保留。
 <!-- CCB-DOC-MOVED-END -->
 # User Interface / Accessibility
 
@@ -251,3 +252,30 @@ The recommended layout in SCREEN_READER_MODE is the following:
 That is:
 1. Add the currently-selected list entry to the detail pane at the side, and
 2. Disable display of the list of options.
+
+## Gun modification management
+
+Activating a gun opens its modification manager.  Guns with an existing activation
+offer a choice between modification management and their original action.  Browsing
+does not retrieve the gun, consume tool charges, or start installation work.
+
+The manager uses terminal cells and `ui_adaptor` resize callbacks, like the inventory.
+Wide terminals display carried modifications and installed slots side by side;
+narrow terminals show the active pane.  Switching panes preserves the filter and
+selection.  Confirming a slot filters the available modifications by slot type.
+Unavailable modifications remain selectable so their blocking reason can be read.
+
+Selecting a modification previews the whole gun without changing the real item.
+The slot display includes capacity supplied by modifications and marks additions
+and removals.  Slots are pooled by type, not represented as invented parent-child
+attachments.  Removal is blocked if the remaining capacity cannot hold installed
+modifications.  Permanent modifications remain visible and cannot be removed.
+
+The lower panels show installation requirements, tool choices, time, risk, and
+current-to-preview statistics.  Details and slot previews can be scrolled separately.
+Loaded damage and recoil are compared only with matching ammunition.  There is
+no aggregate equipment score.  Keybindings are configurable in `GUNMOD_MANAGER`.
+
+Confirmed changes use the normal installation and removal activities, including
+handling time, interruption, and installation failure.  Normal completion returns
+to the manager with the real result; canceling an activity does not reopen it.

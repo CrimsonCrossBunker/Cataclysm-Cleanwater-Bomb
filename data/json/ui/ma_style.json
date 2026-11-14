@@ -1,5 +1,14 @@
 [
   {
+    "id": "technique_cooldowns",
+    "type": "widget",
+    "label": "Cooldowns",
+    "description": "Remaining cooldowns for up to three active techniques from the current style and weapon.",
+    "style": "text",
+    "var": "technique_cooldowns_text",
+    "flags": [ "W_DISABLED_WHEN_EMPTY" ]
+  },
+  {
     "id": "style_desc",
     "type": "widget",
     "label": "Style",

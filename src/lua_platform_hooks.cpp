@@ -415,6 +415,11 @@ void begin_dialogue_session( ::dialogue &d )
     cata::lua_platform::dialogue::begin_dialogue( d );
 }
 
+void clear_dialogue_response_callbacks( ::dialogue &d )
+{
+    cata::lua_platform::dialogue::clear_response_callbacks( d );
+}
+
 void end_dialogue_session( ::dialogue &d ) noexcept
 {
     cata::lua_platform::dialogue::end_session( d );

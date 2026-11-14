@@ -206,7 +206,9 @@ jobs:
           cd /tmp/SDL_shadercross
           git checkout 6b06e55c7c5d7e7a09a8a14f76e866dcfad5ab99
           git submodule update --init --recursive
-          cmake -P build-scripts/download-prebuilt-DirectXShaderCompiler.cmake
+          python3 "$GITHUB_WORKSPACE/build-scripts/retry-download-command.py" -- \
+              cmake -DCMAKE_SYSTEM_NAME=Linux \
+              -P build-scripts/download-prebuilt-DirectXShaderCompiler.cmake
           cmake -S external/SPIRV-Cross -B spirv_cross_build -GNinja \
               -DCMAKE_BUILD_TYPE=Release \
               -DSPIRV_CROSS_SHARED=OFF \
@@ -482,6 +484,17 @@ jobs:
         with:
           path: msvc-full-features/vcpkg_installed
           key: vcpkg-installed-sdl3-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
+      - name: Install vcpkg packages (Windows, SDL3)
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
+        working-directory: msvc-full-features
+        env:
+          VCPKG_BINARY_SOURCES: clear;default,readwrite
+          VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
+        run: |
+          vcpkg install --triplet x64-windows-static --host-triplet x64-windows-static `
+            --x-install-root="$env:GITHUB_WORKSPACE\msvc-full-features\vcpkg_installed\x64-windows-static" `
+            --x-feature=sdl3 --clean-after-build
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux' && matrix.android == 'none'
         timeout-minutes: 10
@@ -548,12 +561,17 @@ jobs:
           mv cataclysmdda-0.J.tar.gz ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.tar.gz
       - name: Build CDDA (windows msvc, SDL3)
         if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
         env:
           BACKTRACE: 1
           CDDA_RELEASE_BUILD: 1
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}\.github\vcpkg_triplets
         run: |
-          msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+          msbuild -m -p:Configuration=Release -p:Platform=${{ matrix.arch }} -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features\Cataclysm-vcpkg-static.sln
+      - name: Package CDDA (windows msvc, SDL3)
+        if: runner.os == 'Windows' && matrix.sdl3 == 1
+        shell: pwsh
+        run: |
           .\build-scripts\windist.ps1
           mv cataclysmdda-0.J.zip ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.zip
       - name: Build CDDA (osx, curses)
@@ -580,7 +598,7 @@ jobs:
           mv Cataclysm.dmg ccb-${{ matrix.artifact }}-${{ needs.release.outputs.timestamp }}.dmg
       - name: Set up JDK (android)
         if: runner.os == 'Linux' && matrix.android != 'none'
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           java-version: '17'
           distribution: 'temurin'   

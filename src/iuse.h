@@ -23,6 +23,7 @@ class item;
 class map;
 class monster;
 struct iteminfo;
+struct item_activation_choices;
 template<typename T> class ret_val;
 
 // iuse methods return the number of charges expended, which is usually "1", or no value.
@@ -201,6 +202,8 @@ std::optional<int> calories_intake_tracker( Character *p, item *, const tripoint
 
 std::optional<int> radiocar( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> radiocontrol( Character *, item *, const tripoint_bub_ms & );
+int query_radiocontrol( const item &controller );
+std::optional<int> radiocontrol_action( Character *who, item *controller, int choice );
 std::optional<int> radiocontrol_tick( Character *, item *, const tripoint_bub_ms & );
 
 std::optional<int> multicooker( Character *, item *, const tripoint_bub_ms & );
@@ -216,7 +219,6 @@ std::optional<int> disassemble( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> post_up( Character *, item *, const tripoint_bub_ms & );
 
 // Helper functions for other iuse functions
-void cut_log_into_planks( Character & );
 void play_music( Character *p, const tripoint_bub_ms &source, int volume, int max_morale,
                  bool play_sounds = true );
 void make_music( Character *p, const tripoint_bub_ms &source, int volume, int max_morale,
@@ -263,13 +265,15 @@ struct heater {
     void serialize( JsonOut &jsout ) const;
     void deserialize( const JsonValue &jsin );
 };
+drop_locations query_heating_targets( Character &who, const item &tool, const heater &source,
+                                      bool liquid_items, bool solid_items );
 heater find_heater( Character *, item *, bool force_use_it );
 heater find_vehicle_heater( const tripoint_bub_ms &position, const item &tool );
 heating_requirements heating_requirements_for_weight( const units::mass &,
         const units::mass &, const units::volume & );
 
 using use_function_pointer = std::optional<int> ( * )( Character *, item *,
-    const tripoint_bub_ms & );
+                             const tripoint_bub_ms & );
 
 class iuse_actor
 {
@@ -291,6 +295,22 @@ class iuse_actor
         virtual std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms & ) const = 0;
         virtual ret_val<void> can_use( const Character &, const item &, map *here,
                                        const tripoint_bub_ms & ) const;
+        // This use action completes on the supplied actor without local UI or
+        // replacing its activity. Unknown/scripted/targeted actions opt out.
+        virtual bool is_immediate_consumption() const;
+        // Executes using only the supplied actor, item and target. Methods
+        // needing another player choice must supply that choice before opting in.
+        virtual bool supports_owned_activation() const {
+            return is_immediate_consumption();
+        }
+
+        // Selection belongs to the local player's UI; validation/execution also
+        // work on server-owned characters and never prompt for missing choices.
+        virtual bool query_activation_choices( item_activation_choices & ) const;
+        virtual bool valid_activation_choices( const item_activation_choices & ) const;
+        virtual std::optional<int> use_with_choices( Character *, item &, map *,
+                const tripoint_bub_ms &, const item_activation_choices & ) const;
+
         virtual void info( const item &, std::vector<iteminfo> & ) const {}
         /**
          * Returns a deep copy of this object. Example implementation:
@@ -333,7 +353,8 @@ struct use_function {
 
         // TODO: Replace map unaware overload with map aware.
         std::optional<int> call( Character *, item &, const tripoint_bub_ms & ) const;
-        std::optional<int> call( Character *, item &, map *here, const tripoint_bub_ms & ) const;
+        std::optional<int> call( Character *, item &, map *here, const tripoint_bub_ms &,
+                                 const item_activation_choices *choices = nullptr ) const;
         // TODO: Replace map unaware overload with map aware.
         ret_val<void> can_call( const Character &, const item &, const tripoint_bub_ms &pos ) const;
         ret_val<void> can_call( const Character &, const item &, map *here,

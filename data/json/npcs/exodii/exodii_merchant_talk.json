@@ -1310,7 +1310,11 @@
     "speaker_effect": { "effect": { "u_add_var": "knowledge_rubik_is_cyborg_u_knows_exodiilore", "value": "yes" } },
     "responses": [
       {
-        "text": "[INT 9] So you're a cyborg of some kind?  That's awesome.  How do I become a cyborg?",
+        "truefalsetext": {
+          "condition": { "mod_is_loaded": "catalegacy_future" },
+          "true": "<fcl_exodii_cyborg_question>",
+          "false": "[INT 9] So you're a cyborg of some kind?  That's awesome.  How do I become a cyborg?"
+        },
         "topic": "TALK_EXODII_MERCHANT_Exodize",
         "condition": {
           "and": [

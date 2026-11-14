@@ -4,14 +4,17 @@
 #include <istream>
 #include <limits>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <variant>
 
 #include "cata_catch.h"
 #include "flexbuffer_cache.h"
 #include "flexbuffer_json.h"
+#include "json.h"
 #include "json_loader.h"
 #include "lua_platform_state.h"
+#include "point.h"
 
 namespace
 {
@@ -50,9 +53,27 @@ TEST_CASE( "lua_platform_persistent_coordinates_preserve_integer_bounds",
                     R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" ).get_object() );
     const cata::lua_platform::script_persistent_tripoint &coordinate =
         std::get<cata::lua_platform::script_persistent_tripoint>( value );
-    CHECK( coordinate.x == std::numeric_limits<int>::max() );
-    CHECK( coordinate.y == std::numeric_limits<int>::min() );
-    CHECK( coordinate.z == 0 );
+    CHECK( coordinate.value.x == std::numeric_limits<int>::max() );
+    CHECK( coordinate.value.y == std::numeric_limits<int>::min() );
+    CHECK( coordinate.value.z == 0 );
+}
+
+TEST_CASE( "lua_platform_persistent_coordinates_preserve_codec",
+           "[lua][platform][semantic][state][persistence]" )
+{
+    namespace platform = cata::lua_platform;
+    const platform::script_persistent_value value = platform::script_persistent_tripoint{
+        tripoint( std::numeric_limits<int>::max(), std::numeric_limits<int>::min(), 0 )
+    };
+    std::ostringstream output;
+    JsonOut json( output );
+    json.start_object();
+    platform::detail::write_persistent_value( json, value );
+    json.end_object();
+    CHECK( output.str() == R"({"type":"tripoint_abs_ms","value":[2147483647,-2147483648,0]})" );
+    const platform::script_persistent_value restored = platform::detail::read_persistent_value(
+                json_loader::from_string( output.str() ).get_object() );
+    CHECK( restored == value );
 }
 
 TEST_CASE( "lua_platform_persistent_coordinates_reject_integer_overflow",
@@ -74,9 +95,9 @@ TEST_CASE( "lua_platform_persistent_coordinates_read_source_less_flexbuffers",
         cata::lua_platform::detail::read_persistent_value( root.get_object() );
     const cata::lua_platform::script_persistent_tripoint &coordinate =
         std::get<cata::lua_platform::script_persistent_tripoint>( value );
-    CHECK( coordinate.x == std::numeric_limits<int>::max() );
-    CHECK( coordinate.y == std::numeric_limits<int>::min() );
-    CHECK( coordinate.z == 0 );
+    CHECK( coordinate.value.x == std::numeric_limits<int>::max() );
+    CHECK( coordinate.value.y == std::numeric_limits<int>::min() );
+    CHECK( coordinate.value.z == 0 );
 }
 
 TEST_CASE( "lua_platform_persistent_coordinates_reject_source_less_overflow",

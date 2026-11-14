@@ -7,6 +7,7 @@
 #include <translation.h>
 #include <type_id.h>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <iterator>
 #include <map>
@@ -29,7 +30,9 @@
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
+#include "effect_source.h"
 #include "enums.h"
+#include "flag.h"
 #include "flexbuffer_json.h"
 #include "game_constants.h"
 #include "generic_factory.h"
@@ -55,11 +58,13 @@
 #include "value_ptr.h"
 #include "weighted_list.h"
 
-class json_flag;
-
 static const bionic_id bio_armor_arms( "bio_armor_arms" );
 static const bionic_id bio_armor_legs( "bio_armor_legs" );
 static const bionic_id bio_cqb( "bio_cqb" );
+
+static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_incorporeal( "incorporeal" );
+static const efftype_id effect_martial_grapple( "martial_grapple" );
 
 static const flag_id json_flag_PROVIDES_TECHNIQUES( "PROVIDES_TECHNIQUES" );
 
@@ -322,6 +327,7 @@ void ma_requirements::load( const JsonObject &jo, std::string_view )
 
     optional( jo, was_loaded, "skill_requirements", min_skill, ma_skill_reader {} );
     optional( jo, was_loaded, "weapon_damage_requirements", min_damage, ma_weapon_damage_reader {} );
+    was_loaded = true;
 }
 
 void ma_technique::load( const JsonObject &jo, std::string_view src )
@@ -341,6 +347,15 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "reach_tec", reach_tec, false );
     optional( jo, was_loaded, "reach_ok", reach_ok, false );
     optional( jo, was_loaded, "manual_activation", manual_activation, false );
+    optional( jo, was_loaded, "cooldown", cooldown, 0_turns );
+    if( cooldown < 0_turns || cooldown > 1_days ) {
+        jo.throw_error( "cooldown must be between zero and one day" );
+    }
+
+    optional( jo, was_loaded, "grapple_action", grapple_action, "" );
+    optional( jo, was_loaded, "grapple_power", grapple_power, 100 );
+    optional( jo, was_loaded, "grapple_stamina", grapple_stamina, 0 );
+    optional( jo, was_loaded, "grapple_cooldown", grapple_cooldown, 0_turns );
 
     optional( jo, was_loaded, "needs_ammo", needs_ammo, false );
 
@@ -383,7 +398,13 @@ void ma_technique::load( const JsonObject &jo, std::string_view src )
     bonuses.load( jo );
 
     if( manual_activation && !can_activate() ) {
-        jo.throw_error( "manual_activation requires an offensive technique with an attack vector and no counterattack trigger" );
+        jo.throw_error( "manual_activation requires an offensive technique with an attack vector and no critical-only or counterattack trigger" );
+    }
+    if( !grapple_action.empty() &&
+        ( ( grapple_action != "hold" && grapple_action != "throw" && grapple_action != "drag" ) ||
+          !manual_activation || !reqs.strictly_unarmed || reach_tec || reach_ok || grapple_power <= 0 ||
+          grapple_stamina <= 0 || grapple_cooldown <= 0_turns ) ) {
+        jo.throw_error( "grapple_action requires hold, throw or drag, manual activation, strictly_unarmed, and positive power, stamina and cooldown" );
     }
 }
 
@@ -1036,19 +1057,56 @@ bool ma_technique::is_valid_character( const Character &u ) const
 
 bool ma_technique::can_activate() const
 {
-    return !dummy && !defensive && !dodge_counter && !block_counter &&
+    return !crit_tec && !dummy && !defensive && !dodge_counter && !block_counter &&
            !miss_recovery && !grab_break && !attack_vectors.empty();
 }
 
 bool ma_technique::activation_allowed( const Character &character,
                                        const std::string_view phase ) const
 {
+    return activation_allowed( character, phase, nullptr );
+}
+
+bool ma_technique::targets_position() const
+{
+    return flags.count( "LUA_POSITION_TECHNIQUE" ) != 0;
+}
+
+bool ma_technique::activation_allowed( const Character &character,
+                                       const std::string_view phase, const Creature *target ) const
+{
+    if( phase == "start" && character.technique_cooldown_remaining( id ) > 0_turns ) {
+        return false;
+    }
+    if( phase != "menu" && !grapple_action.empty() &&
+        ( character.has_effect( grapple_cooldown_effect() ) || character.is_mounted() ||
+          character.get_wielded_item() || character.get_working_arm_count() < 2 ||
+          !character.has_two_arms_lifting() ||
+          character.worn_with_flag( flag_RESTRICT_HANDS ) ||
+          character.has_effect( effect_incorporeal ) ||
+          character.has_effect( effect_downed ) || character.in_sleep_state() ||
+          character.get_stamina() < grapple_stamina ) ) {
+        return false;
+    }
     if( lua_platform_condition_handler.empty() ) {
         return true;
     }
     return cata::lua_platform::invoke_technique_condition_handler(
                id.str(), lua_platform_mod, lua_platform_condition_handler,
-               character, phase ).value_or( false );
+               character, phase, target ).value_or( false );
+}
+
+time_duration ma_technique::activation_cooldown( const Character &character ) const
+{
+    if( lua_platform_cooldown_handler.empty() ) {
+        return cooldown;
+    }
+    const std::optional<double> seconds =
+        cata::lua_platform::invoke_technique_cooldown_handler(
+            id.str(), lua_platform_mod, lua_platform_cooldown_handler, character,
+            to_seconds<double>( cooldown ) );
+    return seconds ? time_duration::from_seconds( static_cast<int>( std::ceil( *seconds ) ) ) :
+           cooldown;
 }
 
 float ma_technique::charge_damage_multiplier( const Character &character,
@@ -1062,6 +1120,31 @@ float ma_technique::charge_damage_multiplier( const Character &character,
     return static_cast<float>( cata::lua_platform::invoke_mounted_charge_damage_handler(
                                    id.str(), lua_platform_mod, lua_platform_charge_damage_handler,
                                    character, profile, completed_steps, speed ).value_or( fallback ) );
+}
+
+bool martial_grapple_blocks_movement( Creature &target )
+{
+    if( !target.has_effect( effect_martial_grapple ) ) {
+        return false;
+    }
+    Creature *const source = target.get_effect(
+                                 effect_martial_grapple ).get_source().resolve_creature();
+    Character *const holder = source ? source->as_character() : nullptr;
+    if( holder && !holder->is_dead_state() && target.is_adjacent( holder, false ) &&
+        !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
+        holder->has_two_arms_lifting() && !holder->worn_with_flag( flag_RESTRICT_HANDS ) &&
+        !holder->has_effect( effect_incorporeal ) &&
+        !holder->has_effect( effect_downed ) && !holder->in_sleep_state() &&
+        holder->get_stamina() >= 100 ) {
+        return true;
+    }
+    target.remove_effect( effect_martial_grapple );
+    return false;
+}
+
+efftype_id ma_technique::grapple_cooldown_effect() const
+{
+    return efftype_id( "martial_grapple_" + grapple_action + "_cooldown" );
 }
 
 ma_buff::ma_buff()
@@ -2178,6 +2261,11 @@ float ma_technique::damage_multiplier( const Character &u, const damage_type_id 
     return bonuses.get_mult( u, affected_stat::DAMAGE, type );
 }
 
+float ma_technique::hit_bonus( const Character &u ) const
+{
+    return bonuses.get_flat( u, affected_stat::HIT );
+}
+
 float ma_technique::move_cost_multiplier( const Character &u ) const
 {
     return bonuses.get_mult( u, affected_stat::MOVE_COST );
@@ -2216,6 +2304,19 @@ std::string ma_technique::get_description() const
 
     if( can_activate() ) {
         dump += _( "* Can be selected as an active technique" ) + std::string( "\n" );
+        if( cooldown > 0_turns || !lua_platform_cooldown_handler.empty() ) {
+            dump += string_format( _( "* Base active cooldown: %s" ), to_string( cooldown ) ) + "\n";
+        }
+        if( !lua_platform_cooldown_handler.empty() ) {
+            dump += _( "* Cooldown is adjusted when the technique is used" ) + std::string( "\n" );
+        }
+    }
+    if( !grapple_action.empty() ) {
+        dump += string_format( _( "* Stamina: at least %d (increases with target weight)\n" ),
+                               grapple_stamina );
+        dump += string_format( _( "* Cooldown: %s (shared by grappling actions of the same kind)\n" ),
+                               to_string( grapple_cooldown ) );
+        dump += _( "* Requires two free, working arms.  Size and weight limit control and throw strength.\n" );
     }
 
     std::string temp = bonuses.get_description();

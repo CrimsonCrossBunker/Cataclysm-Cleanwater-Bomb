@@ -89,6 +89,7 @@ static const efftype_id effect_hot( "hot" );
 static const efftype_id effect_hypovolemia( "hypovolemia" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_lying_down( "lying_down" );
+static const efftype_id effect_melatonin_sleep( "melatonin_sleep" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_meth( "meth" );
 static const efftype_id effect_motor_seizure( "motor_seizure" );
@@ -1069,17 +1070,20 @@ static void eff_fun_sleep( Character &u, effect &it )
 
     int current_sleepiness = u.get_sleepiness();
     const bool anesthetized = u.has_effect( effect_narcosis );
+    const bool melatonin_sleep = u.get_effect_dur( effect_melatonin_sleep ) > 0_turns &&
+                                 calendar::turn - it.get_start_time() < 30_minutes;
 
     if( anesthetized && u.get_sleepiness() <= 25 ) {
         u.set_sleepiness( 25 ); //Prevent us from waking up naturally while under anesthesia
     }
 
     if( u.get_sleepiness() < -25 && it.get_duration() > 3_minutes &&
-        !anesthetized ) {
+        !anesthetized && !melatonin_sleep ) {
         it.set_duration( 1_turns * dice( 3, 10 ) );
     }
 
-    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !anesthetized ) {
+    if( u.get_sleepiness() <= 0 && u.get_sleepiness() > -20 && !anesthetized &&
+        !melatonin_sleep ) {
         u.mod_sleepiness( -25 );
         if( u.get_sleep_deprivation() < SLEEP_DEPRIVATION_HARMLESS ) {
             u.add_msg_if_player( m_good, _( "You feel well rested." ) );

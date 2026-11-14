@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_CONSTRUCTION_H
 #define CATA_SRC_CONSTRUCTION_H
 
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -13,6 +14,8 @@
 #include <vector>
 
 #include "coords_fwd.h"
+#include "coordinates.h"
+#include "craft_command.h"
 #include "game_constants.h"
 #include "item.h"
 
@@ -35,6 +38,7 @@ class JsonObject;
 class nc_color;
 
 struct partial_con {
+    int64_t uid = 0;
     int counter = 0;
     std::list<item> components;
     construction_id id = construction_id( -1 );
@@ -99,6 +103,7 @@ struct construction {
 
         // NPC assistance adjusted
         int adjusted_time() const;
+        int adjusted_time( const Character &builder ) const;
         int print_time( const catacurses::window &w, const point &, int width, nc_color col ) const;
         std::vector<std::string> get_folded_time_string( int width ) const;
         // Result of construction scaling option
@@ -119,6 +124,24 @@ struct construction {
 };
 
 const std::vector<construction> &get_constructions();
+
+struct construction_selection {
+    construction_str_id id;
+    tripoint_abs_ms position;
+    std::vector<comp_selection<item_comp>> components;
+    std::vector<comp_selection<tool_comp>> tools;
+
+    static std::optional<construction_selection> prepare( Character &who,
+            const construction &con, const tripoint_abs_ms &position, bool automatic = false );
+    static std::optional<construction_selection> from_selection( Character &who,
+            const JsonObject &data );
+    void serialize( JsonOut &out ) const;
+    bool start( Character &who, bool server_owned = false ) const;
+    bool valid( Character &who ) const;
+};
+
+bool construction_accessible( Character &who, const construction &con,
+                              const tripoint_abs_ms &position );
 
 void place_construction( std::vector<construction_group_str_id> const &groups );
 void load_construction( const JsonObject &jo, const std::string &src );

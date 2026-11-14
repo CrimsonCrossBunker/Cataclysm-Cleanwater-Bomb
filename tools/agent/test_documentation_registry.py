@@ -19,6 +19,17 @@ class DocumentationRegistryTest(unittest.TestCase):
         self.assertIn("--cached", command)
         self.assertNotIn("--others", command)
 
+    @mock.patch.object(registry.subprocess, "run")
+    def test_tracked_discovery_deduplicates_merge_stages(self, run):
+        run.return_value.stdout = (
+            b"doc/example.md\0AGENTS.md\0doc/example.md\0doc/example.md\0"
+        )
+
+        self.assertEqual(
+            registry.tracked_paths(),
+            ["AGENTS.md", "doc/example.md"],
+        )
+
     def test_registry_covers_every_selected_tracked_path(self):
         data = registry.build_registry("0" * 40)
         expected = {

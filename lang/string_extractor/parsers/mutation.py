@@ -5,7 +5,7 @@ from ..write_text import write_text
 
 def parse_mutation(json, origin):
 
-    if json.get("debug") or json.get("dummy"):
+    if json.get("dummy"):
         return
 
     name = get_singular_name(json)

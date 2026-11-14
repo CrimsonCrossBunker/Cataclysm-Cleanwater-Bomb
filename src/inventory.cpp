@@ -1082,3 +1082,16 @@ void inventory::copy_invlet_of( const inventory &other )
     assigned_invlet = other.assigned_invlet;
     invlet_cache = other.invlet_cache;
 }
+
+void inventory::apply_current_state( inventory &&state )
+{
+    std::list<item> existing;
+    for( std::list<item> &stack : items ) {
+        existing.splice( existing.end(), stack );
+    }
+    for( std::list<item> &stack : state.items ) {
+        item::reuse_current_nodes( existing, stack );
+    }
+    clear();
+    items = std::move( state.items );
+}

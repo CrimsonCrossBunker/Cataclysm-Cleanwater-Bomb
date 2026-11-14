@@ -53,6 +53,8 @@ std::string external_options();
 std::string credits();
 std::string motd();
 std::string title( holiday current_holiday );
+// Resolve a caller-selected title without drawing from simulation RNG.
+std::string title( holiday current_holiday, bool alternate );
 
 cata_path autopickup();
 cata_path autonote();

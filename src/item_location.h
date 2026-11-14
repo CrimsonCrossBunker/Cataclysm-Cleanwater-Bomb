@@ -50,6 +50,9 @@ class item_location
         item_location( Character &ch, item *which );
         item_location( const map_cursor &mc, item *which );
         item_location( const vehicle_cursor &vc, item *which );
+        // Reference the base item of a live part, using the same representation
+        // as a deserialized vehicle-base location. The cursor must be valid.
+        static item_location from_vehicle_part( const vehicle_cursor &vc );
         item_location( const item_location &container, item *which );
 
         void serialize( JsonOut &js ) const;

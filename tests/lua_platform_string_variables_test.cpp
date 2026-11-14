@@ -857,6 +857,8 @@ TEST_CASE( "lua_migration_indirect_string_native_pointer_baseline",
         CHECK( translated.evaluate( context ).translated() == to_translation( "fallback" ).translated() );
         avatar alpha;
         npc beta;
+        alpha.normalize();
+        beta.normalize();
         alpha.set_value( key, "alpha-value" );
         beta.set_value( key, "beta-value" );
         dialogue participants( get_talker_for( alpha ), get_talker_for( beta ) );

@@ -329,6 +329,9 @@ static units::volume string_to_ml( std::string_view str )
 
 void stomach_contents::deserialize( const JsonObject &jo )
 {
+    // Loading replaces the prior contents, including vitamins absent from the
+    // snapshot. This also matters when restoring an already initialized body.
+    nutr.clear_vitamins();
     std::map<vitamin_id, int> vitamins;
     jo.read( "vitamins", vitamins );
     for( const std::pair<const vitamin_id, int> &vit : vitamins ) {

@@ -30,7 +30,6 @@
 #include "catacharset.h"
 #include "character.h"
 #include "city.h"
-#include "clzones.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cuboid_rectangle.h"
@@ -991,7 +990,6 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
 
     std::string &sZoneName = oter_opts.sZoneName;
     tripoint_abs_omt &tripointZone = oter_opts.tripointZone;
-    const zone_manager &zones = zone_manager::get_manager();
 
     oter_opts.mission_target = target;
 
@@ -1006,11 +1004,9 @@ static void draw_ascii( const catacurses::window &w, overmap_draw_data_t &data )
     }
     oter_opts.blink = blink;
 
-    if( data.iZoneIndex != -1 ) {
-        const zone_data &zone = zones.get_zones()[data.iZoneIndex].get();
-        sZoneName = zone.get_name();
-        tripointZone = project_to<coords::omt>(
-                           zone.get_center_point() );
+    if( data.zone_position ) {
+        sZoneName = data.zone_name;
+        tripointZone = *data.zone_position;
     }
 
     const tripoint_abs_omt corner = cursor_pos - point( om_half_width, om_half_height );
@@ -2605,7 +2601,8 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
     } else if( blink && overmap_buffer.is_marked_dangerous( omp ) ) {
         ret.second = c_red;
         ret.first = "X";
-    } else if( blink && opts.mission_inbounds && opts.mission_target && !opts.hilite_mission &&
+    } else if( ( blink || opts.hilite_mission ) && opts.mission_inbounds && opts.mission_target &&
+               ( !opts.hilite_mission || omp.z() != opts.mission_target->z() ) &&
                omp.xy() == opts.mission_target->xy() ) {
         // Mission target, display always, player should know where it is anyway.
         ret.second = c_red;
@@ -2719,7 +2716,7 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
         }
     }
 
-    if( opts.hilite_mission && opts.mission_target && opts.mission_target->xy() == omp.xy() ) {
+    if( opts.hilite_mission && opts.mission_target && *opts.mission_target == omp ) {
         ret.second = red_background( ret.second );
     }
     if( opts.hilite_pc && opts.show_pc && opts.center.xy() == omp.xy() ) {
@@ -2802,12 +2799,13 @@ void ui::omap::display_editor()
 }
 
 void ui::omap::display_zones( const tripoint_abs_omt &center, const tripoint_abs_omt &select,
-                              const int iZoneIndex )
+                              const std::string &zone_name )
 {
     g->overmap_data = overmap_ui::overmap_draw_data_t();
     g->overmap_data.origin_pos = center;
     g->overmap_data.select = select;
-    g->overmap_data.iZoneIndex = iZoneIndex;
+    g->overmap_data.zone_position = select;
+    g->overmap_data.zone_name = zone_name;
     overmap_ui::display();
 }
 

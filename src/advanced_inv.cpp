@@ -46,12 +46,14 @@
 #include "item.h"
 #include "item_category.h"
 #include "item_contents.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_tname.h"
 #include "itype.h"
 #include "localized_comparator.h"
 #include "map.h"
 #include "messages.h"
+#include "mp_client_conn.h"
 #include "options.h"
 #include "output.h"
 #include "panels.h"
@@ -1211,8 +1213,7 @@ bool advanced_inventory::move_all_items()
             }
             do_return_entry();
 
-            const insert_item_activity_actor act( dpane.container, items_to_insert );
-            player_character.assign_activity( act );
+            start_item_insert( player_character, dpane.container, items_to_insert );
         }
     } else if( spane.get_area() == AIM_INVENTORY || spane.get_area() == AIM_WORN ) {
         const tripoint_rel_ms placement = darea.off;
@@ -1579,6 +1580,10 @@ void advanced_inventory::start_activity(
                 --amount_to_move;
             }
             if( sitem->items.front()->is_bucket_nonempty() ) {
+                if( cata_mp::is_client_mode() ) {
+                    popup( _( "Empty spillable containers before storing them in multiplayer." ) );
+                    return;
+                }
                 // Copy the pointers so they won't break if the list gets reordered as buckets are partly emptied.
                 std::vector<item_location> target_buckets = sitem->items;
                 if( target_buckets.front()->contains_no_solids() ) {
@@ -1599,8 +1604,7 @@ void advanced_inventory::start_activity(
             }
         }
 
-        const insert_item_activity_actor act( panes[dest].container, target_inserts, false, false );
-        player_character.assign_activity( act );
+        start_item_insert( player_character, panes[dest].container, target_inserts, false, false );
     }
 }
 

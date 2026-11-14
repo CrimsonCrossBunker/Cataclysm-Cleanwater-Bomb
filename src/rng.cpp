@@ -26,6 +26,16 @@ int rng( int lo, int hi )
     return rng_int_dist( rng_get_engine(), std::uniform_int_distribution<>::param_type( lo, hi ) );
 }
 
+int rng_visual( int lo, int hi )
+{
+    static thread_local std::mt19937 engine( static_cast<unsigned int>(
+                std::chrono::steady_clock::now().time_since_epoch().count() ) );
+    if( lo > hi ) {
+        std::swap( lo, hi );
+    }
+    return std::uniform_int_distribution<int>( lo, hi )( engine );
+}
+
 double rng_float( double lo, double hi )
 {
     static std::uniform_real_distribution<double> rng_real_dist;

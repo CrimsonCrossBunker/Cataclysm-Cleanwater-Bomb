@@ -274,12 +274,13 @@
   {
     "type": "mapgen",
     "om_terrain": [ [ "s_gas_b20" ], [ "s_gas_b21" ] ],
+    "weight": 100,
     "object": {
       "fill_ter": "t_thconc_floor",
       "rows": [
         "   ||||         ########",
-        "   |MP| **|     #---~~-#",
-        "||||M.|***| ||||#--~~~@#",
+        "   |ox| **|     #---~~-#",
+        "||||o.|***| ||||#--~~~@#",
         "|x....|**.| |EEm#--~~~q#",
         "|oo..É|.**| |...+-~ÁÂ-q#",
         "|||.;É|.*.| |.;.#-~~--@#",
@@ -398,9 +399,7 @@
         "Ă": "f_drill_press",
         "B": "f_rack",
         "D": "f_bookcase",
-        "I": "f_fridge",
-        "P": "f_autodoc",
-        "M": "f_autodoc_couch"
+        "I": "f_fridge"
       },
       "vendingmachines": { "Ú": { "item_group": "vending_drink", "lootable": true }, "Ó": { "item_group": "vending_food", "lootable": true } },
       "toilets": { "n": {  } },

@@ -80,7 +80,6 @@ static const skill_id skill_tailor( "tailor" );
 // Quick batch mode shows a scrollable list of 1..50 entries.
 // Direct numeric input allows entering a larger amount without expanding the list.
 static constexpr int crafting_batch_quick_max = 50;
-static constexpr int crafting_batch_input_max = 9999;
 
 namespace
 {

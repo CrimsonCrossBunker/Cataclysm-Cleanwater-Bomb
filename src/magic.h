@@ -536,6 +536,10 @@ class spell
 
         spell() = default;
         explicit spell( spell_id sp, int xp = 0, int level_adjustment = 0 );
+        // Runtime projections include temporary modifiers without firing any
+        // learn/level events. Ordinary save serialization remains unchanged.
+        void store_casting_state( JsonOut &out ) const;
+        static spell from_casting_state( const JsonObject &data );
 
         // sets the message to be different than the spell_type specifies
         void set_message( const translation &msg );
@@ -790,6 +794,8 @@ class known_magic
         bool knows_spell( const spell_id &sp ) const;
         // does the Character know a spell?
         bool knows_spell() const;
+        void store_casting_state( JsonOut &out ) const;
+        void load_casting_state( const JsonObject &data );
         // spells known by Character
         std::vector<spell_id> spells() const;
         // whether any known spell can currently be cast
@@ -821,7 +827,7 @@ class known_magic
         // Clears old data written by EoC triggered by the events player_opens_spellbook or npc_opens_spellbook
         void clear_opens_spellbook_data();
         // uses data received from EoC
-        void evaluate_opens_spellbook_data();
+        void evaluate_opens_spellbook_data( const Character &caster );
         void channel_magic( Character &guy );
         void break_channeling( Character &guy );
 
@@ -932,7 +938,7 @@ void none( const spell &sp, Creature &, const tripoint_bub_ms &target );
 void slime_split_on_death( const spell &sp, Creature &, const tripoint_bub_ms &target );
 
 inline const std::map<spell_shape, std::function<std::set<tripoint_bub_ms>
-( const override_parameters &, const tripoint_bub_ms &, const tripoint_bub_ms & )>> shape_map = {
+( const override_parameters &, const tripoint_bub_ms &, const tripoint_bub_ms & ) >> shape_map = {
     { spell_shape::blast, spell_effect_blast },
     { spell_shape::line, spell_effect_line },
     { spell_shape::cone, spell_effect_cone }

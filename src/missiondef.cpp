@@ -16,7 +16,8 @@
 #include "lua_platform_content.h"
 #include "rng.h"
 
-static const std::map<std::string, std::function<void( mission * )>> mission_function_map = {{
+static const std::map<std::string, std::function<void( mission *, Character & )>>
+mission_function_map = {{
         // Starts
         { "standard", { } },
         { "kill_nemesis", mission_start::kill_nemesis },
@@ -175,7 +176,7 @@ bool mission_type::load( const JsonObject &jo, const std::string_view src )
 
     assign_function( jo, "place", place, tripoint_function_map );
     const auto parse_phase = [&]( const std::string & phase,
-    std::function<void( mission * )> &phase_func ) {
+    std::function<void( mission *, Character & )> &phase_func ) {
         if( jo.has_string( phase ) ) {
             assign_function( jo, phase, phase_func, mission_function_map );
         } else if( jo.has_member( phase ) ) {

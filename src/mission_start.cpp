@@ -9,6 +9,7 @@
 
 #include "avatar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "computer.h"
 #include "coordinates.h"
 #include "current_map.h"
@@ -54,16 +55,27 @@ static const ter_str_id ter_t_wall_metal( "t_wall_metal" );
  * updating *miss with the target and any other important information.
  */
 
-void mission_start::standard( mission * )
+void mission_start::standard( mission *, Character & )
 {
 }
 
-void mission_start::kill_nemesis( mission * )
+void mission_start::kill_nemesis( mission *miss, Character &who )
 {
+    const int quest_id = miss->get_id();
+    const std::size_t generation = miss->identity_generation();
+    const character_action_guard owner( who );
+    const auto live = [&]() {
+        const mission *current = mission::find( quest_id, true );
+        return owner && current == miss && current->identity_generation() == generation &&
+               current->in_progress() && current->get_assigned_player_id() == who.getID();
+    };
+    if( !live() ) {
+        return;
+    }
     // Pick an area for the nemesis to spawn
 
     // Force z = 0 for overmapbuffer::find_random. (spawning on a rooftop is valid!)
-    const tripoint_abs_omt center = { get_player_character().pos_abs_omt().xy(), 0 };
+    const tripoint_abs_omt center = { who.pos_abs_omt().xy(), 0 };
     tripoint_abs_omt site = tripoint_abs_omt::invalid;
 
     static const std::array<float, 3> attempts_multipliers {1.0f, 1.5f, 2.f};
@@ -76,8 +88,11 @@ void mission_start::kill_nemesis( mission * )
         }
         int range = rng( 40, 80 ) * attempts_multipliers[attempt - 1];
         site = overmap_buffer.find_random( center, "field", range, false );
+        if( !live() ) {
+            return;
+        }
     } while( site.is_invalid() );
-    overmap_buffer.add_nemesis( site );
+    overmap_buffer.add_nemesis( site, quest_id );
 }
 
 /*
@@ -145,15 +160,23 @@ static tripoint_omt_ms find_potential_computer_point( const tinymap &compmap )
     return random_entry( *used, fallback );
 }
 
-void mission_start::place_npc_software( mission *miss )
+void mission_start::place_npc_software( mission *miss, Character &who )
 {
     npc *dev = g->find_npc( miss->npc_id );
     if( dev == nullptr ) {
         debugmsg( "Couldn't find NPC!  %d", miss->npc_id.get_value() );
         return;
     }
-    get_player_character().i_add( item( itype_usb_drive, calendar::turn_zero ) );
-    add_msg( _( "%s gave you a USB drive." ), dev->get_name() );
+    const character_action_guard owner( who );
+    const character_action_guard giver( *dev );
+    const int mission_id = miss->get_id();
+    const std::size_t generation = miss->identity_generation();
+    who.i_add( item( itype_usb_drive, calendar::turn_zero ) );
+    if( !owner || !giver || mission::find( mission_id, true ) != miss ||
+        miss->identity_generation() != generation ) {
+        return;
+    }
+    who.add_msg_if_player( _( "%s gave you a USB drive." ), dev->get_name() );
 
     std::string type = "house";
 
@@ -168,7 +191,7 @@ void mission_start::place_npc_software( mission *miss )
 
     tripoint_abs_omt place;
     if( type == "house" ) {
-        place = mission_util::random_house_in_closest_city();
+        place = mission_util::random_house_in_closest_city( who );
     } else {
         place = overmap_buffer.find_closest( dev->pos_abs_omt(), type, 0, false );
     }
@@ -196,7 +219,7 @@ void mission_start::place_npc_software( mission *miss )
     compmap.save();
 }
 
-void mission_start::place_deposit_box( mission *miss )
+void mission_start::place_deposit_box( mission *miss, Character & )
 {
     npc *p = g->find_npc( miss->npc_id );
     if( p == nullptr ) {
@@ -240,9 +263,9 @@ void mission_start::place_deposit_box( mission *miss )
     compmap.save();
 }
 
-void mission_start::find_safety( mission *miss )
+void mission_start::find_safety( mission *miss, Character &who )
 {
-    const tripoint_abs_omt place = get_player_character().pos_abs_omt();
+    const tripoint_abs_omt place = who.pos_abs_omt();
     for( int radius = 0; radius <= 20; radius++ ) {
         for( int dist = 0 - radius; dist <= radius; dist++ ) {
             int offset = rng( 0, 3 ); // Randomizes the direction we check first
@@ -290,11 +313,11 @@ void mission_start::find_safety( mission *miss )
     }
 }
 
-void mission_start::place_book( mission * )
+void mission_start::place_book( mission *, Character & )
 {
 }
 
-void mission_start::reveal_refugee_center( mission *miss )
+void mission_start::reveal_refugee_center( mission *miss, Character &who )
 {
     mission_target_params t;
     t.overmap_terrain = "refctr_S3e";
@@ -304,16 +327,16 @@ void mission_start::reveal_refugee_center( mission *miss )
     t.reveal_radius = 1;
     t.min_distance = 0;
 
-    dialogue d( get_talker_for( get_avatar() ), nullptr );
+    dialogue d( get_talker_for( who ), nullptr );
     std::optional<tripoint_abs_omt> target_pos = mission_util::assign_mission_target( t, d );
 
     if( !target_pos ) {
-        add_msg( _( "You don't know where the address could be…" ) );
+        who.add_msg_if_player( _( "You don't know where the address could be…" ) );
         return;
     }
 
     const tripoint_abs_omt source_road = overmap_buffer.find_closest(
-            get_player_character().pos_abs_omt(), "road",
+            who.pos_abs_omt(), "road",
             3, false );
     const tripoint_abs_omt dest_road = overmap_buffer.find_closest( *target_pos, "road", 3, false );
 
@@ -326,8 +349,9 @@ void mission_start::reveal_refugee_center( mission *miss )
                 "evac_center_18", 1, false );
         overmap_buffer.reveal_route( dest_road, dest_refugee_center, 1, false );
 
-        add_msg( _( "You mark the refugee center and the road that leads to it…" ) );
+        who.add_msg_if_player( _( "You mark the refugee center and the road that leads to it…" ) );
     } else {
-        add_msg( _( "You mark the refugee center, but you have no idea how to get there by road…" ) );
+        who.add_msg_if_player(
+            _( "You mark the refugee center, but you have no idea how to get there by road…" ) );
     }
 }

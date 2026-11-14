@@ -427,12 +427,9 @@ void input_manager::pump_events()
 input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyboard_mode*/ )
 {
     if( input_replay::is_replaying() ) {
-        input_event replayed;
-        if( input_replay::try_replay( replayed ) ) {
-            previously_pressed_key = replayed.get_first_input();
-            return replayed;
-        }
-        // Replay log exhausted: fall through to normal polling.
+        const input_event replayed = input_replay::next_event();
+        previously_pressed_key = replayed.get_first_input();
+        return replayed;
     }
     if( test_mode ) {
         // input should be skipped in caller's code

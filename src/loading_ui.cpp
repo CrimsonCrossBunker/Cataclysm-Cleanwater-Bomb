@@ -2,9 +2,9 @@
 
 #include "cached_options.h"
 #include "input.h"
+#include "loading_ui_random.h"
 #include "options.h"
 #include "output.h"
-#include "text_snippets.h"
 #include "ui_manager.h"
 
 #if defined(TILES)
@@ -16,7 +16,6 @@
     #include "sdltiles.h"
     #include "sdl_wrappers.h"
     #include "cata_imgui.h"
-    #include "text_snippets.h"
     #include "worldfactory.h"
 #else
     #include "cursesdef.h"
@@ -25,6 +24,7 @@
 namespace
 {
 struct ui_state {
+    loading_ui::random_choices choices;
     ui_adaptor *ui;
     background_pane *bg;
 #ifdef TILES
@@ -141,8 +141,7 @@ static void update_state( const std::string &context, const std::string &step )
         const ImVec2 screen_size = ImGui::GetMainViewport()->Size * 0.98f;
 
         // get snippet text and calculate it's size ahead of time
-        gLUI->tip = SNIPPET.random_from_category( "tip" ).value_or(
-                        translation() ).translated();
+        gLUI->tip = gLUI->choices.tip();
 
         // if our screen space is at least twice as large as minimal, we will use 1.5x font size
         gLUI->large_hint_size = cataimgui::min_screen_res_y * 2.f < screen_size.y;
@@ -197,7 +196,7 @@ static void update_state( const std::string &context, const std::string &step )
                     imgs.emplace_back( img_path );
                 }
             }
-            gLUI->chosen_load_img = random_entry( imgs );
+            gLUI->chosen_load_img = gLUI->choices.image( imgs );
         }
         SDL_Surface_Ptr surf = load_image( gLUI->chosen_load_img.get_unrelative_path().u8string().c_str() );
         // calculate max size of image, decreasing it by the size of text below
@@ -218,7 +217,7 @@ static void update_state( const std::string &context, const std::string &step )
         }
         gLUI->window_size = gLUI->splash_size + ImVec2{ 0.0f, 2.0f * ImGui::GetTextLineHeightWithSpacing() };
 #else
-        std::string splash = PATH_INFO::title( get_holiday_from_time() );
+        std::string splash = gLUI->choices.title( get_holiday_from_time() );
         if( get_option<bool>( "ENABLE_ASCII_TITLE" ) ) {
             splash = read_whole_file( splash ).value_or( _( "Cataclysm: Cleanwater Bomb" ) );
         }

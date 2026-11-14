@@ -174,7 +174,7 @@ TEST_CASE( "lua_platform_tonic_survives_character_and_runtime_reload",
         REQUIRE( fresh->character_state.empty() );
         REQUIRE( fresh->tasks.empty() );
     }
-    // Only the sidecar can supply progress to this fresh runtime.
+    // Native avatar data supplies per-character progress; the sidecar restores tasks.
     platform::runtime_world_ready( false );
     CHECK( integer_state( "lua_first_tonic_ticks" ) == 1 );
     CHECK( integer_state( "tonic_events" ) == 1 );

@@ -2,7 +2,9 @@
 #ifndef CATA_SRC_RANGED_H
 #define CATA_SRC_RANGED_H
 
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "coordinates.h"
@@ -24,6 +26,52 @@ struct vehicle_part;
 // Recoil change less or equal to this value (in MoA) stops further aiming
 constexpr double MIN_RECOIL_IMPROVEMENT = 0.01;
 
+constexpr int min_firearm_burst_rounds = 2;
+constexpr int max_firearm_burst_rounds = 30;
+
+constexpr bool valid_firearm_burst_rounds( int rounds )
+{
+    return rounds >= min_firearm_burst_rounds && rounds <= max_firearm_burst_rounds;
+}
+
+/** Inclusive round count range before ammunition or weapon faults interrupt the burst. */
+std::pair<int, int> firearm_burst_round_range( int rounds, float skill );
+/** AP corresponding to rounds / RPM at the character's current moves per game second. */
+int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second );
+
+/** A sweep follows the shorter horizontal arc between its two endpoints. */
+struct firearm_sweep {
+    tripoint_bub_ms start;
+    tripoint_bub_ms end;
+    int speed; // 1 = fast, 2 = medium, 3 = slow
+
+    double duration( const tripoint_bub_ms &origin ) const;
+    bool contains( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos,
+                   double padding = 0.0 ) const;
+    int rounds( const tripoint_bub_ms &origin, int rpm ) const;
+    std::vector<tripoint_bub_ms> shot_targets( const tripoint_bub_ms &origin, int rpm ) const;
+};
+
+std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &here,
+        const tripoint_bub_ms &primary, int range, int rpm, int max_rounds );
+bool select_full_auto_mode( item &gun );
+
+/** Additional aim dispersion accumulated during one continuous trigger pull. */
+class firearm_burst_recoil
+{
+    public:
+        firearm_burst_recoil( int arm_strength, float skill, int rpm );
+        /** Record a shot's kick and return the recoil that carries into the next shot. */
+        double after_shot( int gun_recoil );
+
+    private:
+        double opening_scale;
+        double steady_scale;
+        double settling_rounds;
+        double opening_recoil = 0.0;
+        int shots_fired = 0;
+};
+
 namespace target_handler
 {
 // Trajectory to target. Empty if selection was aborted or player ran out of moves
@@ -38,7 +86,8 @@ trajectory mode_select_only( avatar &you, int range );
 trajectory mode_fire( avatar &you, aim_activity_actor &activity );
 
 /** Throwing item */
-trajectory mode_throw( avatar &you, item &relevant, bool blind_throwing );
+trajectory mode_throw( avatar &you, item &relevant,
+                       const std::optional<tripoint_bub_ms> &blind_from = std::nullopt, int z_range = -1 );
 
 
 /** Reach attacking */
@@ -47,8 +96,9 @@ trajectory mode_reach( avatar &you, item_location weapon );
 /** Unarmed reach attacking */
 trajectory mode_unarmed_reach( avatar &you );
 
-/** Manually firing vehicle turret */
-trajectory mode_turret_manual( avatar &you, turret_data &turret );
+/** Select a manual turret shot using an owned preview gun and resource view. */
+trajectory mode_turret_manual( avatar &you, turret_data &turret, item &preview,
+                               std::optional<firearm_sweep> *sweep = nullptr, bool reaiming = false );
 
 /** Selecting target for turrets (when using vehicle controls) */
 trajectory mode_turrets( avatar &you, vehicle &veh, const std::vector<vehicle_part *> &turrets );

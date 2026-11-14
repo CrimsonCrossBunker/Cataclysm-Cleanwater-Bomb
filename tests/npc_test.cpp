@@ -6948,7 +6948,9 @@ TEST_CASE( "npc_forage_yields_to_danger", "[npc][needs][forage]" )
     here.build_map_cache( 0 );
 
     SECTION( "foraging NPC continues in safety" ) {
-        guy.assign_activity( forage_activity_actor( 1000 ) );
+        const tripoint_bub_ms bush = guy.pos_bub() + point::west;
+        here.ter_set( bush, ter_t_underbrush );
+        guy.assign_activity( forage_activity_actor( here.get_abs( bush ) ) );
         REQUIRE( guy.activity.id() == ACT_FORAGE );
 
         guy.set_moves( 100 );
@@ -6965,7 +6967,9 @@ TEST_CASE( "npc_forage_yields_to_danger", "[npc][needs][forage]" )
         guy.regen_ai_cache();
         REQUIRE( guy.get_ai_danger() > NPC_DANGER_VERY_LOW );
 
-        guy.assign_activity( forage_activity_actor( 1000 ) );
+        const tripoint_bub_ms bush = guy.pos_bub() + point::west;
+        here.ter_set( bush, ter_t_underbrush );
+        guy.assign_activity( forage_activity_actor( here.get_abs( bush ) ) );
         REQUIRE( guy.activity.id() == ACT_FORAGE );
 
         guy.set_moves( 100 );
@@ -7187,7 +7191,9 @@ TEST_CASE( "npc_clear_goal_cancels_self_care_activities", "[npc][needs]" )
 
     SECTION( "forage activity cancelled on goal clear" ) {
         guy.set_committed_goal( "eat_food" );
-        guy.assign_activity( forage_activity_actor( 1000 ) );
+        const tripoint_bub_ms bush = guy.pos_bub() + point::west;
+        here.ter_set( bush, ter_t_underbrush );
+        guy.assign_activity( forage_activity_actor( here.get_abs( bush ) ) );
         REQUIRE( guy.activity );
         REQUIRE( guy.activity.id() == ACT_FORAGE );
 

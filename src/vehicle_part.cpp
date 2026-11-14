@@ -34,6 +34,8 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "veh_type.h"
+#include "vehicle_electronics.h"
+#include "vpart_range.h"
 #include "weather.h"
 
 static const ammotype ammo_battery( "battery" );
@@ -821,31 +823,40 @@ bool vehicle::mod_hp( vehicle_part &pt, int qty )
 
 bool vehicle::can_enable( map &here, const vehicle_part &pt, bool alert ) const
 {
-    if( std::none_of( parts.begin(), parts.end(), [&pt]( const vehicle_part & e ) {
-    return &e == &pt;
-} ) || pt.removed ) {
+    return can_enable_vehicle_part( get_player_character(), here, *this, pt, alert );
+}
+
+bool can_enable_vehicle_part( const Character &who, map &here, const vehicle &target,
+                              const vehicle_part &pt, bool alert )
+{
+    const auto parts = target.get_all_parts_with_fakes( true );
+    if( std::none_of( parts.begin(), parts.end(), [&pt]( const vpart_reference & part ) {
+    return &part.part() == &pt;
+    } ) || pt.removed ) {
         debugmsg( "Cannot enable removed or non-existent part" );
+        return false;
     }
 
     if( pt.is_broken() ) {
         return false;
     }
 
-    // FIXME/HACK: Always checks buckwheat seeds!
-    ret_val<void>can_plant = warm_enough_to_plant( get_player_character().pos_bub(),
-                             itype_seed_buckwheat );
-    if( pt.info().has_flag( "PLANTER" ) && !can_plant.success() ) {
-        if( alert ) {
-            add_msg( m_bad, can_plant.c_str() );
+    if( pt.info().has_flag( "PLANTER" ) ) {
+        // FIXME/HACK: Always checks buckwheat seeds!
+        const ret_val<void> can_plant = warm_enough_to_plant( who.pos_bub(), itype_seed_buckwheat );
+        if( !can_plant.success() ) {
+            if( alert ) {
+                who.add_msg_if_player( m_bad, can_plant.c_str() );
+            }
+            return false;
         }
-        return false;
     }
 
     // TODO: check fuel for combustion engines
 
-    if( pt.info().epower < 0_W && fuel_left( here, fuel_type_battery ) <= 0 ) {
+    if( pt.info().epower < 0_W && target.fuel_left( here, fuel_type_battery ) <= 0 ) {
         if( alert ) {
-            add_msg( m_bad, _( "Insufficient power to enable %s" ), pt.name() );
+            who.add_msg_if_player( m_bad, _( "Insufficient power to enable %s" ), pt.name() );
         }
         return false;
     }

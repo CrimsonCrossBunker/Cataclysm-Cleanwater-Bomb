@@ -28,6 +28,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_selector.h"
+#include "options_helpers.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "ret_val.h"
@@ -51,6 +52,7 @@ static const itype_id itype_water_clean( "water_clean" );
 
 TEST_CASE( "AIM_quantity_counts_items_not_internal_charges", "[items][advanced_inv][stacking]" )
 {
+    const override_option measure_prefix( "MEASURE_PREFIX", "count" );
     clear_avatar();
     clear_map_without_vision();
     avatar &you = get_avatar();
@@ -94,6 +96,32 @@ TEST_CASE( "quantity_format_preserves_loaded_ammunition", "[items][advanced_inv]
     REQUIRE_FALSE( magazine.count_by_charges() );
     CHECK( magazine.display_name( 1, true, false ) == magazine.display_name( 1, true ) );
     CHECK( magazine.count() == 1 );
+}
+
+TEST_CASE( "quantity_name_respects_measure_prefix_options", "[items][advanced_inv][stacking]" )
+{
+    const std::string prefix_mode = GENERATE( "count", "unit", "both" );
+    const override_option measure_prefix( "MEASURE_PREFIX", prefix_mode );
+    for( const itype_id &id : {
+             itype_salt, itype_water_clean,
+             itype_steel_chunk, itype_test_9mm_ammo
+         } ) {
+        item resource( id, calendar::turn, 123 );
+        REQUIRE( resource.count_by_charges() );
+        for( const unsigned int quantity : {
+                 1U, 123U
+             } ) {
+            CAPTURE( prefix_mode, id, quantity );
+            CHECK( resource.display_name_with_count( quantity ) ==
+                   resource.display_name( quantity, false, false ) + " (" +
+                   resource.type->item_measure_prefix( quantity ) + ")" );
+            if( prefix_mode == "count" ) {
+                CHECK( resource.display_name_with_count( quantity ) ==
+                       resource.display_name( quantity, false, false ) + " (" +
+                       std::to_string( quantity ) + ")" );
+            }
+        }
+    }
 }
 
 TEST_CASE( "quantity_name_distinguishes_merged_and_separate_items",
@@ -398,6 +426,9 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
             GIVEN( "items are not charges" ) {
                 const int limit = INT_MAX;
                 int remaining_map = INT_MAX;
+                const int map_count_limit = here.i_at( pos ).count_limit();
+                const int map_volume_limit = here.i_at( pos ).amount_can_fit( knife_combat );
+                const int expected_map_count = std::min( map_count_limit, map_volume_limit );
                 item &knife_combat_map = here.add_item_or_charges( pos, knife_combat,
                                          remaining_map,
                                          false );
@@ -410,6 +441,7 @@ TEST_CASE( "AIM_basic_move_items", "[items][advanced_inv]" )
                     REQUIRE( here.i_at( pos ).size() == static_cast<size_t>( num_items ) );
                 }
 
+                REQUIRE( num_items == expected_map_count );
                 recalc_panes( advinv );
 
                 AND_GIVEN( "items are stacked properly" ) {

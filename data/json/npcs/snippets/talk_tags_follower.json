@@ -930,6 +930,26 @@
   },
   {
     "type": "snippet",
+    "category": "<ally_rule_burst_adaptive>",
+    "text": "Choose burst length based on distance."
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_burst_short>",
+    "text": "Fire short bursts (about 3 rounds)."
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_burst_long>",
+    "text": "Fire long bursts (about 7 rounds)."
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_burst_full_auto>",
+    "text": "Use full auto without taking aim."
+  },
+  {
+    "type": "snippet",
     "category": "<ally_rule_engagement_none>",
     "text": "<mypronoun> won't fight unless their life depends on it."
   },

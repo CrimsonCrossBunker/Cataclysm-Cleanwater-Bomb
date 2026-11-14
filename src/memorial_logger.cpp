@@ -232,7 +232,7 @@ void memorial_logger::write_text_memorial( std::ostream &file,
     //~ First parameter is a pronoun ("He"/"She"), second parameter is a description
     //~ that designates the location relative to its surroundings.
     const std::string kill_place = string_format( _( "%1$s was killed in a %2$s." ),
-        pronoun, locdesc );
+                                   pronoun, locdesc );
 
     //Header
     file << string_format( _( "Cataclysm: Cleanwater Bomb version %s memorial file" ),
@@ -303,7 +303,7 @@ void memorial_logger::write_text_memorial( std::ostream &file,
     std::map<std::tuple<std::string, std::string>, int> kill_counts;
 
     // map <name, sym> to kill count
-    const kill_tracker &kills = g->get_kill_tracker();
+    const kill_statistics &kills = g->get_kill_tracker();
     for( const mtype &type : MonsterGenerator::generator().get_all_mtypes() ) {
         int this_count = kills.kill_count( type.id );
         if( this_count > 0 ) {

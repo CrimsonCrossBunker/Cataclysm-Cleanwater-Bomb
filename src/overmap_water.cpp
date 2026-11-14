@@ -23,6 +23,7 @@
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_noise.h"
+#include "north_america.h"
 #include "overmapbuffer.h"
 #include "point.h"
 #include "regional_settings.h"
@@ -255,6 +256,58 @@ void overmap::river_meander( const point_om_omt &river_end, tripoint_om_omt &cur
     }
 }
 
+
+bool overmap::place_north_american_water()
+{
+    using north_america::terrain;
+    constexpr int width = OMAPX + 2;
+    const auto tiles = north_america::raster( global_base_point() - point( 1, 1 ), width, OMAPY + 2 );
+    const auto at = [&]( int x, int y ) {
+        return tiles[( y + 1 ) * width + x + 1];
+    };
+    const region_settings_lake &lake = settings->get_settings_lake();
+    const int ocean_depth = settings->get_settings_ocean().ocean_depth;
+    const oter_id ocean_surface( "ocean_surface" );
+    const oter_id ocean_shore( "ocean_shore" );
+    const oter_id ocean_water( "ocean_water_cube" );
+    const oter_id ocean_bed( "ocean_bed" );
+    const oter_id river( "river_center" );
+    bool has_land = false;
+    for( int y = 0; y < OMAPY; ++y ) {
+        for( int x = 0; x < OMAPX; ++x ) {
+            const tripoint_om_omt p( x, y, 0 );
+            const terrain type = at( x, y );
+            if( type == terrain::land || type == terrain::river ) {
+                has_land = true;
+                if( type == terrain::river ) {
+                    ter_set( p, river );
+                }
+                continue;
+            }
+
+            bool shore = false;
+            for( int dy = -1; dy <= 1 && !shore; ++dy ) {
+                for( int dx = -1; dx <= 1 && !shore; ++dx ) {
+                    const terrain neighbor = at( x + dx, y + dy );
+                    shore = neighbor != type && neighbor != terrain::river;
+                }
+            }
+            // A lake can have islands and outlets. Keep the same subsurface IDs as
+            // procedural water, so existing mapgen can use the atlas transparently.
+            const bool ocean = type == terrain::ocean;
+            ter_set( p, ocean ? ( shore ? ocean_shore : ocean_surface ) :
+                     ( shore ? lake.shore : lake.surface ) );
+            if( !shore ) {
+                const int depth = ocean ? ocean_depth : lake.lake_depth;
+                for( int z = -1; z > depth; --z ) {
+                    ter_set( tripoint_om_omt( p.xy(), z ), ocean ? ocean_water : lake.interior );
+                }
+                ter_set( tripoint_om_omt( p.xy(), depth ), ocean ? ocean_bed : lake.bed );
+            }
+        }
+    }
+    return has_land;
+}
 
 void overmap::place_lakes( const std::vector<const overmap *> &neighbor_overmaps )
 {

@@ -24,8 +24,11 @@
 #include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "catacharset.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include "item_source.h"
 #include "craft_reservation.h"
 #include "crafting.h"
 #include "character_attire.h"
@@ -44,11 +47,15 @@
 #include "handle_liquid.h"
 #include "inventory.h"
 #include "item.h"
+#include "item_disposition.h"
+#include "item_uid.h"
 #include "item_contents.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_stack.h"
 #include "item_tname.h"
+#include "item_unload.h"
+#include "json.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -69,6 +76,7 @@
 #include "profession.h"
 #include "requirements.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
 #include "translation.h"
@@ -304,6 +312,27 @@ std::pair<item_location, item_pocket *> Character::best_pocket( const item &it, 
 item_location Character::try_add( item it, const item *avoid, const item *original_inventory_item,
                                   const bool allow_wield, bool ignore_pkt_settings )
 {
+    return try_add_impl( std::move( it ), avoid, original_inventory_item, allow_wield,
+                         ignore_pkt_settings, nullptr );
+}
+
+item_location Character::transfer_item_to_inventory( item_location &source, item prepared,
+        bool allow_wield )
+{
+    if( !source || source.held_by( *this ) || prepared.count() <= 0 ||
+        source->typeId() != prepared.typeId() ||
+        source->count() != prepared.count() ||
+        resolve_item_source( *this, get_map(), capture_item_source( *this, source ) ) != source ) {
+        return item_location();
+    }
+    return try_add_impl( std::move( prepared ), nullptr, nullptr, allow_wield, false, &source );
+}
+
+item_location Character::try_add_impl( item it, const item *avoid,
+                                       const item *original_inventory_item, bool allow_wield,
+                                       bool ignore_pkt_settings, item_location *source )
+{
+    const character_action_guard lifetime( *this );
     invalidate_inventory_validity_cache();
     invalidate_leak_level_cache();
     itype_id item_type_id = it.typeId();
@@ -323,8 +352,7 @@ item_location Character::try_add( item it, const item *avoid, const item *origin
     item_location ret = item_location::nowhere;
     bool wielded = false;
     if( pocket.second == nullptr ) {
-        if( !has_weapon() && allow_wield && wield( it ) ) {
-            ret = item_location( *this, &weapon );
+        if( !has_weapon() && allow_wield && wield_impl( it, std::nullopt, true, source, &ret ) ) {
             wielded = true;
         } else {
             return ret;
@@ -342,13 +370,22 @@ item_location Character::try_add( item it, const item *avoid, const item *origin
         pocket.first.on_contents_changed();
         pocket.second->on_contents_changed();
         ret = item_location( pocket.first, newit );
+        if( source ) {
+            source->remove_item();
+        }
     }
 
+    if( !lifetime || !ret ) {
+        return ret;
+    }
     if( keep_invlet ) {
         ret->invlet = it.invlet;
     }
     if( !wielded ) {
         ret->on_pickup( *this );
+    }
+    if( !lifetime ) {
+        return ret;
     }
     cached_info.erase( "reloadables" );
     return ret;
@@ -468,7 +505,7 @@ item_location Character::i_add( item it, bool /* should_stack */, const item *av
         if( !allow_wield || !wield( it ) ) {
             if( allow_drop ) {
                 return item_location( map_cursor( pos_abs() ), &get_map().add_item_or_charges( pos_bub(),
-                        it ) );
+                                      it ) );
             } else {
                 return added;
             }
@@ -529,7 +566,7 @@ ret_val<item_location> Character::i_add_or_fill( item &it, bool should_stack, co
             if( !allow_wield || !wield( it ) ) {
                 if( allow_drop ) {
                     loc = item_location( map_cursor( pos_abs() ), &get_map().add_item_or_charges( pos_bub(),
-                        it ) );
+                                         it ) );
                 }
             } else {
                 loc = item_location( *this, &weapon );
@@ -836,13 +873,28 @@ void Character::drop_invalid_inventory()
     cache_inventory_is_valid = true;
 }
 
-void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj, Character &guy )
+namespace
+{
+struct native_disposition {
+    item_disposition choice;
+    dispose_option option;
+};
+
+void append_disposition( std::vector<native_disposition> &options,
+                         item_disposition choice, dispose_option option )
+{
+    options.push_back( { std::move( choice ), std::move( option ) } );
+}
+
+static void append_holster_dispositions( std::vector<native_disposition> &opts,
+        const std::vector<item *> &worn_items, item_location obj, Character &guy )
 {
 
-    for( item &e : worn ) {
+    for( item *entry : worn_items ) {
+        item &e = *entry;
         // check for attachable subpockets first (the parent item may be defined as a holster)
         if( e.get_contents().has_additional_pockets() && e.can_contain( *obj ).success() ) {
-            opts.emplace_back( dispose_option{
+            append_disposition( opts, item_disposition{ "container", e.uid().get_value(), 0 }, dispose_option{
                 string_format( _( "Store in %s" ), e.tname() ), true, e.invlet,
                 guy.item_store_cost( *obj, e, false, e.insert_cost( *obj ) ),
                 [&guy, &e, obj] {
@@ -857,7 +909,8 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
                 if( !con || !con->can_contain( *obj ).success() ) {
                     continue;
                 }
-                opts.emplace_back( dispose_option{
+                append_disposition( opts, item_disposition{ "pocket", e.uid().get_value(), it->uid().get_value() },
+                dispose_option{
                     string_format( "  >%s", it->tname() ), true, it->invlet,
                     guy.item_store_cost( *obj, *it, false, it->insert_cost( *obj ) ),
                     [&guy, it, con, obj] {
@@ -870,7 +923,7 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
         } else if( e.can_holster( *obj ) ) {
             const holster_actor *ptr = dynamic_cast<const holster_actor *>
                                        ( e.type->get_use( "holster" )->get_actor_ptr() );
-            opts.emplace_back( dispose_option{
+            append_disposition( opts, item_disposition{ "holster", e.uid().get_value(), 0 }, dispose_option{
                 string_format( _( "Store in %s" ), e.tname() ), true, e.invlet,
                 guy.item_store_cost( *obj, e, false, e.insert_cost( *obj ) ),
                 [&guy, ptr, &e, obj] {
@@ -883,70 +936,102 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
     }
 }
 
-bool Character::dispose_item( item_location &&obj, const std::string &prompt )
+
+std::vector<native_disposition> item_disposition_options( Character &who, item_location obj )
 {
-    if( test_mode ) {
-        return false;
+    std::vector<native_disposition> opts;
+    if( !obj ) {
+        return opts;
     }
-
-    uilist menu;
-    menu.text = prompt.empty() ? string_format( _( "Dispose of %s" ), obj->tname() ) : prompt;
-    std::vector<dispose_option> opts;
-
+    Character *owner = &who;
     const bool bucket = obj->will_spill() && !obj->is_container_empty();
 
-    opts.emplace_back( dispose_option{
+    append_disposition( opts, item_disposition{ "inventory", 0, 0 }, dispose_option{
         bucket ? _( "Spill contents and store in inventory" ) : _( "Store in inventory" ),
-        can_stash( *obj ), '1',
-        item_handling_cost( *obj ),
-        [this, bucket, &obj] {
-            if( bucket && !obj->spill_open_pockets( *this, obj.get_item() ) )
-        {
-            return false;
-        }
+        owner->can_stash( *obj ), '1',
+        owner->item_handling_cost( *obj ),
+        [owner, bucket, obj]() mutable {
+            if( bucket && !obj->spill_open_pockets( *owner, obj.get_item() ) )
+            {
+                return false;
+            }
 
-        mod_moves( -item_handling_cost( *obj ) );
-        craft_relocated( this->i_add( *obj, true, &*obj, &*obj ) );
-        obj.remove_item();
-        return true;
-    }
-} );
-
-    opts.emplace_back( dispose_option{
-        _( "Drop item" ), true, '2', 0, [this, &obj] {
-            put_into_vehicle_or_drop( *this, item_drop_reason::deliberate, { *obj } );
+            owner->mod_moves( -owner->item_handling_cost( *obj ) );
+            craft_relocated( owner->i_add( *obj, true, &*obj, &*obj ) );
             obj.remove_item();
             return true;
         }
     } );
 
-    opts.emplace_back( dispose_option{
-        bucket ? _( "Spill contents and wear item" ) : _( "Wear item" ),
-        can_wear( *obj ).success(), '3', item_wear_cost( *obj ),
-        [this, bucket, &obj] {
-            if( bucket && !obj->spill_contents( *this ) )
-        {
-            return false;
+    append_disposition( opts, item_disposition{ "drop", 0, 0 }, dispose_option{
+        _( "Drop item" ), true, '2', 0, [owner, obj]() mutable {
+            put_into_vehicle_or_drop( *owner, item_drop_reason::deliberate, { *obj } );
+            obj.remove_item();
+            return true;
         }
+    } );
 
-        item it = *obj;
-        obj.remove_item();
-        const std::optional<std::list<item>::iterator> worn_it = wear_item( it );
-        if( worn_it )
-        {
-            craft_relocated( item_location( *this, & **worn_it ) );
+    append_disposition( opts, item_disposition{ "wear", 0, 0 }, dispose_option{
+        bucket ? _( "Spill contents and wear item" ) : _( "Wear item" ),
+        owner->can_wear( *obj ).success(), '3', owner->item_wear_cost( *obj ),
+        [owner, bucket, obj]() mutable {
+            if( bucket && !obj->spill_contents( *owner ) )
+            {
+                return false;
+            }
+
+            item it = *obj;
+            obj.remove_item();
+            const std::optional<std::list<item>::iterator> worn_it = owner->wear_item( it );
+            if( worn_it )
+            {
+                craft_relocated( item_location( *owner, & **worn_it ) );
             }
             return !!worn_it;
         }
     } );
 
-    worn.holster_opts( opts, obj, *this );
 
+    std::vector<item *> worn_items;
+    for( item_location candidate : who.top_items_loc() ) {
+        if( who.is_worn( *candidate ) ) {
+            worn_items.push_back( candidate.get_item() );
+        }
+    }
+    append_holster_dispositions( opts, worn_items, obj, who );
+    return opts;
+}
+} // namespace
+
+void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj, Character &guy )
+{
+    std::vector<item *> worn_items;
+    for( item &entry : worn ) {
+        worn_items.push_back( &entry );
+    }
+    std::vector<native_disposition> choices;
+    append_holster_dispositions( choices, worn_items, obj, guy );
+    for( auto &choice : choices ) {
+        opts.push_back( std::move( choice.option ) );
+    }
+}
+
+std::optional<item_disposition> query_item_disposition( Character &who, item_location obj,
+        const std::string &prompt )
+{
+    if( test_mode || !obj ) {
+        return std::nullopt;
+    }
+    uilist menu;
+    menu.text = prompt.empty() ? string_format( _( "Dispose of %s" ), obj->tname() ) : prompt;
+    auto opts = item_disposition_options( who, obj );
     int w = utf8_width( menu.text, true ) + 4;
-    for( const dispose_option &e : opts ) {
+    for( const native_disposition &candidate : opts ) {
+        const dispose_option &e = candidate.option;
         w = std::max( w, utf8_width( e.prompt, true ) + 4 );
     }
-    for( dispose_option &e : opts ) {
+    for( native_disposition &candidate : opts ) {
+        dispose_option &e = candidate.option;
         e.prompt += std::string( w - utf8_width( e.prompt, true ), ' ' );
     }
 
@@ -957,23 +1042,53 @@ bool Character::dispose_item( item_location &&obj, const std::string &prompt )
     int min_moves = INT_MAX;
     int min_moves_i = 0;
     int index = 0;
-    for( const dispose_option &e : opts ) {
+    for( const native_disposition &candidate : opts ) {
+        const dispose_option &e = candidate.option;
         if( e.moves > 0 && e.moves < min_moves ) {
             min_moves = e.moves;
             min_moves_i = index;
         }
         menu.addentry( -1, e.enabled, e.invlet, string_format( e.enabled ? "%s | %-7d" : "%s |",
-                e.prompt, e.moves ) );
+                       e.prompt, e.moves ) );
         index++;
     }
 
     menu.set_selected( min_moves_i );
 
+
     menu.query();
-    if( menu.ret >= 0 ) {
-        return opts[menu.ret].action();
+    if( menu.ret >= 0 && static_cast<size_t>( menu.ret ) < opts.size() ) {
+        return opts[menu.ret].choice;
+    }
+    return std::nullopt;
+}
+
+bool valid_item_disposition( Character &who, item_location object,
+                             const item_disposition &choice )
+{
+    for( const native_disposition &candidate : item_disposition_options( who, object ) ) {
+        if( candidate.choice == choice && candidate.option.enabled ) {
+            return true;
+        }
     }
     return false;
+}
+
+bool execute_item_disposition( Character &who, item_location object,
+                               const item_disposition &choice )
+{
+    for( const native_disposition &candidate : item_disposition_options( who, object ) ) {
+        if( candidate.choice == choice && candidate.option.enabled ) {
+            return candidate.option.action();
+        }
+    }
+    return false;
+}
+
+bool Character::dispose_item( item_location &&obj, const std::string &prompt )
+{
+    const auto choice = query_item_disposition( *this, obj, prompt );
+    return choice && execute_item_disposition( *this, obj, *choice );
 }
 
 item_location Character::get_wielded_item() const
@@ -993,6 +1108,61 @@ void Character::set_wielded_item( const item &to_wield )
 {
     weapon = to_wield;
     martial_arts_data->auto_select_style( *this );
+}
+
+void Character::store_carried_items( JsonOut &json ) const
+{
+    json.start_object();
+    json.member( "outfit", worn );
+    json.member( "inventory" );
+    inv->json_save_items( json );
+    json.member( "has_weapon", !weapon.is_null() );
+    if( !weapon.is_null() ) {
+        json.member( "weapon", weapon );
+    }
+    json.end_object();
+}
+
+void Character::load_carried_items( const JsonObject &data )
+{
+    // Default item construction rolls a display seed. Loading a carried snapshot
+    // must not advance gameplay RNG while reconstructing those items.
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    outfit restored_outfit;
+    inventory restored_inventory;
+    item restored_weapon;
+    const JsonObject outfit_data = data.get_object( "outfit" );
+    if( !outfit_data.has_array( "worn" ) ) {
+        outfit_data.throw_error_at( "worn", "Carried item snapshot requires a worn array" );
+    }
+    for( JsonObject entry : outfit_data.get_array( "worn" ) ) {
+        restored_outfit.worn.emplace_back( item::from_current_state( entry ) );
+    }
+    restored_inventory.load_current_items( data.get_array( "inventory" ) );
+    if( data.get_bool( "has_weapon" ) ) {
+        restored_weapon = item::from_current_state( data.get_object( "weapon" ) );
+    }
+
+    item::reuse_current_nodes( worn.worn, restored_outfit.worn );
+    worn = std::move( restored_outfit );
+    inv->apply_current_state( std::move( restored_inventory ) );
+    if( !weapon.is_null() && weapon.uid() == restored_weapon.uid() ) {
+        weapon.apply_current_state( std::move( restored_weapon ) );
+    } else {
+        weapon = std::move( restored_weapon );
+    }
+    refresh_carried_item_caches();
+}
+
+void Character::refresh_carried_item_caches()
+{
+    invalidate_leak_level_cache();
+    invalidate_weight_carried_cache();
+    invalidate_inventory_validity_cache();
+    invalidate_crafting_inventory();
+    flag_encumbrance();
+    recalculate_enchantment_cache( false );
+    recalc_sight_limits();
 }
 
 bool Character::has_alarm_clock() const
@@ -1124,7 +1294,7 @@ std::vector<intrinsic_quality_source> Character::intrinsic_quality_sources(
         for( const item *pseudo : bio.get_available_pseudo_items( false ) ) {
             // Crafter-aware, or a charged quality resolves through the avatar.
             const int supplied = provider_quality_level( *pseudo, qual, this,
-                false );
+                                 false );
             if( supplied >= level ) {
                 intrinsic_quality_source src;
                 src.owner = intrinsic_quality_source::owner_kind::bionic;
@@ -1139,7 +1309,7 @@ std::vector<intrinsic_quality_source> Character::intrinsic_quality_sources(
         const item weapon = bio.get_weapon();
         if( !weapon.is_null() ) {
             const int supplied = provider_quality_level( weapon, qual, this,
-                false );
+                                 false );
             if( supplied >= level ) {
                 intrinsic_quality_source src;
                 src.owner = intrinsic_quality_source::owner_kind::bionic;
@@ -1233,9 +1403,10 @@ item Character::remove_weapon()
     item tmp = weapon;
     weapon = item();
     martial_arts_data->auto_select_style( *this );
-    get_event_bus().send<event_type::character_wields_item>( getID(), weapon.typeId() );
     cached_info.erase( "weapon_value" );
     invalidate_weight_carried_cache();
+    // Event handlers can retire this character. Finish owner bookkeeping first.
+    get_event_bus().send<event_type::character_wields_item>( getID(), weapon.typeId() );
     return tmp;
 }
 
@@ -1275,7 +1446,7 @@ units::mass Character::weight_carried_with_tweaks( const item_tweaks &tweaks ) c
 {
     const std::map<const item *, int> empty;
     const std::map<const item *, int> &without = tweaks.without_items ? *tweaks.without_items :
-        empty;
+            empty;
 
     // Worn items
     units::mass ret = worn.weight_carried_with_tweaks( without );
@@ -1831,7 +2002,7 @@ std::string Character::weapname_ammo() const
                     charges_color = c_light_green;
                 }
                 mag_ammo = string_format( "(%s)", colorize( string_format( "%i/%i", cur_ammo, max_ammo ),
-                    charges_color ) );
+                                          charges_color ) );
             }
         }
 
@@ -1913,13 +2084,13 @@ units::volume Character::volume_capacity_recursive(
     // discard, currently don't care if inventory has to grow in overall volume
     units::volume expansion = 0_ml;
     volume_capacity += weapon.get_volume_capacity_recursive( include_pocket,
-        check_pocket_tree,
-        expansion
+                       check_pocket_tree,
+                       expansion
                                                            );
     for( const item &it : worn.worn ) {
         volume_capacity += it.get_volume_capacity_recursive( include_pocket,
-            check_pocket_tree,
-            expansion
+                           check_pocket_tree,
+                           expansion
                                                            );
     }
     return volume_capacity;
@@ -1944,7 +2115,7 @@ void Character::toggle_hauling()
     } else {
         std::vector<item_location> items = here.get_haulable_items( pos_bub() );
         if( items.empty() ) {
-            add_msg( m_info, _( "There are no items to haul here." ) );
+            add_msg_if_player( m_info, _( "There are no items to haul here." ) );
             return;
         }
         start_hauling( items );
@@ -1957,19 +2128,19 @@ void Character::start_hauling( const std::vector<item_location> &items_to_haul =
     map &here = get_map();
 
     if( here.veh_at( pos_bub() ) ) {
-        add_msg( m_info, _( "You cannot haul inside vehicles." ) );
+        add_msg_if_player( m_info, _( "You cannot haul inside vehicles." ) );
         return;
     } else if( here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, pos_bub() ) ) {
-        add_msg( m_info, _( "You cannot haul while in deep water." ) );
+        add_msg_if_player( m_info, _( "You cannot haul while in deep water." ) );
         return;
     } else if( !here.can_put_items( pos_bub() ) || here.impassable_field_at( pos_bub() ) ) {
-        add_msg( m_info, _( "You cannot haul items here." ) );
+        add_msg_if_player( m_info, _( "You cannot haul items here." ) );
         return;
     }
 
-    add_msg( _( "You start hauling items along the ground." ) );
+    add_msg_if_player( _( "You start hauling items along the ground." ) );
     if( is_armed() ) {
-        add_msg( m_warning, _( "Your hands are not free, which makes hauling slower." ) );
+        add_msg_if_player( m_warning, _( "Your hands are not free, which makes hauling slower." ) );
     }
 
     hauling = true;
@@ -1979,7 +2150,7 @@ void Character::start_hauling( const std::vector<item_location> &items_to_haul =
 void Character::stop_hauling()
 {
     if( hauling ) {
-        add_msg( _( "You stop hauling items." ) );
+        add_msg_if_player( _( "You stop hauling items." ) );
         hauling = false;
         autohaul = false;
         haul_list.clear();
@@ -2446,8 +2617,8 @@ bool Character::has_fire( const int quantity ) const
     if( !find_firestarter_with_charges( quantity ).is_null() ) {
         return true;
     }
-    if( is_npc() ) {
-        // HACK: A hack to make NPCs use their Molotovs
+    if( is_npc() && !has_native_player_control() ) {
+        // HACK: Allow AI NPCs to use their Molotovs; players need a real fire source.
         return true;
     }
 
@@ -2574,7 +2745,7 @@ bool Character::add_or_drop_with_msg( item &it, const bool /*unloading*/, const 
         }
         const std::vector<item *> wielded_mags = weapon.magazines_current();
         const bool wielded_mag_collision = std::find( wielded_mags.begin(), wielded_mags.end(),
-            &it ) != wielded_mags.end();
+                                           &it ) != wielded_mags.end();
         const bool allow_wield = !wielded_has_it && !wielded_mag_collision;
         const int prev_charges = it.charges;
         item_location ni = i_add( it, true, avoid,
@@ -2595,311 +2766,11 @@ bool Character::add_or_drop_with_msg( item &it, const bool /*unloading*/, const 
     return true;
 }
 
-static bool has_drainable_integral_pocket( const item &target )
-{
-    if( !target.uses_firing_requirements() ) {
-        return false;
-    }
-    const std::vector<const item_pocket *> integral_pockets = target.get_pockets(
-    []( const item_pocket & p ) {
-        return p.is_type( pocket_type::MAGAZINE );
-    } );
-    for( const item_pocket *p : integral_pockets ) {
-        for( const item *e : p->all_items_top() ) {
-            if( !e->has_flag( flag_CASING ) && e->is_ammo() ) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 bool Character::unload( item_location &loc, bool bypass_activity,
                         const item_location &new_container )
 {
-    item &it = *loc;
-    drop_locations locs;
-    // Unload a container consuming moves per item successfully removed
-    if( it.is_container() ) {
-        if( it.empty() ) {
-            add_msg( m_info, _( "The %s is already empty!" ), it.tname() );
-            return false;
-        }
-        if( !it.can_unload() ) {
-            add_msg( m_info, _( "The item can't be unloaded in its current state!" ) );
-            return false;
-        }
-
-        int moves = 0;
-        item *prev_contained = nullptr;
-
-        for( pocket_type ptype : {
-                 pocket_type::CONTAINER,
-                 pocket_type::MAGAZINE_WELL,
-                 pocket_type::MAGAZINE
-             } ) {
-
-            for( item *contained : it.all_items_top( ptype, true ) ) {
-                if( new_container == item_location::nowhere ) {
-                    if( prev_contained && prev_contained->stacks_with( *contained ) ) {
-                        moves += std::max( this->item_handling_cost( *contained, true, 0, -1, true ), 1 );
-                    } else {
-                        moves += this->item_handling_cost( *contained );
-                    }
-                    prev_contained = contained;
-                } else {
-                    // redirect to insert actor
-                    const int count = contained->count_by_charges() ? contained->charges : 1;
-                    locs.emplace_back( item_location( loc, contained ), count );
-                }
-            }
-
-        }
-        if( new_container == item_location::nowhere ) {
-            assign_activity( unload_activity_actor( moves, loc ) );
-        } else if( !locs.empty() ) {
-            assign_activity( insert_item_activity_actor( new_container, locs, true ) );
-        }
-
-        return true;
-    }
-
-    // If item can be unloaded more than once (currently only guns) prompt user to choose
-    std::vector<std::string> msgs( 1, it.tname() );
-    std::vector<item *> opts( 1, &it );
-
-    for( item *e : it.gunmods() ) {
-        if( ( e->is_gun() && !e->has_flag( flag_NO_UNLOAD ) &&
-              ( e->magazine_current() || e->ammo_remaining( ) > 0 || e->casings_count() > 0 ) ) ||
-            ( e->has_flag( flag_BRASS_CATCHER ) && !e->is_container_empty() ) ) {
-            msgs.emplace_back( e->tname() );
-            opts.emplace_back( e );
-        }
-    }
-
-    item *target = nullptr;
-    item_location targloc;
-    if( opts.size() > 1 ) {
-        const int ret = uilist( _( "Unload what?" ), msgs );
-        if( ret >= 0 ) {
-            target = opts[ret];
-            targloc = item_location( loc, opts[ret] );
-        }
-    } else {
-        target = &it;
-        targloc = loc;
-    }
-
-    if( target == nullptr ) {
-        return false;
-    }
-
-    // Next check for any reasons why the item cannot be unloaded
-    if( !target->has_flag( flag_BRASS_CATCHER ) ) {
-        if( !target->is_magazine() && !target->uses_magazine() ) {
-            add_msg( m_info, _( "You can't unload a %s!" ), target->tname() );
-            return false;
-        }
-
-        if( target->has_flag( flag_NO_UNLOAD ) ) {
-            if( target->has_flag( flag_RECHARGE ) || target->has_flag( flag_USE_UPS ) ) {
-                add_msg( m_info, _( "You can't unload a rechargeable %s!" ), target->tname() );
-            } else {
-                add_msg( m_info, _( "You can't unload a %s!" ), target->tname() );
-            }
-            return false;
-        }
-
-        if( !target->magazine_current() && target->ammo_remaining( ) <= 0 &&
-            target->casings_count() <= 0 ) {
-            if( target->is_tool() ) {
-                add_msg( m_info, _( "Your %s isn't charged." ), target->tname() );
-            } else {
-                add_msg( m_info, _( "Your %s isn't loaded." ), target->tname() );
-            }
-            return false;
-        }
-    }
-
-    target->casings_handle( [&]( item & e ) {
-        return this->i_add_or_drop( e );
-    } );
-
-    invalidate_weight_carried_cache();
-
-    if( target->is_magazine() ) {
-        if( bypass_activity ) {
-            unload_activity_actor::unload( *this, targloc );
-        } else {
-            int mv = 0;
-            for( const item *content : target->all_items_top() ) {
-                // We use the same cost for both reloading and unloading
-                mv += this->item_reload_cost( it, *content, content->charges );
-            }
-            if( it.is_ammo_belt() ) {
-                // Disassembling ammo belts is easier than assembling them
-                mv /= 2;
-            }
-            assign_activity( unload_activity_actor( mv, targloc ) );
-        }
-        return true;
-
-    } else if( !target->magazines_current().empty() ||
-               has_drainable_integral_pocket( *target ) ) {
-        std::vector<item *> mags_to_eject = target->magazines_current();
-        struct integral_source {
-            item_pocket *pocket;
-            std::string label;
-            int total_qty;
-        };
-        std::vector<integral_source> integral_sources;
-        if( target->uses_firing_requirements() ) {
-            std::vector<item_pocket *> integral_pockets = target->get_pockets(
-            []( const item_pocket & p ) {
-                return p.is_type( pocket_type::MAGAZINE );
-            } );
-            for( item_pocket *p : integral_pockets ) {
-                std::string entry_name;
-                int amount = 0;
-                for( const item *e : p->all_items_top() ) {
-                    if( e->has_flag( flag_CASING ) || !e->is_ammo() ) {
-                        continue;
-                    }
-                    amount += e->charges > 0 ? e->charges : 1;
-                    if( entry_name.empty() ) {
-                        entry_name = e->tname();
-                    }
-                }
-                if( amount == 0 ) {
-                    continue;
-                }
-                const pocket_data *pd = p->get_pocket_data();
-                std::string label = entry_name;
-                if( pd != nullptr ) {
-                    const std::string display = pd->pocket_name.translated();
-                    if( !display.empty() ) {
-                        label = string_format( "%s (%s)", entry_name, display );
-                    } else if( !pd->pocket_id.empty() ) {
-                        label = string_format( "%s (%s)", entry_name, pd->pocket_id );
-                    }
-                }
-                integral_sources.push_back( { p, label, amount } );
-            }
-        }
-        const int total_sources = static_cast<int>( mags_to_eject.size() +
-            integral_sources.size() );
-        if( !bypass_activity && total_sources > 1 ) {
-            std::vector<std::string> msgs_v;
-            msgs_v.reserve( total_sources + 1 );
-            for( const item *mag : mags_to_eject ) {
-                msgs_v.emplace_back( mag->tname() );
-            }
-            for( const integral_source &src : integral_sources ) {
-                msgs_v.emplace_back( src.label );
-            }
-            msgs_v.emplace_back( _( "All" ) );
-            const int ret = uilist( _( "Unload which source?" ), msgs_v );
-            if( ret < 0 ) {
-                return false;
-            }
-            if( ret < total_sources ) {
-                if( ret < static_cast<int>( mags_to_eject.size() ) ) {
-                    item *picked = mags_to_eject[ret];
-                    mags_to_eject = { picked };
-                    integral_sources.clear();
-                } else {
-                    integral_source picked = integral_sources[ret - mags_to_eject.size()];
-                    integral_sources = { picked };
-                    mags_to_eject.clear();
-                }
-            }
-        }
-        for( item *mag : mags_to_eject ) {
-            if( !this->add_or_drop_with_msg( *mag, true, nullptr, mag ) ) {
-                return false;
-            }
-            // Eject magazine consuming half as much time as required to insert it
-            this->mod_moves( -this->item_reload_cost( *target, *mag, -1 ) / 2 );
-
-            target->remove_items_with( [mag]( const item & e ) {
-                return &e == mag;
-            } );
-        }
-        for( const integral_source &src : integral_sources ) {
-            std::vector<item *> to_remove;
-            const item *rep = nullptr;
-            for( item *e : src.pocket->all_items_top() ) {
-                if( e->has_flag( flag_CASING ) || !e->is_ammo() ) {
-                    continue;
-                }
-                item dropped = *e;
-                if( target->is_filthy() ) {
-                    dropped.set_flag( flag_FILTHY );
-                }
-                if( !this->add_or_drop_with_msg( dropped,
-                                                 dropped.count_by_charges() && dropped.charges > 1 ) ) {
-                    return false;
-                }
-                if( rep == nullptr ) {
-                    rep = e;
-                }
-                to_remove.push_back( e );
-            }
-            if( rep != nullptr ) {
-                this->mod_moves( -this->item_reload_cost( *target, *rep, src.total_qty ) / 2 );
-            }
-            for( item *e : to_remove ) {
-                src.pocket->remove_item( *e );
-            }
-            src.pocket->on_contents_changed();
-        }
-        if( !integral_sources.empty() ) {
-            target->on_contents_changed();
-        }
-
-    } else if( target->ammo_remaining( ) ) {
-        int qty = target->ammo_remaining( );
-
-        // Construct a new ammo item and try to drop it
-        item ammo( target->ammo_current(), calendar::turn, qty );
-        if( target->is_filthy() ) {
-            ammo.set_flag( flag_FILTHY );
-        }
-
-        if( ammo.made_of_from_type( phase_id::LIQUID ) ) {
-            if( !this->add_or_drop_with_msg( ammo ) ) {
-                qty -= ammo.charges; // only handled part (or none) of the liquid
-            }
-            if( qty <= 0 ) {
-                return false; // no liquid was moved
-            }
-
-        } else if( !this->add_or_drop_with_msg( ammo, qty > 1 ) ) {
-            return false;
-        }
-
-        // If successful remove appropriate qty of ammo consuming half as much time as required to load it
-        this->mod_moves( -this->item_reload_cost( *target, ammo, qty ) / 2 );
-
-        target->ammo_set( target->ammo_current(), target->ammo_remaining( ) - qty );
-    } else if( target->has_flag( flag_BRASS_CATCHER ) ) {
-        target->spill_contents( get_player_character() );
-    }
-
-    // Turn off any active tools
-    if( target->is_tool() && target->active && target->ammo_remaining( ) == 0 ) {
-        target->deactivate( this );
-    }
-
-    add_msg( _( "You unload your %s." ), target->tname() );
-
-    if( it.has_flag( flag_MAG_DESTROY ) && it.ammo_remaining( ) == 0 ) {
-        loc.remove_item();
-    }
-
-    get_player_character().recoil = MAX_RECOIL;
-
-    return true;
+    const auto selection = query_unload_selection( loc, bypass_activity );
+    return selection && start_item_unload( *this, loc, *selection, bypass_activity, new_container );
 }
 
 void Character::invalidate_pseudo_items()
@@ -3052,6 +2923,13 @@ void Character::search_surroundings()
 
 bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
 {
+    return wield_impl( it, obtain_cost, combat, nullptr, nullptr );
+}
+
+bool Character::wield_impl( item &it, std::optional<int> obtain_cost, bool combat,
+                            item_location *source, item_location *result )
+{
+    const character_action_guard lifetime( *this );
     invalidate_inventory_validity_cache();
     invalidate_leak_level_cache();
 
@@ -3099,7 +2977,7 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
 
     // Ideally the cost should be calculated from wield(item_location), but as backup try it here.
     const int mv = obtain_cost.value_or( item_handling_cost( it, true,
-        INVENTORY_HANDLING_PENALTY / ( worn ? 2 : 1 ) ) );
+                                         INVENTORY_HANDLING_PENALTY / ( worn ? 2 : 1 ) ) );
 
     if( worn ) {
         it.on_takeoff( *this );
@@ -3124,6 +3002,12 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
 
     // set_wielded_item invalidates the weapon item_location, so get it again
     wielded = get_wielded_item();
+    if( source ) {
+        source->remove_item();
+    }
+    if( result ) {
+        *result = wielded;
+    }
     // Copy-assigned into the weapon slot, so every uid under it is fresh.
     if( wielded ) {
         craft_relocated( wielded );
@@ -3134,6 +3018,9 @@ bool Character::wield( item &it, std::optional<int> obtain_cost, bool combat )
     if( wielded ) {
         last_item = wielded->typeId();
         wielded->on_wield( *this, combat );
+        if( !lifetime || !wielded ) {
+            return true;
+        }
         inv->update_invlet( *wielded );
         inv->update_cache_with_item( *wielded );
         cata::event e = cata::event::make<event_type::character_wields_item>( getID(), last_item );
@@ -3266,7 +3153,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
             item contained_copy( put );
             contained_copy.charges = 1;
             ret_val<void> can_store = container_loc->can_contain( contained_copy, false, false,
-                use_best_pocket, false, item_location(), 10000000_ml, use_best_pocket );
+                                      use_best_pocket, false, item_location(), 10000000_ml, use_best_pocket );
             if( !can_store.success() ) {
                 break;
             }
@@ -3340,7 +3227,7 @@ void Character::store( item &container, item &put, bool penalties, int base_cost
         // Bypass pocket settings (assuming the item is manually stored)
         const int charges = put.count_by_charges() ? put.charges : 1;
         const int charges_stored = target_container->fill_with( put, charges, false, false, true, false,
-            true, this );
+                                   true, this );
         if( charges_stored <= 0 ) {
             rollback_split();
             return;
@@ -3372,7 +3259,7 @@ void Character::store( item_pocket *pocket, item &put, bool penalties, int base_
 
     item_location char_item( *this, &null_item_reference() );
     item_pocket *pkt_best = pocket->best_pocket_in_contents( char_item, put, nullptr, false,
-        false ).second;
+                            false ).second;
     if( !!pkt_best && pocket->better_pocket( *pkt_best, put, true ) ) {
         pocket = pkt_best;
     }

@@ -3469,19 +3469,26 @@ end
     }
 }
 
-TEST_CASE( "native_variable_reads_do_not_share_missing_beta_mutation_fallback",
+TEST_CASE( "native_variable_reads_distinguish_const_and_mutable_dialogues",
            "[lua][platform][semantic][variables]" )
 {
     avatar alpha;
     alpha.set_value( "key", diag_value( 11.0 ) );
     dialogue conversation( get_talker_for( alpha ), nullptr );
+    const const_dialogue read_only_conversation( get_talker_for( alpha ), nullptr );
     const var_info info{ var_type::npc, "key" };
     const diag_value *read = nullptr;
     const std::string read_diagnostic = capture_debugmsg_during( [&]() {
-        read = maybe_read_var_value( info, conversation );
+        read = maybe_read_var_value( info, read_only_conversation );
     } );
     CHECK( read == nullptr );
     CHECK( read_diagnostic.find( "invalid beta talker" ) != std::string::npos );
+    const std::string fallback_diagnostic = capture_debugmsg_during( [&]() {
+        read = maybe_read_var_value( info, conversation );
+    } );
+    REQUIRE( read != nullptr );
+    CHECK( read->dbl() == 11.0 );
+    CHECK( fallback_diagnostic.find( "invalid beta talker" ) != std::string::npos );
     const std::string guarded_write_diagnostic = capture_debugmsg_during( [&]() {
         write_var_value( var_type::npc, "key", &conversation, diag_value( 33.0 ) );
     } );

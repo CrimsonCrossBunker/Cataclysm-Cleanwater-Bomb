@@ -379,15 +379,15 @@ class draw_points_cache_t
 //    - memorized tile content (for invisible/memory tiles)
 //    - per-tile version (for delta encoding)
 //
-// 5. GENERATION: a bare monotonic uint64_t; for client-server the client needs game
-//    turn + sub-turn tick to interpolate between snapshots.
+// 5. GENERATION: a local rebuild counter, not an authoritative world version.
+//    Client-server scene output still needs game turn + sub-turn identity.
 //
 // 6. SERIALIZATION: character_id has serialize(); draw_points_cache_t and
 //    tile_render_info do not.  The full snapshot chain must be serializable for
 //    network transmission.
 //
-// 7. OWNERSHIP: currently embedded in map; future: produced by simulate_turn()
-//    per observer as a standalone value object.
+// 7. OWNERSHIP: the renderer owns this working cache. A semantic scene snapshot
+//    produced by simulation must not include its mutable rendering scratch.
 //
 // None of these gaps block the current refactor — they are documented here so
 // future work has a single source of truth for what remains.
@@ -412,8 +412,8 @@ struct view_snapshot {
     draw_points_cache_t tiles;
 
     // Monotonic generation counter. Incremented once per snapshot rebuild
-    // (dirty gate), not per render frame. For client/server this is the
-    // authoritative game-state version; the client uses it for interpolation.
+    // (dirty gate), not per render frame. This is a view-local cache version,
+    // not an authoritative game-state version or a network interpolation clock.
     uint64_t generation = 0;
 };
 

@@ -146,6 +146,14 @@ class map_memory
         const memorized_tile &get_tile( const tripoint_abs_ms &pos ) const;
 
         /**
+         * Conservative region query for render culling. Returns false only when
+         * every prepared memory submap intersecting the region is empty.
+         * Both corners are inclusive and must be on the same Z level.
+         */
+        bool has_memory_in_region( const tripoint_abs_ms &p1,
+                                   const tripoint_abs_ms &p2 ) const;
+
+        /**
          * Memorizes terrain at \p pos, overwriting old terrain values.
          * @param pos tile position, in global ms coords.
          */

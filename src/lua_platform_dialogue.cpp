@@ -34,6 +34,7 @@
 #include "lua_platform_creatures.h"
 #include "lua_platform_state.h"
 #include "math_parser_diag_value.h"
+#include "mission_dialogue.h"
 #include "npc.h"
 
 namespace cata::lua_platform::dialogue
@@ -64,6 +65,8 @@ struct dialogue_lifetime {
 
 namespace
 {
+
+void clear_session_response_callbacks( const dialogue_session &session ) noexcept;
 
 struct dialogue_session_registry {
     std::unordered_map<const ::dialogue *, std::shared_ptr<dialogue_lifetime>> lifetimes;
@@ -149,7 +152,8 @@ bool dialogue_session::active() const noexcept
 
 bool dialogue_session::participants_live() const noexcept
 {
-    if( !active() ) {
+    if( !active() || !native_dialogue_ ||
+        !mission_dialogue::participants_live( *native_dialogue_ ) ) {
         return false;
     }
 
@@ -290,6 +294,7 @@ void dialogue_session::set_topic( std::string topic )
 void dialogue_session::deactivate() noexcept
 {
     active_ = false;
+    clear_session_response_callbacks( *this );
     for( const std::weak_ptr<dialogue_context_lifetime> &stored : contexts_ ) {
         if( const std::shared_ptr<dialogue_context_lifetime> context = stored.lock() ) {
             context->retire();
@@ -655,49 +660,19 @@ std::size_t context::assigned_mission_count() const
 void context::clear_selected_mission() const
 {
     ::dialogue &d = require_action_write_state().dialogue_ref();
-    if( !d.has_beta ) {
-        return;
-    }
-    talker *const interlocutor = d.actor( true );
-    if( interlocutor == nullptr ) {
-        return;
-    }
-    npc *const provider = interlocutor->get_npc();
-    if( provider != nullptr ) {
-        talk_function::clear_mission( *provider );
-    }
+    mission_dialogue::clear_selected_mission( d );
 }
 
 void context::succeed_selected_mission() const
 {
     ::dialogue &d = require_action_write_state().dialogue_ref();
-    if( !d.has_beta ) {
-        return;
-    }
-    talker *const interlocutor = d.actor( true );
-    if( interlocutor == nullptr ) {
-        return;
-    }
-    npc *const provider = interlocutor->get_npc();
-    if( provider != nullptr ) {
-        talk_function::mission_success( *provider );
-    }
+    mission_dialogue::succeed_selected_mission( d );
 }
 
 void context::fail_selected_mission() const
 {
     ::dialogue &d = require_action_write_state().dialogue_ref();
-    if( !d.has_beta ) {
-        return;
-    }
-    talker *const interlocutor = d.actor( true );
-    if( interlocutor == nullptr ) {
-        return;
-    }
-    npc *const provider = interlocutor->get_npc();
-    if( provider != nullptr ) {
-        talk_function::mission_failure( *provider );
-    }
+    mission_dialogue::fail_selected_mission( d );
 }
 
 void context::end_interlocutor_conversation() const
@@ -1077,6 +1052,24 @@ std::unordered_map<std::uint64_t, stored_response_action_callback>
 response_action_callbacks;
 std::uint64_t next_response_action_callback_id = 1;
 
+void clear_session_response_callbacks( const dialogue_session &session ) noexcept
+{
+    for( auto it = response_callbacks.begin(); it != response_callbacks.end(); ) {
+        if( it->second.session.get() == &session ) {
+            it = response_callbacks.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    for( auto it = response_action_callbacks.begin(); it != response_action_callbacks.end(); ) {
+        if( it->second.session.get() == &session ) {
+            it = response_action_callbacks.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
 } // namespace
 
 
@@ -1131,6 +1124,24 @@ void clear_response_callbacks()
     response_action_callbacks.clear();
 }
 
+void clear_response_callbacks( ::dialogue &d )
+{
+    for( auto it = response_callbacks.begin(); it != response_callbacks.end(); ) {
+        if( it->second.session && it->second.session->native_dialogue_ == &d ) {
+            it = response_callbacks.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    for( auto it = response_action_callbacks.begin(); it != response_action_callbacks.end(); ) {
+        if( it->second.session && it->second.session->native_dialogue_ == &d ) {
+            it = response_action_callbacks.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
 void clear_response_callbacks( const response_callback_origin origin )
 {
     for( auto iter = response_callbacks.begin(); iter != response_callbacks.end(); ) {
@@ -1157,11 +1168,12 @@ talk_topic apply_response_callback( ::dialogue &d, const std::uint64_t response_
     if( found == response_callbacks.end() ) {
         return fallback;
     }
-    stored_response_callback stored = std::move( found->second );
-    response_callbacks.erase( found );
-    if( stored.session && !stored.session->active_for( stored.topic, &d ) ) {
+    if( found->second.session &&
+        !found->second.session->active_for( found->second.topic, &d ) ) {
         return fallback;
     }
+    stored_response_callback stored = std::move( found->second );
+    response_callbacks.erase( found );
     return stored.callback( d, fallback, trial_success );
 }
 
@@ -1172,11 +1184,12 @@ void apply_response_action_callback( ::dialogue &d, const std::uint64_t response
     if( found == response_action_callbacks.end() ) {
         return;
     }
-    stored_response_action_callback stored = std::move( found->second );
-    response_action_callbacks.erase( found );
-    if( stored.session && !stored.session->active_for( stored.topic, &d ) ) {
+    if( found->second.session &&
+        !found->second.session->active_for( found->second.topic, &d ) ) {
         return;
     }
+    stored_response_action_callback stored = std::move( found->second );
+    response_action_callbacks.erase( found );
     stored.callback( d, trial_success );
 }
 

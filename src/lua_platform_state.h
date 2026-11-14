@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <variant>
 
+#include "point.h"
+
 class JsonValue;
 class JsonObject;
 class JsonOut;
@@ -33,12 +35,10 @@ struct script_null_value {
 
 // Absolute map-square coordinates are values, not live map references.
 struct script_persistent_tripoint {
-    int x;
-    int y;
-    int z;
+    tripoint value;
     void serialize( JsonOut &json ) const;
     bool operator==( const script_persistent_tripoint &other ) const {
-        return x == other.x && y == other.y && z == other.z;
+        return value == other.value;
     }
     bool operator!=( const script_persistent_tripoint &other ) const {
         return !( *this == other );
@@ -103,6 +103,19 @@ script_persistent_value read_persistent_value( const JsonObject &entry );
 // exceeded.
 void assign_persistent_value( script_persistent_state &state, const std::string &key,
                               const script_persistent_value &value );
+
+// Character-owned Mod state follows the native actor through saves and snapshots.
+// An empty Mod entry is retained so legacy sidecars cannot resurrect deleted keys.
+class character_script_state
+{
+    public:
+        script_persistent_state &for_mod( const std::string &mod_id );
+        void migrate_legacy( const std::string &mod_id, script_persistent_state values );
+        void serialize( JsonOut &json ) const;
+        void deserialize( const JsonObject &json );
+    private:
+        std::map<std::string, script_persistent_state> mods_;
+};
 
 // Versioned, typed JSON codec.  Integers and floating-point values deliberately
 // retain distinct types across a save/load round trip.

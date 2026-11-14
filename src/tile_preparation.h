@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include "compute_budget.h"
+
 class cata_thread_pool;
 
 namespace tile_preparation
@@ -82,17 +84,18 @@ class frame
         ~frame();
         frame( const frame & ) = delete;
         frame &operator=( const frame & ) = delete;
-        std::vector<input> &capture();
+        std::vector<input, compute_allocator<input>> &capture();
         void prepare();
-        const std::vector<result> &results() const;
+        const std::vector<result, compute_allocator<result>> &results() const;
         unsigned worker_count() const;
         bool used_workers() const;
         bool can_parallelize( std::size_t count ) const;
 
     private:
-        std::unique_ptr<cata_thread_pool> pool_;
-        std::vector<input> inputs_;
-        std::vector<result> results_;
+        std::shared_ptr<cata_thread_pool> pool_;
+        unsigned workers_ = 0;
+        std::vector<input, compute_allocator<input>> inputs_;
+        std::vector<result, compute_allocator<result>> results_;
         bool used_workers_ = false;
         bool leased_ = false;
 };

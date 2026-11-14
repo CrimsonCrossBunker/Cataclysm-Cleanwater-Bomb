@@ -240,30 +240,12 @@ void input_manager::pump_events()
 
 input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyboard_mode*/ )
 {
-    // Replay takes precedence over the test_mode guard: a replaying harness must
-    // be able to source input headlessly without throwing.
+    // A replay sources recorded input before the test_mode guard. Exhaustion
+    // unwinds to the executable; never save re-entrantly from a modal input loop.
     if( input_replay::is_replaying() ) {
-        input_event replayed;
-        if( input_replay::try_replay( replayed ) ) {
-            previously_pressed_key = replayed.get_first_input();
-            return replayed;
-        }
-        // Replay log exhausted. The game may be blocked in any of the ~620
-        // nested modal input loops (a query_yn, a menu, an activity prompt) that
-        // call get_input_event directly and never return to the main do_turn
-        // loop -- so a main-loop quit check cannot reliably fire. Terminate at
-        // this single choke point every input request funnels through. We do NOT
-        // save here: saving re-entrantly from inside a modal input loop is
-        // unsafe, and a well-formed recording ends with its own save/quit. The
-        // recording author is responsible for ending on a saved state; the A/B
-        // harness compares whatever was last persisted.
-        //
-        // std::exit (not main.cpp's exit_handler): platform_headless lives in a
-        // static lib that cannot see exit_handler (defined in the main exe TU).
-        // finish() flushes/closes the replay stream first; the OS reclaims the
-        // rest. Acceptable for a headless harness whose save already happened.
-        input_replay::finish();
-        std::exit( 0 );
+        const input_event replayed = input_replay::next_event();
+        previously_pressed_key = replayed.get_first_input();
+        return replayed;
     }
     if( test_mode ) {
         // input should be skipped in caller's code

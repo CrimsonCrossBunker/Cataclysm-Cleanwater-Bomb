@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "item_load_context.h"
 #include "coords_fwd.h"
 #include "enums.h"
 #include "flat_set.h"
@@ -122,7 +123,7 @@ class item_pocket
                 cata::flat_set<item_category_id> category_whitelist;
                 cata::flat_set<item_category_id> category_blacklist;
                 bool collapsed = false;
-                bool disabled = false;
+                std::optional<bool> disabled;
                 bool unload = true;
                 bool player_edited = false;
         };
@@ -335,6 +336,8 @@ class item_pocket
         void clear_items();
         /** Transfer all contained item nodes without copying them or changing their UIDs. */
         void move_contents_to( item_pocket &destination );
+        void release_current_nodes( std::list<item> &nodes );
+        void reuse_current_nodes( std::list<item> &nodes );
         bool has_item( const item &it ) const;
         item *get_item_with( const std::function<bool( const item & )> &filter );
         const item *get_item_with( const std::function<bool( const item & )> &filter ) const;
@@ -418,7 +421,8 @@ class item_pocket
         void favorite_info( std::vector<iteminfo> &info ) const;
 
         void serialize( JsonOut &json ) const;
-        void deserialize( const JsonObject &data );
+        void deserialize( const JsonObject &data,
+                          item_load_context context = item_load_context::saved_game );
 
         // true if pocket state is the same as if freshly created from the pocket type
         bool is_default_state() const;

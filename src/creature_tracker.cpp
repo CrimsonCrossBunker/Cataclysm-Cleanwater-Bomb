@@ -15,12 +15,15 @@
 #include <ostream>
 #include <ratio>
 #include <string>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 
 #include "ai_reachability_owner.h"
 #include "avatar.h"
 #include "cata_assert.h"
+#include "cata_compiler_support.h"
+#include "creature_reachability_filter.h"
 #include "debug.h"
 #include "flood_fill.h"
 #include "game.h"
@@ -30,6 +33,7 @@
 #include "maptile_fwd.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "monster_target_candidates.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
@@ -46,6 +50,57 @@ class Character;
 static const efftype_id effect_ridden( "ridden" );
 
 #define dbg(x) DebugLog((x),D_GAME) << __FILE__ << ":" << __LINE__ << ": "
+
+struct creature_tracker::reachability_state {
+    // Scratch has no world references. Destroy preparation (and drain workers)
+    // before releasing the owner's reusable traversal buffers.
+    ff::flood_fill_10_workspace flood;
+    std::optional<ai_reachability::frame> preparation;
+};
+
+struct creature_tracker::target_candidate_state {
+    monster_target_candidates table{ MAX_VIEW_DISTANCE };
+    std::unordered_map<const monster *, std::size_t> slots;
+};
+
+bool creature_tracker::nearby_monster_targets( const tripoint_abs_ms &origin,
+        std::vector<shared_ptr_fast<monster>> &out )
+{
+    out.clear();
+    if( monsters_list.size() < 256 || monsters_list.size() > 4096 ) {
+        return false;
+    }
+    try {
+        if( !target_candidates_ ) {
+            auto state = std::make_unique<target_candidate_state>();
+            for( const auto &mon : monsters_list ) {
+                state->slots.emplace( mon.get(), state->slots.size() );
+                state->table.add( mon->pos_abs().xy().raw() );
+            }
+            // Share each coarse window across its observers, regardless of
+            // later friendliness changes. Workers see only copied cell values.
+            for( const auto &mon : monsters_list ) {
+                if( mon->friendly != 0 ) {
+                    state->table.warm( mon->pos_abs().xy().raw() );
+                }
+            }
+            target_candidates_ = std::move( state );
+        }
+        const monster_target_candidates::indices &indices =
+            target_candidates_->table.query( origin.xy().raw(), get_thread_pool() );
+        out.reserve( indices.size() );
+        for( const std::size_t i : indices ) {
+            out.push_back( monsters_list[i] );
+        }
+        return true;
+    } catch( const std::bad_alloc & ) {
+        target_candidates_.reset();
+    } catch( const std::system_error & ) {
+        target_candidates_.reset();
+    }
+    out.clear();
+    return false;
+}
 
 creature_tracker::creature_tracker() = default;
 
@@ -143,6 +198,7 @@ bool creature_tracker::add( const shared_ptr_fast<monster> &critter_ptr )
         return false;
     }
 
+    target_candidates_.reset();
     monsters_list.emplace_back( critter_ptr );
     cache_location( critter.pos_abs(), critter_ptr );
     return true;
@@ -172,6 +228,14 @@ void creature_tracker::cache_location( const tripoint_abs_ms &pos,
     // can leave a false positive, never a false negative for an existing entry.
     location_filter_.set( location_bucket( pos ) );
     monsters_by_location[pos] = critter;
+    if( target_candidates_ ) {
+        const auto slot = target_candidates_->slots.find( critter.get() );
+        if( slot == target_candidates_->slots.end() ) {
+            target_candidates_.reset();
+        } else {
+            target_candidates_->table.move( slot->second, pos.xy().raw() );
+        }
+    }
     if( ++location_filter_updates_ >= std::max<size_t>( 1024, monsters_by_location.size() * 4 ) ) {
         rebuild_location_filter();
     }
@@ -203,6 +267,16 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
                       critter.disp_name(), new_pos.to_string_writable(), othermon.disp_name() );
             return false;
         }
+    }
+
+    // The location index already owns the tracked pointer. Keep the list scan
+    // below for missing/mismatched old entries, not for every normal step.
+    const auto old = monsters_by_location.find( old_pos );
+    if( old != monsters_by_location.end() && old->second.get() == &critter ) {
+        const shared_ptr_fast<monster> tracked = old->second;
+        monsters_by_location.erase( old );
+        cache_location( new_pos, tracked );
+        return true;
     }
 
     const auto iter = std::find_if( monsters_list.begin(), monsters_list.end(),
@@ -256,11 +330,13 @@ void creature_tracker::remove( const monster &critter )
 
     remove_from_location_map( critter );
     removed_this_turn_.emplace( *iter );
+    target_candidates_.reset();
     monsters_list.erase( iter );
 }
 
 void creature_tracker::clear()
 {
+    target_candidates_.reset();
     monsters_list.clear();
     monsters_by_location.clear();
     location_filter_.reset();
@@ -268,13 +344,14 @@ void creature_tracker::clear()
     removed_this_turn_.clear();
     reachability_flood_cost_ms_ = 0.0;
     reachability_bitmap_cost_ms_ = 0.0;
-    reachability_preparation_.reset();
+    reachability_state_.reset();
     creatures_by_zone_and_faction_.clear();
     invalidate_reachability_cache();
 }
 
 void creature_tracker::rebuild_cache()
 {
+    target_candidates_.reset();
     monsters_by_location.clear();
     for( const shared_ptr_fast<monster> &mon_ptr : monsters_list ) {
         cache_location( mon_ptr->pos_abs(), mon_ptr );
@@ -379,6 +456,7 @@ void creature_tracker::remove_dead()
         monster *const critter = iter->get();
         if( critter->is_dead() ) {
             remove_from_location_map( *critter );
+            target_candidates_.reset();
             iter = monsters_list.erase( iter );
         } else {
             ++iter;
@@ -430,8 +508,8 @@ T *creature_tracker::creature_at( const tripoint_abs_ms &p, bool allow_hallucina
 
 void creature_tracker::invalidate_reachability_preparation()
 {
-    if( reachability_preparation_ ) {
-        reachability_preparation_->invalidate();
+    if( reachability_state_ && reachability_state_->preparation ) {
+        reachability_state_->preparation->invalidate();
     }
 }
 void creature_tracker::invalidate_reachability_cache()
@@ -446,8 +524,8 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
     if( workers == 0 || cata_mp::is_session_active() || is_pool_worker_thread() ) {
         return nullptr;
     }
-    if( reachability_preparation_ ) {
-        if( const auto *ready = reachability_preparation_->result() ) {
+    if( reachability_state_ && reachability_state_->preparation ) {
+        if( const ai_reachability::output *ready = reachability_state_->preparation->result() ) {
             // A local owner view validates each input block before its first use
             // during this flood; tiny zones need not scan the entire bubble.
             return ready;
@@ -458,25 +536,29 @@ const ai_reachability::output *creature_tracker::prepare_reachability_geometry()
         return nullptr;
     }
     try {
-        if( !reachability_preparation_ ) {
-            reachability_preparation_ = std::make_unique<ai_reachability::frame>( workers == 1 ? 0 : workers );
+        if( !reachability_state_ ) {
+            reachability_state_ = std::make_unique<reachability_state>();
         }
-        ai_reachability::frame::lease request = reachability_preparation_->try_acquire();
+        if( !reachability_state_->preparation ) {
+            reachability_state_->preparation.emplace( workers == 1 ? 0 : workers );
+        }
+        ai_reachability::frame &preparation = *reachability_state_->preparation;
+        ai_reachability::frame::lease request = preparation.try_acquire();
         if( !request ) {
             return nullptr;
         }
         {
             CATA_PROFILE_SCOPE_NAMED( "ai.reachability.capture" );
-            if( !ai_reachability::capture_geometry( get_map(), reachability_preparation_->capture() ) ) {
+            if( !ai_reachability::capture_geometry( get_map(), preparation.capture() ) ) {
                 return nullptr;
             }
         }
-        if( reachability_preparation_->prepare( request ) ) {
-            const auto *values = reachability_preparation_->captured();
+        if( preparation.prepare( request ) ) {
+            const ai_reachability::snapshot *values = preparation.captured();
             if( values && ai_reachability::geometry_matches( get_map(), *values ) ) {
-                return reachability_preparation_->result();
+                return preparation.result();
             }
-            reachability_preparation_->invalidate();
+            preparation.invalidate();
         }
     } catch( const std::bad_alloc & ) {
         // No partial result is published; retain the original owner query.
@@ -493,7 +575,7 @@ void creature_tracker::rebuild_passability_bitmap()
     // from a fresh capture in this owner interval, never a cached ready frame.
     invalidate_reachability_preparation();
     if( const auto *prepared = prepare_reachability_geometry() ) {
-        const auto *values = reachability_preparation_->captured();
+        const ai_reachability::snapshot *values = reachability_state_->preparation->captured();
         if( values && ai_reachability::geometry_matches( here, *values ) ) {
             CATA_PROFILE_SCOPE_NAMED( "ai.reachability.publish_bitmap" );
             passability_bitmap_ = prepared->passable;
@@ -526,7 +608,8 @@ void creature_tracker::rebuild_passability_bitmap()
  * the same zone will have the same zone number assigned, which can be used to have creatures in
  * different zones ignore each other very cheaply.
  */
-void creature_tracker::flood_fill_zone( const Creature &origin )
+void creature_tracker::flood_fill_zone( const Creature &origin,
+                                        const creature_reachability_filter *occupancy )
 {
     if( dirty_ ) {
         creatures_by_zone_and_faction_.clear();
@@ -548,78 +631,103 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
 
     CATA_PROFILE_SCOPE_NAMED( "ai.reachability.flood" );
     const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+    if( !reachability_state_ ) {
+        try {
+            reachability_state_ = std::make_unique<reachability_state>();
+        } catch( const std::bad_alloc & ) {
+            // Scratch allocation is optional; the original local algorithm is
+            // still available. Do not catch exceptions from the flood itself.
+        }
+    }
     const ai_reachability::output *prepared = prepare_reachability_geometry();
     map &here = get_map();
     std::optional<ai_reachability::geometry_view> geometry;
     if( prepared ) {
-        geometry.emplace( here, *reachability_preparation_->captured() );
+        geometry.emplace( here, *reachability_state_->preparation->captured() );
     }
-    ff::flood_fill_visit_10_connected( origin.pos_bub(),
-    [this, &here, prepared, &geometry]( const tripoint_bub_ms & loc, int direction ) -> bool {
-        if( direction == 0 )
-        {
-            return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
-            loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
-            loc.x() >= 0 && loc.x() < MAPSIZE_X &&
-            passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
-        }
+    struct reachability_predicate {
+        creature_tracker &owner;
+        map &here;
+        const ai_reachability::output *prepared;
+        std::optional<ai_reachability::geometry_view> &geometry;
 
-        if( prepared && geometry->matches_at( loc, direction ) )
-        {
-            return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
-            prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
-        }
+        // Keep the per-cell check inline even when scratch is passed by reference.
+        CATA_FORCEINLINE bool operator()( const tripoint_bub_ms &loc, int direction ) const {
+            if( direction == 0 ) {
+                return loc.z() >= -OVERMAP_DEPTH && loc.z() <= OVERMAP_HEIGHT &&
+                       loc.y() >= 0 && loc.y() < MAPSIZE_Y &&
+                       loc.x() >= 0 && loc.x() < MAPSIZE_X &&
+                       owner.passability_bitmap_[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            }
 
-        auto check_location_passable_down = [loc, &here]( const maptile & mt, const ter_t & ter )
-        {
-            return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
-                     here.is_transparent_wo_fields( loc ) ) &&
-            ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
-              ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
-        };
+            if( prepared && geometry->matches_at( loc, direction ) ) {
+                return direction == 1 ? prepared->up[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()] :
+                       prepared->down[loc.z() + OVERMAP_DEPTH][loc.x()][loc.y()];
+            }
 
-        if( direction == 1 )
-        {
-            const maptile &up = here.maptile_at( loc );
-            const ter_t &up_ter = up.get_ter_t();
-            if( up_ter.id.is_null() ) {
-                return false;
+            auto check_location_passable_down = [loc, this]( const maptile & mt, const ter_t & ter ) {
+                return ( ( ter.movecost != 0 && mt.get_furn_t().movecost >= 0 ) ||
+                         here.is_transparent_wo_fields( loc ) ) &&
+                       ( ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+                         ter.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) );
+            };
+
+            if( direction == 1 ) {
+                const maptile &up = here.maptile_at( loc );
+                const ter_t &up_ter = up.get_ter_t();
+                if( up_ter.id.is_null() ) {
+                    return false;
+                }
+                if( check_location_passable_down( up, up_ter ) ) {
+                    return true;
+                }
             }
-            if( check_location_passable_down( up, up_ter ) ) {
-                return true;
+            if( direction == -1 ) {
+                const maptile &up = here.maptile_at( loc + tripoint::above );
+                const ter_t &up_ter = up.get_ter_t();
+                if( up_ter.id.is_null() ) {
+                    return false;
+                }
+                const maptile &down = here.maptile_at( loc );
+                const ter_t &down_ter = up.get_ter_t();
+                if( down_ter.id.is_null() ) {
+                    return false;
+                }
+                if( check_location_passable_down( down, down_ter ) ) {
+                    return true;
+                }
             }
+            return false;
         }
-        if( direction == -1 )
-        {
-            const maptile &up = here.maptile_at( loc + tripoint::above );
-            const ter_t &up_ter = up.get_ter_t();
-            if( up_ter.id.is_null() ) {
-                return false;
-            }
-            const maptile &down = here.maptile_at( loc );
-            const ter_t &down_ter = up.get_ter_t();
-            if( down_ter.id.is_null() ) {
-                return false;
-            }
-            if( check_location_passable_down( down, down_ter ) ) {
-                return true;
-            }
+    };
+    const reachability_predicate passable{ *this, here, prepared, geometry };
+    std::optional<creature_reachability_filter> local_occupancy;
+    if( !occupancy ) {
+        local_occupancy.emplace( creature_locations_for_flood() );
+        occupancy = &*local_occupancy;
+    }
+    const auto visit = [this, occupancy, &here]( const tripoint_bub_ms & loc ) {
+        const tripoint_abs_ms position = here.get_abs( loc );
+        if( !occupancy->may_contain( position ) ) {
+            return;
         }
-        return false;
-    },
-    [this]( const tripoint_bub_ms & loc ) {
-        if( Creature *creature = this->creature_at<Creature>( loc, true ) ) {
+        if( Creature *creature = this->creature_at<Creature>( position, true ) ) {
             if( shared_ptr_fast<Creature> ptr = g->shared_from( *creature ) ) {
                 const int n = zone_number_ * zone_tick_;
                 creatures_by_zone_and_faction_[n][creature->get_monster_faction()].emplace_back( std::move( ptr ) );
                 creature->set_reachable_zone( n );
             }
         }
-    } );
+    };
+    if( reachability_state_ ) {
+        ff::flood_fill_visit_10_connected( origin.pos_bub(), passable, visit, reachability_state_->flood );
+    } else {
+        ff::flood_fill_visit_10_connected( origin.pos_bub(), passable, visit );
+    }
     if( geometry && geometry->stale() ) {
         // Reads already fell back cell-by-cell, so no partial zone rollback is
         // needed. Rebuild the value preparation before its next admitted use.
-        reachability_preparation_->invalidate();
+        reachability_state_->preparation->invalidate();
     }
     reachability_flood_cost_ms_ = std::max( reachability_flood_cost_ms_ * 0.9,
                                             std::chrono::duration<double, std::milli>(
@@ -629,6 +737,21 @@ void creature_tracker::flood_fill_zone( const Creature &origin )
     } else {
         zone_number_++;
     }
+}
+
+creature_reachability_filter creature_tracker::creature_locations_for_flood() const
+{
+    // Traversal coverage is coarser than the point-query index. Keep it local
+    // to this synchronous pass, and use canonical keys rather than current actor positions.
+    creature_reachability_filter result;
+    for( const auto &entry : monsters_by_location ) {
+        result.mark( entry.first );
+    }
+    for( const auto &person : active_npc ) {
+        result.mark( person->pos_abs() );
+    }
+    result.mark( get_avatar().pos_abs() );
+    return result;
 }
 
 void creature_tracker::precompute_all_zones()
@@ -654,8 +777,15 @@ void creature_tracker::precompute_all_zones()
             needs_zone.push_back( n.get() );
         }
     }
+    if( needs_zone.empty() ) {
+        return;
+    }
+    const creature_reachability_filter occupancy = creature_locations_for_flood();
+    // These floods only assign zones; their predicates and visitors invoke no
+    // gameplay callbacks or movement. The captured filter ends with this pass.
+    // Later lazy floods take a new snapshot, including any intervening movement.
     for( Creature *creature : needs_zone ) {
-        flood_fill_zone( *creature );
+        flood_fill_zone( *creature, &occupancy );
     }
 }
 

@@ -272,6 +272,7 @@
     "type": "mapgen",
     "//": "A nested map for a 9x9 medical room, includes door and south wall.",
     "nested_mapgen_id": "lab_medical_9x9_S_autodoc",
+    "weight": 100,
     "object": {
       "mapgensize": [ 9, 9 ],
       "rows": [
@@ -294,6 +295,7 @@
     "type": "mapgen",
     "//": "A nested map for a 9x9 medical room, includes door and north wall.",
     "nested_mapgen_id": "lab_medical_9x9_N_autodoc",
+    "weight": 100,
     "object": {
       "mapgensize": [ 9, 9 ],
       "rows": [

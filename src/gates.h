@@ -16,6 +16,15 @@ class Creature;
 class JsonObject;
 class map;
 
+// Values and names are persisted by open_tile_activity_actor.
+enum class open_tile_result {
+    OPEN_FAIL,
+    OPEN_DOOR,
+    OPEN_VEHICLE_SINGLE,
+    OPEN_VEHICLE_ALL,
+    OPEN_TILE_RESULT_LAST
+};
+
 namespace cata::lua_platform
 {
 class content_transaction;
@@ -72,6 +81,23 @@ void open_gate( const tripoint_bub_ms &pos );
 
 namespace doors
 {
+
+struct opening {
+    open_tile_result result = open_tile_result::OPEN_FAIL;
+    int vehicle_part = -1;
+};
+
+// Owner-thread actor/target rules shared by local activities and network
+// execution. Selection belongs to the caller; no global avatar supplies the
+// position or action points. Vehicle ownership checks retain their existing
+// actor-specific consent policy. The caller is responsible for resolving an
+// admitted actor; these interaction checks do not authorize a network peer.
+int opening_moves();
+opening begin_open( map &here, Character &who, const tripoint_bub_ms &target );
+bool finish_open( map &here, Character &who, const tripoint_bub_ms &target,
+                  const opening &started );
+// Executes and charges once without replacing the actor's current activity.
+bool open_immediately( map &here, Character &who, const tripoint_bub_ms &target );
 
 /**
  * Checks whether a monster is blocking a position, which will prevent a door from closing.

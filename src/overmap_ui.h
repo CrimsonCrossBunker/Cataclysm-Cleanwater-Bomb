@@ -76,7 +76,7 @@ void display_scents();
  * Display overmap like with @ref display() and display the given zone.
  */
 void display_zones( const tripoint_abs_omt &center, const tripoint_abs_omt &select,
-                    int iZoneIndex );
+                    const std::string &zone_name );
 /**
  * Display overmap like with @ref display() and enable the overmap editor.
  */
@@ -152,7 +152,8 @@ struct overmap_draw_data_t {
 
     // draw zone location.
     tripoint_abs_omt select = tripoint_abs_omt( -1, -1, -1 );
-    int iZoneIndex = -1;
+    std::optional<tripoint_abs_omt> zone_position;
+    std::string zone_name;
     std::vector<tripoint_abs_omt> display_path;
     //center of UI view; usually player OMT position
     tripoint_abs_omt origin_pos = tripoint_abs_omt( -1, -1, -1 );

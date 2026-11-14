@@ -1,0 +1,25 @@
+{
+  "source": "local EmperorCOOP source snapshot",
+  "commit": "e2d49378372cd9a04cf355eae21385c28b2c6de6",
+  "license": "AGPL-3.0-or-later (upstream Cargo.toml)",
+  "note": "Source baseline only. Subsequent CCB changes are maintained in this branch. No V120 binary code or 3D renderer is imported.",
+  "upstream_files": {
+    "rust/coop_ecs/Cargo.toml": "e40e945c5e1e9e58035300687461fd118cf4a84e68784ebdd7059cf01f193bea",
+    "rust/coop_ecs/Cargo.lock": "d253ff9416c342bfd378654ec38dcfd5c1bc48276c160efee0f485d570b4060d",
+    "rust/coop_ecs/include/ccb_coop_ffi.h": "4242b63ed2282a3b6d1375f867c72841300ab95363fd08a76deab7f62010ee9a",
+    "src/mp_renet_transport.cpp": "6a034f5b3b5700d16fd3ac08c1515a44b16d4daf91a0b5023a3f86211db2907e",
+    "src/mp_renet_transport.h": "2bf4df5accb6ce9d50a4d273daedc26118603787e96086a840cedf6327eeb99f",
+    "rust/coop_ecs/src/visual_event_codec.rs": "82236e28b0d7a11471d44671ff3dee15d53e185852666cdb42e62af8b9158395",
+    "rust/coop_ecs/src/monster_state.rs": "75c0a8b2931a1a47931fe2c287c9897dca46242c606960a10db795b5dda03f4a",
+    "rust/coop_ecs/src/visual_event.rs": "a37d4c80edbd94aee12395a42fd52d8af5fa56e515e165d8091234ae86896aa9",
+    "rust/coop_ecs/src/ffi.rs": "e206c68dedbb6b9181a29c237759562e390d14f2b2eda4a95e56329793a717e1",
+    "rust/coop_ecs/src/visual_event_runtime.rs": "030003fe8d0d91bc637ac392dd50fbc8dba07a2a0cf7504e6f4ec89962d07dd3",
+    "rust/coop_ecs/src/actor_state.rs": "2da2ed3b0485cb75d5ed4a4f7347bfff78993734e4cc403a2cbd2f1681f5d29b",
+    "rust/coop_ecs/src/lib.rs": "851fd94a8c588ce2277c505f998bcb82ae15d3e61560172086fa67361b3eb841",
+    "rust/coop_ecs/src/renet_transport.rs": "6c2312cbda1c55dc53023a475bb45a78fb6bfbedca839bd3cce1ae8d43b0b4a7",
+    "rust/coop_ecs/src/activity_state.rs": "cc6a90657cb2de6290f14c58fc6e9feede6826d8f227c663777ee3ecd11bbdb8",
+    "rust/coop_ecs/src/tile_state.rs": "047e8471b6a2391740b8270b58c460fa1a7bd858eb72c9348fc661d1803b83a1",
+    "rust/coop_ecs/src/vehicle_state.rs": "71a1974fce814f4968ad429817b088c7bd559fd91884f04ec70813c2235fb454",
+    "rust/coop_ecs/src/item_state.rs": "dc75801f64e57679f9efa0cf71c35d8ba69755f48f3dfe2c79815f56b71ee472"
+  }
+}

@@ -49,8 +49,9 @@ extern struct mouse_t {
 extern bool test_mode;
 
 // replay_mode controls the deterministic input record/replay harness (phase 0.5
-// of the sim/render decoupling plan). Unlike test_mode, get_input_event must NOT
-// throw under replay_mode: instead events are sourced from / logged to a file.
+// of the sim/render decoupling plan). Input is sourced from / logged to a file.
+// An exhausted replay throws input_replay::replay_error instead of polling live
+// input; the executable unwinds the session and reports failure.
 //   off     - normal interactive play (default)
 //   record  - real input is captured and written to the replay log
 //   replay  - input is fed from the replay log; the platform poll is bypassed
@@ -68,13 +69,6 @@ enum class test_mode_spilling_action_t {
 extern test_mode_spilling_action_t test_mode_spilling_action;
 
 extern bool direct3d_mode;
-
-// True when the live renderer is SDL3's "gpu" renderer backed by the D3D12
-// driver. That backend SIGSEGVs in D3D12_PushFragmentUniformData when a
-// mid-frame render-target switch (scoped_render_target) flushes the command
-// queue. Used to route the colored-light tint overlay away from its
-// render-target-switching silhouette-mask path on that backend.
-extern bool gpu_d3d12_mode;
 
 enum class error_log_format_t {
     human_readable,

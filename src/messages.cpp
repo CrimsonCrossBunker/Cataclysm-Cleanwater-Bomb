@@ -1,4 +1,5 @@
 #include "messages.h"
+#include "message_routing.h"
 
 #include <algorithm>
 #include <array>
@@ -7,6 +8,8 @@
 #include <functional>
 #include <iterator>
 #include <memory>
+#include <limits>
+#include <random>
 #include <ostream>
 #include <string>
 #include <type_traits>
@@ -58,6 +61,7 @@ struct game_message {
     // hide the message, because at some point it was in cooldown period.
     bool cooldown_hidden = false; // NOLINT(cata-serialize)
     game_message_type type = m_neutral;
+    std::optional<player_id> exclude_forward_to; // NOLINT(cata-serialize)
 
     game_message() = default;
     game_message( std::string &&msg, game_message_type const t ) :
@@ -152,7 +156,8 @@ class messages_impl
                 return false;
             }
 
-            if( m.type != last_msg.type || m.message != last_msg.message ) {
+            if( m.type != last_msg.type || m.message != last_msg.message ||
+                !( m.exclude_forward_to == last_msg.exclude_forward_to ) ) {
                 return false;
             }
 
@@ -183,7 +188,8 @@ class messages_impl
         }
 
         void add_msg_string( std::string &&msg, game_message_type const type,
-                             const game_message_flags flags ) {
+                             const game_message_flags flags,
+                             const std::optional<player_id> &exclude = std::nullopt ) {
             if( msg.empty() || !active ) {
                 return;
             }
@@ -195,6 +201,7 @@ class messages_impl
             modify_msg_with_exclamations( msg, type );
 
             game_message m = game_message( std::move( msg ), type );
+            m.exclude_forward_to = exclude;
 
             refresh_cooldown( m, flags );
             hide_message_in_cooldown( m );
@@ -268,7 +275,14 @@ class messages_impl
             // Slowly rises. 0 at 0, 1 at 22.5, 2 at 45 mins. Asymptote at 3.
             const float max_per_msg = 3 - 3 / ( 1 + 0.001 * in_minutes * in_minutes );
             //possible values for smiles_for_this_msg are 0,1,2,3.
-            int smiles_for_this_msg = static_cast<int>( round( rng_normal( 0, max_per_msg ) ) );
+            static thread_local std::mt19937 display_rng( rng_visual( 0, std::numeric_limits<int>::max() ) );
+            const auto one_in_visual = [&]( int chance ) {
+                return std::uniform_int_distribution<int>( 1, std::max( 1, chance ) )( display_rng ) == 1;
+            };
+            const double normal = max_per_msg > 0 ?
+                                  std::normal_distribution<double>( max_per_msg / 2, max_per_msg / 4 )( display_rng ) : 0;
+            int smiles_for_this_msg = static_cast<int>( round( std::clamp( normal, 0.0,
+                                      static_cast<double>( max_per_msg ) ) ) );
 
             // now insert the smiley face somewhere in the msg string. We want to avoid breaking up words, so we will only replace spaces.
             // find all suitable locations for smiley. That is, end of message + all spaces (except after certain words)
@@ -320,10 +334,13 @@ class messages_impl
             }
             // then pick one at random
             for( int i = 0; i < smiles_for_this_msg; i++ ) {
-                const size_t smiley_location = random_entry_removed( smiley_locations );
+                const size_t index = std::uniform_int_distribution<size_t>( 0,
+                                     smiley_locations.size() - 1 )( display_rng );
+                const size_t smiley_location = smiley_locations[index];
+                smiley_locations.erase( smiley_locations.begin() + index );
                 std::string smiley_string = " :)";
                 if( type == m_good || type == m_critical ) {
-                    if( one_in( 5 ) ) {
+                    if( one_in_visual( 5 ) ) {
                         smiley_string = " :D";
                     }
                 }
@@ -341,7 +358,7 @@ class messages_impl
             // if we are *very* high, there will be a chance to finish a long message with an exclamation
             if( smiles_for_this_msg > 1 ) {
                 int woah_chance = static_cast<int>( 10 / smiles_for_this_msg );
-                if( msg.size() > 16 && one_in( woah_chance ) ) {
+                if( msg.size() > 16 && one_in_visual( woah_chance ) ) {
                     std::vector<std::string> exclamations = {
                         "Woah.", "Dude."
                     };
@@ -352,27 +369,31 @@ class messages_impl
                         "Not cool.", "Oof.", "Bummer."
                     };
                     if( type == m_good || type == m_critical || type == m_headshot ) {
-                        msg += " " + random_entry( good_exclamations );
+                        msg += " " + good_exclamations[std::uniform_int_distribution<size_t>( 0,
+                                                                                              good_exclamations.size() - 1 )( display_rng )];
                     } else if( type == m_bad || type == m_grazing ) {
-                        msg += " " + random_entry( bad_exclamations );
+                        msg += " " + bad_exclamations[std::uniform_int_distribution<size_t>( 0,
+                                                                                             bad_exclamations.size() - 1 )( display_rng )];
                     } else {
-                        msg += " " + random_entry( exclamations );
+                        msg += " " + exclamations[std::uniform_int_distribution<size_t>( 0,
+                                                                                         exclamations.size() - 1 )( display_rng )];
                     }
                 }
             }
         }
 
         std::vector<std::pair<std::string, std::string>> recent_messages( size_t count,
-        const bool with_formatting = false ) const {
+                const bool with_formatting = false,
+        const std::optional<player_id> &recipient = std::nullopt ) const {
             count = std::min( count, messages.size() );
-
             std::vector<std::pair<std::string, std::string>> result;
             result.reserve( count );
-
-            const int offset = static_cast<std::ptrdiff_t>( messages.size() - count );
-
-            std::transform( begin( messages ) + offset, end( messages ), back_inserter( result ),
-            [this, with_formatting]( const game_message & msg ) {
+            // Filter within the original window, never pull in older records.
+            for( size_t i = messages.size() - count; i < messages.size(); ++i ) {
+                const game_message &msg = messages[i];
+                if( recipient && msg.exclude_forward_to == recipient ) {
+                    continue;
+                }
                 std::string text = msg.get_with_count();
                 if( with_formatting ) {
                     if( !msg.is_recent( curmes ) ) {
@@ -380,10 +401,8 @@ class messages_impl
                     }
                     text = colorize( text, msg.get_color( curmes ) );
                 }
-                return std::make_pair( to_string_time_of_day( msg.timestamp_in_turns ),
-                                       std::move( text ) );
-            } );
-
+                result.emplace_back( to_string_time_of_day( msg.timestamp_in_turns ), std::move( text ) );
+            }
             return result;
         }
 
@@ -486,6 +505,18 @@ void Messages::add_msg( std::string msg )
 void Messages::add_msg( const game_message_params &params, std::string msg )
 {
     player_messages.add_msg_string( std::move( msg ), params );
+}
+
+void Messages::add_observer_msg( const game_message_params &params, std::string message,
+                                 const std::optional<player_id> &owner )
+{
+    player_messages.add_msg_string( std::move( message ), params.type, params.flags, owner );
+}
+
+std::vector<std::pair<std::string, std::string>> Messages::recent_messages_for_player(
+            size_t count, const player_id &recipient )
+{
+    return player_messages.recent_messages( count, false, recipient );
 }
 
 void Messages::clear_messages()

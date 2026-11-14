@@ -24,6 +24,8 @@
 #include "units.h"
 
 class Character;
+struct item_comp;
+template<typename T> struct comp_selection;
 class JsonObject;
 class item;
 class item_location;
@@ -55,6 +57,9 @@ item_location form_loc_recursive( T &loc, item &it );
  */
 class iuse_transform : public iuse_actor
 {
+    private:
+        std::optional<int> use_impl( Character *, item &, map *, const tripoint_bub_ms &,
+                                     const item_activation_choices * ) const;
     public:
         item_transformation transform;
 
@@ -83,6 +88,14 @@ class iuse_transform : public iuse_actor
 
         /** Asks you to set a timer for a countdown */
         bool set_timer = false;
+        bool query_activation_choices( item_activation_choices & ) const override;
+        bool valid_activation_choices( const item_activation_choices & ) const override;
+        std::optional<int> use_with_choices( Character *, item &, map *,
+                                             const tripoint_bub_ms &, const item_activation_choices & ) const override;
+        bool supports_owned_activation() const override {
+            return true;
+        }
+
 
         /** displayed if activation fails due to damage, with %s replaced by item name */
         translation damage_failure_msg;
@@ -297,6 +310,7 @@ class consume_drug_iuse : public iuse_actor
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here, const tripoint_bub_ms & ) const override;
+        bool is_immediate_consumption() const override;
         std::unique_ptr<iuse_actor> clone() const override;
         void info( const item &, std::vector<iteminfo> & ) const override;
 
@@ -334,6 +348,8 @@ class delayed_transform_iuse : public iuse_transform
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here,
                                 const tripoint_bub_ms &pos ) const override;
+        std::optional<int> use_with_choices( Character *, item &, map *,
+                                             const tripoint_bub_ms &, const item_activation_choices & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;
 };
 
@@ -528,7 +544,8 @@ class firestarter_actor : public iuse_actor
             KILN,
         };
 
-        static start_type prep_firestarter_use( Character &p, map *here, tripoint_bub_ms &pos );
+        static start_type prep_firestarter_use( Character &p, map *here, tripoint_bub_ms &pos,
+                                                bool preview = false, bool confirmed = false );
         /** Player here isn't const because pyromaniacs gain a mood boost from it */
         static void resolve_firestarter_use( Character *p, map *here, const tripoint_bub_ms &pos,
                                              start_type st );
@@ -541,6 +558,16 @@ class firestarter_actor : public iuse_actor
         int moves_cost_by_fuel( const tripoint_bub_ms &pos ) const;
 
         explicit firestarter_actor( const std::string &type = "firestarter" ) : iuse_actor( type ) {}
+
+        bool supports_owned_activation() const override {
+            return true;
+        }
+        bool valid_activation_choices( const item_activation_choices &choices ) const override;
+        bool query_fire_choices( Character &who, const item &tool, map &here,
+                                 tripoint_bub_ms &position, item_activation_choices &choices ) const;
+        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
+                                             const tripoint_bub_ms &position,
+                                             const item_activation_choices &choices ) const override;
 
         ~firestarter_actor() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
@@ -569,7 +596,8 @@ class salvage_actor : public iuse_actor
         /** Moves used per unit of volume of cut item */
         int moves_per_part = 25;
 
-        std::optional<int> try_to_cut_up( Character &p, item &cutter, item_location &cut ) const;
+        std::optional<int> try_to_cut_up( Character &p, item &cutter, item_location &cut,
+                                          bool confirmed = false ) const;
         int time_to_cut_up( const item &it ) const;
         bool valid_to_cut_up( const Character *p, const item &it ) const;
 
@@ -582,12 +610,25 @@ class salvage_actor : public iuse_actor
 
         explicit salvage_actor( const std::string &type = "salvage" ) : iuse_actor( type ) {}
 
+        bool supports_owned_activation() const override {
+            return true;
+        }
+        bool valid_activation_choices( const item_activation_choices &choices ) const override;
+        bool query_salvage_choices( Character &who, const item &tool,
+                                    item_activation_choices &choices ) const;
+        bool confirm_salvage_choices( Character &who, const item &tool,
+                                      const std::vector<item_location> &targets, bool bulk,
+                                      item_activation_choices &choices ) const;
+        std::optional<int> use_with_choices( Character *who, item &tool, map *here,
+                                             const tripoint_bub_ms &position,
+                                             const item_activation_choices &choices ) const override;
+
         ~salvage_actor() override = default;
         void load( const JsonObject &obj, const std::string & ) override;
         std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;
     private:
-        void cut_up( Character &p, item_location &cut ) const;
+        bool cut_up( Character &p, item &cutter, item_location &cut ) const;
 };
 
 /**
@@ -797,6 +838,9 @@ class cast_spell_actor : public iuse_actor
         explicit cast_spell_actor( const std::string &type = "cast_spell" ) : iuse_actor( type ) {}
 
         ~cast_spell_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map * /*here*/,
@@ -893,7 +937,8 @@ class repair_item_actor : public iuse_actor
         };
 
         /** Attempts to repair target item with selected tool */
-        attempt_hint repair( Character &pl, item &tool, item_location &fix, bool refit_only = false ) const;
+        attempt_hint repair( Character &pl, item &tool, item_location &fix, bool refit_only = false,
+                             const comp_selection<item_comp> *material = nullptr ) const;
         /// Checks if repairs on target item are possible. Excludes checks on tool.
         /// Doesn't just estimate - should not return true if repairs are not possible or false if they are.
         /// @param pl character performing the fix
@@ -916,12 +961,13 @@ class repair_item_actor : public iuse_actor
         /// @param check_consumed_available if false skips checking if materials consumed by repair are available for `pl`
         /// @return true if check succeeds
         bool handle_components( Character &pl, const item &fix, bool print_msg, bool just_check,
-                                bool check_consumed_available ) const;
+                                bool check_consumed_available,
+                                const comp_selection<item_comp> *material = nullptr ) const;
         /** Returns the chance to repair and to damage an item. */
         std::pair<float, float> repair_chance(
             const Character &pl, const item &fix, repair_type action_type ) const;
         /** What are we most likely trying to do with this item? */
-        repair_type default_action( const item &fix, int current_skill_level ) const;
+        repair_type default_action( const Character &who, const item &fix, int current_skill_level ) const;
         /**
          * Calculates the difficulty to repair an item based on its materials.
          * Normally the difficulty to repair is that of the most difficult material.
@@ -930,6 +976,10 @@ class repair_item_actor : public iuse_actor
         int repair_recipe_difficulty( const item &fix ) const;
         /** Describes members of `repair_type` enum */
         static std::string action_description( repair_type );
+
+        bool supports_owned_activation() const override {
+            return true;
+        }
 
         explicit repair_item_actor( const std::string &type = "repair_item" ) : iuse_actor( type ) {}
 
@@ -995,6 +1045,8 @@ class heal_actor : public iuse_actor
         int get_disinfected_level( const Character &healer ) const;
         /** How many intensity levels of bleeding will be reduced using this actor by `healer`. */
         int get_stopbleed_level( const Character &healer ) const;
+        int healing_cost( const Character &healer ) const;
+        bool can_treat_part( const Character &patient, const bodypart_id &part ) const;
         /** Does the actual healing. Returns charges used. */
         int finish_using( Character &healer, Character &patient, item &it, bodypart_id healed ) const;
 

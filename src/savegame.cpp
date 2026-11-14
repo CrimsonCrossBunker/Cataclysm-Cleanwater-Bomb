@@ -140,7 +140,6 @@ void game::serialize_json( std::ostream &fout )
     json.member( "bVMonsterLookFire", bVMonsterLookFire );
 
     // save stats.
-    json.member( "kill_tracker", *kill_tracker_ptr );
     json.member( "stats_tracker", *stats_tracker_ptr );
     json.member( "achievements_tracker", *achievements_tracker_ptr );
 
@@ -228,7 +227,7 @@ void game::unserialize( std::istream &fin, const cata_path &path )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -240,7 +239,7 @@ void game::unserialize( std::string fin )
         unserialize_impl( data );
     } catch( const JsonError &jsonerr ) {
         debugmsg( "Bad save json\n%s", jsonerr.c_str() );
-        return;
+        throw;
     }
 }
 
@@ -309,9 +308,15 @@ void game::unserialize_impl( const JsonObject &data )
     data.read( "turnssincelastmon", turnssincelastmon );
     data.read( "bVMonsterLookFire", bVMonsterLookFire );
 
-    data.read( "kill_tracker", *kill_tracker_ptr );
-
-    data.read( "player", u );
+    // Older saves kept this character's count in the game root. Migrate it
+    // before native loading/cache reconstruction, which can query that count.
+    const JsonObject player_data = data.get_object( "player" );
+    if( !player_data.has_member( "kill_tracker" ) && data.has_object( "kill_tracker" ) ) {
+        const JsonObject legacy_kills = data.get_object( "kill_tracker" );
+        u.load( player_data, &legacy_kills );
+    } else {
+        u.deserialize( player_data );
+    }
     data.read( "inactive_global_effect_on_condition_vector",
                inactive_global_effect_on_condition_vector );
     //load queued_eocs
@@ -1290,7 +1295,7 @@ struct mongroup_bin_eq {
 struct mongroup_hash {
     std::size_t operator()( const mongroup &mg ) const {
         // Note: not hashing monsters or position
-        size_t ret = std::hash<mongroup_id>()( mg.type );
+        size_t ret = std::hash < mongroup_id > ()( mg.type );
         cata::hash_combine( ret, mg.population );
         cata::hash_combine( ret, mg.target );
         cata::hash_combine( ret, mg.interest );
@@ -1307,13 +1312,13 @@ void overmap::save_monster_groups( JsonOut &jout ) const
     jout.member( "monster_groups" );
     jout.start_array();
     // Bin groups by their fields, except positions and monsters
-    std::unordered_map<mongroup, std::list<tripoint_om_sm>, mongroup_hash, mongroup_bin_eq>
+    std::unordered_map < mongroup, std::list < tripoint_om_sm>, mongroup_hash, mongroup_bin_eq >
     binned_groups;
     binned_groups.reserve( zg.size() );
     for( const auto &pos_group : zg ) {
         // Each group in bin adds only position
         // so that 100 identical groups are 1 group data and 100 tripoints
-        std::list<tripoint_om_sm> &positions = binned_groups[pos_group.second];
+        std::list < tripoint_om_sm > &positions = binned_groups[pos_group.second];
         positions.emplace_back( pos_group.first );
     }
 
@@ -1379,7 +1384,7 @@ void overmap::serialize( std::ostream &fout ) const
         for( tripoint_om_omt entry_location{ 0, 0, z - OVERMAP_HEIGHT };
              entry_location.y() < 180; entry_location.y()++ ) {
             for( entry_location.x() = 0; entry_location.x() < 180; entry_location.x()++ ) {
-                std::shared_ptr<map_data_summary> summary = layer[z].map_cache[ entry_location.xy() ];
+                std::shared_ptr < map_data_summary > summary = layer[z].map_cache[ entry_location.xy() ];
                 // We don't serialize placeholders, we regenerate them from the ter for their location.
                 if( summary->placeholder ) {
                     continue;
@@ -1514,7 +1519,7 @@ void overmap::serialize( std::ostream &fout ) const
 
     // Condense the overmap special placements so that all placements of a given special
     // are grouped under a single key for that special.
-    std::map<overmap_special_id, std::vector<tripoint_om_omt>> condensed_overmap_special_placements;
+    std::map < overmap_special_id, std::vector < tripoint_om_omt>> condensed_overmap_special_placements;
     for( const auto &placement : overmap_special_placements ) {
         condensed_overmap_special_placements[placement.second].emplace_back( placement.first );
     }
@@ -1549,7 +1554,7 @@ void overmap::serialize( std::ostream &fout ) const
     fout << std::endl;
     json.member( "mapgen_arg_index" );
     json.start_array();
-    for( const std::pair<const tripoint_om_omt, std::optional<mapgen_arguments> *> &p :
+    for( const std::pair < const tripoint_om_omt, std::optional < mapgen_arguments> * > &p :
          mapgen_args_index ) {
         json.start_array();
         json.write( p.first );
@@ -1563,7 +1568,7 @@ void overmap::serialize( std::ostream &fout ) const
 
     json.member( "omt_stack_arguments_map" );
     json.start_array();
-    for( const std::pair<const point_abs_omt, mapgen_arguments> &p : omt_stack_arguments_map ) {
+    for( const std::pair < const point_abs_omt, mapgen_arguments > &p : omt_stack_arguments_map ) {
         json.start_array();
         json.write( p.first );
         p.second.serialize( json );
@@ -1576,7 +1581,7 @@ void overmap::serialize( std::ostream &fout ) const
     fout << std::endl;
     json.member( "pp_decisions_index" );
     json.start_array();
-    for( const std::pair<const tripoint_om_omt, std::vector<pp_resolved_generator> *> &p :
+    for( const std::pair < const tripoint_om_omt, std::vector < pp_resolved_generator> * > &p :
          pp_decisions_index ) {
         json.start_array();
         json.write( p.first );
@@ -1588,12 +1593,12 @@ void overmap::serialize( std::ostream &fout ) const
     json.end_array();
     fout << std::endl;
 
-    std::vector<std::pair<om_pos_dir, std::string>> flattened_joins_used(
+    std::vector < std::pair < om_pos_dir, std::string>> flattened_joins_used(
                 joins_used.begin(), joins_used.end() );
     json.member( "joins_used", flattened_joins_used );
     fout << std::endl;
 
-    std::vector<std::pair<tripoint_om_omt, std::vector<oter_id>>> flattened_predecessors(
+    std::vector < std::pair < tripoint_om_omt, std::vector<oter_id>>> flattened_predecessors(
         predecessors_.begin(), predecessors_.end() );
     json.member( "predecessors", flattened_predecessors );
     fout << std::endl;
@@ -1604,7 +1609,7 @@ void overmap::serialize( std::ostream &fout ) const
 
 ////////////////////////////////////////////////////////////////////////////////////////
 ///// mongroup
-template<typename Archive>
+template < typename Archive >
 void mongroup::io( Archive &archive )
 {
     archive.io( "type", type );
@@ -1614,6 +1619,7 @@ void mongroup::io( Archive &archive )
     archive.io( "horde", horde, false );
     archive.io( "target", target, point_abs_sm::zero );
     archive.io( "nemesis_target", nemesis_target, point_abs_sm::zero );
+    archive.io( "nemesis_mission_id", nemesis_mission_id, -1 );
     archive.io( "interest", interest, 0 );
     archive.io( "horde_behaviour", behaviour, horde_behaviour::none );
     archive.io( "monsters", monsters, io::empty_default_tag() );
@@ -1629,11 +1635,12 @@ void mongroup::deserialize( const JsonObject &jo )
 void mongroup::serialize( JsonOut &json ) const
 {
     io::JsonObjectOutputArchive archive( json );
-    const_cast<mongroup *>( this )->io( archive );
+    const_cast < mongroup * >( this )->io( archive );
 }
 
 void mongroup::deserialize_legacy( const JsonObject &jo )
 {
+    nemesis_mission_id = -1;
     for( JsonMember json : jo ) {
         std::string name = json.name();
         if( name == "type" ) {
@@ -1697,6 +1704,7 @@ void game::unserialize_master( const JsonValue &jv )
     // Reset state that has no clear-on-load hook of its own; otherwise a
     // save without the field inherits the previous game's queue.
     get_item_wakeups().clear();
+    north_america_world = false;
     JsonObject game_json = jv;
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
@@ -1710,12 +1718,18 @@ void game::unserialize_master( const JsonValue &jv )
             jsin.read( next_monster_uid );
         } else if( name == "next_vehicle_uid" ) {
             jsin.read( next_vehicle_uid );
+        } else if( name == "next_construction_uid" ) {
+            jsin.read( next_construction_uid );
         } else if( name == "active_missions" ) {
             mission::unserialize_all( jsin );
         } else if( name == "factions" ) {
             jsin.read( *faction_manager_ptr );
         } else if( name == "seed" ) {
             jsin.read( seed );
+        } else if( name == "north_america_world" ) {
+            north_america_world = jsin.get_bool();
+        } else if( name == "climate_origin" ) {
+            jsin.read( weather.climate_origin );
         } else if( name == "weather" ) {
             weather_manager::unserialize_all( jsin );
         } else if( name == "timed_events" ) {
@@ -1779,6 +1793,9 @@ void weather_manager::serialize_all( JsonOut &json )
     json.member( "temperature", units::to_fahrenheit( weather.temperature ) );
     json.member( "winddirection", weather.winddirection );
     json.member( "windspeed", weather.windspeed );
+    if( weather.climate_precipitation_mm_per_hour ) {
+        json.member( "climate_precipitation_mm_per_hour", *weather.climate_precipitation_mm_per_hour );
+    }
     if( weather.forced_temperature ) {
         json.member( "forced_temperature", units::to_fahrenheit( *weather.forced_temperature ) );
     }
@@ -1810,6 +1827,8 @@ void weather_manager::unserialize_all( const JsonObject &w )
     get_weather().temperature = units::from_fahrenheit( read_temperature );
     w.read( "winddirection", get_weather().winddirection );
     w.read( "windspeed", get_weather().windspeed );
+    get_weather().climate_precipitation_mm_per_hour.reset();
+    w.read( "climate_precipitation_mm_per_hour", get_weather().climate_precipitation_mm_per_hour );
     if( w.has_member( "forced_temperature" ) ) {
         float read_forced_temp;
         w.read( "forced_temperature", read_forced_temp );
@@ -1843,7 +1862,7 @@ void global_variables::unserialize( const JsonObject &jo )
     // global variables
     jo.read( "global_vals", global_values );
     // potentially migrate some variable names
-    for( std::pair<std::string, std::string> migration : migrations ) {
+    for( std::pair < std::string, std::string > migration : migrations ) {
         if( global_values.count( migration.first ) != 0 ) {
             auto extracted = global_values.extract( migration.first );
             extracted.key() = migration.second;
@@ -1886,7 +1905,7 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
                 revert.set_ter( pt, ter_id( jp.get_string( "ter" ) ) );
                 revert.set_trap( pt, trap_id( jp.get_string( "trap" ) ) );
                 if( jp.has_member( "items" ) ) {
-                    cata::colony<item> itm;
+                    cata::colony < item > itm;
                     jp.get_member( "items" ).read( itm, false );
                     revert.get_items( pt ) = std::move( itm );
                 }
@@ -1910,7 +1929,7 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
         if( jo.has_member( "revert_cosmetics" ) ) {
             revert.load( jo.get_member( "revert_cosmetics" ), "cosmetics", savegame_loading_version );
         }
-        get_timed_events().add( static_cast<timed_event_type>( type ), when, faction_id, map_square,
+        get_timed_events().add( static_cast < timed_event_type >( type ), when, faction_id, map_square,
                                 strength,
                                 string_id, std::move( revert ), key );
     }
@@ -1928,6 +1947,7 @@ void game::serialize_master( std::ostream &fout )
         json.member( "next_item_uid", next_item_uid );
         json.member( "next_monster_uid", next_monster_uid );
         json.member( "next_vehicle_uid", next_vehicle_uid );
+        json.member( "next_construction_uid", next_construction_uid );
 
         json.member( "active_missions" );
         mission::serialize_all( json );
@@ -1940,6 +1960,12 @@ void game::serialize_master( std::ostream &fout )
 
         json.member( "factions", *faction_manager_ptr );
         json.member( "seed", seed );
+        if( north_america_world ) {
+            json.member( "north_america_world", north_america_world );
+        }
+        if( weather.climate_origin ) {
+            json.member( "climate_origin", *weather.climate_origin );
+        }
 
         json.end_object();
     } catch( const JsonError &e ) {
@@ -1971,7 +1997,7 @@ void game::serialize_dimension_data( std::ostream &fout )
 
 void faction_manager::serialize( JsonOut &jsout ) const
 {
-    std::vector<faction> local_facs;
+    std::vector < faction > local_facs;
     local_facs.reserve( factions.size() );
     for( const auto &elem : factions ) {
         local_facs.push_back( elem.second );
@@ -2006,11 +2032,11 @@ void cata::lua_platform::detail::erase_platform_var_migration(
     get_globals().migrations.erase( value.from_id );
 }
 
-std::vector<std::pair<std::string, std::string>>
+std::vector < std::pair < std::string, std::string>>
         cata::lua_platform::detail::var_migration_snapshot()
 {
-    std::vector<std::pair<std::string, std::string>> result;
-    const std::map<std::string, std::string> &migrations =
+    std::vector < std::pair < std::string, std::string>> result;
+    const std::map < std::string, std::string > &migrations =
         get_globals().migrations;
     result.reserve( migrations.size() );
     for( const auto &[from_id, to_id] : migrations ) {
@@ -2119,7 +2145,7 @@ void creature_tracker::deserialize( const JsonArray &ja )
     monsters_by_location.clear();
     for( JsonValue jv : ja ) {
         // TODO: would be nice if monster had a constructor using JsonIn or similar, so this could be one statement.
-        shared_ptr_fast<monster> mptr = make_shared_fast<monster>();
+        shared_ptr_fast < monster > mptr = make_shared_fast < monster > ();
         jv.read( *mptr );
         add( mptr );
     }
@@ -2183,7 +2209,7 @@ void overmap_global_state::deserialize( const JsonObject &json )
     highway_intersections.clear();
     //TODO: remove legacy loading in 0.J
     if( json.has_member( "overmap_highway_intersections" ) ) {
-        std::map<std::string, overmap_feature_grid_node> feature_grid;
+        std::map < std::string, overmap_feature_grid_node > feature_grid;
         json.read( "overmap_highway_intersections", feature_grid );
         point_abs_om highway_global_offset;
         json.read( "overmap_highway_offset", highway_global_offset );

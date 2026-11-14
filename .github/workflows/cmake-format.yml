@@ -8,6 +8,8 @@ on:
     - '**/CMakeLists.txt'
     - '**.cmake'
     - '**.cmake.in'
+    - tools/test_cmake_version.py
+    - .github/workflows/cmake-format.yml
   pull_request:
     branches:
     - master
@@ -15,6 +17,8 @@ on:
     - '**/CMakeLists.txt'
     - '**.cmake'
     - '**.cmake.in'
+    - tools/test_cmake_version.py
+    - .github/workflows/cmake-format.yml
 
 permissions:
   contents: read
@@ -32,6 +36,8 @@ jobs:
         persist-credentials: false
     - name: install cmakelang
       run: python3 -m pip install -U cmakelang
+    - name: Check version generation in worktrees and source archives
+      run: python3 tools/test_cmake_version.py
     - name: run cmake-lint
       run: python3 -m cmakelang.lint CMakeLists.txt src/CMakeLists.txt data/CMakeLists.txt lang/CMakeLists.txt src/chkjson/CMakeLists.txt tools/format/CMakeLists.txt tools/clang-tidy-plugin/CMakeLists.txt cmake_uninstall.cmake.in -c .cmake-format.yml
 

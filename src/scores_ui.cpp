@@ -165,12 +165,12 @@ void scores_ui_impl::init_data()
         scores_text.emplace_back( scr->description( stats ).c_str() );
     }
 
-    const kill_tracker &kills_data = g->get_kill_tracker();
+    const kill_statistics &kills_data = g->get_kill_tracker();
     monster_kills = kills_data.monster_kill_count();
     npc_kills = kills_data.npc_kill_count();
     total_kills = kills_data.total_kill_count();
 
-    for( const auto &entry : kills_data.kills ) {
+    for( const auto &entry : kills_data.monster_kills() ) {
         const int num_kills = entry.second;
         const mtype &m = entry.first.obj();
         const std::string &symbol = m.sym;
@@ -185,7 +185,7 @@ void scores_ui_impl::init_data()
             std::tie( std::get<0>( b ), std::get<3>( a ) );
     };
     std::sort( monster_kills_data.begin(), monster_kills_data.end(), sort_by_count_then_name );
-    for( const auto &entry : kills_data.npc_kills ) {
+    for( const auto &entry : kills_data.character_kills() ) {
         npc_kills_data.emplace_back( entry );
     }
     std::sort( npc_kills_data.begin(), npc_kills_data.end(), localized_compare );

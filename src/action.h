@@ -180,6 +180,7 @@ enum action_id : int {
     ACTION_THROW_WIELDED,
     /** Fire the wielded weapon, or open fire menu if none */
     ACTION_FIRE,
+    ACTION_FIRE_SWEEP,
     /** Burst-fire the current weapon */
     ACTION_FIRE_BURST,
     /** Change fire mode of the current weapon */
@@ -226,6 +227,10 @@ enum action_id : int {
     ACTION_SLEEP,
     /** Open vehicle control menu */
     ACTION_CONTROL_VEHICLE,
+    /** Choose or cancel a turning control point while driving. */
+    ACTION_VEHICLE_TURNING_ASSIST,
+    /** Toggle the driving trajectory and next-turn position estimate. */
+    ACTION_VEHICLE_GUIDANCE,
     /** Turn auto travel mode on/off */
     ACTION_TOGGLE_AUTO_TRAVEL_MODE,
     /** Turn safemode on/off, while leaving autosafemode intact */

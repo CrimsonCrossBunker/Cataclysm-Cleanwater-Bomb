@@ -289,6 +289,70 @@ class InventoryMetadataImpactTest(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertFalse(self.compare(after))
 
+    def test_eoc_counter_and_array_position_refreshes_are_exempt(self) -> None:
+        self.before["entries"][0]["example_evidence"] = {
+            "status": "lexical_candidate",
+            "occurrences": 2,
+            "examples": [{
+                "path": "data/json/effects.json",
+                "pointer": "/1/effect/0/effect",
+            }],
+        }
+        after = copy.deepcopy(self.before)
+        after["entries"][0]["example_evidence"].update({
+            "occurrences": 3,
+            "examples": [{
+                "path": "data/json/effects.json",
+                "pointer": "/2/effect/1/effect",
+            }],
+        })
+        self.assertTrue(self.compare(after))
+        after["entries"][0]["shape"] = "object"
+        self.assertFalse(self.compare(after))
+
+    def test_eoc_evidence_changes_are_not_exempt(self) -> None:
+        self.before["entries"][0]["example_evidence"] = {
+            "status": "lexical_candidate",
+            "occurrences": 2,
+            "examples": [{
+                "path": "data/json/effects.json",
+                "pointer": "/1/effect/0/effect",
+            }],
+        }
+        for field, value in (
+            ("status", "complete"),
+            ("occurrences", -1),
+            ("occurrences", True),
+            ("occurrences", "3"),
+            ("examples", []),
+            ("examples", None),
+        ):
+            after = copy.deepcopy(self.before)
+            after["entries"][0]["example_evidence"][field] = value
+            with self.subTest(field=field, value=value):
+                self.assertFalse(self.compare(after))
+        for reference in (
+            {"path": "data/json/other.json", "pointer": "/1/effect/0/effect"},
+            {"path": "data/json/effects.json", "pointer": "/1/effect/0/other"},
+            {
+                "path": "data/json/../effects.json",
+                "pointer": "/1/effect/0/effect",
+            },
+            {"path": "src/effects.json", "pointer": "/1/effect/0/effect"},
+            {"path": "data/json/effects.json", "pointer": "/1/~2/effect"},
+            {"path": "data/json/effects.json", "pointer": 1},
+            {"path": "data/json/effects.json"},
+            {
+                "path": "data/json/effects.json",
+                "pointer": "/1/effect",
+                "extra": True,
+            },
+        ):
+            after = copy.deepcopy(self.before)
+            after["entries"][0]["example_evidence"]["examples"] = [reference]
+            with self.subTest(reference=reference):
+                self.assertFalse(self.compare(after))
+
     def test_documentation_reference_moves_are_exempt(self) -> None:
         self.before["entries"][0]["documentation"] = {
             "status": "lexically_mentioned",

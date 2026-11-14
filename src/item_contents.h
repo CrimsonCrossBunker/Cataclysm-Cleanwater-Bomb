@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 
+#include "item_load_context.h"
 #include "coords_fwd.h"
 #include "enums.h"
 #include "item_pocket.h"
@@ -475,8 +476,10 @@ class item_contents
         void combine( item_contents &&read_input, bool convert = false, bool into_bottom = false,
                       bool restack_charges = true, bool ignore_contents = false );
 
+        void apply_current_state( item_contents &&state );
         void serialize( JsonOut &json ) const;
-        void deserialize( const JsonObject &data );
+        void deserialize( const JsonObject &data,
+                          item_load_context context = item_load_context::saved_game );
     private:
         /**
          * Find the best pocket of type pk_type the item will fit in.

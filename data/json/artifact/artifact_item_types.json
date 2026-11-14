@@ -468,7 +468,7 @@
     "looks_like": "pitchfork",
     "color": "dark_gray",
     "material": [ "anomaly" ],
-    "techniques": [ "WBLOCK_1", "DEF_DISARM" ],
+    "techniques": [ "WBLOCK_1", "DEF_DISARM", "MOUNTED_CHARGE" ],
     "volume": "1750 ml",
     "longest_side": "140 cm",
     "qualities": [ [ "COOK", 1 ] ],

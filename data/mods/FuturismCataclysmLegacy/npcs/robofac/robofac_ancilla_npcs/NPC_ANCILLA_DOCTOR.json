@@ -1,0 +1,12 @@
+[
+  {
+    "type": "snippet",
+    "category": "<fcl_doctor_new_interface>",
+    "text": [ "What?!  Seriously?  New Cybernetics interface?  Tell me more!" ]
+  },
+  {
+    "id": "TALK_ANCILLA_DOCTOR_INSTALL_INTERFACE_REWARD_B",
+    "type": "talk_topic",
+    "dynamic_line": "Right, they told me about you.  I guess you know the drill and how these things work.  I'll use the machine to take out that hostile Exodii tech, install the upgraded Hub 01 unit, and top you up with some extra power, a battery compartment, and a commlink, if you don't have those already.  The new interface works with our old CBMs as well as the Exodii bionics, so no worries there.  I've been given 10 HGC to pay YOU for the Exodii interface scrap.  Remember, the Hub keeping your old interface is a condition for the surgery, and that old thing would've given you cancer, anyway.  So, good riddance, yeah?  You ready?\""
+  }
+]

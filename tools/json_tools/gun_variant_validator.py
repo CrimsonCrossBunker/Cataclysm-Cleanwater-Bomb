@@ -273,16 +273,29 @@ def parse_unit(val, stops):
     return total
 
 
+def firing_mode_signature(mode):
+    """Return the fixed shot count and cyclic rate used by the game."""
+    mode_id, label_or_rpm, qty_or_rpm, *extra = mode
+    if mode_id == "brust-rpm":
+        return qty_or_rpm, int(label_or_rpm)
+    if isinstance(qty_or_rpm, str):
+        return 0, int(qty_or_rpm)
+    flags = extra[0] if extra else []
+    if isinstance(flags, str):
+        flags = [flags]
+    if qty_or_rpm > 1 and not {"MELEE", "VOLLEY"}.intersection(flags):
+        if mode_id == "BURST":
+            return qty_or_rpm, 900
+        return 0, qty_or_rpm * 300
+    return qty_or_rpm, 0
+
+
 # Parse the gun data represented in JSON to what we care about
 def simplify_gun_data(jo):
-    # We only care about what modes it has, and how many bullets
     if "modes" in jo:
-        modes = []
-        for mode in jo["modes"]:
-            modes.append(mode[2])
-        jo["modes"] = sorted(modes)
+        jo["modes"] = sorted(firing_mode_signature(mode) for mode in jo["modes"])
     else:
-        jo["modes"] = [1]
+        jo["modes"] = [(1, 0)]
     # We only care how much damage it deals
     if "ranged_damage" in jo:
         if type(jo["ranged_damage"]) is not dict:

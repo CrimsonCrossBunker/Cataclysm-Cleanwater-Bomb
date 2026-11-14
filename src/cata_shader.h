@@ -91,8 +91,9 @@ enum class memory_preset : int {
 std::optional<memory_preset> memory_preset_from_option_value(
     const std::string &mode );
 
-// RAII over SDL_GPUShader *. Lifetime is tied to the SDL_GPUDevice that
-// created the shader (device-scoped).
+struct fragment_shader_cache;
+
+// Owns an SDL_GPUShader or borrows one from the renderer's fragment cache.
 class shader
 {
     public:
@@ -108,7 +109,8 @@ class shader
         static shader load_fragment( SDL_GPUDevice *device,
                                      const std::string &basename,
                                      unsigned int num_samplers,
-                                     unsigned int num_uniform_buffers );
+                                     unsigned int num_uniform_buffers,
+                                     fragment_shader_cache *cache = nullptr );
 
         shader() = default;
         ~shader();
@@ -134,11 +136,12 @@ class shader
         }
 
     private:
-        shader( SDL_GPUDevice *device, SDL_GPUShader *ptr )
-            : device_( device ), ptr_( ptr ) {}
+        shader( SDL_GPUDevice *device, SDL_GPUShader *ptr, bool owned = true )
+            : device_( device ), ptr_( ptr ), owned_( owned ) {}
 
         SDL_GPUDevice *device_ = nullptr;
         SDL_GPUShader *ptr_ = nullptr;
+        bool owned_ = true;
 };
 
 // RAII over SDL_GPURenderState *. Lifetime is tied to the SDL_Renderer that
@@ -398,10 +401,10 @@ class variant_pass
             lit_suspended_ = suspended;
         }
 
-        // Drop all GPU resources, flushing held state first; idempotent. On
-        // flush failure the handles are abandoned and the embargo raised (see
-        // abandoned_pending_rebind_). Run before the owning renderer dies.
-        void release_gpu_resources();
+        // Drop states, flushing held state first; idempotent. Compiled shaders
+        // stay cached until renderer retirement because SDL caches pipelines
+        // by shader pointer. On flush failure abandon handles and embargo SDL.
+        void release_gpu_resources( bool retiring_renderer = false );
 
         // Abandon every handle without calling SDL: intentional leak for when
         // even flush() is unsafe (dangling renderer), reclaimed at process
@@ -428,6 +431,7 @@ class variant_pass
         void release_lit( bool abandon_handles );
 
         SDL_Renderer *renderer_ = nullptr;
+        std::unique_ptr<fragment_shader_cache> shader_cache_;
         std::array<shader, static_cast<size_t>( variant_kind::count )> shaders_;
         std::array<render_state, static_cast<size_t>( variant_kind::count )> states_;
         std::array<shader, static_cast<size_t>( memory_preset::count )> memory_shaders_;

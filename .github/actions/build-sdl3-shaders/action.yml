@@ -73,7 +73,9 @@ runs:
         cd "$SHADERCROSS_ROOT"
         git checkout 6b06e55c7c5d7e7a09a8a14f76e866dcfad5ab99
         git submodule update --init --recursive
-        cmake -P build-scripts/download-prebuilt-DirectXShaderCompiler.cmake
+        python3 "$GITHUB_WORKSPACE/build-scripts/retry-download-command.py" -- \
+            cmake -DCMAKE_SYSTEM_NAME=Linux \
+            -P build-scripts/download-prebuilt-DirectXShaderCompiler.cmake
         cmake -S external/SPIRV-Cross -B spirv_cross_build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
             -DSPIRV_CROSS_SHARED=OFF \

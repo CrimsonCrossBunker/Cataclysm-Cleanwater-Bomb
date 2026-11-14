@@ -36,12 +36,14 @@
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "gunmod_ui.h"
 #include "input.h"
 #include "input_context.h"
 #include "inventory.h"
 #include "inventory_ui.h"
 #include "item.h"
 #include "item_contents.h"
+#include "item_insert.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
@@ -1136,14 +1138,19 @@ class activatable_inventory_preset : public pickup_inventory_preset
         }
 
         bool is_shown( const item_location &loc ) const override {
-            return ( loc->is_craft() || ( ( loc->type->has_use() || loc->has_relic_activation() ) &&
-                                          ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
+            return ( ( loc->is_gun() && !loc->is_gunmod() ) || loc->is_craft() ||
+                     ( ( loc->type->has_use() || loc->has_relic_activation() ) &&
+                       ( !loc->is_comestible() || loc->type->can_use( "PETFOOD" ) ) ) ) &&
                    !loc.is_invisible_installed_gunmod();
         }
 
         std::string get_denial( const item_location &loc ) const override {
             const item &it = *loc;
             const auto &uses = it.type->use_methods;
+
+            if( it.is_gun() && !it.is_gunmod() ) {
+                return pickup_inventory_preset::get_denial( loc );
+            }
 
             if( it.has_relic_activation() && !it.can_use_relic( you ) ) {
                 return string_format( _( "The %s can't be used like that." ), it.tname() );
@@ -1220,6 +1227,9 @@ class activatable_inventory_preset : public pickup_inventory_preset
 
     protected:
         std::string get_action_name( const item &it ) const {
+            if( it.is_gun() && !it.is_gunmod() ) {
+                return _( "Manage gun modifications" );
+            }
             const auto &uses = it.type->use_methods;
 
             if( uses.size() == 1 ) {
@@ -1345,26 +1355,7 @@ class gunmod_remove_inventory_preset : public inventory_selector_preset
         // a sight mod location, both are removable. Ideally one should not be removable, to
         // represent the mod that has the other mod attached to its added sight mod location.
         std::string get_denial( const item_location &loc ) const override {
-            item mod = *loc.get_item();
-            if( ( mod.type->gunmod->location.name() == "magazine" ||
-                  mod.type->gunmod->location.name() == "mechanism" ||
-                  mod.type->gunmod->location.name() == "loading port" ||
-                  mod.type->gunmod->location.name() == "bore" ) &&
-                ( gun.ammo_remaining( ) > 0 || gun.magazine_current() ) ) {
-                return _( "must be unloaded before removing this mod" );
-            }
-
-            if( !loc->type->gunmod->add_mod.empty() ) {
-                std::map<gunmod_location, int> mod_locations_added = loc->type->gunmod->add_mod;
-
-                for( const std::pair<const gunmod_location, int> &slot : mod_locations_added ) {
-                    if( slot.second > 0 && this->gun.get_free_mod_locations( slot.first ) <= 0 ) {
-                        return _( "has mods attached" );
-                    }
-                }
-            }
-
-            return std::string();
+            return gunmod_ui::removal_denial( gun, *loc );
         }
 
     private:
@@ -2112,7 +2103,7 @@ void game_menus::inv::insert_items( item_location &holster )
     drop_locations holstered_list = game_menus::inv::holster( holster );
 
     if( !holstered_list.empty() ) {
-        you.assign_activity( insert_item_activity_actor( holster, holstered_list ) );
+        start_item_insert( you, holster, holstered_list );
     }
 }
 
@@ -2358,7 +2349,7 @@ class repair_inventory_preset: public inventory_selector_preset
 
             append_cell( [actor, &you]( const item_location & loc ) {
                 const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
+                const repair_item_actor::repair_type action_type = actor->default_action( you, *loc, level );
                 const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.first ),
                                  chance.first == 0 ? c_yellow : ( chance.second == 0 ? c_light_green : c_unset ) );
@@ -2367,7 +2358,7 @@ class repair_inventory_preset: public inventory_selector_preset
 
             append_cell( [actor, &you]( const item_location & loc ) {
                 const int level = you.get_skill_level( actor->used_skill );
-                const repair_item_actor::repair_type action_type = actor->default_action( *loc, level );
+                const repair_item_actor::repair_type action_type = actor->default_action( you, *loc, level );
                 const std::pair<float, float> chance = actor->repair_chance( you, *loc, action_type );
                 return colorize( string_format( "%0.1f%%", 100.0f * chance.second ),
                                  chance.second > chance.first ? c_yellow : ( chance.second == 0 &&

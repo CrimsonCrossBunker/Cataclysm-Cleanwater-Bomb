@@ -48,8 +48,9 @@ option(CATA_CLANG_TIDY_PLUGIN "Build Cata's custom clang-tidy checks as a plugin
 option(CATA_CLANG_TIDY_EXECUTABLE "Build Cata's custom clang-tidy checks as an executable" "OFF")
 option(WARN_STALE_DATA "Warn if file integrity check fails" "OFF")
 option(TESTS "Compile Cata's tests" "ON")
-set(CATA_TEST_SUITE "all" CACHE STRING "Native test sources to compile: all or lua")
-set_property(CACHE CATA_TEST_SUITE PROPERTY STRINGS all lua)
+set(CATA_TEST_SUITE "all" CACHE STRING "Native test sources to compile: all, lua or focused")
+set_property(CACHE CATA_TEST_SUITE PROPERTY STRINGS all lua focused)
+set(CATA_TEST_FILES "" CACHE STRING "For focused tests: semicolon-separated filenames in tests/")
 option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" "ON")
 option(TRACY "Enable Tracy profiling; see doc/c++/PERFORMANCE.md." OFF)
 option(LTO "Enable link-time optimization for Release and RelWithDebInfo builds." OFF)
@@ -75,23 +76,23 @@ endif ()
 
 add_definitions(-DCMAKE)
 
-# Retrieve version from git into GIT_VERSION and creates VERSION.txt
+# Generate a usable version header for Git checkouts and source archives.
 execute_process(COMMAND ${CMAKE_COMMAND}
-    -DGIT_BINARY=${GIT_BINARY}
+    "-DGIT_BINARY=${GIT_BINARY}"
     -P ${CMAKE_SOURCE_DIR}/src/version.cmake
+    RESULT_VARIABLE VERSION_RESULT
     ERROR_VARIABLE GIT_VERSION
     ERROR_STRIP_TRAILING_WHITESPACE
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-if (GIT_VERSION)
-    message(STATUS "${PROJECT_NAME} build version is: ${GIT_VERSION}")
-    add_definitions(-DGIT_VERSION)
-else()
-    message(WARNING "Git binary not found. Build version will be set to NULL. Install Git package
-    or use -DGIT_BINARY to set path to git binary.")
-    set(VERSION "NULL")
+if (NOT VERSION_RESULT EQUAL 0)
+    message(FATAL_ERROR "Version header generation failed: ${GIT_VERSION}")
 endif ()
+message(STATUS "${PROJECT_NAME} build version is: ${GIT_VERSION}")
+# CMake always generates version.h, even without Git. Do not change every
+# target's compile flags when the checkout changes between clean and dirty.
+add_definitions(-DGIT_VERSION)
 
 #OS Check Placeholders. Will be used for BINDIST
 if ("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")

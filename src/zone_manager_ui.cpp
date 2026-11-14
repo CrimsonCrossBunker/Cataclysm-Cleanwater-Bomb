@@ -13,23 +13,59 @@
 #include "color.h"
 #include "cursesdef.h"
 #include "debug.h"
-#include "faction.h"
 #include "game.h"
 #include "input_context.h"
 #include "line.h"
 #include "map.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
+#include "vehicle.h"
+#include "vpart_position.h"
+#include "zone_edit.h"
+#include "zone_work.h"
+#include "cata_utility.h"
 #include "options.h"
 #include "output.h"
 #include "overmap_ui.h"
 #include "panels.h"
 #include "popup.h"
+#include "rng.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
 #include "translations.h"
 #include "ui_manager.h"
 #include "uilist.h"
+#include "enums.h"
+#include "item.h"
+#include "item_uid.h"
+#include "messages.h"
+#include "vehicle_uid.h"
+
+static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
+static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
+static const zone_type_id zone_type_DISASSEMBLE( "DISASSEMBLE" );
+static const zone_type_id zone_type_FARM_PLOT( "FARM_PLOT" );
+static const zone_type_id zone_type_LOOT_CORPSE( "LOOT_CORPSE" );
 
 static const zone_type_id zone_type_LOOT_CUSTOM( "LOOT_CUSTOM" );
+
+static const zone_type_id zone_type_LOOT_UNSORTED( "LOOT_UNSORTED" );
+
+static const zone_type_id zone_type_LOOT_WOOD( "LOOT_WOOD" );
+
+static const zone_type_id zone_type_MINING( "MINING" );
+
+static const zone_type_id zone_type_MOPPING( "MOPPING" );
+
+static const zone_type_id zone_type_STRIP_CORPSES( "STRIP_CORPSES" );
+
+static const zone_type_id zone_type_STUDY_ZONE( "STUDY_ZONE" );
+
+static const zone_type_id zone_type_UNLOAD_ALL( "UNLOAD_ALL" );
+
+static const zone_type_id zone_type_VEHICLE_DECONSTRUCT( "VEHICLE_DECONSTRUCT" );
+
+static const zone_type_id zone_type_VEHICLE_REPAIR( "VEHICLE_REPAIR" );
 
 shared_ptr_fast<game::draw_callback_t> zone_manager_ui::create_zone_callback(
     const std::optional<tripoint_bub_ms> &zone_start,
@@ -161,11 +197,20 @@ void zone_manager_ui::zones_manager_draw_borders( const catacurses::window &w_bo
     wnoutrefresh( w_info_border );
 }
 
-void zone_manager_ui::display_zone_manager()
+void zone_manager_ui::display_zone_manager( const std::shared_ptr<zone_edit_session> &server_draft )
 {
     map &here = get_map();
     avatar &u = get_avatar();
+    const bool remote = cata_mp::is_client_mode();
+    if( remote && !server_draft ) {
+        cata_mp::client_query_zones();
+        return;
+    }
 
+    // Menu previews may construct native items/options. Restore presentation RNG
+    // before submitting; authoritative overlay/map changes keep their own RNG effects.
+    std::optional<restore_on_out_of_scope<cata_default_random_engine>> menu_rng;
+    menu_rng.emplace( rng_get_engine() );
     const tripoint_bub_ms pos = u.pos_bub();
 
     const tripoint_rel_ms stored_view_offset = u.view_offset;
@@ -237,7 +282,7 @@ void zone_manager_ui::display_zone_manager()
     ctxt.register_action( "DISABLE_VEHICLE_ZONES" );
     ctxt.register_action( "SHOW_ALL_ZONES" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
-    if( debug_mode ) {
+    if( debug_mode && !remote ) {
         ctxt.register_action( "CHANGE_FACTION" );
     }
 
@@ -248,25 +293,31 @@ void zone_manager_ui::display_zone_manager()
     bool stuff_changed = false;
     bool show_all_zones = false;
     int zone_cnt = 0;
-    faction_id zones_faction( your_fac );
+    faction_id zones_faction( u.get_faction_id() );
 
-    // reset any zones that were temporarily disabled for an activity
-    mgr.reset_disabled();
-
-    // cache the players location for person zones
-    if( mgr.has_personal_zones() ) {
-        mgr.cache_avatar_location();
+    std::map<faction_id, std::shared_ptr<zone_edit_session>> editors;
+    if( server_draft ) {
+        editors.emplace( zones_faction, server_draft );
     }
+    const auto editor = [&]() -> zone_edit_session & {
+        auto found = editors.find( zones_faction );
+        if( found == editors.end() )
+        {
+            found = editors.emplace( zones_faction,
+                                     std::make_shared<zone_edit_session>( u, mgr, zones_faction ) ).first;
+        }
+        return *found->second;
+    };
 
     // get zones with distance between player and
     // zone center point <= MAX_VIEW_DISTANCE or all zones, if show_all_zones is true
     auto get_zones = [&]() {
         std::vector<zone_manager::ref_zone_data> zones;
         if( show_all_zones ) {
-            zones = mgr.get_zones( zones_faction );
+            zones = editor().get_zones();
         } else {
             const tripoint_abs_ms u_abs_pos = u.pos_abs();
-            for( zone_manager::ref_zone_data &ref : mgr.get_zones( zones_faction ) ) {
+            for( zone_manager::ref_zone_data &ref : editor().get_zones() ) {
                 const tripoint_abs_ms &zone_abs_pos = ref.get().get_center_point();
                 if( rl_dist( u_abs_pos, zone_abs_pos ) <= MAX_VIEW_DISTANCE ) {
                     zones.emplace_back( ref );
@@ -274,9 +325,11 @@ void zone_manager_ui::display_zone_manager()
             }
         }
         zones.erase( std::remove_if( zones.begin(), zones.end(),
-        []( zone_manager::ref_zone_data const & it ) {
+        [&u, remote]( zone_manager::ref_zone_data const & it ) {
             zone_type_id const type = it.get().get_type();
-            return !debug_mode && type.is_valid() && type->hidden;
+            const zone_query_context query = zone_query_context::for_character( u, u.pos_abs() );
+            return !it.get().matches_query( query ) || ( !( debug_mode && !remote ) && type.is_valid() &&
+                    type->hidden );
         } ),
         zones.end() );
         zone_cnt = static_cast<int>( zones.size() );
@@ -487,7 +540,6 @@ void zone_manager_ui::display_zone_manager()
     bool quit = false;
     bool save = false;
     g->set_zones_manager_open( true );
-    zone_manager::get_manager().save_zones( "zmgr-temp" );
     while( !quit ) {
         if( zone_cnt > 0 ) {
             blink = !blink;
@@ -548,8 +600,21 @@ void zone_manager_ui::display_zone_manager()
                     }
                 }
 
-                mgr.add( name, id, get_player_character().get_faction()->id, false, true,
-                         position->first, position->second, options );
+                int64_t vehicle_id = 0;
+                int64_t part_id = 0;
+                const optional_vpart_position vp = here.veh_at( here.get_bub( position->first ) );
+                if( position->first == position->second && vp && vp.cargo() &&
+                    vp->vehicle().get_owner() == zones_faction &&
+                    query_yn( _( "Bind this zone to the cargo part here?" ) ) ) {
+                    if( id == zone_type_FARM_PLOT || id == zone_type_CONSTRUCTION_BLUEPRINT ) {
+                        popup( _( "You cannot add that type of zone to a vehicle." ), PF_NONE );
+                        break;
+                    }
+                    vehicle_id = vp->vehicle().uid().get_value();
+                    part_id = vp.cargo()->part().get_base().uid().get_value();
+                }
+                editor().add( zone_data( name, id, zones_faction, false, true,
+                                         position->first, position->second, options ), vehicle_id, part_id );
 
                 zones = get_zones();
                 active_index = zone_cnt - 1;
@@ -600,8 +665,8 @@ void zone_manager_ui::display_zone_manager()
                 }
 
                 //add a zone that is relative to the avatar position
-                mgr.add( name, id, get_player_character().get_faction()->id, false, true,
-                         position->first, position->second, options );
+                editor().add( zone_data( name, id, zones_faction, false, true,
+                                         position->first, position->second, options ) );
                 zones = get_zones();
                 active_index = zone_cnt - 1;
 
@@ -622,7 +687,7 @@ void zone_manager_ui::display_zone_manager()
             show_all_zones = !show_all_zones;
             zones = get_zones();
             active_index = 0;
-        } else if( action == "CHANGE_FACTION" ) {
+        } else if( action == "CHANGE_FACTION" && debug_mode && !remote ) {
             ui.invalidate_ui();
             std::string facname = zones_faction.str();
             string_input_popup()
@@ -656,7 +721,7 @@ void zone_manager_ui::display_zone_manager()
                 blink = false;
             } else if( action == "REMOVE_ZONE" ) {
                 if( active_index < zone_cnt ) {
-                    mgr.remove( zones[active_index] );
+                    editor().remove( zones[active_index] );
                     zones = get_zones();
                     active_index--;
 
@@ -692,9 +757,6 @@ void zone_manager_ui::display_zone_manager()
                         }
                         break;
                     case 3:
-                        if( zone.get_is_vehicle() && !mgr.zone_edited( zone ) ) {
-                            break;
-                        }
                         if( zone.get_options().query() ) {
                             stuff_changed = true;
                         }
@@ -765,7 +827,7 @@ void zone_manager_ui::display_zone_manager()
                 blink = false;
             } else if( action == "MOVE_ZONE_DOWN" && zone_cnt > 1 ) {
                 if( active_index < zone_cnt - 1 ) {
-                    mgr.swap( zones[active_index], zones[active_index + 1] );
+                    editor().swap( zones[active_index], zones[active_index + 1] );
                     zones = get_zones();
                     active_index++;
                 }
@@ -774,7 +836,7 @@ void zone_manager_ui::display_zone_manager()
 
             } else if( action == "MOVE_ZONE_UP" && zone_cnt > 1 ) {
                 if( active_index > 0 ) {
-                    mgr.swap( zones[active_index], zones[active_index - 1] );
+                    editor().swap( zones[active_index], zones[active_index - 1] );
                     zones = get_zones();
                     active_index--;
                 }
@@ -787,7 +849,8 @@ void zone_manager_ui::display_zone_manager()
                 tripoint_abs_omt zone_overmap =
                     project_to<coords::omt>( zones[active_index].get().get_center_point() );
 
-                ui::omap::display_zones( player_overmap_position, zone_overmap, active_index );
+                ui::omap::display_zones( player_overmap_position, zone_overmap,
+                                         zones[active_index].get().get_name() );
             } else if( action == "ENABLE_ZONE" ) {
                 zones[active_index].get().set_enabled( true );
 
@@ -816,7 +879,7 @@ void zone_manager_ui::display_zone_manager()
                     }
                 }
 
-                stuff_changed = zones_changed;
+                stuff_changed = stuff_changed || zones_changed;
             } else if( action == "DISABLE_PERSONAL_ZONES" ) {
                 bool zones_changed = false;
 
@@ -831,7 +894,7 @@ void zone_manager_ui::display_zone_manager()
                     }
                 }
 
-                stuff_changed = zones_changed;
+                stuff_changed = stuff_changed || zones_changed;
             } else if( action == "ENABLE_VEHICLE_ZONES" ) {
                 bool zones_changed = false;
 
@@ -846,7 +909,7 @@ void zone_manager_ui::display_zone_manager()
                     }
                 }
 
-                stuff_changed = zones_changed;
+                stuff_changed = stuff_changed || zones_changed;
             } else if( action == "DISABLE_VEHICLE_ZONES" ) {
                 bool zones_changed = false;
 
@@ -861,22 +924,216 @@ void zone_manager_ui::display_zone_manager()
                     }
                 }
 
-                stuff_changed = zones_changed;
+                stuff_changed = stuff_changed || zones_changed;
             }
         }
     }
     g->set_zones_manager_open( false );
     ctxt.reset_timeout();
     zone_cb = nullptr;
+    menu_rng.reset();
 
-    if( stuff_changed ) {
-        zone_manager &zones = zone_manager::get_manager();
-        if( !save ) {
-            zones.load_zones( "zmgr-temp" );
+    if( save ) {
+        for( const auto &entry : editors ) {
+            const zone_edit_batch batch = entry.second->finish();
+            if( batch.empty() ) {
+                continue;
+            }
+            const bool submitted = remote ? cata_mp::client_submit_zone_edits( batch ) :
+                                   zone_edit_session::apply( u, mgr, batch );
+            if( !submitted ) {
+                popup( _( "The zones could not be changed.  "
+                          "Reopen the zone manager to refresh them." ) );
+            }
         }
-
-        zones.cache_data();
     }
 
     u.view_offset = stored_view_offset;
+}
+
+void zone_manager_ui::display_zone_actions( const std::shared_ptr<zone_edit_session> &server_draft )
+{
+    enum ZoneFlags {
+        None = 1,
+        SortLoot = 2,
+        SortLootStatic = 4,
+        SortLootPersonal = 8,
+        ConstructPlots = 64,
+        MultiFarmPlots = 128,
+        Multichoptrees = 256,
+        Multichopplanks = 512,
+        Multideconvehicle = 1024,
+        Multirepairvehicle = 2048,
+        MultiButchery = 4096,
+        MultiMining = 8192,
+        MultiDis = 16384,
+        MultiMopping = 32768,
+        MultiStudy = 131072,
+        UnloadLoot = 65536
+    };
+
+    Character &player_character = get_player_character();
+    int flags = 0;
+    zone_manager &mgr = zone_manager::get_manager();
+
+    if( cata_mp::is_client_mode() && !server_draft ) {
+        cata_mp::client_query_zones( true );
+        return;
+    }
+    const auto zones = server_draft ? server_draft :
+                       std::make_shared<zone_edit_session>( player_character, mgr );
+    const auto has_nearby_zone = [&]( const zone_type_id & type ) {
+        return zones->has_near( type, player_character.pos_abs(), MAX_VIEW_DISTANCE );
+    };
+
+    flags |= has_nearby_zone( zone_type_LOOT_UNSORTED ) ? SortLoot : 0;
+    flags |= has_nearby_zone( zone_type_UNLOAD_ALL ) ||
+             has_nearby_zone( zone_type_STRIP_CORPSES ) ? UnloadLoot : 0;
+    if( has_nearby_zone( zone_type_FARM_PLOT ) ) {
+        flags |= MultiFarmPlots;
+    }
+    flags |= has_nearby_zone( zone_type_CONSTRUCTION_BLUEPRINT ) ? ConstructPlots : 0;
+
+    flags |= has_nearby_zone( zone_type_CHOP_TREES ) ? Multichoptrees : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_WOOD ) ? Multichopplanks : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_DECONSTRUCT ) ? Multideconvehicle : 0;
+    flags |= has_nearby_zone( zone_type_VEHICLE_REPAIR ) ? Multirepairvehicle : 0;
+    flags |= has_nearby_zone( zone_type_LOOT_CORPSE ) ? MultiButchery : 0;
+    flags |= has_nearby_zone( zone_type_MINING ) ? MultiMining : 0;
+    flags |= has_nearby_zone( zone_type_DISASSEMBLE ) ? MultiDis : 0;
+    flags |= has_nearby_zone( zone_type_MOPPING ) ? MultiMopping : 0;
+    flags |= has_nearby_zone( zone_type_STUDY_ZONE ) ? MultiStudy : 0;
+    if( flags == 0 ) {
+        add_msg( m_info, _( "There is no compatible zone nearby." ) );
+        add_msg( m_info, _( "Compatible zones are %s and %s" ),
+                 mgr.get_name_from_type( zone_type_LOOT_UNSORTED ),
+                 mgr.get_name_from_type( zone_type_FARM_PLOT ) );
+        return;
+    }
+
+    auto wrap60 = []( const std::string & text ) {
+        return string_join( foldstring( text, 60 ), "\n" );
+    };
+
+    uilist menu;
+    menu.title = _( "Pick action:" );
+    menu.desc_enabled = true;
+
+    if( flags & SortLoot ) {
+        menu.addentry_desc( SortLootStatic, true, 'o', _( "Sort out my loot (static zones only)" ),
+                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring personal zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
+        menu.addentry_desc( SortLootPersonal, true, 'O', _( "Sort out my loot (personal zones only)" ),
+                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones ignoring static zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
+        menu.addentry_desc( SortLoot, true, 'I', _( "Sort out my loot (all)" ),
+                            wrap60( _( "Sorts out the loot from Loot: Unsorted zone to nearby appropriate Loot zones.  Uses empty space in your inventory or utilizes a cart, if you are holding one." ) ) );
+    }
+
+    if( flags & UnloadLoot ) {
+        menu.addentry_desc( UnloadLoot, true, 'U', _( "Unload nearby containers" ),
+                            wrap60( _( "Unloads any corpses or containers that are in their respective zones." ) ) );
+    }
+    if( flags & ConstructPlots ) {
+        menu.addentry_desc( ConstructPlots, true, 'c', _( "Construct plots" ),
+                            wrap60( _( "Work on any nearby Blueprint: construction zones." ) ) );
+    }
+    if( flags & MultiFarmPlots ) {
+        menu.addentry_desc( MultiFarmPlots, true, 'm', _( "Farm plots" ),
+                            wrap60( _( "Till and plant on any nearby farm plots - auto-fetch seeds and tools." ) ) );
+    }
+    if( flags & Multichoptrees ) {
+        menu.addentry_desc( Multichoptrees, true, 'C', _( "Chop trees" ),
+                            wrap60( _( "Chop down any trees in the designated zone - auto-fetch tools." ) ) );
+    }
+    if( flags & Multichopplanks ) {
+        menu.addentry_desc( Multichopplanks, true, 'P', _( "Chop planks" ),
+                            wrap60( _( "Auto-chop logs in wood loot zones into planks - auto-fetch tools." ) ) );
+    }
+    if( flags & Multideconvehicle ) {
+        menu.addentry_desc( Multideconvehicle, true, 'v', _( "Deconstruct vehicle" ),
+                            wrap60( _( "Auto-deconstruct vehicle in designated zone - auto-fetch tools." ) ) );
+    }
+    if( flags & Multirepairvehicle ) {
+        menu.addentry_desc( Multirepairvehicle, true, 'V', _( "Repair vehicle" ),
+                            wrap60( _( "Auto-repair vehicle in designated zone - auto-fetch tools." ) ) );
+    }
+    if( flags & MultiButchery ) {
+        menu.addentry_desc( MultiButchery, true, 'B', _( "Butcher corpses" ),
+                            wrap60( _( "Auto-butcher anything in corpse loot zones - auto-fetch tools." ) ) );
+    }
+    if( flags & MultiMining ) {
+        menu.addentry_desc( MultiMining, true, 'M', _( "Mine Area" ),
+                            wrap60( _( "Auto-mine anything in mining zone - auto-fetch tools." ) ) );
+    }
+    if( flags & MultiDis ) {
+        menu.addentry_desc( MultiDis, true, 'D', _( "Disassemble items" ),
+                            wrap60( _( "Auto-disassemble anything in disassembly zone - auto-fetch tools." ) ) );
+
+    }
+    if( flags & MultiMopping ) {
+        menu.addentry_desc( MultiMopping, true, 'p', _( "Mop area" ), _( "Mop clean the area." ) );
+    }
+    if( flags & MultiStudy ) {
+        menu.addentry_desc( MultiStudy, true, 's', _( "Study from books in study zones" ),
+                            wrap60( _( "Find and read books from study zones." ) ) );
+    }
+
+    menu.query();
+    flags = ( menu.ret >= 0 ) ? menu.ret : None;
+
+    std::string action;
+    switch( flags ) {
+        case None:
+            add_msg( _( "Never mind." ) );
+            return;
+        case SortLoot:
+            action = "sort";
+            break;
+        case SortLootStatic:
+            action = "sort_static";
+            break;
+        case SortLootPersonal:
+            action = "sort_personal";
+            break;
+        case UnloadLoot:
+            action = "unload";
+            break;
+        case ConstructPlots:
+            action = "construct";
+            break;
+        case MultiFarmPlots:
+            action = "farm";
+            break;
+        case Multichoptrees:
+            action = "chop_trees";
+            break;
+        case Multichopplanks:
+            action = "chop_planks";
+            break;
+        case Multideconvehicle:
+            action = "vehicle_deconstruct";
+            break;
+        case Multirepairvehicle:
+            action = "vehicle_repair";
+            break;
+        case MultiButchery:
+            action = "butcher";
+            break;
+        case MultiMining:
+            action = "mine";
+            break;
+        case MultiDis:
+            action = "disassemble";
+            break;
+        case MultiMopping:
+            action = "mop";
+            break;
+        case MultiStudy:
+            action = "study";
+            break;
+        default:
+            return;
+    }
+    if( !cata_mp::client_start_zone_work( action ) ) {
+        start_owned_zone_work( player_character, action );
+    }
 }

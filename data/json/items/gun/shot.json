@@ -43,7 +43,7 @@
     "dispersion": 855,
     "durability": 8,
     "handling": 20,
-    "modes": [ [ "DEFAULT", "burst", 6 ] ],
+    "modes": [ [ "DEFAULT", "auto-rpm", "1800" ] ],
     "energy_drain": "1 kJ",
     "reload": 1000,
     "valid_mod_locations": [ [ "sights mount", 1 ], [ "sling", 1 ] ],

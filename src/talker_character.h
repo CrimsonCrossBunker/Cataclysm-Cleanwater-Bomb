@@ -7,6 +7,8 @@
 
 #include "bodypart.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include <optional>
 #include "coords_fwd.h"
 #include "enums.h"
 #include "talker.h"
@@ -24,14 +26,21 @@ class talker_character_const: virtual public const_talker
         talker_character_const( talker_character_const && ) = delete;
         talker_character_const &operator=( const talker_character_const & ) = default;
         talker_character_const &operator=( talker_character_const && ) = delete;
-        explicit talker_character_const( const Character *new_me ) : me_chr_const( new_me ) {};
+        explicit talker_character_const( const Character *new_me ) : me_chr_const( new_me ) {
+            if( new_me ) {
+                lifetime.emplace( *const_cast<Character *>( new_me ), true );
+            }
+        }
+        bool is_valid() const override {
+            return lifetime && static_cast<bool>( *lifetime );
+        }
         ~talker_character_const() override = default;
 
         Character const *get_const_character() const override {
-            return me_chr_const;
+            return is_valid() ? me_chr_const : nullptr;
         }
         Creature const *get_const_creature() const override {
-            return me_chr_const;
+            return is_valid() ? me_chr_const : nullptr;
         }
 
         // identity and location
@@ -221,6 +230,7 @@ class talker_character_const: virtual public const_talker
 
     private:
         const Character *me_chr_const{};
+        std::optional<character_action_guard> lifetime;
     protected:
         talker_character_const() = default;
 };
@@ -240,10 +250,10 @@ class talker_character: virtual public talker
         ~talker_character() override = default;
 
         Character *get_character() override {
-            return me_chr;
+            return is_valid() ? me_chr : nullptr;
         }
         Creature *get_creature() override {
-            return me_chr;
+            return is_valid() ? me_chr : nullptr;
         }
 
         void set_pos( tripoint_bub_ms new_pos ) override;
@@ -294,6 +304,8 @@ class talker_character: virtual public talker
         void i_add( const item &new_item ) override;
         void i_add_or_drop( item &new_item, bool force_equip = false ) override;
         void remove_items_with( const std::function<bool( const item & )> &filter ) override;
+        bool buy_monster( talker &seller, const mtype_id &mtype, int cost,
+                          int count, bool pacified, const translation &name ) override;
 
         void set_stored_kcal( int value ) override;
         void mod_stored_kcal( int value, bool ignore_weariness ) override;

@@ -51,6 +51,8 @@ void handle_all_liquid( item liquid, int radius, const item *avoid = nullptr );
  * produced the liquid).
  */
 void handle_npc_liquid( item liquid, Character &who );
+// Generated liquid already published in the world; debit that exact source.
+void handle_npc_liquid( item_location liquid, Character &who );
 
 /** Call handle_all_liquid for player or handle_npc_liquid for npc */
 void handle_all_or_npc_liquid( Character &p, item &newit, int radius = 0,
@@ -115,6 +117,9 @@ bool perform_liquid_transfer( item_location &liquid, liquid_dest_opt &target );
 
 // Select destination to use, but don't actually do anything with it. Does not allow for spilling.
 liquid_dest_opt select_liquid_target( item &liquid, int radius );
+// Destination selection only, including ground and vehicle choices. No transfer or activity.
+liquid_dest_opt query_liquid_target( item &liquid, const item *source, int radius,
+                                     bool allow_consume = true );
 
 } // namespace liquid_handler
 

@@ -46,6 +46,9 @@ cata_default_random_engine &rng_get_engine();
 unsigned int rng_bits();
 
 int rng( int lo, int hi );
+// Thread-local presentation choices only. Never use this stream for gameplay,
+// persisted content selection, or authoritative network decisions.
+int rng_visual( int lo, int hi );
 double rng_float( double lo, double hi );
 
 template<typename U>

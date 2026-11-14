@@ -2,7 +2,6 @@
 #ifndef CATA_SRC_MONSTER_H
 #define CATA_SRC_MONSTER_H
 
-#include <stdint.h>
 #include <algorithm>
 #include <bitset>
 #include <climits>
@@ -24,8 +23,8 @@
 #include "compatibility.h"
 #include "coordinates.h"
 #include "creature.h"
-#include "monster_uid.h"
 #include "monster_goal_policy.h"
+#include "monster_uid.h"
 #include "pet_slot.h"
 #include "type_id.h"
 #include "units_fwd.h"
@@ -604,8 +603,8 @@ class monster : public Creature
         int friendly = 0;
         int anger = 0;
         int morale = 2;
-        uint32_t mp_net_id = 0; // MP: network ID for multiplayer monster tracking
     private:
+        float rate_target_impl( Creature &c, float best, bool smart, bool already_visible ) const;
         monster_uid uid_;
         int amount_eaten = 0;
         void recheck_fed_status();

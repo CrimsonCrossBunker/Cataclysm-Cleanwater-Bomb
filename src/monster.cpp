@@ -64,6 +64,7 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "martialarts.h"
 #include "mapdata.h"
 #include "mattack_common.h"
 #include "melee.h"
@@ -2642,6 +2643,9 @@ bool monster::movement_impaired()
 
 bool monster::move_effects( bool )
 {
+    if( martial_grapple_blocks_movement( *this ) ) {
+        return false;
+    }
     // This function is relatively expensive, we want that cached
     // IMPORTANT: If adding any new effects here, make SURE to
     // add them to hardcoded_movement_impairing in effect.cpp
@@ -4846,7 +4850,7 @@ std::function<bool( const tripoint_bub_ms & )> monster::get_path_avoid() const
     return [this]( const tripoint_bub_ms & p ) {
         map &here = get_map();
         // If we can't move there and can't bash it, don't path through it.
-        if( !can_move_to( p ) && ( !bash_skill().empty() || !here.is_bashable( p ) ) ) {
+        if( !can_move_to( p ) && ( !type->bash_skill.empty() || !here.is_bashable( p ) ) ) {
             return true;
         }
 

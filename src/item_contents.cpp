@@ -798,19 +798,19 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
                 continue;
             }
 
-            for( item &it : pocket.edit_contents() ) {
-                const ret_val<item *> inserted = current_pocket_iter->insert_item( std::move( it ),
+            std::list<item> &items = pocket.edit_contents();
+            for( auto it = items.begin(); it != items.end(); ) {
+                const ret_val<item *> inserted = current_pocket_iter->insert_item( std::move( *it ),
                                                  into_bottom, restack_charges, ignore_contents );
-                if( !inserted.success() ) {
-                    // insert_item only moves the item after a successful containment check.
-                    // NOLINTNEXTLINE(bugprone-use-after-move)
-                    uninserted_items.push_back( std::move( it ) );
-                    DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME ) <<
-                            "error: item " << uninserted_items.back().typeId().str() <<
-                            "cannot fit into pocket while loading: " << inserted.str();
+                if( inserted.success() ) {
+                    it = items.erase( it );
+                } else {
+                    ++it;
                 }
             }
-            pocket.clear_items();
+            if( !items.empty() ) {
+                mismatched_pockets.push_back( &pocket );
+            }
 
             if( pocket.saved_sealed() ) {
                 current_pocket_iter->seal();
@@ -888,8 +888,9 @@ void item_contents::combine( item_contents &&read_input, const bool convert,
                 // Failed pocket lookup or containment leaves the item available for migration.
                 // NOLINTNEXTLINE(bugprone-use-after-move)
                 uninserted_items.push_back( std::move( it ) );
-                debugmsg( "error: item %s cannot fit into any pocket while loading: %s",
-                          uninserted_items.back().typeId().str(), inserted.str() );
+                DebugLog( D_WARNING, D_GAME ) << "Preserving item " <<
+                                              uninserted_items.back().typeId().str() <<
+                                              " in a migration pocket: " << inserted.str();
             }
         }
         pocket->clear_items();
@@ -1056,6 +1057,7 @@ std::pair<item_location, item_pocket *> item_contents::best_pocket( const item &
     // @TODO: this could be made better by doing a plain preliminary volume check.
     // if the total volume of the parent is not sufficient, a child won't have enough either.
     std::pair<item_location, item_pocket *> ret = { this_loc, nullptr };
+    const Character *carrier = this_loc ? this_loc.carrier() : nullptr;
     std::vector<item_pocket *> valid_pockets;
     for( item_pocket &pocket : contents ) {
         if( pocket.is_forbidden() ) {
@@ -1078,7 +1080,8 @@ std::pair<item_location, item_pocket *> item_contents::best_pocket( const item &
             //if not allow check nested pockets ,it is no need to save valid pockets
             valid_pockets.emplace_back( &pocket );
         }
-        if( !ignore_settings && !pocket.settings.accepts_item( it ) ) {
+        if( !ignore_settings && ( !pocket.settings.accepts_item( it ) ||
+                                  ( carrier && carrier->is_avatar() && pocket.settings.is_disabled() ) ) ) {
             // Item forbidden by whitelist / blacklist
             continue;
         }
@@ -3159,4 +3162,18 @@ void pocket_management_menu( const std::string &title,
     pocket_selector.allow_additional = true;
 
     pocket_selector.query();
+}
+
+void item_contents::apply_current_state( item_contents &&state )
+{
+    // Pool nodes across pockets of this container so pocket changes do not
+    // invalidate surviving item locations. Additional pocket modules are values.
+    std::list<item> existing;
+    for( item_pocket &pocket : contents ) {
+        pocket.release_current_nodes( existing );
+    }
+    for( item_pocket &pocket : state.contents ) {
+        pocket.reuse_current_nodes( existing );
+    }
+    *this = std::move( state );
 }

@@ -299,6 +299,16 @@
     "auto_needs": true
   },
   {
+    "id": "ACT_HELP_PARTNER",
+    "type": "activity_type",
+    "activity_level": "MODERATE_EXERCISE",
+    "verb": "helping your partner",
+    "rooted": true,
+    "based_on": "time",
+    "can_resume": false,
+    "auto_needs": true
+  },
+  {
     "id": "ACT_CRAFT",
     "type": "activity_type",
     "activity_level": "MODERATE_EXERCISE",
@@ -974,6 +984,24 @@
     "type": "activity_type",
     "activity_level": "NO_EXERCISE",
     "verb": "wielding item",
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
+    "id": "ACT_BIONIC_WATER",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "extracting water",
+    "rooted": true,
+    "based_on": "neither",
+    "can_resume": false
+  },
+  {
+    "id": "ACT_REMOTE_VEHICLE",
+    "type": "activity_type",
+    "activity_level": "NO_EXERCISE",
+    "verb": "accessing vehicle controls",
+    "rooted": true,
     "based_on": "neither",
     "can_resume": false
   },

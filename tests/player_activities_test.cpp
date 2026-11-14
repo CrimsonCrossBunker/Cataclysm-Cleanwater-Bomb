@@ -13,6 +13,7 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "character.h"
+#include "construction.h"
 #include "coordinates.h"
 #include "enums.h"
 #include "flag.h"
@@ -2025,7 +2026,12 @@ static const std::vector<std::function<player_activity()>> test_activities {
     [] { return player_activity( drop_activity_actor() ); },
     //player_activity( ebooksave_activity_actor( loc, loc ) ),
     [] { return player_activity( firstaid_activity_actor( 1, std::string(), get_avatar().getID() ) ); },
-    [] { return player_activity( forage_activity_actor( 1 ) ); },
+    [] {
+        map &here = get_map();
+        const tripoint_bub_ms bush = get_avatar().pos_bub() + tripoint::east;
+        here.ter_set( bush, ter_str_id( "t_underbrush" ) );
+        return player_activity( forage_activity_actor( here.get_abs( bush ) ) );
+    },
     [] { return player_activity( gunmod_remove_activity_actor( 1, item_location(), 0 ) ); },
     [] { return player_activity( hacking_activity_actor( item_location() ) ); },
     //player_activity( hacksaw_activity_actor( p, loc ) ),
@@ -2212,4 +2218,24 @@ TEST_CASE( "activity_interruption_by_distractions", "[activity][interruption]" )
             CHECK( dists.find( distraction_type::dangerous_field ) != dists.end() );
         }
     }
+}
+
+TEST_CASE( "trunk_construction_starts_owned_plank_activity", "[activity][construction]" )
+{
+    clear_avatar();
+    clear_map();
+    avatar &who = get_avatar();
+    const auto origin = who.pos_abs();
+    const construction_str_id recipe( "constr_chop_trunk" );
+    REQUIRE( recipe.is_valid() );
+    REQUIRE_FALSE( recipe->post_specials.empty() );
+    for( const auto finish : recipe->post_specials ) {
+        finish( who.pos_bub( get_map() ) + tripoint::east, who );
+    }
+    REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+    CHECK( who.activity.placement == origin );
+    CHECK( who.activity.moves_left == to_moves<int>( 20_minutes ) );
+    who.activity.do_turn( who );
+    CHECK( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+    who.cancel_activity();
 }

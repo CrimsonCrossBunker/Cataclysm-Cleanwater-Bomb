@@ -1,6 +1,6 @@
 schema_version: 1
 kind: documentation_registry
-source_commit: ad0e598ac9fb8d7b9f6a78a739ec677d32b87070
+source_commit: 73f285ce0085a34611ef22f7b50f6252c62b9e45
 scope: Tracked documentation and machine contracts from the Git index; untracked build caches are never
   traversed.
 entry_count: 243
@@ -834,17 +834,6 @@ entries:
   authority: explanatory
   source_of_truth: false
   stable_document_id: mods.mind-over-matter.no-knacks
-  ccb_docs_ids: []
-  generated: false
-  generated_by: null
-  include_in_ai_index: false
-- id: repo.data-mods-monkey-king-readme-md
-  path: data/mods/Monkey_King/README.md
-  category: historical_document
-  status: historical
-  authority: historical
-  source_of_truth: false
-  stable_document_id: null
   ccb_docs_ids: []
   generated: false
   generated_by: null
@@ -2613,6 +2602,17 @@ entries:
   authority: explanatory
   source_of_truth: false
   stable_document_id: translation-notes-ru
+  ccb_docs_ids: []
+  generated: false
+  generated_by: null
+  include_in_ai_index: false
+- id: repo.rust-coop-ecs-readme-md
+  path: rust/coop_ecs/README.md
+  category: historical_document
+  status: historical
+  authority: historical
+  source_of_truth: false
+  stable_document_id: null
   ccb_docs_ids: []
   generated: false
   generated_by: null

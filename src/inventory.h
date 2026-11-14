@@ -235,6 +235,8 @@ class inventory : public visitable
 
         void json_load_invcache( const JsonValue &jsin );
         void json_load_items( const JsonArray &ja );
+        void load_current_items( const JsonArray &data );
+        void apply_current_state( inventory &&state );
 
         void json_save_invcache( JsonOut &json ) const;
         void json_save_items( JsonOut &json ) const;

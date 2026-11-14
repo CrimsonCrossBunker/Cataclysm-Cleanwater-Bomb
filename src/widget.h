@@ -89,6 +89,7 @@ enum class widget_var : int {
     safe_mode_text, // Safe mode text, color string
     safe_mode_classic_text, // Safe mode text, classic mode color string.
     style_text,     // Active martial arts style name
+    technique_cooldowns_text,
     sundial_text,   // Sundial representing the time of day
     sundial_time_text,   // Current time - exact if character has a watch, sundial otherwise
     time_text,      // Current time - exact if character has a watch, approximate otherwise
@@ -208,7 +209,7 @@ namespace cata::lua_platform
 {
 class content_transaction;
 class character_content_transaction;
-}
+} // namespace cata::lua_platform
 
 struct widget_clause {
     private:

@@ -21,12 +21,12 @@
 
 namespace ai_reachability
 {
-class frame;
 struct output;
-}
+} // namespace ai_reachability
 
 class JsonArray;
 class JsonOut;
+class creature_reachability_filter;
 class game;
 class monster;
 class npc;
@@ -107,6 +107,10 @@ class creature_tracker
          */
         bool add( const shared_ptr_fast<monster> &critter );
         size_t size() const;
+        // Conservative, ordered candidates for friendly-monster target searches.
+        // False asks the caller to use the original full-list traversal.
+        bool nearby_monster_targets( const tripoint_abs_ms &origin,
+                                     std::vector<shared_ptr_fast<monster>> &out );
         /** Updates the position of the given monster to the given point. Returns whether the operation
          *  was successful. */
         bool update_pos( const monster &critter, const tripoint_abs_ms &old_pos,
@@ -158,7 +162,9 @@ class creature_tracker
         /** Remove the monsters entry in @ref monsters_by_location */
         void remove_from_location_map( const monster &critter );
 
-        void flood_fill_zone( const Creature &origin );
+        void flood_fill_zone( const Creature &origin,
+                              const creature_reachability_filter *occupancy = nullptr );
+        creature_reachability_filter creature_locations_for_flood() const;
 
         void rebuild_cache();
         size_t location_bucket( const tripoint_abs_ms &pos ) const;
@@ -206,10 +212,13 @@ class creature_tracker
         std::array<std::array<std::bitset<MAPSIZE_Y>, MAPSIZE_X>, OVERMAP_LAYERS>
         passability_bitmap_{};  // NOLINT(cata-serialize)
 
-        // Preserve the offsets of the authoritative location and zone caches.
-        std::unique_ptr<ai_reachability::frame> reachability_preparation_; // NOLINT(cata-serialize)
+        // Keep preparation and traversal scratch behind the same owner boundary.
+        struct reachability_state;
+        std::unique_ptr<reachability_state> reachability_state_; // NOLINT(cata-serialize)
         double reachability_flood_cost_ms_ = 0.0; // NOLINT(cata-serialize)
         double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
+        struct target_candidate_state;
+        std::unique_ptr<target_candidate_state> target_candidates_; // NOLINT(cata-serialize)
 
         friend game;
 };

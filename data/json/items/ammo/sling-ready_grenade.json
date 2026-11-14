@@ -25,7 +25,7 @@
       "menu_text": "Light rag",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "NPC_ACTIVATE", "NO_REPAIR" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "NPC_ACTIVATE", "NO_REPAIR" ],
     "ammo_type": "sling-ready_grenade",
     "damage": { "damage_type": "bash", "amount": 5 },
     "//": "Total range with staff sling 21 - 5 more than can be thrown by a player with 10 strength",
@@ -57,7 +57,7 @@
       "menu_text": "Activate",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "BOMB", "GRENADE" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "BOMB", "GRENADE" ],
     "ammo_type": "sling-ready_grenade",
     "damage": { "damage_type": "bash", "amount": 6 },
     "//": "Total range with staff sling 35 - 5 more than can be thrown by a player with 10 strength",
@@ -90,7 +90,7 @@
       "menu_text": "Light fuse",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
     "ammo_type": "rock",
     "//": "Same damage and ranged values as the normal grenade",
     "effects": [ "COOKOFF", "NON_FOULING", "EXPLOSIVE_SMALL_HOMEMADE_GRENADE_1" ]
@@ -117,7 +117,7 @@
       "menu_text": "Light fuse",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
     "//": "Same damage and ranged values as the normal grenade",
     "effects": [ "COOKOFF", "NON_FOULING", "EXPLOSIVE_HOMEMADE_GRENADE_1" ]
   },
@@ -144,7 +144,7 @@
       "menu_text": "Light fuse",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
     "ammo_type": "rock",
     "//": "Same damage and ranged values as the normal grenade",
     "effects": [ "COOKOFF", "NON_FOULING", "EXPLOSIVE_SMALL_HOMEMADE_GRENADE_2" ]
@@ -171,7 +171,7 @@
       "menu_text": "Light fuse",
       "type": "transform"
     },
-    "flags": [ "SLING_AMMO", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
+    "flags": [ "SLING_AMMO", "SLING_PROJECTILE", "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ],
     "//": "Same damage and ranged values as the normal grenade",
     "effects": [ "COOKOFF", "NON_FOULING", "EXPLOSIVE_HOMEMADE_GRENADE_2" ]
   }

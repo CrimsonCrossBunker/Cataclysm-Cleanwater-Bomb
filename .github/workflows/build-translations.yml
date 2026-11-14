@@ -26,7 +26,14 @@ jobs:
       - name: Install Transifex CLI
         if: ${{ env.TX_TOKEN != '' }}
         run: |
-          curl -sL https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-amd64.tar.gz | sudo tar zxvf - -C /usr/bin tx
+          archive="$RUNNER_TEMP/tx-linux-amd64.tar.gz"
+          curl --fail --location --show-error --silent \
+            --retry 3 --retry-delay 2 --retry-connrefused \
+            --connect-timeout 30 --max-time 120 \
+            --output "$archive" \
+            https://github.com/transifex/cli/releases/download/v1.6.17/tx-linux-amd64.tar.gz
+          tar -tzf "$archive" tx > /dev/null
+          sudo tar -xzf "$archive" -C /usr/bin tx
 
       - name: Checkout local repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

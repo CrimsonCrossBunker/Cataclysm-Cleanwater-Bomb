@@ -98,7 +98,7 @@
     "color": "brown",
     "location": "mechanism",
     "mod_targets": [ "inventor_pistol" ],
-    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 3 ] ],
+    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "900" ] ],
     "reload_modifier": -90,
     "range_modifier": 2,
     "handling_modifier": 9,

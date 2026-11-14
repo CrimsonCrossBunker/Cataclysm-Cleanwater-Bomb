@@ -20,6 +20,7 @@
 
 #include "avatar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -33,6 +34,8 @@
 #include "map.h"
 #include "monster.h"
 #include "npc.h"
+#include "npc_lifetime.h"
+#include "mp_client_conn.h"
 #include "omdata.h"
 #include "overmapbuffer.h"
 #include "player_activity.h"
@@ -82,7 +85,22 @@ std::string mission_type::tname() const
 }
 
 static std::unordered_map<int, mission> world_missions;
+// Reverse index of the same registry, used to validate legacy borrowed pointers
+// without dereferencing freed storage or scanning every mission on each query.
+static std::unordered_map<const mission *, int> mission_addresses;
 static std::size_t next_mission_identity_generation = 1;
+
+// Phase callbacks may erase or replace entries in world_missions. Keep only
+// identities across callbacks, including when a death affects several quests.
+static std::vector<std::pair<int, std::size_t>> snapshot_missions()
+{
+    std::vector<std::pair<int, std::size_t>> result;
+    result.reserve( world_missions.size() );
+    for( const auto &entry : world_missions ) {
+        result.emplace_back( entry.first, entry.second.identity_generation() );
+    }
+    return result;
+}
 
 static std::size_t issue_mission_identity_generation()
 {
@@ -100,6 +118,7 @@ mission *mission::reserve_new( const mission_type_id &type, const character_id &
     // TODO: Warn about overwrite?
     mission &miss = world_missions[tmp.uid] = tmp;
     miss.identity_generation_ = issue_mission_identity_generation();
+    mission_addresses[&miss] = miss.uid;
     return &miss;
 }
 
@@ -116,6 +135,16 @@ mission *mission::find( int id, bool ok_missing )
     return nullptr;
 }
 
+mission *mission::find_by_address( const mission *candidate )
+{
+    const auto address = mission_addresses.find( candidate );
+    if( address == mission_addresses.end() ) {
+        return nullptr;
+    }
+    mission *live = find( address->second, true );
+    return live == candidate ? live : nullptr;
+}
+
 bool mission::remove_unassigned( const int id )
 {
     const auto iter = world_missions.find( id );
@@ -123,6 +152,7 @@ bool mission::remove_unassigned( const int id )
         iter->second.is_assigned() ) {
         return false;
     }
+    mission_addresses.erase( &iter->second );
     world_missions.erase( iter );
     return true;
 }
@@ -142,6 +172,7 @@ void mission::remove_active_world_mission( mission &cur_mission )
 {
     for( auto iter = world_missions.begin(); iter != world_missions.end(); iter++ ) {
         if( iter->second.get_id() == cur_mission.get_id() && iter->second.in_progress() ) {
+            mission_addresses.erase( &iter->second );
             world_missions.erase( iter );
             break;
         }
@@ -150,21 +181,34 @@ void mission::remove_active_world_mission( mission &cur_mission )
 
 void mission::add_existing( const mission &m )
 {
-    world_missions[ m.uid ] = m;
-    world_missions[ m.uid ].identity_generation_ =
-        issue_mission_identity_generation();
+    mission &stored = world_missions[m.uid] = m;
+    stored.identity_generation_ = issue_mission_identity_generation();
+    mission_addresses[&stored] = stored.uid;
+}
+
+void mission::sync_replica( const mission &m )
+{
+    auto iter = world_missions.find( m.uid );
+    if( iter == world_missions.end() ) {
+        add_existing( m );
+        return;
+    }
+    const std::size_t preserved_generation = iter->second.identity_generation_;
+    iter->second = m;
+    iter->second.identity_generation_ = preserved_generation;
+    mission_addresses[&iter->second] = iter->second.uid;
 }
 
 namespace
 {
 
-std::unordered_set<itype_id> find_item_mission_targets()
+std::unordered_set<itype_id> find_item_mission_targets( const character_id owner )
 {
     std::unordered_set<itype_id> result;
     for( const auto &e : world_missions ) {
         const mission &miss = e.second;
-        if( miss.in_progress() && !miss.get_npc_id().is_valid() &&
-            miss.get_type().goal == MGOAL_FIND_ITEM ) {
+        if( miss.in_progress() && miss.get_assigned_player_id() == owner &&
+            !miss.get_npc_id().is_valid() && miss.get_type().goal == MGOAL_FIND_ITEM ) {
             result.insert( miss.get_item_id() );
         }
     }
@@ -219,29 +263,41 @@ std::unordered_set<itype_id> present_mission_items( const std::unordered_set<ity
 
 void mission::process_all()
 {
+    if( cata_mp::is_client_mode() ) {
+        return;
+    }
     avatar &player_character = get_avatar();
-    const std::unordered_set<itype_id> targets = find_item_mission_targets();
+    const std::unordered_set<itype_id> targets = find_item_mission_targets( player_character.getID() );
 
     // Activity blocks MGOAL_FIND_ITEM before it searches any items.
     const bool use_item_filter = !targets.empty() && !player_character.activity;
     const std::unordered_set<itype_id> present = use_item_filter ? present_mission_items( targets ) :
-        std::unordered_set<itype_id>();
+            std::unordered_set<itype_id>();
     bool item_filter_valid = use_item_filter;
 
-    for( auto &e : world_missions ) {
-        mission &miss = e.second;
-        const bool was_in_progress = miss.in_progress();
-        const bool can_skip_item_check = item_filter_valid && was_in_progress &&
-                                         !miss.get_npc_id().is_valid() &&
-                                         miss.get_type().goal == MGOAL_FIND_ITEM &&
-                                         ( !miss.has_deadline() || calendar::turn <= miss.get_deadline() ) &&
-                                         present.count( miss.get_item_id() ) == 0;
-        if( !can_skip_item_check ) {
-            miss.process();
+    // Preserve the current iteration order, but callbacks may insert, replace,
+    // or erase missions. Never keep an unordered-map iterator across them.
+    for( const auto &entry : snapshot_missions() ) {
+        mission *miss = find( entry.first, true );
+        if( !miss || miss->identity_generation() != entry.second ) {
+            continue;
         }
-
-        // Mission end effects can change the inventory used by later checks.
-        if( was_in_progress && !miss.in_progress() ) {
+        const bool was_in_progress = miss->in_progress();
+        const bool had_pending_effects = miss->failure_effects_pending;
+        const bool can_skip_item_check = item_filter_valid && was_in_progress &&
+                                         miss->get_assigned_player_id() == player_character.getID() &&
+                                         !miss->get_npc_id().is_valid() &&
+                                         miss->get_type().goal == MGOAL_FIND_ITEM &&
+                                         ( !miss->has_deadline() || calendar::turn <= miss->get_deadline() ) &&
+                                         present.count( miss->get_item_id() ) == 0;
+        if( !can_skip_item_check ) {
+            miss->process();
+        }
+        const mission *after = find( entry.first, true );
+        // Completion/failure effects may change inventory relevant to later checks.
+        if( !after || after->identity_generation() != entry.second ||
+            ( was_in_progress && !after->in_progress() ) ||
+            ( had_pending_effects && !after->failure_effects_pending ) ) {
             item_filter_valid = false;
         }
     }
@@ -264,95 +320,113 @@ std::vector<int> mission::to_uid_vector( const std::vector<mission *> &vec )
     std::vector<int> result;
     result.reserve( vec.size() );
     for( const mission *miss : vec ) {
-        result.push_back( miss->uid );
+        if( const mission *live = find_by_address( miss ) ) {
+            result.push_back( live->uid );
+        }
     }
     return result;
 }
 
 void mission::clear_all()
 {
+    mission_addresses.clear();
     world_missions.clear();
 }
 
 void mission::on_creature_death( Creature &poor_dead_dude )
 {
-    if( poor_dead_dude.is_hallucination() ) {
+    if( cata_mp::is_client_mode() || poor_dead_dude.is_hallucination() ) {
         return;
     }
     monster *mon = dynamic_cast<monster *>( &poor_dead_dude );
     if( mon != nullptr ) {
 
-        if( mon->is_nemesis() ) {
-            //the nemesis monster doesn't have a mission attached bc it's an overmap horde
-            //so we loop to find the appropriate mission and complete it
-            avatar &player_character = get_avatar();
-            for( std::pair<const int, mission> &e : world_missions ) {
-                mission &i = e.second;
-                if( i.type->goal == MGOAL_KILL_NEMESIS && player_character.getID() == i.player_id ) {
-                    if( i.type->monster_kill_goal == 1 ) {
-                        i.step_complete( 1 );
-                    } else {
-                        // Recurring nemesis!!
-                        mission_start::kill_nemesis( &i );
-                    }
-                    return;
+        std::set<int> quest_ids = mon->mission_ids;
+        if( mon->is_nemesis() && quest_ids.empty() ) {
+            // Old unbound nemeses predate quest identities on hordes. Only
+            // those retain the original local-avatar association.
+            for( const auto &entry : world_missions ) {
+                const mission &task = entry.second;
+                if( task.in_progress() && task.type->goal == MGOAL_KILL_NEMESIS &&
+                    task.player_id == get_avatar().getID() ) {
+                    quest_ids.insert( entry.first );
+                    break;
                 }
             }
         }
-
-        if( mon->mission_ids.empty() ) {
-            return;
+        std::vector<std::pair<int, std::size_t>> affected;
+        for( const int mission_id : quest_ids ) {
+            const mission *entry = find( mission_id );
+            if( entry ) {
+                affected.emplace_back( mission_id, entry->identity_generation() );
+            }
         }
-        for( const int mission_id : mon->mission_ids ) {
-            mission *found_mission = mission::find( mission_id );
-            if( !found_mission ) {
-                debugmsg( "invalid mission id %d", mission_id );
+        // Failure effects may remove this creature or replace another mission.
+        // Do not access the creature or its mission set again after calling out.
+        for( const auto &identity : affected ) {
+            mission *entry = find( identity.first, true );
+            if( !entry || entry->identity_generation() != identity.second || !entry->in_progress() ) {
                 continue;
             }
-            const mission_type *type = found_mission->type;
-            if( type->goal == MGOAL_FIND_MONSTER ) {
-                found_mission->fail();
-            }
-            if( type->goal == MGOAL_KILL_MONSTER ) {
-                found_mission->step_complete( 1 );
-            }
-            if( type->goal == MGOAL_KILL_MONSTERS ) {
-                if( found_mission->monster_kill_goal-- == 0 ) {
-                    found_mission->step_complete( 1 );
-                }
+            switch( entry->type->goal ) {
+                case MGOAL_KILL_NEMESIS:
+                    if( entry->type->monster_kill_goal == 1 ) {
+                        entry->step_complete( 1 );
+                    } else {
+                        entry->nemesis_respawn_pending = true;
+                        entry->process();
+                    }
+                    break;
+                case MGOAL_FIND_MONSTER:
+                    entry->fail();
+                    break;
+                case MGOAL_KILL_MONSTER:
+                    entry->step_complete( 1 );
+                    break;
+                case MGOAL_KILL_MONSTERS:
+                    if( entry->monster_kill_goal-- == 0 ) {
+                        entry->step_complete( 1 );
+                    }
+                    break;
+                default:
+                    break;
             }
         }
         return;
     }
-    npc *p = dynamic_cast<npc *>( &poor_dead_dude );
-    if( p == nullptr ) {
-        // Must be the player
-        for( mission *&miss : get_avatar().get_active_missions() ) {
-            // mission is free and can be reused
-            miss->player_id = character_id();
-        }
-        // The missions remains assigned to the (dead) character. This should not cause any problems
-        // as the character is dismissed anyway.
-        // Technically, the active missions could be moved to the failed mission section.
+    const Character *dead_character = poor_dead_dude.as_character();
+    if( !dead_character || !dead_character->getID().is_valid() ) {
         return;
     }
-    const character_id dead_guys_id = p->getID();
-    for( auto &e : world_missions ) {
-        mission &i = e.second;
-        if( !i.in_progress() ) {
+    const character_id dead_id = dead_character->getID();
+    const bool was_npc = dead_character->as_npc() != nullptr;
+    const auto affected = snapshot_missions();
+    // NPC-backed remote players own quests too. Release the actual dead
+    // character's active tasks, never the local avatar's or another player's.
+    // Keep the dead character's ledger for native local takeover/history.
+    for( const auto &identity : affected ) {
+        mission *entry = find( identity.first, true );
+        if( entry && entry->in_progress() && entry->player_id == dead_id ) {
+            entry->player_id = character_id();
+        }
+    }
+    if( !was_npc ) {
+        return;
+    }
+    for( const auto &identity : affected ) {
+        mission *entry = find( identity.first, true );
+        if( !entry || entry->identity_generation() != identity.second || !entry->in_progress() ) {
             continue;
         }
-        //complete the mission if you needed killing
-        if( i.type->goal == MGOAL_ASSASSINATE && i.target_npc_id == dead_guys_id ) {
-            i.step_complete( 1 );
+        // A failure phase can erase this entry and any later entry. Capture the
+        // decision first and perform at most one terminal transition.
+        const bool fail_for_death = entry->npc_id == dead_id ||
+                                    ( entry->type->goal == MGOAL_RECRUIT_NPC && entry->target_npc_id == dead_id );
+        if( entry->type->goal == MGOAL_ASSASSINATE && entry->target_npc_id == dead_id ) {
+            entry->step_complete( 1 );
         }
-        //fail the mission if the mission giver dies
-        if( i.npc_id == dead_guys_id ) {
-            i.fail();
-        }
-        //fail the mission if recruit target dies
-        if( i.type->goal == MGOAL_RECRUIT_NPC && i.target_npc_id == dead_guys_id ) {
-            i.fail();
+        if( fail_for_death ) {
+            entry->fail();
         }
     }
 }
@@ -419,10 +493,29 @@ mission *mission::reserve_random( const mission_origin origin, const tripoint_ab
     return mission::reserve_new( type, npc_id );
 }
 
-void mission::assign( avatar &u )
+Character *mission::assigned_character() const
 {
-    if( player_id == u.getID() ) {
-        debugmsg( "strange: player is already assigned to mission %d", uid );
+    if( !player_id.is_valid() ) {
+        return nullptr;
+    }
+    avatar &local = get_avatar();
+    if( local.getID() == player_id ) {
+        return local.is_dead_state() ? nullptr : &local;
+    }
+    npc *owner = g->find_npc( player_id );
+    if( !owner || owner->is_dead() || !g->shared_from( *owner ) ) {
+        return nullptr;
+    }
+    // Registry entries are weak: an active NPC need not already have a held
+    // reference. Confirm native loading before tracking, and never reactivate
+    // an explicitly retired incarnation.
+    const npc_lifetime active = g->npc_lifetimes().track_active( *owner );
+    return active.resolve( g->npc_lifetimes() ) == owner ? owner : nullptr;
+}
+
+void mission::assign( Character &u )
+{
+    if( !u.getID().is_valid() || player_id == u.getID() ) {
         return;
     }
     if( player_id.is_valid() ) {
@@ -430,59 +523,101 @@ void mission::assign( avatar &u )
                   uid, player_id.get_value() );
         return;
     }
+    const character_action_guard owner( u );
+    if( !owner ) {
+        return;
+    }
     player_id = u.getID();
     u.on_mission_assignment( *this );
-    if( status == mission_status::yet_to_start ) {
-        const kill_tracker &kills = g->get_kill_tracker();
-        if( type->goal == MGOAL_KILL_MONSTER_TYPE && monster_type != mtype_id::NULL_ID() ) {
-            kill_count_to_reach = kills.kill_count( monster_type ) + monster_kill_goal;
-        } else if( type->goal == MGOAL_KILL_MONSTER_SPEC ) {
-            kill_count_to_reach = kills.kill_count( monster_species ) + monster_kill_goal;
-        }
-        dialogue d( get_talker_for( u ), get_talker_for( g->find_npc( npc_id ) ) );
-        time_duration deadline_as_var = type->deadline.evaluate( d );
-        if( deadline_as_var != 0_turns ) {
-            deadline = calendar::turn + deadline_as_var;
-        } else {
-            deadline = calendar::turn_zero;
-        }
-        type->start( this );
-        status = mission_status::in_progress;
-        cata::lua_platform::dispatch_native_hook(
-        "on_mission_start", {
-            {
-                "mission",
-                cata::lua_platform::native_callback_mission {
-                    uid, identity_generation_
-                }
-            }
-        } );
+    if( status != mission_status::yet_to_start ) {
+        return;
     }
+    const int mission_id = uid;
+    const std::size_t generation = identity_generation_;
+    const auto live = [&]() {
+        const mission *current = find( mission_id, true );
+        return owner && current == this && current->identity_generation() == generation;
+    };
+    const kill_statistics &kills = u.get_kill_statistics();
+    if( type->goal == MGOAL_KILL_MONSTER_TYPE && monster_type != mtype_id::NULL_ID() ) {
+        kill_count_to_reach = kills.kill_count( monster_type ) + monster_kill_goal;
+    } else if( type->goal == MGOAL_KILL_MONSTER_SPEC ) {
+        kill_count_to_reach = kills.kill_count( monster_species ) + monster_kill_goal;
+    }
+    dialogue d( get_talker_for( u ), get_talker_for( g->find_npc( npc_id ) ) );
+    const time_duration deadline_as_var = type->deadline.evaluate( d );
+    if( !live() ) {
+        return;
+    }
+    deadline = deadline_as_var != 0_turns ? calendar::turn + deadline_as_var : calendar::turn_zero;
+    // Publish the transition before arbitrary phase callbacks: reentrant
+    // completion must not be overwritten by a late in_progress assignment.
+    status = mission_status::in_progress;
+    const auto start_phase = type->start;
+    if( start_phase ) {
+        start_phase( this, u );
+    }
+    if( !live() ) {
+        return;
+    }
+    cata::lua_platform::dispatch_native_hook(
+    "on_mission_start", {
+        { "mission", cata::lua_platform::native_callback_mission { mission_id, generation } }
+    } );
 }
 
 void mission::fail()
 {
-    fail( get_avatar() );
+    if( has_failed() || has_succeeded() ) {
+        return;
+    }
+    if( Character *owner = assigned_character() ) {
+        fail( *owner );
+    } else {
+        status = mission_status::failure;
+        nemesis_respawn_pending = false;
+        deadline = calendar::turn;
+        // The owner may be disconnected/unloaded. Persist the phase instead of
+        // applying that character's penalties or scripts to the local avatar.
+        failure_effects_pending = true;
+    }
 }
 
-void mission::fail( avatar &player_character )
+void mission::fail( Character &player_character )
 {
-    status = mission_status::failure;
-    if( player_character.getID() == player_id ) {
-        player_character.on_mission_finished( *this );
+    if( player_character.getID() != player_id || has_failed() || has_succeeded() ) {
+        return;
     }
-    // Tracks completion/failure
+    status = mission_status::failure;
+    nemesis_respawn_pending = false;
     deadline = calendar::turn;
+    failure_effects_pending = true;
+    finish_failure( player_character );
+}
 
-    type->fail( this );
+void mission::finish_failure( Character &who )
+{
+    const character_action_guard owner( who );
+    if( !failure_effects_pending || who.getID() != player_id || !owner ) {
+        return;
+    }
+    const int mission_id = uid;
+    const std::size_t generation = identity_generation_;
+    const auto fail_phase = type->fail;
+    // Consume before calling out: a repeated process() or saved result cannot
+    // replay a partially executed phase.
+    failure_effects_pending = false;
+    who.on_mission_finished( *this );
+    if( fail_phase ) {
+        fail_phase( this, who );
+    }
+    const mission *current = find( mission_id, true );
+    if( !owner || current != this || current->identity_generation() != generation ) {
+        return;
+    }
     cata::lua_platform::dispatch_native_hook(
     "on_mission_end", {
-        {
-            "mission",
-            cata::lua_platform::native_callback_mission {
-                uid, identity_generation_
-            }
-        },
+        { "mission", cata::lua_platform::native_callback_mission { mission_id, generation } },
         { "success", false }
     } );
 }
@@ -520,19 +655,29 @@ void mission::step_complete( const int _step )
 
 void mission::wrap_up()
 {
-    wrap_up( get_avatar() );
+    if( Character *owner = assigned_character() ) {
+        wrap_up( *owner );
+    }
 }
 
-void mission::wrap_up( avatar &player_character )
+void mission::wrap_up( Character &player_character )
 {
-    if( player_character.getID() != player_id ) {
-        // This is called from npctalk.cpp, the npc should only offer the option to wrap up mission
-        // that have been assigned to the current player.
-        debugmsg( "mission::wrap_up called, player %d was assigned, but current player is %d",
-                  player_id.get_value(), player_character.getID().get_value() );
+    if( player_character.getID() != player_id || has_failed() || has_succeeded() ) {
+        return;
     }
+    const character_action_guard owner( player_character );
+    if( !owner ) {
+        return;
+    }
+    const int mission_id = uid;
+    const std::size_t generation = identity_generation_;
+    const auto live = [&]() {
+        const mission *current = find( mission_id, true );
+        return owner && current == this && current->identity_generation() == generation;
+    };
 
     status = mission_status::success;
+    nemesis_respawn_pending = false;
     player_character.on_mission_finished( *this );
     std::vector<item_comp> comps;
     switch( type->goal ) {
@@ -558,15 +703,24 @@ void mission::wrap_up( avatar &player_character )
             }
 
             player_character.consume_items( comps );
+            if( !live() ) {
+                return;
+            }
 
             if( remove_container ) {
                 std::vector<item_comp> container_comp = std::vector<item_comp>();
                 if( !empty_container.is_null() ) {
                     container_comp.emplace_back( empty_container, type->item_count );
                     player_character.consume_items( container_comp );
+                    if( !live() ) {
+                        return;
+                    }
                 } else {
                     container_comp.emplace_back( container, type->item_count );
                     player_character.consume_items( container_comp );
+                    if( !live() ) {
+                        return;
+                    }
                 }
             }
         }
@@ -577,7 +731,11 @@ void mission::wrap_up( avatar &player_character )
             if( item_sought.is_software() ) {
                 int consumed = 0;
                 while( consumed < item_count ) {
-                    if( player_character.consume_software_container( type->item_id ) ) {
+                    const bool consumed_item = player_character.consume_software_container( type->item_id );
+                    if( !live() ) {
+                        return;
+                    }
+                    if( consumed_item ) {
                         consumed++;
                     } else {
                         debugmsg( "Tried to consume more software %s than available", type->item_id.c_str() );
@@ -587,6 +745,9 @@ void mission::wrap_up( avatar &player_character )
             } else {
                 comps.emplace_back( type->item_id, item_count );
                 player_character.consume_items( comps );
+                if( !live() ) {
+                    return;
+                }
             }
         }
         break;
@@ -615,10 +776,18 @@ void mission::wrap_up( avatar &player_character )
             break;
     }
 
+    if( !live() ) {
+        return;
+    }
     // Tracks completion/failure
     deadline = calendar::turn;
-
-    type->end( this );
+    const auto end_phase = type->end;
+    if( end_phase ) {
+        end_phase( this, player_character );
+    }
+    if( !live() ) {
+        return;
+    }
     cata::lua_platform::dispatch_native_hook(
     "on_mission_end", {
         {
@@ -633,12 +802,18 @@ void mission::wrap_up( avatar &player_character )
 
 bool mission::is_complete( const character_id &_npc_id ) const
 {
-    return is_complete( _npc_id, get_avatar() );
+    if( Character *owner = assigned_character() ) {
+        return is_complete( _npc_id, *owner );
+    }
+    return !is_assigned() && is_complete( _npc_id, get_avatar() );
 }
 
 bool mission::is_complete( const character_id &_npc_id,
-                           avatar &player_character ) const
+                           Character &player_character ) const
 {
+    if( ( is_assigned() && player_id != player_character.getID() ) || has_failed() ) {
+        return false;
+    }
     if( status == mission_status::success ) {
         return true;
     }
@@ -740,7 +915,7 @@ bool mission::is_complete( const character_id &_npc_id,
         }
 
         case MGOAL_RECRUIT_NPC_CLASS: {
-            const auto npcs = overmap_buffer.get_npcs_near_player( 100 );
+            const auto npcs = overmap_buffer.get_npcs_near( player_character.pos_abs_sm(), 100 );
             for( const auto &npc : npcs ) {
                 if( npc->myclass == recruit_class && npc->get_attitude() == NPCATT_FOLLOW ) {
                     return true;
@@ -761,10 +936,10 @@ bool mission::is_complete( const character_id &_npc_id,
             return step >= 1;
 
         case MGOAL_KILL_MONSTER_TYPE:
-            return g->get_kill_tracker().kill_count( monster_type ) >= kill_count_to_reach;
+            return player_character.get_kill_statistics().kill_count( monster_type ) >= kill_count_to_reach;
 
         case MGOAL_KILL_MONSTER_SPEC:
-            return g->get_kill_tracker().kill_count( monster_species ) >= kill_count_to_reach;
+            return player_character.get_kill_statistics().kill_count( monster_species ) >= kill_count_to_reach;
 
         case MGOAL_CONDITION: {
             std::unique_ptr<talker> beta;
@@ -781,13 +956,13 @@ bool mission::is_complete( const character_id &_npc_id,
                     return false;
                 }
                 beta = get_talker_for( *n );
-                for( mission *&mission : n->chatbin.missions_assigned ) {
+                for( mission*&mission : n->chatbin.missions_assigned ) {
                     if( mission->get_assigned_player_id() == player_character.getID() ) {
                         miss.emplace_back( mission );
                     }
                 }
             } else {
-                for( mission *&mission : player_character.get_active_missions() ) {
+                for( mission*&mission : player_character.get_active_missions() ) {
                     if( mission->type->id == type->id ) {
                         miss.emplace_back( mission );
                     }
@@ -915,6 +1090,11 @@ bool mission::has_failed() const
     return status == mission_status::failure;
 }
 
+bool mission::has_succeeded() const
+{
+    return status == mission_status::success;
+}
+
 bool mission::in_progress() const
 {
     return status == mission_status::in_progress;
@@ -927,12 +1107,23 @@ std::size_t mission::identity_generation() const noexcept
 
 void mission::process()
 {
+    if( failure_effects_pending ) {
+        if( Character *owner = assigned_character() ) {
+            finish_failure( *owner );
+        }
+        return;
+    }
     if( !in_progress() ) {
         return;
     }
 
     if( has_deadline() && calendar::turn > deadline ) {
         fail();
+    } else if( nemesis_respawn_pending ) {
+        if( Character *owner = assigned_character() ) {
+            nemesis_respawn_pending = false;
+            mission_start::kill_nemesis( this, *owner );
+        }
     } else if( !npc_id.is_valid() && is_complete( npc_id ) ) { // No quest giver.
         wrap_up();
     }
@@ -988,17 +1179,6 @@ void mission::set_assigned_player_id( const character_id &char_id )
     player_id = char_id;
 }
 
-void mission::update_world_missions_character( const character_id &old_char_id,
-        const character_id &new_char_id )
-{
-    for( auto &world_mission : world_missions ) {
-        if( world_mission.second.in_progress() &&
-            ( world_mission.second.get_assigned_player_id()  == old_char_id ||
-              world_mission.second.get_assigned_player_id() == character_id( - 1 ) ) ) {
-            world_mission.second.set_assigned_player_id( new_char_id );
-        }
-    }
-}
 
 bool mission::is_assigned() const
 {

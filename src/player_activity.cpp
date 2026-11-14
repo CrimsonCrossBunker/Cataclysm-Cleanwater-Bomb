@@ -5,12 +5,13 @@
 #include <coordinates.h>
 #include <enums.h>
 #include <item_location.h>
+#include <mp_firearm.h>
 #include <point.h>
-#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <atomic>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <memory>
 
@@ -20,7 +21,9 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -33,6 +36,10 @@
 #include "itype.h"
 #include "lua_platform_runtime.h"
 #include "messages.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -68,6 +75,13 @@ static const activity_id ACT_WORKOUT_LIGHT( "ACT_WORKOUT_LIGHT" );
 static const activity_id ACT_WORKOUT_MODERATE( "ACT_WORKOUT_MODERATE" );
 
 static const efftype_id effect_nausea( "nausea" );
+
+static bool client_firearm_view( const Character &who, const activity_id &type )
+{
+    return cata_mp::inventory_activity_view( who.activity ) ||
+           ( who.is_avatar() && type == ACT_AIM && cata_mp::is_client_mode() &&
+             cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive );
+}
 
 std::uint64_t player_activity::identity_token::next_value() noexcept
 {
@@ -159,6 +173,9 @@ std::string player_activity::get_str_value( size_t index, std::string_view def )
 
 std::optional<std::string> player_activity::get_progress_message( const avatar &u ) const
 {
+    if( execution_ == activity_execution::presentation ) {
+        return g->multiplayer_session().client_inventory_activity.item_use_progress;
+    }
     if( type == ACT_NULL || get_verb().empty() ) {
         return std::optional<std::string>();
     }
@@ -213,20 +230,54 @@ std::optional<std::string> player_activity::get_progress_message( const avatar &
 
 void player_activity::start_or_resume( Character &who, bool resuming )
 {
+    if( execution_ == activity_execution::presentation ) {
+        return;
+    }
+    const character_action_guard lifetime( who );
+    const std::uint64_t identity = identity_generation();
+    if( !lifetime ) {
+        return;
+    }
     if( actor && !resuming ) {
         actor->start( *this, who );
+        if( !lifetime || identity_generation() != identity ) {
+            return;
+        }
     }
     if( !type.is_null() && rooted() ) {
         who.rooted_message();
     }
     // last, as start function may have changed the type
     synchronize_type_with_actor();
-    get_event_bus().send<event_type::character_starts_activity>( who.getID(), type, resuming );
+    if( !client_firearm_view( who, type ) ) {
+        get_event_bus().send<event_type::character_starts_activity>( who.getID(), type, resuming );
+    }
 }
 
 void player_activity::do_turn( Character &you )
 {
-    const safe_reference<Creature> character_reference = you.get_safe_reference();
+    if( execution_ == activity_execution::presentation ) {
+        cata_mp::client_step_inventory_activity();
+        return;
+    }
+    if( cata_mp::inventory_activity_view( *this ) ) {
+        // Progress and all gameplay/Lua lifecycle hooks belong to the server.
+        actor->do_turn( *this, you );
+        return;
+    }
+    const character_action_guard character_reference( you );
+    if( !character_reference ) {
+        return;
+    }
+    const bool authoritative = execution_ == activity_execution::authoritative;
+    const on_out_of_scope continue_authority( [&]() {
+        // Legacy actors sometimes replace the activity directly instead of
+        // calling Character::assign_activity. Keep their continuation owned.
+        if( authoritative && character_reference ) {
+            you.activity.set_execution( you.activity ? activity_execution::authoritative :
+                                        activity_execution::local );
+        }
+    } );
     // Specifically call the do turn function for the cancellation activity early
     // This is because the game can get stuck trying to fuel a fire when it's not...
     if( type == ACT_MIGRATION_CANCEL ) {
@@ -275,11 +326,13 @@ void player_activity::do_turn( Character &you )
         // NPCs that re-enter the reality bubble may have a large backlog of moves.
         // Allow them to fast-forward time-based activities proportionally.
         const int base_progress = 100;
-        const int npc_bonus = you.is_npc() ? std::max( 0, you.get_moves() - base_progress ) : 0;
+        // A remote player's NPC body follows the same clock as the avatar.
+        const bool npc_catchup = you.is_npc() && !you.is_player_controlled();
+        const int npc_bonus = npc_catchup ? std::max( 0, you.get_moves() - base_progress ) : 0;
         const int progress = base_progress + npc_bonus;
         if( moves_left >= progress ) {
             moves_left -= progress * activity_mult;
-            if( you.is_npc() ) {
+            if( npc_catchup ) {
                 you.mod_moves( -progress );
             } else {
                 you.set_moves( 0 );
@@ -373,6 +426,7 @@ void player_activity::do_turn( Character &you )
                     act_id == ACT_WORKOUT_LIGHT;
     if( !excluded && adjusted_stamina < previous_stamina &&
         you.get_stamina() < you.get_stamina_max() / 3 ) {
+        const std::uint64_t stamina_identity = identity_generation();
         if( one_in( 50 ) ) {
             you.add_msg_if_player( _( "You pause for a moment to catch your breath." ) );
         }
@@ -389,6 +443,9 @@ void player_activity::do_turn( Character &you )
                 case UILIST_CANCEL:
                 case 2:
                     auto_resume = false;
+                    if( travel_activity ) {
+                        you.abort_automove();
+                    }
                     you.cancel_activity();
                     break;
                 case 3:
@@ -399,8 +456,14 @@ void player_activity::do_turn( Character &you )
                     break;
             }
         }
+        if( !character_reference || identity_generation() != stamina_identity ) {
+            return;
+        }
         if( !ignoreQuery && auto_resume ) {
             you.assign_activity( wait_stamina_activity_actor( you.get_stamina_max() ) );
+            if( !character_reference ) {
+                return;
+            }
         }
         activity_handlers::clean_may_activity_occupancy_items_var_if_is_avatar_and_no_activity_now( you );
         return;
@@ -410,7 +473,7 @@ void player_activity::do_turn( Character &you )
         you.pause();
     }
 
-    if( *this && moves_left <= 0 ) {
+    if( *this && moves_left <= 0 && ( !actor || actor->ready_to_finish() ) ) {
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
         const std::uint64_t completion_identity = identity_generation();
@@ -438,7 +501,9 @@ void player_activity::do_turn( Character &you )
                            "Setting activity %s to null for %s, no moves left.",
                            type.c_str(), you.name );
             const std::uint64_t finished_identity = identity_generation();
-            get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            if( !client_firearm_view( you, type ) ) {
+                get_event_bus().send<event_type::character_finished_activity>( you.getID(), type, false );
+            }
             if( !character_reference ||
                 ( *this && identity_generation() != finished_identity ) ) {
                 return;
@@ -481,11 +546,26 @@ void player_activity::do_turn( Character &you )
 
 void player_activity::canceled( Character &who )
 {
+    if( execution_ == activity_execution::presentation ) {
+        cata_mp::client_cancel_inventory_activity();
+        return;
+    }
+    const character_action_guard lifetime( who, true );
+    const std::uint64_t identity = identity_generation();
+    const bool view_only = client_firearm_view( who, type );
     if( *this && actor ) {
         actor->canceled( *this, who );
+        if( !lifetime || ( *this && identity_generation() != identity ) ) {
+            return;
+        }
     }
     activity_handlers::clean_may_activity_occupancy_items_var( who );
-    get_event_bus().send<event_type::character_finished_activity>( who.getID(), type, true );
+    if( !view_only ) {
+        get_event_bus().send<event_type::character_finished_activity>( who.getID(), type, true );
+        if( !lifetime || ( *this && identity_generation() != identity ) ) {
+            return;
+        }
+    }
     g->wait_popup_reset();
 }
 
@@ -548,6 +628,9 @@ void player_activity::set_resume_values( const player_activity &other, const Cha
 
     if( actor && other.actor ) {
         actor->set_resume_values( *other.actor, who );
+        if( const std::optional<int> remaining = actor->remaining_moves_on_resume() ) {
+            moves_left = *remaining;
+        }
     }
 }
 

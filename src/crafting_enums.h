@@ -12,6 +12,14 @@ enum class step_attention : int {
     supervised,
 };
 
+enum class craft_placement : int {
+    automatic = 0,
+    wield,
+    work_on_ground,
+    stash,
+    drop,
+};
+
 enum class step_choice : int {
     do_wait = 0,
     do_something,

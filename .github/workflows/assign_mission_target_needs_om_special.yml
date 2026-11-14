@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - '**.json'
+      - 'tools/json_tools/assign_mission_target_needs_om_special.bash'
+      - 'tools/json_tools/test_assign_mission_target.py'
+      - '.github/workflows/assign_mission_target_needs_om_special.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -19,4 +22,5 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
+    - run: python3 -m unittest discover -s tools/json_tools -p 'test_assign_mission_target.py'
     - run: ./tools/json_tools/assign_mission_target_needs_om_special.bash 2>&1

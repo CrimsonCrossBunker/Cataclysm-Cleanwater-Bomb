@@ -177,9 +177,8 @@ bool Character::has_trait_flag( const json_character_flag &b ) const
             trait_flag_cache[b] = true;
             return true;
         } else if( mut_data.activated ) {
-            Character &player = get_player_character();
-            if( ( mut_data.active_flags.count( b ) > 0 && player.has_active_mutation( mut ) ) ||
-                ( mut_data.inactive_flags.count( b ) > 0 && !player.has_active_mutation( mut ) ) ) {
+            if( ( mut_data.active_flags.count( b ) > 0 && has_active_mutation( mut ) ) ||
+                ( mut_data.inactive_flags.count( b ) > 0 && !has_active_mutation( mut ) ) ) {
                 trait_flag_cache[b] = true;
                 return true;
             }
@@ -199,9 +198,8 @@ int Character::count_trait_flag( const json_character_flag &b ) const
         if( mut_data.flags.count( b ) > 0 ) {
             ret++;
         } else if( mut_data.activated ) {
-            Character &player = get_player_character();
-            if( ( mut_data.active_flags.count( b ) > 0 && player.has_active_mutation( mut ) ) ||
-                ( mut_data.inactive_flags.count( b ) > 0 && !player.has_active_mutation( mut ) ) ) {
+            if( ( mut_data.active_flags.count( b ) > 0 && has_active_mutation( mut ) ) ||
+                ( mut_data.inactive_flags.count( b ) > 0 && !has_active_mutation( mut ) ) ) {
                 ret++;
             }
         }

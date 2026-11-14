@@ -156,3 +156,14 @@ submap *map_meddler::get_submap_at_grid( map &m, const tripoint_rel_sm &p )
 {
     return m.get_submap_at_grid( p );
 }
+
+void map_meddler::spawn_monsters_submap_group( map &m, const tripoint_rel_sm &p,
+        mongroup &group, bool ignore_sight )
+{
+    m.spawn_monsters_submap_group( p, group, ignore_sight );
+}
+
+void map_meddler::set_abs_sub( map &m, const tripoint_abs_sm &p )
+{
+    m.set_abs_sub( p );
+}

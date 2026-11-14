@@ -20,6 +20,7 @@
 #include <variant>
 #include <vector>
 
+#include "map_viewpoint.h"
 #include "active_item_cache.h"
 #include "ai_reachability_fwd.h"
 #include "cached_options.h"
@@ -51,11 +52,6 @@
 #include "units.h"
 #include "value_ptr.h"
 #include "vpart_position.h"
-#include "view_snapshot.h"
-
-#if defined(TILES)
-    #include "cata_tiles.h"
-#endif
 
 struct scent_block;
 struct terrain_growth_state;
@@ -440,15 +436,21 @@ class map
         void set_pathfinding_cache_dirty( const tripoint_bub_ms &p );
         /*@}*/
 
-        // Mark the tiles draw-points cache for rebuild on the next frame.
+        // Advance the map-change revision observed independently by each view.
         // Terrain/furniture changes already trigger this transitively (they
         // dirty the seen cache, which build_map_cache turns into a draw-cache
         // rebuild), but the decoration-class mutators — traps, partial
         // construction, graffiti — change none of the visibility caches, so
         // they must request the rebuild explicitly or the cache would serve a
-        // stale snapshot of that content. No-op outside tiles builds / the
-        // reality bubble.
+        // stale snapshot of that content. This is owner-thread bookkeeping,
+        // independent of the active frontend and of the reality bubble.
         void set_draw_points_cache_dirty();
+        uint64_t draw_cache_revision() const {
+            return draw_cache_revision_;
+        }
+        uint64_t pathfinding_cache_revision() const {
+            return pathfinding_cache_revision_;
+        }
 
         void invalidate_map_cache( int zlev );
 
@@ -1398,6 +1400,13 @@ class map
         void i_rem( const tripoint_bub_ms &p, item *it );
         void spawn_artifact( const tripoint_bub_ms &p, const relic_procgen_id &id, int max_attributes = 5,
                              int power_level = 1000, int max_negative_power = -2000, bool is_resonant = false );
+        // Runs native item randomization without placement/drop effects. Used
+        // when a completed operation must publish all results before callbacks.
+        std::optional<item> prepare_spawn_item( const tripoint_bub_ms &p, const itype_id &type_id,
+                                                int charges = 0,
+                                                const time_point &birthday = calendar::start_of_cataclysm,
+                                                int damlevel = 0, const std::set<flag_id> &flags = {},
+                                                const std::string &variant = "", const std::string &faction = "" ) const;
         void spawn_item( const tripoint_bub_ms &p, const itype_id &type_id,
                          unsigned quantity = 1, int charges = 0,
                          const time_point &birthday = calendar::start_of_cataclysm, int damlevel = 0,
@@ -1427,8 +1436,20 @@ class map
          *  @warning function is relatively expensive and meant for user initiated actions, not mapgen
          */
         item_location add_item_or_charges_ret_loc( const tripoint_bub_ms &pos, item obj,
-                bool overflow = true );
-        item &add_item_or_charges( const tripoint_bub_ms &pos, item obj, bool overflow = true );
+                bool overflow = true, Character *dropper = nullptr );
+        // Move one existing stack without overflow. Returns the quantity placed
+        // or consumed by its drop action, leaving any unplaced quantity at source.
+        int transfer_item_or_charges( const tripoint_bub_ms &pos, item_location source,
+                                      item prepared, Character &dropper, int source_range = 1, bool overflow = false,
+                                      item_location *placed = nullptr );
+        // Machinery already owns the operation at this tile. Only a root item
+        // at pos may be settled; the operator need not be within walking reach.
+        // Without an operator, character drop actions leave the source in place.
+        int settle_item_on_ground( const tripoint_bub_ms &pos, item_location source,
+                                   Character *dropper, item_location *placed = nullptr );
+        // An explicit dropper owns item drop actions; nullptr preserves legacy world/mapgen calls.
+        item &add_item_or_charges( const tripoint_bub_ms &pos, item obj, bool overflow = true,
+                                   Character *dropper = nullptr );
         item &add_item_or_charges( const tripoint_bub_ms &pos, item obj, int &copies_remaining,
                                    bool overflow = true );
 
@@ -1447,6 +1468,10 @@ class map
          */
         item &add_item( const tripoint_bub_ms &p, item new_item, int copies );
         item &add_item( const tripoint_bub_ms &p, item new_item );
+        // Publish a completed operation's items before callbacks. The caller
+        // then uses normal placement/transfer; canceled leftovers remain real items.
+        item &add_item_unprocessed( const tripoint_bub_ms &p, item new_item,
+                                    bool retain_liquid = false );
 
         /**
          * Update an item's active status, for example when adding
@@ -1730,7 +1755,11 @@ class map
             Map &m, const tripoint_bub_ms &p, const field_type_id &type );
 
         std::pair<item *, tripoint_bub_ms> _add_item_or_charges( const tripoint_bub_ms &pos, item obj,
-                int &copies_remaining, bool overflow = true );
+                int &copies_remaining, bool overflow = true, Character *dropper = nullptr,
+                const std::function<bool( int )> &take_source = {} );
+        int transfer_item_or_charges_impl( const tripoint_bub_ms &pos, item_location source,
+                                           item prepared, Character *dropper, int source_range, bool overflow,
+                                           item_location *placed, bool at_target );
     public:
 
         // Splatters of various kind
@@ -2045,6 +2074,9 @@ class map
          * Try to grow a harvestable plant to the next stage(s).
          */
         void grow_plant( const tripoint_bub_ms &p );
+        // An explicit nullptr advances unattended machinery's crops without
+        // attributing character lifecycle effects to the local avatar.
+        void grow_plant( const tripoint_bub_ms &p, Character *grower );
         void grow_terrain_plant( const tripoint_bub_ms &p );
         /**
          * Produce sap on tapped maple trees
@@ -2103,7 +2135,7 @@ class map
         // Initialize a terrain's own finite liquid even when that terrain is
         // swimmable.  Other terrain item-destruction rules still apply.
         item &add_item_impl( const tripoint_bub_ms &p, item new_item, int copies,
-                             bool allow_liquid_on_swimmable );
+                             bool allow_liquid_on_swimmable, bool process_item = true );
         void generate_lightmap( int zlev );
         void build_seen_cache( const tripoint_bub_ms &origin, int target_z,
                                int extension_range = MAX_VIEW_DISTANCE,
@@ -2339,7 +2371,7 @@ class map
         // Not serialized: loading, shifting or changing the coordinate context
         // retires pending owner receipts, including reloads at the same origin.
         struct context_lifetime {
-            std::optional<safe_reference_anchor> anchor;
+            std::optional < safe_reference_anchor > anchor;
             context_lifetime() = default;
             context_lifetime( context_lifetime &&other ) noexcept {
                 other.reset();
@@ -2352,7 +2384,7 @@ class map
             void reset() noexcept {
                 anchor.reset();
             }
-            safe_reference<map> reference_to( map *owner ) {
+            safe_reference < map > reference_to( map *owner ) {
                 if( !anchor ) {
                     anchor.emplace();
                 }
@@ -2360,24 +2392,31 @@ class map
             }
         };
         context_lifetime context_lifetime_;
+        // Not serialized. A reset map context invalidates every old view handle.
+        uint64_t draw_cache_revision_ = 0;
+        // Invalidate saved route results whenever routing inputs become dirty.
+        uint64_t pathfinding_cache_revision_ = 0;
         // Owner-thread capture/merge; workers never retain map/cache references.
-        std::unique_ptr<vision_preparation::frame> vision_preparation_;
+        std::unique_ptr < vision_preparation::frame > vision_preparation_;
         double vision_horizontal_cost_ms_ = 0.0;
         /**
          * Set of submaps that contain active items in absolute coordinates.
          */
-        std::set<tripoint_abs_sm> submaps_with_active_items;
-        std::set<tripoint_abs_sm> submaps_with_active_items_dirty;
+        std::set < tripoint_abs_sm > submaps_with_active_items;
+        std::set < tripoint_abs_sm > submaps_with_active_items_dirty;
 
         /**
          * Cache of coordinate pairs recently checked for visibility.
          */
-        using lru_cache_t = lru_cache<point, char>;
+        using lru_cache_t = lru_cache < point, char >;
         mutable lru_cache_t skew_vision_cache;
         mutable lru_cache_t skew_vision_wo_fields_cache;
 
         // The observer belongs to this map's seen cache, not to the process.
-        std::optional<std::pair<tripoint_abs_ms, int>> previous_visibility_observer;
+        std::optional < std::pair < tripoint_abs_ms, int>> previous_visibility_observer;
+        friend class scoped_map_viewpoint;
+        std::optional < map_viewpoint > viewpoint_;
+        const map_viewpoint *viewpoint_for( const Creature &observer ) const;
 
         struct char_light_state {
             float light;
@@ -2391,19 +2430,19 @@ class map
         };
         // Each map tracks its own light sources.  Keep both buffers so unchanged
         // cache queries do not allocate another temporary snapshot every time.
-        std::vector<char_light_state> cached_char_lights;
-        std::vector<char_light_state> current_char_lights;
+        std::vector < char_light_state > cached_char_lights;
+        std::vector < char_light_state > current_char_lights;
 
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
-            std::unique_ptr<level_cache, level_cache_free> &cache = caches[zlev + OVERMAP_DEPTH];
+            std::unique_ptr < level_cache, level_cache_free > &cache = caches[zlev + OVERMAP_DEPTH];
             if( !cache ) {
                 cache = alloc_cache();
             }
             return *cache;
         }
 
-        static std::unique_ptr<level_cache, level_cache_free> alloc_cache();
+        static std::unique_ptr < level_cache, level_cache_free > alloc_cache();
 
         level_cache *get_cache_lazy( int zlev ) const {
             return caches[zlev + OVERMAP_DEPTH].get();
@@ -2416,12 +2455,12 @@ class map
 
         // caches the highest zlevel above which all zlevels are uniform
         // !value || value->first != map::abs_sub means cache is invalid
-        std::optional<std::pair<tripoint_abs_sm, int>> max_populated_zlev = std::nullopt;
+        std::optional < std::pair < tripoint_abs_sm, int>> max_populated_zlev = std::nullopt;
 
         bool mapgen_in_progress = false;
         // this is set for maps loaded in bounds of the main map (g->m)
         bool _main_requires_cleanup = false;
-        std::optional<bool> _main_cleanup_override = std::nullopt;
+        std::optional < bool > _main_cleanup_override = std::nullopt;
 
     public:
         int supports_zlevels() const {
@@ -2439,6 +2478,11 @@ class map
         void update_pathfinding_cache( const tripoint_bub_ms &p ) const;
         void update_pathfinding_cache( int zlev ) const;
 
+        // Display and visibility consumers only; simulation uses Creature::pos_*.
+        tripoint_bub_ms observer_position( const Creature &observer ) const;
+        bool observer_standing( const Character &observer ) const;
+        int observer_z_range( const Creature &observer ) const;
+        std::optional < map_viewpoint > observer_viewpoint( const Creature &observer ) const;
         void update_visibility_cache( int zlev );
         void invalidate_visibility_cache();
         const visibility_variables &get_visibility_variables_cache() const;
@@ -2450,44 +2494,44 @@ class map
         void update_submaps_with_active_items();
 
         // Just exposed for unit test introspection.
-        const std::set<tripoint_abs_sm> &get_submaps_with_active_items() const {
+        const std::set < tripoint_abs_sm > &get_submaps_with_active_items() const {
             return submaps_with_active_items;
         }
         // Clips the area to map bounds
-        tripoint_range<tripoint_bub_ms> points_in_rectangle(
+        tripoint_range < tripoint_bub_ms > points_in_rectangle(
             const tripoint_bub_ms &from, const tripoint_bub_ms &to ) const;
         // despite named "radius", returns a square
-        tripoint_range<tripoint_bub_ms> points_in_radius(
+        tripoint_range < tripoint_bub_ms > points_in_radius(
             const tripoint_bub_ms &center, size_t radius, size_t radiusz = 0 ) const;
 
         /**
          * Yields a range of all points that are contained in the map and have the z-level of
          * this map (@ref abs_sub).
          */
-        tripoint_range<tripoint_bub_ms> points_on_zlevel() const;
+        tripoint_range < tripoint_bub_ms > points_on_zlevel() const;
         /// Same as above, but uses the specific z-level. If the given z-level is invalid, it
         /// returns an empty range.
-        tripoint_range<tripoint_bub_ms> points_on_zlevel( int z ) const;
+        tripoint_range < tripoint_bub_ms > points_on_zlevel( int z ) const;
 
-        std::list<item_location> get_active_items_in_radius( const tripoint_bub_ms &center, int radius );
-        std::list<item_location> get_active_items_in_radius( const tripoint_bub_ms &center, int radius,
+        std::list < item_location > get_active_items_in_radius( const tripoint_bub_ms &center, int radius );
+        std::list < item_location > get_active_items_in_radius( const tripoint_bub_ms &center, int radius,
                 special_item_type type );
 
         /**returns positions of furnitures with matching flag in the specified radius*/
-        std::list<tripoint_bub_ms> find_furnitures_with_flag_in_radius( const tripoint_bub_ms &center,
+        std::list < tripoint_bub_ms > find_furnitures_with_flag_in_radius( const tripoint_bub_ms &center,
                 size_t radius,
                 const std::string &flag,
                 size_t radiusz = 0 ) const;
         /**returns positions of furnitures with matching flag in the specified radius*/
-        std::list<tripoint_bub_ms> find_furnitures_with_flag_in_radius( const tripoint_bub_ms &center,
+        std::list < tripoint_bub_ms > find_furnitures_with_flag_in_radius( const tripoint_bub_ms &center,
                 size_t radius,
                 ter_furn_flag flag,
                 size_t radiusz = 0 ) const;
         /**returns creatures in specified radius*/
-        std::list<Creature *> get_creatures_in_radius( const tripoint_bub_ms &center, size_t radius,
+        std::list < Creature * > get_creatures_in_radius( const tripoint_bub_ms &center, size_t radius,
                 size_t radiusz = 0 ) const;
 
-        std::list<Creature *> get_creatures_in_radius_circ( const tripoint_bub_ms &center, size_t radius,
+        std::list < Creature * > get_creatures_in_radius_circ( const tripoint_bub_ms &center, size_t radius,
                 size_t radiusz = 0 ) const;
 
         level_cache &access_cache( int zlev );
@@ -2495,17 +2539,8 @@ class map
         bool dont_draw_lower_floor( const tripoint_bub_ms &p ) const;
 
         bool has_haulable_items( const tripoint_bub_ms &pos );
-        std::vector<item_location> get_haulable_items( const tripoint_bub_ms &pos );
+        std::vector < item_location > get_haulable_items( const tripoint_bub_ms &pos );
 
-#if defined(TILES)
-        bool draw_points_cache_dirty = true;
-        view_snapshot draw_points_cache;
-        point_rel_ms prev_top_left;
-        point_rel_ms prev_bottom_right;
-        point prev_o;
-        std::multimap<point, formatted_text> overlay_strings_cache;
-        color_block_overlay_container color_blocks_cache;
-#endif
 };
 
 // The map the code is currently processing. It is currently (incorrectly) fixed at the
@@ -2524,8 +2559,8 @@ map &get_map();
 // synchronization purposes.
 map &reality_bubble();
 
-template<int SIZE, int MULTIPLIER>
-void shift_bitset_cache( std::bitset<SIZE *SIZE> &cache, const point_rel_sm &s );
+template < int SIZE, int MULTIPLIER >
+void shift_bitset_cache( std::bitset < SIZE *SIZE > &cache, const point_rel_sm &s );
 
 bool ter_furn_has_flag( const ter_t &ter, const furn_t &furn, ter_furn_flag flag );
 bool generate_uniform( const tripoint_abs_sm &p, const ter_str_id &ter );
@@ -2562,7 +2597,7 @@ class tinymap : private map
         using map::save;
         void load( const tripoint_abs_omt &w, bool update_vehicles,
                    bool pump_events = false ) {
-            map::load( project_to<coords::sm>( w ), update_vehicles, pump_events );
+            map::load( project_to < coords::sm > ( w ), update_vehicles, pump_events );
         };
 
         using map::is_main_cleanup_queued;
@@ -2572,7 +2607,7 @@ class tinymap : private map
         void place_spawns( const mongroup_id &group, int chance,
                            const point_omt_ms &p1, const point_omt_ms &p2, const int z_level, float density,
                            bool individual = false, bool friendly = false,
-                           const std::optional<std::string> &name = std::nullopt,
+                           const std::optional < std::string > &name = std::nullopt,
                            int mission_id = -1 ) {
             map::place_spawns( group, chance, rebase_bub( p1 ), rebase_bub( p2 ), z_level, density, individual,
                                friendly,
@@ -2638,12 +2673,12 @@ class tinymap : private map
         bool impassable( const tripoint_omt_ms &p ) const {
             return map::impassable( rebase_bub( p ) );
         }
-        tripoint_range<tripoint_omt_ms> points_on_zlevel() const;
-        tripoint_range<tripoint_omt_ms> points_on_zlevel( int z ) const;
-        tripoint_range<tripoint_omt_ms> points_in_rectangle(
+        tripoint_range < tripoint_omt_ms > points_on_zlevel() const;
+        tripoint_range < tripoint_omt_ms > points_on_zlevel( int z ) const;
+        tripoint_range < tripoint_omt_ms > points_in_rectangle(
             const tripoint_omt_ms &from, const tripoint_omt_ms &to ) const;
         // rectangular prism
-        tripoint_range<tripoint_omt_ms> points_in_radius(
+        tripoint_range < tripoint_omt_ms > points_in_radius(
             const tripoint_omt_ms &center, size_t radius, size_t radiusz = 0 ) const;
         map_stack i_at( const tripoint_omt_ms &p ) {
             return map::i_at( rebase_bub( p ) );
@@ -2651,12 +2686,13 @@ class tinymap : private map
         void spawn_item( const tripoint_omt_ms &p, const itype_id &type_id,
                          unsigned quantity = 1, int charges = 0,
                          const time_point &birthday = calendar::start_of_cataclysm, int damlevel = 0,
-                         const std::set<flag_id> &flags = {}, const std::string &variant = "",
+                         const std::set < flag_id > &flags = {}, const std::string &variant = "",
                          const std::string &faction = "" ) {
             map::spawn_item( rebase_bub( p ), type_id, quantity, charges, birthday, damlevel, flags, variant,
                              faction );
         }
-        std::vector<item *> spawn_items( const tripoint_omt_ms &p, const std::vector<item> &new_items ) {
+        std::vector < item * > spawn_items( const tripoint_omt_ms &p,
+                                            const std::vector < item > &new_items ) {
             return map::spawn_items( rebase_bub( p ), new_items );
         }
         item &add_item( const tripoint_omt_ms &p, item new_item ) {
@@ -2666,7 +2702,7 @@ class tinymap : private map
                                    bool overflow = true ) {
             return map::add_item_or_charges( tripoint_bub_ms( rebase_bub( p ), abs_sub.z() ), obj, overflow );
         }
-        std::vector<item *> put_items_from_loc(
+        std::vector < item * > put_items_from_loc(
             const item_group_id &group_id, const tripoint_omt_ms &p,
             const time_point &turn = calendar::start_of_cataclysm ) {
             return map::put_items_from_loc( group_id, rebase_bub( p ), turn );
@@ -2674,7 +2710,7 @@ class tinymap : private map
         item &add_item_or_charges( const tripoint_omt_ms &pos, item obj, bool overflow = true ) {
             return map::add_item_or_charges( rebase_bub( pos ), std::move( obj ), overflow );
         }
-        std::vector<item *> place_items(
+        std::vector < item * > place_items(
             const item_group_id &group_id, int chance, const tripoint_omt_ms &p1, const tripoint_omt_ms &p2,
             bool ongrass, const time_point &turn, int magazine = 0, int ammo = 0,
             const std::string &faction = "" ) {
@@ -2784,7 +2820,7 @@ class tinymap : private map
 class fake_map : public tinymap
 {
     private:
-        std::vector<std::unique_ptr<submap>> temp_submaps_;
+        std::vector < std::unique_ptr < submap>> temp_submaps_;
     public:
         explicit fake_map( const ter_id &ter_type = ter_str_id( "t_dirt" ).id() );
         ~fake_map() override;
@@ -2811,7 +2847,7 @@ class smallmap : public tinymap
 class small_fake_map : public smallmap
 {
     private:
-        std::vector<std::unique_ptr<submap>> temp_submaps_;
+        std::vector < std::unique_ptr < submap>> temp_submaps_;
     public:
         explicit small_fake_map( const ter_id &ter_type = ter_str_id( "t_dirt" ).id() );
         ~small_fake_map() override;

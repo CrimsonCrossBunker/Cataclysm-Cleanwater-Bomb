@@ -82,6 +82,7 @@ bool character_has_item_with_var_val( const Character &they, const std::string &
 void clear_character( Character &dummy, bool skip_nutrition )
 {
     map &here = get_map();
+    dummy.lua_character_state = {};
 
     dummy.set_body();
     dummy.normalize(); // In particular this clears martial arts style
@@ -117,7 +118,7 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy.prof = profession::generic();
     dummy.hobbies.clear();
     dummy._skills->clear();
-    dummy.martial_arts_data->clear_styles();
+    *dummy.martial_arts_data = character_martial_arts();
     dummy.clear_morale();
     dummy.activity.set_to_null();
     dummy.backlog.clear();

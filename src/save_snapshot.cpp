@@ -1,4 +1,5 @@
 #include "save_snapshot.h"
+#include "world_identity_store.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -290,7 +291,9 @@ bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name )
     //   2. Copy the snapshot into the world (excluding its own meta file).
     //   3. On success, delete the backup. On any failure, move the backup
     //      contents back so the world is never left half-deleted.
-    std::vector<std::string> protect = { SNAPSHOTS_DIR, RESTORE_BACKUP_DIR };
+    // World lineage survives gameplay rollback, including legacy snapshots
+    // made before identity metadata existed. Never import another lineage.
+    std::vector<std::string> protect = { SNAPSHOTS_DIR, RESTORE_BACKUP_DIR, WORLD_IDENTITY_FILE };
     if( dir_name == DIMENSION_ROLLBACK_SLOT ) {
         // Keep recovery discoverable even if this restore is interrupted.
         protect.push_back( DIMENSION_TRANSITION_MARKER );
@@ -312,7 +315,7 @@ bool restore_snapshot( const cata_path &world_dir, const std::string &dir_name )
 
     // Copy the snapshot in, excluding the per-snapshot meta file so it does not
     // pollute the world root (and snowball into future snapshots).
-    if( !copy_tree( snap_fs, world_fs, { SNAPSHOT_META } ) ) {
+    if( !copy_tree( snap_fs, world_fs, { SNAPSHOT_META, WORLD_IDENTITY_FILE } ) ) {
         // Restore failed: wipe the partial copy and move the backup back.
         clear_dir_except( world_fs, protect );
         move_entries( backup_fs, world_fs, {} );

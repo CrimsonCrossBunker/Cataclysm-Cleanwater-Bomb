@@ -8,6 +8,9 @@
 #include <vector>
 
 #include "coordinates.h"
+#include "crafting_enums.h"
+#include "item_disposition.h"
+#include "item_source.h"
 #include "recipe.h"
 #include "requirements.h"
 #include "type_id.h"
@@ -56,9 +59,20 @@ struct comp_selection {
     void deserialize( const JsonObject &data );
 };
 
+// Shared construction/crafting requirement validation. Canonicalize client
+// choices against native requirements and validate the whole material/tool
+// selection before either is consumed. Tools use their full charge cost here.
+bool validate_requirement_selection( Character &who, const requirement_data &requirements,
+                                     std::vector<comp_selection<item_comp>> &components,
+                                     std::vector<comp_selection<tool_comp>> &tools );
+bool validate_requirement_selection( Character &who, const requirement_data &requirements,
+                                     std::vector<comp_selection<item_comp>> &components,
+                                     std::vector<comp_selection<tool_comp>> &tools, int radius,
+                                     const std::function<bool( const item & )> &filter, bool clear_path = true );
+
 /** One recipe step's allocation of a single chosen tool. */
 struct step_tool_alloc {
-    comp_selection<tool_comp> sel;
+    comp_selection < tool_comp > sel;
     // count * batch units allocated to this step, in tool_comp.count units
     // (NOT scaled by charge_factor).  Zero for non-charged tools.
     int step_count_units = 0;
@@ -81,9 +95,37 @@ struct step_tool_alloc {
 *   allocations, so the caller can keep their prior selections and an absent
 *   future step's tool neither cancels nor degrades the resume.
 */
-std::vector<std::vector<step_tool_alloc>> select_step_tool_allocs(
-    Character &crafter, const recipe &rec, int batch, temp_crafting_inventory &map_inv,
-    bool &cancelled, int reselect_step = -1 );
+std::vector < std::vector < step_tool_alloc>> select_step_tool_allocs(
+            Character &crafter, const recipe &rec, int batch, temp_crafting_inventory &map_inv,
+            bool &cancelled, int reselect_step = -1,
+            std::vector < comp_selection < tool_comp>> *choices = nullptr );
+
+/** Choices for repairing a craft or replacing its tools, without advancing it. */
+class craft_resume_selection
+{
+    public:
+        static std::optional < craft_resume_selection > prepare( Character &who, item &craft );
+        static std::optional < craft_resume_selection > from_selection( Character &who, item &craft,
+                const JsonObject &data );
+        void serialize( JsonOut &out ) const;
+        bool apply( Character &who, item &craft ) const;
+
+    private:
+        friend class Character;
+        explicit craft_resume_selection( const item &craft );
+        static std::vector < std::vector < step_tool_alloc>> retain_paid_tools(
+                    const item &craft, std::vector < std::vector < step_tool_alloc>> fresh );
+        bool matches( const item &craft ) const;
+        recipe_id recipe;
+        int batch = 0;
+        int progress = 0;
+        int step = 0;
+        recipe_filter_flags flags = recipe_filter_flags::none;
+        bool replaces_tools = false;
+        std::vector < comp_selection < item_comp>> components;
+        std::vector < comp_selection < tool_comp>> tools;
+        std::vector < std::vector < step_tool_alloc>> allocations;
+};
 
 /**
 *   Class that describes a crafting job.
@@ -96,16 +138,34 @@ class craft_command
         /** Instantiates an empty craft_command, which can't be executed. */
         craft_command() = default;
         craft_command( const recipe *to_make, int batch_size, bool is_long, Character *crafter,
-                       const std::optional<tripoint_bub_ms> &loc ) :
+                       const std::optional < tripoint_bub_ms > &loc ) :
             rec( to_make ), batch_size( batch_size ), longcraft( is_long ), crafter( crafter ), loc( loc ) {}
 
         /**
          * Selects components to use for the craft, then assigns the crafting activity to 'crafter'.
          * Executes with supplied location, std::nullopt means crafting from inventory.
          */
-        void execute( const std::optional<tripoint_bub_ms> &new_loc );
+        void execute( const std::optional < tripoint_bub_ms > &new_loc );
         /** Executes with saved location, NOT the same as execute( std::nullopt )! */
         void execute( bool only_cache_comps = false );
+
+        /** Collect all choices without consuming components or assigning an activity. */
+        bool prepare();
+        bool prepare_owned_start();
+        bool validate_owned_start() const;
+        item preview_start() const;
+        bool is_owned_start() const {
+            return placement.has_value();
+        }
+        const std::optional < craft_placement > &selected_placement() const {
+            return placement;
+        }
+        /** Execute an already selected and validated command without selecting again. */
+        void execute_prepared();
+        /** Encode player choices, never debited tool budgets or resulting items. */
+        void serialize_selection( JsonOut &out ) const;
+        /** Validate choices against the recipe and this actor's current inventory. */
+        static std::optional < craft_command > from_selection( Character &who, const JsonObject &data );
 
         /**
          * Consumes the selected components and returns the resulting in progress craft item.
@@ -131,8 +191,8 @@ class craft_command
         }
         skill_id get_skill_id();
 
-        bool continue_prompt_liquids( const std::function<bool( const item & )> &filter,
-                                      bool no_prompt = false );
+        bool continue_prompt_liquids( const std::function < bool( const item & ) > &filter,
+                                      bool no_prompt = false ) const;
         static bool safe_to_unload_comp( const item &it );
 
     private:
@@ -144,29 +204,40 @@ class craft_command
         */
         bool longcraft = false;
         // This is mainly here for maintainability reasons.
-        Character *crafter;
+        Character *crafter = nullptr;
 
         recipe_filter_flags flags = recipe_filter_flags::none;
 
         // Location of the workbench to place the item on
         // zero_tripoint indicates crafting without a workbench
-        std::optional<tripoint_bub_ms> loc;
+        std::optional < tripoint_bub_ms > loc;
 
-        std::vector<comp_selection<item_comp>> item_selections;
-        std::vector<comp_selection<tool_comp>> tool_selections;
+        std::vector < comp_selection < item_comp>> item_selections;
+        std::vector < comp_selection < tool_comp>> tool_selections;
         // Per-step tool allocations for step recipes (empty for stepless).
-        std::vector<std::vector<step_tool_alloc>> step_tool_allocs;
+        std::vector < std::vector < step_tool_alloc>> step_tool_allocs;
+        std::vector < comp_selection < tool_comp>> step_tool_choices;
+        std::vector < attention_plan > plans;
+        std::optional < craft_placement > placement;
+        item_source start_weapon;
+        std::optional < item_disposition > disposition;
+        bool allow_nonempty = false;
+        bool allow_spoilage = false;
+
+        bool select_components( bool only_cache_comps );
+        void record_selection();
+        const char *spoilage_warning( const item &preview ) const;
 
         /** Checks if tools we selected in a previous call to execute() are still available. */
-        std::vector<comp_selection<item_comp>> check_item_components_missing(
-            const read_only_visitable &map_inv ) const;
+        std::vector < comp_selection < item_comp>> check_item_components_missing(
+                const read_only_visitable &map_inv ) const;
         /** Checks if items we selected in a previous call to execute() are still available. */
-        std::vector<comp_selection<tool_comp>> check_tool_components_missing(
-            const read_only_visitable &map_inv ) const;
+        std::vector < comp_selection < tool_comp>> check_tool_components_missing(
+                const read_only_visitable &map_inv ) const;
 
         /** Creates a continue pop up asking to continue crafting and listing the missing components */
-        bool query_continue( const std::vector<comp_selection<item_comp>> &missing_items,
-                             const std::vector<comp_selection<tool_comp>> &missing_tools );
+        bool query_continue( const std::vector < comp_selection < item_comp>> &missing_items,
+                             const std::vector < comp_selection < tool_comp>> &missing_tools );
 };
 
 #endif // CATA_SRC_CRAFT_COMMAND_H

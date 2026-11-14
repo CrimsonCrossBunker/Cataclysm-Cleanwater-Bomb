@@ -1,0 +1,12 @@
+[
+  {
+    "id": "test_owned_multimag_saw",
+    "type": "ITEM",
+    "subtypes": [ "TOOL" ],
+    "copy-from": "test_owned_multimag_repair_tool",
+    "name": { "str": "test multimag saw" },
+    "description": "A saw which consumes vehicle fuel and battery power together.",
+    "qualities": [ [ "SAW_M", 3 ] ],
+    "use_action": [ [ "HACKSAW", 1 ] ]
+  }
+]

@@ -1,6 +1,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_attire.h"
 #include "coordinates.h"
@@ -16,6 +18,9 @@
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_pocket.h"
+#include "item_reload.h"
+#include "json.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
@@ -25,6 +30,7 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
@@ -64,6 +70,140 @@ static const itype_id itype_stanag30( "stanag30" );
 static const itype_id itype_sw_610( "sw_610" );
 static const itype_id itype_sw_619( "sw_619" );
 static const itype_id itype_water_clean( "water_clean" );
+
+namespace
+{
+std::string reload_item_state( const item &object )
+{
+    std::ostringstream stream;
+    JsonOut output( stream );
+    object.serialize( output );
+    return stream.str();
+}
+} // namespace
+
+TEST_CASE( "reload_preview_preserves_sources_and_matches_native_contents", "[reload][preview]" )
+{
+    clear_avatar();
+    clear_map();
+    on_out_of_scope cleanup( []() {
+        clear_avatar();
+        clear_map();
+    } );
+    avatar &who = get_avatar();
+    restore_on_out_of_scope<cata_default_random_engine> rng_restore( rng_get_engine() );
+    who.wear_item( item( itype_backpack ), false );
+    who.set_moves( 321 );
+    item target( itype_stanag30 );
+    item ammunition( itype_556, calendar::turn, 50 );
+    int qty = 100;
+    bool targeted = false;
+    pocket_type kind = pocket_type::MAGAZINE;
+
+    SECTION( "loose_ammunition_clamps_to_capacity" ) {
+        targeted = GENERATE( false, true );
+        target.ammo_set( itype_556, 5 );
+    }
+    SECTION( "magazine_swap_keeps_old_magazine_until_execution" ) {
+        targeted = GENERATE( false, true );
+        target = item( itype_glock_19 );
+        target.ammo_set( itype_9mm, 5 );
+        ammunition = item( itype_glockbigmag );
+        ammunition.ammo_set( itype_9mm, 20 );
+        kind = pocket_type::MAGAZINE_WELL;
+        qty = 1;
+    }
+    SECTION( "speedloader_keeps_its_ammunition_until_execution" ) {
+        target = item( itype_sw_619 );
+        ammunition = item( itype_38_speedloader );
+        ammunition.ammo_set( itype_38_special, 6 );
+        // Native integral gun reload selects its MAGAZINE pocket.
+        targeted = true;
+    }
+    SECTION( "casings_are_not_ejected_by_preview" ) {
+        target = item( itype_sw_610 );
+        target.force_insert_item( item( itype_40_casing, calendar::turn, 6 ).set_flag(
+                                      json_flag_CASING ), pocket_type::MAGAZINE );
+        ammunition = item( itype_40sw, calendar::turn, 6 );
+        targeted = true;
+    }
+    SECTION( "liquid_transfer_does_not_touch_source_container" ) {
+        target = item( itype_2lcanteen );
+        ammunition = item( itype_water_clean, calendar::turn, 4 );
+        targeted = false;
+    }
+    SECTION( "belt_linkages_are_spent_only_by_execution" ) {
+        target = item( itype_id( "belt223" ) );
+        who.i_add( item( itype_id( "ammolink223" ), calendar::turn, 100 ) );
+        // The existing non-targeted path consumes physical linkages.
+        targeted = false;
+        qty = 5;
+    }
+    int pocket = -1;
+    if( targeted ) {
+        int index = 0;
+        for( const item_pocket *candidate : target.get_pockets( []( const item_pocket & ) {
+        return true;
+    } ) ) {
+            if( candidate->is_type( kind ) ) {
+                pocket = index;
+                break;
+            }
+            ++index;
+        }
+        REQUIRE( pocket >= 0 );
+    }
+    // A contained source covers the live parent-location path as well as map
+    // ownership. Preview must not unseal, remove or notify this container.
+    item container( itype_backpack );
+    if( ammunition.made_of_from_type( phase_id::LIQUID ) ) {
+        container = item( itype_2lcanteen );
+    }
+    REQUIRE( container.put_in( ammunition, pocket_type::CONTAINER ).success() );
+    item_location stored = get_map().add_item_or_charges_ret_loc( who.pos_bub(), container );
+    item_location source( stored, &stored->only_item() );
+    const std::string before_target = reload_item_state( target );
+    const std::string before_source = reload_item_state( *stored );
+    const auto before_rng = rng_get_engine();
+    const int linkages = who.charges_of( itype_id( "ammolink223" ) );
+    const units::mass carried_weight = who.weight_carried();
+    const auto preview = preview_reload( target, source, qty, pocket );
+    REQUIRE( preview );
+    CHECK( reload_item_state( target ) == before_target );
+    CHECK( reload_item_state( *stored ) == before_source );
+    CHECK( rng_get_engine() == before_rng );
+    CHECK( who.get_moves() == 321 );
+    CHECK( who.charges_of( itype_id( "ammolink223" ) ) == linkages );
+    CHECK( who.weight_carried() == carried_weight );
+
+    REQUIRE( target.reload( who, source, qty, pocket ) );
+    CHECK( target.get_contents().same_contents( preview->get_contents() ) );
+    CHECK( target.volume() == preview->volume() );
+    CHECK( target.weight() == preview->weight() );
+    CHECK( target.ammo_remaining() == preview->ammo_remaining() );
+    if( target.is_ammo_belt() ) {
+        CHECK( who.charges_of( itype_id( "ammolink223" ) ) == linkages - qty );
+    }
+}
+
+TEST_CASE( "reload_preview_rejects_missing_or_incompatible_ammunition", "[reload][preview]" )
+{
+    clear_avatar();
+    clear_map();
+    on_out_of_scope cleanup( []() {
+        clear_avatar();
+        clear_map();
+    } );
+    const item magazine( itype_stanag30 );
+    CHECK_FALSE( preview_reload( magazine, item_location(), 1 ) );
+    item_location source = get_map().add_item_or_charges_ret_loc( get_avatar().pos_bub(),
+                           item( itype_9mm, calendar::turn, 10 ) );
+    const std::string before = reload_item_state( *source );
+    CHECK_FALSE( preview_reload( magazine, source, 1 ) );
+    CHECK_FALSE( preview_reload( magazine, source, 0 ) );
+    CHECK_FALSE( preview_reload( magazine, source, 1, 999 ) );
+    CHECK( reload_item_state( *source ) == before );
+}
 
 static void test_reloading( item &target, item &ammo, bool expect_success = true )
 {
