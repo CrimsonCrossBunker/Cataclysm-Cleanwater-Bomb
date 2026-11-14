@@ -126,6 +126,73 @@ std::unique_ptr<activity_actor> reload_installation_order( const activity_actor 
 }
 } // namespace
 
+TEST_CASE( "vehicle_installation_service_preserves_the_selected_deck",
+           "[vehicle][decks][activity][vehicle_service]" )
+{
+    installation_service_fixture f;
+    std::vector<vehicle_part_install_service_entry> entries = f.entries();
+    SECTION( "single_part" ) {
+        entries.resize( 1 );
+    }
+    SECTION( "batch" ) {
+    }
+    for( vehicle_part_install_service_entry &entry : entries ) {
+        entry.mount_level = 1;
+        REQUIRE( f.target->install_part( f.here, tripoint_rel_ms( entry.mount, 1 ),
+                                         vpart_frame ) >= 0 );
+        REQUIRE( f.target->install_part( f.here, entry.mount, vpart_horn_bicycle ) >= 0 );
+        const std::vector<point_rel_ms> expected{ entry.mount };
+        CHECK( veh_interact::service_installation_mounts( f.here, *f.target, entry.mount,
+                entry.mount, vpart_horn_bicycle.obj(), 1 ) == expected );
+    }
+    f.here.add_vehicle_to_cache( f.target );
+    REQUIRE( vehicle_part_install_service_activity_actor::can_install_order(
+                 f.here, *f.target, vpart_horn_bicycle, entries ) );
+    const int original_count = f.target->part_count();
+    vehicle_part_install_service_activity_actor order(
+        20_minutes, f.mechanic->getID(), f.target->pos_abs(),
+        talk_function::vehicle_service_state_snapshot( *f.target ), vpart_horn_bicycle,
+        entries, "", 0, false );
+    std::unique_ptr<activity_actor> actor = reload_installation_order( order );
+    player_activity act;
+    actor->finish( act, f.player );
+    CHECK( f.target->part_count() == original_count + static_cast<int>( entries.size() ) );
+    for( const vehicle_part_install_service_entry &entry : entries ) {
+        CHECK( f.target->part_with_feature( tripoint_rel_ms( entry.mount, 1 ),
+                                           "HORN", false ) >= 0 );
+        CHECK( f.target->parts_at_relative( entry.mount, false ).size() == 2 );
+    }
+    CHECK( f.mechanic->get_value( "vehicle_part_service_status" ).str() == "complete" );
+    CHECK( f.mechanic->op_of_u.owed == 0 );
+}
+
+TEST_CASE( "vehicle_installation_service_checks_obstructions_on_the_selected_deck",
+           "[vehicle][decks][activity][vehicle_service]" )
+{
+    installation_service_fixture f;
+    std::vector<vehicle_part_install_service_entry> entries = f.entries();
+    for( vehicle_part_install_service_entry &entry : entries ) {
+        entry.mount_level = 1;
+        REQUIRE( f.target->install_part( f.here, tripoint_rel_ms( entry.mount, 1 ),
+                                         vpart_frame ) >= 0 );
+    }
+    SECTION( "single_part" ) {
+        entries.resize( 1 );
+    }
+    SECTION( "batch" ) {
+    }
+    f.here.add_vehicle_to_cache( f.target );
+    const point_rel_ms mount = entries.front().mount;
+    f.here.ter_set( f.target->mount_to_tripoint( &f.here, tripoint_rel_ms( mount, 0 ) ),
+                    ter_t_wall );
+    CHECK( vehicle_part_install_service_activity_actor::can_install_order(
+               f.here, *f.target, vpart_horn_bicycle, entries ) );
+    f.here.ter_set( f.target->mount_to_tripoint( &f.here, tripoint_rel_ms( mount, 1 ) ),
+                    ter_t_wall );
+    CHECK_FALSE( vehicle_part_install_service_activity_actor::can_install_order(
+                     f.here, *f.target, vpart_horn_bicycle, entries ) );
+}
+
 TEST_CASE( "vehicle_installation_service_completes_a_batch",
            "[vehicle][activity][vehicle_service]" )
 {

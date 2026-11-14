@@ -17335,8 +17335,9 @@ bool vehicle_part_install_service_activity_actor::can_install_order( map &here,
         return !entry.reserved_part.is_null() &&
                entry.reserved_part.typeId() == part_id->base_item &&
                !veh_interact::service_installation_position_denial( here, target, entry.mount,
-                       part_id.obj() ) &&
-               !veh_interact::service_installation_denial( target, entry.mount, part_id.obj() );
+                       part_id.obj(), entry.mount_level ) &&
+               !veh_interact::service_installation_denial( target, entry.mount, part_id.obj(),
+                       entry.mount_level );
     }
 
     std::vector<vehicle_part> preview_parts;
@@ -17361,13 +17362,15 @@ bool vehicle_part_install_service_activity_actor::can_install_order( map &here,
             return false;
         }
         if( veh_interact::service_installation_position_denial( here, target, entry.mount,
-                part_id.obj() ) ) {
+                part_id.obj(), entry.mount_level ) ) {
             return false;
         }
-        if( veh_interact::service_installation_denial( preview, entry.mount, part_id.obj() ) ) {
+        if( veh_interact::service_installation_denial( preview, entry.mount, part_id.obj(),
+                entry.mount_level ) ) {
             return false;
         }
-        if( preview.install_part( *preview_map.cast_to_map(), entry.mount, part_id,
+        if( preview.install_part( *preview_map.cast_to_map(),
+                                  tripoint_rel_ms( entry.mount, entry.mount_level ), part_id,
                                   item( entry.reserved_part ) ) < 0 ) {
             return false;
         }
@@ -17455,7 +17458,8 @@ void vehicle_part_install_service_activity_actor::finish( player_activity &act, 
             installed.variant = variant;
         }
         installed.direction = units::from_degrees( direction_degrees );
-        const int index = target->install_part( here, entry.mount, std::move( installed ) );
+        const tripoint_rel_ms mount( entry.mount, entry.mount_level );
+        const int index = target->install_part( here, mount, std::move( installed ) );
         if( index < 0 ) {
             for( const int installed_index : installed_indices ) {
                 target->part( installed_index ).removed = true;
@@ -17515,6 +17519,7 @@ void vehicle_part_install_service_activity_actor::serialize( JsonOut &jsout ) co
     for( const vehicle_part_install_service_entry &entry : entries ) {
         jsout.start_object();
         jsout.member( "mount", entry.mount );
+        jsout.member( "mount_level", entry.mount_level );
         jsout.member( "reserved_part", entry.reserved_part );
         jsout.member( "supplied_by_mechanic", entry.supplied_by_mechanic );
         jsout.member( "paid_cost", entry.paid_cost );
@@ -17541,6 +17546,7 @@ std::unique_ptr<activity_actor> vehicle_part_install_service_activity_actor::des
     const auto read_entry = [&actor]( const JsonObject & entry_data ) {
         vehicle_part_install_service_entry entry;
         entry_data.read( "mount", entry.mount );
+        entry_data.read( "mount_level", entry.mount_level );
         entry_data.read( "reserved_part", entry.reserved_part );
         entry_data.read( "supplied_by_mechanic", entry.supplied_by_mechanic );
         entry_data.read( "paid_cost", entry.paid_cost );

@@ -347,9 +347,10 @@ veh_interact::select_service_action_at_grid( map &here, vehicle &veh,
 }
 
 std::optional<std::string> veh_interact::service_installation_denial( const vehicle &veh,
-        const point_rel_ms &mount, const vpart_info &vpart )
+        const point_rel_ms &mount, const vpart_info &vpart, int mount_level )
 {
-    const std::vector<int> parts_here = veh.parts_at_relative( mount, true );
+    const tripoint_rel_ms deck_mount( mount, mount_level );
+    const std::vector<int> parts_here = veh.parts_at_relative( deck_mount, true );
     if( std::any_of( parts_here.begin(), parts_here.end(), [&]( const int index ) {
     return veh.part( index ).has_flag( vp_flag::carried_flag );
     } ) ) {
@@ -385,7 +386,7 @@ std::optional<std::string> veh_interact::service_installation_denial( const vehi
             return _( "No more complex engines can be installed on this vehicle." );
         }
     }
-    const ret_val<void> can_mount = veh.can_mount( mount, vpart );
+    const ret_val<void> can_mount = veh.can_mount( deck_mount, vpart );
     if( !can_mount.success() ) {
         return can_mount.str();
     }
@@ -393,9 +394,10 @@ std::optional<std::string> veh_interact::service_installation_denial( const vehi
 }
 
 std::optional<std::string> veh_interact::service_installation_position_denial( map &here,
-        const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart )
+        const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart, int mount_level )
 {
-    const tripoint_bub_ms position = veh.pos_bub( here ) + veh.coord_translate( mount );
+    const tripoint_bub_ms position = veh.mount_to_tripoint( &here,
+                                     tripoint_rel_ms( mount, mount_level ) );
     if( !here.inbounds( position ) ) {
         return _( "The installation position is outside the loaded map." );
     }
@@ -425,7 +427,8 @@ static int service_installation_area_size( const point_rel_ms &first, const poin
 }
 
 std::vector<point_rel_ms> veh_interact::service_installation_mounts( map &here, const vehicle &veh,
-        const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart )
+        const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart,
+        int mount_level )
 {
     std::vector<point_rel_ms> result;
     if( service_installation_area_size( first, second ) == 0 ) {
@@ -438,8 +441,8 @@ std::vector<point_rel_ms> veh_interact::service_installation_mounts( map &here, 
     for( int x = 0; x < width; ++x ) {
         for( int y = 0; y < height; ++y ) {
             const point_rel_ms mount( minimum.x() + x, minimum.y() + y );
-            if( !service_installation_position_denial( here, veh, mount, vpart ) &&
-                !service_installation_denial( veh, mount, vpart ) ) {
+            if( !service_installation_position_denial( here, veh, mount, vpart, mount_level ) &&
+                !service_installation_denial( veh, mount, vpart, mount_level ) ) {
                 result.push_back( mount );
             }
         }
@@ -481,7 +484,7 @@ std::optional<std::string> veh_interact::service_removal_denial( const vehicle &
     if( info.has_flag( VPFLAG_POWER_TRANSFER ) || info.has_flag( "TOW_CABLE" ) ) {
         return _( "Disconnect this part from the other vehicle before removing it." );
     }
-    for( const int attached_index : veh.parts_at_relative( part.mount, false ) ) {
+    for( const int attached_index : veh.parts_at_relative( part.mount_pos3(), false ) ) {
         const vehicle_part &attached_part = veh.part( attached_index );
         const vpart_info &attached_info = attached_part.info();
         if( attached_part.has_flag( vp_flag::linked_flag ) ) {
@@ -859,6 +862,8 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
         msg.reset();
         if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
             move_cursor( here, vec->xy() );
+        } else if( action == "VEHICLE_DECK_UP" || action == "VEHICLE_DECK_DOWN" ) {
+            change_deck( here, action == "VEHICLE_DECK_UP" ? 1 : -1 );
         } else if( action == "BATCH_INSTALL" ) {
             if( service_install_items == nullptr || service_install_items->empty() ) {
                 msg = _( "Neither side has a tradable vehicle part available for installation." );
@@ -879,6 +884,7 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
                 service_selection result;
                 result.action = service_action::install;
                 result.mount = -cursor_vp_mount;
+                result.mount_level = cursor_level;
                 result.part_id = sel_vpart_info->id;
                 return result;
             }
@@ -889,6 +895,7 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
                 result.action = service_action::repair;
                 result.part_index = *selected;
                 result.mount = veh->part( *selected ).mount;
+                result.mount_level = veh->part( *selected ).mount_level;
                 result.part_id = veh->part( *selected ).info().id;
                 return result;
             }
@@ -901,6 +908,7 @@ std::optional<veh_interact::service_selection> veh_interact::do_vehicle_service_
                 result.action = service_action::remove;
                 result.part_index = *selected;
                 result.mount = veh->part( *selected ).mount;
+                result.mount_level = veh->part( *selected ).mount_level;
                 result.part_id = veh->part( *selected ).info().id;
                 return result;
             }
@@ -952,6 +960,13 @@ std::optional<veh_interact::service_selection> veh_interact::do_service_batch_in
         const std::string action = main_context.handle_input();
         if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
             move_cursor( here, vec->xy() );
+        } else if( action == "VEHICLE_DECK_UP" || action == "VEHICLE_DECK_DOWN" ) {
+            const int previous_level = cursor_level;
+            change_deck( here, action == "VEHICLE_DECK_UP" ? 1 : -1 );
+            if( cursor_level != previous_level ) {
+                first_corner_selected = false;
+                service_area_start = -cursor_vp_mount;
+            }
         } else if( action == "QUIT" ) {
             msg.reset();
             return std::nullopt;
@@ -974,9 +989,10 @@ std::optional<veh_interact::service_selection> veh_interact::do_service_batch_in
             }
             service_selection result;
             result.action = service_action::install_batch;
+            result.mount_level = cursor_level;
             result.part_id = sel_vpart_info->id;
             result.mounts = service_installation_mounts( here, *veh, *service_area_start,
-                            *service_area_end, *sel_vpart_info );
+                            *service_area_end, *sel_vpart_info, cursor_level );
             if( result.mounts.empty() ) {
                 return std::nullopt;
             }
@@ -1013,6 +1029,8 @@ std::optional<int> veh_interact::do_part_selection_loop( map &here )
         msg.reset();
         if( const std::optional<tripoint_rel_ms> vec = main_context.get_direction_rel_ms( action ) ) {
             move_cursor( here, vec->xy() );
+        } else if( action == "VEHICLE_DECK_UP" || action == "VEHICLE_DECK_DOWN" ) {
+            change_deck( here, action == "VEHICLE_DECK_UP" ? 1 : -1 );
         } else if( action == "CONFIRM" ) {
             if( const std::optional<int> selected = select_part_at_cursor( here ) ) {
                 return selected;
@@ -1272,8 +1290,9 @@ bool veh_interact::update_part_requirements( map &here )
             _( "The mechanic supplies all skills, tools, lifting, and installation materials.\n" );
         if( service_area_end ) {
             const int total = service_installation_area_size( *service_area_start, *service_area_end );
-            const int eligible = static_cast<int>( service_installation_mounts( here, *veh,
-                                                   *service_area_start, *service_area_end, *sel_vpart_info ).size() );
+            const int eligible = static_cast<int>( service_installation_mounts(
+                    here, *veh, *service_area_start, *service_area_end, *sel_vpart_info,
+                    cursor_level ).size() );
             nmsg += string_format( _( "Install one identical part at each of %1$d eligible tiles.\n"
                                       "%2$d tiles in the selected rectangle cannot accept this part.\n" ),
                                    eligible, total - eligible );
@@ -1282,7 +1301,7 @@ bool veh_interact::update_part_requirements( map &here )
             return eligible > 0;
         }
         const std::optional<std::string> denial = service_installation_denial(
-                    *veh, -cursor_vp_mount, *sel_vpart_info );
+                    *veh, -cursor_vp_mount, *sel_vpart_info, cursor_level );
         if( denial ) {
             nmsg += _( "<color_white>Cannot install due to:</color>\n> " );
             nmsg += colorize( *denial, c_red ) + "\n";
@@ -2809,7 +2828,7 @@ void veh_interact::move_cursor( map &here, const point_rel_ms &d, int dstart_at 
                 continue;
             }
             if( service_area_end && service_installation_mounts( here, *veh, *service_area_start,
-                    *service_area_end, vpi ).empty() ) {
+                    *service_area_end, vpi, cursor_level ).empty() ) {
                 continue;
             }
             if( can_potentially_install( vpi ) ) {

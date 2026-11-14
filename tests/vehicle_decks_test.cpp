@@ -76,6 +76,22 @@ TEST_CASE( "vehicle_decks_separate_stacked_components", "[vehicle][decks]" )
     CHECK( vpart_position( veh, 1 ).get_label() == "upper" );
 }
 
+TEST_CASE( "vehicle_service_removal_checks_only_attachments_on_the_selected_deck",
+           "[vehicle][decks][vehicle_service]" )
+{
+    vehicle &veh = make_deck_vehicle();
+    map &here = get_map();
+    const int lower = veh.install_part( here, tripoint_rel_ms::zero, vpart_id( "dashboard" ) );
+    const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "dashboard" ) );
+    REQUIRE( lower >= 0 );
+    REQUIRE( upper >= 0 );
+    veh.part( lower ).set_flag( vp_flag::linked_flag );
+    CHECK_FALSE( veh_interact::service_removal_denial( veh, upper ) );
+    CHECK( veh_interact::service_removal_denial( veh, lower ) );
+    veh.part( upper ).set_flag( vp_flag::linked_flag );
+    CHECK( veh_interact::service_removal_denial( veh, upper ) );
+}
+
 TEST_CASE( "opening_a_deck_door_keeps_the_other_deck_closed", "[vehicle][decks]" )
 {
     vehicle &veh = make_deck_vehicle();

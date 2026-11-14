@@ -1250,7 +1250,7 @@ static std::optional<std::string> choose_vehicle_part_variant( const vpart_info 
 }
 
 static std::optional<int> choose_vehicle_part_direction( map &here, vehicle &veh,
-        const point_rel_ms &mount, const vpart_info &part )
+        const tripoint_rel_ms &mount, const vpart_info &part )
 {
     if( !( part.has_flag( VPFLAG_CONE_LIGHT ) || part.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
            part.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) ) {
@@ -1259,8 +1259,7 @@ static std::optional<int> choose_vehicle_part_direction( map &here, vehicle &veh
 
     avatar &player_character = get_avatar();
     const tripoint_rel_ms old_view_offset = player_character.view_offset;
-    const point_rel_ms translated_mount = veh.coord_translate( mount );
-    const tripoint_bub_ms origin = veh.pos_bub( here ) + translated_mount;
+    const tripoint_bub_ms origin = veh.mount_to_tripoint( &here, mount );
     player_character.view_offset = origin - player_character.pos_bub( here );
     popup( _( "Choose a facing direction for the new %s and confirm, or cancel the installation." ),
            part.name() );
@@ -1622,7 +1621,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         const vehicle_part_install_candidate &candidate = candidates[index];
         sum_cost += candidate.total_cost;
         entries.push_back( { mounts[index], *candidate.location, candidate.supplied_by_mechanic,
-                             candidate.total_cost } );
+                             candidate.total_cost, selection->mount_level } );
     }
     if( sum_cost > std::numeric_limits<int>::max() ||
         static_cast<int64_t>( p.op_of_u.owed ) - sum_cost < std::numeric_limits<int>::min() ) {
@@ -1641,7 +1640,7 @@ void talk_function::select_vehicle_part_service( npc &p )
         return;
     }
     const std::optional<int> direction = choose_vehicle_part_direction(
-            here, *veh, selection->mount, part );
+            here, *veh, tripoint_rel_ms( selection->mount, selection->mount_level ), part );
     if( !direction ) {
         return;
     }
