@@ -10,6 +10,30 @@ struct liquid_dest_opt;
 
 namespace liquid_handler
 {
+// Match the legacy increment-until-full loop, including the final charge that
+// reaches or crosses capacity. full_after must be monotonic and non-mutating.
+template<typename FullAfter>
+int charges_until_full( int available, FullAfter &&full_after )
+{
+    if( available <= 0 || full_after( 0 ) ) {
+        return 0;
+    }
+    if( !full_after( available ) ) {
+        return available;
+    }
+    int low = 1;
+    int high = available;
+    while( low < high ) {
+        const int mid = low + ( high - low ) / 2;
+        if( full_after( mid ) ) {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+    return low;
+}
+
 /**
  * Execute a resolved liquid destination without opening a menu or starting an activity.
  * The caller owns source/access validation and removal of an exhausted source item.
