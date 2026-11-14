@@ -360,7 +360,7 @@ void sounds::add_footstep( const tripoint_bub_ms &p, int volume, int, monster *,
     const season_type seas = season_of_year( calendar::turn );
     const std::string seas_str = season_str( seas );
     sounds_since_last_turn.emplace_back( get_map().get_abs( p ), sound_event { volume,
-            sound_t::movement, footstep, false, true, "", "", seas_str} );
+                                         sound_t::movement, footstep, false, true, "", "", seas_str} );
 }
 
 template <typename C>
@@ -510,7 +510,7 @@ static void deliver_sound( const centroid &cluster, const tripoint_abs_ms &sourc
             for( const tripoint_bub_ms &tp : locations ) {
                 const int dist = sound_distance( local_source, tp );
                 if( vol * 2 <= dist || ( regions && !regions->owns( terrain,
-                        project_to<coords::sm>( terrain.get_abs( tp ) ) ) ) ) {
+                                         project_to<coords::sm>( terrain.get_abs( tp ) ) ) ) ) {
                     continue;
                 }
                 const trap &tr = terrain.tr_at( tp );

@@ -1266,8 +1266,8 @@ TEST_CASE( "mp_room_closes_and_reopens_in_the_loaded_world",
 
     const tripoint_abs_ms second_vehicle_pos = here.get_abs( tripoint_bub_ms( 74, 74, 0 ) );
     vehicle *second_vehicle = here.add_vehicle( vproto_id( "bicycle" ),
-        here.get_bub( second_vehicle_pos ), 0_degrees, 0,
-        veh_spawn_status::UNDAMAGED );
+                              here.get_bub( second_vehicle_pos ), 0_degrees, 0,
+                              veh_spawn_status::UNDAMAGED );
     REQUIRE( second_vehicle );
     REQUIRE( veh_pointer_or_null( region.terrain->veh_at( second_vehicle_pos ) ) == second_vehicle );
     const auto second_vehicle_lifetime = second_vehicle->get_safe_reference();

@@ -925,7 +925,7 @@ void map::cache_vehicle_parts( vehicle &veh )
             set_transparency_cache_dirty( p );
         }
         const int part = veh.avail_part_with_feature( static_cast<int>( vpr.part_index() ),
-            VPFLAG_LADDER );
+                         VPFLAG_LADDER );
         if( part != -1 ) {
             const vehicle_part &ladder_part = veh.part( part );
             const int length = ladder_part.info().ladder_length();
@@ -1051,16 +1051,16 @@ void map::refresh_vehicle_in_shared_views( vehicle &veh, const tripoint_abs_sm &
     if( !g || !g->multiplayer_session().has_regions() ) {
         return;
     }
-    const auto submap_at = []( const map &view, const tripoint_abs_sm &pos ) -> const submap * {
+    const auto submap_at = []( const map & view, const tripoint_abs_sm & pos ) -> const submap * {
         return view.has_loaded_submap( pos ) ?
-               view.get_submap_at_grid( pos - view.abs_sub.xy() ) : nullptr;
+        view.get_submap_at_grid( pos - view.abs_sub.xy() ) : nullptr;
     };
     const submap *new_storage = submap_at( *this, veh.sm_pos );
     const auto stores_vehicle = [&veh]( const std::unique_ptr<vehicle> &entry ) {
         return entry.get() == &veh;
     };
     if( new_storage && std::none_of( new_storage->vehicles.begin(), new_storage->vehicles.end(),
-                                    stores_vehicle ) ) {
+                                     stores_vehicle ) ) {
         new_storage = nullptr;
     }
     if( !old_storage && !new_storage ) {
@@ -4588,7 +4588,7 @@ void map::support_dirty( const tripoint_bub_ms &p )
         auto &session = g->multiplayer_session();
         const tripoint_abs_ms absolute = get_abs( p );
         const map *const owner = session.loaded_map_at( reality_bubble(), project_to<coords::sm>(
-                absolute ) );
+                                     absolute ) );
         if( owner && owner->unsafe_get_submap_at( owner->get_bub( absolute ) ) ==
             unsafe_get_submap_at( p ) ) {
             session.pending_support.insert( absolute );

@@ -5848,7 +5848,7 @@ bool client_apply_message( const std::string &msg )
                 terrain_palette.emplace_back( value.get_string() );
                 furniture_palette.emplace_back( value.get_string() );
             }
-            const auto decode = []( const JsonArray &runs, const auto &palette, auto &out ) {
+            const auto decode = []( const JsonArray & runs, const auto & palette, auto & out ) {
                 size_t cursor = 0;
                 for( JsonValue value : runs ) {
                     const JsonArray run = value.get_array();
@@ -6554,7 +6554,7 @@ void client_process_incoming()
             const world_id &host = mp_session().admission.host_world;
             if( host.valid() ) {
                 get_avatar().use_guest_map_memory( PATH_INFO::config_dir_path() /
-                                                  "mp_map_memory" / host.str() /
+                                                   "mp_map_memory" / host.str() /
                                                    mp_session().local_player->id.str() );
             }
             client_send_join( *mp_session().local_player );

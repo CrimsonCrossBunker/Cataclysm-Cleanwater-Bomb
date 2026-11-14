@@ -181,7 +181,7 @@ TEST_CASE( "mp_client_applies_terrain_after_following_a_distant_authoritative_po
     const tripoint_bub_ms local( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
     get_avatar().setpos( here, local, false );
     const tripoint_abs_sm start = get_avatar().pos_abs_sm();
-    const auto state = []( const tripoint_abs_ms &position ) {
+    const auto state = []( const tripoint_abs_ms & position ) {
         return R"({"type":"state","connected":true,"pos":{"x":)" + std::to_string( position.x() ) +
                ",\"y\":" + std::to_string( position.y() ) + ",\"z\":" +
                std::to_string( position.z() ) + "}}";

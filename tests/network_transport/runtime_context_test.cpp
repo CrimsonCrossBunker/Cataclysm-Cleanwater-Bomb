@@ -38,7 +38,7 @@ size_t thread_count()
 {
 #if defined(__linux__)
     return static_cast<size_t>( std::distance( std::filesystem::directory_iterator( "/proc/self/task" ),
-            std::filesystem::directory_iterator() ) );
+                                std::filesystem::directory_iterator() ) );
 #else
     return 0; // Socket/state isolation is portable; OS thread evidence is Linux-only.
 #endif

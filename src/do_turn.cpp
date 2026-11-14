@@ -713,7 +713,7 @@ void overmap_npc_move()
         }
     }
     bool npcs_need_reload = false;
-    for( npc*&elem : travelling_npcs ) {
+    for( npc *&elem : travelling_npcs ) {
         if( elem->has_omt_destination() ) {
             if( !elem->omt_path.empty() ) {
                 if( rl_dist( elem->omt_path.back(), elem->pos_abs_omt() ) > 2 ) {

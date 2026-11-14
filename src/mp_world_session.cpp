@@ -136,7 +136,7 @@ void world_session::retire_region( map &primary, const player_id &player )
     map &terrain = *retiring->second->terrain;
     std::vector<std::reference_wrapper<const map>> views;
     views.reserve( 1 + regions_.size() );
-    visit_resident_maps( primary, [&]( const map &view ) {
+    visit_resident_maps( primary, [&]( const map & view ) {
         if( &view != &terrain ) {
             views.emplace_back( view );
         }

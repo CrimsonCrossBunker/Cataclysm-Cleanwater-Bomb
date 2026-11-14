@@ -150,8 +150,8 @@ struct client_replication_state {
     std::unordered_map<uint32_t, int64_t> vehicle_uids{};
     monster_mirrors monsters{};
     struct terrain_chunk {
-        std::array<ter_id, SEEX * SEEY> terrain;
-        std::array<furn_id, SEEX * SEEY> furniture;
+        std::array<ter_id, SEEX *SEEY> terrain;
+        std::array<furn_id, SEEX *SEEY> furniture;
     };
     // Receive terrain before a state moves the local window over it.
     std::map<tripoint_abs_sm, terrain_chunk> pending_terrain;
