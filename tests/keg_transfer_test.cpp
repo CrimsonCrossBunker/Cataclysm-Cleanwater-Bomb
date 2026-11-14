@@ -1,4 +1,6 @@
+#include <initializer_list>
 #include <limits>
+#include <string>
 
 #include "cata_catch.h"
 #include "liquid_transfer.h"
