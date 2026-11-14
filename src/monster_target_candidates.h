@@ -10,6 +10,7 @@
 #include "compute_budget.h"
 
 class cata_thread_pool;
+struct point;
 
 // A conservative XY broad phase. Z, death, attitude, visibility and target
 // selection remain live owner queries, in the original monster-list order.
@@ -19,12 +20,12 @@ class monster_target_candidates
         using cell = std::pair<int, int>;
         using indices = std::vector<std::size_t, compute_allocator<std::size_t>>;
         static constexpr std::size_t max_windows = 64;
-        static cell cell_at( int x, int y );
+        static cell cell_at( const point &pos );
         explicit monster_target_candidates( int range );
-        void add( int x, int y );
-        void move( std::size_t index, int x, int y );
-        void warm( int x, int y );
-        const indices &query( int x, int y, cata_thread_pool &pool );
+        void add( const point &pos );
+        void move( std::size_t index, const point &pos );
+        void warm( const point &pos );
+        const indices &query( const point &pos, cata_thread_pool &pool );
     private:
         struct window {
             bool ready = false;

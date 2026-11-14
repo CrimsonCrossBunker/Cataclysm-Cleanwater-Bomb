@@ -7,6 +7,7 @@
 #include <future>
 #include <vector>
 
+#include "point.h"
 #include "thread_pool.h"
 
 namespace
@@ -18,9 +19,9 @@ int cell_axis( int value )
 }
 } // namespace
 
-monster_target_candidates::cell monster_target_candidates::cell_at( int x, int y )
+monster_target_candidates::cell monster_target_candidates::cell_at( const point &pos )
 {
-    return { cell_axis( x ), cell_axis( y ) };
+    return { cell_axis( pos.x ), cell_axis( pos.y ) };
 }
 
 monster_target_candidates::monster_target_candidates( int range ) :
@@ -34,15 +35,15 @@ bool monster_target_candidates::overlaps( cell observer, cell target ) const
            std::abs( observer.second - target.second ) <= cell_range_;
 }
 
-void monster_target_candidates::add( int x, int y )
+void monster_target_candidates::add( const point &pos )
 {
-    cells_.push_back( cell_at( x, y ) );
+    cells_.push_back( cell_at( pos ) );
     windows_.clear();
 }
 
-void monster_target_candidates::move( std::size_t index, int x, int y )
+void monster_target_candidates::move( std::size_t index, const point &pos )
 {
-    const cell next = cell_at( x, y );
+    const cell next = cell_at( pos );
     const cell previous = cells_.at( index );
     if( previous == next ) {
         return;
@@ -55,10 +56,10 @@ void monster_target_candidates::move( std::size_t index, int x, int y )
     cells_[index] = next;
 }
 
-void monster_target_candidates::warm( int x, int y )
+void monster_target_candidates::warm( const point &pos )
 {
     if( windows_.size() < max_windows ) {
-        windows_.try_emplace( cell_at( x, y ) );
+        windows_.try_emplace( cell_at( pos ) );
     }
 }
 
@@ -119,9 +120,9 @@ void monster_target_candidates::prepare( cata_thread_pool &pool )
 }
 
 const monster_target_candidates::indices &monster_target_candidates::query(
-    int x, int y, cata_thread_pool &pool )
+    const point &pos, cata_thread_pool &pool )
 {
-    const cell key = cell_at( x, y );
+    const cell key = cell_at( pos );
     if( windows_.find( key ) == windows_.end() && windows_.size() == max_windows ) {
         windows_.clear();
     }

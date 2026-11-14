@@ -75,19 +75,19 @@ bool creature_tracker::nearby_monster_targets( const tripoint_abs_ms &origin,
             auto state = std::make_unique<target_candidate_state>();
             for( const auto &mon : monsters_list ) {
                 state->slots.emplace( mon.get(), state->slots.size() );
-                state->table.add( mon->pos_abs().x(), mon->pos_abs().y() );
+                state->table.add( mon->pos_abs().xy().raw() );
             }
             // Share each coarse window across its observers, regardless of
             // later friendliness changes. Workers see only copied cell values.
             for( const auto &mon : monsters_list ) {
                 if( mon->friendly != 0 ) {
-                    state->table.warm( mon->pos_abs().x(), mon->pos_abs().y() );
+                    state->table.warm( mon->pos_abs().xy().raw() );
                 }
             }
             target_candidates_ = std::move( state );
         }
-        const auto &indices = target_candidates_->table.query( origin.x(), origin.y(),
-                              get_thread_pool() );
+        const monster_target_candidates::indices &indices =
+            target_candidates_->table.query( origin.xy().raw(), get_thread_pool() );
         out.reserve( indices.size() );
         for( const std::size_t i : indices ) {
             out.push_back( monsters_list[i] );
@@ -233,7 +233,7 @@ void creature_tracker::cache_location( const tripoint_abs_ms &pos,
         if( slot == target_candidates_->slots.end() ) {
             target_candidates_.reset();
         } else {
-            target_candidates_->table.move( slot->second, pos.x(), pos.y() );
+            target_candidates_->table.move( slot->second, pos.xy().raw() );
         }
     }
     if( ++location_filter_updates_ >= std::max<size_t>( 1024, monsters_by_location.size() * 4 ) ) {
