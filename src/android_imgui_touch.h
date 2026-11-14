@@ -2,9 +2,12 @@
 #define CATA_SRC_ANDROID_IMGUI_TOUCH_H
 
 #include <cstdint>
+#include <string_view>
 
 namespace android_imgui_touch
 {
+
+bool should_capture( bool new_ui, bool window_shown, std::string_view input_scene );
 
 enum class gesture_mode : int {
     idle = 0,

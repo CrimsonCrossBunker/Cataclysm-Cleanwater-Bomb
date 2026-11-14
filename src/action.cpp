@@ -1344,6 +1344,9 @@ std::optional<tripoint_rel_ms> choose_direction( const std::string &message,
             const input_context &ctxt, const std::string &action )> &action_cb )
 {
     input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );
+#if defined(__ANDROID__)
+    ctxt.set_hud_scene( "gameplay.choose_direction", message );
+#endif
     if( timeout >= 0 ) {
         ctxt.set_timeout( timeout );
     }

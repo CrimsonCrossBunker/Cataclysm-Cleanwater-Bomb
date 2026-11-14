@@ -377,6 +377,9 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
         if( !target ) {
             return std::nullopt;
         }
+        if( !tool->action->can_repair_target( who, *target, true, true ) ) {
+            return std::nullopt;
+        }
         const repair_repeat repeat = query_repair_repeat( who, *tool->tool, *target, *tool->action,
                                      previous );
         if( repeat == repair_repeat::CANCEL ) {

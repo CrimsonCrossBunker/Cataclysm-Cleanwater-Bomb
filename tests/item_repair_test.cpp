@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <cmath>
 #include <initializer_list>
 #include <set>
 #include <string>
@@ -14,6 +16,7 @@
 #include "clone_ptr.h"
 #include "coordinates.h"
 #include "fault.h"
+#include "flag.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_repair.h"
@@ -27,6 +30,7 @@
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
+#include "messages.h"
 #include "player_activity.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -369,4 +373,53 @@ TEST_CASE( "item_mending_a_gun_malfunction_does_not_restore_durability",
                     fault_fix_mend_fault_fail_to_feed_manual_feed );
     CHECK( target->faults.empty() );
     CHECK( target->damage() == 2000 );
+}
+
+TEST_CASE( "motor_repair_material_check_reports_shortages", "[item][repair][repair_materials]" )
+{
+    const bool filthy_target = GENERATE( false, true );
+    const bool filthy_material = GENERATE( false, true );
+    CAPTURE( filthy_target, filthy_material );
+    for( const int shortage : {
+             12, 1, 0
+         } ) {
+        DYNAMIC_SECTION( "shortage=" << shortage ) {
+            clear_avatar();
+            clear_map_without_vision();
+            Character &you = get_player_character();
+            item motor( itype_id( "motor" ) );
+            motor.set_damage( 2000 );
+            if( filthy_target ) {
+                motor.set_flag( flag_id( "FILTHY" ) );
+            }
+            const auto *actor = dynamic_cast<const repair_item_actor *>(
+                                    itype_welding_kit->get_use( "repair_metal" )->get_actor_ptr() );
+            REQUIRE( actor );
+            const int count = std::max<int>( 1, std::ceil( motor.base_volume() *
+                                             actor->cost_scaling / 250_ml ) );
+            REQUIRE( count == 12 );
+            const auto materials = actor->get_valid_repair_materials( motor );
+            REQUIRE_FALSE( materials.empty() );
+            for( int index = 0; index < count - shortage; ++index ) {
+                item material( *materials.begin() );
+                if( filthy_material ) {
+                    material.set_flag( flag_id( "FILTHY" ) );
+                }
+                get_map().add_item_or_charges( you.pos_bub(), material );
+            }
+            you.invalidate_crafting_inventory();
+            CHECK( actor->can_repair_target( you, motor, false, false ) );
+            Messages::clear_messages();
+            const bool available = shortage == 0 && ( filthy_target || !filthy_material );
+            CHECK( actor->can_repair_target( you, motor, true, true ) == available );
+            if( !available ) {
+                bool shortage_message = false;
+                for( const auto &message : Messages::recent_messages( 10 ) ) {
+                    shortage_message |= message.second.find( "don't have enough clean" ) != std::string::npos;
+                }
+                CHECK( shortage_message );
+            }
+            CHECK( motor.damage() == 2000 );
+        }
+    }
 }

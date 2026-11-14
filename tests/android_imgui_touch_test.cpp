@@ -7,6 +7,16 @@
 using android_imgui_touch::gesture;
 using android_imgui_touch::gesture_mode;
 
+TEST_CASE( "android_imgui_touch_preserves_direction_prompts", "[android][imgui][touch]" )
+{
+    CHECK_FALSE( android_imgui_touch::should_capture( true, true, "gameplay.choose_direction" ) );
+    CHECK( android_imgui_touch::should_capture( true, true, "inventory.main" ) );
+    CHECK( android_imgui_touch::should_capture( true, true, "UILIST" ) );
+    CHECK( android_imgui_touch::should_capture( true, true, "DEFAULTMODE" ) );
+    CHECK_FALSE( android_imgui_touch::should_capture( true, false, "inventory.main" ) );
+    CHECK_FALSE( android_imgui_touch::should_capture( false, true, "inventory.main" ) );
+}
+
 TEST_CASE( "android_imgui_touch_tap_waits_for_release", "[android][imgui][touch]" )
 {
     gesture input;
