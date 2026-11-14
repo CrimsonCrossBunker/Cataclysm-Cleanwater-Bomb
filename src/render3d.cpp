@@ -73,21 +73,28 @@ namespace
 // P0: a square region around the view center, single z-level.
 constexpr int REGION_RADIUS = 24;
 constexpr int REGION_SIZE = REGION_RADIUS * 2 + 1;
-// full view distance (MAX_VIEW_DISTANCE): the far ring beyond REGION_RADIUS is
-// drawn on the view level only, the near region renders all z-levels
+// full view distance (MAX_VIEW_DISTANCE): the near region renders all z-levels;
+// the separate far pass owns generated structures beyond the 60-tile circle
 constexpr int VIEW_RADIUS = 60;
 constexpr int VIEW_SIZE = VIEW_RADIUS * 2 + 1;
-// Generated-map LOD beyond the native live radius, on the surface level only.
-constexpr int FAR_SUBMAP_RADIUS = 128;
-constexpr int FAR_LOD_MAX_INSTANCES =
+// Generated-map LOD beyond the native live radius. Above ground it includes
+// every surface/upper level. Initial buffers and map memory stay at 128 tiles.
+constexpr int FAR_SUBMAP_RADIUS = 256;
+constexpr int INITIAL_FAR_SUBMAP_RADIUS = 128;
+constexpr int FAR_MEMORY_RADIUS = 128;
+constexpr int FAR_LOD_LEVEL_INSTANCES =
     ( ( FAR_SUBMAP_RADIUS * 2 + 1 ) * ( FAR_SUBMAP_RADIUS * 2 + 1 ) -
       VIEW_SIZE * VIEW_SIZE ) * 2;
+constexpr int INITIAL_FAR_LOD_INSTANCES =
+    ( ( INITIAL_FAR_SUBMAP_RADIUS * 2 + 1 ) * ( INITIAL_FAR_SUBMAP_RADIUS * 2 + 1 ) -
+      VIEW_SIZE * VIEW_SIZE ) * 2;
+constexpr int FAR_LOD_MAX_INSTANCES = FAR_LOD_LEVEL_INSTANCES * ( OVERMAP_HEIGHT + 1 );
 // cross-level rendering: all z-levels stacked LEVEL_HEIGHT apart
-// (the near ±24 region renders every level; the far ring draws the view level only)
 // a tile can yield up to 6 instances (floor + object + furniture + creature + item + item highlight)
-constexpr int MAX_DRAW_INSTANCES = VIEW_SIZE * VIEW_SIZE * 6 +
-                                   REGION_SIZE * REGION_SIZE * 6 * ( OVERMAP_DEPTH + OVERMAP_HEIGHT ) +
-                                   FAR_LOD_MAX_INSTANCES;
+constexpr int NEAR_DRAW_INSTANCES = VIEW_SIZE * VIEW_SIZE * 6 +
+                                    REGION_SIZE * REGION_SIZE * 6 * ( OVERMAP_DEPTH + OVERMAP_HEIGHT );
+constexpr int INITIAL_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + INITIAL_FAR_LOD_INSTANCES;
+constexpr int MAX_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + FAR_LOD_MAX_INSTANCES;
 // float3 pos + float3 scale + float2 uv0 + float2 uv1 + float4 color + float flags + float pad
 constexpr int INSTANCE_STRIDE = 64;
 
@@ -513,6 +520,7 @@ struct frame_slot {
     SDL_GPUTexture *depth_tex = nullptr;
     SDL_Texture *color_tex_sdl = nullptr;
     SDL_GPUBuffer *instance_vb = nullptr;
+    size_t instance_vb_size = 0;
     SDL_GPUTransferBuffer *instance_tb = nullptr;
     size_t instance_tb_size = 0;
     std::unordered_map<SDL_Texture *, std::shared_ptr<SDL_Texture>> texture_owners;
@@ -851,6 +859,7 @@ void context::teardown()
             if( slot.instance_vb ) {
                 SDL_ReleaseGPUBuffer( device, slot.instance_vb );
                 slot.instance_vb = nullptr;
+                slot.instance_vb_size = 0;
             }
         }
         if( glyph_tex ) {
@@ -1258,12 +1267,15 @@ bool probe( SDL_Renderer *renderer )
     g_ctx.quad_vb = SDL_CreateGPUBuffer( device, &bi );
     bi.size = flatquad_vertices().size() * sizeof( float );
     g_ctx.flatquad_vb = SDL_CreateGPUBuffer( device, &bi );
-    // slack past MAX_DRAW_INSTANCES: the cap is checked per tile, and one tile
+    // Slack past the initial cap: the cap is checked per tile, and one tile
     // (a fence corner with furniture + items) can push several past it. Each
     // slot owns its instance VB so a pending frame never shares it with a new one.
-    bi.size = ( MAX_DRAW_INSTANCES + 64 ) * INSTANCE_STRIDE;
+    // Dense multi-level far terrain grows this buffer on demand instead of
+    // multiplying every renderer's initial allocation by OVERMAP_HEIGHT + 1.
+    bi.size = ( INITIAL_DRAW_INSTANCES + 64 ) * INSTANCE_STRIDE;
     for( frame_slot &slot : g_ctx.slots ) {
         slot.instance_vb = SDL_CreateGPUBuffer( device, &bi );
+        slot.instance_vb_size = slot.instance_vb ? bi.size : 0;
     }
     bool buffers_ok = g_ctx.cube_vb && g_ctx.xquad_vb && g_ctx.quad_vb && g_ctx.flatquad_vb;
     for( const frame_slot &slot : g_ctx.slots ) {
@@ -3205,7 +3217,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     continue;
                 }
                 // two-tier gather: only the near region (±REGION_RADIUS) renders
-                // other z-levels; the far ring draws the view level alone
+                // other z-levels; the separate far pass owns distant structures
                 if( dz != 0 &&
                     ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
                     continue;
@@ -5005,14 +5017,19 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     if( get_option<bool>( "RENDER3D_FAR_TERRAIN" ) ) {
         // Generated-map structural LOD beyond the live radius. MAPBUFFER owns all
         // submaps; pointers are borrowed for this gather only and never retained.
-        const int landscape_z = std::min( cz, 0 );
-        const float landscape_wz = ( landscape_z - cz ) * LEVEL_HEIGHT;
+        // On or above the surface, include every upper building level. Underground
+        // keeps the original single-level far pass.
+        const int far_z_min = upos.z() >= 0 ? 0 : std::min( cz, 0 );
+        const int far_z_max = upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min;
         const tripoint_abs_ms center_abs = here.get_abs( center );
         const tripoint_abs_sm center_sm = project_to<coords::sm>( center_abs );
         static tripoint_abs_sm far_center = tripoint_abs_sm::invalid;
         static std::unordered_set<tripoint_abs_sm> far_missing;
-        if( far_center != center_sm ) {
+        static uint64_t far_missing_revision = 0;
+        const uint64_t buffer_revision = MAPBUFFER.content_revision();
+        if( far_center != center_sm || far_missing_revision != buffer_revision ) {
             far_center = center_sm;
+            far_missing_revision = buffer_revision;
             far_missing.clear();
         }
         int far_load_budget = full_vision ? 1 : 0;
@@ -5022,9 +5039,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( count >= MAX_DRAW_INSTANCES ) {
                     return count;
                 }
-                const tripoint_abs_sm sm_pos = center_sm + point_rel_sm( smx, smy );
-                const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
-                const point smd( sm_abs.x() - center_abs.x(), sm_abs.y() - center_abs.y() );
+                const tripoint_abs_sm column_pos = center_sm + point_rel_sm( smx, smy );
+                const tripoint_abs_ms column_abs = project_to<coords::ms>( column_pos );
+                const point smd( column_abs.x() - center_abs.x(), column_abs.y() - center_abs.y() );
                 int max_corner_range2 = 0;
                 for( const int x : { smd.x, smd.x + SEEX - 1 } ) {
                     for( const int y : { smd.y, smd.y + SEEY - 1 } ) {
@@ -5034,48 +5051,73 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( max_corner_range2 <= VIEW_RADIUS * VIEW_RADIUS ) {
                     continue;
                 }
-                if( !bounds_in_frustum( frustum, static_cast<float>( smd.x ),
-                                        static_cast<float>( smd.y ),
-                                        static_cast<float>( smd.x + SEEX ),
-                                        static_cast<float>( smd.y + SEEY ), landscape_wz ) ) {
-                    continue;
-                }
+                // The existing observer-level LOS gate is shared by the column;
+                // memory remains independent of it on every level.
                 const bool gray_visible = gray_los_visible(
-                                              sm_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) );
-                const submap *sm = nullptr;
-                if( gray_visible ) {
-                    sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
-                    if( !sm && far_missing.count( sm_pos ) == 0 ) {
-                        MAPBUFFER.prefetch_quad( project_to<coords::omt>( sm_pos ),
-                                                 std::max( std::abs( smx ), std::abs( smy ) ) );
-                        if( far_load_budget > 0 ) {
-                            --far_load_budget;
-                            sm = MAPBUFFER.lookup_submap( sm_pos );
-                            if( !sm ) {
-                                far_missing.insert( sm_pos );
+                                              column_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) );
+                for( int zlev = far_z_min; zlev <= far_z_max; ++zlev ) {
+                    if( count >= MAX_DRAW_INSTANCES ) {
+                        return count;
+                    }
+                    const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
+                    if( !bounds_in_frustum( frustum, static_cast<float>( smd.x ),
+                                            static_cast<float>( smd.y ),
+                                            static_cast<float>( smd.x + SEEX ),
+                                            static_cast<float>( smd.y + SEEY ), wz ) ) {
+                        continue;
+                    }
+                    const tripoint_abs_sm sm_pos( column_pos.x(), column_pos.y(), zlev );
+                    const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
+                    const submap *sm = nullptr;
+                    if( gray_visible ) {
+                        sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
+                        if( !sm && far_missing.count( sm_pos ) == 0 ) {
+                            MAPBUFFER.prefetch_quad( project_to<coords::omt>( sm_pos ),
+                                                     std::max( std::abs( smx ), std::abs( smy ) ) );
+                            if( far_load_budget > 0 ) {
+                                --far_load_budget;
+                                sm = MAPBUFFER.lookup_submap( sm_pos );
+                                // Loading can advance the revision even when the requested submap
+                                // is absent. Adopt it here so new data does not clear this frame's
+                                // negative results and repeatedly retry the first absent upper level.
+                                far_missing_revision = MAPBUFFER.content_revision();
+                                if( !sm ) {
+                                    far_missing.insert( sm_pos );
+                                }
                             }
                         }
                     }
-                }
-                for( int ly = 0; ly < SEEY; ++ly ) {
-                    for( int lx = 0; lx < SEEX; ++lx ) {
-                        const point d( smd.x + lx, smd.y + ly );
-                        const int range2 = d.x * d.x + d.y * d.y;
-                        if( range2 <= VIEW_RADIUS * VIEW_RADIUS ||
-                            range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ||
-                            !tile_in_frustum( frustum, d, landscape_wz ) ) {
-                            continue;
-                        }
-                        const tripoint_abs_ms abs_p = sm_abs + point_rel_ms( lx, ly );
-                        const memorized_tile &mem = you.get_memorized_tile( abs_p );
-                        if( !mem.get_ter_id().empty() || !mem.get_dec_id().empty() ) {
-                            gather_memory_tile( here.get_bub( abs_p ), d, landscape_wz, true );
-                            continue;
-                        }
-                        if( gray_visible && sm ) {
-                            const ter_id t = sm->get_ter( point_sm_ms( lx, ly ) );
-                            if( t ) {
-                                gather_structure_tile( t.obj(), d, landscape_wz, nullptr, false );
+                    bool uniform_open_air = false;
+                    if( sm && sm->is_uniform() ) {
+                        const ter_id uniform_ter = sm->get_ter( point_sm_ms( 0, 0 ) );
+                        uniform_open_air = uniform_ter &&
+                                           uniform_ter->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+                    }
+                    if( ( !sm || uniform_open_air ) &&
+                        !you.has_map_memory_in_region( sm_abs,
+                                                       sm_abs + point_rel_ms( SEEX - 1, SEEY - 1 ) ) ) {
+                        continue;
+                    }
+                    for( int ly = 0; ly < SEEY; ++ly ) {
+                        for( int lx = 0; lx < SEEX; ++lx ) {
+                            const point d( smd.x + lx, smd.y + ly );
+                            const int range2 = d.x * d.x + d.y * d.y;
+                            if( range2 <= VIEW_RADIUS * VIEW_RADIUS ||
+                                range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ||
+                                !tile_in_frustum( frustum, d, wz ) ) {
+                                continue;
+                            }
+                            const tripoint_abs_ms abs_p = sm_abs + point_rel_ms( lx, ly );
+                            const memorized_tile &mem = you.get_memorized_tile( abs_p );
+                            if( !mem.get_ter_id().empty() || !mem.get_dec_id().empty() ) {
+                                gather_memory_tile( here.get_bub( abs_p ), d, wz, zlev <= cz );
+                                continue;
+                            }
+                            if( gray_visible && sm && !uniform_open_air ) {
+                                const ter_id t = sm->get_ter( point_sm_ms( lx, ly ) );
+                                if( t ) {
+                                    gather_structure_tile( t.obj(), d, wz, nullptr, false );
+                                }
                             }
                         }
                     }
@@ -5346,10 +5388,10 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         if( get_option<bool>( "RENDER3D_FAR_TERRAIN" ) ) {
             const tripoint_abs_ms center_abs = here.get_abs( center );
             const tripoint_abs_ms player_abs = here.get_abs( upos );
-            const point min_xy( std::min( center_abs.x(), player_abs.x() ) - FAR_SUBMAP_RADIUS,
-                                std::min( center_abs.y(), player_abs.y() ) - FAR_SUBMAP_RADIUS );
-            const point max_xy( std::max( center_abs.x(), player_abs.x() ) + FAR_SUBMAP_RADIUS,
-                                std::max( center_abs.y(), player_abs.y() ) + FAR_SUBMAP_RADIUS );
+            const point min_xy( std::min( center_abs.x(), player_abs.x() ) - FAR_MEMORY_RADIUS,
+                                std::min( center_abs.y(), player_abs.y() ) - FAR_MEMORY_RADIUS );
+            const point max_xy( std::max( center_abs.x(), player_abs.x() ) + FAR_MEMORY_RADIUS,
+                                std::max( center_abs.y(), player_abs.y() ) + FAR_MEMORY_RADIUS );
             you.prepare_map_memory_region( tripoint_abs_ms( min_xy.x, min_xy.y, 0 ),
                                            tripoint_abs_ms( max_xy.x, max_xy.y, 0 ) );
         } else {
@@ -5396,7 +5438,8 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     // precision for ground decals viewed from upper levels.
     const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
                                         static_cast<float>( w ) / static_cast<float>( h ),
-                                        0.5f, 300.0f );
+                                        0.5f, std::max( 300.0f,
+                                                        static_cast<float>( FAR_SUBMAP_RADIUS + 64 ) ) );
     const mat4 mvp = mat4_mul( proj, view );
     const view_frustum frustum = make_view_frustum( mvp );
 
@@ -5698,6 +5741,27 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     bool upload_ok = true;
     if( !inst.empty() ) {
         const size_t bytes = inst.size() * sizeof( float );
+        if( bytes > slot.instance_vb_size ) {
+            // begin_frame_slot only reuses a slot whose previous submission
+            // completed, so growing its vertex buffer cannot race that draw.
+            if( slot.instance_vb ) {
+                SDL_ReleaseGPUBuffer( device, slot.instance_vb );
+                slot.instance_vb = nullptr;
+                slot.instance_vb_size = 0;
+            }
+            size_t new_size = 64 * 1024;
+            while( new_size < bytes ) {
+                new_size *= 2;
+            }
+            SDL_GPUBufferCreateInfo bi{};
+            bi.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+            bi.size = static_cast<Uint32>( new_size );
+            slot.instance_vb = SDL_CreateGPUBuffer( device, &bi );
+            slot.instance_vb_size = slot.instance_vb ? new_size : 0;
+        }
+        if( !slot.instance_vb ) {
+            upload_ok = false;
+        }
         if( bytes > slot.instance_tb_size ) {
             // begin_frame_slot only reuses a slot whose previous submission
             // completed, so growing its upload buffer cannot race that upload.
@@ -5723,17 +5787,19 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             void *mapped = SDL_MapGPUTransferBuffer( device, tb, false );
             if( mapped ) {
                 std::memcpy( mapped, inst.data(), inst.size() * sizeof( float ) );
+                if( upload_ok ) {
+                    SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
+                    SDL_GPUTransferBufferLocation src{};
+                    src.transfer_buffer = tb;
+                    src.offset = 0;
+                    SDL_GPUBufferRegion dst{};
+                    dst.buffer = slot.instance_vb;
+                    dst.offset = 0;
+                    dst.size = inst.size() * sizeof( float );
+                    SDL_UploadToGPUBuffer( copy, &src, &dst, false );
+                    SDL_EndGPUCopyPass( copy );
+                }
                 SDL_UnmapGPUTransferBuffer( device, tb );
-                SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
-                SDL_GPUTransferBufferLocation src{};
-                src.transfer_buffer = tb;
-                src.offset = 0;
-                SDL_GPUBufferRegion dst{};
-                dst.buffer = slot.instance_vb;
-                dst.offset = 0;
-                dst.size = inst.size() * sizeof( float );
-                SDL_UploadToGPUBuffer( copy, &src, &dst, false );
-                SDL_EndGPUCopyPass( copy );
             } else {
                 upload_ok = false;
             }

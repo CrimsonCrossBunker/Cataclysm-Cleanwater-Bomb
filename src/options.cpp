@@ -3141,7 +3141,7 @@ void options_manager::add_options_graphics()
            );
 
         add( "RENDER3D_FAR_TERRAIN", page_id, to_translation( "3D distant generated terrain" ),
-             to_translation( "If true, displays generated terrain and map memory beyond the normal 60-tile range in the experimental 3D renderer.  Additional loading and rendering cost applies." ),
+             to_translation( "If true, displays real terrain up to 256 tiles and map memory up to 128 tiles in the experimental 3D renderer.  When visibility permits, at most 32 distant overmap terrain tiles are generated per turn.  Additional map generation, loading and rendering cost applies." ),
              false, COPT_CURSES_HIDE
            );
 

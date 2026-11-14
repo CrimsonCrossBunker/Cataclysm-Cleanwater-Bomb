@@ -10663,6 +10663,39 @@ bool generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &terrain_type
     return MAPBUFFER.generate_uniform_omt( p, terrain_type );
 }
 
+bool map::generate_distant_omt( const tripoint_abs_omt &p )
+{
+    const tripoint_abs_sm grid_sm_base = project_to<coords::sm>( p );
+    map &bubble_map = reality_bubble();
+    bool main_inbounds = false;
+    for( int gridx = 0; gridx <= 1; ++gridx ) {
+        for( int gridy = 0; gridy <= 1; ++gridy ) {
+            const tripoint_abs_sm pos = grid_sm_base + point_rel_sm( gridx, gridy );
+            main_inbounds = main_inbounds || ( this != &bubble_map &&
+                                               bubble_map.inbounds( project_to<coords::ms>( pos ) ) );
+        }
+    }
+
+    smallmap tmp_map;
+    swap_map swap( *tmp_map.cast_to_map() );
+    tmp_map.main_cleanup_override( false );
+    tmp_map.generate( p, calendar::turn, true );
+    _main_requires_cleanup |= main_inbounds && tmp_map.is_main_cleanup_queued();
+
+    for( int gridx = 0; gridx <= 1; ++gridx ) {
+        for( int gridy = 0; gridy <= 1; ++gridy ) {
+            for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; ++gridz ) {
+                const tripoint_abs_sm pos = grid_sm_base.xy() + tripoint( gridx, gridy, gridz );
+                if( !MAPBUFFER.get_submap_if_loaded( pos ) ) {
+                    debugmsg( "failed to generate distant submap at %s", pos.to_string() );
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
 void map::loadn( const point_bub_sm &grid, bool update_vehicles )
 {
     dbg( D_INFO ) << "map::loadn(game[" << g.get() << "], worldx[" << abs_sub.x()

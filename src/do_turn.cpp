@@ -1227,6 +1227,7 @@ void game::simulate_turn_suffix()
     local_player_controller().process_turn();
 
     update_avatar_memory( u );
+    generate_distant_terrain();
 
     // Per-turn world-state updates previously ran inside present_turn().
     // Moving them here keeps simulation advancing every tick regardless of
