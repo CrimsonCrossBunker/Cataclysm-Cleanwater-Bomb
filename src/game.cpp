@@ -218,6 +218,9 @@
 #include "proficiency.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#ifdef TILES
+    #include "render3d.h"
+#endif
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -790,6 +793,7 @@ void game::reset_game_state()
     new_game = true;
     north_america_world = false;
     dimension_checkpoint_pending = false;
+    distant_generated_omts.clear();
 
     next_npc_id = character_id( 1 );
     next_mission_id = 1;
@@ -11645,6 +11649,110 @@ void game::vertical_notes( int z_before, int z_after )
                    !ter2->has_flag( oter_flags::known_up ) ) {
             overmap_buffer.set_seen( cursp_after, om_vision_level::full );
             overmap_buffer.add_note( cursp_after, string_format( "<:W;%s", _( "AUTO: goes up" ) ) );
+        }
+    }
+}
+
+void game::generate_distant_terrain()
+{
+    if( !is_draw_tiles_mode() || !get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ||
+        !get_option<bool>( "RENDER3D_FAR_TERRAIN" ) || cata_mp::is_session_active() ||
+        !m.supports_zlevels() || u.posz() < 0 ) {
+        return;
+    }
+#if defined(TILES)
+    // An option-enabled session may still have fallen back to 2D after a
+    // renderer/probe failure. Do not generate extra world data unless 3D is live.
+    if( !render3d::available() ) {
+        return;
+    }
+#endif
+
+    const tripoint_bub_ms observer_pos = m.observer_position( u );
+    if( u.sight_range( m.ambient_light_at( observer_pos ) ) < MAX_VIEW_DISTANCE ) {
+        return;
+    }
+    const level_cache &sight_cache = m.get_cache_ref( observer_pos.z() );
+    bool full_vision = false;
+    for( int y = 0; y < MAPSIZE_Y && !full_vision; ++y ) {
+        for( int x = 0; x < MAPSIZE_X; ++x ) {
+            const int radius = std::max( std::abs( x - observer_pos.x() ),
+                                         std::abs( y - observer_pos.y() ) );
+            if( radius < MAX_VIEW_DISTANCE ) {
+                continue;
+            }
+            if( sight_cache.seen_cache[x][y] > 0.0f ||
+                sight_cache.camera_cache[x][y] > 0.0f ) {
+                full_vision = true;
+                break;
+            }
+        }
+    }
+    if( !full_vision ) {
+        return;
+    }
+
+    // Must match FAR_SUBMAP_RADIUS in render3d.cpp. Kept local to avoid rebuilding
+    // every game_constants.h consumer for this renderer-specific feature.
+    constexpr int far_radius = 256;
+    constexpr int omt_size = SEEX * 2;
+    constexpr int far_radius_omt = ( far_radius + omt_size - 1 ) / omt_size;
+    const tripoint_abs_ms player_abs = u.pos_abs();
+    const tripoint_abs_omt center_omt = project_to<coords::omt>( player_abs );
+    struct candidate {
+        tripoint_abs_omt pos;
+        int distance2;
+    };
+    std::vector<candidate> candidates;
+    for( int dy = -far_radius_omt; dy <= far_radius_omt; ++dy ) {
+        for( int dx = -far_radius_omt; dx <= far_radius_omt; ++dx ) {
+            const tripoint_abs_omt pos( center_omt.x() + dx, center_omt.y() + dy, 0 );
+            const tripoint_abs_ms corner = project_to<coords::ms>( pos );
+            int max_corner_range2 = 0;
+            for( const int x : { 0, omt_size - 1 } ) {
+                for( const int y : { 0, omt_size - 1 } ) {
+                    const int rx = corner.x() + x - player_abs.x();
+                    const int ry = corner.y() + y - player_abs.y();
+                    max_corner_range2 = std::max( max_corner_range2, rx * rx + ry * ry );
+                }
+            }
+            const int nearest_x = std::clamp( player_abs.x(), corner.x(), corner.x() + omt_size - 1 );
+            const int nearest_y = std::clamp( player_abs.y(), corner.y(), corner.y() + omt_size - 1 );
+            const int nearest_range2 = ( nearest_x - player_abs.x() ) * ( nearest_x - player_abs.x() ) +
+                                       ( nearest_y - player_abs.y() ) * ( nearest_y - player_abs.y() );
+            if( max_corner_range2 <= MAX_VIEW_DISTANCE * MAX_VIEW_DISTANCE ||
+                nearest_range2 > far_radius * far_radius ) {
+                continue;
+            }
+            const int center_x = corner.x() + omt_size / 2 - player_abs.x();
+            const int center_y = corner.y() + omt_size / 2 - player_abs.y();
+            candidates.push_back( { pos, center_x * center_x + center_y * center_y } );
+        }
+    }
+    std::sort( candidates.begin(), candidates.end(), []( const candidate & a, const candidate & b ) {
+        return a.distance2 < b.distance2;
+    } );
+
+    constexpr auto generation_slice = std::chrono::milliseconds( 8 );
+    const auto generation_begin = std::chrono::steady_clock::now();
+    int generation_budget = 32;
+    for( const candidate &next : candidates ) {
+        if( distant_generated_omts.count( next.pos ) != 0 ) {
+            continue;
+        }
+        if( MAPBUFFER.submap_exists_approx( project_to<coords::sm>( next.pos ) ) ) {
+            // Positive results are stable for this save too: avoid probing the same
+            // archive listing every turn while the candidate frontier is scanned.
+            distant_generated_omts.insert( next.pos );
+            continue;
+        }
+        // Record the attempt as well as success: a failed or entirely uniform OMT
+        // must not monopolize every later turn's generation budget.
+        distant_generated_omts.insert( next.pos );
+        m.generate_distant_omt( next.pos );
+        if( --generation_budget <= 0 ||
+            std::chrono::steady_clock::now() - generation_begin >= generation_slice ) {
+            return;
         }
     }
 }

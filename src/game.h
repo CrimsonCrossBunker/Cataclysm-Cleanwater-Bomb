@@ -253,6 +253,7 @@ class game
         void simulate_turn_prefix();       // world progression: calendar, weather, NPCs, hordes
         bool do_avatar_action_loop();      // player input & action; returns true if game over
         void simulate_turn_suffix();       // post-action simulation: creatures, map cache, memory
+        void generate_distant_terrain();   // budgeted real OMT generation for 3D LOD
         void present_turn();               // rendering, audio, UI
 
         /** Loads static data that does not depend on mods or similar. */
@@ -1333,6 +1334,8 @@ class game
         memorial_logger &memorial();
 
         global_variables global_variables_instance;
+        // Runtime-only deduplication for uniform OMTs that have no disk sentinel.
+        std::unordered_set<tripoint_abs_omt> distant_generated_omts; // NOLINT(cata-serialize)
         std::unordered_map<std::string, point_abs_om> unique_npcs;
     public:
         void update_unique_npc_location( const std::string &id, point_abs_om loc );

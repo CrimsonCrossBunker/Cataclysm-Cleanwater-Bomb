@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAPBUFFER_H
 #define CATA_SRC_MAPBUFFER_H
 
+#include <cstdint>
 #include <functional>
 #include <list>
 #include <map>
@@ -77,6 +78,12 @@ class mapbuffer
          * submap object, don't delete it on your own.
          */
         submap *lookup_submap( const tripoint_abs_sm &p );
+        // Return a resident submap without disk I/O, parsing, or map generation.
+        // The pointer is borrowed and must only be used while the buffer is stable.
+        submap *get_submap_if_loaded( const tripoint_abs_sm &p );
+        // Changes when resident content is added, removed, or cleared. Consumers
+        // can use this to invalidate negative lookup caches after mapgen or eviction.
+        uint64_t content_revision() const;
         // Cheaper version of the above for when you only care about whether the
         // submap exists or not.
         bool submap_exists( const tripoint_abs_sm &p );
@@ -148,6 +155,7 @@ class mapbuffer
         // caching it. Returns nullptr if the archive does not exist / fails to open.
         const std::unordered_set<std::string> *zzip_listing( const cata_path &zzip_path );
         submap_map_t submaps; // NOLINT(cata-serialize)
+        uint64_t content_revision_ = 0;
         const bool active_world_adapter_;
         std::unique_ptr<const map_storage_context> storage_;
         uniform_terrain_lookup uniform_terrain_;

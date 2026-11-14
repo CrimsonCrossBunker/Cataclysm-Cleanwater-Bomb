@@ -106,7 +106,9 @@ void mapbuffer::clear()
     // Drop any pending/completed background reads first: their captured paths
     // belong to the world being torn down and must not be consumed afterward.
     prefetcher_.clear();
+    std::scoped_lock lk( submaps_mutex_ );
     submaps.clear();
+    ++content_revision_;
     // The listing cache is keyed by archive path and belongs to the old world.
     zzip_listing_cache.clear();
     if( active_world_adapter_ ) {
@@ -117,12 +119,14 @@ void mapbuffer::clear()
 void mapbuffer::clear_outside_reality_bubble()
 {
     map &here = get_map();
+    std::scoped_lock lk( submaps_mutex_ );
     auto it = submaps.begin();
     while( it != submaps.end() ) {
         if( here.inbounds( it->first ) ) {
             ++it;
         } else {
             it = submaps.erase( it );
+            ++content_revision_;
         }
     }
 }
@@ -142,6 +146,7 @@ bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &s
         veh->sm_pos = p;
     }
     submaps[p] = std::move( sm );
+    ++content_revision_;
 
     return true;
 }
@@ -169,6 +174,20 @@ void mapbuffer::remove_submap( const tripoint_abs_sm &addr )
         return;
     }
     submaps.erase( m_target );
+    ++content_revision_;
+}
+
+uint64_t mapbuffer::content_revision() const
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    return content_revision_;
+}
+
+submap *mapbuffer::get_submap_if_loaded( const tripoint_abs_sm &p )
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    const auto iter = submaps.find( p );
+    return iter == submaps.end() ? nullptr : iter->second.get();
 }
 
 submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )

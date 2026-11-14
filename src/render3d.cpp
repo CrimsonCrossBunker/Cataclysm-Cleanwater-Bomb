@@ -45,6 +45,7 @@
 #include "line.h"
 #include "map.h"
 #include "map_memory.h"
+#include "mapbuffer.h"
 #include "mapdata.h"
 #include "monster.h"
 #include "mtype.h"
@@ -60,6 +61,7 @@
 #include "veh_type.h"
 #include "weather.h"
 #include "weather_type.h"
+#include "worldfactory.h"
 
 static const vpart_location_id vpart_location_on_roof( "on_roof" );
 
@@ -72,15 +74,28 @@ namespace
 // P0: a square region around the view center, single z-level.
 constexpr int REGION_RADIUS = 24;
 constexpr int REGION_SIZE = REGION_RADIUS * 2 + 1;
-// full view distance (MAX_VIEW_DISTANCE): the far ring beyond REGION_RADIUS is
-// drawn on the view level only, the near region renders all z-levels
+// full view distance (MAX_VIEW_DISTANCE): the near region renders all z-levels;
+// the separate far pass owns generated structures beyond the 60-tile circle
 constexpr int VIEW_RADIUS = 60;
 constexpr int VIEW_SIZE = VIEW_RADIUS * 2 + 1;
+// Generated-map LOD beyond the native live radius. Above ground it includes
+// every surface/upper level. Initial buffers and map memory stay at 128 tiles.
+constexpr int FAR_SUBMAP_RADIUS = 256;
+constexpr int INITIAL_FAR_SUBMAP_RADIUS = 128;
+constexpr int FAR_MEMORY_RADIUS = 128;
+constexpr int FAR_LOD_LEVEL_INSTANCES =
+    ( ( FAR_SUBMAP_RADIUS * 2 + 1 ) * ( FAR_SUBMAP_RADIUS * 2 + 1 ) -
+      VIEW_SIZE * VIEW_SIZE ) * 2;
+constexpr int INITIAL_FAR_LOD_INSTANCES =
+    ( ( INITIAL_FAR_SUBMAP_RADIUS * 2 + 1 ) * ( INITIAL_FAR_SUBMAP_RADIUS * 2 + 1 ) -
+      VIEW_SIZE * VIEW_SIZE ) * 2;
+constexpr int FAR_LOD_MAX_INSTANCES = FAR_LOD_LEVEL_INSTANCES * ( OVERMAP_HEIGHT + 1 );
 // cross-level rendering: all z-levels stacked LEVEL_HEIGHT apart
-// (the near ±24 region renders every level; the far ring draws the view level only)
 // a tile can yield up to 6 instances (floor + object + furniture + creature + item + item highlight)
-constexpr int MAX_DRAW_INSTANCES = VIEW_SIZE * VIEW_SIZE * 6 +
-                                   REGION_SIZE * REGION_SIZE * 6 * ( OVERMAP_DEPTH + OVERMAP_HEIGHT );
+constexpr int NEAR_DRAW_INSTANCES = VIEW_SIZE * VIEW_SIZE * 6 +
+                                    REGION_SIZE * REGION_SIZE * 6 * ( OVERMAP_DEPTH + OVERMAP_HEIGHT );
+constexpr int INITIAL_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + INITIAL_FAR_LOD_INSTANCES;
+constexpr int MAX_DRAW_INSTANCES = NEAR_DRAW_INSTANCES + FAR_LOD_MAX_INSTANCES;
 // float3 pos + float3 scale + float2 uv0 + float2 uv1 + float4 color + float flags + float pad
 constexpr int INSTANCE_STRIDE = 64;
 
@@ -103,8 +118,8 @@ constexpr float ITEM_HEIGHT = 0.5f;
 // fields: liquid/solid traces (blood, bile, acid, web...) draw as thin decals
 // just above the floor; gas/plasma effects (smoke, fire, gas...) draw as
 // camera-facing billboards. Co-tile entries stagger so they never share a plane.
-constexpr float FIELD_DECAL_Z = 0.001f;
-constexpr float FIELD_DECAL_STAGGER = 0.0003f;
+constexpr float FIELD_DECAL_Z = 0.002f;
+constexpr float FIELD_DECAL_STAGGER = 0.0005f;
 constexpr float FIELD_RISER_HEIGHT = 1.4f;
 constexpr float FIELD_RISER_OFFSET = 0.008f;
 // ground-level utility runs sit above the floor and the existing low decals
@@ -140,6 +155,11 @@ constexpr float VEH_MIRROR_Z = 0.80f;
 // prepare call below anchors that region's z window at 0 (see draw_terrain_window)
 static_assert( fov_3d_z_range >= OVERMAP_DEPTH &&fov_3d_z_range >= OVERMAP_HEIGHT,
                "map memory region must cover every rendered z-level" );
+
+constexpr int COMPASS_ATLAS_SIZE = 256;
+constexpr float COMPASS_ARC_RADIUS_UV = 0.78f;
+constexpr float COMPASS_QUAD_SIZE = 3.0f;
+constexpr float COMPASS_WAIST_Z = 0.82f;
 
 // geometry kind of an instance batch (matches `params.x` in terrain3d.vert)
 enum draw_mode : int {
@@ -300,6 +320,21 @@ bool aabb_in_frustum( const view_frustum &f, const vec3 &min, const vec3 &max )
     return true;
 }
 
+bool aabb_fully_in_frustum( const view_frustum &f, const vec3 &min, const vec3 &max )
+{
+    for( const std::array<float, 4> &p : f.planes ) {
+        // The negative vertex is the worst case. If it is inside, every other
+        // corner is inside this plane too.
+        const vec3 v{ p[0] >= 0.0f ? min.x : max.x,
+                      p[1] >= 0.0f ? min.y : max.y,
+                      p[2] >= 0.0f ? min.z : max.z };
+        if( p[0] * v.x + p[1] * v.y + p[2] * v.z + p[3] < 0.0f ) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Generous bounds for every object a tile can emit: the largest current
 // creature billboard is 9m wide, and vehicle/sheet art can spill across tiles.
 // Conservative culling is preferable here to clipping an edge-case sprite.
@@ -311,6 +346,13 @@ bool bounds_in_frustum( const view_frustum &f, const float x0, const float y0,
                         const float x1, const float y1, const float wz )
 {
     return aabb_in_frustum( f, { x0 - CULL_XY_MARGIN, y0 - CULL_XY_MARGIN, wz - CULL_Z_BELOW },
+    { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
+}
+
+bool bounds_fully_in_frustum( const view_frustum &f, const float x0, const float y0,
+                              const float x1, const float y1, const float wz )
+{
+    return aabb_fully_in_frustum( f, { x0 - CULL_XY_MARGIN, y0 - CULL_XY_MARGIN, wz - CULL_Z_BELOW },
     { x1 + CULL_XY_MARGIN, y1 + CULL_XY_MARGIN, wz + CULL_Z_ABOVE } );
 }
 
@@ -501,6 +543,7 @@ struct frame_slot {
     SDL_GPUTexture *depth_tex = nullptr;
     SDL_Texture *color_tex_sdl = nullptr;
     SDL_GPUBuffer *instance_vb = nullptr;
+    size_t instance_vb_size = 0;
     SDL_GPUTransferBuffer *instance_tb = nullptr;
     size_t instance_tb_size = 0;
     std::unordered_map<SDL_Texture *, std::shared_ptr<SDL_Texture>> texture_owners;
@@ -533,6 +576,8 @@ struct context {
     int glyph_cell_h = 0;
     int glyph_atlas_w = 0;
     int glyph_atlas_h = 0;
+    // Procedural north-arc texture, rebuilt with the renderer.
+    SDL_Texture *compass_tex = nullptr;
     int tex_w = 0;
     int tex_h = 0;
 
@@ -633,6 +678,13 @@ struct frame_profile {
     uint64_t instances = 0;
     uint64_t segments = 0;
     uint64_t upload_bytes = 0;
+    uint64_t far_columns = 0;
+    uint64_t far_submaps = 0;
+    uint64_t far_tiles = 0;
+    uint64_t far_los_calls = 0;
+    uint64_t far_los_hits = 0;
+    uint64_t far_instances = 0;
+    double far_ms = 0.0;
     double memory_ms = 0.0;
     double gather_ms = 0.0;
     double assembly_ms = 0.0;
@@ -655,6 +707,13 @@ struct frame_profile {
         instances += other.instances;
         segments += other.segments;
         upload_bytes += other.upload_bytes;
+        far_columns += other.far_columns;
+        far_submaps += other.far_submaps;
+        far_tiles += other.far_tiles;
+        far_los_calls += other.far_los_calls;
+        far_los_hits += other.far_los_hits;
+        far_instances += other.far_instances;
+        far_ms += other.far_ms;
         memory_ms += other.memory_ms;
         gather_ms += other.gather_ms;
         assembly_ms += other.assembly_ms;
@@ -706,7 +765,14 @@ void publish_profile( const frame_profile &frame )
         << " orientation_hits=" << avg( total.orientation_cache_hits )
         << " instances=" << avg( total.instances )
         << " segments=" << avg( total.segments )
-        << " upload_KiB=" << avg( total.upload_bytes ) / 1024.0;
+        << " upload_KiB=" << avg( total.upload_bytes ) / 1024.0
+        << " | far=" << avg( total.far_ms )
+        << "ms far_cols=" << avg( total.far_columns )
+        << " far_sm=" << avg( total.far_submaps )
+        << " far_tiles=" << avg( total.far_tiles )
+        << " far_los=" << avg( total.far_los_calls )
+        << " far_los_hits=" << avg( total.far_los_hits )
+        << " far_instances=" << avg( total.far_instances );
     write_status( out.str() );
     total = frame_profile{};
     frames = 0;
@@ -837,11 +903,16 @@ void context::teardown()
             if( slot.instance_vb ) {
                 SDL_ReleaseGPUBuffer( device, slot.instance_vb );
                 slot.instance_vb = nullptr;
+                slot.instance_vb_size = 0;
             }
         }
         if( glyph_tex ) {
             SDL_DestroyTexture( glyph_tex );
             glyph_tex = nullptr;
+        }
+        if( compass_tex ) {
+            SDL_DestroyTexture( compass_tex );
+            compass_tex = nullptr;
         }
         if( fallback_tex ) {
             SDL_ReleaseGPUTexture( device, fallback_tex );
@@ -1033,6 +1104,51 @@ bool build_glyph_atlas( SDL_Renderer *renderer )
     return true;
 }
 
+// A northern semicircle in texture space (negative world y). The arc ends and
+// radial edge fade through the existing soft-alpha dither in the fragment shader.
+bool build_compass_atlas( SDL_Renderer *renderer )
+{
+    constexpr int size = COMPASS_ATLAS_SIZE;
+    constexpr float half = size * 0.5f;
+    std::vector<Uint8> pixels( static_cast<size_t>( size ) * size * 4, 0 );
+    const auto smooth01 = []( float value ) {
+        const float t = std::clamp( value, 0.0f, 1.0f );
+        return t * t * ( 3.0f - 2.0f * t );
+    };
+    for( int y = 0; y < size; ++y ) {
+        for( int x = 0; x < size; ++x ) {
+            const float nx = ( x + 0.5f - half ) / half;
+            const float ny = ( y + 0.5f - half ) / half;
+            const float radius = std::hypot( nx, ny );
+            const float radial = 1.0f - smooth01(
+                                     ( std::abs( radius - COMPASS_ARC_RADIUS_UV ) - 0.015f ) / 0.045f );
+            if( ny >= 0.0f || radial <= 0.0f ) {
+                continue;
+            }
+            const float end_fade = smooth01( -ny / ( COMPASS_ARC_RADIUS_UV * 0.65f ) );
+            const size_t i = ( static_cast<size_t>( y ) * size + x ) * 4;
+            pixels[i] = 110;
+            pixels[i + 1] = 215;
+            pixels[i + 2] = 255;
+            pixels[i + 3] = static_cast<Uint8>( radial * end_fade * 0.9f * 255.0f );
+        }
+    }
+    g_ctx.compass_tex = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_RGBA32,
+                                           SDL_TEXTUREACCESS_STATIC, size, size );
+    if( !g_ctx.compass_tex ) {
+        write_status( "compass atlas: texture creation failed: " + std::string( SDL_GetError() ) );
+        return false;
+    }
+    if( !SDL_UpdateTexture( g_ctx.compass_tex, nullptr, pixels.data(), size * 4 ) ) {
+        write_status( "compass atlas: texture upload failed: " + std::string( SDL_GetError() ) );
+        SDL_DestroyTexture( g_ctx.compass_tex );
+        g_ctx.compass_tex = nullptr;
+        return false;
+    }
+    write_status( "compass atlas: built " + std::to_string( size ) + "x" + std::to_string( size ) );
+    return true;
+}
+
 bool probe( SDL_Renderer *renderer )
 {
     g_ctx.teardown();
@@ -1195,12 +1311,15 @@ bool probe( SDL_Renderer *renderer )
     g_ctx.quad_vb = SDL_CreateGPUBuffer( device, &bi );
     bi.size = flatquad_vertices().size() * sizeof( float );
     g_ctx.flatquad_vb = SDL_CreateGPUBuffer( device, &bi );
-    // slack past MAX_DRAW_INSTANCES: the cap is checked per tile, and one tile
+    // Slack past the initial cap: the cap is checked per tile, and one tile
     // (a fence corner with furniture + items) can push several past it. Each
     // slot owns its instance VB so a pending frame never shares it with a new one.
-    bi.size = ( MAX_DRAW_INSTANCES + 64 ) * INSTANCE_STRIDE;
+    // Dense multi-level far terrain grows this buffer on demand instead of
+    // multiplying every renderer's initial allocation by OVERMAP_HEIGHT + 1.
+    bi.size = ( INITIAL_DRAW_INSTANCES + 64 ) * INSTANCE_STRIDE;
     for( frame_slot &slot : g_ctx.slots ) {
         slot.instance_vb = SDL_CreateGPUBuffer( device, &bi );
+        slot.instance_vb_size = slot.instance_vb ? bi.size : 0;
     }
     bool buffers_ok = g_ctx.cube_vb && g_ctx.xquad_vb && g_ctx.quad_vb && g_ctx.flatquad_vb;
     for( const frame_slot &slot : g_ctx.slots ) {
@@ -1322,6 +1441,7 @@ bool probe( SDL_Renderer *renderer )
     SDL_ReleaseGPUTransferBuffer( device, tb );
 
     build_glyph_atlas( renderer );
+    build_compass_atlas( renderer );
 
     g_available = true;
     DebugLog( D_INFO, DC_ALL ) << "render3d: probe OK";
@@ -1557,6 +1677,18 @@ bool flat_utility_terrain( const ter_t &t, const int z )
 bool upright_equipment_terrain( const ter_t &t )
 {
     static constexpr std::array<std::string_view, 2> ids = {{ "t_monkey_bars", "t_slide" }};
+    return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
+}
+
+// Spriteless treetops and canvas roofs are open surfaces, not hash-colored
+// floors. Callers still draw them when a tileset supplies a real fg/bg sprite.
+bool skip_untextured_terrain_surface( const ter_t &t )
+{
+    static constexpr std::array<std::string_view, 5> ids = {{
+            "t_canvas_roof", "t_treetop", "t_treetop_evergreen",
+            "t_treetop_dead", "t_treetop_giant_fern"
+        }
+    };
     return std::find( ids.begin(), ids.end(), std::string_view( t.id.str() ) ) != ids.end();
 }
 
@@ -2250,7 +2382,19 @@ region_cull_mask build_region_cull_mask( map &here, const avatar &you,
                 }
             }
 
-            if( !potentially_visible || uniform_open_air ) {
+            bool vehicle_in_open_air = false;
+            if( uniform_open_air && cache.get_veh_in_active_range() ) {
+                for( int y = y0; y <= y1 && !vehicle_in_open_air; ++y ) {
+                    for( int x = x0; x <= x1; ++x ) {
+                        if( cache.get_veh_exists_at( tripoint_bub_ms( x, y, zlev ) ) ) {
+                            vehicle_in_open_air = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if( !potentially_visible || ( uniform_open_air && !vehicle_in_open_air ) ) {
                 const tripoint_bub_ms first( x0, y0, zlev );
                 const tripoint_bub_ms last( x1, y1, zlev );
                 if( !you.has_map_memory_in_region( here.get_abs( first ), here.get_abs( last ) ) ) {
@@ -2466,6 +2610,171 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                ? map::apparent_light_helper( c, q ).apparent_light : 0.0f;
         return tone_from_light( smooth_lighting::classify_light_cell(
                                     ll, apparent, vis_vars.vision_threshold ).light );
+    };
+    size_t gray_box_bucket = std::numeric_limits<size_t>::max();
+    size_t gray_tree_bucket = std::numeric_limits<size_t>::max();
+    const auto structure_bucket_for = [&]( const int mode ) -> decltype( auto ) {
+        size_t &cached = mode == MODE_BOX ? gray_box_bucket : gray_tree_bucket;
+        if( cached == std::numeric_limits<size_t>::max() ) {
+            bucket_for( mode, nullptr );
+            cached = bucket_index.at( bucket_key{ mode, nullptr } );
+        }
+        return ( buckets[cached].data );
+    };
+    struct structure_traits {
+        bool no_floor = false;
+        bool draw_floor = false;
+        bool is_tree = false;
+        bool is_shrub = false;
+        bool is_wall = false;
+    };
+    std::unordered_map<ter_id, structure_traits> structure_traits_cache;
+    const auto structure_traits_for = [&]( const ter_t & t ) {
+        const ter_id id( t.id );
+        auto iter = structure_traits_cache.find( id );
+        if( iter != structure_traits_cache.end() ) {
+            return iter;
+        }
+        structure_traits traits;
+        traits.no_floor = t.has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+        traits.draw_floor = !traits.no_floor && !skip_untextured_terrain_surface( t );
+        traits.is_tree = t.has_flag( "TREE" );
+        traits.is_shrub = t.has_flag( "SHRUB" );
+        const bool is_panel = door_or_window( t ) || wall_opening( t );
+        const bool is_fence = !is_panel && t.has_flag( "THIN_OBSTACLE" );
+        const bool is_upright = upright_equipment_terrain( t );
+        traits.is_wall = !traits.is_tree && !traits.is_shrub && !is_panel && !is_fence &&
+                         !is_upright && t.movecost == 0;
+        return structure_traits_cache.emplace( id, traits ).first;
+    };
+    // Structural LOD for generated submaps beyond the native 60-tile radius.
+    // It avoids sprite, orientation and entity lookups, and uses one neutral gray.
+    const auto gather_structure_tile = [&]( const ter_t & t, const point d, const float wz,
+    const tile_tone * tone, const bool memory ) -> bool {
+        const structure_traits &traits = structure_traits_for( t )->second;
+        if( traits.no_floor && !traits.is_tree && !traits.is_shrub ) {
+            return false;
+        }
+        const float shade = tone ? tone->shade : 1.0f;
+        const float saturation = tone ? tone->sat : 1.0f;
+        const float r = 0.45f * shade;
+        const float g = 0.45f * shade;
+        const float b = 0.45f * shade;
+        const sprite_info untextured;
+        bool drew = false;
+        if( traits.draw_floor && count < MAX_DRAW_INSTANCES ) {
+            std::vector<float> &v = structure_bucket_for( MODE_BOX );
+            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ),
+                           wz - FLOOR_THICK - 0.001f, 1.0f, 1.0f, FLOOR_THICK, untextured,
+                           r, g, b, true, 0, false, -1.0f, false, saturation, memory );
+            ++count;
+            drew = true;
+        }
+        if( traits.is_wall && count < MAX_DRAW_INSTANCES ) {
+            std::vector<float> &v = structure_bucket_for( MODE_BOX );
+            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
+                           1.0f, 1.0f, WALL_HEIGHT, untextured, r, g, b,
+                           true, 0, false, -1.0f, false, saturation, memory );
+            ++count;
+            drew = true;
+        }
+        if( ( traits.is_tree || traits.is_shrub ) && count < MAX_DRAW_INSTANCES ) {
+            const float height = traits.is_shrub ? SHRUB_HEIGHT : TREE_HEIGHT;
+            std::vector<float> &v = structure_bucket_for( MODE_XQUAD );
+            push_instance( v, static_cast<float>( d.x ), static_cast<float>( d.y ), wz,
+                           1.0f, 1.0f, height, untextured, r, g, b,
+                           true, 0, false, -1.0f, false, saturation, memory );
+            ++count;
+            drew = true;
+        }
+        return drew;
+    };
+    const tripoint_bub_ms observer_pos = here.observer_position( you );
+    const uint64_t seen_generation = here.seen_generation();
+    bool full_vision = you.sight_range( here.ambient_light_at( observer_pos ) ) >=
+                       MAX_VIEW_DISTANCE;
+    if( full_vision ) {
+        static std::optional<tripoint_bub_ms> last_vision_origin;
+        static uint64_t last_seen_generation = 0;
+        static int max_seen_radius = 0;
+        if( last_vision_origin != observer_pos || last_seen_generation != seen_generation ) {
+            last_vision_origin = observer_pos;
+            last_seen_generation = seen_generation;
+            max_seen_radius = 0;
+            const level_cache &sight_cache = here.get_cache_ref( observer_pos.z() );
+            for( int y = 0; y < MAPSIZE_Y && max_seen_radius < MAX_VIEW_DISTANCE; ++y ) {
+                for( int x = 0; x < MAPSIZE_X; ++x ) {
+                    const int radius = std::max( std::abs( x - observer_pos.x() ),
+                                                 std::abs( y - observer_pos.y() ) );
+                    if( radius < MAX_VIEW_DISTANCE ) {
+                        continue;
+                    }
+                    if( sight_cache.seen_cache[x][y] > 0.0f ||
+                        sight_cache.camera_cache[x][y] > 0.0f ) {
+                        max_seen_radius = MAX_VIEW_DISTANCE;
+                        break;
+                    }
+                }
+            }
+        }
+        full_vision = max_seen_radius >= MAX_VIEW_DISTANCE;
+    }
+    static const WORLD *los_world = nullptr;
+    static std::string los_dimension;
+    static std::optional<tripoint_abs_ms> los_origin;
+    static uint64_t los_generation = 0;
+    static std::unordered_map<tripoint_abs_ms, bool> los_cache;
+    const WORLD *current_world = world_generator ? world_generator->active_world : nullptr;
+    const std::string current_dimension = g ? g->get_dimension_prefix().str() : std::string();
+    const tripoint_abs_ms current_origin = here.get_abs( observer_pos );
+    if( los_world != current_world || los_dimension != current_dimension ||
+        los_origin != current_origin || los_generation != seen_generation ) {
+        los_world = current_world;
+        los_dimension = current_dimension;
+        los_origin = current_origin;
+        los_generation = seen_generation;
+        los_cache.clear();
+    }
+    const auto gray_los_visible = [&]( const tripoint_abs_ms & target ) {
+        if( !full_vision ) {
+            return false;
+        }
+        const auto cached = los_cache.find( target );
+        if( cached != los_cache.end() ) {
+            ++g_profile.far_los_hits;
+            return cached->second;
+        }
+        ++g_profile.far_los_calls;
+        const auto cache_result = [&]( const bool visible ) {
+            los_cache.emplace( target, visible );
+            return visible;
+        };
+        const tripoint_bub_ms target_bub = here.get_bub( target );
+        const int dx = target_bub.x() - observer_pos.x();
+        const int dy = target_bub.y() - observer_pos.y();
+        const int steps = std::max( std::abs( dx ), std::abs( dy ) );
+        if( steps == 0 ) {
+            return cache_result( true );
+        }
+        const level_cache &sight_cache = here.get_cache_ref( observer_pos.z() );
+        for( int i = 1; i <= steps; ++i ) {
+            const int x = observer_pos.x() + static_cast<int>( std::lround(
+                                  static_cast<double>( dx ) * i / steps ) );
+            const int y = observer_pos.y() + static_cast<int>( std::lround(
+                                  static_cast<double>( dy ) * i / steps ) );
+            const int rx = x - observer_pos.x();
+            const int ry = y - observer_pos.y();
+            if( rx * rx + ry * ry > VIEW_RADIUS * VIEW_RADIUS ) {
+                break;
+            }
+            const tripoint_bub_ms p( x, y, observer_pos.z() );
+            if( !here.inbounds( p ) ||
+                ( sight_cache.seen_cache[x][y] <= 0.0f &&
+                  sight_cache.camera_cache[x][y] <= 0.0f ) ) {
+                return cache_result( false );
+            }
+        }
+        return cache_result( true );
     };
     // sprite-less tiles (fields) fall back to the tileset's ASCII symbol, drawn
     // from the shared TTF glyph atlas and tinted with the entity color (the
@@ -2740,7 +3049,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                            wz - 0.001f, 1.0f, 1.0f, 1.0f, ground_spr, gr, gg, gb,
                            false, ground_rot4, false, -1.0f, false, 1.0f, true );
             ++count;
-        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) )
+        } else if( !is_empty_frame && ( !is_flat_utility || ground_tex ) &&
+                   ( ground_tex || !skip_untextured_terrain_surface( t ) ) )
         {
             // Horizontal objects without a bg must not acquire an unrelated
             // hash-colored floor box beneath their textured top and silhouette.
@@ -3004,8 +3314,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( count >= MAX_DRAW_INSTANCES ) {
                     return count;
                 }
+                // The detailed view level ends at a 60-tile circle. Outside
+                // it, the far pass owns memory and generated structural LOD.
+                if( dz == 0 && dx * dx + dy * dy > VIEW_RADIUS * VIEW_RADIUS ) {
+                    continue;
+                }
                 // two-tier gather: only the near region (±REGION_RADIUS) renders
-                // other z-levels; the far ring draws the view level alone
+                // other z-levels; the separate far pass owns distant structures
                 if( dz != 0 &&
                     ( std::abs( dx ) > REGION_RADIUS || std::abs( dy ) > REGION_RADIUS ) ) {
                     continue;
@@ -3055,7 +3370,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // levels draw memory only, nothing where there is none.
                 if( !visible ) {
                     if( dz == 0 ) {
-                        if( !gather_memory_tile( p, point( dx, dy ), wz, true ) ) {
+                        if( !gather_memory_tile( p, point( dx, dy ), wz, true ) &&
+                            std::max( std::abs( dx ), std::abs( dy ) ) <= REGION_RADIUS ) {
                             push_fog_slab( point( dx, dy ), wz );
                         }
                     } else if( !( dz > 0 &&
@@ -3083,11 +3399,13 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 if( t == t_null ) {
                     continue;
                 }
-                // open air / holes: nothing stands here on this level (water is
-                // NO_FLOOR_WATER, not NO_FLOOR, and still draws). furniture can
-                // bridge a gap, so its tile is not open air
-                if( t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
-                    f == furn_str_id::NULL_ID() ) {
+                // Open air / holes have no terrain surface (water is
+                // NO_FLOOR_WATER, not NO_FLOOR, and still draws). Furniture can
+                // bridge a gap, and a flying vehicle still needs its object pass.
+                const optional_vpart_position ovp = here.veh_at( p );
+                const bool open_air = t->has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                                      f == furn_str_id::NULL_ID();
+                if( open_air && !ovp ) {
                     continue;
                 }
                 // the whole tile shares one light tone, from the same light
@@ -3124,7 +3442,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // walls, ordinary fences and panels keep the straight "edge" middle
                 // segment since they are drawn as vertical faces; flat utility runs
                 // instead use their true top-down connection shape
-                const bool plain_floor = !is_tree && !is_shrub && !is_panel && !is_fence &&
+                const bool plain_floor = !open_air && !is_tree && !is_shrub && !is_panel && !is_fence &&
                                          !is_wall && !is_upright_equipment;
                 const bool shaped = plain_floor || is_flat_utility || is_upright_equipment;
                 int rota = 0;
@@ -3255,7 +3573,9 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // canopies are spriteless terrain) — skip instead of painting a
                 // hash-colored floor in the sky. Horizontal utilities likewise
                 // get no hash-colored base when their tile has no real bg.
-                if( !is_empty_frame && ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) ) {
+                if( !open_air && !is_empty_frame &&
+                    ( ( dz <= 0 && !is_flat_utility ) || ground_tex ) &&
+                    ( ground_tex || !skip_untextured_terrain_surface( *t ) ) ) {
                     // the base-id / wood-floor fallbacks have no connection
                     // rotation: only a shaped fg sprite carries one
                     const int ground_rot4 = ( !btex && !dtex ) ? frot4 : 0;
@@ -3829,7 +4149,6 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // stream (no depth write, painter order = 2D's row order), so
                 // coplanar overlaps resolve exactly like 2D and never z-fight.
                 if( !roof_unseen && count < MAX_DRAW_INSTANCES ) {
-                    const optional_vpart_position ovp = here.veh_at( p );
                     if( ovp ) {
                         const vehicle &veh = ovp->vehicle();
                         const point_rel_ms mount = ovp->mount_pos();
@@ -4619,6 +4938,11 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             sprite_id = m->type->id.str();
             cat = TILE_CATEGORY::MONSTER;
             size_scale = creature_size_scale( m->get_size() );
+            // Skitterbot's 108500 ml volume is only 500 ml over the medium
+            // threshold. Keep this small-dog robot from becoming a 2.52m giant.
+            if( m->type->id.str() == "mon_skitterbot" ) {
+                size_scale = creature_size_scale( creature_size::small );
+            }
             overlays = m->get_overlay_ids();
         } else if( const Character *ch = critter.as_character() ) {
             size_scale = CHARACTER_SIZE_SCALE;
@@ -4793,6 +5117,186 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                      static_cast<float>( p.y() - center.y() ), wz, tone );
     }
 
+    if( get_option<bool>( "RENDER3D_FAR_TERRAIN" ) ) {
+        const bool far_profile = profiling_enabled();
+        const Uint64 far_begin = profile_ticks( far_profile );
+        const int far_count_start = count;
+        // Generated-map structural LOD beyond the live radius. MAPBUFFER owns all
+        // submaps; pointers are borrowed for this gather only and never retained.
+        // On or above the surface, include every upper building level. Underground
+        // keeps the original single-level far pass.
+        const int far_z_min = upos.z() >= 0 ? 0 : std::min( cz, 0 );
+        const int far_z_max = upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min;
+        const tripoint_abs_ms center_abs = here.get_abs( center );
+        const tripoint_abs_sm center_sm = project_to<coords::sm>( center_abs );
+        static tripoint_abs_sm far_center = tripoint_abs_sm::invalid;
+        static std::unordered_set<tripoint_abs_sm> far_missing;
+        static uint64_t far_missing_revision = 0;
+        const uint64_t buffer_revision = MAPBUFFER.content_revision();
+        if( far_center != center_sm || far_missing_revision != buffer_revision ) {
+            far_center = center_sm;
+            far_missing_revision = buffer_revision;
+            far_missing.clear();
+        }
+        int far_load_budget = full_vision ? 1 : 0;
+        constexpr int far_radius_sm = ( FAR_SUBMAP_RADIUS + SEEX - 1 ) / SEEX;
+        for( int smy = -far_radius_sm; smy <= far_radius_sm; ++smy ) {
+            for( int smx = -far_radius_sm; smx <= far_radius_sm; ++smx ) {
+                if( count >= MAX_DRAW_INSTANCES ) {
+                    return count;
+                }
+                const tripoint_abs_sm column_pos = center_sm + point_rel_sm( smx, smy );
+                const tripoint_abs_ms column_abs = project_to<coords::ms>( column_pos );
+                const point smd( column_abs.x() - center_abs.x(), column_abs.y() - center_abs.y() );
+                int max_corner_range2 = 0;
+                for( const int x : { smd.x, smd.x + SEEX - 1 } ) {
+                    for( const int y : { smd.y, smd.y + SEEY - 1 } ) {
+                        max_corner_range2 = std::max( max_corner_range2, x * x + y * y );
+                    }
+                }
+                if( max_corner_range2 <= VIEW_RADIUS * VIEW_RADIUS ) {
+                    continue;
+                }
+                ++g_profile.far_columns;
+                // Frustum work precedes LOS. A fully contained submap needs no
+                // per-tile plane tests later; an intersecting one stays conservative.
+                std::array<uint8_t, OVERMAP_LAYERS> z_frustum{};
+                bool any_in_frustum = false;
+                for( int zlev = far_z_min; zlev <= far_z_max; ++zlev ) {
+                    const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
+                    if( !bounds_in_frustum( frustum, static_cast<float>( smd.x ),
+                                            static_cast<float>( smd.y ),
+                                            static_cast<float>( smd.x + SEEX ),
+                                            static_cast<float>( smd.y + SEEY ), wz ) ) {
+                        continue;
+                    }
+                    z_frustum[zlev + OVERMAP_DEPTH] = bounds_fully_in_frustum(
+                                                          frustum, static_cast<float>( smd.x ),
+                                                          static_cast<float>( smd.y ),
+                                                          static_cast<float>( smd.x + SEEX ),
+                                                          static_cast<float>( smd.y + SEEY ), wz ) ? 2 : 1;
+                    any_in_frustum = true;
+                }
+                if( !any_in_frustum ) {
+                    continue;
+                }
+                const int nearest_x = std::clamp( 0, smd.x, smd.x + SEEX - 1 );
+                const int nearest_y = std::clamp( 0, smd.y, smd.y + SEEY - 1 );
+                const bool memory_possible =
+                    nearest_x * nearest_x + nearest_y * nearest_y <= FAR_MEMORY_RADIUS * FAR_MEMORY_RADIUS;
+                // The existing observer-level LOS gate is shared by the column;
+                // memory remains independent of it on every level.
+                const bool gray_visible = gray_los_visible(
+                                              column_abs + point_rel_ms( SEEX / 2, SEEY / 2 ) );
+                if( !gray_visible && !memory_possible ) {
+                    continue;
+                }
+                for( int zlev = far_z_min; zlev <= far_z_max; ++zlev ) {
+                    if( count >= MAX_DRAW_INSTANCES ) {
+                        return count;
+                    }
+                    const uint8_t frustum_state = z_frustum[zlev + OVERMAP_DEPTH];
+                    if( frustum_state == 0 ) {
+                        continue;
+                    }
+                    ++g_profile.far_submaps;
+                    const float wz = ( zlev - cz ) * LEVEL_HEIGHT;
+                    const tripoint_abs_sm sm_pos( column_pos.x(), column_pos.y(), zlev );
+                    const tripoint_abs_ms sm_abs = project_to<coords::ms>( sm_pos );
+                    const submap *sm = nullptr;
+                    if( gray_visible ) {
+                        sm = MAPBUFFER.get_submap_if_loaded( sm_pos );
+                        if( !sm && far_missing.count( sm_pos ) == 0 ) {
+                            MAPBUFFER.prefetch_quad( project_to<coords::omt>( sm_pos ),
+                                                     std::max( std::abs( smx ), std::abs( smy ) ) );
+                            if( far_load_budget > 0 ) {
+                                --far_load_budget;
+                                sm = MAPBUFFER.lookup_submap( sm_pos );
+                                // Loading can advance the revision even when the requested submap
+                                // is absent. Adopt it here so new data does not clear this frame's
+                                // negative results and repeatedly retry the first absent upper level.
+                                far_missing_revision = MAPBUFFER.content_revision();
+                                if( !sm ) {
+                                    far_missing.insert( sm_pos );
+                                }
+                            }
+                        }
+                    }
+                    bool uniform_open_air = false;
+                    if( sm && sm->is_uniform() ) {
+                        const ter_id uniform_ter = sm->get_ter( point_sm_ms( 0, 0 ) );
+                        uniform_open_air = uniform_ter &&
+                                           uniform_ter->has_flag( ter_furn_flag::TFLAG_NO_FLOOR );
+                    }
+                    const bool has_memory = memory_possible && you.has_map_memory_in_region(
+                                                sm_abs, sm_abs + point_rel_ms( SEEX - 1, SEEY - 1 ) );
+                    if( ( !sm || uniform_open_air ) && !has_memory ) {
+                        continue;
+                    }
+                    for( int ly = 0; ly < SEEY; ++ly ) {
+                        for( int lx = 0; lx < SEEX; ++lx ) {
+                            const point d( smd.x + lx, smd.y + ly );
+                            const int range2 = d.x * d.x + d.y * d.y;
+                            if( range2 <= VIEW_RADIUS * VIEW_RADIUS ||
+                                range2 > FAR_SUBMAP_RADIUS * FAR_SUBMAP_RADIUS ) {
+                                continue;
+                            }
+                            if( frustum_state == 1 && !tile_in_frustum( frustum, d, wz ) ) {
+                                continue;
+                            }
+                            ++g_profile.far_tiles;
+                            if( has_memory && range2 <= FAR_MEMORY_RADIUS * FAR_MEMORY_RADIUS ) {
+                                const tripoint_abs_ms abs_p = sm_abs + point_rel_ms( lx, ly );
+                                const memorized_tile &mem = you.get_memorized_tile( abs_p );
+                                if( !mem.get_ter_id().empty() || !mem.get_dec_id().empty() ) {
+                                    gather_memory_tile( here.get_bub( abs_p ), d, wz, zlev <= cz );
+                                    continue;
+                                }
+                            }
+                            if( gray_visible && sm && !uniform_open_air ) {
+                                const ter_id t = sm->get_ter( point_sm_ms( lx, ly ) );
+                                if( t ) {
+                                    gather_structure_tile( t.obj(), d, wz, nullptr, false );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        g_profile.far_instances = count - far_count_start;
+        if( far_profile ) {
+            g_profile.far_ms = profile_ms( far_begin, profile_ticks( true ) );
+        }
+    }
+
+    // World-space north compass: a waist-height northern arc and a camera-facing
+    // N at negative map y. Orbiting the camera never changes their orientation.
+    if( upos.z() == center.z() && g_ctx.compass_tex && count + 2 <= MAX_DRAW_INSTANCES ) {
+        const float pcx = static_cast<float>( upos.x() - center.x() ) + 0.5f;
+        const float pcy = static_cast<float>( upos.y() - center.y() ) + 0.5f;
+        const float compass_z = ( upos.z() - cz ) * LEVEL_HEIGHT + COMPASS_WAIST_Z;
+        sprite_info arc;
+        arc.atlas = g_ctx.compass_tex;
+        arc.u1 = 1.0f;
+        arc.v1 = 1.0f;
+        std::vector<float> &av = bucket_for( MODE_FLATQUAD_DECAL, arc.atlas );
+        push_instance( av, pcx - COMPASS_QUAD_SIZE * 0.5f, pcy - COMPASS_QUAD_SIZE * 0.5f,
+                       compass_z, COMPASS_QUAD_SIZE, COMPASS_QUAD_SIZE, 1.0f, arc,
+                       1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, false, true );
+        ++count;
+        sprite_info north;
+        if( glyph_sprite( U'N', north ) ) {
+            const float height = 0.45f;
+            const float width = height * std::clamp( north.aspect, 0.5f, 2.0f );
+            const float radius = COMPASS_QUAD_SIZE * 0.5f * COMPASS_ARC_RADIUS_UV;
+            std::vector<float> &nv = bucket_for( MODE_BILLBOARD, north.atlas );
+            push_instance( nv, pcx, pcy - radius, compass_z, width, height, 1.0f, north,
+                           1.0f, 1.0f, 1.0f, false, 0, false, -1.0f, false, 1.0f, false, true );
+            ++count;
+        }
+    }
+
     // hover preselection box + game-driven cursors (targeting, construction...):
     // a thin slab carrying the tileset's highlight/cursor sprite
     auto push_cursor_slab = [&]( const tripoint_bub_ms & tp, const char *sprite ) {
@@ -4807,6 +5311,16 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                        0.002f, 1.0f, 1.0f, 0.05f, cspr, 1.0f, 1.0f, 1.0f );
         ++count;
     };
+    // Match the native tiles vehicle indicator: the next facing, ten tiles
+    // ahead, using the same game option, map-level anchor and cursor sprite.
+    if( you.controlling_vehicle ) {
+        const std::optional<tripoint_rel_ms> indicator_offset =
+            g->get_veh_dir_indicator_location( true );
+        if( indicator_offset ) {
+            push_cursor_slab( tripoint_bub_ms( upos.xy(), center.z() ) + indicator_offset->xy(),
+                              "cursor" );
+        }
+    }
     // forward movement marker: the tile the "up" key steps to, i.e. screen
     // forward. the tileset's line_target brackets (yellow in UC) mark it as a
     // destination, visibly distinct from the white mouse hover below; its
@@ -5015,9 +5529,20 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
         // at z=0 makes it cover the whole rendered range
         // [-OVERMAP_DEPTH, +OVERMAP_HEIGHT] no matter which level the player is
         // on (the static_assert above keeps that invariant)
-        you.prepare_map_memory_region(
-            here.get_abs( tripoint_bub_ms( 0, 0, 0 ) ),
-            here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, 0 ) ) );
+        if( get_option<bool>( "RENDER3D_FAR_TERRAIN" ) ) {
+            const tripoint_abs_ms center_abs = here.get_abs( center );
+            const tripoint_abs_ms player_abs = here.get_abs( upos );
+            const point min_xy( std::min( center_abs.x(), player_abs.x() ) - FAR_MEMORY_RADIUS,
+                                std::min( center_abs.y(), player_abs.y() ) - FAR_MEMORY_RADIUS );
+            const point max_xy( std::max( center_abs.x(), player_abs.x() ) + FAR_MEMORY_RADIUS,
+                                std::max( center_abs.y(), player_abs.y() ) + FAR_MEMORY_RADIUS );
+            you.prepare_map_memory_region( tripoint_abs_ms( min_xy.x, min_xy.y, 0 ),
+                                           tripoint_abs_ms( max_xy.x, max_xy.y, 0 ) );
+        } else {
+            you.prepare_map_memory_region(
+                here.get_abs( tripoint_bub_ms( 0, 0, 0 ) ),
+                here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, 0 ) ) );
+        }
         const level_cache &mem_level = here.get_cache_ref( upos.z() );
         static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );
         static time_point last_sweep_turn = calendar::turn_zero;
@@ -5053,9 +5578,12 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                     target.y - dir.y * g_cam_dist,
                     target.z - dir.z * g_cam_dist };
     const mat4 view = mat4_lookat( eye, target, { 0.0f, 0.0f, 1.0f } );
+    // The orbit camera stays at least 6 units away; near=0.5 preserves far-depth
+    // precision for ground decals viewed from upper levels.
     const mat4 proj = mat4_perspective( 40.0f * 3.14159265f / 180.0f,
                                         static_cast<float>( w ) / static_cast<float>( h ),
-                                        0.05f, 300.0f );
+                                        0.5f, std::max( 300.0f,
+                                                        static_cast<float>( FAR_SUBMAP_RADIUS + 64 ) ) );
     const mat4 mvp = mat4_mul( proj, view );
     const view_frustum frustum = make_view_frustum( mvp );
 
@@ -5357,6 +5885,27 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     bool upload_ok = true;
     if( !inst.empty() ) {
         const size_t bytes = inst.size() * sizeof( float );
+        if( bytes > slot.instance_vb_size ) {
+            // begin_frame_slot only reuses a slot whose previous submission
+            // completed, so growing its vertex buffer cannot race that draw.
+            if( slot.instance_vb ) {
+                SDL_ReleaseGPUBuffer( device, slot.instance_vb );
+                slot.instance_vb = nullptr;
+                slot.instance_vb_size = 0;
+            }
+            size_t new_size = 64 * 1024;
+            while( new_size < bytes ) {
+                new_size *= 2;
+            }
+            SDL_GPUBufferCreateInfo bi{};
+            bi.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+            bi.size = static_cast<Uint32>( new_size );
+            slot.instance_vb = SDL_CreateGPUBuffer( device, &bi );
+            slot.instance_vb_size = slot.instance_vb ? new_size : 0;
+        }
+        if( !slot.instance_vb ) {
+            upload_ok = false;
+        }
         if( bytes > slot.instance_tb_size ) {
             // begin_frame_slot only reuses a slot whose previous submission
             // completed, so growing its upload buffer cannot race that upload.
@@ -5382,17 +5931,19 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
             void *mapped = SDL_MapGPUTransferBuffer( device, tb, false );
             if( mapped ) {
                 std::memcpy( mapped, inst.data(), inst.size() * sizeof( float ) );
+                if( upload_ok ) {
+                    SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
+                    SDL_GPUTransferBufferLocation src{};
+                    src.transfer_buffer = tb;
+                    src.offset = 0;
+                    SDL_GPUBufferRegion dst{};
+                    dst.buffer = slot.instance_vb;
+                    dst.offset = 0;
+                    dst.size = inst.size() * sizeof( float );
+                    SDL_UploadToGPUBuffer( copy, &src, &dst, false );
+                    SDL_EndGPUCopyPass( copy );
+                }
                 SDL_UnmapGPUTransferBuffer( device, tb );
-                SDL_GPUCopyPass *copy = SDL_BeginGPUCopyPass( cmd );
-                SDL_GPUTransferBufferLocation src{};
-                src.transfer_buffer = tb;
-                src.offset = 0;
-                SDL_GPUBufferRegion dst{};
-                dst.buffer = slot.instance_vb;
-                dst.offset = 0;
-                dst.size = inst.size() * sizeof( float );
-                SDL_UploadToGPUBuffer( copy, &src, &dst, false );
-                SDL_EndGPUCopyPass( copy );
             } else {
                 upload_ok = false;
             }
