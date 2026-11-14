@@ -89,7 +89,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -103,7 +104,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
