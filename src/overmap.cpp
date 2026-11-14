@@ -1,4 +1,6 @@
 #include "cube_direction.h" // IWYU pragma: associated
+#include "north_america.h"
+#include "north_america_ecology.h"
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -1047,19 +1049,25 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         }
     }
 
+    const bool atlas = north_america::active();
+    if( atlas && !place_north_american_water() ) {
+        return;
+    }
     std::vector<Highway_path> highway_paths;
-    calculate_urbanity();
-    calculate_forestosity();
+    if( !atlas ) {
+        calculate_urbanity();
+        calculate_forestosity();
+    }
     if( settings->neighbor_connections ) {
         populate_connections_out_from_neighbors( neighbor_overmaps );
     }
-    if( settings->overmap_river ) {
+    if( !atlas && settings->overmap_river ) {
         place_rivers( neighbor_overmaps );
     }
-    if( settings->overmap_lake ) {
+    if( !atlas && settings->overmap_lake ) {
         place_lakes( neighbor_overmaps );
     }
-    if( settings->overmap_ocean ) {
+    if( !atlas && settings->overmap_ocean ) {
         place_oceans( neighbor_overmaps );
     }
     if( settings->overmap_forest ) {
@@ -1068,10 +1076,10 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     if( settings->overmap_forest && settings->place_swamps ) {
         place_swamps();
     }
-    if( settings->overmap_ravine ) {
+    if( !atlas && settings->overmap_ravine ) {
         place_ravines();
     }
-    if( settings->overmap_river ) {
+    if( !atlas && settings->overmap_river ) {
         // Polish rivers now so highways get the correct predecessors rather than river_center
         polish_river( neighbor_overmaps );
     }
@@ -2154,7 +2162,9 @@ void overmap::place_forests()
 {
     const region_settings_forest &settings_forest = settings->get_settings_forest();
     const oter_id default_oter_id( settings->default_oter[OVERMAP_DEPTH] );
-    const om_noise::om_noise_layer_forest f( global_base_point(), g->get_seed() );
+    const point_abs_omt origin = global_base_point();
+    const om_noise::om_noise_layer_forest f( origin, g->get_seed() );
+    const bool geographic_forest = north_america::active();
 
     for( int x = 0; x < OMAPX; x++ ) {
         for( int y = 0; y < OMAPY; y++ ) {
@@ -2167,12 +2177,14 @@ void overmap::place_forests()
                 continue;
             }
 
-            const float n = f.noise_at( p.xy() );
+            const float adjustment = geographic_forest ?
+                                     north_america::forest_adjustment( origin + p.xy().raw() ) : forest_size_adjust;
+            const float n = f.noise_at( p.xy() ) + adjustment;
 
             // If the noise here meets our threshold, turn it into a forest.
-            if( n + forest_size_adjust > settings_forest.noise_threshold_forest_thick ) {
+            if( n > settings_forest.noise_threshold_forest_thick ) {
                 ter_set( p, oter_forest_thick );
-            } else if( n + forest_size_adjust > settings_forest.noise_threshold_forest ) {
+            } else if( n > settings_forest.noise_threshold_forest ) {
                 ter_set( p, oter_forest );
             }
         }

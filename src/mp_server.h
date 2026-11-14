@@ -25,6 +25,7 @@ struct server_welcome {
     unsigned int seed = 0;
     std::optional<std::array<int, 3>> host_omt;
     world_id world;
+    bool north_america_world = false;
 };
 
 class server

@@ -306,6 +306,7 @@ class game
          * that skip JSON/mod reloading.
          */
         void reset_game_state();
+        bool north_america_world = false;
 
         /**
          * Reload a save in place without bouncing through the main menu,

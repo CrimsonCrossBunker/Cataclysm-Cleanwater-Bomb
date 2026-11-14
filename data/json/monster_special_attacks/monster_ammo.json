@@ -94,6 +94,7 @@
     "description": "A naturally fletched projectile made of bone and cartilage.  It feels denser than you'd expect.",
     "material": [ "cyber_bone" ],
     "ammo_type": "bone_dart",
-    "weight": "250 g"
+    "weight": "250 g",
+    "delete": { "flags": [ "SLING_PROJECTILE" ] }
   }
 ]

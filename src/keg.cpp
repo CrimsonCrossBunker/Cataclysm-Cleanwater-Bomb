@@ -1,6 +1,7 @@
 #include "keg.h"
 
 #include <algorithm>
+#include <limits>
 #include <set>
 #include <utility>
 
@@ -97,8 +98,13 @@ bool pour( map &here, const tripoint_bub_ms &tile, item &liquid )
             batch = &entry;
         }
     }
-    const int remaining = liquid.charges_per_volume( limit ) - ( batch ? batch->charges : 0 );
-    const int amount = std::min( liquid.charges, remaining );
+    const int existing = batch ? batch->charges : 0;
+    const int available = std::min( liquid.charges, std::numeric_limits<int>::max() - existing );
+    item probe( batch ? *batch : liquid );
+    const int amount = liquid_handler::charges_until_full( available, [&]( int added ) {
+        probe.charges = existing + added;
+        return probe.volume() >= limit;
+    } );
     if( amount <= 0 ) {
         return false;
     }

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <coordinates.h>
 #include <cstdint>
@@ -312,6 +313,7 @@ class target_ui
         // Weapon being fired/thrown
         item *relevant = nullptr;
         bool defer_target_effects = false;
+        bool abort_if_no_targets = false;
         // Cached selection range from player's position
         int range = 0;
         // Sling launches share throwing accuracy, but have their own cost and labels.
@@ -332,6 +334,8 @@ class target_ui
         bool no_mana = false;
         // Relevant activity
         aim_activity_actor *activity = nullptr;
+        bool sweeping = false;
+        std::optional<firearm_sweep> selected_sweep;
 
         enum class ExitCode : int {
             Abort,
@@ -389,6 +393,8 @@ class target_ui
         input_context ctxt;
         input_context burst_ctxt{ "TARGET" };
         int burst_rounds = 0;
+        std::optional<tripoint_bub_ms> sweep_start;
+        bool selecting_sweep_speed = false;
 
         /* These members are relevant for TargetMode::Fire */
         // Weapon sight dispersion
@@ -532,6 +538,8 @@ class target_ui
         bool action_aim_and_shoot( const std::string &action );
 
         int select_burst_rounds();
+        bool select_sweep();
+        void panel_sweep_selection( int text_y );
         void panel_burst_selection( int text_y );
 
         // Draw UI-specific terrain overlays
@@ -583,8 +591,14 @@ target_handler::trajectory target_handler::mode_fire( avatar &you, aim_activity_
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Fire;
     ui.activity = &activity;
+    ui.abort_if_no_targets = activity.abort_if_no_targets;
+    ui.sweeping = activity.sweeping;
     ui.relevant = &*activity.get_weapon();
     gun_mode gun = ui.relevant->gun_current_mode();
+    if( !gun || ( activity.sweeping && !gun.full_auto() ) ) {
+        activity.aborted = true;
+        return {};
+    }
     ui.range = gun.target->gun_range( &you );
     ui.ammo = gun->ammo_data();
 
@@ -653,19 +667,25 @@ target_handler::trajectory target_handler::mode_unarmed_reach( avatar &you )
 }
 
 target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret,
-        item &preview )
+        item &preview, std::optional<firearm_sweep> *sweep, bool reaiming )
 {
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::TurretManual;
     ui.turret = &turret;
     ui.relevant = &preview;
+    ui.sweeping = sweep != nullptr;
     ui.defer_target_effects = true;
+    ui.abort_if_no_targets = reaiming;
     ui.range = turret.range();
     ui.ammo = turret.ammo_data();
 
     restore_on_out_of_scope view_offset_prev( you.view_offset );
-    return ui.run();
+    auto trajectory = ui.run();
+    if( sweep ) {
+        *sweep = ui.selected_sweep;
+    }
+    return trajectory;
 }
 
 target_handler::trajectory target_handler::mode_turrets( avatar &you, vehicle &veh,
@@ -1301,6 +1321,208 @@ int firearm_burst_move_cost( int rounds, int rpm, int moves_per_second )
                              std::numeric_limits<int>::max() ) );
 }
 
+bool select_full_auto_mode( item &gun )
+{
+    if( const gun_mode current = gun.gun_current_mode(); current && current.full_auto() ) {
+        return true;
+    }
+    for( const auto &[id, mode] : gun.gun_all_modes() ) {
+        if( mode.full_auto() && !mode.melee() && gun.gun_set_mode( id ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static double sweep_bearing( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos )
+{
+    return std::atan2( pos.y() - origin.y(), pos.x() - origin.x() );
+}
+
+static double sweep_angle( const tripoint_bub_ms &origin, const tripoint_bub_ms &start,
+                           const tripoint_bub_ms &end )
+{
+    return std::remainder( sweep_bearing( origin, end ) - sweep_bearing( origin, start ),
+                           2.0 * M_PI );
+}
+
+double firearm_sweep::duration( const tripoint_bub_ms &origin ) const
+{
+    if( speed < 1 || speed > 3 || start == origin || end == origin ||
+        start.z() != origin.z() || end.z() != origin.z() ) {
+        return 0.0;
+    }
+    static constexpr std::array<double, 3> degrees_per_second = { 100.0, 60.0, 30.0 };
+    const double angle = std::abs( sweep_angle( origin, start, end ) );
+    if( angle < 1e-9 ) {
+        return 0.0;
+    }
+    return angle * 180.0 /
+           ( M_PI * degrees_per_second[speed - 1] );
+}
+
+bool firearm_sweep::contains( const tripoint_bub_ms &origin, const tripoint_bub_ms &pos,
+                              double padding ) const
+{
+    if( pos == origin || pos.z() != origin.z() || duration( origin ) == 0.0 ) {
+        return false;
+    }
+    const double arc = sweep_angle( origin, start, end );
+    const double offset = sweep_angle( origin, arc > 0.0 ? start : end, pos );
+    const double wrapped = offset < -padding ? offset + 2.0 * M_PI : offset;
+    return wrapped <= std::abs( arc ) + padding;
+}
+
+int firearm_sweep::rounds( const tripoint_bub_ms &origin, int rpm ) const
+{
+    const double seconds = duration( origin );
+    if( rpm <= 0 || seconds <= 0.0 ) {
+        return 0;
+    }
+    // The first round leaves as the sweep starts. Bound the work for very high modded rates.
+    return static_cast<int>( std::clamp( std::ceil( seconds * rpm / 60.0 - 1e-9 ), 1.0, 120.0 ) );
+}
+
+static int sweep_move_cost( double seconds, int moves_per_second )
+{
+    return std::max( 1, static_cast<int>( std::ceil( seconds * moves_per_second - 1e-9 ) ) );
+}
+
+std::vector<tripoint_bub_ms> firearm_sweep::shot_targets( const tripoint_bub_ms &origin,
+        int rpm ) const
+{
+    const int count = rounds( origin, rpm );
+    if( count == 0 ) {
+        return {};
+    }
+    std::vector<tripoint_bub_ms> targets;
+    targets.reserve( count );
+    const double bearing = sweep_bearing( origin, start );
+    const double arc = sweep_angle( origin, start, end );
+    const double start_range = std::hypot( start.x() - origin.x(), start.y() - origin.y() );
+    const double end_range = std::hypot( end.x() - origin.x(), end.y() - origin.y() );
+    const int range = std::max( rl_dist( origin, start ), rl_dist( origin, end ) );
+    for( int i = 0; i < count; ++i ) {
+        const double fraction = i / static_cast<double>( std::max( 1, count - 1 ) );
+        const double angle = bearing + arc * fraction;
+        const double radius = start_range + ( end_range - start_range ) * fraction;
+        tripoint_bub_ms aim = origin + point( std::lround( radius * std::cos( angle ) ),
+                                              std::lround( radius * std::sin( angle ) ) );
+        if( rl_dist( origin, aim ) > range ) {
+            const auto ray = line_to( origin, aim );
+            const auto inside = std::find_if( ray.rbegin(), ray.rend(), [&]( const tripoint_bub_ms & p ) {
+                return p != origin && rl_dist( origin, p ) <= range;
+            } );
+            if( inside != ray.rend() ) {
+                aim = *inside;
+            }
+        }
+        targets.push_back( aim );
+    }
+    return targets;
+}
+
+std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &here,
+        const tripoint_bub_ms &primary, int range, int rpm, int max_rounds )
+{
+    constexpr int close_range = 8;
+    const tripoint_bub_ms origin = shooter.pos_bub( here );
+    const int limit = std::min( close_range, range );
+    if( rpm <= 0 || max_rounds < 3 || primary == origin || primary.z() != origin.z() ||
+        rl_dist( origin, primary ) > limit ) {
+        return std::nullopt;
+    }
+    static const species_id zombie_species( "ZOMBIE" );
+    std::vector<tripoint_bub_ms> zombies;
+    std::vector<tripoint_bub_ms> protected_positions;
+    for( const Creature &critter : g->all_creatures() ) {
+        const tripoint_bub_ms pos = critter.pos_bub( here );
+        if( pos == origin || pos.z() != origin.z() || critter.is_dead_state() ||
+            rl_dist( origin, pos ) > range ) {
+            continue;
+        }
+        if( shooter.attitude_to( critter ) != Creature::Attitude::HOSTILE ||
+            critter.attitude_to( shooter ) == Creature::Attitude::FRIENDLY ) {
+            protected_positions.push_back( pos );
+        } else if( rl_dist( origin, pos ) <= limit && critter.in_species( zombie_species ) &&
+                   shooter.sees( here, critter ) && here.clear_path( origin, pos, limit, 1, 100 ) ) {
+            zombies.push_back( pos );
+        }
+    }
+    if( zombies.size() < 3 || std::find( zombies.begin(), zombies.end(), primary ) == zombies.end() ) {
+        return std::nullopt;
+    }
+
+    std::optional<firearm_sweep> best;
+    int best_count = 2;
+    double best_angle = 2.0 * M_PI / 3.0;
+    for( const tripoint_bub_ms &start : zombies ) {
+        for( const tripoint_bub_ms &end : zombies ) {
+            firearm_sweep sweep{ start, end, 2 };
+            const double angle = std::abs( sweep_angle( origin, start, end ) );
+            if( angle < M_PI / 12.0 || angle > 2.0 * M_PI / 3.0 ||
+                !sweep.contains( origin, primary, 1e-9 ) ||
+                std::any_of( protected_positions.begin(), protected_positions.end(),
+            [&]( const tripoint_bub_ms & pos ) {
+            // Include misses and a margin for grid rounding at close range.
+            return sweep.contains( origin, pos, M_PI / 4.0 );
+            } ) ) {
+                continue;
+            }
+            const int depth = std::min( rl_dist( origin, start ), rl_dist( origin, end ) );
+            const int count = std::count_if( zombies.begin(), zombies.end(),
+            [&]( const tripoint_bub_ms & pos ) {
+                return rl_dist( origin, pos ) <= depth && sweep.contains( origin, pos, 1e-9 );
+            } );
+            if( rl_dist( origin, primary ) <= depth &&
+                ( count > best_count || ( count == best_count && best && angle < best_angle ) ) ) {
+                sweep.speed = count >= 5 ? 3 : count == 4 ? 2 : 1;
+                const int min_rounds = std::min( count, max_rounds );
+                while( sweep.speed < 3 && sweep.rounds( origin, rpm ) < min_rounds ) {
+                    ++sweep.speed;
+                }
+                while( sweep.speed > 1 && sweep.rounds( origin, rpm ) > max_rounds ) {
+                    --sweep.speed;
+                }
+                if( sweep.rounds( origin, rpm ) >= min_rounds &&
+                    sweep.rounds( origin, rpm ) <= max_rounds ) {
+                    best_count = count;
+                    best_angle = angle;
+                    best = sweep;
+                }
+            }
+        }
+    }
+    return best;
+}
+
+firearm_burst_recoil::firearm_burst_recoil( int arm_strength, float skill, int rpm )
+{
+    const double level = std::clamp<double>( skill, 0.0, MAX_SKILL );
+    // An 8-strength shooter at weapon skill 7 is the reference for an intermediate rifle.
+    const double control = ( 8.0 + std::max( 1, arm_strength ) ) / 16.0 * ( 0.5 + level / 14.0 );
+    const double old_kick_scale = 5.0 * ( 1.0 - level / ( 2 * MAX_SKILL ) );
+    // Faster follow-up rounds leave less time for the opening kick to displace the aim.
+    const double interval_scale = std::clamp( 750.0 / std::max( 1, rpm ), 0.65, 1.20 );
+    opening_scale = old_kick_scale * std::min( 0.8, 0.7 / control ) * interval_scale;
+    steady_scale = 0.65 / ( control * std::sqrt( control ) );
+    settling_rounds = std::clamp( 5.0 / control, 2.5, 10.0 );
+}
+
+double firearm_burst_recoil::after_shot( int gun_recoil )
+{
+    const double kick = std::max( 0, gun_recoil );
+    const double progress = std::min( ++shots_fired / settling_rounds, 1.0 );
+    const double steady_recoil = kick * steady_scale;
+    if( progress >= 1.0 ) {
+        return steady_recoil;
+    }
+    opening_recoil += kick * opening_scale;
+    // Blend out the accumulated climb as the shooter settles into the burst.
+    const double settled = progress * progress * ( 3.0 - 2.0 * progress );
+    return opening_recoil * ( 1.0 - settled ) + steady_recoil * settled;
+}
+
 int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 {
     map &here = get_map();
@@ -1314,7 +1536,7 @@ int Character::fire_gun( const tripoint_bub_ms &target, int shots )
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
-                         item_location ammo, int burst_rounds )
+                         const item_location &ammo, int burst_rounds )
 {
     if( !mode || mode.melee() ) {
         return 0;
@@ -1325,7 +1547,8 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
     if( mode.fixed_burst() || burst_rounds != 0 ) {
         const int planned = mode.fixed_burst() ? mode.qty : roll_firearm_burst_rounds( *this, *mode,
                             burst_rounds );
-        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm );
+        const int fired = fire_gun_impl( here, target, planned, *mode.target, ammo, false, mode.rpm,
+                                         true );
         if( fired > 0 ) {
             add_msg_if_player( n_gettext( "You fire %d round.", "You fire %d rounds.", fired ), fired );
         }
@@ -1343,17 +1566,56 @@ int Character::fire_gun( map &here, const tripoint_bub_ms &target, const gun_mod
         }
         return 0;
     }
-    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second );
+    return fire_gun_impl( here, target, shots, *mode.target, ammo, !uses_game_second, mode.rpm );
 }
 
 int Character::fire_gun( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                          item_location ammo )
 {
-    return fire_gun_impl( here, target, shots, gun, ammo, true );
+    return fire_gun_impl( here, target, shots, gun, std::move( ammo ), true );
+}
+
+int Character::fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                               int round_limit, bool protect_friendlies )
+{
+    if( !mode || !mode.full_auto() || mode.melee() || round_limit <= 0 ||
+        !here.inbounds( sweep.start ) || !here.inbounds( sweep.end ) ) {
+        return 0;
+    }
+    const tripoint_bub_ms origin = pos_bub( here );
+    const int range = mode->gun_range( this );
+    if( rl_dist( origin, sweep.start ) > range || rl_dist( origin, sweep.end ) > range ) {
+        return 0;
+    }
+    const auto targets = sweep.shot_targets( origin, mode.rpm );
+    const int shots = std::min( round_limit, static_cast<int>( targets.size() ) );
+    if( shots == 0 ) {
+        return 0;
+    }
+    const int fired = fire_gun_impl( here, sweep.start, shots, *mode.target, item_location(), false,
+                                     mode.rpm, false, &targets, protect_friendlies );
+    if( !is_fake() ) {
+        const double duration = sweep.duration( origin );
+        const double seconds = fired == static_cast<int>( targets.size() ) ? duration :
+                               std::min( duration, std::max( 1, fired ) * 60.0 / mode.rpm );
+        mod_moves( -sweep_move_cost( seconds, get_speed() ) );
+        if( fired > 0 ) {
+            last_target_pos = here.get_abs( targets[fired - 1] );
+            last_target.reset();
+            if( is_avatar() ) {
+                as_avatar()->mark_aim_cache_dirty();
+            }
+            add_msg_if_player( n_gettext( "You sweep with %d round.", "You sweep with %d rounds.", fired ),
+                               fired );
+        }
+    }
+    return fired;
 }
 
 int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
-                              item_location ammo, bool spend_attack_moves, int burst_rpm )
+                              item_location ammo, bool spend_attack_moves, int firing_rpm,
+                              bool spend_burst_moves,
+                              const std::vector<tripoint_bub_ms> *sweep_targets, bool protect_friendlies )
 {
     if( !gun.is_gun() ) {
         debugmsg( "%s tried to fire non-gun (%s).", get_name(), gun.tname() );
@@ -1415,25 +1677,32 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         }
     }
 
-    // Up to 50% of recoil can be delayed until end of burst dependent upon relevant skill
-    /** @EFFECT_PISTOL delays effects of recoil during automatic fire */
-    /** @EFFECT_SMG delays effects of recoil during automatic fire */
-    /** @EFFECT_RIFLE delays effects of recoil during automatic fire */
-    /** @EFFECT_SHOTGUN delays effects of recoil during automatic fire */
-    double absorb = std::min( get_skill_level( gun.gun_skill() ),
-                              static_cast<float>( MAX_SKILL ) ) / static_cast<double>( MAX_SKILL * 2 );
+    /** @EFFECT_PISTOL improves recoil control during automatic fire */
+    /** @EFFECT_SMG improves recoil control during automatic fire */
+    /** @EFFECT_RIFLE improves recoil control during automatic fire */
+    /** @EFFECT_SHOTGUN improves recoil control during automatic fire */
+    const skill_id gun_skill = gun.gun_skill();
+    const float gun_skill_level = get_skill_level( gun_skill );
+    const double absorb = std::min( gun_skill_level, static_cast<float>( MAX_SKILL ) ) /
+                          static_cast<double>( MAX_SKILL * 2 );
+    std::optional<firearm_burst_recoil> recoil_control;
+    if( firing_rpm > 0 && shots > 1 &&
+        ( sweep_targets || ( !gun.has_flag( flag_VEHICLE ) && !is_fake() && !is_mech_weapon ) ) ) {
+        recoil_control.emplace( get_arm_str(), gun_skill_level, firing_rpm );
+    }
+    double burst_recoil = 0.0;
 
     itype_id gun_id = gun.typeId();
     const int attack_moves = spend_attack_moves
                              ? time_to_attack( *this, *gun_id ) + action_time( *this, *gun_id )
                              : 0;
     const int reload_moves = reload_and_shoot_time( *this, ammo );
-    const int burst_speed = burst_rpm > 0 ? get_speed() : 0;
-    skill_id gun_skill = gun.gun_skill();
+    const int burst_speed = spend_burst_moves ? get_speed() : 0;
     add_msg_debug( debugmode::DF_RANGED, "Gun skill (%s) %g", gun_skill.c_str(),
                    get_skill_level( gun_skill ) ) ;
     tripoint_bub_ms aim = target;
     int curshot = 0;
+    std::chrono::steady_clock::time_point sound_burst_start;
     int hits = 0; // total shots on target
     int delay = 0; // delayed recoil that has yet to be applied
     // Snapshot the gun slot. The wielded item can stop being a gun
@@ -1441,7 +1710,14 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
     // post-shot hurt_part / skill-practice blocks still need to read
     // it for the shots that already fired.
     const islot_gun *const original_gun = gun.is_gun() ? gun.type->gun.get() : nullptr;
+    const tripoint_bub_ms sweep_origin = pos_bub( here );
     while( curshot != shots ) {
+        if( sweep_targets ) {
+            aim = ( *sweep_targets )[curshot];
+            if( !here.inbounds( aim ) || aim == sweep_origin || pos_bub( here ) != sweep_origin ) {
+                break;
+            }
+        }
         // Special handling for weapons where we supply the ammo separately (i.e. ammo is populated)
         // instead of it being loaded into the weapon, reload right before firing.
         if( !!ammo && !gun.ammo_remaining( ) ) {
@@ -1465,12 +1741,17 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 
         // Add gunshot noise
         make_gun_sound_effect( *this, shots > 1, &gun );
-        sfx::generate_gun_sound( *this, gun );
+        if( firing_rpm > 0 && curshot == 0 ) {
+            sound_burst_start = std::chrono::steady_clock::now();
+        }
+        sfx::generate_gun_sound( *this, gun, firing_rpm, curshot, sound_burst_start );
         // Muzzle flash light overlay (visible, loud firearms only).
         make_gun_flash_effect( *this, aim, gun );
 
         weakpoint_attack wp_attack;
         wp_attack.weapon = &gun;
+        wp_attack.sweeping = sweep_targets != nullptr;
+        wp_attack.protect_friendlies = protect_friendlies;
         // get ammo_id in gun for event character_ranged_attacks_monster. If no ammo, use itype_id::NULL_ID()
         itype_id projectile_use_ammo_id = gun.has_ammo_data() ? gun.ammo_data()->get_id() :
                                           itype_id::NULL_ID();
@@ -1482,7 +1763,8 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                            elem.res_pen );
         }
 
-        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total(), proj.shot_spread );
+        dispersion_sources dispersion = total_gun_dispersion( gun, recoil_total() + burst_recoil,
+                                        proj.shot_spread );
         dispersion.add_range( dispersion_variance() );
 
         dealt_projectile_attack shot;
@@ -1524,23 +1806,24 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             break;
         }
 
-        int qty = gun.gun_recoil( *this, bipod );
-
-        add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
-                       qty, absorb * 100 );
-
-        delay += qty * absorb;
-        // Temporarily scale by 5x as we adjust MAX_RECOIL, factoring in the recoil enchantment also.
-        const int added_recoil = enchantment_cache->modify_value(
-                                     enchant_vals::mod::RECOIL_MODIFIER, 5.0 ) * ( qty * ( 1.0 - absorb ) );
-
-        add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
-
-        // if shoots multiple barrels simultaneously, do not apply the recoil while shooting, only in the end
-        if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
-            delay += added_recoil;
+        const int qty = gun.gun_recoil( *this, bipod );
+        const double recoil_scale = enchantment_cache->modify_value(
+                                        enchant_vals::mod::RECOIL_MODIFIER, 5.0 );
+        if( recoil_control ) {
+            burst_recoil = recoil_control->after_shot( qty ) * std::max( 0.0, recoil_scale / 5.0 );
+            add_msg_debug( debugmode::DF_RANGED, "recoil after shot %d: %.1f", curshot, burst_recoil );
         } else {
-            recoil += added_recoil;
+            add_msg_debug( debugmode::DF_RANGED, "total recoil: %d; absorbed: %.0f%%",
+                           qty, absorb * 100 );
+            delay += qty * absorb;
+            const int added_recoil = recoil_scale * ( qty * ( 1.0 - absorb ) );
+            add_msg_debug( debugmode::DF_RANGED, "final recoil of this shot: %d", added_recoil );
+            // Simultaneous barrels impart their recoil only after all projectiles leave.
+            if( gun.gun_current_mode().flags.count( "VOLLEY" ) ) {
+                delay += added_recoil;
+            } else {
+                recoil += added_recoil;
+            }
         }
 
         const itype_id current_ammo = gun.ammo_current();
@@ -1593,8 +1876,13 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
             continue; // skip retargeting for launchers
         }
     }
+    // Carry the last shot's aim displacement into the next trigger pull.
+    recoil += burst_recoil;
+
     // Interrupted bursts only occupy the time spent firing, with one interval for a failed trigger.
-    const int burst_moves = firearm_burst_move_cost( std::max( 1, curshot ), burst_rpm, burst_speed );
+    const int burst_moves = spend_burst_moves
+                            ? firearm_burst_move_cost( std::max( 1, curshot ), firing_rpm, burst_speed )
+                            : 0;
     const int64_t total_moves = static_cast<int64_t>( attack_moves ) + reload_moves + burst_moves;
     mod_moves( -static_cast<int>( std::min<int64_t>( total_moves, std::numeric_limits<int>::max() ) ) );
 
@@ -1651,8 +1939,9 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         // Reset aim for bows and other reload-and-shoot weapons.
         recoil = MAX_RECOIL;
     } else {
-        // apply delayed recoil, factor in recoil enchantments
-        recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        if( !recoil_control ) {
+            recoil += enchantment_cache->modify_value( enchant_vals::mod::RECOIL_MODIFIER, delay );
+        }
         if( is_mech_weapon ) {
             // mechs can handle recoil far better. they are built around their main gun.
             // TODO: shouldn't this affect only recoil accumulated during this function?
@@ -1673,28 +1962,29 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 }
 
 static float railgun_throw_multiplier( const Character &character, float base,
-                                       float itype::*item_mult,
-                                       float islot_gunmod::*gunmod_mult )
+                                       float throw_correction_data::*multiplier )
 {
-    float multiplier = base;
+    float result = base;
     const item_location wielded = character.get_wielded_item();
     if( !wielded ) {
-        return multiplier;
+        return result;
     }
     const bool has_railgun_throw_multiplier = flag_RAILGUN_THROW_MULTIPLIER.is_valid();
     if( has_railgun_throw_multiplier &&
-        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-        multiplier *= wielded->type->*item_mult;
+        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+        wielded->type->throw_correction ) {
+        result *= wielded->type->throw_correction.value().*multiplier;
     }
     if( wielded->is_gun() ) {
         for( const item *mod : wielded->gunmods() ) {
             if( has_railgun_throw_multiplier &&
-                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-                multiplier *= ( *mod->type->gunmod ).*gunmod_mult;
+                mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+                mod->type->gunmod->throw_correction ) {
+                result *= mod->type->gunmod->throw_correction.value().*multiplier;
             }
         }
     }
-    return multiplier;
+    return result;
 }
 
 int throw_cost( const Character &c, const item &to_throw )
@@ -1704,10 +1994,10 @@ int throw_cost( const Character &c, const item &to_throw )
     // Differences:
     // Dex is more (2x) important for throwing speed
     // At 10 skill, the cost is down to 0.75%, not 0.66%
-    const int base_move_cost = to_throw.attack_time( c ) * 4 / 5;
+    const int base_move_cost = to_throw.attack_time( c ) / 2;
     // Throw leverage multiplier: scale the weight-based portion of attack_time
     const bool do_railgun = c.is_fcl_railgun_throw( to_throw );
-    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : c.throw_weight_multiplier( to_throw );
     const int weight_adjust = static_cast<int>( to_throw.weight() * ( weight_mult - 1.0f ) /
                               60_gram / to_throw.count() / 2 );
     const int effective_base_cost = base_move_cost + weight_adjust;
@@ -1724,12 +2014,10 @@ int throw_cost( const Character &c, const item &to_throw )
     // Stamina penalty only affects base/2 and encumbrance parts of the cost
     move_cost *= stamina_penalty;
     move_cost += skill_cost;
-    if( do_railgun ) {
-        move_cost -= c.get_dex();
-    }
+    move_cost -= c.get_dex();
     move_cost = c.enchantment_cache->modify_value( enchant_vals::mod::ATTACK_SPEED, move_cost );
     move_cost = static_cast<int>( std::round( move_cost *
-                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier() ) ) );
+                                  ( do_railgun ? 1.0f : c.throw_speed_multiplier( to_throw ) ) ) );
 
     return std::max( 25, move_cost );
 }
@@ -1804,7 +2092,7 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
 {
     const bool do_railgun = is_fcl_railgun_throw( to_throw );
     units::mass weight = to_throw.weight() *
-                         ( do_railgun ? 1.0f : throw_weight_multiplier() );
+                         ( do_railgun ? 1.0f : throw_weight_multiplier( to_throw ) );
     units::volume volume = to_throw.volume();
     if( to_throw.count_by_charges() && to_throw.charges > 1 ) {
         weight /= to_throw.charges;
@@ -1844,10 +2132,10 @@ int Character::throwing_dispersion( const item &to_throw, Creature *critter,
         dispersion *= 4;
     }
 
-    const float dispersion_multiplier = do_railgun ? railgun_throw_multiplier( *this, 0.5f,
-                                        &itype::throw_dispersion_multiplier,
-                                        &islot_gunmod::throw_dispersion_multiplier ) :
-                                        throw_dispersion_multiplier();
+    const float dispersion_multiplier = do_railgun ?
+                                        railgun_throw_multiplier( *this, 0.5f,
+                                                &throw_correction_data::dispersion_multiplier ) :
+                                        throw_dispersion_multiplier( to_throw );
     dispersion = static_cast<int>( std::round( dispersion * dispersion_multiplier ) );
 
     return std::max( 0, dispersion );
@@ -1881,12 +2169,10 @@ static float throwing_skill_adjusted( const Character &guy )
 static double thrown_item_weight_damage( const Character &thrower, const item &thrown )
 {
     const bool do_railgun = thrower.is_fcl_railgun_throw( thrown );
-    const float weight_dmg = thrown.weight() *
-                             ( do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
-                                     &itype::throw_weight_multiplier,
-                                     &islot_gunmod::throw_weight_multiplier ) :
-                               thrower.throw_weight_multiplier() ) /
-                             100.0_gram;
+    const float weight_mult = do_railgun ? railgun_throw_multiplier( thrower, 1.8f,
+                              &throw_correction_data::weight_multiplier ) :
+                              thrower.throw_weight_multiplier( thrown, true );
+    const float weight_dmg = thrown.weight() * weight_mult / 100.0_gram;
     const float skill = throwing_skill_adjusted( thrower );
     const int dex = thrower.get_dex();
 
@@ -1902,7 +2188,9 @@ static double thrown_item_weight_damage( const Character &thrower, const item &t
     }
 
     const double scaled_weight_dmg = weight_dmg * velocity_factor;
-    const double cap = thrower.thrown_item_adjusted_damage( thrown );
+    // Half of the effective-weight bonus raises the strength-based damage cap.
+    const double cap = thrower.thrown_item_adjusted_damage( thrown ) *
+                       ( 1.0f + 0.5f * std::max( 0.0f, weight_mult - 1.0f ) );
     double thrown_dmg = std::min( scaled_weight_dmg, cap );
 
     // RANGED_DAMAGE enchantment can used at railgun throwing
@@ -1967,15 +2255,14 @@ int Character::thrown_item_total_damage_raw( const item &thrown ) const
         du.res_pen += skill_level / 2.0f;
     }
 
-    int total_damage = 0;
+    float total_damage = 0.0f;
     for( damage_unit &du : proj.impact.damage_units ) {
         total_damage += du.amount * du.damage_multiplier;
     }
     const float throw_damage_mult = is_fcl_railgun_throw( thrown ) ?
                                     railgun_throw_multiplier( *this, 3.5f,
-                                            &itype::throw_damage_multiplier,
-                                            &islot_gunmod::throw_damage_multiplier ) :
-                                    throw_damage_multiplier();
+                                            &throw_correction_data::damage_multiplier ) :
+                                    throw_damage_multiplier( thrown );
     return std::round( total_damage * throw_damage_mult );
 }
 
@@ -1999,7 +2286,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
         const int stamina_cost = get_standard_stamina_cost( &thrown );
         mod_stamina( static_cast<int>( std::round(
                                            ( stamina_cost + throwing_skill ) *
-                                           ( fcl_railgun_throw ? 1.0f : throw_stamina_multiplier() ) ) ) );
+                                           ( fcl_railgun_throw ? 1.0f :
+                                             throw_stamina_multiplier( thrown ) ) ) ) );
     }
 
     const float skill_level = throwing_skill_adjusted( *this );
@@ -2093,8 +2381,8 @@ dealt_projectile_attack Character::throw_item( const tripoint_bub_ms &target, co
 
     // Apply wielded-item throwing damage multiplier.
     impact.mult_damage( do_railgun ? railgun_throw_multiplier( *this, 3.5f,
-                        &itype::throw_damage_multiplier,
-                        &islot_gunmod::throw_damage_multiplier ) : throw_damage_multiplier() );
+                        &throw_correction_data::damage_multiplier ) :
+                        throw_damage_multiplier( thrown ) );
 
     Creature *critter = get_creature_tracker().creature_at( target, true );
     const dispersion_sources dispersion( throwing_dispersion( thrown, critter,
@@ -2929,7 +3217,7 @@ int reload_and_shoot_time( const Character &p, const item_location &loc )
     return time;
 }
 
-bool ready_ranged_ammo( Character &who, item &gun, item_location ammo )
+bool ready_ranged_ammo( Character &who, item &gun, const item_location &ammo )
 {
     const int moves = reload_and_shoot_time( who, ammo );
     if( !ammo || !gun.reload( who, ammo, 1 ) ) {
@@ -3451,11 +3739,13 @@ target_handler::trajectory target_ui::run()
     }
     update_target_list();
 
-    if( activity && activity->abort_if_no_targets && targets.empty() ) {
+    if( abort_if_no_targets && targets.empty() ) {
         // this branch is taken when already shot once and re-entered
         // aiming, if no targets are available we want to abort so
         // players don't arrive at aiming ui with nothing to shoot at.
-        activity->aborted = true;
+        if( activity ) {
+            activity->aborted = true;
+        }
         traj.clear();
         return traj;
     }
@@ -3534,7 +3824,7 @@ target_handler::trajectory target_ui::run()
             action = aim_mode->action;
         }
 
-        if( mode == TargetMode::Fire && status == Status::Good && attempted_shot ) {
+        if( mode == TargetMode::Fire && !sweeping && status == Status::Good && attempted_shot ) {
             if( !relevant->gun_current_mode().full_auto() ) {
                 requested_burst = 0;
             } else if( !valid_firearm_burst_rounds( requested_burst ) ) {
@@ -3588,6 +3878,9 @@ target_handler::trajectory target_ui::run()
                                     casting->effect() == "pickup" || casting->effect() == "summon" );
             if( !can_skip_confirm && !confirm_non_enemy_target() ) {
                 continue;
+            }
+            if( sweeping && mode == TargetMode::Fire ) {
+                apply_aim_turning_penalty();
             }
             set_last_target();
             if( mode == TargetMode::Fire && cata_mp::client_uses_firearm_intents( *relevant ) ) {
@@ -3675,8 +3968,19 @@ target_handler::trajectory target_ui::run()
             break;
         }
         case ExitCode::Fire: {
+            if( sweeping && !select_sweep() ) {
+                traj.clear();
+                if( activity ) {
+                    activity->aborted = true;
+                }
+                break;
+            }
             if( mode == TargetMode::Fire ) {
                 activity->burst_rounds = requested_burst;
+                if( selected_sweep ) {
+                    activity->sweep_end = here.get_abs( selected_sweep->end );
+                    activity->sweep_speed = selected_sweep->speed;
+                }
             }
             if( mode != TargetMode::SelectOnly && !defer_target_effects ) {
                 bool harmful = !( mode == TargetMode::Spell && casting->damage( player_character ) <= 0 );
@@ -3760,13 +4064,15 @@ void target_ui::init_window_and_input()
     ctxt.register_action( "zoom_out" );
     ctxt.register_action( "zoom_in" );
     ctxt.register_action( "TOGGLE_MOVE_CURSOR_VIEW" );
-    if( get_map().observer_z_range( *you ) > 0 ) {
+    if( !sweeping && get_map().observer_z_range( *you ) > 0 ) {
         ctxt.register_action( "LEVEL_UP" );
         ctxt.register_action( "LEVEL_DOWN" );
     }
     if( mode == TargetMode::Fire || mode == TargetMode::TurretManual || ( mode == TargetMode::Reach &&
             ( relevant && relevant->is_gun() ) && you->get_aim_types( *relevant ).size() > 1 ) ) {
-        ctxt.register_action( "SWITCH_MODE" );
+        if( !sweeping ) {
+            ctxt.register_action( "SWITCH_MODE" );
+        }
         if( mode == TargetMode::Fire || mode == TargetMode::TurretManual ) {
             ctxt.register_action( "SWITCH_AMMO" );
         }
@@ -3865,6 +4171,9 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
     // Make sure new position is valid or find a closest valid position
     std::vector < tripoint_bub_ms > new_traj;
     tripoint_bub_ms valid_pos = new_pos;
+    if( sweeping && valid_pos.z() != src.z() ) {
+        return false;
+    }
     map &here = get_map();
     if( new_pos != src ) {
         // On Z axis, make sure we do not exceed map boundaries
@@ -4075,7 +4384,7 @@ tripoint_bub_ms target_ui::choose_initial_target()
 
     // Try previously targeted creature
     shared_ptr_fast < Creature > cr = you->last_target.lock();
-    if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
+    if( cr && !cr->is_dead_state() && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
         return cr->pos_bub();
     }
 
@@ -4104,6 +4413,10 @@ bool target_ui::try_reacquire_target( bool critter, tripoint_bub_ms &new_dst )
     if( critter ) {
         // Try to re-acquire the creature
         shared_ptr_fast < Creature > cr = you->last_target.lock();
+        if( cr && cr->is_dead_state() ) {
+            new_dst = choose_initial_target();
+            return false;
+        }
         if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
             new_dst = cr->pos_bub();
             return true;
@@ -4663,6 +4976,95 @@ static constexpr std::array<std::pair<const char *, int>, 3> burst_presets = {{
     }
 };
 
+bool target_ui::select_sweep()
+{
+    sweep_start = dst;
+    const auto initial_trajectory = traj;
+    const tripoint_bub_ms start = dst;
+    on_out_of_scope restore( [&]() {
+        sweep_start.reset();
+        selecting_sweep_speed = false;
+        set_cursor_pos( start );
+        traj = initial_trajectory;
+    } );
+
+    while( true ) {
+        g->invalidate_main_ui_adaptor();
+        ui_manager::redraw();
+        const std::string action = ctxt.handle_input();
+        bool skip_redraw = false;
+        if( action == "QUIT" ) {
+            return false;
+        }
+        if( handle_cursor_movement( action, skip_redraw ) ) {
+            continue;
+        }
+        if( action == "FIRE" && status == Status::Good &&
+            firearm_sweep{ start, dst, 2 }.duration( src ) > 0.0 ) {
+            break;
+        }
+    }
+
+    const tripoint_bub_ms end = dst;
+    selecting_sweep_speed = true;
+    burst_ctxt = input_context( "TARGET" );
+    burst_ctxt.register_action( "QUIT" );
+    burst_ctxt.register_action( "HELP_KEYBINDINGS" );
+    for( const auto &preset : burst_presets ) {
+        burst_ctxt.register_action( preset.first );
+    }
+    while( true ) {
+        g->invalidate_main_ui_adaptor();
+        ui_manager::redraw();
+        const std::string action = burst_ctxt.handle_input();
+        if( action == "QUIT" ) {
+            return false;
+        }
+        for( int i = 0; i < 3; ++i ) {
+            if( action != burst_presets[i].first ) {
+                continue;
+            }
+            const firearm_sweep sweep{ start, end, i + 1 };
+            bool friendly = false;
+            for( const Creature &critter : g->all_creatures() ) {
+                const tripoint_bub_ms pos = critter.pos_bub();
+                if( &critter != you && !critter.is_dead_state() && pl_sees( critter ) &&
+                    dist_fn( pos ) <= range && you->attitude_to( critter ) != Creature::Attitude::HOSTILE &&
+                    sweep.contains( src, pos, M_PI / 4.0 ) ) {
+                    friendly = true;
+                    break;
+                }
+            }
+            if( friendly && !query_yn( _( "Sweep through a non-hostile creature's line of fire?" ) ) ) {
+                continue;
+            }
+            selected_sweep = sweep;
+            return true;
+        }
+    }
+}
+
+void target_ui::panel_sweep_selection( int text_y )
+{
+    if( !selecting_sweep_speed ) {
+        trim_and_print( w_target, point( 1, text_y ), getmaxx( w_target ) - 2, c_white,
+                        string_format( _( "%s to set the end of the sweep" ), ctxt.get_desc( "FIRE" ) ) );
+        return;
+    }
+    const gun_mode gun = relevant->gun_current_mode();
+    const std::array<std::string, 3> labels = { _( "Fast" ), _( "Medium" ), _( "Slow" ) };
+    const int moves_per_second = you->get_speed();
+    for( int i = 0; i < 3; ++i ) {
+        const firearm_sweep sweep{ *sweep_start, dst, i + 1 };
+        const double seconds = sweep.duration( src );
+        trim_and_print( w_target, point( 1, text_y++ ), getmaxx( w_target ) - 2, c_white,
+                        string_format( _( "%s %s: %d AP, %d rounds (%.2f s)" ),
+                                       burst_ctxt.get_desc( burst_presets[i].first, 1 ),
+                                       labels[i], sweep_move_cost( seconds, moves_per_second ),
+                                       sweep.rounds( src, gun.rpm ), seconds ) );
+    }
+}
+
 int target_ui::select_burst_rounds()
 {
     burst_rounds = min_firearm_burst_rounds;
@@ -4766,6 +5168,27 @@ void target_ui::draw_terrain_overlay()
         g->draw_line( src, center, l, true );
     }
 
+    if( sweep_start ) {
+        const auto start_line = filter_this_z( get_map().find_clear_path( src, *sweep_start ) );
+        g->draw_line( *sweep_start, center, start_line );
+        if( dst.z() == center.z() && firearm_sweep{ *sweep_start, dst, 2 }.duration( src ) > 0.0 ) {
+            const firearm_sweep outline{ *sweep_start, dst, 2 };
+            drawsq_params params = drawsq_params().highlight( true ).center( center );
+            for( const tripoint_bub_ms &tile : outline.shot_targets( src, 2400 ) ) {
+                if( get_map().inbounds( tile ) && you->sees( get_map(), tile ) ) {
+#ifdef TILES
+                    if( use_tiles ) {
+                        g->draw_highlight( tile );
+                    } else {
+#endif
+                        get_map().drawsq( g->w_terrain, tile, params );
+#ifdef TILES
+                    }
+#endif
+                }
+            }
+        }
+    }
     // Draw trajectory
     if( mode != TargetMode::Turrets && dst != src ) {
         std::vector < tripoint_bub_ms > this_z = filter_this_z( traj );
@@ -4827,6 +5250,11 @@ void target_ui::draw_ui_window()
         text_y += compact ? 0 : 1;
     }
 
+    if( sweep_start ) {
+        panel_sweep_selection( text_y );
+        wnoutrefresh( w_target );
+        return;
+    }
     if( burst_rounds > 0 ) {
         panel_burst_selection( text_y );
         wnoutrefresh( w_target );
@@ -4878,6 +5306,10 @@ double target_ui::get_predicted_recoil() const
 
 std::string target_ui::uitext_title() const
 {
+    if( sweeping ) {
+        return sweep_start ? selecting_sweep_speed ? _( "Sweep speed" ) : _( "Sweep endpoint" ) :
+               _( "Aim at the sweep start" );
+    }
     if( burst_rounds > 0 ) {
         return string_format( _( "Burst length: %s" ), relevant->tname() );
     }

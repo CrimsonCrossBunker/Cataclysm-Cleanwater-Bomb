@@ -22,6 +22,7 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
+#include "options_helpers.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -32,6 +33,7 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_control.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -48,6 +50,7 @@ static const itype_id itype_glockmag( "glockmag" );
 static const vpart_id vpart_aisle( "aisle" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_tank( "tank" );
+static const vpart_id vpart_turret_glock_19( "turret_glock_19" );
 static const vpart_id vpart_turret_test_multimag_gun_consume( "turret_test_multimag_gun_consume" );
 static const vpart_id vpart_turret_test_multimag_turret_flamethrower(
     "turret_test_multimag_turret_flamethrower" );
@@ -125,6 +128,93 @@ TEST_CASE( "vehicle_mount_supports_naval_rifle_strength", "[vehicle][gun][turret
     const item removed = veh->part_to_item( here, part );
     CHECK( removed.get_min_str() == 90 );
     CHECK_FALSE( you.meets_stat_requirements( removed ) );
+    here.destroy_vehicle( veh );
+}
+
+TEST_CASE( "direct_turret_fire_honors_reaim_after_firing", "[vehicle][gun][turret]" )
+{
+    const bool reaim = GENERATE( false, true );
+    const override_option aim_after_firing( "AIM_AFTER_FIRING", reaim ? "true" : "false" );
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms pos( 65, 65, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, pos, 0_degrees, 0,
+                                     veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_turret_glock_19 );
+    REQUIRE( index >= 0 );
+    vehicle_part &part = veh->part( index );
+    REQUIRE( part.ammo_set( itype_9mm, 3 ) == 3 );
+    turret_data gun = veh->turret_query( part );
+    REQUIRE( gun );
+    gun.base()->faults.clear();
+    gun.base()->set_flag( flag_id( "NEVER_JAMS" ) );
+    you.setpos( here, veh->bub_part_pos( here, part ) );
+    you.set_moves( 100 );
+
+    vehicle_control_selection command;
+    command.vehicle_id = veh->uid().get_value();
+    command.position = you.pos_abs();
+    command.action = "turret_direct";
+    command.turret.emplace();
+    command.turret->operation = "fire_direct";
+    command.turret->operator_position = you.pos_abs();
+    command.turret->turrets.push_back( capture_vehicle_turret( *veh, part ) );
+    command.turret->target = you.pos_abs() + tripoint( 5, 0, 0 );
+    REQUIRE( execute_vehicle_control( you, here, command ) );
+    CHECK( gun.ammo_remaining() == 2 );
+    CHECK( static_cast<bool>( you.activity ) == reaim );
+    if( reaim ) {
+        CHECK( you.activity.id() == activity_id( "ACT_AIM" ) );
+        // A pending continuation cannot open a different turret after the operator moves.
+        you.setpos( here, pos + tripoint( 0, 3, 0 ) );
+        you.set_moves( 100 );
+        you.activity.do_turn( you );
+        CHECK_FALSE( you.activity );
+        CHECK( gun.ammo_remaining() == 2 );
+    }
+    here.destroy_vehicle( veh );
+}
+
+TEST_CASE( "automatic_turret_can_fire_past_an_operator_on_its_mount",
+           "[vehicle][gun][turret]" )
+{
+    const bool on_mount = GENERATE( false, true );
+    clear_map_without_vision();
+    clear_avatar();
+    map &here = get_map();
+    build_test_map( ter_id( "t_pavement" ) );
+    set_time_to_day();
+    avatar &you = get_avatar();
+    const tripoint_bub_ms pos( 65, 65, 0 );
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_turret_rig, pos, 0_degrees, 0,
+                                     veh_spawn_status::PRISTINE, false, true );
+    REQUIRE( veh );
+    const int index = veh->install_part( here, point_rel_ms::zero, vpart_turret_glock_19 );
+    REQUIRE( index >= 0 );
+    vehicle_part &part = veh->part( index );
+    REQUIRE( part.ammo_set( itype_9mm, 3 ) == 3 );
+    turret_data gun = veh->turret_query( part );
+    REQUIRE( gun );
+    gun.base()->faults.clear();
+    gun.base()->set_flag( flag_id( "NEVER_JAMS" ) );
+    veh->set_owner( you );
+    part.enabled = true;
+    part.reset_target( veh->abs_part_pos( part ) );
+    const tripoint_bub_ms turret_pos = veh->bub_part_pos( here, part );
+    you.setpos( here, on_mount ? turret_pos : turret_pos + tripoint( 3, 0, 0 ) );
+    const optional_vpart_position mount = here.veh_at( turret_pos );
+    REQUIRE( mount );
+    REQUIRE_FALSE( mount->is_inside() );
+    here.invalidate_map_cache( 0 );
+    here.build_map_cache( 0, true );
+    const monster &zombie = spawn_test_monster( "mon_zombie", turret_pos + tripoint( 6, 0, 0 ), false );
+    REQUIRE( zombie.attitude_to( you ) == Creature::Attitude::HOSTILE );
+
+    CHECK( veh->automatic_fire_turret( part ) == ( on_mount ? 1 : 0 ) );
+    CHECK( gun.ammo_remaining() == ( on_mount ? 2 : 3 ) );
     here.destroy_vehicle( veh );
 }
 

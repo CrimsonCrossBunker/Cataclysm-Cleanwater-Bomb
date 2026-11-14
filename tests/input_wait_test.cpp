@@ -79,6 +79,15 @@ TEST_CASE( "input_wait_blocks_until_the_earliest_wake", "[input_wait]" )
             CHECK( input_wait_timeout_ms( s ) == 15 );
         }
     }
+    GIVEN( "a queued sound is due before the next present" ) {
+        input_wait_state s;
+        s.sound_ms = 3;
+        CHECK( input_wait_timeout_ms( s ) == 3 );
+        s.present_ms = 15;
+        CHECK( input_wait_timeout_ms( s ) == 3 );
+        s.input_ms = 1;
+        CHECK( input_wait_timeout_ms( s ) == 1 );
+    }
 }
 
 TEST_CASE( "touch_wait_matches_checkmessages_timers", "[input_wait]" )

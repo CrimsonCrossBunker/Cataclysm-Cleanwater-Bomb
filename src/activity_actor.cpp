@@ -30,6 +30,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <map>
 #include <optional>
@@ -498,9 +499,19 @@ aim_activity_actor::aim_activity_actor()
     initial_view_offset = get_avatar().view_offset;
 }
 
-aim_activity_actor aim_activity_actor::use_wielded()
+aim_activity_actor aim_activity_actor::use_wielded( bool sweeping )
 {
-    return aim_activity_actor();
+    aim_activity_actor actor;
+    actor.sweeping = sweeping;
+    return actor;
+}
+
+aim_activity_actor aim_activity_actor::reaim_turret( int64_t vehicle_id, int64_t gun_id )
+{
+    aim_activity_actor actor;
+    actor.turret_vehicle_id = vehicle_id;
+    actor.turret_gun_id = gun_id;
+    return actor;
 }
 
 aim_activity_actor aim_activity_actor::use_bionic( const item &fake_gun, unsigned int uid )
@@ -521,6 +532,12 @@ aim_activity_actor aim_activity_actor::use_mutation( const item &fake_gun )
 
 void aim_activity_actor::start( player_activity &act, Character &who )
 {
+    // Time spent on aiming is determined on the go by the player.
+    act.moves_total = 1;
+    act.moves_left = 1;
+    if( turret_vehicle_id != 0 ) {
+        return;
+    }
     item_location weapon = get_weapon( who );
     if( !weapon ) {
         aborted = true;
@@ -529,6 +546,11 @@ void aim_activity_actor::start( player_activity &act, Character &who )
     }
     item &it = *weapon.get_item();
 
+    if( sweeping && cata_mp::is_client_mode() ) {
+        aborted = true;
+        act.set_to_null();
+        return;
+    }
     if( cata_mp::client_uses_firearm_intents( it ) ) {
         cata_mp::client_start_firearm_activity( bionic_uid );
         cata_mp::client_request_firearm( who.pos_bub(), "prepare" );
@@ -536,10 +558,6 @@ void aim_activity_actor::start( player_activity &act, Character &who )
         aborted = true;
         finish( act, who );
     }
-
-    // Time spent on aiming is determined on the go by the player
-    act.moves_total = 1;
-    act.moves_left = 1;
 }
 
 bool aim_activity_actor::check_gun_ability_to_shoot( Character &who, item &it )
@@ -557,7 +575,28 @@ void aim_activity_actor::do_turn( player_activity &act, Character &who )
         act.moves_left = 0;
         return;
     }
+    if( sweeping && cata_mp::is_client_mode() ) {
+        aborted = true;
+        act.moves_left = 0;
+        return;
+    }
     avatar &you = get_avatar();
+
+    if( turret_vehicle_id != 0 ) {
+        // Direct fire uses the verified vehicle-control command, which requires no active activity.
+        act.set_to_null();
+        const tripoint_abs_ms position = who.pos_abs();
+        const optional_vpart_position at = here.veh_at( position );
+        if( at && at->vehicle().uid().get_value() == turret_vehicle_id &&
+            get_option<bool>( "AIM_AFTER_FIRING" ) && !cata_mp::is_client_mode() ) {
+            vehicle &veh = at->vehicle();
+            const turret_data turret = veh.turret_query( position );
+            if( turret && turret.base()->uid().get_value() == turret_gun_id ) {
+                use_vehicle_turrets( who, here, veh, position, "fire_direct", false, false, true );
+            }
+        }
+        return;
+    }
 
     const cata_mp::firearm_view_phase remote_phase = cata_mp::client_firearm_phase();
     if( cata_mp::is_client_mode() && remote_phase != cata_mp::firearm_view_phase::inactive ) {
@@ -661,10 +700,15 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
     gun_mode gun = weapon->gun_current_mode();
     if( !remote ) {
-        who.fire_gun( here, fin_trajectory.back(), gun, reload_loc, burst_rounds );
+        if( sweeping && sweep_end && !fin_trajectory.empty() ) {
+            who.fire_gun_sweep( here, { fin_trajectory.back(), here.get_bub( *sweep_end ), sweep_speed },
+                                gun, std::numeric_limits<int>::max(), false );
+        } else if( !sweeping ) {
+            who.fire_gun( here, fin_trajectory.back(), gun, reload_loc, burst_rounds );
+        }
     }
 
-    if( !get_option<bool>( "AIM_AFTER_FIRING" ) ||
+    if( sweeping || !get_option<bool>( "AIM_AFTER_FIRING" ) ||
         weapon.get_item()->has_fault_of_type( gun_mechanical_simple ) ) {
         if( remote && bionic_uid ) {
             cata_mp::client_cancel_firearm_activity( false );
@@ -695,6 +739,9 @@ void aim_activity_actor::finish( player_activity &act, Character &who )
 
 void aim_activity_actor::canceled( player_activity &/*act*/, Character &/*who*/ )
 {
+    if( turret_vehicle_id != 0 ) {
+        return;
+    }
     if( cata_mp::is_client_mode() ) {
         if( cata_mp::client_firearm_phase() != cata_mp::firearm_view_phase::inactive ) {
             cata_mp::client_cancel_firearm_activity( should_unload_RAS );
@@ -712,11 +759,20 @@ void aim_activity_actor::serialize( JsonOut &jsout ) const
     jsout.start_object();
 
     jsout.member( "fake_weapon", fake_weapon );
+    if( turret_vehicle_id != 0 ) {
+        jsout.member( "turret_vehicle_id", turret_vehicle_id );
+        jsout.member( "turret_gun_id", turret_gun_id );
+    }
     jsout.member( "bionic_uid", bionic_uid );
     jsout.member( "bionic_weapon_source", bionic_weapon_source );
     jsout.member( "fin_trajectory", fin_trajectory );
     if( burst_rounds != 0 ) {
         jsout.member( "burst_rounds", burst_rounds );
+    }
+    if( sweeping ) {
+        jsout.member( "sweeping", sweeping );
+        jsout.member( "sweep_end", sweep_end );
+        jsout.member( "sweep_speed", sweep_speed );
     }
     jsout.member( "action", action );
     jsout.member( "aif_duration", aif_duration );
@@ -740,12 +796,17 @@ std::unique_ptr<activity_actor> aim_activity_actor::deserialize( JsonValue &jsin
     JsonObject data = jsin.get_object();
 
     data.read( "fake_weapon", actor.fake_weapon );
+    data.read( "turret_vehicle_id", actor.turret_vehicle_id );
+    data.read( "turret_gun_id", actor.turret_gun_id );
     data.read( "bionic_uid", actor.bionic_uid );
     actor.bionic_weapon_source = data.has_member( "bionic_weapon_source" ) ?
                                  data.get_int64( "bionic_weapon_source" ) :
                                  actor.fake_weapon ? actor.fake_weapon->uid().get_value() : 0;
     data.read( "fin_trajectory", actor.fin_trajectory );
     actor.burst_rounds = data.get_int( "burst_rounds", 0 );
+    data.read( "sweeping", actor.sweeping );
+    data.read( "sweep_end", actor.sweep_end );
+    data.read( "sweep_speed", actor.sweep_speed );
     data.read( "action", actor.action );
     data.read( "aif_duration", actor.aif_duration );
     data.read( "aiming_at_critter", actor.aiming_at_critter );
@@ -13382,11 +13443,11 @@ void firstaid_activity_actor::serialize( JsonOut &jsout ) const
     jsout.end_object();
 }
 
-std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &jsin )
+std::unique_ptr<activity_actor> firstaid_activity_actor::deserialize( JsonValue &input )
 {
     firstaid_activity_actor actor( {},  {}, {} );
 
-    JsonObject data = jsin.get_object();
+    JsonObject data = input.get_object();
 
     data.read( "moves", actor.moves );
     data.read( "name", actor.name );
@@ -19750,7 +19811,7 @@ void mounted_charge_activity_actor::start( player_activity &act, Character &who 
     if( !valid_state( who, weapon ) ||
         ( !cooldown_started &&
           who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
-        !tec_mounted_charge->activation_allowed( who, "start" ) ) {
+        !tec_mounted_charge->activation_allowed( who, cooldown_started ? "continue" : "start" ) ) {
         stop( act );
         return;
     }
@@ -19848,7 +19909,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
 
         who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
                 tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
-        const bool attacked = who.melee_attack( *target, false );
+        const bool attacked = who.melee_attack( *target, false, matec_id(), false );
         who.clear_mounted_charge_stab_multiplier();
         if( attacked && !cooldown_started ) {
             who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
@@ -19881,10 +19942,11 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         }
     }
 
+    const tripoint_abs_ms before = who.pos_abs();
     const int moves_before = who.get_moves();
     const tripoint_rel_ms direction = next - current;
     avatar_action::move( *player, here, direction );
-    if( who.get_moves() < moves_before && !cooldown_started ) {
+    if( !cooldown_started && ( who.pos_abs() != before || who.get_moves() < moves_before ) ) {
         who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
         cooldown_started = true;
     }
@@ -19949,6 +20011,7 @@ std::unique_ptr<activity_actor> mounted_charge_activity_actor::deserialize( Json
     data.read( "weapon_uid", actor.weapon_uid );
     data.read( "origin", actor.origin );
     data.read( "charge_item_type", actor.charge_item_type );
+    actor.charge_item_type = item_controller->migrate_id( actor.charge_item_type );
     data.read( "completed_steps", actor.completed_steps );
     actor.cooldown_started = actor.completed_steps > 0;
     data.read( "cooldown_started", actor.cooldown_started );

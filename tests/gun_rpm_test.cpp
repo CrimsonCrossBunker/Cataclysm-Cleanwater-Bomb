@@ -1,24 +1,176 @@
 #include <string>
 
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "dispersion.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "gun_mode.h"
 #include "item.h"
 #include "itype.h"
 #include "json_error.h"
 #include "json_loader.h"
+#include "line.h"
 #include "ranged.h"
 #include "translations.h"
 #include "type_id.h"
+#include "units.h"
 
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 static const gun_mode_id gun_mode_REACH( "REACH" );
 static const gun_mode_id gun_mode_VOLLEY( "VOLLEY" );
+static const itype_id itype_223( "223" );
+static const itype_id itype_308( "308" );
+static const itype_id itype_545( "545" );
+static const itype_id itype_kord( "kord" );
+static const itype_id itype_m14ebr( "m14ebr" );
+static const itype_id itype_modular_m16_auto_rifle( "modular_m16_auto_rifle" );
+static const itype_id itype_modular_m16a4( "modular_m16a4" );
 static const itype_id itype_test_multimag_gun( "test_multimag_gun" );
 static const itype_id itype_test_multimag_gun_consume( "test_multimag_gun_consume" );
+static const skill_id skill_gun( "gun" );
+static const skill_id skill_rifle( "rifle" );
+
+TEST_CASE( "sweep_speed_and_rpm_set_round_count_and_cover_the_arc", "[ranged][gun_sweep]" )
+{
+    const tripoint_bub_ms origin{ 20, 20, 0 };
+    const tripoint_bub_ms start{ 26, 20, 0 };
+    const tripoint_bub_ms end{ 20, 26, 0 };
+    const firearm_sweep fast{ start, end, 1 };
+    const firearm_sweep medium{ start, end, 2 };
+    const firearm_sweep slow{ start, end, 3 };
+    CHECK( fast.rounds( origin, 750 ) == 12 );
+    CHECK( medium.rounds( origin, 750 ) == 19 );
+    CHECK( slow.rounds( origin, 750 ) == 38 );
+    CHECK( slow.rounds( origin, 600 ) == 30 );
+    CHECK( slow.rounds( origin, 900 ) == 45 );
+    CHECK( fast.rounds( origin, 1200 ) == 18 );
+    const auto points = slow.shot_targets( origin, 900 );
+    REQUIRE( points.size() == 45 );
+    CHECK( points.front() == start );
+    CHECK( points.back() == end );
+    CHECK( points[22].x() == points[22].y() );
+    CHECK( points[22].x() > origin.x() );
+    const firearm_sweep reverse{ end, start, 3 };
+    CHECK( reverse.shot_targets( origin, 900 )[22] == points[22] );
+}
+
+TEST_CASE( "sweep_wraps_at_the_bearing_boundary_and_rejects_degenerate_arcs",
+           "[ranged][gun_sweep]" )
+{
+    const tripoint_bub_ms origin{ 20, 20, 0 };
+    const tripoint_bub_ms start{ 15, 19, 0 };
+    const tripoint_bub_ms end{ 15, 21, 0 };
+    const firearm_sweep sweep{ start, end, 2 };
+    CHECK( sweep.contains( origin, tripoint_bub_ms( 14, 20, 0 ) ) );
+    CHECK_FALSE( sweep.contains( origin, tripoint_bub_ms( 26, 20, 0 ) ) );
+    CHECK_FALSE( sweep.contains( origin, tripoint_bub_ms( 14, 20, 1 ) ) );
+    CHECK( sweep.duration( origin ) < 0.4 );
+    const firearm_sweep same_ray{ start, tripoint_bub_ms( 10, 18, 0 ), 2 };
+    const firearm_sweep wrong_floor{ start, tripoint_bub_ms( 15, 21, 1 ), 2 };
+    const firearm_sweep wrong_speed{ start, end, 4 };
+    CHECK( same_ray.shot_targets( origin, 600 ).empty() );
+    CHECK( wrong_floor.rounds( origin, 600 ) == 0 );
+    CHECK( wrong_speed.rounds( origin, 600 ) == 0 );
+}
+
+TEST_CASE( "trained_rifle_shooters_can_hold_a_close_automatic_burst",
+           "[ranged][gun_rpm][recoil]" )
+{
+    const bool battle_rifle = GENERATE( false, true );
+    const int strength = battle_rifle ? 14 : 8;
+    avatar shooter;
+    shooter.normalize();
+    shooter.set_str_base( strength );
+    shooter.reset_stats();
+    shooter.set_skill_level( skill_gun, 7 );
+    shooter.set_skill_level( skill_rifle, 7 );
+    item rifle( battle_rifle ? itype_m14ebr : itype_modular_m16_auto_rifle );
+    rifle.ammo_set( battle_rifle ? itype_308 : itype_223, 12 );
+    REQUIRE( rifle.ammo_remaining() == 12 );
+    REQUIRE( rifle.gun_set_mode( gun_mode_AUTO ) );
+    const gun_mode mode = rifle.gun_current_mode();
+    REQUIRE( mode.full_auto() );
+    const int kick = rifle.gun_recoil( shooter );
+    REQUIRE( kick > 0 );
+
+    firearm_burst_recoil control( shooter.get_arm_str(), shooter.get_skill_level( skill_rifle ),
+                                  mode.rpm );
+    const double second_shot = control.after_shot( kick );
+    const double third_shot = control.after_shot( kick );
+    CHECK( second_shot < kick * 5.0 * 0.65 );
+    CHECK( third_shot > second_shot );
+    const double aim = rifle.sight_dispersion( shooter ).second;
+    for( int fired = 3; fired < 12; ++fired ) {
+        const double recoil = control.after_shot( kick );
+        if( fired >= 5 ) {
+            // Aimed shots after settling stay inside a standing medium target at four tiles.
+            const double dispersion = shooter.total_gun_dispersion( rifle, aim + recoil, 0 ).max();
+            CHECK( iso_tangent( 4, units::from_arcmin( dispersion + 11.0 ) ) <
+                   occupied_tile_fraction( creature_size::medium ) );
+            CHECK( recoil < second_shot );
+        }
+    }
+}
+
+TEST_CASE( "arm_strength_and_weapon_skill_both_help_settle_a_burst",
+           "[ranged][gun_rpm][recoil]" )
+{
+    firearm_burst_recoil strong( 14, 7.0f, 750 );
+    firearm_burst_recoil average( 8, 7.0f, 750 );
+    firearm_burst_recoil novice( 8, 1.0f, 750 );
+    constexpr int kick = 150;
+    CHECK( strong.after_shot( kick ) < average.after_shot( kick ) );
+    // Compare equally long bursts using the same weapon kick.
+    novice.after_shot( kick );
+    double strong_recoil = 0.0;
+    double average_recoil = 0.0;
+    double novice_recoil = 0.0;
+    for( int fired = 2; fired <= 5; ++fired ) {
+        strong_recoil = strong.after_shot( kick );
+        average_recoil = average.after_shot( kick );
+        novice_recoil = novice.after_shot( kick );
+    }
+    CHECK( strong_recoil < average_recoil );
+    CHECK( average_recoil < novice_recoil );
+}
+
+TEST_CASE( "faster_cyclic_rate_and_lower_weapon_kick_tighten_the_second_shot",
+           "[ranged][gun_rpm][recoil]" )
+{
+    avatar shooter;
+    shooter.normalize();
+    shooter.set_skill_level( skill_gun, 7 );
+    shooter.set_skill_level( skill_rifle, 7 );
+    item m16( itype_modular_m16a4 );
+    m16.ammo_set( itype_223, 3 );
+    item kord( itype_kord );
+    kord.ammo_set( itype_545, 2 );
+    REQUIRE( m16.ammo_remaining() == 3 );
+    REQUIRE( kord.ammo_remaining() == 2 );
+    REQUIRE( m16.gun_set_mode( gun_mode_BURST ) );
+    REQUIRE( kord.gun_set_mode( gun_mode_BURST ) );
+    const int m16_rpm = m16.gun_current_mode().rpm;
+    const int kord_rpm = kord.gun_current_mode().rpm;
+    const int m16_kick = m16.gun_recoil( shooter );
+    const int kord_kick = kord.gun_recoil( shooter );
+    REQUIRE( kord_rpm > m16_rpm );
+    REQUIRE( m16_kick > kord_kick );
+    REQUIRE( kord_kick > 0 );
+
+    const int arm_strength = shooter.get_arm_str();
+    const double m16_second = firearm_burst_recoil( arm_strength, 7.0f, m16_rpm ).after_shot(
+                                  m16_kick );
+    const double faster_second = firearm_burst_recoil( arm_strength, 7.0f, kord_rpm ).after_shot(
+                                     m16_kick );
+    const double kord_second = firearm_burst_recoil( arm_strength, 7.0f, kord_rpm ).after_shot(
+                                   kord_kick );
+    CHECK( faster_second < m16_second );
+    CHECK( kord_second < m16_second * 0.65 );
+}
 
 TEST_CASE( "gun_modes_load_legacy_quantities_and_rpm_strings", "[ranged][gun_rpm]" )
 {

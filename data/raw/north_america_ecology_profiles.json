@@ -1,0 +1,625 @@
+{
+  "biomes": {
+    "alpine": [
+      -0.65,
+      "t_moss",
+      9
+    ],
+    "tundra": [
+      -0.52,
+      "t_moss",
+      23
+    ],
+    "taiga": [
+      0.03,
+      "t_moss",
+      7
+    ],
+    "boreal": [
+      0.09,
+      "t_grass",
+      5
+    ],
+    "wet_boreal": [
+      -0.06,
+      "t_moss",
+      7
+    ],
+    "rockies": [
+      -0.02,
+      "t_grass",
+      4
+    ],
+    "pacific": [
+      0.18,
+      "t_grass",
+      4
+    ],
+    "eastern": [
+      0.1,
+      "t_grass",
+      4
+    ],
+    "appalachian": [
+      0.13,
+      "t_grass",
+      5
+    ],
+    "southeast": [
+      0.1,
+      "t_grass",
+      5
+    ],
+    "coastal_south": [
+      0.04,
+      "t_grass",
+      9
+    ],
+    "prairie": [
+      -0.4,
+      "t_grass_tall",
+      12
+    ],
+    "shortgrass": [
+      -0.49,
+      "t_grass_dead",
+      7
+    ],
+    "desert": [
+      -0.6,
+      "t_sand",
+      9
+    ],
+    "cold_desert": [
+      -0.53,
+      "t_dirt",
+      9
+    ],
+    "california": [
+      -0.23,
+      "t_grass_dead",
+      19
+    ],
+    "mexican_upland": [
+      -0.16,
+      "t_grass_dead",
+      12
+    ],
+    "mexican_montane": [
+      0.01,
+      "t_grass",
+      6
+    ],
+    "tropical_dry": [
+      -0.19,
+      "t_grass_dead",
+      13
+    ],
+    "tropical_wet": [
+      0.17,
+      "t_grass",
+      13
+    ],
+    "everglades": [
+      -0.3,
+      "t_grass_tall",
+      16
+    ],
+    "sonoran_desert": [
+      -0.6,
+      "t_sand",
+      13
+    ]
+  },
+  "regions": {
+    "1.1": "alpine",
+    "2.1": "tundra",
+    "2.2": "tundra",
+    "2.3": "tundra",
+    "2.4": "tundra",
+    "3.1": "taiga",
+    "3.2": "taiga",
+    "3.3": "taiga",
+    "3.4": "taiga",
+    "4.1": "wet_boreal",
+    "5.1": "boreal",
+    "5.2": "boreal",
+    "5.3": "boreal",
+    "5.4": "boreal",
+    "6.1": "rockies",
+    "6.2": "rockies",
+    "7.1": "pacific",
+    "8.1": "eastern",
+    "8.2": "eastern",
+    "8.3": "southeast",
+    "8.4": "appalachian",
+    "8.5": "coastal_south",
+    "9.1": "prairie",
+    "9.2": "prairie",
+    "9.3": "shortgrass",
+    "9.4": "shortgrass",
+    "9.5": "coastal_south",
+    "9.6": "tropical_dry",
+    "10.1": "cold_desert",
+    "10.2": "desert",
+    "11.1": "california",
+    "12.1": "mexican_upland",
+    "12.2": "mexican_upland",
+    "13.1": "rockies",
+    "13.2": "mexican_montane",
+    "13.3": "mexican_montane",
+    "13.4": "mexican_montane",
+    "13.5": "mexican_montane",
+    "13.6": "mexican_montane",
+    "14.1": "tropical_dry",
+    "14.2": "tropical_dry",
+    "14.3": "tropical_dry",
+    "14.4": "tropical_dry",
+    "14.5": "tropical_dry",
+    "14.6": "tropical_dry",
+    "15.1": "tropical_wet",
+    "15.2": "tropical_wet",
+    "15.3": "tropical_wet",
+    "15.4": "everglades",
+    "15.5": "tropical_wet",
+    "15.6": "tropical_wet"
+  },
+  "species": [
+    {
+      "id": "white_spruce",
+      "name": "white spruce",
+      "latin": "Picea glauca",
+      "kind": "E",
+      "range": "piceglau",
+      "biomes": [
+        "taiga",
+        "boreal",
+        "wet_boreal",
+        "rockies"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "black_spruce",
+      "name": "black spruce",
+      "latin": "Picea mariana",
+      "kind": "E",
+      "range": "picemari",
+      "biomes": [
+        "taiga",
+        "boreal",
+        "wet_boreal"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "tamarack",
+      "name": "tamarack",
+      "latin": "Larix laricina",
+      "kind": "D",
+      "range": "larilari",
+      "biomes": [
+        "taiga",
+        "boreal",
+        "wet_boreal"
+      ],
+      "weight": 4
+    },
+    {
+      "id": "jack_pine",
+      "name": "jack pine",
+      "latin": "Pinus banksiana",
+      "kind": "E",
+      "range": "pinubank",
+      "biomes": [
+        "taiga",
+        "boreal",
+        "wet_boreal"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "paper_birch",
+      "name": "paper birch",
+      "latin": "Betula papyrifera",
+      "kind": "D",
+      "range": "betupapy",
+      "biomes": [
+        "taiga",
+        "boreal",
+        "wet_boreal",
+        "rockies",
+        "eastern"
+      ],
+      "weight": 5
+    },
+    {
+      "id": "douglas_fir",
+      "name": "Douglas-fir",
+      "latin": "Pseudotsuga menziesii",
+      "kind": "E",
+      "range": "pseumenz",
+      "biomes": [
+        "pacific",
+        "rockies",
+        "california",
+        "mexican_montane"
+      ],
+      "weight": 9
+    },
+    {
+      "id": "western_redcedar",
+      "name": "western redcedar",
+      "latin": "Thuja plicata",
+      "kind": "E",
+      "range": "thujplic",
+      "biomes": [
+        "pacific",
+        "rockies"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "western_hemlock",
+      "name": "western hemlock",
+      "latin": "Tsuga heterophylla",
+      "kind": "E",
+      "range": "tsughete",
+      "biomes": [
+        "pacific",
+        "rockies"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "sitka_spruce",
+      "name": "Sitka spruce",
+      "latin": "Picea sitchensis",
+      "kind": "E",
+      "range": "picesitc",
+      "biomes": [
+        "pacific"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "ponderosa_pine",
+      "name": "ponderosa pine",
+      "latin": "Pinus ponderosa",
+      "kind": "E",
+      "range": "pinupond",
+      "biomes": [
+        "rockies",
+        "california",
+        "mexican_upland",
+        "cold_desert"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "lodgepole_pine",
+      "name": "lodgepole pine",
+      "latin": "Pinus contorta",
+      "kind": "E",
+      "range": "pinucont",
+      "biomes": [
+        "rockies",
+        "pacific",
+        "california"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "oregon_white_oak",
+      "name": "Oregon white oak",
+      "latin": "Quercus garryana",
+      "kind": "D",
+      "range": "quergarr",
+      "biomes": [
+        "pacific",
+        "california"
+      ],
+      "weight": 4
+    },
+    {
+      "id": "blue_oak",
+      "name": "blue oak",
+      "latin": "Quercus douglasii",
+      "kind": "D",
+      "range": "querdoug",
+      "biomes": [
+        "california"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "southern_live_oak",
+      "name": "southern live oak",
+      "latin": "Quercus virginiana",
+      "kind": "E",
+      "range": "",
+      "biomes": [
+        "southeast",
+        "coastal_south",
+        "everglades"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "shagbark_hickory",
+      "name": "shagbark hickory",
+      "latin": "Carya ovata",
+      "kind": "D",
+      "range": "caryovat",
+      "biomes": [
+        "eastern",
+        "appalachian",
+        "southeast"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "bur_oak",
+      "name": "bur oak",
+      "latin": "Quercus macrocarpa",
+      "kind": "D",
+      "range": "quermacr",
+      "biomes": [
+        "eastern",
+        "appalachian",
+        "prairie",
+        "boreal"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "eastern_cottonwood",
+      "name": "eastern cottonwood",
+      "latin": "Populus deltoides",
+      "kind": "D",
+      "range": "popudelt",
+      "biomes": [
+        "prairie",
+        "shortgrass",
+        "eastern",
+        "southeast",
+        "coastal_south"
+      ],
+      "weight": 4
+    },
+    {
+      "id": "pacific_madrone",
+      "name": "Pacific madrone",
+      "latin": "Arbutus menziesii",
+      "kind": "E",
+      "range": "arbumenz",
+      "biomes": [
+        "pacific",
+        "california"
+      ],
+      "weight": 4
+    },
+    {
+      "id": "subalpine_fir",
+      "name": "subalpine fir",
+      "latin": "Abies lasiocarpa",
+      "kind": "E",
+      "range": "abielasi",
+      "biomes": [
+        "rockies",
+        "pacific"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "colorado_pinyon",
+      "name": "Colorado pinyon",
+      "latin": "Pinus edulis",
+      "kind": "E",
+      "range": "pinuedul",
+      "biomes": [
+        "rockies",
+        "cold_desert"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "mexican_pinyon",
+      "name": "Mexican pinyon",
+      "latin": "Pinus cembroides",
+      "kind": "E",
+      "range": "pinucemb",
+      "biomes": [
+        "mexican_upland",
+        "mexican_montane",
+        "desert",
+        "sonoran_desert"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "montezuma_pine",
+      "name": "Montezuma pine",
+      "latin": "Pinus montezumae",
+      "kind": "E",
+      "range": "",
+      "biomes": [
+        "mexican_montane",
+        "mexican_upland"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "big_sagebrush",
+      "name": "big sagebrush",
+      "latin": "Artemisia tridentata",
+      "kind": "S",
+      "range": "artetrid",
+      "biomes": [
+        "cold_desert",
+        "shortgrass",
+        "rockies"
+      ],
+      "weight": 9
+    },
+    {
+      "id": "dwarf_birch",
+      "name": "dwarf birch",
+      "latin": "Betula glandulosa",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "tundra",
+        "taiga",
+        "wet_boreal"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "creosote_bush",
+      "name": "creosote bush",
+      "latin": "Larrea tridentata",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "desert",
+        "sonoran_desert"
+      ],
+      "weight": 9
+    },
+    {
+      "id": "saguaro",
+      "name": "saguaro",
+      "latin": "Carnegiea gigantea",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "sonoran_desert"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "chamise",
+      "name": "chamise",
+      "latin": "Adenostoma fasciculatum",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "california"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "snowberry",
+      "name": "common snowberry",
+      "latin": "Symphoricarpos albus",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "prairie",
+        "rockies",
+        "pacific"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "bald_cypress",
+      "name": "bald cypress",
+      "latin": "Taxodium distichum",
+      "kind": "D",
+      "range": "",
+      "biomes": [
+        "coastal_south",
+        "everglades"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "longleaf_pine",
+      "name": "longleaf pine",
+      "latin": "Pinus palustris",
+      "kind": "E",
+      "range": "",
+      "biomes": [
+        "coastal_south"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "wax_myrtle",
+      "name": "southern wax myrtle",
+      "latin": "Morella cerifera",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "southeast",
+        "coastal_south",
+        "everglades"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "gumbo_limbo",
+      "name": "gumbo-limbo",
+      "latin": "Bursera simaruba",
+      "kind": "D",
+      "range": "",
+      "biomes": [
+        "tropical_dry",
+        "tropical_wet",
+        "everglades"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "spanish_cedar",
+      "name": "Spanish cedar",
+      "latin": "Cedrela odorata",
+      "kind": "D",
+      "range": "",
+      "biomes": [
+        "tropical_wet"
+      ],
+      "weight": 5
+    },
+    {
+      "id": "netleaf_oak",
+      "name": "netleaf oak",
+      "latin": "Quercus rugosa",
+      "kind": "E",
+      "range": "",
+      "biomes": [
+        "mexican_montane",
+        "mexican_upland"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "texas_mesquite",
+      "name": "honey mesquite",
+      "latin": "Prosopis glandulosa",
+      "kind": "D",
+      "range": "",
+      "biomes": [
+        "desert",
+        "tropical_dry"
+      ],
+      "weight": 6
+    },
+    {
+      "id": "prickly_pear",
+      "name": "Engelmann's prickly pear",
+      "latin": "Opuntia engelmannii",
+      "kind": "S",
+      "range": "",
+      "biomes": [
+        "desert",
+        "sonoran_desert",
+        "tropical_dry",
+        "mexican_upland",
+        "sonoran_desert"
+      ],
+      "weight": 5
+    }
+  ]
+}

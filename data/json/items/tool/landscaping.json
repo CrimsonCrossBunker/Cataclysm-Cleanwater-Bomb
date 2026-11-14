@@ -318,6 +318,7 @@
     "copy-from": "machete"
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "brush_axe",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -334,13 +335,14 @@
     "color": "brown",
     "qualities": [ [ "AXE", 2 ], [ "GRASS_CUT", 1 ], [ "CUT", 1 ], [ "BUTCHER", -70 ] ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "uneven" },
-    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" ],
     "weapon_category": [ "GREAT_AXES" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE" ],
     "melee_damage": { "bash": 14, "cut": 26 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "brush_pole",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -357,7 +359,7 @@
     "color": "brown",
     "looks_like": "glaive",
     "qualities": [ [ "AXE", 1 ], [ "GRASS_CUT", 1 ], [ "CUT", 1 ], [ "BUTCHER", -70 ] ],
-    "techniques": [ "WBLOCK_1", "BRUTAL", "WIDE", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "BRUTAL", "WIDE", "SWEEP", "MOUNTED_CHARGE" ],
     "faults": [ { "fault_group": "handle_long", "weight_mult": 4 }, { "fault_group": "blade_general" } ],
     "flags": [ "DURABLE_MELEE", "REACH_ATTACK", "NONCONDUCTIVE", "SHEATH_SPEAR", "ALWAYS_TWOHAND" ],
     "weapon_category": [ "SPEARS" ],

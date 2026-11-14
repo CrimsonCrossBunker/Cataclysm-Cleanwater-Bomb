@@ -1,5 +1,6 @@
 [
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "ax",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -15,7 +16,7 @@
     "symbol": "/",
     "color": "light_gray",
     "qualities": [ [ "CUT", 1 ], [ "AXE", 3 ], [ "BUTCHER", -36 ] ],
-    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "SHEATH_AXE", "NO_SALVAGE" ],
     "faults": [ { "fault_group": "handle_long" }, { "fault_group": "blade_general_no_tip" } ],
     "//": "Wood axes also lack the ability to hook appropriately in combat, for the same reason they work well against trees.  Straight axe head instead of curved.",

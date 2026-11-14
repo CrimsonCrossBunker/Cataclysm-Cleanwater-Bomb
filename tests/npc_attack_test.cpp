@@ -402,16 +402,42 @@ TEST_CASE( "NPC_burst_orders_survive_save_load", "[npc_rules][gun_rpm]" )
 {
     npc_follower_rules rules;
     CHECK( rules.burst == burst_rule::ADAPTIVE );
+    CHECK_FALSE( rules.allow_sweep );
     rules.burst = burst_rule::LONG;
+    rules.allow_sweep = true;
     std::ostringstream saved;
     JsonOut json( saved );
     rules.serialize( json );
     npc_follower_rules restored;
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
     CHECK( restored.burst == burst_rule::LONG );
+    CHECK( restored.allow_sweep );
 
     restored.deserialize( json_loader::from_string( R"({ "aim": 0 })" ).get_object() );
     CHECK( restored.burst == burst_rule::ADAPTIVE );
+    CHECK_FALSE( restored.allow_sweep );
+}
+
+TEST_CASE( "NPC_sweep_needs_a_close_group_and_a_clear_sector", "[npc_attack][gun_sweep]" )
+{
+    clear_map_and_put_player_underground();
+    scoped_weather_override sunny_weather( weather_sunny );
+    map &here = get_map();
+    npc &shooter = npc_attack_setup::respawn_main_npc();
+    shooter.set_fac( faction_your_followers );
+    shooter.set_attitude( NPCATT_FOLLOW );
+    const tripoint_bub_ms origin = shooter.pos_bub();
+    const tripoint_bub_ms primary = origin + point( 4, 0 );
+    REQUIRE( g->place_critter_at( mon_zombie, primary ) );
+    REQUIRE( g->place_critter_at( mon_zombie, origin + point( 4, -2 ) ) );
+    CHECK_FALSE( find_firearm_sweep( shooter, here, primary, 20, 750, 12 ) );
+    REQUIRE( g->place_critter_at( mon_zombie, origin + point( 4, 2 ) ) );
+    const auto sweep = find_firearm_sweep( shooter, here, primary, 20, 750, 12 );
+    REQUIRE( sweep );
+    CHECK( sweep->contains( origin, primary ) );
+    CHECK_FALSE( find_firearm_sweep( shooter, here, primary, 20, 750, 2 ) );
+    get_player_character().setpos( here, origin + point( 2, 0 ) );
+    CHECK_FALSE( find_firearm_sweep( shooter, here, primary, 20, 750, 12 ) );
 }
 
 TEST_CASE( "NPC_faces_zombies", "[npc_attack]" )

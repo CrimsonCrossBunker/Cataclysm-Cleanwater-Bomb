@@ -1704,6 +1704,7 @@ void game::unserialize_master( const JsonValue &jv )
     // Reset state that has no clear-on-load hook of its own; otherwise a
     // save without the field inherits the previous game's queue.
     get_item_wakeups().clear();
+    north_america_world = false;
     JsonObject game_json = jv;
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
@@ -1725,6 +1726,10 @@ void game::unserialize_master( const JsonValue &jv )
             jsin.read( *faction_manager_ptr );
         } else if( name == "seed" ) {
             jsin.read( seed );
+        } else if( name == "north_america_world" ) {
+            north_america_world = jsin.get_bool();
+        } else if( name == "climate_origin" ) {
+            jsin.read( weather.climate_origin );
         } else if( name == "weather" ) {
             weather_manager::unserialize_all( jsin );
         } else if( name == "timed_events" ) {
@@ -1788,6 +1793,9 @@ void weather_manager::serialize_all( JsonOut &json )
     json.member( "temperature", units::to_fahrenheit( weather.temperature ) );
     json.member( "winddirection", weather.winddirection );
     json.member( "windspeed", weather.windspeed );
+    if( weather.climate_precipitation_mm_per_hour ) {
+        json.member( "climate_precipitation_mm_per_hour", *weather.climate_precipitation_mm_per_hour );
+    }
     if( weather.forced_temperature ) {
         json.member( "forced_temperature", units::to_fahrenheit( *weather.forced_temperature ) );
     }
@@ -1819,6 +1827,8 @@ void weather_manager::unserialize_all( const JsonObject &w )
     get_weather().temperature = units::from_fahrenheit( read_temperature );
     w.read( "winddirection", get_weather().winddirection );
     w.read( "windspeed", get_weather().windspeed );
+    get_weather().climate_precipitation_mm_per_hour.reset();
+    w.read( "climate_precipitation_mm_per_hour", get_weather().climate_precipitation_mm_per_hour );
     if( w.has_member( "forced_temperature" ) ) {
         float read_forced_temp;
         w.read( "forced_temperature", read_forced_temp );
@@ -1950,6 +1960,12 @@ void game::serialize_master( std::ostream &fout )
 
         json.member( "factions", *faction_manager_ptr );
         json.member( "seed", seed );
+        if( north_america_world ) {
+            json.member( "north_america_world", north_america_world );
+        }
+        if( weather.climate_origin ) {
+            json.member( "climate_origin", *weather.climate_origin );
+        }
 
         json.end_object();
     } catch( const JsonError &e ) {

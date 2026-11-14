@@ -2738,7 +2738,7 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field description? string|LocalizedText Technique description; plural text is rejected.
 ---@field avatar_message? string|LocalizedText Message shown to the avatar on use; plural text is rejected.
 ---@field npc_message? string|LocalizedText Message shown to NPC observers on use; plural text is rejected.
----@field crit_tec? boolean Critical-only technique.
+---@field crit_tec? boolean Automatic critical-only technique; incompatible with manual_activation.
 ---@field crit_ok? boolean Usable on critical hits.
 ---@field wall_adjacent? boolean Only works near a wall.
 ---@field reach_tec? boolean Only usable during reach attacks.
@@ -2765,11 +2765,19 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field unarmed_allowed? boolean Whether unarmed characters may use it.
 ---@field melee_allowed? boolean Whether armed characters may use it.
 ---@field strictly_unarmed? boolean Ignore force-unarmed styles.
----@field manual_activation? boolean Restrict activation to the active technique menu. All offensive non-counter techniques are selectable by default.
+---@field manual_activation? boolean Restrict activation to the active technique menu. Offensive non-counter, non-critical-only techniques are selectable by default.
 ---@field active_when? string Named Lua handler that decides whether the technique is available.
 ---@field cooldown_seconds? number Base manual-activation cooldown, 0..86400 game seconds; defaults to zero and rounds up to whole seconds.
 ---@field cooldown_duration? string Named handler receiving CcbTechniqueCooldownPayload; called only for an attempted execution, never to draw UI. Invalid results fall back to the base cooldown.
 ---@field charge_damage? string Named mounted-charge damage handler receiving CcbMountedChargeDamagePayload and returning one finite multiplier. Native code clamps it to 1..max_multiplier; unavailable or invalid callbacks use the native speed-based formula.
+
+---@field cooldown_turns? integer Game-turn cooldown from zero through one day; defaults to zero. cooldown_seconds takes effect when this value is zero. A positive value requires manual_activation.
+---@field grapple_action? 'hold'|'drag'|'throw' Requires manual activation, strictly_unarmed, no reach, and positive grapple parameters.
+---@field grapple_power? integer Positive grappling leverage percentage; defaults to 100.
+---@field grapple_stamina? integer Positive base stamina requirement.
+---@field grapple_cooldown_turns? integer Positive shared action cooldown in game turns.
+---@field grapple_plan? string Registered handler receiving CcbTechniqueGrapplePayload and returning CcbTechniqueGrapplePlan. Errors reject execution without native fallback.
+---@field position_plan? string Registered CcbTechniquePositionPayload -> CcbTechniquePositionPlan handler. Requires manual activation; incompatible with grapple_plan, on_apply and creature-only effects. Targets clear visible adjacent positions, not creatures or vehicles.
 
 ---@class CcbMountedChargeDamagePayload
 ---@field technique_id string Stable native technique id.
@@ -2782,12 +2790,53 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field multiplier_per_step number Weapon charge bonus per reference-speed step. The core policy caps run-up at five steps and scales its bonus by mount_speed / 300.
 ---@field max_multiplier number Weapon charge damage multiplier ceiling.
 
+---@class CcbTechniquePositionPayload
+---@field technique_id string Stable technique id.
+---@field phase 'target'|'execute' Selection preview or final execution; callbacks should be pure and must tolerate repeated previews.
+---@field strength integer Current attacker strength.
+---@field melee_skill number Current Melee level.
+---@field unarmed_skill number Current Unarmed Combat level.
+---@field armed boolean Whether a weapon is wielded.
+---@field weapon_bash number Wielded weapon bash damage, or zero.
+---@field terrain string Selected terrain id.
+---@field furniture string Selected furniture id.
+---@field window boolean Native window flag.
+---@field door boolean Native door flag.
+---@field bashable boolean Whether terrain or furniture is bashable.
+---@field passable boolean Whether the selected terrain/furniture tile is passable.
+---@field bash_strength integer Native bash strength threshold.
+---@field bash_resistance integer Native bash resistance.
+
+---@class CcbTechniquePositionPlan
+---@field allowed boolean False rejects without native costs; remaining fields are required only when true.
+---@field stamina_cost? integer Total stamina cost in [0, 1000000].
+---@field move_cost? integer Total move cost in [1, 1000000].
+---@field bash_power? integer Normal terrain-bash power in [0, 1000000]; zero performs an empty-space action without damage or combat experience. Never forces terrain destruction.
+
+---@class CcbTechniqueGrapplePayload
+---@field technique_id string Stable technique id.
+---@field strength integer Current attacker strength.
+---@field unarmed_skill number Current attacker Unarmed Combat level.
+---@field size_difference integer Target size category minus attacker size category.
+---@field target_weight_kg number Current target weight in kilograms.
+---@field power integer Configured grappling leverage percentage.
+---@field base_stamina integer Configured base stamina requirement.
+
+---@class CcbTechniqueGrapplePlan
+---@field allowed boolean False rejects the action; other fields are required only when true.
+---@field stamina_cost? integer Nonnegative total stamina cost, at most INT_MAX.
+---@field move_cost? integer Positive move cost, at most INT_MAX.
+---@field duration_turns? integer Positive hold or knockdown duration, at most INT_MAX. Dragging does not refresh the hold.
+---@field damage? number Finite nonnegative bash damage before native armor, at most FLT_MAX; only applied by throws.
+
 ---@class CcbTechniqueConditionPayload
 ---@field technique_id string Stable native technique id.
----@field phase 'menu'|'start'|'continue' Native activation phase.
+---@field phase 'menu'|'start'|'continue'|'target' Native activation phase. Target eligibility is checked during manual selection/execution and automatic candidate evaluation.
+---@field target? CcbTechniqueTargetSnapshot Present only when a creature target is being checked.
 ---@field character GameHandle Exact Character being evaluated.
 ---@field weapon_id string Wielded item id, or an empty string when unarmed.
 ---@field moves integer Current native move points.
+---@field stamina integer Current native stamina.
 ---@field mounted boolean Whether the Character is mounted.
 ---@field mount_kind 'none'|'animal'|'mech' Native mount category.
 ---@field activity_active boolean Whether a native activity is active.
@@ -2803,6 +2852,21 @@ function AttackVectorDefinition:forbids_flag(flag_id) end
 ---@field phase_movement boolean Whether phase movement is active.
 ---@field can_attack boolean False when a native CANNOT_ATTACK flag is present.
 ---@field can_move boolean False when a native CANNOT_MOVE flag is present.
+---@class CcbTechniqueTargetSnapshot
+---@field creature GameHandle Exact selected creature, not a borrowed native pointer.
+---@field kind 'avatar'|'npc'|'monster' Native creature category.
+---@field hostile boolean Whether the target is hostile to the acting Character. This does not restrict manual targeting.
+---@field alive boolean Whether the selected creature is alive.
+---@field downed boolean Whether the selected creature is downed or on the ground.
+---@field flying boolean Whether the monster is currently flying.
+---@field bodytype string Monster body type, or human for Characters.
+---@field armed boolean Whether the creature currently has a weapon.
+---@field adjacent boolean Native adjacency on the same z-level.
+---@field weight_kg number Current target weight in kilograms.
+---@field size_difference integer Target size category minus actor size category.
+---@field gripped boolean Whether any martial grappling grip is present.
+---@field own_grip boolean Whether the acting Character owns the grip.
+
 ---@class TechniqueDefinition
 ---@field id string
 local TechniqueDefinition = {}
@@ -2814,6 +2878,27 @@ function TechniqueDefinition:flag(flag_id) end
 ---@param attack_vector_id string Native attack-vector id.
 ---@return TechniqueDefinition self
 function TechniqueDefinition:attack_vector(attack_vector_id) end
+
+---@param style_id string Existing or locally staged martial-art style. Appends this technique without replacing style buffs or requirements; rolls back with the content transaction.
+---@return TechniqueDefinition self
+function TechniqueDefinition:style(style_id) end
+
+---@param category_id string Native weapon category; multiple categories are alternatives.
+---@return TechniqueDefinition self
+function TechniqueDefinition:weapon_category(category_id) end
+
+---@param damage_type string Native damage type id.
+---@param multiplier number Finite value in (0, 10]; replaces the previous multiplier for this damage type.
+---@return TechniqueDefinition self
+function TechniqueDefinition:damage_multiplier(damage_type, multiplier) end
+
+---@param multiplier number Finite value in (0, 10].
+---@return TechniqueDefinition self
+function TechniqueDefinition:move_cost_multiplier(multiplier) end
+
+---@param bonus number Finite accuracy adjustment in [-20, 20].
+---@return TechniqueDefinition self
+function TechniqueDefinition:accuracy_bonus(bonus) end
 
 ---@param skill_id string Native skill id.
 ---@param level integer Non-negative minimum skill level.
@@ -11959,6 +12044,7 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@class CcbTechniqueDefinitionSnapshot
 ---@field cooldown_seconds number Base manual-activation cooldown in game seconds.
 ---@field dynamic_cooldown boolean Whether a cooldown-duration handler is attached.
+---@field target_mode 'creature'|'position' Native targeting mode.
 ---@field id GameId GameId<martial_art_technique>.
 ---@field name string Localized technique name.
 ---@field description string Complete native rule description.
@@ -11994,7 +12080,13 @@ function CcbPlatformRecipesApi.forget_category(character, category, subcategory)
 ---@field attack_vectors CcbTechniqueIdPage GameId<attack_vector> entries.
 ---@field eocs CcbTechniqueIdPage Native attached condition identifiers; not a Lua authoring interface.
 ---@field manual_activation boolean Whether the player may select the technique as an active attack.
+---@field cooldown_turns integer Configured per-technique cooldown in game turns.
 ---@field conditional_activation boolean Whether a Lua activation policy is attached.
+---@field grapple_action string Empty for non-grappling techniques; otherwise hold, drag or throw.
+---@field grapple_power integer Configured leverage percentage.
+---@field grapple_stamina integer Configured base stamina requirement.
+---@field grapple_cooldown_turns integer Shared action cooldown in game turns.
+---@field scripted_grapple boolean Whether a Lua grapple plan is attached.
 ---@class CcbMartialArtsApi
 local CcbMartialArtsApi = {}
 

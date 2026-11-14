@@ -231,7 +231,8 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                 do_aim = setup_table_button( button_number, toggle_label,
                                              role_model.rules.aim == guy->rules.aim );
                 do_burst = setup_table_button( button_number, toggle_label,
-                                               role_model.rules.burst == guy->rules.burst );
+                                               role_model.rules.burst == guy->rules.burst &&
+                                               role_model.rules.allow_sweep == guy->rules.allow_sweep );
                 /*Engagement rule*/
                 do_engagement = setup_table_button( button_number, toggle_label,
                                                     role_model.rules.engagement == guy->rules.engagement );
@@ -252,6 +253,7 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                                              role_model.rules.flags == guy->rules.flags &&
                                              role_model.rules.aim == guy->rules.aim &&
                                              role_model.rules.burst == guy->rules.burst &&
+                                             role_model.rules.allow_sweep == guy->rules.allow_sweep &&
                                              role_model.rules.engagement == guy->rules.engagement &&
                                              role_model.rules.cbm_recharge == guy->rules.cbm_recharge &&
                                              role_model.rules.cbm_reserve == guy->rules.cbm_reserve &&
@@ -270,6 +272,7 @@ void follower_rules_ui_impl::rules_transfer_popup( bool &exporting_rules, bool &
                 }
                 if( do_burst || do_all ) {
                     guy_with_new->rules.burst = guy_with_same->rules.burst;
+                    guy_with_new->rules.allow_sweep = guy_with_same->rules.allow_sweep;
                 }
                 if( do_engagement || do_all ) {
                     guy_with_new->rules.engagement = guy_with_same->rules.engagement;
@@ -436,6 +439,13 @@ void follower_rules_ui_impl::draw_controls()
     assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
     radio_group( "BURST_RULES", _( "Automatic fire burst length:" ), &guy->rules.burst, burst_rule_map,
                  assigned_hotkey, pressed_key );
+    assigned_hotkey = input_ptr->next_unassigned_hotkey( hotkeys, assigned_hotkey );
+    print_hotkey( assigned_hotkey );
+    ImGui::SameLine();
+    const bool sweep_changed = ImGui::Checkbox( _( "Allow sweeping fire" ), &guy->rules.allow_sweep );
+    if( !sweep_changed && pressed_key == assigned_hotkey ) {
+        guy->rules.allow_sweep = !guy->rules.allow_sweep;
+    }
 
     /* Shows CBM rules, but only if the character has bionics. Must be last because it will
     only appear sometimes and we don't want hotkeys to be different depending on whether

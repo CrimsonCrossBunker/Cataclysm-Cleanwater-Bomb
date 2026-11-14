@@ -1,0 +1,33 @@
+[
+  {
+    "type": "terrain",
+    "id": "test_t_throwing_wall",
+    "name": "test throwing wall",
+    "description": "An impassable obstacle for projectile contact tests.",
+    "symbol": "#",
+    "color": "white",
+    "move_cost": 0,
+    "flags": [ "WALL" ]
+  },
+  {
+    "type": "terrain",
+    "id": "test_t_throwing_floor",
+    "name": "test throwing floor",
+    "description": "A solid landing tile for ledge throwing tests.",
+    "symbol": ".",
+    "color": "white",
+    "move_cost": 2,
+    "flags": [ "TRANSPARENT", "FLAT" ]
+  },
+  {
+    "type": "terrain",
+    "id": "test_t_throwing_open_air",
+    "name": "test throwing open air",
+    "description": "A floorless tile for paid ledge view tests.",
+    "symbol": " ",
+    "color": "white",
+    "move_cost": 2,
+    "flags": [ "TRANSPARENT", "NO_FLOOR", "EMPTY_SPACE" ],
+    "examine_action": "ledge"
+  }
+]
