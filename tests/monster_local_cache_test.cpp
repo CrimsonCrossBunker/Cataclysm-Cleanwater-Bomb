@@ -46,7 +46,7 @@ TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
     int queries = 0;
     monster_local_cache<int *, 1, 0> cache;
     for( int i = 0; i < 3; ++i ) {
-        CHECK( cache.get( { -1, 1, 0 }, [&]() -> int* {
+        CHECK( cache.get( tripoint::south_west, [&]() -> int* {
             ++queries;
             return nullptr;
         } ) == nullptr );
@@ -63,7 +63,7 @@ TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
     }
     CHECK( queries == 7 );
     monster_local_cache<int *, 1, 0> next_action;
-    CHECK( next_action.get( { -1, 1, 0 }, [&]() {
+    CHECK( next_action.get( tripoint::south_west, [&]() {
         return &helper;
     } ) == &helper );
 }
