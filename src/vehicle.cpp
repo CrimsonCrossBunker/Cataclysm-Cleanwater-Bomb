@@ -1358,10 +1358,14 @@ bool vehicle::is_structural_part_removed() const
 ret_val<void> vehicle::can_mount( const tripoint_rel_ms &dp, const vpart_info &vpi ) const
 {
     if( dp.z() < 0 || dp.z() > 10 || pos_abs().z() + dp.z() > OVERMAP_HEIGHT ) {
-        return ret_val<void>::make_failure( _( "该楼层超出了载具可用的高度范围。" ) );
+        return ret_val<void>::make_failure(
+                   //~ Original Chinese: 该楼层超出了载具可用的高度范围。
+                   _( "This deck is outside the vehicle's allowed height range." ) );
     }
     if( dp.z() != 0 && ( vpi.has_flag( VPFLAG_WHEEL ) || vpi.has_flag( VPFLAG_FLOATS ) ) ) {
-        return ret_val<void>::make_failure( _( "车轮和船体必须安装在底层车架上。" ) );
+        return ret_val<void>::make_failure(
+                   //~ Original Chinese: 车轮和船体必须安装在底层车架上。
+                   _( "Wheels and hulls must be installed on the bottom deck frame." ) );
     }
     const std::vector<int> parts_in_square = parts_at_relative( dp,
             /* use_cache = */ false, /* include_fake = */ false );
@@ -1518,7 +1522,8 @@ ret_val<void> vehicle::can_unmount( const vehicle_part &vp_to_remove, bool allow
            part.mount_level == 0 && part.info().location == vpart_location_structure;
     } ) ) {
         return ret_val<void>::make_failure(
-                   _( "请先拆卸上层，再拆卸最后一块底层车架。" ) );
+                   //~ Original Chinese: 请先拆卸上层，再拆卸最后一块底层车架。
+                   _( "Remove the upper decks before removing the last bottom-deck frame." ) );
     }
 
     // structure parts can only be removed when no non-structure/non-cable parts are on tile

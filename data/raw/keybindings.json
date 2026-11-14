@@ -2256,14 +2256,14 @@
     "type": "keybinding",
     "id": "VEHICLE_DECK_UP",
     "category": "VEH_INTERACT",
-    "name": "切换到上一层",
+    "name": { "str": "Switch to the deck above", "//~": "Original Chinese: 切换到上一层" },
     "bindings": [ { "input_method": "keyboard_any", "key": "PPAGE", "mod": [ "ctrl" ] } ]
   },
   {
     "type": "keybinding",
     "id": "VEHICLE_DECK_DOWN",
     "category": "VEH_INTERACT",
-    "name": "切换到下一层",
+    "name": { "str": "Switch to the deck below", "//~": "Original Chinese: 切换到下一层" },
     "bindings": [ { "input_method": "keyboard_any", "key": "NPAGE", "mod": [ "ctrl" ] } ]
   },
   {

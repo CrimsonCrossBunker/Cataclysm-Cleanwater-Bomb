@@ -3,11 +3,14 @@
     "id": "deck_stairs",
     "copy-from": "ladder_3",
     "type": "vehicle_part",
-    "name": "车内楼梯",
+    "name": { "str": "interior stairs", "//~": "Original Chinese: 车内楼梯" },
     "item": "rope_30",
     "location": "under",
     "looks_like": "f_rope_up",
     "flags": [ "DECK_STAIRS", "SHOCK_IMMUNE" ],
-    "description": "连接当前车内楼层与上一层的可拆卸通道。上下两层都需要可站立的车内部件。"
+    "description": {
+      "str": "A removable passage connecting this vehicle deck to the one above.  Both decks need a vehicle part you can stand on.",
+      "//~": "Original Chinese: 连接当前车内楼层与上一层的可拆卸通道。上下两层都需要可站立的车内部件。"
+    }
   }
 ]

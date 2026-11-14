@@ -3,7 +3,7 @@
     "id": "rv_double_decker",
     "copy-from": "rv",
     "type": "vehicle",
-    "name": "双层房车",
+    "name": { "str": "double-decker RV", "//~": "Original Chinese: 双层房车" },
     "parts": [
       { "x": -2, "y": 1, "parts": [ "deck_stairs" ] },
       { "x": -2, "y": 1, "z": 1, "parts": [ "hdframe", "aisle", "roof" ] },

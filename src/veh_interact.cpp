@@ -3298,7 +3298,8 @@ void veh_interact::display_name()
     trim_and_print( w_name, point( 1 + utf8_width( _( "Name: " ) ), 0 ),
                     getmaxx( w_name ) - utf8_width( _( "Name: " ) ) - 2,
                     !veh->is_owned_by( get_player_character(), true ) ? c_light_red : c_light_green,
-                    string_format( _( "楼层 %d  [%s / %s]  " ), cursor_level + 1,
+                    //~ Original Chinese: 楼层 %d  [%s / %s]
+                    string_format( _( "Deck %d  [%s / %s]  " ), cursor_level + 1,
                                    main_context.get_desc( "VEHICLE_DECK_UP" ),
                                    main_context.get_desc( "VEHICLE_DECK_DOWN" ) ) +
                     string_format( _( "%s (%s)" ), veh->name, veh->get_owner_name() ) );
