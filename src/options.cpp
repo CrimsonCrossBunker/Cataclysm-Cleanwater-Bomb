@@ -3530,6 +3530,14 @@ void options_manager::add_options_world_default()
     }, "reset"
        );
 
+    add( "WORLD_MAP_GENERATION", "world_default", to_translation( "Map generation" ),
+         to_translation( "Choose the default surface map for a new world. North America uses real geography. "
+                         "Classic random generates terrain and settlements procedurally. "
+    "Custom regions and pregenerated maps supplied by mods take precedence." ), {
+        { "north_america", to_translation( "North America" ) },
+        { "classic_random", to_translation( "Classic random" ) }
+    }, "north_america" );
+
     add_empty_line();
 
     add_option_group( "world_default", Group( "game_world_opts", to_translation( "Game world options" ),
@@ -4329,6 +4337,12 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         ingame = false;
     }
 
+    const auto show_option = [ingame]( const std::string & name ) {
+        // The map mode is fixed once the world starts generating terrain.
+        return !( ingame && name == "WORLD_MAP_GENERATION" ) &&
+               !get_options().get_option( name ).is_hidden();
+    };
+
     size_t sel_worldgen_tab = 1;
     std::map<size_t, inclusive_rectangle<point>> worldgen_tab_map;
     std::map<int, inclusive_rectangle<point>> opt_tab_map;
@@ -4456,7 +4470,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                     return groups_state[it.group];
                 case ItemType::Option:
                     return groups_state[it.group]
-                    && !get_options().get_option( it.data ).is_hidden();
+                    && show_option( it.data );
                 default:
                     cata_fatal( "invalid ItemType" );
             }
@@ -4656,10 +4670,10 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
             if( !groups_state[item.group] ) {
                 continue;
             }
-            const cOpt &option = current_options.find( item.data )->second;
-            if( option.is_hidden() ) {
+            if( !show_option( item.data ) ) {
                 continue;
             }
+            const cOpt &option = current_options.find( item.data )->second;
             row.name = option.getMenuText();
             row.value = option.getValueName();
             row.enabled = !option.hasPrerequisite() || option.checkPrerequisite();
@@ -4813,7 +4827,7 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
                     return true;
                 case ItemType::Option:
                     return groups_state[curr_item.group]
-                    && !get_options().get_option( curr_item.data ).is_hidden();
+                    && show_option( curr_item.data );
                 default:
                     cata_fatal( "invalid ItemType" );
             }
@@ -4930,7 +4944,9 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
         } else if( action == "RIGHT" || action == "LEFT" || action == "CONFIRM" ) {
             switch( curr_item.type ) {
                 case ItemType::Option: {
-                    on_select_option();
+                    if( is_selectable( iCurrentLine ) ) {
+                        on_select_option();
+                    }
                     break;
                 }
                 case ItemType::GroupHeader: {

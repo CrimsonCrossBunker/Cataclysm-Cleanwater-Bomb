@@ -257,7 +257,8 @@ class water_grid
 
 bool available()
 {
-    return get_option<std::string>( "OVERMAP_PREGENERATED_PATH" ).empty() &&
+    return get_option<std::string>( "WORLD_MAP_GENERATION" ) == "north_america" &&
+           get_option<std::string>( "OVERMAP_PREGENERATED_PATH" ).empty() &&
            get_option<std::string>( "DEFAULT_REGION" ) == "default" && city::get_all().empty() &&
            get_atlas().loaded;
 }

@@ -1,8 +1,15 @@
 # North America atlas
 
-`north_america.atlas` is the bundled terrain source for new worlds in the
-default surface region. The city selector is available during character
-creation with the displayed Starting city action (Shift+C by default).
+In the world creation options, **Map generation** defaults to **North America**
+for the default surface region. Select **Classic random** to generate rivers,
+lakes, forests, and settlements with the original procedural generator.
+Configured custom regions and pregenerated maps retain their own generation.
+The choice is fixed once the world starts generating terrain, and existing
+saves continue with their saved map mode.
+
+`north_america.atlas` is the bundled geographic terrain source. In a North
+America world, the city selector is available during character creation with
+the displayed Starting city action (Shift+C by default).
 The default search starts near Bedford/Hanscom, west of Boston. When a city
 is selected, the scenario's usual starting buildings are searched in its
 overmap and up to three overmaps away.
