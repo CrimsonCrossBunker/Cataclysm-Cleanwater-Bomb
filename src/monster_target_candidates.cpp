@@ -1,5 +1,6 @@
 #include "monster_target_candidates.h"
 
+#include <compute_budget.h>
 #include <algorithm>
 #include <cstdlib>
 #include <exception>

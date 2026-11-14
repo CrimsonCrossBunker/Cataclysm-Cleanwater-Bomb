@@ -6,6 +6,9 @@
 #include <character_id.h>
 #include <coordinates.h>
 #include <creature.h>
+#include <memory_fast.h>
+#include <monster_goal_policy.h>
+#include <safe_reference.h>
 #include <algorithm>
 #include <cfloat>
 #include <climits>
@@ -36,8 +39,8 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
-#include "map_movement_query.h"
 #include "map_iterator.h"
+#include "map_movement_query.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mattack_common.h"

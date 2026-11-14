@@ -1,15 +1,24 @@
+#include <coordinates.h>
+#include <memory_fast.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "cata_catch.h"
 #include "creature_tracker.h"
-#include "map.h"
 #include "line.h"
-#include "mtype.h"
+#include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
+#include "mtype.h"
 #include "player_helpers.h"
 
 TEST_CASE( "monster_candidate_owner_tracks_move_swap_remove_and_add",

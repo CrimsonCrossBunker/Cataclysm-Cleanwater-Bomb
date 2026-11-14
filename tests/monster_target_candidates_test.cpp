@@ -1,5 +1,11 @@
+#include <compute_budget.h>
 #include <algorithm>
 #include <cstdlib>
+#include <future>
+#include <initializer_list>
+#include <new>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "cata_catch.h"
