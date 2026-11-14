@@ -66,7 +66,7 @@ TEST_CASE( "monster_candidates_serial_and_parallel_match_after_movement",
         }
         a.move( 899, { phase == 0 ? 1 : 200, 1 } );
         b.move( 899, { phase == 0 ? 1 : 200, 1 } );
-        const monster_target_candidates::indices &moved = b.query( { 0, 0 }, parallel );
+        const monster_target_candidates::indices &moved = b.query( point::zero, parallel );
         CHECK( std::binary_search( moved.begin(), moved.end(), 899 ) == ( phase == 0 ) );
     }
     // More than the window cap must evict/rebuild without retaining stale IDs.
@@ -74,10 +74,10 @@ TEST_CASE( "monster_candidates_serial_and_parallel_match_after_movement",
         CHECK( a.query( { i * 16, 0 }, serial ) == b.query( { i * 16, 0 }, parallel ) );
     }
     // Adding a new position invalidates cached row lengths and preserves order.
-    a.add( { 0, 0 } );
-    b.add( { 0, 0 } );
-    CHECK( a.query( { 0, 0 }, serial ) == b.query( { 0, 0 }, parallel ) );
-    CHECK( b.query( { 0, 0 }, parallel ).back() == 900 );
+    a.add( point::zero );
+    b.add( point::zero );
+    CHECK( a.query( point::zero, serial ) == b.query( point::zero, parallel ) );
+    CHECK( b.query( point::zero, parallel ).back() == 900 );
 }
 
 TEST_CASE( "monster_candidates_nested_dispatch_does_not_wait_on_its_pool",
@@ -92,7 +92,7 @@ TEST_CASE( "monster_candidates_nested_dispatch_does_not_wait_on_its_pool",
         for( int i = 0; i < 32; ++i ) {
             candidates.warm( { i * 16, 0 } );
         }
-        return candidates.query( { 0, 0 }, pool ).size();
+        return candidates.query( point::zero, pool ).size();
     };
     auto first = pool.submit_returning( work );
     auto second = pool.submit_returning( work );
@@ -122,9 +122,9 @@ TEST_CASE( "monster_candidates_failed_batch_can_retry", "[monster][target_candid
     };
     {
         release_reservation reservation{ budget, remaining };
-        CHECK_THROWS_AS( candidates.query( { 0, 0 }, pool ), std::bad_alloc );
+        CHECK_THROWS_AS( candidates.query( point::zero, pool ), std::bad_alloc );
     }
-    CHECK( candidates.query( { 0, 0 }, pool ).size() == 80 );
+    CHECK( candidates.query( point::zero, pool ).size() == 80 );
 }
 
 BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows",
@@ -137,8 +137,8 @@ BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows",
         positions.emplace_back( i % 30 * 8, i / 30 * 8 );
         candidates.add( { positions.back().first, positions.back().second } );
     }
-    const monster_target_candidates::cell origin = monster_target_candidates::cell_at( { 0, 0 } );
-    candidates.query( { 0, 0 }, pool );
+    const monster_target_candidates::cell origin = monster_target_candidates::cell_at( point::zero );
+    candidates.query( point::zero, pool );
     BENCHMARK( "full_900_candidate_scan" ) {
         std::size_t count = 0;
         for( const auto &p : positions ) {
@@ -150,7 +150,7 @@ BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows",
         return count;
     };
     BENCHMARK( "reuse_candidate_window" ) {
-        return candidates.query( { 0, 0 }, pool ).size();
+        return candidates.query( point::zero, pool ).size();
     };
     cata_thread_pool workers( 4 );
     const auto cold = [&]( cata_thread_pool & executor ) {
@@ -161,7 +161,7 @@ BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows",
         for( int i = 0; i < 32; ++i ) {
             fresh.warm( { i % 8 * 16, i / 8 * 16 } );
         }
-        return fresh.query( { 0, 0 }, executor ).size();
+        return fresh.query( point::zero, executor ).size();
     };
     BENCHMARK( "build_32_windows_serial" ) {
         return cold( pool );
