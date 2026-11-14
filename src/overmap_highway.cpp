@@ -24,6 +24,7 @@
 #include "messages.h"
 #include "omdata.h"
 #include "options.h"
+#include "north_america.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
 #include "point.h"
@@ -534,7 +535,7 @@ std::pair<bool, std::bitset<HIGHWAY_MAX_CONNECTIONS>> overmap::highway_handle_oc
     std::bitset<HIGHWAY_MAX_CONNECTIONS> ocean_adjacent;
     const point_abs_om this_om = pos();
 
-    if( settings->overmap_ocean ) {
+    if( settings->overmap_ocean && !north_america::active() ) {
         const region_settings_ocean &settings_ocean = settings->get_settings_ocean();
         // Not ideal as oceans can start later than these settings but it's at least reliably stopping before them
         const int ocean_start_north = settings_ocean.ocean_start_north.value_or( INT_MAX );
@@ -758,9 +759,9 @@ std::vector<Highway_path> overmap::place_highways(
     highway_grid.set_options();
     // guaranteed intersection close to (but not at) avatar start location
     if( highway_grid.get_grid_origin().is_invalid() ) {
-        //this only happens exactly once, upon generation of the first overmap
-        //TODO: there should be an intersection around the avatar's start location, not 0,0
-        highway_grid.set_grid_origin( point_abs_om::zero );
+        // Existing worlds retain the saved grid origin. New atlas worlds anchor
+        // the grid near their first generated overmap.
+        highway_grid.set_grid_origin( north_america::active() ? pos() : point_abs_om::zero );
         highway_grid.generate_feature_point( highway_grid.get_grid_origin() );
     }
 
@@ -1067,6 +1068,13 @@ void highway_intersection_grid::generate_offset( overmap_feature_grid_node &node
 {
     const int max_offset_variance = this->max_offset_variance;
     auto no_lakes = [this]( const point_abs_om & pt ) {
+        if( north_america::active() ) {
+            const auto cached = om_has_lake_cache.emplace( pt, false );
+            if( cached.second ) {
+                cached.first->second = north_america::suitable_for_highway_intersection( pt );
+            }
+            return cached.first->second;
+        }
         const region_settings &settings = overmap_buffer.get_settings(
                                               project_to<coords::omt>( tripoint_abs_om( pt, 0 ) ) );
         if( !settings.overmap_lake ) {
@@ -1096,6 +1104,10 @@ void highway_intersection_grid::generate_offset( overmap_feature_grid_node &node
         }
     }
     if( intersection_candidates.empty() ) {
+        if( north_america::active() ) {
+            node.set_offset_pos( grid_pos );
+            return;
+        }
         debugmsg( "no highway intersections could be generated in overmap radius of %d at overmap %s; reduce lake frequency",
                   max_offset_variance, grid_pos.to_string() );
     }

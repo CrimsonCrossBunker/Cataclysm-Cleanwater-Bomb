@@ -1,4 +1,6 @@
 #include "cube_direction.h" // IWYU pragma: associated
+#include "north_america.h"
+#include "north_america_ecology.h"
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -64,7 +66,6 @@
 #include "overmap_map_data_cache.h"
 #include "overmap_noise.h"
 #include "overmap_types.h"
-#include "north_america.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
 #include "regional_settings.h"
@@ -2161,7 +2162,9 @@ void overmap::place_forests()
 {
     const region_settings_forest &settings_forest = settings->get_settings_forest();
     const oter_id default_oter_id( settings->default_oter[OVERMAP_DEPTH] );
-    const om_noise::om_noise_layer_forest f( global_base_point(), g->get_seed() );
+    const point_abs_omt origin = global_base_point();
+    const om_noise::om_noise_layer_forest f( origin, g->get_seed() );
+    const bool geographic_forest = north_america::active();
 
     for( int x = 0; x < OMAPX; x++ ) {
         for( int y = 0; y < OMAPY; y++ ) {
@@ -2174,12 +2177,14 @@ void overmap::place_forests()
                 continue;
             }
 
-            const float n = f.noise_at( p.xy() );
+            const float adjustment = geographic_forest ?
+                                     north_america::forest_adjustment( origin + p.xy().raw() ) : forest_size_adjust;
+            const float n = f.noise_at( p.xy() ) + adjustment;
 
             // If the noise here meets our threshold, turn it into a forest.
-            if( n + forest_size_adjust > settings_forest.noise_threshold_forest_thick ) {
+            if( n > settings_forest.noise_threshold_forest_thick ) {
                 ter_set( p, oter_forest_thick );
-            } else if( n + forest_size_adjust > settings_forest.noise_threshold_forest ) {
+            } else if( n > settings_forest.noise_threshold_forest ) {
                 ter_set( p, oter_forest );
             }
         }
