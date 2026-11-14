@@ -1,0 +1,9 @@
+# Regional climate data
+
+`us_stations.json` contains editable monthly normals from [NOAA NCEI U.S. Climate Normals, 1991–2020](https://www.ncei.noaa.gov/products/land-based-station/us-climate-normals). Each `source_station` is a CSV filename in the [NOAA monthly station archive](https://www.ncei.noaa.gov/data/normals-monthly/1991-2020/access/).
+
+The twelve rows run from January through December. Columns are the normal daily minimum and maximum in °C, the monthly precipitation in millimetres of water equivalent, the mean number of days with at least 0.01 inches of precipitation, and the prevailing precipitation system. Annual precipitation is the sum of the monthly values. To correct a station, keep its ID and edit the relevant row or coordinates.
+
+The precipitation system is an editable simulation choice. Frontal events last longer, monsoon and convective showers favour the afternoon, and trade-wind showers have intermediate durations. The mean water budget comes from the station totals and wet-day counts. Bedford/Hanscom is predominantly frontal in the model with summer convection. The Southwest has a summer monsoon. Hawaiʻi includes windward trade-wind stations. See the [Massachusetts climate summary](https://statesummaries.ncics.org/chapter/ma/), [NWS Southwest monsoon overview](https://www.weather.gov/twc/Monsooninfo), and [NWS Hawaiʻi climate summary](https://www.weather.gov/hfo/climate_summary).
+
+The native `regional_climate::at` lookup takes latitude and longitude in degrees and blends the nearest stations by distance. All 50 states are within the intended domain. Coverage is coarse, especially in the mountains and on individual islands. The default surface weather generator maps the first player spawn to Bedford/Hanscom and uses one metre per map square. Existing worlds without a saved origin use map coordinate (0, 0) as the anchor. Weather responds to geographic position while the terrain remains procedurally generated.

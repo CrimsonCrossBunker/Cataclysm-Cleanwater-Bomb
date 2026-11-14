@@ -135,6 +135,7 @@
 #include "vitamin.h"
 #include "weakpoint.h"
 #include "weather_gen.h"
+#include "regional_climate.h"
 #include "weather_type.h"
 #include "widget.h"
 #include "worldfactory.h"
@@ -299,6 +300,7 @@ void DynamicDataLoader::initialize()
     add( "field_type_migration", &field_type_migrations::load );
     add( "weather_type", &weather_types::load );
     add( "weather_generator", &weather_generator::load_weather_generator );
+    add( "regional_climate_station", &regional_climate::load_station );
     add( "ammo_effect", &ammo_effects::load );
     add( "explosion_light", &explosion_lights::load );
     add( "emit", &emit::load_emit );
@@ -824,6 +826,7 @@ void DynamicDataLoader::unload_data()
     wound_fix::reset();
     weakpoints::reset();
     weather_generator::reset();
+    regional_climate::reset();
     weather_types::reset();
     widget::reset();
     zone_type::reset();

@@ -110,7 +110,7 @@ struct weather_printable {
 };
 
 struct weather_sum {
-    int rain_amount = 0;
+    double rain_amount = 0;
     float sunlight = 0.0f;
     float radiant_exposure = 0.0f; // J/m2
     int wind_amount = 0;
@@ -228,6 +228,9 @@ class weather_manager
         std::optional<units::temperature> forced_temperature;
         // Cached weather data
         pimpl<w_point> weather_precise;
+        // World-level anchor shared by dimensions. Terrain is still procedurally generated.
+        std::optional<point_abs_ms> climate_origin;
+        std::optional<double> climate_precipitation_mm_per_hour;
         std::optional<int> wind_direction_override;
         std::optional<int> windspeed_override;
         weather_type_id weather_override;
