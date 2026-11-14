@@ -313,6 +313,7 @@ class target_ui
         // Weapon being fired/thrown
         item *relevant = nullptr;
         bool defer_target_effects = false;
+        bool abort_if_no_targets = false;
         // Cached selection range from player's position
         int range = 0;
         // Sling launches share throwing accuracy, but have their own cost and labels.
@@ -590,6 +591,7 @@ target_handler::trajectory target_handler::mode_fire( avatar &you, aim_activity_
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Fire;
     ui.activity = &activity;
+    ui.abort_if_no_targets = activity.abort_if_no_targets;
     ui.sweeping = activity.sweeping;
     ui.relevant = &*activity.get_weapon();
     gun_mode gun = ui.relevant->gun_current_mode();
@@ -665,7 +667,7 @@ target_handler::trajectory target_handler::mode_unarmed_reach( avatar &you )
 }
 
 target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret,
-        item &preview, std::optional<firearm_sweep> *sweep )
+        item &preview, std::optional<firearm_sweep> *sweep, bool reaiming )
 {
     target_ui ui = target_ui();
     ui.you = &you;
@@ -674,6 +676,7 @@ target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turr
     ui.relevant = &preview;
     ui.sweeping = sweep != nullptr;
     ui.defer_target_effects = true;
+    ui.abort_if_no_targets = reaiming;
     ui.range = turret.range();
     ui.ammo = turret.ammo_data();
 
@@ -3736,11 +3739,13 @@ target_handler::trajectory target_ui::run()
     }
     update_target_list();
 
-    if( activity && activity->abort_if_no_targets && targets.empty() ) {
+    if( abort_if_no_targets && targets.empty() ) {
         // this branch is taken when already shot once and re-entered
         // aiming, if no targets are available we want to abort so
         // players don't arrive at aiming ui with nothing to shoot at.
-        activity->aborted = true;
+        if( activity ) {
+            activity->aborted = true;
+        }
         traj.clear();
         return traj;
     }
@@ -4379,7 +4384,7 @@ tripoint_bub_ms target_ui::choose_initial_target()
 
     // Try previously targeted creature
     shared_ptr_fast < Creature > cr = you->last_target.lock();
-    if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
+    if( cr && !cr->is_dead_state() && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
         return cr->pos_bub();
     }
 
@@ -4408,6 +4413,10 @@ bool target_ui::try_reacquire_target( bool critter, tripoint_bub_ms &new_dst )
     if( critter ) {
         // Try to re-acquire the creature
         shared_ptr_fast < Creature > cr = you->last_target.lock();
+        if( cr && cr->is_dead_state() ) {
+            new_dst = choose_initial_target();
+            return false;
+        }
         if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
             new_dst = cr->pos_bub();
             return true;

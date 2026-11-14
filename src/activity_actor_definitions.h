@@ -571,6 +571,8 @@ class aim_activity_actor : public activity_actor
 {
     private:
         std::optional<item> fake_weapon;
+        int64_t turret_vehicle_id = 0;
+        int64_t turret_gun_id = 0;
         unsigned int bionic_uid = 0;
         int64_t bionic_weapon_source = 0;
         std::vector<tripoint_bub_ms> fin_trajectory;
@@ -610,6 +612,7 @@ class aim_activity_actor : public activity_actor
 
         /** Aiming wielded gun */
         static aim_activity_actor use_wielded( bool sweeping = false );
+        static aim_activity_actor reaim_turret( int64_t vehicle_id, int64_t gun_id );
 
         /** Aiming fake gun provided by a bionic */
         static aim_activity_actor use_bionic( const item &fake_gun, unsigned int uid );
