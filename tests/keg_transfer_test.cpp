@@ -6,10 +6,18 @@
 TEST_CASE( "bulk_keg_capacity_matches_incremental_transfer", "[liquid][keg]" )
 {
     // Rounded volume models include sub-millilitre charges and partial kegs.
-    for( int existing : { 0, 1, 7, 35 } ) {
-        for( int available : { 0, 1, 2, 8, 31, 1000 } ) {
-            for( int capacity : { 1, 3, 20, 100, 3000 } ) {
-                for( int denominator : { 1, 3, 100 } ) {
+    for( int existing : {
+             0, 1, 7, 35
+         } ) {
+        for( int available : {
+                 0, 1, 2, 8, 31, 1000
+             } ) {
+            for( int capacity : {
+                     1, 3, 20, 100, 3000
+                 } ) {
+                for( int denominator : {
+                         1, 3, 100
+                     } ) {
                     CAPTURE( existing, available, capacity, denominator );
                     const auto full = [&]( int added ) {
                         return ( ( existing + added ) * 7 + denominator - 1 ) / denominator >= capacity;

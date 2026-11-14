@@ -398,9 +398,15 @@ TEST_CASE( "bulk_keg_pouring_matches_incremental_item_volume", "[liquid][keg][tr
     here.furn_set( pos, furn_id( "f_wood_keg" ) );
     const units::volume capacity = here.furn( pos ).obj().keg_capacity;
     REQUIRE( capacity > 0_ml );
-    for( const char *id : { "jp8", "water_clean" } ) {
-        for( int existing : { 0, 7 } ) {
-            for( int available : { 1, 200000 } ) {
+    for( const char *id : {
+             "jp8", "water_clean"
+         } ) {
+        for( int existing : {
+                 0, 7
+             } ) {
+            for( int available : {
+                     1, 200000
+                 } ) {
                 CAPTURE( id, existing, available );
                 here.i_clear( pos );
                 item stored( itype_id( id ), calendar::turn, existing );
