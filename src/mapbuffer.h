@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAPBUFFER_H
 #define CATA_SRC_MAPBUFFER_H
 
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <map>
@@ -35,6 +36,8 @@ class mapbuffer
         // resolver belongs to the same world and is called only on the owner thread.
         explicit mapbuffer( map_storage_context storage, uniform_terrain_lookup uniform = {} );
         ~mapbuffer();
+
+        std::size_t submap_count() const;
 
         /** Store all submaps in this instance into savefiles.
          * @param delete_after_save If true, the saved submaps are removed
