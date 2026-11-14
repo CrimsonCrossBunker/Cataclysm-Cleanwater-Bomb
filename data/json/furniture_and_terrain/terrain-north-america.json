@@ -1,0 +1,311 @@
+[
+  {
+    "type": "terrain",
+    "abstract": "t_north_america_tree",
+    "copy-from": "t_tree_abstract",
+    "examine_action": "none"
+  },
+  {
+    "type": "terrain",
+    "abstract": "t_north_america_conifer",
+    "copy-from": "t_north_america_tree",
+    "looks_like": "t_tree_pine",
+    "roof": "t_treetop_evergreen",
+    "symbol": "4",
+    "color": "green"
+  },
+  {
+    "type": "terrain",
+    "abstract": "t_north_america_shrub",
+    "copy-from": "t_shrub",
+    "examine_action": "none"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_white_spruce",
+    "copy-from": "t_north_america_conifer",
+    "name": "white spruce",
+    "description": "A North American tree of the species Picea glauca.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_black_spruce",
+    "copy-from": "t_north_america_conifer",
+    "name": "black spruce",
+    "description": "A North American tree of the species Picea mariana.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_tamarack",
+    "copy-from": "t_north_america_tree",
+    "name": "tamarack",
+    "description": "A North American tree of the species Larix laricina.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_jack_pine",
+    "copy-from": "t_north_america_conifer",
+    "name": "jack pine",
+    "description": "A North American tree of the species Pinus banksiana.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_paper_birch",
+    "copy-from": "t_north_america_tree",
+    "name": "paper birch",
+    "description": "A North American tree of the species Betula papyrifera.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_douglas_fir",
+    "copy-from": "t_north_america_conifer",
+    "name": "Douglas-fir",
+    "description": "A North American tree of the species Pseudotsuga menziesii.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_western_redcedar",
+    "copy-from": "t_north_america_conifer",
+    "name": "western redcedar",
+    "description": "A North American tree of the species Thuja plicata.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_western_hemlock",
+    "copy-from": "t_north_america_conifer",
+    "name": "western hemlock",
+    "description": "A North American tree of the species Tsuga heterophylla.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_sitka_spruce",
+    "copy-from": "t_north_america_conifer",
+    "name": "Sitka spruce",
+    "description": "A North American tree of the species Picea sitchensis.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_ponderosa_pine",
+    "copy-from": "t_north_america_conifer",
+    "name": "ponderosa pine",
+    "description": "A North American tree of the species Pinus ponderosa.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_lodgepole_pine",
+    "copy-from": "t_north_america_conifer",
+    "name": "lodgepole pine",
+    "description": "A North American tree of the species Pinus contorta.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_oregon_white_oak",
+    "copy-from": "t_north_america_tree",
+    "name": "Oregon white oak",
+    "description": "A North American tree of the species Quercus garryana.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_blue_oak",
+    "copy-from": "t_north_america_tree",
+    "name": "blue oak",
+    "description": "A North American tree of the species Quercus douglasii.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_southern_live_oak",
+    "copy-from": "t_north_america_conifer",
+    "name": "southern live oak",
+    "description": "A North American tree of the species Quercus virginiana.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_shagbark_hickory",
+    "copy-from": "t_north_america_tree",
+    "name": "shagbark hickory",
+    "description": "A North American tree of the species Carya ovata.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_bur_oak",
+    "copy-from": "t_north_america_tree",
+    "name": "bur oak",
+    "description": "A North American tree of the species Quercus macrocarpa.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_eastern_cottonwood",
+    "copy-from": "t_north_america_tree",
+    "name": "eastern cottonwood",
+    "description": "A North American tree of the species Populus deltoides.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_pacific_madrone",
+    "copy-from": "t_north_america_conifer",
+    "name": "Pacific madrone",
+    "description": "A North American tree of the species Arbutus menziesii.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_subalpine_fir",
+    "copy-from": "t_north_america_conifer",
+    "name": "subalpine fir",
+    "description": "A North American tree of the species Abies lasiocarpa.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_colorado_pinyon",
+    "copy-from": "t_north_america_conifer",
+    "name": "Colorado pinyon",
+    "description": "A North American tree of the species Pinus edulis.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_mexican_pinyon",
+    "copy-from": "t_north_america_conifer",
+    "name": "Mexican pinyon",
+    "description": "A North American tree of the species Pinus cembroides.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_montezuma_pine",
+    "copy-from": "t_north_america_conifer",
+    "name": "Montezuma pine",
+    "description": "A North American tree of the species Pinus montezumae.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_big_sagebrush",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "big sagebrush",
+    "description": "A North American plant of the species Artemisia tridentata."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_dwarf_birch",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "dwarf birch",
+    "description": "A North American plant of the species Betula glandulosa."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_creosote_bush",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "creosote bush",
+    "description": "A North American plant of the species Larrea tridentata."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_saguaro",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "saguaro",
+    "description": "A North American plant of the species Carnegiea gigantea."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_chamise",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "chamise",
+    "description": "A North American plant of the species Adenostoma fasciculatum."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_snowberry",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "common snowberry",
+    "description": "A North American plant of the species Symphoricarpos albus."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_bald_cypress",
+    "copy-from": "t_north_america_tree",
+    "name": "bald cypress",
+    "description": "A North American tree of the species Taxodium distichum.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_longleaf_pine",
+    "copy-from": "t_north_america_conifer",
+    "name": "longleaf pine",
+    "description": "A North American tree of the species Pinus palustris.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_wax_myrtle",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "southern wax myrtle",
+    "description": "A North American plant of the species Morella cerifera."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_gumbo_limbo",
+    "copy-from": "t_north_america_tree",
+    "name": "gumbo-limbo",
+    "description": "A North American tree of the species Bursera simaruba.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_spanish_cedar",
+    "copy-from": "t_north_america_tree",
+    "name": "Spanish cedar",
+    "description": "A North American tree of the species Cedrela odorata.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_netleaf_oak",
+    "copy-from": "t_north_america_conifer",
+    "name": "netleaf oak",
+    "description": "A North American tree of the species Quercus rugosa.",
+    "looks_like": "t_tree_pine"
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_texas_mesquite",
+    "copy-from": "t_north_america_tree",
+    "name": "honey mesquite",
+    "description": "A North American tree of the species Prosopis glandulosa.",
+    "looks_like": "t_tree"
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_prickly_pear",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "Engelmann's prickly pear",
+    "description": "A North American plant of the species Opuntia engelmannii."
+  }
+]

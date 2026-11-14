@@ -83,6 +83,7 @@
 #include "mod_id_compat.h"
 #include "mongroup.h"
 #include "npc.h"
+#include "north_america_ecology.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
@@ -6867,6 +6868,7 @@ void map::draw_map( mapgendata &dat )
     }
 
     resolve_regional_terrain_and_furniture( dat );
+    north_america::place_native_vegetation( dat );
     // End of draw_map
 }
 

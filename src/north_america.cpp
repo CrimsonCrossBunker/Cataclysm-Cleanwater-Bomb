@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <unordered_map>
 #include <utility>
 
 #include "cata_utility.h"
@@ -61,13 +62,40 @@ std::vector<point> read_path( const JsonArray &vertices )
 struct feature {
     std::vector<std::vector<point>> paths;
     bounds box;
+    std::unordered_map<int, std::vector<std::pair<point, point>>> edges_by_band;
 };
+
+// Horizontal scanlines only need edges in their latitude band. Index by
+// projected metres, including bands west/north of the atlas origin.
+constexpr int edge_band_width = 8192;
+int edge_band( int y )
+{
+    return y / edge_band_width - ( y % edge_band_width < 0 ? 1 : 0 );
+}
+
+void index_edges( feature &polygon )
+{
+    for( const auto &ring : polygon.paths ) {
+        for( size_t i = 1; i < ring.size(); ++i ) {
+            const point a = ring[i - 1];
+            const point b = ring[i];
+            if( a.y == b.y ) {
+                continue;
+            }
+            for( int band = edge_band( std::min( a.y, b.y ) );
+                 band <= edge_band( std::max( a.y, b.y ) - 1 ); ++band ) {
+                polygon.edges_by_band[band].emplace_back( a, b );
+            }
+        }
+    }
+}
 
 struct atlas {
     std::vector<feature> land;
     std::vector<feature> lakes;
     std::vector<feature> rivers;
     std::vector<place> cities;
+    std::unordered_map<point_abs_om, std::vector<size_t>> cities_by_overmap;
     bool loaded = false;
 
     atlas() {
@@ -91,6 +119,7 @@ struct atlas {
                     }
                     if( !f.paths.empty() ) {
                         f.box = extent( f.paths.front() );
+                        index_edges( f );
                         layer.second->push_back( std::move( f ) );
                     }
                 }
@@ -110,6 +139,8 @@ struct atlas {
                 cities.push_back( { entry.get_string( 0 ), entry.get_string( 1 ),
                                     entry.get_string( 2 ), project_to<coords::omt>( p ),
                                     entry.get_int( 5 ) } );
+                cities_by_overmap[project_to<coords::om>( cities.back().position )].push_back(
+                    cities.size() - 1 );
             }
         } );
     }
@@ -124,24 +155,29 @@ const atlas &get_atlas()
 class water_grid
 {
     public:
-        water_grid( point_abs_omt origin, int width, int height )
+        water_grid( point_abs_omt origin, int width, int height, int stride )
             : tiles( width * height, terrain::ocean ), width( width ), height( height ),
+              step( stride * tile_metres ),
               first( project_to<coords::ms>( origin ).raw() + point( tile_metres / 2, tile_metres / 2 ) ),
-              box{ first, first + point( ( width - 1 ) * tile_metres, ( height - 1 ) * tile_metres ) } {}
+              box{ first, first + point( ( width - 1 ) * step, ( height - 1 ) * step ) } {}
 
         void paint( const feature &polygon, terrain type ) {
             if( !box.intersects( polygon.box ) ) {
                 return;
             }
             std::vector<std::vector<double>> crossings( height );
-            for( const auto &ring : polygon.paths ) {
-                for( size_t i = 1; i < ring.size(); ++i ) {
-                    const point &a = ring[i - 1];
-                    const point &b = ring[i];
-                    const int begin = row( std::min( a.y, b.y ) );
-                    const int end = row( std::max( a.y, b.y ) );
+            for( int band = edge_band( first.y ); band <= edge_band( box.max.y ); ++band ) {
+                const auto entry = polygon.edges_by_band.find( band );
+                if( entry == polygon.edges_by_band.end() ) {
+                    continue;
+                }
+                const int band_begin = row( band * edge_band_width );
+                const int band_end = row( ( band + 1 ) * edge_band_width );
+                for( const auto &[a, b] : entry->second ) {
+                    const int begin = std::max( band_begin, row( std::min( a.y, b.y ) ) );
+                    const int end = std::min( band_end, row( std::max( a.y, b.y ) ) );
                     for( int y = begin; y < end; ++y ) {
-                        const double t = static_cast<double>( first.y + y * tile_metres - a.y ) / ( b.y - a.y );
+                        const double t = static_cast<double>( first.y + y * step - a.y ) / ( b.y - a.y );
                         crossings[y].push_back( a.x + t * ( b.x - a.x ) );
                     }
                 }
@@ -181,13 +217,13 @@ class water_grid
                 const int y0 = row( std::min( a.y, b.y ) - radius );
                 const int y1 = row( std::max( a.y, b.y ) + radius + 1 );
                 for( int y = y0; y < y1; ++y ) {
-                    const double py = first.y + y * tile_metres - a.y;
+                    const double py = first.y + y * step - a.y;
                     for( int x = x0; x < x1; ++x ) {
                         terrain &cell = tiles[y * width + x];
                         if( cell != terrain::land ) {
                             continue;
                         }
-                        const double px = first.x + x * tile_metres - a.x;
+                        const double px = first.x + x * step - a.x;
                         const double t = std::clamp( ( px * dx + py * dy ) / length_squared, 0.0, 1.0 );
                         const double ex = px - t * dx;
                         const double ey = py - t * dy;
@@ -203,15 +239,16 @@ class water_grid
 
     private:
         int column( double x ) const {
-            return std::clamp( static_cast<int>( std::ceil( ( x - first.x ) / tile_metres ) ), 0, width );
+            return std::clamp( static_cast<int>( std::ceil( ( x - first.x ) / step ) ), 0, width );
         }
         int row( int y ) const {
             return std::clamp( static_cast<int>( std::ceil(
-                    ( y - static_cast<double>( first.y ) ) / tile_metres ) ), 0, height );
+                    ( y - static_cast<double>( first.y ) ) / step ) ), 0, height );
         }
 
         int width;
         int height;
+        int step;
         point first;
         bounds box;
 };
@@ -220,7 +257,8 @@ class water_grid
 
 bool available()
 {
-    return get_option<std::string>( "OVERMAP_PREGENERATED_PATH" ).empty() &&
+    return get_option<std::string>( "WORLD_MAP_GENERATION" ) == "north_america" &&
+           get_option<std::string>( "OVERMAP_PREGENERATED_PATH" ).empty() &&
            get_option<std::string>( "DEFAULT_REGION" ) == "default" && city::get_all().empty() &&
            get_atlas().loaded;
 }
@@ -240,6 +278,25 @@ bool offer_starting_city()
 const std::vector<place> &cities()
 {
     return get_atlas().cities;
+}
+
+const std::vector<size_t> &cities_in( point_abs_om overmap )
+{
+    static const std::vector<size_t> empty;
+    const auto &index = get_atlas().cities_by_overmap;
+    const auto it = index.find( overmap );
+    return it == index.end() ? empty : it->second;
+}
+
+bool suitable_for_highway_intersection( point_abs_om overmap )
+{
+    // Sample the whole overmap on a coarse lattice. This is a planning hint;
+    // the actual route still sees the full-resolution terrain and water.
+    constexpr int samples = 9;
+    constexpr int stride = OMAPX / samples;
+    const point_abs_omt start = project_to<coords::omt>( overmap );
+    const auto water = raster( start + point( stride / 2, stride / 2 ), samples, samples, stride );
+    return std::count( water.begin(), water.end(), terrain::land ) > samples * samples / 2;
 }
 
 regional_climate::coordinates location( point_abs_ms position )
@@ -262,10 +319,10 @@ regional_climate::coordinates location( point_abs_ms position )
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
 }
 
-std::vector<terrain> raster( point_abs_omt origin, int width, int height )
+std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride )
 {
     const atlas &data = get_atlas();
-    water_grid grid( origin, width, height );
+    water_grid grid( origin, width, height, stride );
     for( const feature &polygon : data.land ) {
         grid.paint( polygon, terrain::land );
     }

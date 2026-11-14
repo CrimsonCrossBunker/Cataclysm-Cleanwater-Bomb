@@ -1,7 +1,26 @@
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "game.h"
 #include "north_america.h"
+#include "options.h"
+#include "options_helpers.h"
+
+TEST_CASE( "north_america_is_a_new_world_map_option", "[north_america][option]" )
+{
+    const auto defaults = get_options().get_world_defaults();
+    CHECK( defaults.at( "WORLD_MAP_GENERATION" ).getDefaultValue() == "north_america" );
+
+    override_option map_mode( "WORLD_MAP_GENERATION", "classic_random" );
+    CHECK( get_option<std::string>( "WORLD_MAP_GENERATION" ) == "classic_random" );
+    CHECK_FALSE( north_america::available() );
+    CHECK_FALSE( north_america::offer_starting_city() );
+
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    CHECK( north_america::active() );
+}
 
 TEST_CASE( "north_america_atlas_contains_real_water_and_land", "[north_america]" )
 {
