@@ -83,7 +83,7 @@ void monster_target_candidates::prepare( cata_thread_pool &pool )
     // Tiny or single-window work is cheaper inline. No nested pool waits.
     const std::size_t work = cells_.size() * pending.size();
     const std::size_t chunks = std::min( { pending.size(),
-                                         static_cast<std::size_t>( pool.num_workers() ), work / 4096 } );
+                                           static_cast<std::size_t>( pool.num_workers() ), work / 4096 } );
     if( chunks < 2 || is_pool_worker_thread() ) {
         build( 0, pending.size() );
     } else {
@@ -93,7 +93,7 @@ void monster_target_candidates::prepare( cata_thread_pool &pool )
         try {
             for( std::size_t i = 0; i < chunks; ++i ) {
                 tasks.push_back( pool.submit_returning( build, pending.size() * i / chunks,
-                                                       pending.size() * ( i + 1 ) / chunks ) );
+                                                        pending.size() * ( i + 1 ) / chunks ) );
             }
         } catch( ... ) {
             failure = std::current_exception();

@@ -12,7 +12,8 @@
 #include "monster.h"
 #include "player_helpers.h"
 
-TEST_CASE( "monster_candidate_owner_tracks_move_swap_remove_and_add", "[monster][target_candidates_owner]" )
+TEST_CASE( "monster_candidate_owner_tracks_move_swap_remove_and_add",
+           "[monster][target_candidates_owner]" )
 {
     clear_avatar();
     clear_map_without_vision();
@@ -39,7 +40,7 @@ TEST_CASE( "monster_candidate_owner_tracks_move_swap_remove_and_add", "[monster]
     CHECK( std::find( result.begin(), result.end(), first ) == result.end() );
     monster &replacement = spawn_test_monster( "mon_zombie", tripoint_bub_ms( 2, 1, 0 ) );
     REQUIRE( tracker.nearby_monster_targets( origin, result ) );
-    CHECK( std::any_of( result.begin(), result.end(), [&]( const auto &ptr ) {
+    CHECK( std::any_of( result.begin(), result.end(), [&]( const auto & ptr ) {
         return ptr.get() == &replacement;
     } ) );
     const auto &ordered = tracker.get_monsters_list();
@@ -79,7 +80,7 @@ TEST_CASE( "monster_group_bash_matches_uncached_rays", "[monster][group_bash]" )
                 }
                 const tripoint_bub_ms target = origin + tripoint_rel_ms( dx, dy, 0 );
                 std::vector<tripoint_bub_ms> path = continue_line(
-                            std::vector<tripoint_bub_ms>{target, origin}, 5 );
+                                                        std::vector<tripoint_bub_ms> {target, origin}, 5 );
                 path.insert( path.begin(), origin );
                 tripoint_bub_ms previous = target;
                 std::map<damage_type_id, int> expected;

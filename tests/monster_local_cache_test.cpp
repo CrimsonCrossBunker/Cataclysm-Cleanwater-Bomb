@@ -22,9 +22,9 @@ TEST_CASE( "monster_local_cache_preserves_scent_weights", "[monster][local_cache
                             original.push_back( {x, y, z} );
                         }
                         if( cache.get( x, y, z, [&]() {
-                            ++queries;
-                            return valid;
-                        } ) ) {
+                        ++queries;
+                        return valid;
+                    } ) ) {
                             cached.push_back( {x, y, z} );
                         }
                     }
@@ -45,18 +45,18 @@ TEST_CASE( "monster_local_cache_caches_missing_helpers_and_has_local_lifetime",
     int queries = 0;
     monster_local_cache<int *, 1, 0> cache;
     for( int i = 0; i < 3; ++i ) {
-        CHECK( cache.get( -1, 1, 0, [&]() -> int * {
+        CHECK( cache.get( -1, 1, 0, [&]() -> int* {
             ++queries;
             return nullptr;
         } ) == nullptr );
     }
     CHECK( queries == 1 );
     // Out-of-window queries are never aliased into a valid entry.
-    for( const auto &offset : std::vector<std::array<int, 3>>{
-             {2, 0, 0}, {-2, 0, 0}, {0, 2, 0}, {0, -2, 0}, {0, 0, 1}, {0, 0, -1}
-         } ) {
+    for( const auto &offset : std::vector<std::array<int, 3>> {
+    {2, 0, 0}, {-2, 0, 0}, {0, 2, 0}, {0, -2, 0}, {0, 0, 1}, {0, 0, -1}
+} ) {
         CHECK( cache.get( offset[0], offset[1], offset[2], [&]() {
-        ++queries;
+            ++queries;
             return &helper;
         } ) == &helper );
     }

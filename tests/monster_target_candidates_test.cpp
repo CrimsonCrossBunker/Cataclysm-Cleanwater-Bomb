@@ -6,7 +6,8 @@
 #include "monster_target_candidates.h"
 #include "thread_pool.h"
 
-TEST_CASE( "monster_candidates_preserve_order_and_cover_visible_range", "[monster][target_candidates]" )
+TEST_CASE( "monster_candidates_preserve_order_and_cover_visible_range",
+           "[monster][target_candidates]" )
 {
     cata_thread_pool pool( 0 );
     monster_target_candidates candidates( 60 );
@@ -17,8 +18,12 @@ TEST_CASE( "monster_candidates_preserve_order_and_cover_visible_range", "[monste
             candidates.add( x, y );
         }
     }
-    for( int x : { -65, -64, -17, -16, -1, 0, 15, 16, 63, 64 } ) {
-        for( int y : { -17, -1, 0, 16 } ) {
+    for( int x : {
+             -65, -64, -17, -16, -1, 0, 15, 16, 63, 64
+             } ) {
+        for( int y : {
+                 -17, -1, 0, 16
+                 } ) {
             const auto &result = candidates.query( x, y, pool );
             REQUIRE( std::is_sorted( result.begin(), result.end() ) );
             REQUIRE( std::adjacent_find( result.begin(), result.end() ) == result.end() );
@@ -32,7 +37,8 @@ TEST_CASE( "monster_candidates_preserve_order_and_cover_visible_range", "[monste
     }
 }
 
-TEST_CASE( "monster_candidates_serial_and_parallel_match_after_movement", "[monster][target_candidates]" )
+TEST_CASE( "monster_candidates_serial_and_parallel_match_after_movement",
+           "[monster][target_candidates]" )
 {
     cata_thread_pool serial( 0 );
     cata_thread_pool parallel( 4 );
@@ -67,7 +73,8 @@ TEST_CASE( "monster_candidates_serial_and_parallel_match_after_movement", "[mons
     CHECK( b.query( 0, 0, parallel ).back() == 900 );
 }
 
-TEST_CASE( "monster_candidates_nested_dispatch_does_not_wait_on_its_pool", "[monster][target_candidates]" )
+TEST_CASE( "monster_candidates_nested_dispatch_does_not_wait_on_its_pool",
+           "[monster][target_candidates]" )
 {
     cata_thread_pool pool( 2 );
     auto work = [&pool]() {
@@ -113,7 +120,8 @@ TEST_CASE( "monster_candidates_failed_batch_can_retry", "[monster][target_candid
     CHECK( candidates.query( 0, 0, pool ).size() == 80 );
 }
 
-BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows", "[monster][target_candidates]" )
+BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows",
+                     "[monster][target_candidates]" )
 {
     cata_thread_pool pool( 0 );
     monster_target_candidates candidates( 60 );
@@ -137,7 +145,7 @@ BENCHMARK_TEST_CASE( "monster_candidates_reuse_900_monster_windows", "[monster][
         return candidates.query( 0, 0, pool ).size();
     };
     cata_thread_pool workers( 4 );
-    const auto cold = [&]( cata_thread_pool &executor ) {
+    const auto cold = [&]( cata_thread_pool & executor ) {
         monster_target_candidates fresh( 60 );
         for( const auto &p : positions ) {
             fresh.add( p.first, p.second );

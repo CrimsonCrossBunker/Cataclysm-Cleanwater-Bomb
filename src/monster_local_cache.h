@@ -25,7 +25,7 @@ class monster_local_cache
         }
     private:
         static constexpr int width = RadiusXY * 2 + 1;
-        std::array<std::optional<T>, width * width * ( RadiusZ * 2 + 1 )> values_{};
+        std::array < std::optional<T>, width *width *( RadiusZ * 2 + 1 ) > values_{};
 };
 
 #endif // CATA_SRC_MONSTER_LOCAL_CACHE_H
