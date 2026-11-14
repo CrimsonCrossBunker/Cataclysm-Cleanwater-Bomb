@@ -31,7 +31,8 @@ struct repair_target {
 
 repair_target capture_target( Character &who, const item_location &target );
 item_location resolve_target( Character &who, map &here, const repair_target &selection );
-bool confirm_target_ownership( Character &who, const item_location &target, repair_target &selection );
+bool confirm_target_ownership( Character &who, const item_location &target,
+                               repair_target &selection );
 bool authorize_vehicle_work( Character &who, map &here, repair_target &selection );
 
 struct mending_selection {

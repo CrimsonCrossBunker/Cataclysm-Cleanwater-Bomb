@@ -66,8 +66,8 @@ struct cable_link_selection {
 std::optional<cable_link_selection> query_cable_link( Character &who, map &here,
         const item_location &cable, const link_up_actor &link );
 bool valid_cable_link( Character &who, map &here, const item &cable, const link_up_actor &link,
-                      const cable_link_selection &selection );
+                       const cable_link_selection &selection );
 std::optional<int> execute_cable_link( Character &who, map &here, item_location cable,
-                                      const link_up_actor &link, const cable_link_selection &selection );
+                                       const link_up_actor &link, const cable_link_selection &selection );
 
 #endif // CATA_SRC_VEHICLE_POWER_CONNECTION_H

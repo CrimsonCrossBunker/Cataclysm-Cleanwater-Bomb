@@ -317,7 +317,8 @@ TEST_CASE( "owned_sleep_validates_the_site_and_alarm_and_restores_the_attempt",
 {
     reload_fixture fixture;
     npc &who = fixture.remote();
-    const auto control = g->player_controls().claim( cata_mp::player_id( std::string( 32, 'a' ) ), who );
+    const auto control = g->player_controls().claim( cata_mp::player_id( std::string( 32, 'a' ) ),
+                         who );
     REQUIRE( control.get() == &who );
     avatar &host = get_avatar();
     map &here = get_map();
@@ -327,7 +328,7 @@ TEST_CASE( "owned_sleep_validates_the_site_and_alarm_and_restores_the_attempt",
     choice.origin = who.pos_abs();
     choice.alarm_hours = 3;
     const auto start = [&]() {
-        fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
             out.member( "kind", "sleep" );
             out.member( "sleep", choice );
         } ) );
@@ -375,7 +376,9 @@ TEST_CASE( "owned_sleep_validates_the_site_and_alarm_and_restores_the_attempt",
         REQUIRE( who.has_effect( alarm ) );
         who.get_effect( alarm ).set_duration( 2_turns );
         sounds::reset_sounds();
-        const on_out_of_scope clear_sounds( []() { sounds::reset_sounds(); } );
+        const on_out_of_scope clear_sounds( []() {
+            sounds::reset_sounds();
+        } );
         who.process_effects();
         const auto sounds_at = sounds::get_monster_sounds().first;
         REQUIRE( sounds_at.size() == 1 );
@@ -418,7 +421,7 @@ TEST_CASE( "owned_wait_uses_the_operators_conditions_and_preserves_interruptions
     map &here = get_map();
     wait_selection choice{ who.pos_abs(), "duration", 1_hours, false };
     const auto start = [&]() {
-        fixture.run( who, fixture.request( who, "start", [&]( JsonOut &out ) {
+        fixture.run( who, fixture.request( who, "start", [&]( JsonOut & out ) {
             out.member( "kind", "wait" );
             out.member( "wait", choice );
         } ) );

@@ -1299,7 +1299,7 @@ bool advanced_inventory::move_all_items()
         do_return_entry();
 
         if( !submit_advanced_move( player_character, target_items, quantities, relative_destination,
-                                    dpane.in_vehicle() ) ) {
+                                   dpane.in_vehicle() ) ) {
             const move_items_activity_actor act( target_items, quantities, dpane.in_vehicle(),
                                                  relative_destination );
             player_character.assign_activity( act );
@@ -1608,7 +1608,7 @@ void advanced_inventory::start_activity(
             const tripoint_rel_ms relative_destination = squares[destarea].off;
 
             if( !submit_advanced_move( player_character, target_items, quantities, relative_destination,
-                                        to_vehicle ) ) {
+                                       to_vehicle ) ) {
                 const move_items_activity_actor act( target_items, quantities, to_vehicle, relative_destination );
                 player_character.assign_activity( act );
             }
@@ -1778,7 +1778,7 @@ bool advanced_inventory::action_move_item( advanced_inv_listitem *sitem,
             start_activity( destarea, srcarea, sitem, amount_to_move, from_vehicle, to_vehicle );
         } else if( destarea == AIM_WORN ) {
             player_character.assign_activity( wear_activity_actor( { sitem->items.front() },
-                                              { amount_to_move } ) );
+            { amount_to_move } ) );
         } else {
             player_character.assign_activity( wield_activity_actor( sitem->items.front(), amount_to_move ) );
         }

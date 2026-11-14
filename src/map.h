@@ -848,7 +848,7 @@ class map
         VehicleList get_vehicles();
         bool place_vehicle( std::unique_ptr<vehicle> &&new_vehicle );
         vehicle *restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
-                                          const tripoint_abs_ms &position, vehicle *previous );
+                                           const tripoint_abs_ms &position, vehicle *previous );
         void add_vehicle_to_cache( vehicle * );
         void clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &pt );
         // clears all vehicle level caches

@@ -41,6 +41,6 @@ item_location resolve_vehicle_water_source( Character &who, map &here, const ite
         const std::optional<faction_id> &owner = std::nullopt );
 void drink_vehicle_liquid( Character &who, map &here, item_location liquid );
 void vehicle_liquid_transfer_turn( player_activity &act, Character &who, const item_source &source,
-                                  const unload_liquid_choice &destination );
+                                   const unload_liquid_choice &destination );
 
 #endif // CATA_SRC_VEHICLE_WATER_H

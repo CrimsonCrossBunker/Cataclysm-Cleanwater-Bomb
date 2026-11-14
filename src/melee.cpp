@@ -1227,7 +1227,7 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
 bool melee::has_revivable_corpse( map &here, const tripoint_bub_ms &target )
 {
     const map_stack items = here.i_at( target );
-    return std::any_of( items.begin(), items.end(), []( const item &candidate ) {
+    return std::any_of( items.begin(), items.end(), []( const item & candidate ) {
         return candidate.can_revive();
     } );
 }

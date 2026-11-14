@@ -195,7 +195,7 @@ bool unload_solid_fuel( Character &who, map &here, vehicle &target, const itype_
         return false;
     }
     const int per_item = fuel == plutonium ? PLUTONIUM_CHARGES : 1;
-    const auto store = []( const vehicle_part &part ) {
+    const auto store = []( const vehicle_part & part ) {
         return !part.removed && !part.is_fake && !part.has_flag( vp_flag::carried_flag );
     };
     const int available = std::min<int64_t>( target.fuel_left( here, fuel, store ), INT_MAX );

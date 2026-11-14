@@ -3695,7 +3695,8 @@ void game::vehicle_turning_assist()
         veh->can_use_rails( here ) || !veh->valid_wheel_config( here ) ||
         veh->steering_effectiveness( here ) <= 0.0f || !veh->can_control_on_land( u ) ||
         veh->is_autodriving || veh->autopilot_on ) {
-        add_msg( m_info, _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
+        add_msg( m_info,
+                 _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
         return;
     }
     const safe_reference<vehicle> lifetime = veh->get_safe_reference();
@@ -3715,13 +3716,15 @@ void game::vehicle_turning_assist()
     const double lateral = -delta.x() * std::sin( heading ) + delta.y() * std::cos( heading );
     const std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( forward, lateral );
     if( !arc ) {
-        add_msg( m_info, _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
+        add_msg( m_info,
+                 _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
         return;
     }
     veh->pldrive( here, u, 0, 0, 0, arc );
     if( lifetime && veh->turning_arc ) {
         vehicle_guidance = true;
-        add_msg( m_info, _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
+        add_msg( m_info,
+                 _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
     }
 }
 
@@ -3752,10 +3755,10 @@ void game::draw_vehicle_guidance()
     // Match the movement engine's tile-step budget for one second.  Drag,
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
-                                 vehicles::vmiph_per_tile ) ), 0, 60 );
+                                  vehicles::vmiph_per_tile ) ), 0, 60 );
     const double skill = u.get_skill_level( skill_id( "driving" ) );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
-                                       ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
+                                        ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
     std::set<tripoint_bub_ms> estimate;
     tripoint_bub_ms predicted = origin;
@@ -3767,10 +3770,12 @@ void game::draw_vehicle_guidance()
     for( int step = 0; step <= steps; ++step ) {
         const double angle = to_radians( ray.dir() );
         // Project the two sides of the vehicle along its predicted heading.
-        for( const double side : { left - 1.0, right + 1.0 } ) {
+        for( const double side : {
+                 left - 1.0, right + 1.0
+             } ) {
             const tripoint_bub_ms p = predicted + point(
-                                         std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
-                                         std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
+                                          std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
+                                          std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
             guides.insert( p );
         }
         if( step == steps ) {
@@ -3778,8 +3783,12 @@ void game::draw_vehicle_guidance()
             int max_x = INT_MIN;
             int min_y = INT_MAX;
             int max_y = INT_MIN;
-            for( const double along : { rear, front } ) {
-                for( const double side : { left, right } ) {
+            for( const double along : {
+                     rear, front
+                 } ) {
+                for( const double side : {
+                         left, right
+                     } ) {
                     const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
                     const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
                     min_x = std::min( min_x, x - uncertainty );
@@ -13054,10 +13063,10 @@ pulp_data game::calculate_character_ability_to_pulp( const Character &you )
     // bash is good, but the rest physical damages can be useful also
     damage_instance di;
     you.roll_damage( damage_cut, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
+                     sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
     you.roll_damage( damage_stab, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
+                     sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
     for( const damage_unit &du : di ) {
         // potentially move it to json, if someone find necrotic mace +3 should pulp faster for some reason

@@ -369,7 +369,8 @@ struct owned_npc_item_offer {
     std::string refused_reason;
 };
 
-static void refresh_vehicles_at_changed_tiles( const map &here, inventory_activity_host_state &state )
+static void refresh_vehicles_at_changed_tiles( const map &here,
+        inventory_activity_host_state &state )
 {
     std::sort( state.changed_tiles.begin(), state.changed_tiles.end() );
     state.changed_tiles.erase( std::unique( state.changed_tiles.begin(), state.changed_tiles.end() ),
@@ -392,7 +393,8 @@ struct owned_dialogue_session {
     dialogue session;
     dialogue_window window;
     dialogue_view_prompt current_prompt;
-    std::variant<std::monostate, npc_trade_session, dialogue_seminar_request, owned_npc_item_offer> modal;
+    std::variant<std::monostate, npc_trade_session, dialogue_seminar_request, owned_npc_item_offer>
+    modal;
     std::optional<talk_topic> after_modal;
     std::string modal_response;
     int64_t last_modal_id = 0;
@@ -532,7 +534,7 @@ struct owned_dialogue_session {
                 return false;
             }
             auto &trade = modal.emplace<npc_trade_session>( who, *provider, here, id,
-                std::move( *trade_request ) );
+                          std::move( *trade_request ) );
             if( !trade.belongs_to( who, *provider, here ) || !participants_alive() ) {
                 modal.emplace<std::monostate>();
                 return false;
@@ -1361,7 +1363,9 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
     if( used && choices.cable_link ) {
         state.refresh_observers = true;
         const auto &link = *choices.cable_link;
-        for( const auto *endpoint : { &link.first, &link.destination } ) {
+        for( const auto *endpoint : {
+                 &link.first, &link.destination
+             } ) {
             if( *endpoint ) {
                 state.changed_tiles.push_back( ( *endpoint )->position );
                 state.refresh_vehicle_snapshots.push_back( ( *endpoint )->vehicle_id );
@@ -1782,7 +1786,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
             state.refresh_observers = true;
             state.changed_tiles.push_back( *work );
         }
-        if( const auto *consume = dynamic_cast<const consume_activity_actor *>( who.activity.actor.get() ) ) {
+        if( const auto *consume = dynamic_cast<const consume_activity_actor *>
+                                  ( who.activity.actor.get() ) ) {
             if( const auto &ground = consume->ground_food_after_harvest() ) {
                 state.refresh_observers = true;
                 state.changed_tiles.push_back( ground->position );
@@ -1804,7 +1809,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 state.changed_tiles.push_back( here.get_abs( p ) );
             }
         }
-        if( const auto *fire = dynamic_cast<const fire_start_activity_actor *>( who.activity.actor.get() ) ) {
+        if( const auto *fire = dynamic_cast<const fire_start_activity_actor *>
+                               ( who.activity.actor.get() ) ) {
             fire->append_work_tiles( state.changed_tiles );
             refresh_vehicles_at_changed_tiles( here, state );
         }
@@ -1960,7 +1966,8 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                         state.refresh_vehicle_snapshots.push_back( selection.vehicle_uid );
                     }
                 } else if( lifetime ) {
-                    who.add_msg_if_player( m_info, _( "The vehicle work is no longer available or its requirements are unmet." ) );
+                    who.add_msg_if_player( m_info,
+                                           _( "The vehicle work is no longer available or its requirements are unmet." ) );
                 }
             } else if( kind == "smash" ) {
                 tripoint_abs_ms origin;
@@ -2085,7 +2092,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 fireplace_selection choice;
                 request.read( "fireplace", choice, true );
                 if( execute_fireplace_selection( who, here, choice, activity_execution::authoritative,
-                                                &state.changed_tiles ) ) {
+                                                 &state.changed_tiles ) ) {
                     state.refresh_observers = true;
                     state.changed_tiles.push_back( choice.target.position );
                     refresh_vehicles_at_changed_tiles( here, state );
@@ -2913,7 +2920,7 @@ void client_start_sleep( const sleep_selection &choice )
     player_activity view{ try_sleep_activity_actor( 0_turns ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "sleep" );
             out.member( "sleep", choice );
         } );
@@ -2925,7 +2932,7 @@ void client_start_wait( const wait_selection &choice )
     player_activity view{ wait_activity_actor( 0_turns ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "wait" );
             out.member( "wait", choice );
         } );
@@ -3147,7 +3154,7 @@ bool client_fireplace_selection( const fireplace_selection &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "fireplace" );
             out.member( "fireplace", choice );
         } );
@@ -3163,7 +3170,7 @@ bool client_appliance_conversion( const appliance_conversion_selection &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "appliance_conversion" );
             out.member( "conversion", choice );
         } );
@@ -3179,7 +3186,7 @@ bool client_finish_arc_furnace( const arc_furnace::completion &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "finish_arc_furnace" );
             out.member( "furnace", choice );
         } );
@@ -3195,7 +3202,7 @@ bool client_stook_command( const stook::command &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "stook" );
             out.member( "stook", choice );
         } );
@@ -3211,7 +3218,7 @@ bool client_autoclave_command( const autoclave::command &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "autoclave" );
             out.member( "autoclave", choice );
         } );
@@ -3227,7 +3234,7 @@ bool client_mill_command( const mill::command &choice )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "mill" );
             out.member( "mill", choice );
         } );
@@ -3454,7 +3461,7 @@ void client_start_consume_ground( const ground_food_target &target, bool allow_c
         !begin_client_inventory_activity( consume_activity_actor::client_view() ) ) {
         return;
     }
-    send_inventory_activity( "start", [&]( JsonOut &out ) {
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "consume_ground" );
         out.member( "ground", target );
         out.member( "allow_consequences", allow_consequences );
@@ -3843,7 +3850,7 @@ bool client_fermentation_command( const fermentation_vessel::command &command )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "fermentation" );
             out.member( "vessel", command );
         } );
@@ -3859,7 +3866,7 @@ bool client_keg_command( const keg::command &command )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "keg" );
             out.member( "keg", command );
         } );
@@ -3875,7 +3882,7 @@ bool client_furniture_reload( const furniture_reload::command &command )
     player_activity view{ invoke_item_activity_actor( item_location(), std::string() ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "furniture_reload" );
             out.member( "reload", command );
         } );
@@ -3892,7 +3899,7 @@ void client_start_mending( const item_location &target, item_repair::mending_sel
     player_activity view( activity_id( "ACT_MEND_ITEM" ), 1 );
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "mend_fault" );
             out.member( "mend", selection );
         } );
@@ -3911,7 +3918,7 @@ bool client_start_selected_repair( const item_location &tool, const std::string 
     if( !begin_client_inventory_activity( view ) ) {
         return false;
     }
-    send_inventory_activity( "start", [&]( JsonOut &out ) {
+    send_inventory_activity( "start", [&]( JsonOut & out ) {
         out.member( "kind", "repair_selected" );
         out.member( "tool", source );
         out.member( "method", method );
@@ -3925,7 +3932,7 @@ void client_start_item_move( const item_move_selection &selection )
     player_activity view{ move_items_activity_actor( {}, {}, false, tripoint_rel_ms::zero ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "item_move" );
             out.member( "move", selection );
         } );
@@ -4019,7 +4026,7 @@ void client_start_vehicle_work( map &here, vehicle_action action, vehicle &targe
     player_activity view{ vehicle_activity_actor() };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "vehicle_work" );
             out.member( "work", selection );
         } );
@@ -4063,7 +4070,7 @@ void client_start_smash( const tripoint_bub_ms &position )
     player_activity view{ bash_activity_actor( position ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "smash" );
             out.member( "origin", origin );
             out.member( "target", target );
@@ -4081,7 +4088,7 @@ void client_start_owned_wear( const std::vector<equipment_intent> &selection )
     player_activity view{ wear_activity_actor( {}, {} ) };
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "wear" );
             out.member( "equipment", selection );
         } );
@@ -4144,7 +4151,7 @@ void client_plug_appliance( const appliance_connection_selection &selection )
     player_activity view( activity_id( "ACT_VEHICLE" ), 1 );
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
-        send_inventory_activity( "start", [&]( JsonOut &out ) {
+        send_inventory_activity( "start", [&]( JsonOut & out ) {
             out.member( "kind", "plug_appliance" );
             out.member( "connection", selection );
         } );
@@ -4511,7 +4518,8 @@ static void query_client_dialogue_prompt( dialogue_window &d_win,
 
 static bool inventory_activity_needs_input( const inventory_activity_client_state &view )
 {
-    return view.cancel_requested || view.needs_placement || view.finished || view.liquid_source_uid > 0 ||
+    return view.cancel_requested || view.needs_placement || view.finished ||
+           view.liquid_source_uid > 0 ||
            view.remote_security_prompt || view.tree_direction_prompt || !view.smash_prompt.empty() ||
            view.repair_prompt || view.disassembly_prompt || view.spell_prompt || view.dialogue_prompt ||
            view.remote_vehicle_target > 0 || !view.craft_decision.empty() ||

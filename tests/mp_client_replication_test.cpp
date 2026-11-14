@@ -295,7 +295,7 @@ TEST_CASE( "mp_monster_replica_uses_host_hp_and_despawns_without_death_effects",
     const auto rng = rng_get_engine();
     const bool hp_removal = GENERATE( false, true );
     const std::string gone = hp_removal ? state_message( {{ 17, original.get(), 0 }} ) :
-                             state_message( {}, { 17 } );
+        state_message( {}, { 17 } );
     REQUIRE( cata_mp::client_apply_message( gone ) );
     CHECK( session.replication.client.monsters.find( 17 ) == nullptr );
     CHECK_FALSE( get_creature_tracker().is_present( original.get() ) );

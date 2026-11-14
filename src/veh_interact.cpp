@@ -325,7 +325,7 @@ bool has_vehicle_self_jack( vehicle &target, int quality )
 }
 
 bool vehicle_work_can_lift( Character &who, map &here, vehicle &target, const vpart_info &info,
-                           const tripoint_bub_ms &position )
+                            const tripoint_bub_ms &position )
 {
     if( !info.has_flag( "NEEDS_JACKING" ) ) {
         item base( info.base_item );
@@ -1382,7 +1382,8 @@ void veh_interact::cache_tool_availability()
     } );
 
     cache_tool_availability_update_lifting( player_character.pos_bub() );
-    max_jack = lifting_quality_to_mass( available_vehicle_jack_quality( player_character, here, *veh ) );
+    max_jack = lifting_quality_to_mass( available_vehicle_jack_quality( player_character, here,
+                                        *veh ) );
 }
 
 void veh_interact::cache_tool_availability_update_lifting( const tripoint_bub_ms &world_cursor_pos )
@@ -2052,7 +2053,7 @@ void veh_interact::do_refill( map &here )
     title = _( "Select part to refill:" );
 
     auto act = [&]( const map &, const vehicle_part & pt ) {
-        const auto validate = [&]( const item &source ) {
+        const auto validate = [&]( const item & source ) {
             return can_refill_vehicle_part( pt, source );
         };
 
@@ -2763,7 +2764,7 @@ void veh_interact::do_assign_crew( map &here )
         return pt.is_seat();
     };
 
-    auto act = [&]( map &here, vehicle_part &pt ) {
+    auto act = [&]( map & here, vehicle_part & pt ) {
         const int index = veh->index_of_part( &pt );
         const int64_t uid = pt.get_base().uid().get_value();
         const auto target = veh->get_safe_reference();

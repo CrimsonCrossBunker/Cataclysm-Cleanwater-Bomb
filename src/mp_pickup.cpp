@@ -100,7 +100,8 @@ std::optional<std::string> make_pickup_request( const Pickup::selection &selecti
         out.member( "quantity", exact && selected_quantity == 0 ? target->count() : selected_quantity );
         if( exact ) {
             const item_source source = capture_item_source( get_avatar(), target );
-            if( source.kind != "map" && ( source.kind != "vehicle" || source.vehicle <= 0 || source.cargo <= 0 ) ) {
+            if( source.kind != "map" && ( source.kind != "vehicle" || source.vehicle <= 0 ||
+                                          source.cargo <= 0 ) ) {
                 return std::nullopt;
             }
             out.member( "source", source );

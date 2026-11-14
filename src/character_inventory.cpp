@@ -341,7 +341,8 @@ bool Character::transfer_furniture_item_to_inventory( item_location &source )
     map &here = get_map();
     const tripoint_abs_ms position = source.pos_abs();
     const tripoint_abs_ms origin = pos_abs();
-    if( origin.z() != position.z() || !here.inbounds( position ) || square_dist( origin, position ) > 1 ||
+    if( origin.z() != position.z() || !here.inbounds( position ) ||
+        square_dist( origin, position ) > 1 ||
         resolve_furniture_item( here, position, source->uid().get_value() ) != source ) {
         return false;
     }
@@ -792,7 +793,7 @@ void Character::drop( const drop_locations &what, const tripoint_bub_ms &target,
     }
 
     if( !stash && submit_client_item_move( *this, what, target,
-                                         item_move_destination::prefer_cargo, true ) ) {
+                                           item_move_destination::prefer_cargo, true ) ) {
         return;
     }
     const tripoint_rel_ms placement = target - pos_bub();
@@ -3120,7 +3121,8 @@ bool Character::wield_charges( item_location source, int quantity )
     if( has_wield_conflicts( selected ) ) {
         return false;
     }
-    return wield_impl( selected, source.obtain_cost( *this, quantity ), true, &source, nullptr, quantity );
+    return wield_impl( selected, source.obtain_cost( *this, quantity ), true, &source, nullptr,
+                       quantity );
 }
 
 bool Character::wield_contents( item &container, item *internal_item, bool penalties,

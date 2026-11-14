@@ -782,7 +782,8 @@ std::optional<vehicle_control_selection> query_vehicle_control( Character &who, 
     const bool theft_check = action == "take" || action == "engines" || action == "hotwire" ||
                              action == "alarm" || action == "smash_alarm" || action == "horn" ||
                              action == "electronics" || action == "appliance" ||
-                             action == "water" || action == "siphon" || action == "heating" || action == "repair" || action == "toolstation" ||
+                             action == "water" || action == "siphon" || action == "heating" || action == "repair" ||
+                             action == "toolstation" ||
                              action == "tool_use" || action == "turret" || action == "harness" || action == "fold" ||
                              autopilot_action( action );
     if( theft_check && target.has_owner() && !target.is_owned_by( who ) ) {
@@ -1050,7 +1051,7 @@ bool execute_vehicle_control( Character &who, map &here,
     if( ( selection.action == "water" || siphon ) != selection.water.has_value() ||
         ( selection.water &&
           ( siphon != ( selection.water->operation == "siphon" ||
-                         selection.water->operation == "siphon_drink" ) ||
+                        selection.water->operation == "siphon_drink" ) ||
             !valid_vehicle_water_selection( who, here, *target,
                                             selection.position, *selection.water ) ) ) ) {
         return false;
@@ -1323,7 +1324,7 @@ bool execute_vehicle_control( Character &who, map &here,
 }
 
 bool cata_mp::client_siphon_vehicle( Character &who, map &here, vehicle &target,
-                                    const vehicle_part &part )
+                                     const vehicle_part &part )
 {
     if( !is_client_mode() ) {
         return false;
@@ -1371,7 +1372,7 @@ bool cata_mp::client_siphon_vehicle( Character &who, map &here, vehicle &target,
 }
 
 bool cata_mp::client_manage_vehicle( Character &who, map &here, vehicle &target,
-                                    vehicle_management_selection choice, const vehicle_part *part )
+                                     vehicle_management_selection choice, const vehicle_part *part )
 {
     if( !is_client_mode() ) {
         return false;

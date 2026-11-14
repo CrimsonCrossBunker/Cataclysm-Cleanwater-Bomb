@@ -4037,7 +4037,7 @@ void iexamine::fireplace( Character &you, const tripoint_bub_ms &examp )
                 return;
             }
             const deployed_furniture_selection teardown{ choice.origin, choice.target.position,
-                                                          choice.target.furniture, burning_now };
+                    choice.target.furniture, burning_now };
             if( lifetime && context && can_take_down_deployed_furniture( you, here, teardown ) &&
                 ( !you.is_avatar() || !cata_mp::client_take_down_furniture( teardown ) ) ) {
                 take_down_deployed_furniture( you, here, teardown );
@@ -4113,7 +4113,8 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         who.add_msg_if_player( compost ? _( "There's a tank of %s set to ferment there." ) :
                                _( "There's a vat of %s set to ferment there." ), input->tname() );
         if( remaining <= 0_turns ) {
-            if( who.query_yn( compost ? _( "Finish fermenting?" ) : _( "Finish brewing?" ) ) && still_there() ) {
+            if( who.query_yn( compost ? _( "Finish fermenting?" ) : _( "Finish brewing?" ) ) &&
+                still_there() ) {
                 submit_vessel_command( who, here, command );
             }
         } else {
@@ -4181,7 +4182,8 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
     const auto carried = compost ? who.cache_get_items_with( "is_compostable", &item::is_compostable ) :
                          who.cache_get_items_with( "is_brewable", &item::is_brewable );
     for( const item_location &candidate : carried ) {
-        if( candidate && candidate.held_by( who ) && ( !input || candidate->typeId() == input->typeId() ) ) {
+        if( candidate && candidate.held_by( who ) && ( !input ||
+                candidate->typeId() == input->typeId() ) ) {
             supplies[candidate->typeId()].push_back( capture_item_source( who, candidate ) );
         }
     }
@@ -4219,7 +4221,8 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
     } else {
         who.add_msg_if_player( compost ? _( "This tank is empty." ) : _( "This keg is empty." ) );
         if( supplies.empty() ) {
-            who.add_msg_if_player( m_info, compost ? _( "You have nothing that could be used as biomass to ferment." ) :
+            who.add_msg_if_player( m_info,
+                                   compost ? _( "You have nothing that could be used as biomass to ferment." ) :
                                    _( "You have no brew to ferment." ) );
             return;
         }
@@ -4243,7 +4246,7 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         command.supplies = std::move( supplies.at( types[index] ) );
     }
     command.start_after_deposit = who.query_yn( compost ? _( "Start anaerobic digestion?" ) :
-                                   _( "Start fermenting cycle?" ) );
+                                  _( "Start fermenting cycle?" ) );
     if( still_there() ) {
         submit_vessel_command( who, here, command );
     }
@@ -4347,7 +4350,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
             }
             std::advance( selected, index );
         } else if( !batch && !you.query_yn( _( "Fill the %1$s with %2$s?" ), name,
-                                           item::nname( selected->first ) ) ) {
+                                            item::nname( selected->first ) ) ) {
             return;
         }
         choice.action = ::keg::operation::fill;
@@ -4363,9 +4366,9 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
     const bool liquid = batch && batch->made_of( phase_id::LIQUID );
     uilist menu;
     menu.text = batch ? string_format( _( "%1$s with %2$s (%3$d)    %4$s / %5$s" ),
-                                      uppercase_first_letter( name ), batch->tname(), batch->charges,
-                                      vol_to_string( batch->volume(), true, true ),
-                                      vol_to_string( capacity, true, true ) ) :
+                                       uppercase_first_letter( name ), batch->tname(), batch->charges,
+                                       vol_to_string( batch->volume(), true, true ),
+                                       vol_to_string( capacity, true, true ) ) :
                 string_format( _( "The %s is empty." ), name );
     if( batch ) {
         menu.addentry( 0, liquid, MENU_AUTOASSIGN, _( "Dispense or dump %s" ), batch->tname() );
@@ -4928,7 +4931,7 @@ void iexamine::curtains( Character &you, const tripoint_bub_ms &examp )
 
     const ter_id ter = here.ter( examp );
     const terrain_examine_selection teardown{ terrain_examine_action::remove_curtains, you.pos_abs(),
-                                               here.get_abs( examp ), ter.id(), std::nullopt };
+            here.get_abs( examp ), ter.id(), std::nullopt };
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
 
@@ -6022,18 +6025,18 @@ void iexamine::autodoc( Character &you, const tripoint_bub_ms &examp )
 }
 
 static std::optional<comp_selection<item_comp>> choose_mill_input(
-        Character &who, map &here, units::volume remaining )
+            Character &who, map &here, units::volume remaining )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const character_action_guard lifetime( who );
     const auto context = here.get_context_reference();
     const tripoint_abs_ms origin = who.pos_abs();
-    const auto filter = [&]( const item &entry ) {
+    const auto filter = [&]( const item & entry ) {
         return mill::accepts( entry ) && entry.is_owned_by( who, true ) &&
                !craft_reservation::contains_reserved( entry );
     };
     temp_crafting_inventory combined = who.crafting_inventory();
-    combined.remove_items_with( [&]( const item &entry ) {
+    combined.remove_items_with( [&]( const item & entry ) {
         return !filter( entry );
     } );
 
@@ -6041,7 +6044,9 @@ static std::optional<comp_selection<item_comp>> choose_mill_input(
     menu.text = _( "Load mill with what kind of product?" );
     std::vector<item_comp> choices;
     std::set<itype_id> listed;
-    for( const item *entry : combined.items_with( []( const item & ) { return true; } ) ) {
+    for( const item *entry : combined.items_with( []( const item & ) {
+    return true;
+} ) ) {
         const itype_id &type = entry->typeId();
         if( !listed.insert( type ).second ) {
             continue;
@@ -6144,7 +6149,7 @@ void iexamine::quern_examine( Character &who, const tripoint_bub_ms &tile )
         case 0: {
             const restore_on_out_of_scope restore_rng( rng_get_engine() );
             std::string details = colorize( active ? _( "There's a mill here.  It is turning and milling." ) :
-                                             _( "There's a mill here." ), c_green ) + "\n";
+                                            _( "There's a mill here." ), c_green ) + "\n";
             if( active && time_left > 0_turns ) {
                 details += string_format( _( "It should take about %s to finish milling." ),
                                           to_string_clipped( time_left ) ) + "\n";
@@ -6407,7 +6412,8 @@ void iexamine::open_safe( Character &you, const tripoint_bub_ms &examp )
 {
     map &here = get_map();
     submit_safe_interaction( you, here, { safe_action::open, you.pos_abs(),
-                                        here.get_abs( examp ), here.furn( examp ).id() } );
+                                          here.get_abs( examp ), here.furn( examp ).id()
+                                        } );
 }
 
 void iexamine::workbench( Character &you, const tripoint_bub_ms &examp )

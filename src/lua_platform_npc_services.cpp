@@ -610,13 +610,13 @@ sol::table npc_mission_provider_state(
                              runtime_generation,
                              world_generation );
     const std::size_t selected_available_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions.begin(),
-                        provider.chatbin.missions.end(),
-                        selected ) );
+                std::count( provider.chatbin.missions.begin(),
+                            provider.chatbin.missions.end(),
+                            selected ) );
     const std::size_t selected_assigned_count = static_cast<std::size_t>(
-            std::count( provider.chatbin.missions_assigned.begin(),
-                        provider.chatbin.missions_assigned.end(),
-                        selected ) );
+                std::count( provider.chatbin.missions_assigned.begin(),
+                            provider.chatbin.missions_assigned.end(),
+                            selected ) );
     if( !live_mission_pointer( selected ) ) {
         result["selected"] = sol::nil;
         result["selected_stale"] = selected != nullptr;
@@ -688,7 +688,7 @@ sol::table get_npc_mission_provider_state(
         return make_game_error_result( state, *error );
     }
     const ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                                     world_generation );
     const const_talker *speaker = conversation ? conversation->const_actor( true ) : nullptr;
     return make_game_value_result(
                state, sol::make_object(
@@ -719,7 +719,7 @@ sol::table get_npc_mission_assigned_for_owner(
         return make_game_error_result( state, *error );
     }
     ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                               world_generation );
     if( !owns_dialogue_service( conversation, *owner ) ) {
         return make_game_error_result( state, {
             "wrong_subtype", "A remote mission owner must be the current dialogue participant"
@@ -785,7 +785,7 @@ sol::table get_npc_mission_selected_condition(
     }
 
     ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                               world_generation );
     if( !owns_dialogue_service( conversation, *owner ) ) {
         return make_game_error_result( state, {
             "wrong_subtype", "A remote mission owner must be the current dialogue participant"
@@ -829,7 +829,7 @@ sol::table get_npc_mission_selected_has_goal(
         return make_game_error_result( state, *error );
     }
     const mission *selected = selected_service_mission( *provider, service_conversation(
-            *provider, runtime_generation, world_generation ) );
+                                  *provider, runtime_generation, world_generation ) );
     if( !live_mission_pointer( selected ) ) {
         return make_game_value_result(
                    state, sol::make_object( state, false ) );
@@ -861,7 +861,7 @@ sol::table get_npc_mission_selected_has_generic_rewards(
         return make_game_error_result( state, *error );
     }
     const mission *selected = selected_service_mission( *provider, service_conversation(
-            *provider, runtime_generation, world_generation ) );
+                                  *provider, runtime_generation, world_generation ) );
     if( selected == nullptr ) {
         // f_mission_has_generic_rewards explicitly treats an empty selection
         // as true (without reproducing its diagnostic message).  Keep a stale
@@ -922,7 +922,7 @@ sol::table select_npc_mission(
         } );
     }
     ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                               world_generation );
     talker *speaker = conversation ? conversation->actor( true ) : nullptr;
     if( conversation ) {
         const Character *owner = mission_dialogue::resolve_dialogue_character( *conversation );
@@ -934,7 +934,7 @@ sol::table select_npc_mission(
         }
     }
     sol::table before = npc_mission_provider_state( state, *provider, runtime_generation,
-        world_generation, speaker );
+                        world_generation, speaker );
     if( speaker ) {
         speaker->select_mission( selected );
     } else {
@@ -943,7 +943,7 @@ sol::table select_npc_mission(
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] = npc_mission_provider_state( state, *provider, runtime_generation,
-        world_generation, speaker );
+                     world_generation, speaker );
     return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
 
@@ -1035,7 +1035,7 @@ sol::table run_selected_npc_mission_action(
             "Unknown NPC mission action" );
     }
     ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                               world_generation );
     if( !owner->getID().is_valid() || !owns_dialogue_service( conversation, *owner ) ) {
         return make_game_error_result( state, {
             "wrong_subtype", "A remote mission owner must be the current dialogue participant"
@@ -1360,7 +1360,7 @@ sol::table run_selected_npc_mission_action(
         if( speaker ) {
             const auto mine = speaker->assigned_missions();
             speaker->select_mission( mine.empty() ? first_live_mission( provider->chatbin.missions,
-                    provider->getID() ) : mine.front() );
+                                     provider->getID() ) : mine.front() );
             if( provider->chatbin.mission_selected == selected ) {
                 provider->chatbin.mission_selected = nullptr;
             }
@@ -1411,13 +1411,13 @@ sol::table open_selected_npc_mission_reward_trade(
         return make_game_error_result( state, *error );
     }
     Character *owner = resolve_exact_character(
-                        owner_handle, runtime_generation,
-                        world_generation, error );
+                           owner_handle, runtime_generation,
+                           world_generation, error );
     if( owner == nullptr ) {
         return make_game_error_result( state, *error );
     }
     if( ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation ) ) {
+                                   world_generation ) ) {
         if( !owns_dialogue_service( conversation, *owner ) ||
             !mission_dialogue::reward_selected_mission( *conversation, true ) ) {
             return make_game_error_result( state, {
@@ -2092,7 +2092,7 @@ sol::table start_selected_npc_training(
         return make_game_error_result( state, *error );
     }
     ::dialogue *conversation = service_conversation( *provider, runtime_generation,
-        world_generation );
+                               world_generation );
     if( !owns_dialogue_service( conversation, *student ) ||
         ( !conversation && student != &get_avatar() ) ) {
         return make_game_error_result( state, {

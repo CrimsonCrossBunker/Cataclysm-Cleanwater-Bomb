@@ -287,7 +287,7 @@ std::optional<npc_trade_session::quote> npc_trade_session::price_order(
                                make_row( player, trader, *found, quantity, false ) );
     }
     const auto terms = npc_trading::quote_trade( player, trader, sales, purchases,
-        request_.service_cost, use_bank_ );
+                       request_.service_cost, use_bank_ );
     if( !terms ) {
         return std::nullopt;
     }

@@ -59,7 +59,8 @@ bool destination_matches( Character &who, map &here, const item_move_selection &
         return here.can_put_items_ter_furn( pos );
     }
     const auto cargo = here.veh_at( pos ).cargo();
-    return cargo && usable_cargo( *cargo ) && cargo->part().get_base().uid().get_value() == selection.cargo;
+    return cargo && usable_cargo( *cargo ) &&
+           cargo->part().get_base().uid().get_value() == selection.cargo;
 }
 
 item_location resolve_movable( Character &who, map &here, const item_move_selection &selection,
@@ -134,7 +135,7 @@ int insert_cargo( map &here, const vpart_reference &cargo, item &portion )
     if( !added ) {
         return 0;
     }
-    craft_relocated( item_location( vehicle_cursor( veh, cargo.part_index() ), &**added ) );
+    craft_relocated( item_location( vehicle_cursor( veh, cargo.part_index() ), & **added ) );
     if( portion.count_by_charges() ) {
         portion.charges -= count;
     }
@@ -272,7 +273,7 @@ bool start_owned_item_move( Character &who, map &here, item_move_selection selec
             return false;
         }
     }
-    const auto available = [&]( const auto &entry ) {
+    const auto available = [&]( const auto & entry ) {
         return static_cast<bool>( resolve_movable( who, here, selection, entry.first, entry.second ) );
     };
     if( std::none_of( selection.items.begin(), selection.items.end(), available ) ) {

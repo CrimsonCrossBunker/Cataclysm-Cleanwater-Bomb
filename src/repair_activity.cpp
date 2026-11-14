@@ -149,7 +149,7 @@ std::optional<prepared_tool> prepare_tool( Character &who, const repair_tool_sou
 }
 
 item_location resolve_repair_workpiece( Character &who, const item_source &source,
-                                       const std::optional<item_repair::repair_target> &preferred )
+                                        const std::optional<item_repair::repair_target> &preferred )
 {
     map &here = get_map();
     if( preferred && preferred->matches( source ) ) {

@@ -854,7 +854,7 @@ bool map::place_vehicle( std::unique_ptr<vehicle> &&new_vehicle )
 }
 
 vehicle *map::restore_vehicle_snapshot( std::unique_ptr<vehicle> replica,
-                                       const tripoint_abs_ms &position, vehicle *previous )
+                                        const tripoint_abs_ms &position, vehicle *previous )
 {
     if( !replica || !inbounds( position ) ) {
         return nullptr;
@@ -7152,7 +7152,8 @@ int map::transfer_item_or_charges( const tripoint_bub_ms &pos, item_location sou
 
 int map::unload_furniture_item( item_location source, Character &who, item_location *placed )
 {
-    return source ? unload_furniture_item( who.pos_bub( *this ), source, item( *source ), who, placed ) : 0;
+    return source ? unload_furniture_item( who.pos_bub( *this ), source, item( *source ), who,
+                                           placed ) : 0;
 }
 
 int map::unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
@@ -7535,7 +7536,7 @@ std::pair<item *, tripoint_bub_ms> map::_add_item_or_charges( const tripoint_bub
         const int max_path_length = 4 * max_dist;
         const pathfinding_settings setting( {}, max_dist, max_path_length, 0, false, false, true, false,
                                             false, false );
-        const auto overflow_capacity = [&]( const tripoint_bub_ms &tile ) {
+        const auto overflow_capacity = [&]( const tripoint_bub_ms & tile ) {
             if( !valid_tile( tile ) || has_flag( ter_furn_flag::TFLAG_NOITEM, tile ) ||
                 has_flag( ter_furn_flag::TFLAG_SEALED, tile ) ) {
                 return 0;

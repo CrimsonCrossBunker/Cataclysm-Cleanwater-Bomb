@@ -33,7 +33,7 @@ const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 constexpr time_duration cycle_time = 90_minutes;
 
 std::optional<std::vector<item *>> read_batch( Character &who, map &here,
-        const tripoint_bub_ms &tile, operation action )
+                                const tripoint_bub_ms &tile, operation action )
 {
     std::vector<item *> batch;
     for( item &entry : here.i_at( tile ) ) {

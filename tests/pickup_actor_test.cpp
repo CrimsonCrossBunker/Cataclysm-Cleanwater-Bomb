@@ -207,7 +207,7 @@ TEST_CASE( "replicated_vehicle_cargo_keeps_item_ancestry_for_authoritative_picku
     const auto vehicle_id = original->uid().get_value();
     const auto part_id = original->part( part ).get_base().uid().get_value();
     const auto absolute = here.get_abs( pos );
-    const auto row = [&]( const std::string &payload ) {
+    const auto row = [&]( const std::string & payload ) {
         return R"({"type":"vehicle_step","vehicles":[{"nid":1,"uid":)" + std::to_string( vehicle_id ) +
                R"(,"x":)" + std::to_string( absolute.x() ) +
                R"(,"y":)" + std::to_string( absolute.y() ) +
@@ -762,7 +762,7 @@ TEST_CASE( "mp_pickup_ingress_ignores_client_mutations_and_old_inventory_echoes"
     auto &turn = only_test_remote( session ).turn;
     ++turn.grant_seq;
     turn.remote_moves = 100;
-    const auto coordinates = []( const tripoint_abs_ms &p ) {
+    const auto coordinates = []( const tripoint_abs_ms & p ) {
         return R"("x":)" + std::to_string( p.x() ) + R"(,"y":)" + std::to_string( p.y() ) +
                R"(,"z":)" + std::to_string( p.z() );
     };

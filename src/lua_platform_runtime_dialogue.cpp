@@ -2317,7 +2317,7 @@ talk_topic invoke_platform_dialogue_response_callback(
         callback_scope scope( *owner );
         const auto npc_services = npc_services_for_callback( *owner, d, topic_id );
         const sol::protected_function_result result = callback(
-                context, trial_success, fallback.id );
+                    context, trial_success, fallback.id );
         context->invalidate();
         if( !result.valid() ) {
             const sol::error error = result;

@@ -41,11 +41,13 @@ equipment_intent make_equipment_intent( const Character &who, item_location sour
                                         const std::string &operation, bool unseal = false );
 bool execute_equipment_intent( Character &who, map &here, const equipment_intent &intent );
 bool start_owned_wear( Character &who, map &here, std::vector<equipment_intent> selection );
-void do_owned_wear( player_activity &activity, Character &who, std::vector<equipment_intent> &pending );
+void do_owned_wear( player_activity &activity, Character &who,
+                    std::vector<equipment_intent> &pending );
 // Only selection/consent on the client; inventory and callbacks stay on the host.
 void client_select_equipment( const std::string &operation, item_location source,
                               bool unseal = false, int quantity = 0 );
-void client_select_wear( const std::vector<item_location> &sources, const std::vector<int> &quantities );
+void client_select_wear( const std::vector<item_location> &sources,
+                         const std::vector<int> &quantities );
 void client_request_equipment( const equipment_intent &intent );
 } // namespace cata_mp
 #endif // CATA_SRC_MP_EQUIPMENT_H

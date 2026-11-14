@@ -4847,7 +4847,8 @@ void Character::mend_item( item_location &&obj, bool interactive )
 #ifdef MP_ENABLED
         if( remote ) {
             cata_mp::client_start_mending( obj, { item_repair::capture_target( *this, obj ),
-                                                opt.fault, fix.id } );
+                                                  opt.fault, fix.id
+                                                } );
             return;
         }
 #endif

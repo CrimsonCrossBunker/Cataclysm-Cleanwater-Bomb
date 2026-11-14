@@ -1275,7 +1275,7 @@ class link_up_actor : public iuse_actor
         std::optional<int> link_to_veh_app( Character *p, item &it, bool to_ports ) const;
         // Native link transaction after the caller has selected and validated the endpoint.
         std::optional<int> attach_to_vehicle( Character &who, item &it, map &here,
-                                             const vpart_position &endpoint, bool to_ports ) const;
+                                              const vpart_position &endpoint, bool to_ports ) const;
         std::optional<int> link_tow_cable( Character *p, item &it, bool to_towing ) const;
         std::optional<int> attach_tow_cable( Character &who, item &it, map &here,
                                              const vpart_position &endpoint, bool to_towing ) const;
