@@ -974,29 +974,32 @@ conditional_t::func f_near_om_location( const JsonObject &jo, std::string_view m
     const dbl_or_var range = get_dbl_or_var( jo, "range", false, 1 );
     return [location, range, is_npc]( const_dialogue const & d ) {
         const tripoint_abs_omt omt_pos = d.const_actor( is_npc )->pos_abs_omt();
+        // The requested location does not depend on the scanned tile, so evaluate it
+        // (and classify it) once instead of once per tile in the radius.
+        const std::string location_value = location.evaluate( d );
+        const bool camp_any = location_value == "FACTION_CAMP_ANY";
+        const bool camp_start = location_value == "FACTION_CAMP_START";
         for( const tripoint_abs_omt &curr_pos : points_in_radius( omt_pos,
                 range.evaluate( d ) ) ) {
             const oter_id &omt_ter = overmap_buffer.ter( curr_pos );
-            const std::optional<mapgen_arguments> *maybe_args = overmap_buffer.mapgen_args( omt_pos );
-            const std::string &omt_str = omt_ter.id().str();
-            std::string location_value = location.evaluate( d );
 
-            if( location_value == "FACTION_CAMP_ANY" ) {
+            if( camp_any ) {
                 std::optional<basecamp *> bcp = overmap_buffer.find_camp( curr_pos.xy() );
                 if( bcp ) {
                     return true;
                 }
                 // TODO: legacy check to be removed once primitive field camp OMTs have been purged
-                if( omt_str.find( "faction_base_camp" ) != std::string::npos ) {
+                if( omt_ter.id().str().find( "faction_base_camp" ) != std::string::npos ) {
                     return true;
                 }
-            } else if( location_value  == "FACTION_CAMP_START" &&
-                       !recipe_group::get_recipes_by_id( "all_faction_base_types", omt_ter, maybe_args ).empty() ) {
+            } else if( camp_start ) {
+                const auto *maybe_args = overmap_buffer.mapgen_args( omt_pos );
+                if( !recipe_group::get_recipes_by_id( "all_faction_base_types", omt_ter,
+                                                      maybe_args ).empty() ) {
+                    return true;
+                }
+            } else if( oter_no_dir_or_connections( omt_ter ) == location_value ) {
                 return true;
-            } else {
-                if( oter_no_dir_or_connections( omt_ter ) == location_value ) {
-                    return true;
-                }
             }
         }
         // should never get here this is for safety
