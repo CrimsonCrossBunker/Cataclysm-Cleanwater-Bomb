@@ -153,7 +153,9 @@ TEST_CASE( "vehicle_drag_calc_baseline", "[.]" )
     clear_game_drag( ter_id( "t_pavement" ) );
 
     for( std::pair<const vproto_id, std::vector<double>> &veh_drag : test_data::drag_data ) {
-        print_drag_test_strings( veh_drag.first );
+        DYNAMIC_SECTION( veh_drag.first.str() ) {
+            print_drag_test_strings( veh_drag.first );
+        }
     }
 }
 
@@ -168,6 +170,8 @@ TEST_CASE( "vehicle_drag", "[vehicle] [engine]" )
     INFO( "Vehicle drag values changed.  Update values in data/mods/TEST_DATA/vehicle_drag_test.json with values printed below." );
 
     for( std::pair<const vproto_id, std::vector<double>> &veh_drag : test_data::drag_data ) {
-        test_vehicle_drag( veh_drag );
+        DYNAMIC_SECTION( veh_drag.first.str() ) {
+            test_vehicle_drag( veh_drag );
+        }
     }
 }

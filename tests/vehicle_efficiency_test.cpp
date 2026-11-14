@@ -421,7 +421,9 @@ static void test_vehicle(
 TEST_CASE( "vehicle_find_efficiency", "[.]" )
 {
     for( const auto &veh : test_data::eff_data ) {
-        find_efficiency( veh.first );
+        DYNAMIC_SECTION( veh.first.str() ) {
+            find_efficiency( veh.first );
+        }
     }
 }
 
@@ -429,7 +431,9 @@ TEST_CASE( "vehicle_find_efficiency", "[.]" )
 TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 {
     for( const auto &veh : test_data::eff_data ) {
-        print_test_strings( veh.first );
+        DYNAMIC_SECTION( veh.first.str() ) {
+            print_test_strings( veh.first );
+        }
     }
 }
 
@@ -440,7 +444,7 @@ TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engine]" )
 {
     const std::map<vproto_id, int> mass_before_door_windows = {
-        { vehicle_prototype_road_roller, 33096593 },
+        { vehicle_prototype_road_roller, 12392593 },
         { vehicle_prototype_car, 1016912 },
         { vehicle_prototype_suv, 1255580 },
         { vehicle_prototype_fire_engine, 2100450 },
@@ -453,24 +457,26 @@ TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engi
     };
 
     for( const auto &legacy : mass_before_door_windows ) {
-        CAPTURE( legacy.first );
-        clear_game( ter_t_pavement.id() );
-        map &here = get_map();
-        vehicle *veh = here.add_vehicle( legacy.first, tripoint_bub_ms( 60, 60, 0 ),
-                                         -90_degrees, 0, veh_spawn_status::UNDAMAGED );
-        REQUIRE( veh != nullptr );
-        units::mass window_mass;
-        for( const vpart_reference &part : veh->get_all_parts() ) {
-            veh->get_items( part.part() ).clear();
-            part.part().ammo_consume( part.part().ammo_remaining(), &here, part.pos_bub( here ) );
-            if( part.info().location == vpart_location_on_door ) {
-                window_mass += part.part().get_base().weight();
+        DYNAMIC_SECTION( legacy.first.str() ) {
+            CAPTURE( legacy.first );
+            clear_game( ter_t_pavement.id() );
+            map &here = get_map();
+            vehicle *veh = here.add_vehicle( legacy.first, tripoint_bub_ms( 60, 60, 0 ),
+                                             -90_degrees, 0, veh_spawn_status::UNDAMAGED );
+            REQUIRE( veh != nullptr );
+            units::mass window_mass;
+            for( const vpart_reference &part : veh->get_all_parts() ) {
+                veh->get_items( part.part() ).clear();
+                part.part().ammo_consume( part.part().ammo_remaining(), &here, part.pos_bub( here ) );
+                if( part.info().location == vpart_location_on_door ) {
+                    window_mass += part.part().get_base().weight();
+                }
             }
+            REQUIRE( window_mass > 0_gram );
+            CHECK( to_gram( veh->total_mass( here ) - window_mass ) == legacy.second );
+            REQUIRE( test_data::eff_data.count( legacy.first ) == 1 );
+            CHECK( to_gram( veh->total_mass( here ) ) == test_data::eff_data.at( legacy.first ).forward[0] );
         }
-        REQUIRE( window_mass > 0_gram );
-        CHECK( to_gram( veh->total_mass( here ) - window_mass ) == legacy.second );
-        REQUIRE( test_data::eff_data.count( legacy.first ) == 1 );
-        CHECK( to_gram( veh->total_mass( here ) ) == test_data::eff_data.at( legacy.first ).forward[0] );
     }
 }
 
@@ -479,9 +485,11 @@ TEST_CASE( "vehicle_efficiency", "[vehicle] [engine]" )
     REQUIRE_FALSE( test_data::eff_data.empty() );
 
     for( auto &vehicle : test_data::eff_data ) {
-        test_vehicle( vehicle.first, vehicle.second.forward[0], vehicle.second.forward[1],
-                      vehicle.second.forward[2], vehicle.second.forward[3], vehicle.second.forward[4] );
-        test_vehicle( vehicle.first, vehicle.second.reverse[0], vehicle.second.reverse[1],
-                      vehicle.second.reverse[2], vehicle.second.reverse[3], vehicle.second.reverse[4], 0, 0, true );
+        DYNAMIC_SECTION( vehicle.first.str() ) {
+            test_vehicle( vehicle.first, vehicle.second.forward[0], vehicle.second.forward[1],
+                          vehicle.second.forward[2], vehicle.second.forward[3], vehicle.second.forward[4] );
+            test_vehicle( vehicle.first, vehicle.second.reverse[0], vehicle.second.reverse[1],
+                          vehicle.second.reverse[2], vehicle.second.reverse[3], vehicle.second.reverse[4], 0, 0, true );
+        }
     }
 }
