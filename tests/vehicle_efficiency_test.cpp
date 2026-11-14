@@ -444,7 +444,7 @@ TEST_CASE( "make_vehicle_efficiency_case", "[.]" )
 TEST_CASE( "vehicle_efficiency_mass_change_is_door_window_mass", "[vehicle][engine]" )
 {
     const std::map<vproto_id, int> mass_before_door_windows = {
-        { vehicle_prototype_road_roller, 11932593 },
+        { vehicle_prototype_road_roller, 12392593 },
         { vehicle_prototype_car, 1016912 },
         { vehicle_prototype_suv, 1255580 },
         { vehicle_prototype_fire_engine, 2100450 },
