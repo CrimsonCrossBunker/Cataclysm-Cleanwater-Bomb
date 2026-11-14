@@ -1,5 +1,6 @@
 #include "line.h"
 
+#include <point.h>
 #include <algorithm>
 #include <array>
 #include <cstdlib>

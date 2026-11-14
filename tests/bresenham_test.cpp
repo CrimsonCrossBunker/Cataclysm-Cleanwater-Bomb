@@ -1,7 +1,11 @@
+#include <coordinates.h>
+#include <point.h>
 #include <array>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "bresenham.h"
