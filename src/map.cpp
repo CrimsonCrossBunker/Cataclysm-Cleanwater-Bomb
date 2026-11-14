@@ -11738,6 +11738,7 @@ void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &grou
 
     if( pop ) {
         // Populate the group from its population variable.
+        const bool animal_group = MonsterGroupManager::is_animal( group.type );
         for( int m = 0; m < pop; m++ ) {
             std::vector<MonsterGroupResult> spawn_details =
                 MonsterGroupManager::GetResultFromGroup( group.type, &pop );
@@ -11751,7 +11752,12 @@ void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &grou
                 if( group.horde ) {
                     tmp.set_horde_attraction( MHA_ALWAYS );
                 }
-                for( int i = 0; i < mgr.pack_size; i++ ) {
+                int pack = mgr.pack_size;
+                if( !animal_group ) {
+                    const float mlt = MonsterGroupManager::spawn_multiplier( mgr.id );
+                    pack = roll_remainder( mlt * mgr.pack_size );
+                }
+                for( int i = 0; i < pack; i++ ) {
                     group.monsters.push_back( tmp );
                 }
             }

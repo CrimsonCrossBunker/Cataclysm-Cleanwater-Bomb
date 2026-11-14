@@ -621,6 +621,29 @@ bool MonsterGroupManager::is_animal( const mongroup_id &group_name )
     return groupptr->is_animal;
 }
 
+float MonsterGroupManager::spawn_gate_density()
+{
+    const float density = get_option<float>( "SPAWN_DENSITY" );
+    const float feral = get_option<float>( "FERAL_SPAWN_SCALE" );
+    return std::max( density, feral );
+}
+
+float MonsterGroupManager::spawn_multiplier( const mtype_id &monster )
+{
+    if( !monster.is_valid() ) {
+        return 1.0f;
+    }
+    static const species_id species_FERAL( "FERAL" );
+    const float gate = spawn_gate_density();
+    if( gate <= 0.0f ) {
+        return 0.0f;
+    }
+    if( monster->in_species( species_FERAL ) ) {
+        return get_option<float>( "FERAL_SPAWN_SCALE" ) / gate;
+    }
+    return get_option<float>( "SPAWN_DENSITY" ) / gate;
+}
+
 void MonsterGroupManager::ClearMonsterGroups()
 {
     monsterGroupMap.clear();

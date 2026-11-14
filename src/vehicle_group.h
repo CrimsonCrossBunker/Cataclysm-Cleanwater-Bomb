@@ -52,6 +52,11 @@ class VehicleGroup
             return *vehicles.pick();
         }
 
+        // CCB: Like pick(), but military, police and emergency vehicles are gated by the
+        // MILITARY_VEHICLE_SPAWN world option.  Returns nullptr when the roll excluded
+        // the picked vehicle.
+        const vproto_id *pick_scaled() const;
+
         std::vector<vproto_id> all_possible_results() const;
 
         static void load( const JsonObject &jo );
@@ -63,6 +68,18 @@ class VehicleGroup
                     const vgroup_id &id );
         weighted_int_list<vproto_id> vehicles;
 };
+
+// CCB: Whether this vehicle prototype belongs to military, police or emergency services
+// and is therefore scaled by the MILITARY_VEHICLE_SPAWN world option.
+bool is_military_or_police_vehicle( const vproto_id &proto );
+
+// CCB: Placement roll for a picked vehicle: always true for civilian vehicles, while for
+// military, police and emergency vehicles it depends on the MILITARY_VEHICLE_SPAWN option.
+bool vehicle_spawn_roll( const vproto_id &proto );
+
+// CCB: Whether every vehicle in the group is a military, police or emergency vehicle.
+// The result is cached and cleared when vehicle groups reset.
+bool vgroup_is_military( const vgroup_id &group );
 
 /**
  * The location and facing data needed to place a vehicle onto the map.

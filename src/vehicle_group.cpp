@@ -16,9 +16,12 @@
 #include "flexbuffer_json.h"
 #include "lua_platform_content.h"
 #include "map.h"
+#include "options.h"
 #include "point.h"
 #include "units.h"
 #include "vpart_position.h"
+
+#include <unordered_set>
 
 using vplacement_id = string_id<VehiclePlacement>;
 
@@ -27,6 +30,8 @@ static const vgroup_id VehicleGroup_parkinglot( "parkinglot" );
 std::unordered_map<vgroup_id, VehicleGroup> vgroups;
 static std::unordered_map<vplacement_id, VehiclePlacement> vplacements;
 static std::unordered_map<vspawn_id, VehicleSpawn> vspawns;
+// CCB: Cache for vgroup_is_military(), follows the vehicle group data lifecycle.
+static std::unordered_map<vgroup_id, bool> vgroup_military_cache;
 
 const VehicleGroup *cata::lua_platform::detail::vehicle_group_registry_find(
     const std::string &id )
@@ -162,6 +167,71 @@ void VehicleGroup::load( const JsonObject &jo )
 void VehicleGroup::reset()
 {
     vgroups.clear();
+    vgroup_military_cache.clear();
+}
+
+const vproto_id *VehicleGroup::pick_scaled() const
+{
+    const vproto_id *proto = vehicles.pick();
+    if( proto != nullptr && vehicle_spawn_roll( *proto ) ) {
+        return proto;
+    }
+    return nullptr;
+}
+
+// CCB: Vehicles belonging to military, police or emergency services.  These are scaled by
+// the MILITARY_VEHICLE_SPAWN world option.  Static historical cannons are excluded.
+static const std::unordered_set<std::string> military_police_vehicles = {
+    "aapc-gl", "aapc-mg", "apc", "apc-gl",
+    "armored_car", "armored_car_xedra_vanguard",
+    "ambulance", "car_fbi", "fire_engine", "fire_truck",
+    "helicopter_apache_1a", "helicopter_apache_1b", "helicopter_apache_1c",
+    "helicopter_blackhawk_3a", "helicopter_blackhawk_3b", "helicopter_blackhawk_3c",
+    "helicopter_osprey_2a", "helicopter_osprey_2b", "helicopter_osprey_2c",
+    "humvee", "humvee_gl", "humvee_tow",
+    "military_cargo_truck", "military_cargo_truck_b",
+    "police_k9tpt", "policecar", "policecar_k9", "policesuv", "policesuv_k9",
+    "truck_swat"
+};
+
+bool is_military_or_police_vehicle( const vproto_id &proto )
+{
+    return military_police_vehicles.count( proto.str() ) > 0;
+}
+
+bool vehicle_spawn_roll( const vproto_id &proto )
+{
+    if( !is_military_or_police_vehicle( proto ) ) {
+        return true;
+    }
+    const float option = get_option<float>( "MILITARY_VEHICLE_SPAWN" );
+    if( option <= 0.0f ) {
+        // Explicit guard: x_in_y( 0, N ) can return true when rng_float rolls exactly 0.0.
+        return false;
+    }
+    return x_in_y( roll_remainder( 100.0f * option ), 100 );
+}
+
+bool vgroup_is_military( const vgroup_id &group )
+{
+    const auto cached = vgroup_military_cache.find( group );
+    if( cached != vgroup_military_cache.end() ) {
+        return cached->second;
+    }
+    bool all_military = false;
+    const auto found = vgroups.find( group );
+    if( found != vgroups.end() ) {
+        const std::vector<vproto_id> members = found->second.all_possible_results();
+        all_military = !members.empty();
+        for( const vproto_id &proto : members ) {
+            if( !is_military_or_police_vehicle( proto ) ) {
+                all_military = false;
+                break;
+            }
+        }
+    }
+    vgroup_military_cache.emplace( group, all_military );
+    return all_military;
 }
 
 VehicleFacings::VehicleFacings( const JsonObject &jo, std::string_view key )
@@ -236,11 +306,19 @@ void VehicleFunction_json::apply( map &m, const std::string &terrain_name ) cons
                 return;
             }
             const tripoint_bub_ms pos{ loc->pick_point(), m.get_abs_sub().z() };
-            m.add_vehicle( vehicle->pick(), pos, loc->pick_facing(), fuel,
+            const vproto_id *picked = vehicle->pick_scaled();
+            if( picked == nullptr ) {
+                continue;
+            }
+            m.add_vehicle( *picked, pos, loc->pick_facing(), fuel,
                            static_cast<veh_spawn_status>( status ) );
         } else {
             const tripoint_bub_ms pos{ location->pick_point(), m.get_abs_sub().z()};
-            m.add_vehicle( vehicle->pick(), pos, location->pick_facing(), fuel,
+            const vproto_id *picked = vehicle->pick_scaled();
+            if( picked == nullptr ) {
+                continue;
+            }
+            m.add_vehicle( *picked, pos, location->pick_facing(), fuel,
                            static_cast<veh_spawn_status>( status ) );
         }
     }
@@ -343,7 +421,11 @@ static void builtin_parkinglot( map &m, std::string_view )
             } else {
                 facing = one_in( 2 ) ? 0_degrees : 180_degrees;
             }
-            m.add_vehicle( VehicleGroup_parkinglot->pick(), pos_p, facing, -1,
+            const vproto_id *picked = VehicleGroup_parkinglot->pick_scaled();
+            if( picked == nullptr ) {
+                continue;
+            }
+            m.add_vehicle( *picked, pos_p, facing, -1,
                            veh_spawn_status::DEFAULT_LIGHT_DMG );
         }
     }

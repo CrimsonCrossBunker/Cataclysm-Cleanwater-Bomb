@@ -310,6 +310,13 @@ static void delete_items_at_mount( vehicle &veh, const point_rel_ms &pt )
 
 static bool mx_helicopter( map &m, const tripoint_abs_sm &abs_sub )
 {
+    // CCB: Gate the crashed military helicopter on the MILITARY_VEHICLE_SPAWN world option.
+    // The crashed_helicopters group only contains military aircraft, so any pick is
+    // representative of the whole group.
+    if( !vehicle_spawn_roll( VehicleGroup_crashed_helicopters->pick() ) ) {
+        return false;
+    }
+
     point_bub_ms c = rng_map_point<point_bub_ms>( 6 );
 
     for( int x = 0; x < SEEX * 2; x++ ) {

@@ -302,6 +302,15 @@ class MonsterGroupManager
 
         static bool is_animal( const mongroup_id &group );
 
+        // CCB: Effective spawn-event density for non-animal monster groups: the larger of the
+        // SPAWN_DENSITY and FERAL_SPAWN_SCALE world options, so that feral human spawns can be
+        // scaled independently of other monsters.
+        static float spawn_gate_density();
+        // CCB: Per-monster multiplier that splits a spawn event gated by spawn_gate_density()
+        // between feral humans (scaled by FERAL_SPAWN_SCALE) and all other monsters (scaled by
+        // SPAWN_DENSITY).  Equals 1.0 with default options.
+        static float spawn_multiplier( const mtype_id &monster );
+
         // Public getter for private monsterGroupMap, do not use if you don't know what you're doing.
         static std::map<mongroup_id, MonsterGroup> &Get_all_Groups();
 

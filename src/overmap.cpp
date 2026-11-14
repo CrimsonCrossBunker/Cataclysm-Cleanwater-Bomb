@@ -3482,8 +3482,15 @@ void overmap::place_specials( overmap_special_batch &enabled_specials )
             const overmap_special_id &id = iter->special_details->id;
             const overmap_special_placement_constraints &constraints =
                 iter->special_details->get_constraints();
-            const int occ_min = constraints.occurrences.min;
             const int occ_max = constraints.occurrences.max;
+            int occ_min = constraints.occurrences.min;
+            // CCB: Scale the spawn probability of military sites (flagged MILITARY in JSON)
+            // with the MILITARY_SITE_SPAWN world option by scaling the deck's success cards.
+            // 0 disables military sites entirely.
+            if( iter->special_details->has_flag( "MILITARY" ) ) {
+                const float mlt = get_option<float>( "MILITARY_SITE_SPAWN" );
+                occ_min = clamp( roll_remainder( occ_min * mlt ), 0, occ_max );
+            }
 
             // Specials with no success cards or empty deck never spawn via this path.
             if( occ_min <= 0 || occ_max <= 0 ) {
@@ -3653,7 +3660,7 @@ void overmap::place_mongroups()
         int city_spawn_chance = get_option<int>( "SPAWN_CITY_HORDE_SMALL_CITY_CHANCE" );
         float city_spawn_scalar = get_option<float>( "SPAWN_CITY_HORDE_SCALAR" );
         float city_spawn_spread = get_option<float>( "SPAWN_CITY_HORDE_SPREAD" );
-        float spawn_density = get_option<float>( "SPAWN_DENSITY" );
+        float spawn_density = MonsterGroupManager::spawn_gate_density();
 
         for( city &elem : cities ) {
             if( elem.size > city_spawn_threshold || one_in( city_spawn_chance ) ) {

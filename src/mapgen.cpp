@@ -319,10 +319,11 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
             const overmap_static_spawns &spawns = terrain_type->get_static_spawns();
 
             float spawn_density = 1.0f;
-            if( MonsterGroupManager::is_animal( spawns.group ) ) {
+            const bool animal_group = MonsterGroupManager::is_animal( spawns.group );
+            if( animal_group ) {
                 spawn_density = get_option< float >( "SPAWN_ANIMAL_DENSITY" );
             } else {
-                spawn_density = get_option< float >( "SPAWN_DENSITY" );
+                spawn_density = MonsterGroupManager::spawn_gate_density();
             }
 
             // Apply a multiplier to the number of monsters for really high densities.
@@ -344,12 +345,17 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                         if( !mgr.id ) {
                             continue;
                         }
+                        MonsterGroupResult scaled = mgr;
+                        if( !animal_group ) {
+                            const float mlt = MonsterGroupManager::spawn_multiplier( scaled.id );
+                            scaled.pack_size = roll_remainder( mlt * scaled.pack_size );
+                        }
                         if( const std::optional<tripoint_bub_ms> pt =
                         random_point_on_level( *this, gridz, [this]( const tripoint_bub_ms & n ) {
                         return passable_through( n );
                         } ) ) {
                             const tripoint_bub_ms pnt = pt.value();
-                            add_spawn( mgr, pnt );
+                            add_spawn( scaled, pnt );
                         }
                     }
                 }
@@ -2841,7 +2847,7 @@ class jmapgen_monster : public jmapgen_piece
             // half the odds at density 1.
             // Instead, apply a multiplier to the number of monsters for really high densities.
             // For example, a 50% chance at spawn density 4 becomes a 75% chance of ~2.7 monsters.
-            int odds_after_density = raw_odds * get_option<float>( "SPAWN_DENSITY" );
+            int odds_after_density = raw_odds * MonsterGroupManager::spawn_gate_density();
             int max_odds = ( 100 + raw_odds ) / 2;
             float density_multiplier = 1.0f;
             if( odds_after_density > max_odds ) {
@@ -2890,14 +2896,18 @@ class jmapgen_monster : public jmapgen_piece
                     MonsterGroupManager::GetResultFromGroup( chosen_group, nullptr, nullptr, false, nullptr,
                             use_pack_size );
                 for( const MonsterGroupResult &mgr : spawn_details ) {
-                    dat.m.add_spawn( mgr.id, spawn_count * pack_size.get(),
+                    const float mlt = MonsterGroupManager::spawn_multiplier( mgr.id );
+                    const int pack = roll_remainder( mlt * spawn_count * pack_size.get() );
+                    dat.m.add_spawn( mgr.id, pack,
                     { x.get(), y.get(), dat.zlevel() + z.get()},
                     friendly, -1, mission_id, chosen_name, data );
                 }
             } else if( ids.is_valid() ) {
                 mtype_id chosen_type = ids.pick()->get( dat );
                 if( !chosen_type.is_null() ) {
-                    dat.m.add_spawn( chosen_type, spawn_count * pack_size.get(),
+                    const float mlt = MonsterGroupManager::spawn_multiplier( chosen_type );
+                    const int pack = roll_remainder( mlt * spawn_count * pack_size.get() );
+                    dat.m.add_spawn( chosen_type, pack,
                     { x.get(), y.get(), dat.zlevel() + z.get()},
                     friendly, -1, mission_id, chosen_name, data );
                 }
@@ -2946,15 +2956,37 @@ class jmapgen_vehicle : public jmapgen_piece_with_has_vehicle_collision
         }
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z,
                     const std::string &/*context*/ ) const override {
-            if( !x_in_y( chance, 100 ) ) {
-                return;
-            }
             vgroup_id chosen_id = type.get( dat );
             if( chosen_id.is_null() ) {
                 return;
             }
+            // CCB: Scale the placement chance of groups consisting entirely of military,
+            // police or emergency vehicles with the MILITARY_VEHICLE_SPAWN world option.
+            const bool military_group = vgroup_is_military( chosen_id );
+            int effective_chance = chance;
+            if( military_group ) {
+                const float option = get_option<float>( "MILITARY_VEHICLE_SPAWN" );
+                if( option <= 0.0f ) {
+                    // Explicit guard: x_in_y( 0, N ) can return true when rng_float rolls
+                    // exactly 0.0.
+                    return;
+                }
+                effective_chance = roll_remainder( chance * option );
+            }
+            if( !x_in_y( effective_chance, 100 ) ) {
+                return;
+            }
+            const vproto_id *picked = nullptr;
+            if( military_group ) {
+                picked = &chosen_id->pick();
+            } else {
+                picked = chosen_id->pick_scaled();
+            }
+            if( picked == nullptr ) {
+                return;
+            }
             tripoint_bub_ms const dst( x.get(), y.get(), dat.zlevel() + z.get() );
-            vehicle *veh = dat.m.add_vehicle( chosen_id->pick(), dst, random_entry( rotation ),
+            vehicle *veh = dat.m.add_vehicle( *picked, dst, random_entry( rotation ),
                                               fuel, static_cast<veh_spawn_status>( status ) );
             if( veh && !faction.empty() ) {
                 veh->set_owner( faction_id( faction ) );
@@ -6892,10 +6924,11 @@ void map::place_spawns( const mongroup_id &group, const int chance,
     }
 
     float spawn_density = 1.0f;
-    if( MonsterGroupManager::is_animal( group ) ) {
+    const bool animal_group = MonsterGroupManager::is_animal( group );
+    if( animal_group ) {
         spawn_density = get_option< float >( "SPAWN_ANIMAL_DENSITY" );
     } else {
-        spawn_density = get_option< float >( "SPAWN_DENSITY" );
+        spawn_density = MonsterGroupManager::spawn_gate_density();
     }
 
     float multiplier = density * spawn_density;
@@ -6918,7 +6951,12 @@ void map::place_spawns( const mongroup_id &group, const int chance,
         std::vector<MonsterGroupResult> spawn_details =
             MonsterGroupManager::GetResultFromGroup( group, &num );
         for( const MonsterGroupResult &mgr : spawn_details ) {
-            add_spawn( mgr.id, mgr.pack_size, { p, abs_sub.z() },
+            int pack = mgr.pack_size;
+            if( !animal_group ) {
+                const float mlt = MonsterGroupManager::spawn_multiplier( mgr.id );
+                pack = roll_remainder( mlt * mgr.pack_size );
+            }
+            add_spawn( mgr.id, pack, { p, abs_sub.z() },
                        friendly, -1, mission_id, name, mgr.data );
         }
     }

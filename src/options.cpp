@@ -3558,6 +3558,11 @@ void options_manager::add_options_world_default()
              0.0, 50.0, 1.0, 0.1
            );
 
+        add( "FERAL_SPAWN_SCALE", page_id, to_translation( "Feral human spawn scaling factor" ),
+             to_translation( "A scaling factor that determines density of feral human spawns, independent of the general spawn rate scaling factor above.  A higher number means more feral humans.  Set to 0 to disable feral humans." ),
+             0.0, 50.0, 1.0, 0.1
+           );
+
         add( "ITEM_SPAWNRATE", page_id, to_translation( "Item spawn scaling factor" ),
              to_translation( "A scaling factor that determines density of item spawns.  A higher number means more items." ),
              0.01, 10.0, 1.0, 0.01
@@ -3572,6 +3577,23 @@ void options_manager::add_options_world_default()
              to_translation( "Monster evolution slowdown" ),
              to_translation( "A multiplier for the time between monster upgrades.  For example a value of 2.00 would cause evolution to occur at half speed.  Set to 0.00 to turn off monster upgrades." ),
              0.0, 100, 1.0, 0.01
+           );
+    } );
+    add_empty_line();
+
+    add_option_group( "world_default", Group( "military_opts",
+                      to_translation( "Military sites and military/police vehicles" ),
+                      to_translation( "Options regarding spawn rates of military overmap sites and of military, police and emergency vehicles.  These affect newly generated areas." ) ),
+    [&]( const std::string & page_id ) {
+        add( "MILITARY_SITE_SPAWN", page_id, to_translation( "Military site spawn scaling factor" ),
+             to_translation( "A scaling factor that determines the spawn probability of military overmap sites such as the military base, military outpost, military helipad and military bunker.  A higher number means more military sites.  Set to 0 to disable military sites.  Requires world reset." ),
+             0.0, 50.0, 1.0, 0.1
+           );
+
+        add( "MILITARY_VEHICLE_SPAWN", page_id,
+             to_translation( "Military/police vehicle spawn scaling factor" ),
+             to_translation( "A scaling factor that determines the spawn probability of military, police and emergency vehicles such as humvees, APCs, police cars and fire engines.  A higher number means more military/police vehicles.  Set to 0 to disable them." ),
+             0.0, 50.0, 1.0, 0.1
            );
     } );
     add_empty_line();
