@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bake CEC ecoregions and Little's native plant ranges into the CCB atlas grid."""
+"""Bake CEC ecoregions and Little's plant ranges into the CCB atlas grid."""
 
 import argparse
 import json
@@ -14,7 +14,8 @@ from rasterio.warp import Resampling, reproject
 from shapely import make_valid, transform
 from shapely.geometry import shape
 
-PROJECTION = CRS.from_proj4("+proj=aeqd +lat_0=42.47 +lon_0=-71.2894 +R=6371000 +units=m")
+PROJECTION = CRS.from_proj4(
+    "+proj=aeqd +lat_0=42.47 +lon_0=-71.2894 +R=6371000 +units=m")
 STEP = 8640  # two overmaps, with one map square per projected metre
 X, Y = -7603200, -6220800
 WIDTH, HEIGHT = 1320, 1250
@@ -31,8 +32,10 @@ def projected_shapes(path):
     to_atlas = Transformer.from_crs(crs, PROJECTION, always_xy=True)
     for feature in data["features"]:
         if feature["geometry"] is not None:
-            geom = make_valid(transform(shape(feature["geometry"]), to_atlas.transform,
-                                        interleaved=False))
+            geom = make_valid(transform(
+                shape(feature["geometry"]), to_atlas.transform,
+                interleaved=False,
+            ))
             if not geom.is_empty:
                 yield geom, feature["properties"]
 
@@ -52,7 +55,8 @@ def population_grid(path):
         transform = Affine(*source["affine"][:6])
         data = source["data"]
         nodata = source["nodata"]
-    to_mollweide = Transformer.from_crs(PROJECTION, "ESRI:54009", always_xy=True)
+    to_mollweide = Transformer.from_crs(
+        PROJECTION, "ESRI:54009", always_xy=True)
     points_x, points_y = np.meshgrid(
         X + (np.arange(WIDTH) + 0.5) * STEP,
         -Y - (np.arange(HEIGHT) + 0.5) * STEP,
@@ -61,17 +65,20 @@ def population_grid(path):
     rr, cc = rowcol(transform, sx.ravel(), sy.ravel())
     rr = np.asarray(rr, dtype="int32").reshape(sx.shape)
     cc = np.asarray(cc, dtype="int32").reshape(sx.shape)
-    values = data[np.clip(rr, 0, data.shape[0] - 1), np.clip(cc, 0, data.shape[1] - 1)]
+    values = data[np.clip(rr, 0, data.shape[0] - 1),
+                  np.clip(cc, 0, data.shape[1] - 1)]
     values = np.where(np.isfinite(values) & (values != nodata), values, 0)
     # Store relative density bands. Zero is unpopulated; 7 is urban.
-    return np.searchsorted([0.01, 0.1, 0.5, 2, 10, 40, 200], values, side="right")
+    return np.searchsorted(
+        [0.01, 0.1, 0.5, 2, 10, 40, 200], values, side="right")
 
 
 def forest_cover_bands(fine_cells):
     land = (fine_cells > 0) & (fine_cells != 18)
     count = land.sum(axis=(1, 3))
     trees = ((fine_cells > 0) & (fine_cells <= 6)).sum(axis=(1, 3))
-    return np.where(count > 0, 1 + (trees * 5 + count // 2) // np.maximum(count, 1), 0)
+    return np.where(count > 0, 1 + (trees * 5 + count // 2) //
+                    np.maximum(count, 1), 0)
 
 
 def landcover_grid(source):
@@ -82,7 +89,8 @@ def landcover_grid(source):
         with open_raster(source / f"landcover-{suffix}.tif") as dataset:
             reproject(dataset.read(1), finer, src_transform=dataset.transform,
                       src_crs=dataset.crs, src_nodata=0, dst_nodata=0,
-                      dst_transform=AFFINE * Affine.scale(0.25), dst_crs=PROJECTION.to_wkt(),
+                      dst_transform=AFFINE * Affine.scale(0.25),
+                      dst_crs=PROJECTION.to_wkt(),
                       init_dest_nodata=False, resampling=Resampling.nearest)
     # 0 indicates no sampling coverage; 1 through 6 encode 0–100% forest cover.
     return forest_cover_bands(finer.reshape(HEIGHT, 4, WIDTH, 4))
@@ -92,17 +100,24 @@ def build(source, definitions):
     ecoregions = list(projected_shapes(source / "eco2-main.geojson"))
     codes = sorted({props["LEVEL2"] for _, props in ecoregions})
     if not set(codes).issubset(definitions["regions"]):
-        raise ValueError("Missing vegetation profiles for " +
-                         ", ".join(sorted(set(codes) - definitions["regions"].keys())))
+        missing = sorted(set(codes) - definitions["regions"].keys())
+        missing_names = ", ".join(missing)
+        raise ValueError(f"Missing vegetation profiles for {missing_names}")
     regions = rasterize(((geom, codes.index(props["LEVEL2"]) + 1)
                          for geom, props in ecoregions),
-                        out_shape=(HEIGHT, WIDTH), transform=AFFINE, dtype="uint8")
+                        out_shape=(HEIGHT, WIDTH), transform=AFFINE,
+                        dtype="uint8")
 
     species = definitions["species"]
     if len(species) > 57:
-        raise ValueError("The generated plant range mask supports at most 57 species")
-    sonoran = rasterize(((geom, 1) for geom, _ in projected_shapes(Path(__file__).with_name("north_america_sonoran_range.geojson"))),
-                        out_shape=regions.shape, transform=AFFINE, dtype="uint8")
+        raise ValueError(
+            "The generated plant range mask supports at most 57 species")
+    sonoran_name = "north_america_sonoran_range.geojson"
+    sonoran_path = Path(__file__).with_name(sonoran_name)
+    sonoran = rasterize(
+        ((geom, 1) for geom, _ in projected_shapes(sonoran_path)),
+        out_shape=regions.shape, transform=AFFINE, dtype="uint8",
+    )
     mask = regions.astype("uint64")
     for i, plant in enumerate(species):
         if plant["range"]:
@@ -114,7 +129,8 @@ def build(source, definitions):
     area = regions != 0
     mask[~area] = 0
     # A range mask bit after all species distinguishes the Sonoran warm desert.
-    mask |= ((regions == codes.index("10.2") + 1) & (sonoran != 0)).astype("uint64") << np.uint64(len(species) + 6)
+    mask |= ((regions == codes.index("10.2") + 1) & (sonoran != 0)
+             ).astype("uint64") << np.uint64(len(species) + 6)
     density = population_grid(source / "population.npz")
     density[~area] = 0
     cover = landcover_grid(source)
@@ -126,7 +142,8 @@ def build(source, definitions):
     for pattern_id, raw in enumerate(patterns[1:], 1):
         bits = int(raw)
         code = codes[(bits & 63) - 1]
-        biome = "sonoran_desert" if bits & (1 << (len(species) + 6)) else definitions["regions"][code]
+        biome = "sonoran_desert" if bits & (
+            1 << (len(species) + 6)) else definitions["regions"][code]
         included = []
         for i, plant in enumerate(species):
             if biome in plant["biomes"] and (
@@ -154,13 +171,15 @@ def render(data):
         end = "," if key != "forest_cover" else ""
         if key in {"runs", "population", "forest_cover"}:
             lines.append(f'  "{key}": [')
-            lines.extend("    " + ",".join(json.dumps(run, separators=(",", ":"))
-                                            for run in value[i:i+12])
-                         + ("," if i + 12 < len(value) else "")
-                         for i in range(0, len(value), 12))
+            for i in range(0, len(value), 12):
+                runs = ",".join(json.dumps(run, separators=(",", ":"))
+                                for run in value[i:i + 12])
+                suffix = "," if i + 12 < len(value) else ""
+                lines.append(f"    {runs}{suffix}")
             lines.append("  ]" + end)
         else:
-            lines.append(f'  "{key}": ' + json.dumps(value, separators=(",", ":")) + ",")
+            lines.append(f'  "{key}": ' + json.dumps(value,
+                         separators=(",", ":")) + ",")
     return "\n".join(lines + ["}", ""])
 
 

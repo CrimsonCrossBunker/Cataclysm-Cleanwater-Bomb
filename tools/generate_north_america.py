@@ -53,7 +53,9 @@ def projected_features(path, project, kind, max_rank=None):
                     continue
                 clipped = make_valid(geometry).intersection(window)
                 for part in components(clipped, kind):
-                    projected = transform(part, project.transform, interleaved=False).simplify(120, preserve_topology=True)
+                    projected = transform(
+                        part, project.transform, interleaved=False
+                    ).simplify(120, preserve_topology=True)
                     yield from components(projected, kind)
 
 
@@ -67,23 +69,30 @@ def pack_polygon(polygon):
 
 
 def build(source):
-    # Spherical azimuthal equidistant: metre distances from Bedford are preserved.
+    # Spherical azimuthal equidistant: metre distances from Bedford are
+    # preserved.
     project = Transformer.from_crs(
         "EPSG:4326",
-        CRS.from_proj4(f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} +R={RADIUS} +units=m"),
+        CRS.from_proj4(
+            f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} "
+            f"+R={RADIUS} +units=m"
+        ),
         always_xy=True,
     )
     map_data = {
         "version": 1,
         "land": [pack_polygon(p) for p in projected_features(
-            source / LAYERS["land"], project, "Polygon") if p.area >= 1_000_000],
+            source / LAYERS["land"], project, "Polygon"
+        ) if p.area >= 1_000_000],
         "lakes": [pack_polygon(p) for p in projected_features(
-            source / LAYERS["lakes"], project, "Polygon", 6) if p.area >= 1_000_000],
+            source / LAYERS["lakes"], project, "Polygon", 6
+        ) if p.area >= 1_000_000],
         "rivers": [packed_points(p.coords) for p in projected_features(
             source / LAYERS["rivers"], project, "LineString", 7)],
         "cities": [],
     }
-    with shapefile.Reader(str(source / LAYERS["cities"]), encoding="utf-8") as places:
+    cities = source / LAYERS["cities"]
+    with shapefile.Reader(str(cities), encoding="utf-8") as places:
         for r in places.iterRecords():
             if r["ADM0_A3"] not in {"USA", "CAN", "MEX"} or not r["ADM1NAME"]:
                 continue
@@ -104,14 +113,16 @@ def render(data):
         lines.append(f'  "{key}": [')
         for i, entry in enumerate(data[key]):
             suffix = "," if i + 1 < len(data[key]) else ""
-            lines.append("    " + json.dumps(entry, ensure_ascii=False, separators=(",", ":")) + suffix)
+            lines.append("    " + json.dumps(entry,
+                         ensure_ascii=False, separators=(",", ":")) + suffix)
         lines.append("  ]" + ("," if key != "cities" else ""))
     return "\n".join(lines + ["}", ""])
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path, help="directory containing the four Natural Earth ZIPs")
+    parser.add_argument("source", type=Path,
+                        help="directory with the four Natural Earth ZIPs")
     parser.add_argument("output", type=Path)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
