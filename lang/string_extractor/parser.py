@@ -248,6 +248,7 @@ parsers = {
     "recipe_group": parse_recipe_group,
     "region_overlay": dummy_parser,
     "region_settings": dummy_parser,
+    "regional_climate_station": dummy_parser,
     "region_settings_river": dummy_parser,
     "region_settings_lake": dummy_parser,
     "region_settings_ocean": dummy_parser,
