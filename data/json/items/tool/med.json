@@ -65,7 +65,8 @@
     "symbol": "!",
     "color": "white",
     "flags": [ "SINGLE_USE" ],
-    "use_action": { "type": "heal", "bandages_power": 4, "bleed": 15, "move_cost": 6000 }
+    "use_action": { "type": "heal", "bandages_power": 4, "bleed": 15, "move_cost": 6000 },
+    "stackable": true
   },
   {
     "id": "bandages_makeshift",
@@ -114,7 +115,8 @@
     "symbol": "*",
     "color": "white",
     "flags": [ "SINGLE_USE" ],
-    "use_action": { "type": "heal", "bandages_power": 2, "bleed": 3, "move_cost": 3000 }
+    "use_action": { "type": "heal", "bandages_power": 2, "bleed": 3, "move_cost": 3000 },
+    "stackable": true
   },
   {
     "id": "disinrag",
@@ -203,7 +205,8 @@
     "symbol": ",",
     "color": "white",
     "flags": [ "SINGLE_USE" ],
-    "use_action": { "type": "heal", "bandages_power": 4, "bleed": 5, "move_cost": 6000 }
+    "use_action": { "type": "heal", "bandages_power": 4, "bleed": 5, "move_cost": 6000 },
+    "stackable": true
   },
   {
     "id": "liq_bandage_spray",
