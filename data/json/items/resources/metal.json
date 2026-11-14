@@ -1,5 +1,6 @@
 [
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "pipe",
     "name": { "str": "pipe" },
@@ -12,7 +13,7 @@
     "symbol": "/",
     "material": [ "steel" ],
     "qualities": [ [ "HAMMER", 1 ] ],
-    "techniques": [ "WBLOCK_2", "RAPID", "PRECISE" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "PRECISE", "MOUNTED_CHARGE" ],
     "weapon_category": [ "BATONS" ],
     "faults": [ { "fault_group": "steel_pipe_short", "weight_mult": 2 } ],
     "volume": "370 ml",

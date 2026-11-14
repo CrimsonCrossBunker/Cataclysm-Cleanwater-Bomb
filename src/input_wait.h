@@ -17,6 +17,8 @@ struct input_wait_state {
     std::optional<uint32_t> input_ms;
     // until a present deferred by the refresh throttle is due
     std::optional<uint32_t> present_ms;
+    // until the next queued sound needs playback, even while a present is pending
+    std::optional<uint32_t> sound_ms;
     // until the next platform timer CheckMessages polls for. ignored while a
     // present is pending: CheckMessages runs those timers only once
     // needupdate is clear

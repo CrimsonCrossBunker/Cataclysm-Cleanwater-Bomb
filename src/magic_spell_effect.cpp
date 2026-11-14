@@ -1830,7 +1830,7 @@ void spell_effect::guilt( const spell &sp, Creature &caster, const tripoint_bub_
         int moraleMalus = -5 * guilt_mult * ( 1.0 - killRatio );
         const int maxMalus = -250 * ( 1.0 - killRatio );
         const time_duration duration = sp.duration_turns( caster ) * ( 1.0 - killRatio );
-        const time_duration decayDelay = 3_minutes * ( 1.0 - killRatio );
+        const time_duration decayDelay = 3_hours * ( 1.0 - killRatio );
 
         bool shared_species = false;
         if( caster.is_dead_state() && caster.get_killer() != nullptr ) {

@@ -1527,7 +1527,7 @@ static void reach_attack( avatar &you )
     g->reenter_fullscreen();
 }
 
-static void fire()
+static void fire( bool sweeping = false )
 {
     avatar &you = get_avatar();
     map &here = get_map();
@@ -1537,7 +1537,11 @@ static void fire()
         return;
     }
 
-    const item_location weapon = you.get_wielded_item();
+    item_location weapon = you.get_wielded_item();
+    if( sweeping && cata_mp::is_client_mode() ) {
+        add_msg( m_info, _( "Sweeping fire is unavailable for multiplayer clients." ) );
+        return;
+    }
     const bool reach = weapon ? !weapon->is_gun() && weapon->current_reach_range( you ).first > 1 :
                        static_cast<int>( you.calculate_by_enchantment( 1,
                                          enchant_vals::mod::MELEE_RANGE_MODIFIER ) ) > 1;
@@ -1556,7 +1560,7 @@ static void fire()
         add_msg( m_info, _( "You can't use reach attacks while forcing yourself to fight unarmed." ) );
         return;
     }
-    if( reach ) {
+    if( reach && !sweeping ) {
         reach_attack( you );
         return;
     }
@@ -1576,26 +1580,34 @@ static void fire()
         add_msg( m_bad, _( "Your hands aren't suited for using firearms!" ) );
         return;
     }
-    if( weapon && is_sling_launcher( *weapon ) ) {
+    if( sweeping && weapon && weapon->is_gun() && select_full_auto_mode( *weapon ) ) {
+        avatar_action::fire_wielded_weapon( you, true );
+        return;
+    }
+    if( !sweeping && weapon && is_sling_launcher( *weapon ) ) {
         avatar_action::fire_wielded_weapon( you );
         return;
     }
     // try firing gun
-    if( weapon && weapon->is_gun() && !weapon->gun_current_mode().melee() ) {
+    if( !sweeping && weapon && weapon->is_gun() && !weapon->gun_current_mode().melee() ) {
         avatar_action::fire_wielded_weapon( you );
         return;
     }
     // try firing turrets
     if( const optional_vpart_position ovp = here.veh_at( you.pos_abs() ) ) {
         if( turret_data turret_here = ovp->vehicle().turret_query( you.pos_abs() ) ) {
-            if( avatar_action::fire_turret_manual( you, here, turret_here ) ) {
+            if( avatar_action::fire_turret_manual( you, here, turret_here, sweeping ) ) {
                 return;
             }
-        } else if( ovp.part_with_feature( VPFLAG_CONTROLS, true ) ) {
+        } else if( !sweeping && ovp.part_with_feature( VPFLAG_CONTROLS, true ) ) {
             if( ovp->vehicle().turrets_aim_and_fire_all_manual() ) {
                 return;
             }
         }
+    }
+    if( sweeping ) {
+        add_msg( m_info, _( "You need a full-auto weapon to sweep." ) );
+        return;
     }
     // offer to draw a gun from worn holster
     std::vector<std::string> options;
@@ -2215,7 +2227,7 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 ACTION_USE, ACTION_USE_WIELDED, ACTION_READ,
                 ACTION_PASS_ITEM, ACTION_HIGH_FIVE,
                 ACTION_CHAT,
-                ACTION_FIRE, ACTION_FIRE_BURST, ACTION_AUTOATTACK, ACTION_ACTIVE_TECHNIQUE,
+                ACTION_FIRE, ACTION_FIRE_BURST, ACTION_FIRE_SWEEP, ACTION_AUTOATTACK, ACTION_ACTIVE_TECHNIQUE,
                 ACTION_THROW, ACTION_THROW_WIELDED,
                 ACTION_CAST_SPELL, ACTION_RECAST_SPELL,
                 ACTION_SMASH,
@@ -3120,11 +3132,12 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
                 break;
             }
 
-        case ACTION_FIRE: {
+        case ACTION_FIRE:
+        case ACTION_FIRE_SWEEP: {
 #ifdef MP_ENABLED
                 const int pre_fire_moves = player_character.get_moves();
 #endif
-                fire();
+                fire( act == ACTION_FIRE_SWEEP );
 #ifdef MP_ENABLED
                 cata_mp::mp_client_post_action( pre_fire_moves );
 #endif

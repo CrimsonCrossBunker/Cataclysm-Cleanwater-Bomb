@@ -38,7 +38,7 @@
     "ammo": [ "metal_rail" ],
     "skill": "rifle",
     "extend": { "flags": [ "NO_TURRET" ] },
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "2 rd.", 2 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "900", 2 ] ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "metal_rail": 100 } } ],
     "ammo_effects": [ "TRAIL" ]
   }

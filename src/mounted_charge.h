@@ -19,7 +19,7 @@ struct mounted_charge_profile {
 
     bool valid() const {
         return max_steps > 0 &&
-               ( damage_type == "stab" || damage_type == "cut" ) &&
+               ( damage_type == "stab" || damage_type == "cut" || damage_type == "bash" ) &&
                multiplier_per_step >= 0.0f && multiplier_per_step <= 0.5f &&
                max_multiplier >= 1.0f && max_multiplier <= 2.0f;
     }

@@ -8,6 +8,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -3305,6 +3306,47 @@ ret_val<void> item::is_gunmod_compatible( const item &mod ) const
     return ret_val<void>::make_success();
 }
 
+static const std::string gun_rpm_turn_var = "gun_rpm_fired_turn";
+
+int gun_mode::shots_available( time_point when ) const
+{
+    if( !target || melee() ) {
+        return 0;
+    }
+    if( !full_auto() ) {
+        return qty;
+    }
+    const int64_t second = to_seconds<int64_t>( when - calendar::turn_zero );
+    if( target->get_var( gun_rpm_turn_var, std::numeric_limits<double>::lowest() ) == second ) {
+        return 0;
+    }
+    constexpr int seconds_per_minute = to_seconds<int>( 1_minutes );
+    const int64_t phase = ( second % seconds_per_minute + seconds_per_minute ) % seconds_per_minute;
+    // Count whole shots in this second without rounding away fractional shots per second.
+    return static_cast<int>( ( phase + 1 ) * rpm / seconds_per_minute -
+                             phase * rpm / seconds_per_minute );
+}
+
+int gun_mode::start_firing( time_point when ) const
+{
+    const int shots = shots_available( when );
+    if( full_auto() && shots > 0 ) {
+        target->set_var( gun_rpm_turn_var, to_seconds<double>( when - calendar::turn_zero ) );
+    }
+    return shots;
+}
+
+std::string gun_mode::firing_label( const std::string &name ) const
+{
+    if( fixed_burst() ) {
+        return string_format( _( "%s (%d rounds at %d RPM)" ), name, qty, rpm );
+    }
+    if( full_auto() ) {
+        return string_format( _( "%s (%d RPM)" ), name, rpm );
+    }
+    return string_format( "%s (%d)", name, qty );
+}
+
 std::map<gun_mode_id, gun_mode> item::gun_all_modes() const
 {
     std::map<gun_mode_id, gun_mode> res;
@@ -3330,7 +3372,7 @@ std::map<gun_mode_id, gun_mode> item::gun_all_modes() const
 
                 res.emplace( gun_mode_id( prefix + m.first.str() ), gun_mode( m.second.name(),
                              const_cast<item *>( e ),
-                             qty, m.second.flags() ) );
+                             qty, m.second.flags(), m.second.rpm() ) );
             }
 
             // non-auxiliary gunmods may provide additional modes for the base item
@@ -3339,11 +3381,11 @@ std::map<gun_mode_id, gun_mode> item::gun_all_modes() const
                 //checks for melee gunmod, points to gunmod
                 if( m.first == gun_mode_REACH ) {
                     res.emplace( m.first, gun_mode { m.second.name(), const_cast<item *>( e ),
-                                                     m.second.qty(), m.second.flags() } );
+                                                     m.second.qty(), m.second.flags(), m.second.rpm() } );
                     //otherwise points to the parent gun, not the gunmod
                 } else {
                     res.emplace( m.first, gun_mode { m.second.name(), const_cast<item *>( this ),
-                                                     m.second.qty(), m.second.flags() } );
+                                                     m.second.qty(), m.second.flags(), m.second.rpm() } );
                 }
             }
         }

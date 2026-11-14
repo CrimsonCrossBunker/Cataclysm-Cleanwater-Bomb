@@ -8,12 +8,13 @@
     "weight": "1731 g",
     "color": "light_gray",
     "material": [ "orichalcum_metal", "wood", "gold" ],
-    "techniques": [ "WBLOCK_2", "BRUTAL" ],
+    "techniques": [ "WBLOCK_2", "BRUTAL", "MOUNTED_CHARGE" ],
     "volume": "2500 ml",
     "price": "2 kUSD",
     "melee_damage": { "bash": 45, "stab": 23 }
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "gungnir",
     "copy-from": "spear_steel",
     "type": "ITEM",
@@ -21,7 +22,7 @@
     "description": "Gungnir, the spear of Odin.  It is rumored to be the perfect spear, perfectly hitting any target regardless of the wielder's strength or skill.  It feels like Odin's protecting you.",
     "weight": "1854 g",
     "material": [ "orichalcum_metal", "wood", "gold" ],
-    "techniques": [ "WBLOCK_1", "IMPALE", "SWEEP" ],
+    "techniques": [ "WBLOCK_1", "IMPALE", "SWEEP", "MOUNTED_CHARGE" ],
     "volume": "3250 ml",
     "price": "2 kUSD",
     "melee_damage": { "bash": 10, "cut": 35 }
@@ -34,7 +35,7 @@
     "description": "Gram, the sword of Sigurd.  It is rumored to be the sword that slayed the legendary dragon, Fafnir.  Once said to have cleaved Regin's anvil in half, the edge is impeccable.",
     "weight": "1132 g",
     "material": [ "orichalcum_metal", "steel" ],
-    "techniques": [ "WBLOCK_2", "PRECISE", "DIVIDE" ],
+    "techniques": [ "WBLOCK_2", "PRECISE", "DIVIDE", "MOUNTED_CHARGE" ],
     "volume": "2000 ml",
     "price": "2 kUSD",
     "melee_damage": { "bash": 6, "cut": 45 }
@@ -48,7 +49,7 @@
     "price": "1 kUSD 600 USD",
     "material": [ "steel", "gold", "orichalcum_metal" ],
     "extend": { "flags": [ "MAGIC_FOCUS", "SPELLCASTING_AID" ] },
-    "techniques": [ "WBLOCK_2", "SPIN", "RAPID", "SWEEP" ],
+    "techniques": [ "WBLOCK_2", "SPIN", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
     "weight": "1860 g",
     "use_action": { "type": "cast_spell", "spell_id": "ethereal_grasp", "no_fail": true, "level": 10, "need_wielding": true },
     "melee_damage": { "bash": 20, "cut": 35 }
@@ -87,6 +88,7 @@
     "color": "yellow"
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
     "id": "wolfsbane",
     "copy-from": "pike",
     "type": "ITEM",

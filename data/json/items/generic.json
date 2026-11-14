@@ -492,6 +492,7 @@
     "price": "200 USD",
     "price_postapoc": "10 USD",
     "material": [ "stone" ],
+    "flags": [ "SLING_PROJECTILE" ],
     "weight": "493 g",
     "volume": "250 ml",
     "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "neutral" },
@@ -3426,7 +3427,7 @@
     "material": [ "plastic" ],
     "symbol": ".",
     "color": "white",
-    "flags": [ "NO_REPAIR" ]
+    "flags": [ "NO_REPAIR", "SLING_PROJECTILE" ]
   },
   {
     "id": "salt_lick",

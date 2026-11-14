@@ -265,6 +265,8 @@ std::string action_ident( action_id act )
             return "throw_wielded";
         case ACTION_FIRE:
             return "fire";
+        case ACTION_FIRE_SWEEP:
+            return "fire_sweep";
         case ACTION_FIRE_BURST:
             return "fire_burst";
         case ACTION_CAST_SPELL:
@@ -1201,6 +1203,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_THROW );
             REGISTER_ACTION( ACTION_THROW_WIELDED );
             REGISTER_ACTION( ACTION_FIRE_BURST );
+            REGISTER_ACTION( ACTION_FIRE_SWEEP );
             REGISTER_ACTION( ACTION_PICK_STYLE );
             REGISTER_ACTION( ACTION_ACTIVE_TECHNIQUE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_TRAVEL_MODE );

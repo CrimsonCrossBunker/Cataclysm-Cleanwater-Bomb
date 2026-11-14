@@ -2,6 +2,10 @@
 #ifndef CATA_SRC_REPAIR_ACTIVITY_H
 #define CATA_SRC_REPAIR_ACTIVITY_H
 
+#include <coordinates.h>
+#include <point.h>
+#include <requirements.h>
+#include <type_id.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -18,7 +22,6 @@ class JsonValue;
 class item;
 class item_location;
 class map;
-class player_activity;
 class repair_item_actor;
 class vehicle;
 struct vehicle_control_selection;
@@ -34,7 +37,7 @@ enum class repair_repeat : int {
     CANCEL = 7,
 };
 
-repair_repeat query_repair_repeat( Character &who, const item &tool, const item &target,
+repair_repeat query_repair_repeat( Character &who, const item &tool, const item &fix,
                                    const repair_item_actor &actor, repair_repeat previous );
 
 // A portable source or a particular tool supplied by particular vehicle hardware.

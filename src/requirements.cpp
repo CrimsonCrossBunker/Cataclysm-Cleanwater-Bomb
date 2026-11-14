@@ -1448,6 +1448,10 @@ requirement_data requirement_data::disassembly_requirements() const
     []( const std::vector<tool_comp> &tcv ) {
         return tcv.empty();
     } ), ret.tools.end() );
+    ret.qualities.erase( std::remove_if( ret.qualities.begin(), ret.qualities.end(),
+    []( const std::vector<quality_requirement> &alternatives ) {
+        return alternatives.empty();
+    } ), ret.qualities.end() );
     // Remove unrecoverable components
     ret.components.erase( std::remove_if( ret.components.begin(), ret.components.end(),
     []( std::vector<item_comp> &cov ) {

@@ -23,6 +23,7 @@
 #include "avatar.h"
 #include "basecamp.h"
 #include "bodypart.h"
+#include "bresenham.h"
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_assert.h"
@@ -9685,7 +9686,7 @@ bool map::sees( const tripoint_bub_ms &F, const tripoint_bub_ms &T, const int ra
 
     // Ugly `if` for now
     if( F.z() == T.z() ) {
-        bresenham( F.xy(), T.xy(), bresenham_slope,
+        bresenham_2d( F.xy(), T.xy(), bresenham_slope,
         [this, f_transparent, &visible, &T]( const point_bub_ms & new_point ) {
             // Exit before checking the last square, it's still visible even if opaque.
             if( new_point.x() == T.x() && new_point.y() == T.y() ) {
@@ -9933,7 +9934,7 @@ std::vector<tripoint_bub_ms> map::reachable_flood_steps( const tripoint_bub_ms &
     // init to -1 as "not visited yet"
     std::vector<int> t_grid( grid_area, -1 );
     const tripoint_rel_ms origin_offset = { range, range, 0 };
-    const int initial_visit_distance = range * range; // Large unreachable value
+    const int initial_visit_distance = std::max( 1, range * range ); // Large unreachable value
 
     // Fill positions that are visitable with initial_visit_distance
     for( const tripoint_bub_ms &p : points_in_radius( f, range ) ) {
@@ -10071,7 +10072,7 @@ bool map::clear_path( const tripoint_bub_ms &f, const tripoint_bub_ms &t, const 
             return false; // Out of range!
         }
         bool is_clear = true;
-        bresenham( f.xy(), t.xy(), 0,
+        bresenham_2d( f.xy(), t.xy(), 0,
         [this, &is_clear, cost_min, cost_max, &t]( const point_bub_ms & new_point ) {
             // Exit before checking the last square, it's still reachable even if it is an obstacle.
             if( new_point.x() == t.x() && new_point.y() == t.y() ) {
