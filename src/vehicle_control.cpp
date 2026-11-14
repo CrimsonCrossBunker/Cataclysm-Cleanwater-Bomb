@@ -454,20 +454,20 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
     }
     if( harness ) {
         return position.z() == who.pos_abs().z() && rl_dist( who.pos_abs(), position ) <= 1 &&
-               target.avail_part_with_feature( at->mount_pos(), "ANIMAL_CTRL" ) >= 0;
+               target.avail_part_with_feature( at->mount_pos3(), "ANIMAL_CTRL" ) >= 0;
     }
     if( direct_turret ) {
         // The native direct-fire action operates the gun on the player's tile,
         // without acquiring driving control or unlocking the vehicle.
         return position == who.pos_abs() &&
-               target.avail_part_with_feature( at->mount_pos(), "TURRET" ) >= 0;
+               target.avail_part_with_feature( at->mount_pos3(), "TURRET" ) >= 0;
     }
     if( turret ) {
         // A gunner can operate a console while another player drives.
         return !target.is_locked && target.has_part( "TURRET" ) &&
                ( remote_source || resolve_remote_vehicle( who, here ) == &target ||
                  ( position.z() == who.pos_abs().z() && rl_dist( who.pos_abs(), position ) <= 1 &&
-                   target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0 ) );
+                   target.avail_part_with_feature( at->mount_pos3(), "CONTROLS" ) >= 0 ) );
     }
     if( tool_use ) {
         return who.pos_abs().z() == position.z() && rl_dist( who.pos_abs(), position ) <= 1 &&
@@ -512,17 +512,17 @@ bool vehicle_control_accessible( const Character &who, map &here, const vehicle 
             ( taking && who.pos_abs() != position ) ) {
             return false;
         }
-        const bool controls = target.avail_part_with_feature( at->mount_pos(), "CONTROLS" ) >= 0;
-        const bool reins = target.avail_part_with_feature( at->mount_pos(), "CONTROL_ANIMAL" ) >= 0 &&
+        const bool controls = target.avail_part_with_feature( at->mount_pos3(), "CONTROLS" ) >= 0;
+        const bool reins = target.avail_part_with_feature( at->mount_pos3(), "CONTROL_ANIMAL" ) >= 0 &&
                            target.has_engine_type( itype_id( "animal" ), false ) && target.get_harnessed_animal( here );
         if( electronics ? ( !target.is_appliance() &&
-                            target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 &&
-                            target.avail_part_with_feature( at->mount_pos(), "REMOTE_CONTROLS" ) < 0 ) :
+                            target.avail_part_with_feature( at->mount_pos3(), "CTRL_ELECTRONIC" ) < 0 &&
+                            target.avail_part_with_feature( at->mount_pos3(), "REMOTE_CONTROLS" ) < 0 ) :
             ( !controls && ( security || !reins ) ) ) {
             return false;
         }
         if( autopilot_action( action ) && action != "autopilot_stop" &&
-            target.avail_part_with_feature( at->mount_pos(), "CTRL_ELECTRONIC" ) < 0 ) {
+            target.avail_part_with_feature( at->mount_pos3(), "CTRL_ELECTRONIC" ) < 0 ) {
             return false;
         }
     }

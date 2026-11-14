@@ -4662,6 +4662,7 @@ struct vehicle_part_install_service_entry {
     item reserved_part;
     bool supplied_by_mechanic = false;
     int paid_cost = 0;
+    int mount_level = 0;
 };
 
 class vehicle_part_install_service_activity_actor : public wait_activity_actor

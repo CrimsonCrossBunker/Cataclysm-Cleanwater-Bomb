@@ -1869,7 +1869,7 @@ const zone_data *zone_manager::get_bottom_zone(
 // If you are passing new_zone from a non-const iterator, be prepared for a move! This
 // may break some iterators like map iterators if you are less specific!
 zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle,
-        const point_rel_ms &mount_point,
+        const tripoint_rel_ms &mount_point,
         zone_data &new_zone, map *pmap )
 {
     //create a vehicle loot zone
@@ -1879,7 +1879,7 @@ zone_data *zone_manager::create_vehicle_loot_zone( vehicle &vehicle,
     auto nz = vehicle.loot_zones.emplace( mount_point, new_zone );
     const vehicle_zone_locator locator{ vehicle.get_safe_reference(), nz->second.get_lifetime_identity() };
     map &here = pmap == nullptr ? get_map() : *pmap;
-    here.register_vehicle_zone( &vehicle, here.get_abs_sub().z() );
+    here.register_vehicle_zone( &vehicle );
     if( !rebind_vehicle_zone_locators( locator ) && previous_owner == nullptr ) {
         added_vzones.push_back( locator );
     }
@@ -1909,7 +1909,7 @@ zone_data *zone_manager::add( const std::string &name, const zone_type_id &type,
                     return nullptr;
                 }
 
-                return create_vehicle_loot_zone( vp->vehicle(), vp->mount_pos(), new_zone, pmap );
+                return create_vehicle_loot_zone( vp->vehicle(), vp->mount_pos3(), new_zone, pmap );
             }
         }
     }
@@ -2398,8 +2398,8 @@ void zone_manager::revert_vzones()
         if( const std::optional<vpart_reference> vp = here.veh_at( pos ).cargo() ) {
             zone.set_is_vehicle( true );
             zone.set_vehicle_owner( vp->vehicle() );
-            vp->vehicle().loot_zones.emplace( vp->mount_pos(), zone );
-            here.register_vehicle_zone( &vp->vehicle(), here.get_abs_sub().z() );
+            vp->vehicle().loot_zones.emplace( vp->mount_pos3(), zone );
+            here.register_vehicle_zone( &vp->vehicle() );
             cache_vzones();
         }
     }

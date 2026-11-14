@@ -125,6 +125,7 @@ class vpart_position
          */
         // TODO: change to return tripoint.
         point_rel_ms mount_pos() const;
+        tripoint_rel_ms mount_pos3() const;
 
         // implementation required for using as std::map key
         bool operator<( const vpart_position &other ) const;

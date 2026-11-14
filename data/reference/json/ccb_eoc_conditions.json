@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:e89ad395c4edfe3f97c532135f8722a1387b2c07bc677377de1b7b0e5c252f4b",
+    "source_fingerprint": "sha256:59e22d23d848c655acc8e486ea35e1208f4046bd0a9d758ca7ccdc3c64e57876",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -132,7 +132,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 10
+            "line": 11
           }
         ],
         "confidence": "lexical_only"
@@ -227,7 +227,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1116
+            "line": 1117
           }
         ],
         "confidence": "lexical_only"
@@ -320,7 +320,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 105
+            "line": 106
           }
         ],
         "confidence": "lexical_only"
@@ -413,7 +413,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 610
+            "line": 611
           }
         ],
         "confidence": "lexical_only"
@@ -506,7 +506,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1400
+            "line": 1401
           }
         ],
         "confidence": "lexical_only"
@@ -599,7 +599,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 554
+            "line": 555
           }
         ],
         "confidence": "lexical_only"
@@ -780,7 +780,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4033
+            "line": 4034
           }
         ],
         "confidence": "lexical_only"
@@ -873,7 +873,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 98
+            "line": 99
           }
         ],
         "confidence": "lexical_only"
@@ -966,7 +966,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1753
+            "line": 1754
           }
         ],
         "confidence": "lexical_only"
@@ -1059,7 +1059,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MISSIONS_JSON.md",
-            "line": 357
+            "line": 358
           }
         ],
         "confidence": "lexical_only"
@@ -1149,7 +1149,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1120
+            "line": 1121
           }
         ],
         "confidence": "lexical_only"
@@ -1242,7 +1242,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 100
+            "line": 101
           }
         ],
         "confidence": "lexical_only"
@@ -1335,7 +1335,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MISSIONS_JSON.md",
-            "line": 362
+            "line": 363
           }
         ],
         "confidence": "lexical_only"
@@ -1430,7 +1430,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1121
+            "line": 1122
           }
         ],
         "confidence": "lexical_only"
@@ -1613,7 +1613,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1119
+            "line": 1120
           }
         ],
         "confidence": "lexical_only"
@@ -1703,7 +1703,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1148
+            "line": 1149
           }
         ],
         "confidence": "lexical_only"
@@ -1796,7 +1796,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 571
+            "line": 572
           }
         ],
         "confidence": "lexical_only"
@@ -1889,7 +1889,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1133
+            "line": 1134
           }
         ],
         "confidence": "lexical_only"
@@ -1982,7 +1982,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4053
+            "line": 4054
           }
         ],
         "confidence": "lexical_only"
@@ -2075,7 +2075,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1164
+            "line": 1165
           }
         ],
         "confidence": "lexical_only"
@@ -2163,7 +2163,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1757
+            "line": 1758
           }
         ],
         "confidence": "lexical_only"
@@ -2256,7 +2256,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 4053
+            "line": 4054
           }
         ],
         "confidence": "lexical_only"
@@ -2349,7 +2349,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 247
+            "line": 248
           }
         ],
         "confidence": "lexical_only"
@@ -2442,7 +2442,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1547
+            "line": 1548
           }
         ],
         "confidence": "lexical_only"
@@ -2535,7 +2535,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1330
+            "line": 1331
           }
         ],
         "confidence": "lexical_only"
@@ -2628,7 +2628,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1330
+            "line": 1331
           }
         ],
         "confidence": "lexical_only"
@@ -2721,7 +2721,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 490
+            "line": 491
           }
         ],
         "confidence": "lexical_only"
@@ -2814,7 +2814,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1359
+            "line": 1360
           }
         ],
         "confidence": "lexical_only"
@@ -2907,7 +2907,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1363
+            "line": 1364
           }
         ],
         "confidence": "lexical_only"
@@ -3088,7 +3088,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1330
+            "line": 1331
           }
         ],
         "confidence": "lexical_only"
@@ -3181,7 +3181,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 490
+            "line": 491
           }
         ],
         "confidence": "lexical_only"
@@ -3274,7 +3274,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 109
+            "line": 110
           }
         ],
         "confidence": "lexical_only"
@@ -3369,7 +3369,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1126
+            "line": 1127
           }
         ],
         "confidence": "lexical_only"
@@ -3464,7 +3464,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1128
+            "line": 1129
           }
         ],
         "confidence": "lexical_only"
@@ -3559,7 +3559,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1122
+            "line": 1123
           }
         ],
         "confidence": "lexical_only"
@@ -3652,7 +3652,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1129
+            "line": 1130
           }
         ],
         "confidence": "lexical_only"
@@ -3747,7 +3747,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1127
+            "line": 1128
           }
         ],
         "confidence": "lexical_only"
@@ -3840,7 +3840,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 617
+            "line": 618
           }
         ],
         "confidence": "lexical_only"
@@ -3934,7 +3934,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 40
+            "line": 11
           }
         ],
         "confidence": "lexical_only"
@@ -4029,7 +4029,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 591
+            "line": 592
           }
         ],
         "confidence": "lexical_only"
@@ -4124,7 +4124,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1131
+            "line": 1132
           }
         ],
         "confidence": "lexical_only"
@@ -4219,7 +4219,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1132
+            "line": 1133
           }
         ],
         "confidence": "lexical_only"
@@ -4314,7 +4314,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 362
+            "line": 363
           }
         ],
         "confidence": "lexical_only"
@@ -4404,7 +4404,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1116
+            "line": 1117
           }
         ],
         "confidence": "lexical_only"
@@ -4499,7 +4499,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1134
+            "line": 1135
           }
         ],
         "confidence": "lexical_only"
@@ -4594,7 +4594,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 537
+            "line": 538
           }
         ],
         "confidence": "lexical_only"
@@ -4684,7 +4684,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 936
+            "line": 937
           }
         ],
         "confidence": "lexical_only"
@@ -4774,7 +4774,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1624
+            "line": 1625
           }
         ],
         "confidence": "lexical_only"
@@ -4864,7 +4864,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1592
+            "line": 1593
           }
         ],
         "confidence": "lexical_only"
@@ -4954,7 +4954,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1144
+            "line": 1145
           }
         ],
         "confidence": "lexical_only"
@@ -5049,7 +5049,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1467
+            "line": 1468
           }
         ],
         "confidence": "lexical_only"
@@ -5139,7 +5139,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 915
+            "line": 916
           }
         ],
         "confidence": "lexical_only"
@@ -5229,7 +5229,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1145
+            "line": 1146
           }
         ],
         "confidence": "lexical_only"
@@ -5319,7 +5319,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1144
+            "line": 1145
           }
         ],
         "confidence": "lexical_only"
@@ -5409,7 +5409,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 984
+            "line": 985
           }
         ],
         "confidence": "lexical_only"
@@ -5504,7 +5504,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1005
+            "line": 1006
           }
         ],
         "confidence": "lexical_only"
@@ -5599,7 +5599,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1143
+            "line": 1144
           }
         ],
         "confidence": "lexical_only"
@@ -5689,7 +5689,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1223
+            "line": 1224
           }
         ],
         "confidence": "lexical_only"
@@ -5784,7 +5784,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 320
+            "line": 321
           }
         ],
         "confidence": "lexical_only"
@@ -5879,7 +5879,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1135
+            "line": 1136
           }
         ],
         "confidence": "lexical_only"
@@ -5974,7 +5974,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1136
+            "line": 1137
           }
         ],
         "confidence": "lexical_only"
@@ -6085,7 +6085,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1123
+            "line": 1124
           }
         ],
         "confidence": "lexical_only"
@@ -6180,7 +6180,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 865
+            "line": 866
           }
         ],
         "confidence": "lexical_only"
@@ -6275,7 +6275,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 390
+            "line": 391
           }
         ],
         "confidence": "lexical_only"
@@ -6453,7 +6453,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1120
+            "line": 1121
           }
         ],
         "confidence": "lexical_only"
@@ -6548,7 +6548,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 844
+            "line": 845
           }
         ],
         "confidence": "lexical_only"
@@ -6643,7 +6643,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1140
+            "line": 1141
           }
         ],
         "confidence": "lexical_only"
@@ -6735,7 +6735,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -6830,7 +6830,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 69
+            "line": 70
           }
         ],
         "confidence": "lexical_only"
@@ -6925,7 +6925,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 480
+            "line": 481
           }
         ],
         "confidence": "lexical_only"
@@ -7022,7 +7022,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -7117,7 +7117,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 699
+            "line": 700
           }
         ],
         "confidence": "lexical_only"
@@ -7207,7 +7207,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 721
+            "line": 722
           }
         ],
         "confidence": "lexical_only"
@@ -7297,7 +7297,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1043
+            "line": 1044
           }
         ],
         "confidence": "lexical_only"
@@ -7387,7 +7387,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 699
+            "line": 700
           }
         ],
         "confidence": "lexical_only"
@@ -7477,7 +7477,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 779
+            "line": 780
           }
         ],
         "confidence": "lexical_only"
@@ -7652,7 +7652,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 450
+            "line": 451
           }
         ],
         "confidence": "lexical_only"
@@ -7827,7 +7827,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1119
+            "line": 1120
           }
         ],
         "confidence": "lexical_only"
@@ -7917,7 +7917,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 498
+            "line": 499
           }
         ],
         "confidence": "lexical_only"
@@ -8009,7 +8009,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 682
+            "line": 683
           }
         ],
         "confidence": "lexical_only"
@@ -8106,7 +8106,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -8196,7 +8196,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1148
+            "line": 1149
           }
         ],
         "confidence": "lexical_only"
@@ -8286,7 +8286,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 638
+            "line": 639
           }
         ],
         "confidence": "lexical_only"
@@ -8376,7 +8376,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 899
+            "line": 900
           }
         ],
         "confidence": "lexical_only"
@@ -8466,7 +8466,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 744
+            "line": 745
           }
         ],
         "confidence": "lexical_only"
@@ -8561,7 +8561,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 521
+            "line": 522
           }
         ],
         "confidence": "lexical_only"
@@ -8738,7 +8738,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -8833,7 +8833,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 15
+            "line": 16
           }
         ],
         "confidence": "lexical_only"
@@ -8928,7 +8928,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 416
+            "line": 417
           }
         ],
         "confidence": "lexical_only"
@@ -9023,7 +9023,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 963
+            "line": 964
           }
         ],
         "confidence": "lexical_only"
@@ -9113,7 +9113,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1127
+            "line": 1128
           }
         ],
         "confidence": "lexical_only"
@@ -9203,7 +9203,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1077
+            "line": 1078
           }
         ],
         "confidence": "lexical_only"
@@ -9298,7 +9298,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1109
+            "line": 1110
           }
         ],
         "confidence": "lexical_only"
@@ -9388,7 +9388,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1093
+            "line": 1094
           }
         ],
         "confidence": "lexical_only"
@@ -9483,7 +9483,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1061
+            "line": 1062
           }
         ],
         "confidence": "lexical_only"
@@ -9578,7 +9578,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1137
+            "line": 1138
           }
         ],
         "confidence": "lexical_only"
@@ -9673,7 +9673,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1186
+            "line": 1187
           }
         ],
         "confidence": "lexical_only"
@@ -9768,7 +9768,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -9858,7 +9858,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1721
+            "line": 1722
           }
         ],
         "confidence": "lexical_only"
@@ -9953,7 +9953,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -10043,7 +10043,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1165
+            "line": 1166
           }
         ],
         "confidence": "lexical_only"
@@ -10133,7 +10133,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1505
+            "line": 1506
           }
         ],
         "confidence": "lexical_only"
@@ -10223,7 +10223,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1657
+            "line": 1658
           }
         ],
         "confidence": "lexical_only"
@@ -10313,7 +10313,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1640
+            "line": 1641
           }
         ],
         "confidence": "lexical_only"
@@ -10403,7 +10403,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1608
+            "line": 1609
           }
         ],
         "confidence": "lexical_only"
@@ -10493,7 +10493,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -10583,7 +10583,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1265
+            "line": 1266
           }
         ],
         "confidence": "lexical_only"
@@ -10673,7 +10673,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1737
+            "line": 1738
           }
         ],
         "confidence": "lexical_only"
@@ -10763,7 +10763,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -10858,7 +10858,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -10953,7 +10953,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -11043,7 +11043,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1234
           }
         ],
         "confidence": "lexical_only"
@@ -11133,7 +11133,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1250
           }
         ],
         "confidence": "lexical_only"
@@ -11223,7 +11223,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1705
+            "line": 1706
           }
         ],
         "confidence": "lexical_only"
@@ -11318,7 +11318,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1234
           }
         ],
         "confidence": "lexical_only"
@@ -11413,7 +11413,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1250
           }
         ],
         "confidence": "lexical_only"
@@ -11508,7 +11508,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1164
+            "line": 1165
           }
         ],
         "confidence": "lexical_only"
@@ -11598,7 +11598,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1576
+            "line": 1577
           }
         ],
         "confidence": "lexical_only"
@@ -11794,7 +11794,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1689
+            "line": 1690
           }
         ],
         "confidence": "lexical_only"
@@ -11884,7 +11884,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1673
+            "line": 1674
           }
         ],
         "confidence": "lexical_only"
@@ -11974,7 +11974,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 432
+            "line": 433
           }
         ],
         "confidence": "lexical_only"
@@ -12069,7 +12069,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1124
+            "line": 1125
           }
         ],
         "confidence": "lexical_only"
@@ -12164,7 +12164,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1165
+            "line": 1166
           }
         ],
         "confidence": "lexical_only"
@@ -12254,7 +12254,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -12349,7 +12349,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1207
+            "line": 1208
           }
         ],
         "confidence": "lexical_only"
@@ -12534,7 +12534,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 320
+            "line": 321
           }
         ],
         "confidence": "lexical_only"
@@ -12624,7 +12624,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1126
+            "line": 1127
           }
         ],
         "confidence": "lexical_only"
@@ -12714,7 +12714,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1128
+            "line": 1129
           }
         ],
         "confidence": "lexical_only"
@@ -12804,7 +12804,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1122
+            "line": 1123
           }
         ],
         "confidence": "lexical_only"
@@ -12894,7 +12894,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1127
+            "line": 1128
           }
         ],
         "confidence": "lexical_only"
@@ -12989,7 +12989,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1141
+            "line": 1142
           }
         ],
         "confidence": "lexical_only"
@@ -13084,7 +13084,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 585
+            "line": 586
           }
         ],
         "confidence": "lexical_only"
@@ -13174,7 +13174,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1147
+            "line": 1148
           }
         ],
         "confidence": "lexical_only"
@@ -13264,7 +13264,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1281
+            "line": 1282
           }
         ],
         "confidence": "lexical_only"
@@ -13357,7 +13357,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1155
+            "line": 1156
           }
         ],
         "confidence": "lexical_only"
@@ -13452,7 +13452,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1146
+            "line": 1147
           }
         ],
         "confidence": "lexical_only"
@@ -13717,7 +13717,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1130
+            "line": 1131
           }
         ],
         "confidence": "lexical_only"
@@ -13812,7 +13812,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1138
+            "line": 1139
           }
         ],
         "confidence": "lexical_only"
@@ -13992,7 +13992,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1139
+            "line": 1140
           }
         ],
         "confidence": "lexical_only"
@@ -14082,7 +14082,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 465
+            "line": 466
           }
         ],
         "confidence": "lexical_only"
@@ -14172,7 +14172,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1125
+            "line": 1126
           }
         ],
         "confidence": "lexical_only"
@@ -14267,7 +14267,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1166
+            "line": 1167
           }
         ],
         "confidence": "lexical_only"
@@ -14361,7 +14361,7 @@
         "evidence": [
           {
             "path": "doc/JSON/ARTIFACTS.md",
-            "line": 38
+            "line": 11
           }
         ],
         "confidence": "lexical_only"
@@ -14544,7 +14544,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1451
+            "line": 1452
           }
         ],
         "confidence": "lexical_only"
@@ -14639,7 +14639,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1451
+            "line": 1452
           }
         ],
         "confidence": "lexical_only"
@@ -14732,7 +14732,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1149
+            "line": 1150
           }
         ],
         "confidence": "lexical_only"
@@ -14825,7 +14825,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1761
+            "line": 1762
           }
         ],
         "confidence": "lexical_only"
@@ -14915,7 +14915,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1142
+            "line": 1143
           }
         ],
         "confidence": "lexical_only"
@@ -15010,7 +15010,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1108
+            "line": 1109
           }
         ],
         "confidence": "lexical_only"
@@ -15105,7 +15105,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 362
+            "line": 363
           }
         ],
         "confidence": "lexical_only"
@@ -15209,7 +15209,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1116
+            "line": 1117
           }
         ],
         "confidence": "lexical_only"
@@ -15299,7 +15299,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1134
+            "line": 1135
           }
         ],
         "confidence": "lexical_only"
@@ -15389,7 +15389,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 537
+            "line": 538
           }
         ],
         "confidence": "lexical_only"
@@ -15484,7 +15484,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 936
+            "line": 937
           }
         ],
         "confidence": "lexical_only"
@@ -15574,7 +15574,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1624
+            "line": 1625
           }
         ],
         "confidence": "lexical_only"
@@ -15664,7 +15664,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1592
+            "line": 1593
           }
         ],
         "confidence": "lexical_only"
@@ -15759,7 +15759,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1144
+            "line": 1145
           }
         ],
         "confidence": "lexical_only"
@@ -15854,7 +15854,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1467
+            "line": 1468
           }
         ],
         "confidence": "lexical_only"
@@ -15949,7 +15949,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 915
+            "line": 916
           }
         ],
         "confidence": "lexical_only"
@@ -16039,7 +16039,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1145
+            "line": 1146
           }
         ],
         "confidence": "lexical_only"
@@ -16129,7 +16129,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1144
+            "line": 1145
           }
         ],
         "confidence": "lexical_only"
@@ -16224,7 +16224,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 984
+            "line": 985
           }
         ],
         "confidence": "lexical_only"
@@ -16319,7 +16319,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1005
+            "line": 1006
           }
         ],
         "confidence": "lexical_only"
@@ -16409,7 +16409,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1143
+            "line": 1144
           }
         ],
         "confidence": "lexical_only"
@@ -16504,7 +16504,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1223
+            "line": 1224
           }
         ],
         "confidence": "lexical_only"
@@ -16599,7 +16599,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 118
+            "line": 119
           }
         ],
         "confidence": "lexical_only"
@@ -16694,7 +16694,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1135
+            "line": 1136
           }
         ],
         "confidence": "lexical_only"
@@ -16784,7 +16784,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1136
+            "line": 1137
           }
         ],
         "confidence": "lexical_only"
@@ -16890,7 +16890,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1123
+            "line": 1124
           }
         ],
         "confidence": "lexical_only"
@@ -16985,7 +16985,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 865
+            "line": 866
           }
         ],
         "confidence": "lexical_only"
@@ -17080,7 +17080,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 390
+            "line": 391
           }
         ],
         "confidence": "lexical_only"
@@ -17184,7 +17184,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1120
+            "line": 1121
           }
         ],
         "confidence": "lexical_only"
@@ -17279,7 +17279,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 844
+            "line": 845
           }
         ],
         "confidence": "lexical_only"
@@ -17372,7 +17372,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1109
+            "line": 1110
           }
         ],
         "confidence": "lexical_only"
@@ -17467,7 +17467,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 734
+            "line": 735
           }
         ],
         "confidence": "lexical_only"
@@ -17557,7 +17557,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1140
+            "line": 1141
           }
         ],
         "confidence": "lexical_only"
@@ -17654,7 +17654,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -17749,7 +17749,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 247
+            "line": 248
           }
         ],
         "confidence": "lexical_only"
@@ -17844,7 +17844,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1110
+            "line": 1111
           }
         ],
         "confidence": "lexical_only"
@@ -17939,7 +17939,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 480
+            "line": 481
           }
         ],
         "confidence": "lexical_only"
@@ -18036,7 +18036,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -18131,7 +18131,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 699
+            "line": 700
           }
         ],
         "confidence": "lexical_only"
@@ -18226,7 +18226,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 721
+            "line": 722
           }
         ],
         "confidence": "lexical_only"
@@ -18321,7 +18321,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1043
+            "line": 1044
           }
         ],
         "confidence": "lexical_only"
@@ -18416,7 +18416,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 699
+            "line": 700
           }
         ],
         "confidence": "lexical_only"
@@ -18511,7 +18511,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 779
+            "line": 780
           }
         ],
         "confidence": "lexical_only"
@@ -18705,7 +18705,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 450
+            "line": 451
           }
         ],
         "confidence": "lexical_only"
@@ -18798,7 +18798,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 67
+            "line": 68
           }
         ],
         "confidence": "lexical_only"
@@ -18992,7 +18992,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1119
+            "line": 1120
           }
         ],
         "confidence": "lexical_only"
@@ -19082,7 +19082,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 498
+            "line": 499
           }
         ],
         "confidence": "lexical_only"
@@ -19174,7 +19174,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 682
+            "line": 683
           }
         ],
         "confidence": "lexical_only"
@@ -19271,7 +19271,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 666
+            "line": 667
           }
         ],
         "confidence": "lexical_only"
@@ -19375,7 +19375,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1148
+            "line": 1149
           }
         ],
         "confidence": "lexical_only"
@@ -19470,7 +19470,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 638
+            "line": 639
           }
         ],
         "confidence": "lexical_only"
@@ -19565,7 +19565,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 899
+            "line": 900
           }
         ],
         "confidence": "lexical_only"
@@ -19660,7 +19660,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 744
+            "line": 745
           }
         ],
         "confidence": "lexical_only"
@@ -19755,7 +19755,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 521
+            "line": 522
           }
         ],
         "confidence": "lexical_only"
@@ -19942,7 +19942,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 226
+            "line": 227
           }
         ],
         "confidence": "lexical_only"
@@ -20037,7 +20037,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 218
+            "line": 219
           }
         ],
         "confidence": "lexical_only"
@@ -20127,7 +20127,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 416
+            "line": 417
           }
         ],
         "confidence": "lexical_only"
@@ -20222,7 +20222,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 963
+            "line": 964
           }
         ],
         "confidence": "lexical_only"
@@ -20317,7 +20317,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1127
+            "line": 1128
           }
         ],
         "confidence": "lexical_only"
@@ -20412,7 +20412,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 957
+            "line": 958
           }
         ],
         "confidence": "lexical_only"
@@ -20507,7 +20507,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1109
+            "line": 1110
           }
         ],
         "confidence": "lexical_only"
@@ -20602,7 +20602,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1093
+            "line": 1094
           }
         ],
         "confidence": "lexical_only"
@@ -20697,7 +20697,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 296
+            "line": 297
           }
         ],
         "confidence": "lexical_only"
@@ -20787,7 +20787,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1137
+            "line": 1138
           }
         ],
         "confidence": "lexical_only"
@@ -20882,7 +20882,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1186
+            "line": 1187
           }
         ],
         "confidence": "lexical_only"
@@ -20977,7 +20977,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -21067,7 +21067,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1721
+            "line": 1722
           }
         ],
         "confidence": "lexical_only"
@@ -21162,7 +21162,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -21257,7 +21257,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 118
+            "line": 119
           }
         ],
         "confidence": "lexical_only"
@@ -21347,7 +21347,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1505
+            "line": 1506
           }
         ],
         "confidence": "lexical_only"
@@ -21437,7 +21437,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1657
+            "line": 1658
           }
         ],
         "confidence": "lexical_only"
@@ -21527,7 +21527,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1640
+            "line": 1641
           }
         ],
         "confidence": "lexical_only"
@@ -21617,7 +21617,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1608
+            "line": 1609
           }
         ],
         "confidence": "lexical_only"
@@ -21712,7 +21712,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -21807,7 +21807,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1265
+            "line": 1266
           }
         ],
         "confidence": "lexical_only"
@@ -21902,7 +21902,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1737
+            "line": 1738
           }
         ],
         "confidence": "lexical_only"
@@ -21997,7 +21997,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -22092,7 +22092,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -22187,7 +22187,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -22282,7 +22282,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1234
           }
         ],
         "confidence": "lexical_only"
@@ -22372,7 +22372,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1250
           }
         ],
         "confidence": "lexical_only"
@@ -22462,7 +22462,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1705
+            "line": 1706
           }
         ],
         "confidence": "lexical_only"
@@ -22557,7 +22557,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1233
+            "line": 1234
           }
         ],
         "confidence": "lexical_only"
@@ -22652,7 +22652,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1249
+            "line": 1250
           }
         ],
         "confidence": "lexical_only"
@@ -22747,7 +22747,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 297
+            "line": 298
           }
         ],
         "confidence": "lexical_only"
@@ -22837,7 +22837,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1576
+            "line": 1577
           }
         ],
         "confidence": "lexical_only"
@@ -23028,7 +23028,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1689
+            "line": 1690
           }
         ],
         "confidence": "lexical_only"
@@ -23118,7 +23118,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1673
+            "line": 1674
           }
         ],
         "confidence": "lexical_only"
@@ -23208,7 +23208,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 432
+            "line": 433
           }
         ],
         "confidence": "lexical_only"
@@ -23298,7 +23298,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1124
+            "line": 1125
           }
         ],
         "confidence": "lexical_only"
@@ -23393,7 +23393,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1165
+            "line": 1166
           }
         ],
         "confidence": "lexical_only"
@@ -23483,7 +23483,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 336
+            "line": 337
           }
         ],
         "confidence": "lexical_only"
@@ -23573,7 +23573,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1207
+            "line": 1208
           }
         ],
         "confidence": "lexical_only"
@@ -23668,7 +23668,7 @@
         "evidence": [
           {
             "path": "doc/JSON/MISSIONS_JSON.md",
-            "line": 357
+            "line": 358
           }
         ],
         "confidence": "lexical_only"
@@ -23761,7 +23761,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 67
+            "line": 68
           }
         ],
         "confidence": "lexical_only"
@@ -23856,7 +23856,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 320
+            "line": 321
           }
         ],
         "confidence": "lexical_only"
@@ -23960,7 +23960,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1126
+            "line": 1127
           }
         ],
         "confidence": "lexical_only"
@@ -24064,7 +24064,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1128
+            "line": 1129
           }
         ],
         "confidence": "lexical_only"
@@ -24168,7 +24168,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1122
+            "line": 1123
           }
         ],
         "confidence": "lexical_only"
@@ -24272,7 +24272,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1127
+            "line": 1128
           }
         ],
         "confidence": "lexical_only"
@@ -24455,7 +24455,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 257
+            "line": 258
           }
         ],
         "confidence": "lexical_only"
@@ -24630,7 +24630,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1147
+            "line": 1148
           }
         ],
         "confidence": "lexical_only"
@@ -24725,7 +24725,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1281
+            "line": 1282
           }
         ],
         "confidence": "lexical_only"
@@ -24815,7 +24815,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1146
+            "line": 1147
           }
         ],
         "confidence": "lexical_only"
@@ -24993,7 +24993,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1494
+            "line": 1495
           }
         ],
         "confidence": "lexical_only"
@@ -25088,7 +25088,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 1525
+            "line": 1526
           }
         ],
         "confidence": "lexical_only"
@@ -25263,7 +25263,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1138
+            "line": 1139
           }
         ],
         "confidence": "lexical_only"
@@ -25438,7 +25438,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1139
+            "line": 1140
           }
         ],
         "confidence": "lexical_only"
@@ -25533,7 +25533,7 @@
         "evidence": [
           {
             "path": "doc/JSON/EFFECT_ON_CONDITION.md",
-            "line": 465
+            "line": 466
           }
         ],
         "confidence": "lexical_only"
@@ -25623,7 +25623,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1125
+            "line": 1126
           }
         ],
         "confidence": "lexical_only"
@@ -25716,7 +25716,7 @@
         "evidence": [
           {
             "path": "doc/JSON/NPCs.md",
-            "line": 1167
+            "line": 1168
           }
         ],
         "confidence": "lexical_only"

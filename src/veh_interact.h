@@ -102,12 +102,14 @@ class veh_interact
             std::vector<point_rel_ms> mounts;
             vpart_id part_id;
             int part_index = -1;
+            int mount_level = 0;
         };
 
-        static void run( map &here,  vehicle &veh, const point_rel_ms &p );
+        static void run( map &here, vehicle &veh, const point_rel_ms &p, int deck = -1 );
 
         // Hidden parts must remain selectable even when no visible frame remains.
         static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );
+        static int part_at_mount( const vehicle &veh, const tripoint_rel_ms &mount );
 
         // Inventory requirements are independent of the selected vehicle tile.
         static std::map<const vpart_info *, bool> installation_requirement_availability(
@@ -132,11 +134,12 @@ class veh_interact
 
         /** Structural/content denial for a service installation; skills and resources are ignored. */
         static std::optional<std::string> service_installation_denial( const vehicle &veh,
-                const point_rel_ms &mount, const vpart_info &vpart );
+                const point_rel_ms &mount, const vpart_info &vpart, int mount_level = 0 );
 
         /** Map obstruction denial, checked against the live vehicle rather than a planning copy. */
         static std::optional<std::string> service_installation_position_denial( map &here,
-                const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart );
+                const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart,
+                int mount_level = 0 );
 
         static constexpr int service_installation_area_limit = 4096;
 
@@ -144,7 +147,8 @@ class veh_interact
          * Returns no mounts for a rectangle larger than service_installation_area_limit.
          */
         static std::vector<point_rel_ms> service_installation_mounts( map &here, const vehicle &veh,
-                const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart );
+                const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart,
+                int mount_level = 0 );
 
         /** Structural/content denial for a service removal; skills and resources are ignored. */
         static std::optional<std::string> service_removal_denial( const vehicle &veh,
@@ -158,6 +162,8 @@ class veh_interact
         // functionally, this works as the cursor position for the top-down vehicle view
         // see vehicle::build_interact_menu for initial assignment
         point_rel_ms cursor_vp_mount = point_rel_ms::zero;
+        int cursor_level = 0;
+        void change_deck( map &here, int dz );
         /* starting offset for vehicle parts description display and max offset for scrolling */
         int start_at = 0;
         int start_limit = 0;

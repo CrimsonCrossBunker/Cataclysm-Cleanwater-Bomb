@@ -4112,7 +4112,8 @@ void item::link_data::serialize( JsonOut &jsout ) const
     jsout.member( "link_i_state", source );
     jsout.member( "link_t_state", target );
     jsout.member( "link_t_abs_pos", t_abs_pos );
-    jsout.member( "link_t_mount", t_mount );
+    jsout.member( "link_t_mount", t_mount.xy() );
+    jsout.member( "link_t_mount_level", t_mount.z() );
     jsout.member( "link_length", length );
     jsout.member( "link_max_length", max_length );
     jsout.member( "link_last_processed", last_processed );
@@ -4129,7 +4130,9 @@ void item::link_data::deserialize( const JsonObject &data )
     data.read( "link_i_state", source );
     data.read( "link_t_state", target );
     data.read( "link_t_abs_pos", t_abs_pos );
-    data.read( "link_t_mount", t_mount );
+    point_rel_ms mount;
+    data.read( "link_t_mount", mount );
+    t_mount = tripoint_rel_ms( mount, data.get_int( "link_t_mount_level", 0 ) );
     data.read( "link_length", length );
     data.read( "link_max_length", max_length );
     data.read( "link_last_processed", last_processed );
@@ -4777,6 +4780,12 @@ void vehicle_part::deserialize( const JsonObject &data )
 
     data.read( "mount_dx", mount.x() );
     data.read( "mount_dy", mount.y() );
+    data.read( "mount_level", mount_level );
+    if( mount_level < 0 || mount_level > 10 ) {
+        data.throw_error_at( "mount_level", "vehicle deck out of range" );
+    }
+    precalc[0].z() = mount_level;
+    precalc[1].z() = mount_level;
     data.read( "open", open );
     int direction_int;
     data.read( "direction", direction_int );
@@ -4838,6 +4847,9 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "base", base );
     json.member( "mount_dx", mount.x() );
     json.member( "mount_dy", mount.y() );
+    if( mount_level != 0 ) {
+        json.member( "mount_level", mount_level );
+    }
     json.member( "open", open );
     json.member( "direction", std::lround( to_degrees( direction ) ) );
     json.member( "blood", blood );
@@ -4909,6 +4921,7 @@ void label::deserialize( const JsonObject &data )
     data.read( "x", x() );
     data.read( "y", y() );
     data.read( "text", text );
+    data.read( "z", mount_level );
 }
 
 void label::serialize( JsonOut &json ) const
@@ -4917,6 +4930,9 @@ void label::serialize( JsonOut &json ) const
     json.member( "x", x() );
     json.member( "y", y() );
     json.member( "text", text );
+    if( mount_level != 0 ) {
+        json.member( "z", mount_level );
+    }
     json.end_object();
 }
 
@@ -5032,14 +5048,15 @@ void vehicle::deserialize( const JsonObject &data )
 
     refresh( );
 
-    point p;
-    zone_data zd;
     for( JsonObject sdata : data.get_array( "zones" ) ) {
         sdata.allow_omitted_members();
+        point_rel_ms p;
+        zone_data zd;
         sdata.read( "point", p );
+        const int mount_level = sdata.get_int( "mount_level", 0 );
         sdata.read( "zone", zd );
         zd.set_vehicle_owner( *this );
-        loot_zones.emplace( p, zd );
+        loot_zones.emplace( tripoint_rel_ms( p, mount_level ), zd );
     }
     data.read( "other_tow_point", tow_data.other_towing_point );
     // Note that it's possible for a vehicle to be loaded midway
@@ -5115,7 +5132,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.start_array();
     for( auto const &z : loot_zones ) {
         json.start_object();
-        json.member( "point", z.first );
+        json.member( "point", z.first.xy() );
+        json.member( "mount_level", z.first.z() );
         json.member( "zone", z.second );
         json.end_object();
     }

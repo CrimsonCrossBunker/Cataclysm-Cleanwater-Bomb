@@ -921,7 +921,7 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
     tripoint_bub_ms pos = here.get_bub( p );
     // Vertical collisions need to be handled differently
     // All collisions have to be either fully vertical or fully horizontal for now
-    const bool vert_coll = bash_floor || p.z() != sm_pos.z();
+    const bool vert_coll = bash_floor || p.z() != abs_part_pos( part ).z();
     Creature *critter = get_creature_tracker().creature_at( p, true );
     Character *ph = dynamic_cast<Character *>( critter );
 
@@ -2274,7 +2274,7 @@ bool vehicle::level_vehicle( map &here )
     // make sure that all parts are either supported across levels or on the same level
     std::map<int, bool> no_support;
     for( vehicle_part &prt : parts ) {
-        if( prt.info().location != vpart_location_structure ) {
+        if( prt.mount_level != 0 || prt.info().location != vpart_location_structure ) {
             continue;
         }
         const tripoint_bub_ms part_pos = bub_part_pos( here, prt );
@@ -2306,7 +2306,7 @@ bool vehicle::level_vehicle( map &here )
             adjust_level = true;
             // drop unsupported parts 1 zlevel
             for( size_t prt = 0; prt < parts.size(); prt++ ) {
-                if( abs_part_pos( prt ).z() == zlevel ) {
+                if( abs_part_pos( prt ).z() - parts[prt].mount_level == zlevel ) {
                     dropped_parts.insert( static_cast<int>( prt ) );
                 }
             }
@@ -2370,7 +2370,12 @@ void vehicle::check_falling_or_floating()
     }
     // TODO: Make the vehicle "slide" towards its center of weight
     //  when it's not properly supported
-    const std::set<tripoint_abs_ms> &pts = get_points();
+    std::set<tripoint_abs_ms> pts;
+    for( const vpart_reference &vp : get_all_parts() ) {
+        if( vp.part().mount_level == 0 ) {
+            pts.insert( vp.pos_abs() );
+        }
+    }
     if( pts.empty() ) {
         // Dirty vehicle with no parts
         is_falling = false;
@@ -2674,7 +2679,7 @@ void vehicle::update_active_fakes()
         const vehicle_part &part_real = parts.at( part_fake.fake_part_to );
         const tripoint_rel_ms &fake_precalc = part_fake.precalc[0];
         const tripoint_rel_ms &real_precalc = part_real.precalc[0];
-        const vpart_edge_info &real_edge = edges[part_real.mount];
+        const vpart_edge_info &real_edge = edges[part_real.mount_pos3()];
         const bool is_protrusion = part_real.info().has_flag( "PROTRUSION" );
 
         if( real_edge.forward != -1 ) {

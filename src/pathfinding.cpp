@@ -638,6 +638,23 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
             pf.add_point( newg, newg + 2 * rl_dist( p, t ), cur, p );
         }
 
+        if( settings.allow_climb_stairs ) {
+            if( const optional_vpart_position source = veh_at( cur ) ) {
+                for( int dz : {
+                         -1, 1
+                         } ) {
+                    const auto dest = source->vehicle().deck_transition( *this, cur, dz );
+                    if( !dest || dest->z() < min.z() || dest->z() > max.z() ||
+                        !inbounds( *dest ) ||
+                        ( settings.avoid_traps && !tr_at( *dest ).is_benign() ) ) {
+                        continue;
+                    }
+                    const int new_g = layer.gscore[parent_index] + 2;
+                    pf.add_point( new_g, new_g + 2 * rl_dist( *dest, t ), cur, *dest );
+                }
+            }
+        }
+
         // TODO: We should be able to go up ramps even if we can't climb stairs.
         if( !( cur_special & ( PathfindingFlag::GoesUp | PathfindingFlag::GoesDown ) ) ||
             !settings.allow_climb_stairs ) {
