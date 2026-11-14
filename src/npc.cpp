@@ -1824,8 +1824,8 @@ bool npc::wield_offered_item( item_location &source, Character &donor )
                     mod_moves( -wear_cost );
                 }
             } else {
-                const item_disposition disposition{ can_stash( *old )&& !old->will_spill() ?
-                                                    "inventory" : "drop", 0, 0 };
+                const bool can_stash_old = can_stash( *old ) && !old->will_spill();
+                const item_disposition disposition{ can_stash_old ? "inventory" : "drop", 0, 0 };
                 if( !execute_item_disposition( *this, old, disposition ) ) {
                     return false;
                 }
