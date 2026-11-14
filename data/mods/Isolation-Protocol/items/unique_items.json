@@ -346,7 +346,7 @@
     "material": [ "wood", "diamond" ],
     "symbol": "/",
     "color": "white",
-    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SPEAR", "TRADER_AVOID", "RELIC_PINK", "MAGIC_FOCUS" ],
     "melee_damage": { "bash": 29 }
   },

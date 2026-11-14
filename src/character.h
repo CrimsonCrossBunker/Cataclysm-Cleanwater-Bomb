@@ -82,6 +82,7 @@ class effect;
 class enchant_cache;
 class faction;
 class gun_mode;
+struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;
@@ -1252,6 +1253,12 @@ class Character : public Creature, public visitable
         int active_technique_range( const matec_id &technique ) const;
         /** Executes one selected technique after checking its current target requirements. */
         bool use_active_technique( Creature &target, const matec_id &technique );
+        bool can_use_active_technique_at( const tripoint_bub_ms &position,
+                                          const matec_id &technique ) const;
+        bool use_active_technique( const tripoint_bub_ms &position, const matec_id &technique );
+        time_duration technique_cooldown_remaining( const matec_id &technique ) const;
+        void start_technique_cooldown( const matec_id &technique );
+        std::vector<std::pair<matec_id, time_duration>> active_technique_cooldowns() const;
         void perform_technique( const ma_technique &technique, Creature &t, damage_instance &di,
                                 int &move_cost, item_location &cur_weapon );
 
@@ -3570,6 +3577,8 @@ class Character : public Creature, public visitable
         /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
         int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
                       const item_location &ammo = item_location(), int burst_rounds = 0 );
+        int fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                            int round_limit, bool protect_friendlies );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3587,7 +3596,9 @@ class Character : public Creature, public visitable
     private:
         int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
                            item_location ammo, bool spend_attack_moves, int firing_rpm = 0,
-                           bool spend_burst_moves = false );
+                           bool spend_burst_moves = false,
+                           const std::vector<tripoint_bub_ms> *sweep_targets = nullptr,
+                           bool protect_friendlies = false );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,

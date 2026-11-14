@@ -85,6 +85,7 @@
     "type": "ITEM",
     "id": "megachette_folded",
     "copy-from": "megachette",
+    "mounted_charge": null,
     "category": "weapons",
     "name": { "str": "megachette (folded)", "str_pl": "megachettes (folded)" },
     "description": "Probably a great weapon, it is folded now.",

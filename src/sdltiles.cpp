@@ -1466,7 +1466,7 @@ void refresh_display()
     }
 
 #if defined(SDL_SOUND)
-    sfx::process_melee_sounds();
+    sfx::process_queued_sounds();
     sound_backend::poll();
 #endif
 
@@ -6604,7 +6604,7 @@ static void redraw_render3d_camera_if_due()
 static void CheckMessages()
 {
 #if defined(SDL_SOUND)
-    sfx::process_melee_sounds();
+    sfx::process_queued_sounds();
 #endif
     static mouse_button_capture imgui_mouse_buttons;
     SDL_Event ev;
@@ -8179,6 +8179,9 @@ static int input_wait_ms( const std::optional<uint32_t> &input_ms )
         s.present_ms = ms_until_elapsed_reaches( lastupdate, now, interval );
     }
     s.platform_ms = android_touch_wait_ms( now );
+#if defined(SDL_SOUND)
+    s.sound_ms = sfx::queued_sound_wait_ms();
+#endif
     return input_wait_timeout_ms( s );
 }
 #endif

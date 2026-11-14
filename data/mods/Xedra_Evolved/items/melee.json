@@ -269,7 +269,7 @@
     "volume": "1500 ml",
     "longest_side": "180 cm",
     "material": [ "wood", "dreamstuff" ],
-    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP" ],
+    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SPEAR", "ALWAYS_TWOHAND", "WOODEN_WEAPON" ],
     "weapon_category": [ "QUARTERSTAVES" ],
     "proportional": { "weight": 0.5, "melee_damage": { "bash": 1.3 } },

@@ -536,6 +536,14 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     }
 
     map &here = get_map();
+    const auto sweep = mode.full_auto() && !source.is_hallucination() &&
+                       ( !source.is_player_ally() || source.rules.allow_sweep ) &&
+                       max_aoe_size( mode->ammo_effects() ) == 0 &&
+                       !mode->ammo_effects().count( ammo_effect_str_id( "BOUNCE" ) )
+                       ? find_firearm_sweep( source, here, location, mode->gun_range( &source ), mode.rpm,
+                               mode->shots_remaining( here, &source ) )
+                       : std::nullopt;
+    const tripoint_bub_ms aim_location = sweep ? sweep->start : location;
     int burst_rounds = 0;
     if( mode.rpm > 0 ) {
         const npc_gun_range range = npc_gun_distance( source, *mode,
@@ -543,18 +551,18 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
         if( mode.full_auto() ) {
             burst_rounds = npc_burst_estimate( source.rules.burst, range );
         }
-        if( mode.fixed_burst() || burst_rounds > 0 ) {
+        if( sweep || mode.fixed_burst() || burst_rounds > 0 ) {
             std::optional<tripoint_bub_ms> previous;
             if( source.last_target_pos ) {
                 previous = here.get_bub( *source.last_target_pos );
             }
-            source.recoil = aim_turning_recoil( source, source.pos_bub(), previous, location );
-            source.last_target_pos = here.get_abs( location );
+            source.recoil = aim_turning_recoil( source, source.pos_bub(), previous, aim_location );
+            source.last_target_pos = here.get_abs( aim_location );
 
             const std::vector<aim_type> aims = source.get_aim_types( *mode );
             // Some sights have identical thresholds, so the shared list may omit a preset.
             const aim_type &aim = aims[std::min( static_cast<std::size_t>( range ), aims.size() - 1 )];
-            if( !aim_gun_until_threshold( source, *mode, location, aim.threshold ) ||
+            if( !aim_gun_until_threshold( source, *mode, aim_location, aim.threshold ) ||
                 source.get_moves() <= 0 ) {
                 return;
             }
@@ -576,6 +584,8 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     const int moves = source.get_moves();
     if( source.is_hallucination() ) {
         source.pretend_fire( mode, burst_rounds );
+    } else if( sweep ) {
+        source.fire_gun_sweep( here, *sweep, mode, mode->shots_remaining( here, &source ), true );
     } else {
         source.fire_gun( here, location, mode, item_location(), burst_rounds );
     }

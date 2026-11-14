@@ -124,6 +124,13 @@ sol::table snapshot_technique_definition(
     result["manual_activation"] = definition.can_activate();
     result["cooldown_seconds"] = to_seconds<double>( definition.cooldown );
     result["dynamic_cooldown"] = !definition.lua_platform_cooldown_handler.empty();
+    result["target_mode"] = definition.targets_position() ? "position" : "creature";
+    result["cooldown_turns"] = to_turns<int>( definition.cooldown );
+    result["grapple_action"] = definition.grapple_action;
+    result["grapple_power"] = definition.grapple_power;
+    result["grapple_stamina"] = definition.grapple_stamina;
+    result["grapple_cooldown_turns"] = to_turns<int>( definition.grapple_cooldown );
+    result["scripted_grapple"] = !definition.lua_platform_grapple_handler.empty();
     result["conditional_activation"] =
         !definition.lua_platform_condition_handler.empty();
     result["reach_only"] = definition.reach_tec;

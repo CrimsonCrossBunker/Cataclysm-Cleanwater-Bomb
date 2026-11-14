@@ -56,6 +56,7 @@
 
 // IWYU pragma: no_forward_declare npc // behind unique_ptr
 class Character;
+struct firearm_sweep;
 class Creature;
 class JsonArray;
 class JsonObject;
@@ -711,7 +712,7 @@ class turret_data
          * and performs any other actions that must be done before firing a turret.
          * @param p the player that is firing the gun, subject to recoil adjustment.
          */
-        void prepare_fire( Character &you );
+        void prepare_fire( Character &you, int sweep_rounds = 0 );
 
         /**
          * Reset state after firing a prepared turret, called by the firing function.
@@ -726,7 +727,8 @@ class turret_data
          * @param target coordinates that will be fired on.
          * @return the number of shots actually fired (may be zero).
          */
-        int fire( Character &c, map *here, const tripoint_bub_ms &target );
+        int fire( Character &c, map *here, const tripoint_bub_ms &target,
+                  const firearm_sweep *sweep = nullptr, bool automatic = false );
 
         bool can_reload() const;
         bool can_unload() const;

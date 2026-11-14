@@ -5,12 +5,13 @@
 #include <coordinates.h>
 #include <enums.h>
 #include <item_location.h>
+#include <mp_firearm.h>
 #include <point.h>
-#include <safe_reference.h>
 #include <type_id.h>
 #include <algorithm>
 #include <atomic>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <memory>
 
@@ -20,9 +21,9 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "cata_scope_helpers.h"
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
@@ -233,7 +234,7 @@ void player_activity::start_or_resume( Character &who, bool resuming )
         return;
     }
     const character_action_guard lifetime( who );
-    const auto identity = identity_generation();
+    const std::uint64_t identity = identity_generation();
     if( !lifetime ) {
         return;
     }
@@ -425,6 +426,7 @@ void player_activity::do_turn( Character &you )
                     act_id == ACT_WORKOUT_LIGHT;
     if( !excluded && adjusted_stamina < previous_stamina &&
         you.get_stamina() < you.get_stamina_max() / 3 ) {
+        const std::uint64_t stamina_identity = identity_generation();
         if( one_in( 50 ) ) {
             you.add_msg_if_player( _( "You pause for a moment to catch your breath." ) );
         }
@@ -441,6 +443,9 @@ void player_activity::do_turn( Character &you )
                 case UILIST_CANCEL:
                 case 2:
                     auto_resume = false;
+                    if( travel_activity ) {
+                        you.abort_automove();
+                    }
                     you.cancel_activity();
                     break;
                 case 3:
@@ -451,7 +456,7 @@ void player_activity::do_turn( Character &you )
                     break;
             }
         }
-        if( !character_reference || identity_generation() != dispatched_identity ) {
+        if( !character_reference || identity_generation() != stamina_identity ) {
             return;
         }
         if( !ignoreQuery && auto_resume ) {
@@ -546,7 +551,7 @@ void player_activity::canceled( Character &who )
         return;
     }
     const character_action_guard lifetime( who, true );
-    const auto identity = identity_generation();
+    const std::uint64_t identity = identity_generation();
     const bool view_only = client_firearm_view( who, type );
     if( *this && actor ) {
         actor->canceled( *this, who );

@@ -3218,10 +3218,17 @@
   },
   {
     "type": "keybinding",
+    "name": "Sweep with an automatic weapon",
+    "category": "DEFAULTMODE",
+    "id": "fire_sweep",
+    "bindings": [ { "input_method": "keyboard_char", "key": "F" }, { "input_method": "keyboard_code", "key": "f", "mod": [ "shift" ] } ]
+  },
+  {
+    "type": "keybinding",
     "name": "Toggle attack mode of wielded item",
     "category": "DEFAULTMODE",
     "id": "select_fire_mode",
-    "bindings": [ { "input_method": "keyboard_char", "key": "F" }, { "input_method": "keyboard_code", "key": "f", "mod": [ "shift" ] } ]
+    "bindings": [ { "input_method": "keyboard_code", "key": "f", "mod": [ "ctrl" ] } ]
   },
   {
     "type": "keybinding",
