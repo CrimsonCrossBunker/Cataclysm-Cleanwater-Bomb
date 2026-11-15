@@ -190,8 +190,9 @@ TEST_CASE( "map_buffers_keep_same_coordinates_in_separate_storage_namespaces", "
 
 TEST_CASE( "map_save_keeps_quads_resident_in_either_active_map", "[map_storage][regression]" )
 {
+    const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
-    mapbuffer buffer( fixture.context( "a", "default", false ) );
+    mapbuffer buffer( fixture.context( "a", "default", compressed ) );
     const tripoint_abs_sm primary_base( 0, 0, 0 );
     const tripoint_abs_sm remote_base( 40, -40, 0 );
     const tripoint_abs_sm outside_base( -60, 60, 0 );
@@ -203,12 +204,16 @@ TEST_CASE( "map_save_keeps_quads_resident_in_either_active_map", "[map_storage][
     submap *const primary_before = buffer.lookup_submap( primary_base );
     submap *const remote_before = buffer.lookup_submap( remote_base );
 
+    REQUIRE( buffer.submap_count() == 12 );
+
     buffer.save( false, { std::cref( primary ), std::cref( remote ) } );
 
-    CHECK( std::distance( buffer.begin(), buffer.end() ) == 8 );
+    CHECK( buffer.submap_count() == 8 );
     CHECK( buffer.lookup_submap( primary_base ) == primary_before );
     CHECK( buffer.lookup_submap( remote_base ) == remote_before );
+    CHECK( buffer.submap_count() == 8 );
     check_quad( buffer, outside_base, ter_t_soil );
+    CHECK( buffer.submap_count() == 12 );
 }
 
 TEST_CASE( "overlapping_map_views_tick_shared_fields_and_items_once",
