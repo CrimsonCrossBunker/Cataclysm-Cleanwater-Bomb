@@ -285,10 +285,6 @@ void item_pocket::restack()
 
 item *restack_charge_items( std::list<item> &contents, item *tracked )
 {
-    // Only count_by_charges items can combine (item::can_combine rejects everything else
-    // without side effects), so pair up those alone instead of scanning all of `contents`
-    // for each of them.  The pairs are visited in the same order as before, including the
-    // restart of the outer scan at contents.begin() after every merge.
     std::vector<std::list<item>::iterator> stackable;
     for( auto iter = contents.begin(); iter != contents.end(); ++iter ) {
         if( iter->count_by_charges() ) {
@@ -303,15 +299,11 @@ item *restack_charge_items( std::list<item> &contents, item *tracked )
                 ++inner;
                 continue;
             }
-            // inner was placed in outer, check if inner was the item that we track
             if( &*stackable[inner] == tracked ) {
                 tracked = &*stackable[outer];
             }
             contents.erase( stackable[inner] );
             stackable.erase( stackable.begin() + inner );
-            // The outer scan restarts at contents.begin().  If that item cannot combine,
-            // the rest of this inner pass is a no-op and the scan resumes at the first
-            // stackable item; otherwise it keeps merging into the first item.
             if( stackable.front() != contents.begin() ) {
                 rescan = true;
                 break;
