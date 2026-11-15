@@ -113,7 +113,9 @@ void mapbuffer::clear()
     // Drop any pending/completed background reads first: their captured paths
     // belong to the world being torn down and must not be consumed afterward.
     prefetcher_.clear();
+    std::scoped_lock lk( submaps_mutex_ );
     submaps.clear();
+    ++content_revision_;
     // The listing cache is keyed by archive path and belongs to the old world.
     zzip_listing_cache.clear();
     if( active_world_adapter_ ) {
@@ -124,12 +126,14 @@ void mapbuffer::clear()
 void mapbuffer::clear_outside_reality_bubble()
 {
     map &here = get_map();
+    std::scoped_lock lk( submaps_mutex_ );
     auto it = submaps.begin();
     while( it != submaps.end() ) {
         if( here.inbounds( it->first ) ) {
             ++it;
         } else {
             it = submaps.erase( it );
+            ++content_revision_;
         }
     }
 }
@@ -149,6 +153,7 @@ bool mapbuffer::add_submap( const tripoint_abs_sm &p, std::unique_ptr<submap> &s
         veh->sm_pos = p;
     }
     submaps[p] = std::move( sm );
+    ++content_revision_;
 
     return true;
 }
@@ -176,9 +181,33 @@ void mapbuffer::remove_submap( const tripoint_abs_sm &addr )
         return;
     }
     submaps.erase( m_target );
+    ++content_revision_;
+}
+
+uint64_t mapbuffer::content_revision() const
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    return content_revision_;
+}
+
+submap *mapbuffer::get_submap_if_loaded( const tripoint_abs_sm &p )
+{
+    std::scoped_lock lk( submaps_mutex_ );
+    const auto iter = submaps.find( p );
+    return iter == submaps.end() ? nullptr : iter->second.get();
 }
 
 submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
+{
+    return lookup_submap( p, true );
+}
+
+const submap *mapbuffer::lookup_saved_submap( const tripoint_abs_sm &p )
+{
+    return lookup_submap( p, false );
+}
+
+submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p, bool restore_uniform )
 {
     storage();
     dbg( D_INFO ) << "mapbuffer::lookup_submap( x[" << p.x() << "], y[" << p.y() << "], z["
@@ -187,7 +216,7 @@ submap *mapbuffer::lookup_submap( const tripoint_abs_sm &p )
     const auto iter = submaps.find( p );
     if( iter == submaps.end() ) {
         try {
-            return unserialize_submaps( p );
+            return unserialize_submaps( p, restore_uniform );
         } catch( const std::exception &err ) {
             debugmsg( "Failed to load submap %s: %s", p.to_string(), err.what() );
         }
@@ -533,7 +562,7 @@ const std::unordered_set<std::string> *mapbuffer::zzip_listing( const cata_path 
 
 // We're reading in way too many entities here to mess around with creating sub-objects and
 // seeking around in them, so we're using the json streaming API.
-submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
+submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p, bool restore_uniform )
 {
     CATA_PROFILE_SCOPE();
     // Map the tripoint to the submap quad that stores it.
@@ -608,7 +637,7 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
 
     // fill in uniform submaps that were not serialized. Note that failure as a result of it
     // not being uniform is OK and results in any missing uniform submaps being generated.
-    if( uniform_terrain_ ) {
+    if( restore_uniform && uniform_terrain_ ) {
         const std::optional<ter_str_id> terrain = uniform_terrain_( om_addr )->get_uniform_terrain();
         if( terrain ) {
             for( int x = 0; x <= 1; ++x ) {
@@ -624,8 +653,10 @@ submap *mapbuffer::unserialize_submaps( const tripoint_abs_sm &p )
         }
     }
     if( submaps.count( p ) == 0 ) {
-        debugmsg( "file %s did not contain the expected submap %s",
-                  quad_path.generic_u8string(), p.to_string() );
+        if( restore_uniform ) {
+            debugmsg( "file %s did not contain the expected submap %s",
+                      quad_path.generic_u8string(), p.to_string() );
+        }
         return nullptr;
     }
 
@@ -675,8 +706,17 @@ bool mapbuffer::generate_uniform_omt( const tripoint_abs_sm &p, const oter_id &t
 void mapbuffer::deserialize( const JsonArray &ja )
 {
     for( JsonObject submap_json : ja ) {
+        JsonArray coordinates = submap_json.get_array( "coordinates" );
+        const tripoint_abs_sm submap_coordinates{
+            coordinates.next_int(), coordinates.next_int(), coordinates.next_int()
+        };
+        // A renderer read may have loaded the serialized members of this quad
+        // before the simulation asks to reconstruct one of its uniform submaps.
+        if( submaps.count( submap_coordinates ) != 0 ) {
+            submap_json.allow_omitted_members();
+            continue;
+        }
         std::unique_ptr<submap> sm = std::make_unique<submap>();
-        tripoint_abs_sm submap_coordinates;
         int version = 0;
         // We have to read version first because the iteration order of json members is undefined.
         if( submap_json.has_int( "version" ) ) {
@@ -684,11 +724,7 @@ void mapbuffer::deserialize( const JsonArray &ja )
         }
         for( JsonMember submap_member : submap_json ) {
             std::string submap_member_name = submap_member.name();
-            if( submap_member_name == "coordinates" ) {
-                JsonArray coords_array = submap_member;
-                tripoint_abs_sm loc{ coords_array.next_int(), coords_array.next_int(), coords_array.next_int() };
-                submap_coordinates = loc;
-            } else {
+            if( submap_member_name != "coordinates" ) {
                 sm->load( submap_member, submap_member_name, version );
             }
         }

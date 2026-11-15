@@ -442,6 +442,35 @@ TEST_CASE( "partial_quad_restores_uniform_submaps_only_in_its_own_buffer", "[map
     CHECK( std::distance( MAPBUFFER.begin(), MAPBUFFER.end() ) == global_size );
 }
 
+TEST_CASE( "distant_terrain_reads_saved_submaps_without_reconstructing_missing_tiles",
+           "[map_storage][render3d]" )
+{
+    const bool compressed = GENERATE( false, true );
+    storage_fixture fixture;
+    const auto context = fixture.context( "a", "default", compressed );
+    int overmap_lookups = 0;
+    mapbuffer buffer( context, [&]( const tripoint_abs_omt & ) {
+        ++overmap_lookups;
+        return oter_id( "solid_earth" );
+    } );
+    auto sm = std::make_unique<submap>();
+    sm->set_all_ter( ter_t_floor );
+    REQUIRE( buffer.add_submap( tripoint_abs_sm::zero, sm ) );
+    buffer.save( true );
+    const tripoint_abs_sm missing( 1, 1, 0 );
+    CHECK( buffer.lookup_saved_submap( missing ) == nullptr );
+    const submap *saved = buffer.lookup_saved_submap( tripoint_abs_sm::zero );
+    REQUIRE( saved );
+    CHECK( saved->get_ter( point_sm_ms::zero ) == ter_t_floor );
+    CHECK( overmap_lookups == 0 );
+
+    const submap *reconstructed = buffer.lookup_submap( missing );
+    REQUIRE( reconstructed );
+    CHECK( reconstructed->get_ter( point_sm_ms::zero ) == ter_t_soil );
+    CHECK( buffer.lookup_submap( tripoint_abs_sm::zero ) == saved );
+    CHECK( overmap_lookups == 1 );
+}
+
 TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][save]" )
 {
     const bool compressed = GENERATE( false, true );
