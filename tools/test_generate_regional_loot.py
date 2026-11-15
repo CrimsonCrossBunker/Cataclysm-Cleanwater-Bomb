@@ -3,7 +3,36 @@
 import json
 import unittest
 
-from generate_regional_loot import DATA, ITEMS, POLICY, build, magazine_capacity, records
+from generate_regional_loot import DATA, ITEMS, POLICY, build, magazine_capacity, records, render
+
+
+class RegionalJsonFormatTest(unittest.TestCase):
+    def test_existing_repository_layout(self):
+        for name in ("itemgroups/Weapons_Mods_Ammo/conversions/conversion_guns.json",
+                     "itemgroups/Clothing_Gear/military.json"):
+            with self.subTest(path=name):
+                original = (DATA / "json" / name).read_text(encoding="utf-8")
+                self.assertEqual(render(json.loads(original)) + "\n", original)
+
+    def test_nested_collections_and_string_contents(self):
+        value = [{"entries": [{"item": "{ } [ ]\u00a0", "charges": [0, 4]}, {}, []]}]
+        self.assertEqual(render(value),
+                         '[\n  { "entries": [ { "item": "{ } [ ]\\u00a0", '
+                         '"charges": [ 0, 4 ] }, {  }, [  ] ] }\n]')
+        self.assertEqual(render([]), "[\n  \n]")
+        self.assertEqual(render({}), "{\n  \n}")
+
+    def test_collection_limit_counts_bytes_and_separators(self):
+        boundary = {"name": "x" * 106}
+        flat = render(boundary, indent=2)
+        self.assertEqual(len(flat.encode("utf-8")), 120)
+        self.assertNotIn("\n", flat)
+        self.assertIn("\n", render({"name": "x" * 107}, indent=2))
+        self.assertNotIn("\n", render({"name": "é" * 53}, indent=2))
+        self.assertIn("\n", render({"name": "é" * 54}, indent=2))
+        lines = render([boundary, boundary]).splitlines()
+        self.assertEqual(lines[1], "  " + flat + ",")
+        self.assertEqual(lines[2], "  {")
 
 
 class RegionalLootTest(unittest.TestCase):
