@@ -3,7 +3,7 @@
     "type": "item_group",
     "id": "roadmap_stock",
     "subtype": "distribution",
-    "items": [ ["roadmap", 100] ]
+    "items": [ [ "roadmap", 100 ] ]
   },
   {
     "type": "item_group",
@@ -126,7 +126,7 @@
     "type": "item_group",
     "id": "atlas_maps",
     "subtype": "distribution",
-    "groups": [ ["atlas_maps_US", 100], ["atlas_maps_CA", 100], ["atlas_maps_MX", 100] ]
+    "groups": [ [ "atlas_maps_US", 100 ], [ "atlas_maps_CA", 100 ], [ "atlas_maps_MX", 100 ] ]
   },
   {
     "type": "item_group",
