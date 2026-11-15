@@ -4175,6 +4175,10 @@ void islot_seed::deserialize( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "water_consumption", water_consumption,
               irrigation::DEFAULT_SEED_WATER_CONSUMPTION );
 
+    if( jo.has_object( "crop_climate" ) ) {
+        climate = crop_climate_profile::load( jo.get_object( "crop_climate" ) );
+    }
+
     auto load_eocs = [&]( const char *key, std::vector < effect_on_condition_id > &out ) {
         if( jo.has_array( key ) ) {
             for( JsonValue jv : jo.get_array( key ) ) {

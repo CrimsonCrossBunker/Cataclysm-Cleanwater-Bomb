@@ -1380,18 +1380,26 @@ const city &overmap::get_invalid_city() const
 }
 
 tripoint_om_omt overmap::find_random_omt( const std::pair<std::string, ot_match_type> &target,
-        std::optional<city> target_city ) const
+        std::optional<city> target_city, bool outskirts ) const
 {
+    const auto abs_origin = project_to<coords::omt>( pos() );
+    const bool atlas = outskirts && north_america::active();
     const bool check_nearest_city = target_city.has_value();
     std::vector<tripoint_om_omt> valid;
     for( int i = 0; i < OMAPX; i++ ) {
         for( int j = 0; j < OMAPY; j++ ) {
+            const point raw( i, j );
+            if( ( atlas && north_america::in_urban_footprint( abs_origin + raw ) ) ||
+            ( outskirts && std::any_of( cities.begin(), cities.end(), [&]( const city & c ) {
+            return square_dist( c.pos.raw(), raw ) < c.size + 12;
+            } ) ) ) {
+                continue;
+            }
             for( int k = -OVERMAP_DEPTH; k <= OVERMAP_HEIGHT; k++ ) {
-                tripoint_om_omt p( i, j, k );
-                if( is_ot_match( target.first, ter( p ), target.second ) ) {
-                    if( !check_nearest_city || get_nearest_city( p ) == target_city.value() ) {
-                        valid.push_back( p );
-                    }
+                const tripoint_om_omt p( i, j, k );
+                if( is_ot_match( target.first, ter( p ), target.second ) &&
+                    ( !check_nearest_city || get_nearest_city( p ) == *target_city ) ) {
+                    valid.push_back( p );
                 }
             }
         }
@@ -2355,6 +2363,10 @@ void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps
             };
             fallback_road_connection_point = nearest_road( point_om_omt( OMAPX / 2, OMAPY / 2 ) );
             for( const city &settlement : cities ) {
+                if( north_america::in_urban_footprint( project_to<coords::omt>( pos() ) +
+                                                       settlement.pos.raw() ) ) {
+                    continue;
+                }
                 const point_om_omt target = nearest_road( settlement.pos );
                 if( target != settlement.pos ) {
                     build_connection( network, lay_out_connection( network, settlement.pos, target, 0,

@@ -1,6 +1,7 @@
 #include "calendar_ui.h"
 
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <string>
 #include <utility>
@@ -13,6 +14,32 @@
 #include "translation.h"
 #include "translations.h"
 #include "uilist.h"
+
+namespace
+{
+int year_days()
+{
+    return to_days<int>( calendar::year_length() );
+}
+
+int month_start( int month_index )
+{
+    static constexpr std::array<int, 13> days{ 0, 31, 61, 91, 122, 152, 182, 213,
+            243, 273, 304, 334, 364 };
+    return ( days[month_index] * year_days() + 363 ) / 364;
+}
+
+std::pair<int, int> civil_month_day( time_point date )
+{
+    const int day = to_days<int>( ( time_past_new_year( date ) + calendar::year_length() ) %
+                                  calendar::year_length() );
+    int month_index = 0;
+    while( month_index < 11 && day >= month_start( month_index + 1 ) ) {
+        ++month_index;
+    }
+    return { month_index, day - month_start( month_index ) + 1 };
+}
+} // namespace
 
 time_point calendar_ui::select_time_point( time_point initial_value, std::string_view title,
         calendar_ui::granularity granularity_level, bool ignore_eternal_season )
@@ -36,9 +63,26 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
         return_value = std::max( std::min( max, return_value + offset ), calendar::turn_zero );
     };
 
+    const auto set_month = [&]( int step ) {
+        const auto [month_index, day] = civil_month_day( return_value );
+        int selected = month_index + 1 + step;
+        if( step == 0 ) {
+            number_input_popup<int> query( 1, selected, _( "Set month (1–12) to?" ) );
+            selected = std::clamp( query.query(), 1, 12 );
+        }
+        const int target = ( selected + 11 ) % 12;
+        const int limit = std::max( 1, month_start( target + 1 ) - month_start( target ) );
+        const int wrap_year = selected == 0 ? -year_days() : selected == 13 ? year_days() : 0;
+        const int delta = wrap_year + month_start( target ) - month_start( month_index ) +
+                          std::min( day, limit ) - day;
+        if( delta != 0 ) {
+            set_turn( 0, 1_days, "", delta );
+        }
+    };
+
     uilist smenu;
     static const auto years = []( const time_point & p ) {
-        return static_cast<int>( ( p - calendar::turn_zero ) / calendar::year_length() );
+        return calendar::years_since_cataclysm( p );
     };
     int iSel = smenu.ret;
     do {
@@ -67,11 +111,11 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
 
         smenu.addentry( static_cast<int>( calendar_ui::granularity::year ), true,
                         'y', "%s: %d", _( "year" ), years( return_value ) + 1 );
-        smenu.addentry( static_cast<int>( calendar_ui::granularity::season ), true,
-                        's', "%s: %s", _( "season" ), calendar::name_season( season_of_year( return_value,
-                                ignore_eternal_season ) ) );
+        const auto [month_index, day] = civil_month_day( return_value );
+        smenu.addentry( static_cast<int>( calendar_ui::granularity::month ), true,
+                        'o', "%s: %s", _( "month" ), to_string( static_cast<month>( month_index ) ) );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::day ), true,
-                        'd', "%s: %d", _( "day" ), day_of_season<int>( return_value ) + 1 );
+                        'd', "%s: %d", _( "day" ), day );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::hour ), true,
                         'h', "%s: %d", _( "hour" ), hour_of_day<int>( return_value ) );
         smenu.addentry( static_cast<int>( calendar_ui::granularity::minute ), true,
@@ -92,14 +136,19 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
             case static_cast<int>( calendar_ui::granularity::year ):
                 set_turn( years( return_value ) + 1, calendar::year_length(), _( "Set year to?" ) );
                 break;
-            case static_cast<int>( calendar_ui::granularity::season ):
-                set_turn( static_cast<int>( season_of_year( return_value, ignore_eternal_season ) ),
-                          calendar::season_length(),
-                          _( "Set season to?  (0 = spring)" ) );
+            case static_cast<int>( calendar_ui::granularity::month ):
+                set_month( 0 );
                 break;
-            case static_cast<int>( calendar_ui::granularity::day ):
-                set_turn( day_of_season<int>( return_value ) + 1, 1_days, _( "Set days to?" ) );
+            case static_cast<int>( calendar_ui::granularity::day ): {
+                int selected = day;
+                number_input_popup<int> query( 1, selected, _( "Set day of month to?" ) );
+                selected = std::clamp( query.query(), 1,
+                                       std::max( 1, month_start( month_index + 1 ) - month_start( month_index ) ) );
+                if( selected != day ) {
+                    set_turn( day, 1_days, "", selected - day );
+                }
                 break;
+            }
             case static_cast<int>( calendar_ui::granularity::hour ):
                 set_turn( hour_of_day<int>( return_value ), 1_hours, _( "Set hour to?" ) );
                 break;
@@ -124,13 +173,11 @@ time_point calendar_ui::select_time_point( time_point initial_value, std::string
                         case static_cast<int>( calendar_ui::granularity::year ):
                             set_turn( years( return_value ) + 1, calendar::year_length(), "", auto_value );
                             break;
-                        case static_cast<int>( calendar_ui::granularity::season ):
-                            set_turn( static_cast<int>( season_of_year( return_value, ignore_eternal_season ) ),
-                                      calendar::season_length(), "",
-                                      auto_value );
+                        case static_cast<int>( calendar_ui::granularity::month ):
+                            set_month( auto_value );
                             break;
                         case static_cast<int>( calendar_ui::granularity::day ):
-                            set_turn( day_of_season<int>( return_value ) + 1, 1_days, "", auto_value );
+                            set_turn( day, 1_days, "", auto_value );
                             break;
                         case static_cast<int>( calendar_ui::granularity::hour ):
                             set_turn( hour_of_day<int>( return_value ), 1_hours, "", auto_value );

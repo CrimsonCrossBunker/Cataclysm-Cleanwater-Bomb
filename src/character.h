@@ -629,6 +629,7 @@ class Character : public Creature, public visitable
             return grab_generation_;
         }
 
+        bool start_outskirts = true;
         std::optional<city> starting_city;
         std::optional<point_abs_om> world_origin;
         bool random_start_location = true;

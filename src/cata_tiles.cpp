@@ -1586,6 +1586,43 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         layer_vpart :
                         f == &cata_tiles::draw_critter_at ? layer_critter :
                         f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
+                    if( f == &cata_tiles::draw_critter_at && cur_zlevel >= 0 ) {
+                        bool began_snow = false;
+                        const int base = ( cur_zlevel - center.z() ) * zlevel_height;
+                        for( const row_sprite_entry &entry : row_sprites ) {
+                            const auto &var = std::get<tile_render_info::sprite>( entry.tile->var );
+                            if( var.invisible[0] ) {
+                                continue;
+                            }
+                            const auto &position = entry.tile->view.pos;
+                            const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
+                            if( cover == snow_cover::none ) {
+                                continue;
+                            }
+                            if( !began_snow ) {
+                                if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
+                                    if( !vp->flush() ) {
+                                        display_buffer_scope_signal_recovery_required();
+                                        throw std::runtime_error( "Snow overlay failed to restore renderer state" );
+                                    }
+                                }
+                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+                                began_snow = true;
+                            }
+                            const point screen = player_to_screen( position.xy() );
+                            const int alpha = cover == snow_cover::deep ? 180 :
+                                              cover == snow_cover::medium ? 125 : 72;
+                            const uint8_t light = var.ll == lit_level::LOW ? 145 : 242;
+                            const SDL_Rect area{ screen.x, screen.y - base, tile_width,
+                                                 iso ? std::max( 1, tile_height / 2 ) : tile_height };
+                            geometry->rect( renderer, area,
+                                            SDL_Color{ light, light, static_cast<uint8_t>( light + 10 ),
+                                                       static_cast<uint8_t>( alpha ) } );
+                        }
+                        if( began_snow ) {
+                            SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+                        }
+                    }
                     const bool track_bounds = !iso &&
                                               f != &cata_tiles::draw_zone_mark &&
                                               f != &cata_tiles::draw_zombie_revival_indicators;

@@ -22,6 +22,7 @@
 #include "game_constants.h"
 #include "iexamine.h"
 #include "lightmap.h"
+#include "plant_climate.h"
 #include "requirements.h"
 #include "translation.h"
 #include "type_id.h"
@@ -759,6 +760,7 @@ struct ter_t : map_data_common_t {
 
     cata::value_ptr<plant_data> plant;
     cata::value_ptr<terrain_growth_data> terrain_growth;
+    std::optional<fruit_climate_profile> fruit_climate;
 
     std::string trap_id_str;     // String storing the id string of the trap.
     ter_str_id transforms_into; // Transform into what terrain?

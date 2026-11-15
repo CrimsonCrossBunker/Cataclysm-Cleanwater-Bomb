@@ -52,7 +52,17 @@
       { "GROWTH_HARVEST": "20 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 27,
+      "min_c": 0,
+      "max_c": 38,
+      "degree_days": 860,
+      "water_mm": 520,
+      "growing_days": 87,
+      "water_peak": 0.62
+    }
   },
   {
     "type": "ITEM",
@@ -110,7 +120,17 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 27,
+      "min_c": 0,
+      "max_c": 38,
+      "degree_days": 1120,
+      "water_mm": 520,
+      "growing_days": 111,
+      "water_peak": 0.66
+    }
   },
   {
     "type": "ITEM",
@@ -143,7 +163,17 @@
       { "GROWTH_MATURE": "23 days" },
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
-    ]
+    ],
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 27,
+      "min_c": 0,
+      "max_c": 38,
+      "degree_days": 1120,
+      "water_mm": 520,
+      "growing_days": 111,
+      "water_peak": 0.66
+    }
   },
   {
     "type": "ITEM",
@@ -361,7 +391,17 @@
     ],
     "into": "flour",
     "recipe": "flour_mill_1_15",
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 23,
+      "min_c": -6,
+      "max_c": 36,
+      "degree_days": 1060,
+      "water_mm": 480,
+      "growing_days": 109,
+      "water_peak": 0.7
+    }
   },
   {
     "type": "ITEM",
@@ -398,7 +438,17 @@
     ],
     "into": "flour",
     "recipe": "flour_mill_1_15",
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 21,
+      "min_c": -13,
+      "max_c": 34,
+      "degree_days": 1080,
+      "water_mm": 480,
+      "growing_days": 120,
+      "water_peak": 0.7
+    }
   },
   {
     "type": "ITEM",
@@ -469,7 +519,17 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "flour",
-    "recipe": "flour_mill_1_15"
+    "recipe": "flour_mill_1_15",
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 21,
+      "min_c": -5,
+      "max_c": 32,
+      "degree_days": 870,
+      "water_mm": 460,
+      "growing_days": 90,
+      "water_peak": 0.65
+    }
   },
   {
     "type": "ITEM",
@@ -550,7 +610,17 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "flour_wheat_free",
-    "recipe": "flour_wheat_free_mill_4_15"
+    "recipe": "flour_wheat_free_mill_4_15",
+    "crop_climate": {
+      "base_c": 4.4,
+      "optimum_c": 21,
+      "min_c": -4,
+      "max_c": 32,
+      "degree_days": 840,
+      "water_mm": 480,
+      "growing_days": 91,
+      "water_peak": 0.62
+    }
   },
   {
     "type": "ITEM",
@@ -600,7 +670,17 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "dry_wild_rice",
-    "recipe": "dry_wild_rice_mill_1_5"
+    "recipe": "dry_wild_rice_mill_1_5",
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 26,
+      "min_c": 0,
+      "max_c": 37,
+      "degree_days": 1000,
+      "water_mm": 880,
+      "growing_days": 110,
+      "water_peak": 0.6
+    }
   },
   {
     "type": "ITEM",
@@ -643,7 +723,17 @@
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
     "into": "flour_wheat_free",
-    "recipe": "flour_wheat_free_mill_1_15"
+    "recipe": "flour_wheat_free_mill_1_15",
+    "crop_climate": {
+      "base_c": 7,
+      "optimum_c": 24,
+      "min_c": -1,
+      "max_c": 36,
+      "degree_days": 635,
+      "water_mm": 300,
+      "growing_days": 75,
+      "water_peak": 0.63
+    }
   },
   {
     "type": "ITEM",
@@ -731,7 +821,17 @@
     ],
     "into": "paste_seed",
     "recipe": "paste_seed_mill_1_1",
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 22,
+      "min_c": -5,
+      "max_c": 34,
+      "degree_days": 1200,
+      "water_mm": 420,
+      "growing_days": 102,
+      "water_peak": 0.68
+    }
   },
   {
     "type": "ITEM",
@@ -792,7 +892,17 @@
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 5,
+      "optimum_c": 23,
+      "min_c": -3,
+      "max_c": 33,
+      "degree_days": 930,
+      "water_mm": 365,
+      "growing_days": 104,
+      "water_peak": 0.68
+    }
   },
   {
     "type": "ITEM",

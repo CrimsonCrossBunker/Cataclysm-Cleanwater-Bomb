@@ -611,7 +611,17 @@
     "flags": [ "RAW", "PLANTABLE_SEED" ],
     "vitamins": [ [ "vitC", "5400 μg" ], [ "iron", "600 μg" ], [ "calcium", "32400 μg" ], [ "veggy_allergen", 1 ] ],
     "//": "Who in their right mind would eat an entire garlic bulb raw?",
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 4,
+      "optimum_c": 21,
+      "min_c": -6,
+      "max_c": 33,
+      "degree_days": 900,
+      "water_mm": 360,
+      "growing_days": 112,
+      "water_peak": 0.7
+    }
   },
   {
     "type": "ITEM",
@@ -1243,7 +1253,17 @@
       { "GROWTH_HARVEST": "22 days" },
       { "GROWTH_OVERGROWN": "1 hour" }
     ],
-    "stackable": true
+    "stackable": true,
+    "crop_climate": {
+      "base_c": 10,
+      "optimum_c": 25,
+      "min_c": 0,
+      "max_c": 36,
+      "degree_days": 480,
+      "water_mm": 350,
+      "growing_days": 63,
+      "water_peak": 0.68
+    }
   },
   {
     "type": "ITEM",

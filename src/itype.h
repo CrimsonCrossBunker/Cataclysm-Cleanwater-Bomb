@@ -1370,6 +1370,7 @@ struct islot_seed {
          * How much water the planted crop consumes per day.  Only used when planted in irrigable furniture.
          */
         int water_consumption = irrigation::DEFAULT_SEED_WATER_CONSUMPTION;
+        std::optional<crop_climate_profile> climate;
         /**
          * EOCs triggered during the plant lifecycle.
          */

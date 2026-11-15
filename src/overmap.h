@@ -476,7 +476,8 @@ class overmap
          * Returns @ref tripoint_om_omt::invalid if no suitable place has been found.
          */
         tripoint_om_omt find_random_omt( const std::pair<std::string, ot_match_type> &target,
-                                         std::optional<city> target_city = std::nullopt ) const;
+                                         std::optional<city> target_city = std::nullopt,
+                                         bool outskirts = false ) const;
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {
@@ -623,6 +624,7 @@ class overmap
         std::unordered_set<point_om_omt> city_tiles;
         // Fill in any gaps in city_tiles that don't connect to the map edge
         void flood_fill_city_tiles();
+        void build_atlas_city_grid( const overmap_connection &road );
         std::multimap<tripoint_om_sm, mongroup> zg; // NOLINT(cata-serialize)
         std::map<point_abs_omt, basecamp> camps;
     public:
