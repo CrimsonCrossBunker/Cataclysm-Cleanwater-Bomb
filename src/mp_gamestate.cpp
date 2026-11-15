@@ -6617,12 +6617,7 @@ void client_process_incoming()
     }
     // Repaint when we processed incoming messages so calendar/time/messages/
     // tiles reach the screen during long activities (the client stays in tight
-    // do_turn iterations otherwise). THROTTLED to ~12fps: a full refresh_display
-    // is ~100ms on the slower client, and with divergent worlds recv_count>0
-    // every grant, so rendering per grant paced the client's do_turn (and thus
-    // the host's lockstep wait) to render-speed. The grant ack is already sent
-    // in process_mp_events, so throttling only affects visual freshness, not the
-    // round-trip. DIAG: log slow renders so we can see the actual cost.
+    // do_turn iterations otherwise).
     if( recv_count > 0 ) {
         const std::chrono::steady_clock::time_point r0 = std::chrono::steady_clock::now();
         g->invalidate_main_ui_adaptor();
