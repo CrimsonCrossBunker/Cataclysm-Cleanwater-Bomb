@@ -221,6 +221,7 @@ TEST_CASE( "vehicle_deck_zones_follow_their_cargo", "[vehicle][decks][zones][sav
     CHECK( here.get_vehicle_zones( 0 ).size() == ( lower_cargo ? 1 : 0 ) );
     REQUIRE( here.get_vehicle_zones( 1 ).size() == 1 );
 
+    veh.precalc_mounts( 1, veh.face.dir(), point_rel_ms::zero );
     REQUIRE( here.displace_vehicle( veh, tripoint_rel_ms::east ) );
     REQUIRE( here.check_vehicle_zones( 1 ) );
     const auto upstairs = here.get_vehicle_zones( 1 );
@@ -257,8 +258,8 @@ TEST_CASE( "vehicle_deck_cables_reconnect_and_disconnect_at_the_selected_port",
     REQUIRE( lower >= 0 );
     REQUIRE( upper >= 0 );
     here.add_vehicle_to_cache( &veh );
-    item lower_cord( itype_id( "test_power_cord" ) );
-    item upper_cord( itype_id( "test_power_cord" ) );
+    item lower_cord( itype_id( "extension_cable" ) );
+    item upper_cord( itype_id( "extension_cable" ) );
     REQUIRE( lower_cord.link_to( here.veh_at( veh.bub_part_pos( here, lower ) ),
                                  link_state::vehicle_port ).success() );
     REQUIRE( upper_cord.link_to( here.veh_at( veh.bub_part_pos( here, upper ) ),
@@ -268,7 +269,7 @@ TEST_CASE( "vehicle_deck_cables_reconnect_and_disconnect_at_the_selected_port",
     std::ostringstream buffer;
     JsonOut out( buffer );
     upper_cord.link().serialize( out );
-    item loaded_cord( itype_id( "test_power_cord" ) );
+    item loaded_cord( itype_id( "extension_cable" ) );
     loaded_cord.link().deserialize( json_loader::from_string( buffer.str() ).get_object() );
     CHECK( loaded_cord.link().t_mount == tripoint_rel_ms::above );
     CHECK_FALSE( loaded_cord.link().t_veh );

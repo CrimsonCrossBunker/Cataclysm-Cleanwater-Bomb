@@ -19862,6 +19862,7 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
            "[mp_inventory_activity][vehicle_work_owned]" )
 {
     const int deck = GENERATE( 0, 1 );
+    CAPTURE( deck );
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
@@ -19875,7 +19876,9 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     REQUIRE( target->install_part( here, point_rel_ms::zero, frame ) >= 0 );
     if( deck != 0 ) {
         REQUIRE( target->install_part( here, tripoint_rel_ms::above, frame ) >= 0 );
-        who.setpos( here, who.pos_bub() + tripoint::above, false );
+        const tripoint_bub_ms upstairs = who.pos_bub() + tripoint::above;
+        here.ter_set( upstairs, ter_id( "t_floor" ) );
+        who.setpos( here, upstairs, false );
     }
     here.add_vehicle_to_cache( target );
 
@@ -19884,6 +19887,7 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     selection.origin = who.pos_abs();
     selection.mount = tripoint_rel_ms( 1, 0, deck );
     selection.position = target->mount_to_tripoint_abs( selection.mount );
+    here.ter_set( here.get_bub( selection.position ), ter_id( "t_floor" ) );
     selection.vehicle_uid = target->uid().get_value();
     selection.owner = target->get_owner();
     selection.part_type = frame;
@@ -19900,6 +19904,8 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     fixture.run( who, vehicle_work_request( fixture, who, wrong_deck ) );
     CHECK_FALSE( who.activity );
     CHECK( target->part_count_real() == part_count );
+    REQUIRE( validate_vehicle_work( who, here, *target, selection, nullptr,
+                                    item_location() ) );
     fixture.run( who, vehicle_work_request( fixture, who, selection ) );
     REQUIRE( who.activity.id() == activity_id( "ACT_VEHICLE" ) );
     CHECK( who.activity.moves_left == to_moves<int>( 1_seconds ) );

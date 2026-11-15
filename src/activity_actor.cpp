@@ -14815,31 +14815,30 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 break;
             }
 
-            // consume items extracting a match for the parts base item
             item base;
             std::vector<item> installed_with;
-            for( const std::vector<item_comp> &e : reqs.get_components() ) {
-                for( item &obj : you.consume_items( e, 1, is_crafting_component, [&vpinfo]( const itype_id & itm ) {
-                return itm == vpinfo.base_item;
-            }, false, true ) ) {
-                    if( obj.typeId() == vpinfo.base_item ) {
-                        base = obj;
-                    } else {
-                        installed_with.push_back( obj );
+            if( you.has_trait( trait_DEBUG_HS ) ) {
+                base = item( vpinfo.base_item );
+            } else {
+                for( const std::vector<item_comp> &e : reqs.get_components() ) {
+                    for( item &obj : you.consume_items( e, 1, is_crafting_component,
+                    [&vpinfo]( const itype_id & itm ) {
+                    return itm == vpinfo.base_item;
+                }, false, true ) ) {
+                        if( obj.typeId() == vpinfo.base_item ) {
+                            base = obj;
+                        } else {
+                            installed_with.push_back( obj );
+                        }
                     }
                 }
-            }
-            if( base.is_null() ) {
-                if( !you.has_trait( trait_DEBUG_HS ) ) {
+                if( base.is_null() ) {
                     add_msg( m_info, _( "Could not find base part in requirements for %s." ), vpinfo.name() );
                     break;
-                } else {
-                    base = item( vpinfo.base_item );
                 }
-            }
-
-            for( const auto &e : reqs.get_tools() ) {
-                you.consume_tools( e );
+                for( const auto &e : reqs.get_tools() ) {
+                    you.consume_tools( e );
+                }
             }
 
             you.invalidate_crafting_inventory();
