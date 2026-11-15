@@ -4,6 +4,7 @@
 #include <climits>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <iterator>
@@ -1521,6 +1522,91 @@ void npc::regen_ai_cache()
     }
 }
 
+static bool has_combat_action_window( const npc &who, const npc_short_term_cache &cache,
+                                      const Creature &target, int move_cost )
+{
+    const map &here = get_map();
+    const tripoint_bub_ms here_pos = who.pos_bub( here );
+    const int own_speed = who.get_speed();
+    const auto safe_from = [&]( const Creature & enemy ) {
+        const int distance = rl_dist( who.pos_abs(), enemy.pos_abs() );
+        const int enemy_speed = enemy.get_speed();
+        if( distance <= 2 || own_speed <= 0 || enemy_speed <= 0 || move_cost <= 0 ) {
+            return false;
+        }
+        const tripoint_bub_ms enemy_pos = enemy.pos_bub( here );
+        if( const monster *mon = enemy.as_monster() ) {
+            if( mon->has_flag( mon_flag_RANGED_ATTACKER ) && here.sees( enemy_pos, here_pos, -1 ) ) {
+                return false;
+            }
+        } else if( const Character *shooter = enemy.as_character() ) {
+            const item_location gun = shooter->get_wielded_item();
+            if( gun && gun->is_gun() && gun->ammo_sufficient( shooter ) &&
+                here.sees( enemy_pos, here_pos, gun->gun_range( shooter ) ) ) {
+                return false;
+            }
+        }
+        // Leave two tiles of separation and enough moves to react on the next turn.
+        return static_cast<std::int64_t>( distance - 2 ) * 100 * own_speed >
+               ( static_cast<std::int64_t>( move_cost ) + own_speed ) * enemy_speed;
+    };
+    return safe_from( target ) &&
+           std::none_of( cache.hostile_guys.begin(), cache.hostile_guys.end(),
+    [&]( const auto & entry ) {
+        const auto enemy = entry.lock();
+        return enemy && enemy.get() != &target && !enemy->is_dead_state() && !safe_from( *enemy );
+    } );
+}
+
+static npc_action choose_combat_self_care( npc &who, npc_short_term_cache &cache,
+        const Creature &target )
+{
+    if( who.get_attitude() != NPCATT_FOLLOW || !who.is_player_ally() ||
+        who.has_native_player_control() || who.is_hallucination() || who.activity ||
+        who.in_vehicle || who.is_mounted() || who.is_underwater() ||
+        who.has_effect( effect_npc_fire_bad ) || !cache.dangerous_explosives.empty() ||
+        get_map().dangerous_field_at( who.pos_bub() ) || rl_dist( who.pos_abs(), target.pos_abs() ) <= 2 ) {
+        return npc_undecided;
+    }
+
+    healing_options urgent;
+    urgent.bleed = who.has_effect( effect_bleed );
+    urgent.bandage = !urgent.bleed && who.hp_percentage() < 35 &&
+                     who.patient_assessment( who ).bandage;
+    if( urgent.any_true() ) {
+        const item &medicine = who.get_healing_item( urgent );
+        const use_function *use = medicine.is_null() ? nullptr : medicine.get_use( "heal" );
+        const auto *healing = use ? dynamic_cast<const heal_actor *>( use->get_actor_ptr() ) : nullptr;
+        if( healing && !medicine.is_filthy() && craft_reservation::usable_by_automation( medicine ) &&
+            medicine.ammo_sufficient( &who ) && ( !urgent.bleed || healing->get_stopbleed_level( who ) > 0 ) &&
+            has_combat_action_window( who, cache, target, healing->healing_cost( who ) ) ) {
+            cache.can_heal = urgent;
+            return npc_heal;
+        }
+    }
+
+    if( !who.rules.has_flag( ally_rule::use_guns ) ||
+        who.rules.has_flag( ally_rule::forbid_engage ) ||
+        who.rules.engagement == combat_engagement::NONE ) {
+        return npc_undecided;
+    }
+    const item_location weapon = who.get_wielded_item();
+    if( !weapon || !weapon->is_gun() || weapon->ammo_remaining() != 0 ||
+        weapon->ammo_sufficient( &who ) ||
+        ( who.rules.has_flag( ally_rule::use_silent ) && !weapon->is_silent() ) ||
+        !craft_reservation::usable_by_automation( *weapon ) || !who.can_reload( *weapon ) ) {
+        return npc_undecided;
+    }
+
+    const item::reload_option reload = who.select_ammo( weapon );
+    if( !reload || !reload.ammo.held_by( who ) ) {
+        return npc_undecided;
+    }
+    const int move_cost = std::max( reload.moves(),
+                                    who.item_reload_cost( *weapon, *reload.ammo, reload.qty() ) );
+    return has_combat_action_window( who, cache, target, move_cost ) ? npc_reload : npc_undecided;
+}
+
 void npc::move()
 {
     const map &here = get_map();
@@ -1678,7 +1764,10 @@ void npc::move()
                has_charges( itype_smoxygen_tank, 1 ) ) ) {
         action = npc_heal;
     } else if( target != nullptr && ai_cache.danger > 0 && !has_flag( json_flag_CANNOT_ATTACK ) ) {
-        action = method_of_attack();
+        action = choose_combat_self_care( *this, ai_cache, *target );
+        if( action == npc_undecided ) {
+            action = method_of_attack();
+        }
     } else if( !ai_cache.sound_alerts.empty() && !is_walking_with() &&
                !has_flag( json_flag_CANNOT_MOVE ) ) {
         if( has_trait( trait_IGNORE_SOUND ) ) {
