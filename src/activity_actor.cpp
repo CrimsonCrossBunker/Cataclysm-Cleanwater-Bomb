@@ -139,6 +139,7 @@
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mtype.h"
+#include "north_america_soil.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "npctalk.h"
@@ -459,8 +460,6 @@ static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_traps( "traps" );
 static const species_id species_ZOMBIE( "ZOMBIE" );
 static const ter_str_id ter_t_card_reader_broken( "t_card_reader_broken" );
-static const ter_str_id ter_t_dirt( "t_dirt" );
-static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 static const ter_str_id ter_t_door_c( "t_door_c" );
 static const ter_str_id ter_t_door_locked_alarm( "t_door_locked_alarm" );
 static const ter_str_id ter_t_door_metal_c( "t_door_metal_c" );
@@ -9179,7 +9178,7 @@ void plant_seed_activity_actor::finish( player_activity &act, Character &who )
         } else if( terrain.plant != nullptr ) {
             here.set( examp, terrain.id, terrain.plant->transform );
         } else {
-            here.set( examp, ter_t_dirt, furn_f_plant_seed );
+            here.set( examp, north_america::planted_soil( here.ter( examp ) ), furn_f_plant_seed );
         }
     } else {
         here.furn_set( examp, furn_f_plant_seed );
@@ -12708,7 +12707,8 @@ void churn_activity_actor::finish( player_activity &act, Character &who )
     const tripoint_bub_ms position = here.get_bub( source->target.position );
     const bool greenhouse = here.ter( position ).id() == ter_t_greenhouse;
     act.set_to_null();
-    here.ter_set( position, greenhouse ? ter_t_greenhouse_tilled : ter_t_dirtmound );
+    here.ter_set( position, greenhouse ? ter_t_greenhouse_tilled.id() :
+                  north_america::tilled_soil( here.ter( position ) ) );
     if( lifetime && context ) {
         who.add_msg_if_player( greenhouse ? _( "You finish preparing the greenhouse here." ) :
                                _( "You finish churning up the earth here." ) );

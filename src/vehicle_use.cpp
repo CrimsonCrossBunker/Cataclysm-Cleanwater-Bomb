@@ -70,6 +70,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america_soil.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -136,7 +137,6 @@ static const quality_id qual_SCREW( "SCREW" );
 
 static const skill_id skill_mechanics( "mechanics" );
 
-static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 
 static const vpart_id vpart_horn_bicycle( "horn_bicycle" );
@@ -995,7 +995,8 @@ void vehicle::operate_planter( map &here )
         if( seed == seeds.end() ) {
             continue;
         }
-        const bool plant = here.ter( position ) == ter_t_dirtmound &&
+        const ter_id terrain = here.ter( position );
+        const bool plant = north_america::canonical_soil( terrain ) == ter_t_dirtmound &&
                            here.furn( position ) == furn_str_id::NULL_ID() && here.i_at( position ).empty();
         if( !plant && part( index ).info().has_flag( "ADVANCED_PLANTER" ) ) {
             continue;
@@ -1015,7 +1016,7 @@ void vehicle::operate_planter( map &here )
             seeds.erase( seed );
         }
         if( plant ) {
-            here.set( position, ter_t_dirt, furn_f_plant_seed );
+            here.set( position, north_america::planted_soil( terrain ), furn_f_plant_seed );
         }
         item &stored = here.add_item( position, std::move( planted ) );
         if( !operation.valid() ) {

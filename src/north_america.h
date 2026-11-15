@@ -51,6 +51,7 @@ class scoped_regional_loot
 };
 
 const item_group_id &regional_item_group( const item_group_id &base );
+const std::string &civic_flag_variant();
 // The caller can include a border to make shoreline classification independent of generation order.
 std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride = 1 );
 

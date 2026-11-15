@@ -4,9 +4,65 @@
 #include "coordinates.h"
 #include "game.h"
 #include "item_group.h"
+#include "mapdata.h"
 #include "north_america.h"
+#include "north_america_soil.h"
 #include "options.h"
 #include "options_helpers.h"
+
+TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    const item_group_id produce( "fresh_produce" );
+    const item_group_id police( "police_armory_any_pistol" );
+    const item_group_id swat_drops( "guns_swat" );
+    const point_abs_ms toronto( -649984, -162480 );
+    const point_abs_ms mexico_city( -2966130, 2139454 );
+
+    g->north_america_world = true;
+    {
+        const north_america::scoped_regional_loot canada( toronto );
+        CHECK( north_america::civic_flag_variant() == "canadian_flag" );
+        CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-CA-ON" ) );
+        CHECK( north_america::regional_item_group( police ) == item_group_id( "police_armory_any_pistol-CA" ) );
+        CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-CA" ) );
+    }
+    {
+        const north_america::scoped_regional_loot mexico( mexico_city );
+        CHECK( north_america::civic_flag_variant() == "mexican_flag" );
+        CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-MX-CMX" ) );
+        CHECK( north_america::regional_item_group( police ) == item_group_id( "police_armory_any_pistol-MX" ) );
+        CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-MX" ) );
+    }
+    g->north_america_world = false;
+    const north_america::scoped_regional_loot classic( toronto );
+    CHECK( north_america::civic_flag_variant().empty() );
+    CHECK( north_america::regional_item_group( produce ) == produce );
+    CHECK( north_america::regional_item_group( police ) == police );
+}
+
+TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][farming]" )
+{
+    const ter_str_id prairie( "t_atlas_soil_prairie" );
+    const ter_str_id prairie_tilled( "t_atlas_soil_prairie_tilled" );
+    const ter_str_id dirt( "t_dirt" );
+    const ter_str_id dirtmound( "t_dirtmound" );
+
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2341315, -1609560 ) ) == prairie );
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2015172, -1184597 ) ) == prairie );
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2660946, -1974662 ) ) == prairie );
+    REQUIRE( prairie.is_valid() );
+    REQUIRE( prairie_tilled.is_valid() );
+    CHECK( prairie->has_flag( ter_furn_flag::TFLAG_DIGGABLE ) );
+    CHECK( prairie->has_flag( ter_furn_flag::TFLAG_PLOWABLE ) );
+    CHECK( prairie_tilled->has_flag( ter_furn_flag::TFLAG_PLANTABLE ) );
+    CHECK( north_america::canonical_soil( prairie.id() ) == dirt );
+    CHECK( north_america::canonical_soil( prairie_tilled.id() ) == dirtmound );
+    CHECK( north_america::tilled_soil( prairie.id() ) == prairie_tilled );
+    CHECK( north_america::planted_soil( prairie_tilled.id() ) == prairie );
+    CHECK( north_america::tilled_soil( dirt.id() ) == dirtmound );
+    CHECK( north_america::planted_soil( dirtmound.id() ) == dirt );
+}
 
 TEST_CASE( "north_america_jurisdictions_follow_borders", "[north_america][worldgen]" )
 {

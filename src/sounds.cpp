@@ -35,6 +35,7 @@
 #include "mp_client_conn.h"
 #include "mp_world_session.h"
 #include "music.h"
+#include "north_america_soil.h"
 #include "npc.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -1873,7 +1874,7 @@ void sfx::do_footstep( const Character &ch )
             play_plmove_sound_variant( "walk_grass", seas_str, indoors, night );
             return;
         }
-        if( dirt.count( terrain ) > 0 ) {
+        if( dirt.count( north_america::canonical_soil( terrain.id() ).id() ) > 0 ) {
             play_plmove_sound_variant( "walk_dirt", seas_str, indoors, night );
             return;
         }
