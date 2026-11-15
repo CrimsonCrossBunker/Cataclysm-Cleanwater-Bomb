@@ -100,5 +100,7 @@ TEST_CASE( "snow_movement_penalty", "[snow][movement]" )
     here.build_map_cache( pos.z() );
     here.build_map_cache( pos.z() + 1 );
     CHECK( player.run_cost( 100 ) == clear_cost );
+    CHECK( weather.get_surface_snow_cover( here, pos ) == snow_cover::none );
+    CHECK( weather.get_surface_snow_cover( here, pos + tripoint::above ) == snow_cover::deep );
     weather.snow_depth_map.clear();
 }

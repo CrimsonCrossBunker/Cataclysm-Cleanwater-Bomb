@@ -236,6 +236,11 @@ const std::vector<urban_district> &urban_districts_in( point_abs_om pos )
     return district == overmaps.end() ? empty : district->second;
 }
 
+int urban_district_size()
+{
+    return get_urban_atlas().step;
+}
+
 bool in_urban_footprint( point_abs_omt pos )
 {
     const urban_atlas &atlas = get_urban_atlas();

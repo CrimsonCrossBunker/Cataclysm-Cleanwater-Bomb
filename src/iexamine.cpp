@@ -2686,7 +2686,11 @@ void iexamine::fertilize_terrain( Character &you, const tripoint_bub_ms &examp )
 
 void iexamine::harvested_plant( Character &you, const tripoint_bub_ms &examp )
 {
-    you.add_msg_if_player( m_info, _( "Nothing can be harvested from this plant in current season." ) );
+    if( get_map().ter( examp )->fruit_climate ) {
+        you.add_msg_if_player( m_info, _( "There is no ripe fruit on this plant." ) );
+    } else {
+        you.add_msg_if_player( m_info, _( "Nothing can be harvested from this plant in current season." ) );
+    }
     iexamine::none( you, examp );
 }
 

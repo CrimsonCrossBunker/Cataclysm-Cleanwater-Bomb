@@ -15,6 +15,7 @@ namespace north_america
 struct road_cell {
     unsigned lanes = 0;
     std::size_t connections = 0;
+    bool urban_arterial = false;
 };
 
 // Connection masks use north, east, south, west. Only the second function

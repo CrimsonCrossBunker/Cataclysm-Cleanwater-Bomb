@@ -1,0 +1,83 @@
+[
+  {
+    "type": "city_building",
+    "id": "house_regional_cape_cod",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_cape_cod_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_cape_cod_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_craftsman",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_craftsman_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_craftsman_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_shotgun",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_shotgun_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_shotgun_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_prairie",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_prairie_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_prairie_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_brick_bungalow",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_brick_bungalow_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_brick_bungalow_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_adobe",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_adobe_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_adobe_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_quebec",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_quebec_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_quebec_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_mexican_patio",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_mexican_patio_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_mexican_patio_roof_north" }
+    ]
+  },
+  {
+    "type": "city_building",
+    "id": "house_regional_ranch",
+    "locations": [ "land" ],
+    "overmaps": [
+      { "point": [ 0, 0, 0 ], "overmap": "house_regional_ranch_north" },
+      { "point": [ 0, 0, 1 ], "overmap": "house_regional_ranch_roof_north" }
+    ]
+  }
+]

@@ -25,6 +25,7 @@ struct urban_district {
 
 const std::vector<urban_district> &urban_districts_in( point_abs_om pos );
 bool in_urban_footprint( point_abs_omt pos );
+int urban_district_size();
 std::string ecoregion_code( point_abs_omt pos );
 void place_native_vegetation( mapgendata &dat );
 } // namespace north_america

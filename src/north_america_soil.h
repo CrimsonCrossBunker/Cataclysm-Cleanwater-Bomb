@@ -21,6 +21,15 @@ ter_id preserve_soil( ter_id terrain, ter_id replacement );
 ter_id tilled_soil( ter_id surface );
 ter_id planted_soil( ter_id mound );
 
+struct crop_soil_properties {
+    double water_capacity = 1.0;
+    double infiltration = 1.0;
+    double drainage = 0.0;
+    double root_growth = 1.0;
+};
+
+crop_soil_properties crop_soil_at( ter_id terrain );
+
 } // namespace north_america
 
 #endif // CATA_SRC_NORTH_AMERICA_SOIL_H

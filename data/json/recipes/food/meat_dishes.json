@@ -622,6 +622,8 @@
         [ "cherries", 1 ],
         [ "cranberries", 1 ],
         [ "raspberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "m_stellatum_berries", 4 ],
         [ "blackberries", 1 ]

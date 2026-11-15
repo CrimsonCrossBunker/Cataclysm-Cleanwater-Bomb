@@ -986,11 +986,14 @@ bool game::start_game()
                 u.starting_city = random_entry( city::get_all() );
                 u.world_origin = u.starting_city->pos_om;
             }
-            auto ret = start_loc.find_player_initial_location( u.starting_city.value() );
+            auto ret = u.start_outskirts ?
+                       start_loc.find_player_initial_location( u.starting_city->pos_om, true ) :
+                       start_loc.find_player_initial_location( *u.starting_city );
             omtstart = ret.first;
             associated_parameters = ret.second;
         } else {
-            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ) );
+            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ),
+                       u.start_outskirts );
             omtstart = ret.first;
             associated_parameters = ret.second;
         }

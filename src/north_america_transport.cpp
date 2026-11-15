@@ -11,6 +11,7 @@
 #include "map_scale_constants.h"
 #include "mapgendata.h"
 #include "north_america.h"
+#include "north_america_ecology.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "path_info.h"
@@ -23,6 +24,11 @@ namespace north_america
 namespace
 {
 constexpr int bucket_width = 256;
+
+bool on_arterial_axis( int coordinate, int spacing )
+{
+    return ( coordinate % spacing + spacing ) % spacing == spacing / 2;
+}
 
 struct road_segment {
     point begin;
@@ -107,7 +113,8 @@ void visit_roads( point from, point to, const Visitor &visit )
 std::vector<road_cell> road_network( point_abs_omt origin, int width, int height )
 {
     std::vector<road_cell> roads( width * height );
-    const auto set_link = [&roads, width, height]( point p, point q, unsigned lanes ) {
+    const auto set_link = [&roads, width, height]( point p, point q, unsigned lanes,
+    bool arterial = false ) {
         if( p.x < 0 || p.y < 0 || p.x >= width || p.y >= height ) {
             return;
         }
@@ -117,6 +124,7 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
                                              delta.y > 0 ? om_direction::type::south : om_direction::type::north;
         road_cell &cell = roads[p.y * width + p.x];
         cell.lanes = std::max( cell.lanes, lanes );
+        cell.urban_arterial |= arterial;
         cell.connections = om_lines::set_segment( cell.connections, direction );
     };
     const point first = origin.raw();
@@ -138,6 +146,28 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
             previous = next;
         }
     } );
+    const int spacing = urban_district_size();
+    if( spacing > 1 ) {
+        for( int y = 0; y < height; ++y ) {
+            const bool row = on_arterial_axis( first.y + y, spacing );
+            for( int x = 0; x < width; ++x ) {
+                const bool column = on_arterial_axis( first.x + x, spacing );
+                const point local( x, y );
+                const point_abs_omt absolute = origin + local;
+                if( ( !row && !column ) || !in_urban_footprint( absolute ) ) {
+                    continue;
+                }
+                for( const point &direction : {
+                         point::north, point::south, point::east, point::west
+                     } ) {
+                    if( ( direction.x != 0 ? row : column ) &&
+                        in_urban_footprint( absolute + direction ) ) {
+                        set_link( local, local + direction, 4, true );
+                    }
+                }
+            }
+        }
+    }
     return roads;
 }
 
@@ -179,6 +209,8 @@ bool draw_mapped_road( mapgendata &dat )
 
     static const ter_str_id grass( "t_grass" );
     static const ter_str_id paving( "t_pavement" );
+    static const ter_str_id sidewalk( "t_sidewalk" );
+    const bool boulevard = cell.urban_arterial && cell.lanes == 4;
     static const ter_str_id yellow( "t_pavement_y" );
     static const ter_str_id white( "t_atlas_pavement_white" );
     const std::size_t links = dat.terrain_type()->get_line();
@@ -208,13 +240,19 @@ bool draw_mapped_road( mapgendata &dat )
             const bool horizontal = y >= center - half_width && y < center + half_width &&
                                     ( ( west && x < center + half_width ) ||
                                       ( east && x >= center - half_width ) );
+            const bool sidewalk_strip = boulevard &&
+                                        ( ( ( north || south ) && ( x == center - half_width - 1 ||
+                                                x == center + half_width ) ) ||
+                                          ( ( east || west ) && ( y == center - half_width - 1 ||
+                                                  y == center + half_width ) ) );
             const ter_id ground = vertical && horizontal ? paving.id() :
-                                  vertical ? surface( x, y ) : horizontal ? surface( y, x ) : grass.id();
+                                  vertical ? surface( x, y ) : horizontal ? surface( y, x ) :
+                                  sidewalk_strip ? sidewalk.id() : grass.id();
             dat.m.ter_set( point_bub_ms( x, y ), ground );
         }
     }
-    if( one_in( 10 ) && ( ( north && south && !east && !west ) ||
-                          ( east && west && !north && !south ) ) ) {
+    if( !boulevard && one_in( 10 ) && ( ( north && south && !east && !west ) ||
+                                        ( east && west && !north && !south ) ) ) {
         static const vgroup_id highway( "highway" );
         const bool heading_positive = one_in( 2 );
         const int side = heading_positive ? -lane_width : lane_width;

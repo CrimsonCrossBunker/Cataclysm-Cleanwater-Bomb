@@ -30,6 +30,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ],
         [ "cherries", 1 ]
@@ -57,6 +59,8 @@
         [ "syrup_corn", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ],
         [ "cherries", 1 ]
@@ -308,6 +312,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],
@@ -341,6 +347,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],
@@ -379,6 +387,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],
@@ -415,6 +425,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],
@@ -497,6 +509,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],
@@ -568,6 +582,8 @@
         [ "maple_candy", 1 ],
         [ "strawberries", 1 ],
         [ "blueberries", 1 ],
+        [ "prickly_pear_fruit", 1 ],
+        [ "saguaro_fruit", 2 ],
         [ "wintergreen_berry", 4 ],
         [ "blackberries", 1 ]
       ],

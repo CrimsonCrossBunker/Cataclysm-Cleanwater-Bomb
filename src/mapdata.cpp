@@ -1565,6 +1565,9 @@ void ter_t::load( const JsonObject &jo, const std::string &src )
         terrain_growth = cata::make_value<terrain_growth_data>();
         terrain_growth->load( jo, "terrain_growth" );
     }
+    if( jo.has_object( "fruit_climate" ) ) {
+        fruit_climate = fruit_climate_profile::load( jo.get_object( "fruit_climate" ) );
+    }
 
     if( jo.has_object( "bash" ) ) {
         bool bash_loaded = !!bash;
@@ -1675,6 +1678,9 @@ void ter_t::check() const
     }
     if( terrain_growth ) {
         terrain_growth->check( id.c_str() );
+    }
+    if( fruit_climate && !fruit_climate->harvest.is_valid() ) {
+        debugmsg( "%s has invalid fruit harvest %s", id.c_str(), fruit_climate->harvest.c_str() );
     }
     if( deconstruct ) {
         deconstruct->check( id.c_str() );

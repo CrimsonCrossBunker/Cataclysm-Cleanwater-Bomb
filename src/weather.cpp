@@ -49,6 +49,7 @@
 #include "north_america.h"
 #include "overmapbuffer.h"
 #include "pocket_type.h"
+#include "plant_climate.h"
 #include "point.h"
 #include "profiling.h"
 #include "regional_settings.h"
@@ -1093,6 +1094,9 @@ const weather_generator &weather_manager::get_cur_weather_gen() const
 
 void weather_manager::on_game_start()
 {
+    clear_plant_climate_cache();
+    last_weather_turn.reset();
+    indoor_reference_time.reset();
     regional_climate::set_calendar_location( std::nullopt );
     if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
         weather_override = static_cast<weather_type_id>
@@ -1118,6 +1122,17 @@ void weather_manager::update_weather()
 {
     CATA_PROFILE_SCOPE();
     Character &player_character = get_player_character();
+    if( last_weather_turn && ( calendar::turn < *last_weather_turn ||
+                               calendar::turn - *last_weather_turn > 1_hours ) ) {
+        if( calendar::turn < *last_weather_turn ) {
+            snow_depth_map.clear();
+        }
+        clear_plant_climate_cache();
+        clear_temp_cache();
+        indoor_reference_time.reset();
+        nextweather = calendar::turn;
+    }
+    last_weather_turn = calendar::turn;
     update_solar_location();
     weather_changed = false;
     if( weather_id == WEATHER_NULL || calendar::turn >= nextweather ) {
@@ -1352,12 +1367,23 @@ double weather_manager::get_snow_depth_mm( const tripoint_abs_omt &location ) co
 snow_cover weather_manager::get_snow_cover( const map &here,
         const tripoint_bub_ms &position ) const
 {
-    if( position.z() < 0 || !here.inbounds( position ) || !here.is_outside( position ) ||
-        here.is_roofed( position ) || here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ||
+    return here.is_outside( position ) ? get_surface_snow_cover( here, position ) : snow_cover::none;
+}
+
+snow_cover weather_manager::get_surface_snow_cover( const map &here,
+        const tripoint_bub_ms &position ) const
+{
+    if( position.z() < 0 || !here.inbounds( position ) ) {
+        return snow_cover::none;
+    }
+    const snow_cover cover = classify_snow( get_snow_depth_mm(
+            project_to<coords::omt>( here.get_abs( position ) ) ) );
+    if( cover == snow_cover::none || here.is_open_air( position ) || here.is_roofed( position ) ||
+        here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ||
         here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, position ) ) {
         return snow_cover::none;
     }
-    return classify_snow( get_snow_depth_mm( project_to<coords::omt>( here.get_abs( position ) ) ) );
+    return cover;
 }
 
 void weather_manager::set_nextweather( time_point t )
@@ -1365,6 +1391,53 @@ void weather_manager::set_nextweather( time_point t )
     nextweather = t;
     update_weather();
 }
+
+double indoor_heat_retention( double wall_loss, int openings, double wind_mph )
+{
+    // Approximate conduction and wind-driven infiltration as parallel losses.
+    return 1.0 / ( 1.0 + wall_loss + openings * ( 1.2 + 0.06 * wind_mph ) );
+}
+
+namespace
+{
+double room_heat_retention( const map &here, const tripoint_bub_ms &location, double wind )
+{
+    constexpr int sample_radius = 6;
+    static constexpr std::array<point, 4> directions{ point::north, point::east,
+            point::south, point::west };
+    int openings = 0;
+    double wall_loss = 0;
+    for( const point &direction : directions ) {
+        double side_loss = 0.20;
+        for( int distance = 1; distance <= sample_radius; ++distance ) {
+            const tripoint_bub_ms boundary = location + direction * distance;
+            if( !here.inbounds( boundary ) ) {
+                break;
+            }
+            const ter_t &surface = here.ter( boundary ).obj();
+            if( surface.movecost == 0 ) {
+                if( surface.has_flag( "WINDOW" ) ) {
+                    side_loss = 0.32;
+                } else if( surface.has_flag( "DOOR" ) ) {
+                    side_loss = 0.20;
+                } else if( surface.has_flag( "WALL" ) ) {
+                    side_loss = 0.07;
+                }
+                break;
+            }
+            if( here.is_outside( boundary ) ||
+                ( ( surface.has_flag( "WINDOW" ) || surface.has_flag( "DOOR" ) ) &&
+                  here.is_outside( boundary + direction ) ) ) {
+                side_loss = 0;
+                ++openings;
+                break;
+            }
+        }
+        wall_loss += side_loss;
+    }
+    return indoor_heat_retention( wall_loss, openings, wind );
+}
+} // namespace
 
 units::temperature weather_manager::get_temperature( const tripoint_bub_ms &location )
 {
@@ -1382,6 +1455,29 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
                               temperature;
 
     if( !g->new_game && !g->swapping_dimensions ) {
+        const map &here = get_map();
+        const tripoint_bub_ms player = get_player_character().pos_bub();
+        if( location.z() >= 0 && here.inbounds( location ) &&
+            std::abs( location.z() - player.z() ) <= 1 &&
+            square_dist( location.xy().raw(), player.xy().raw() ) <= 18 &&
+            ( !here.is_outside( location ) || here.is_roofed( location ) ) ) {
+            if( !indoor_reference_time || calendar::turn < *indoor_reference_time ||
+                calendar::turn - *indoor_reference_time >= 30_minutes ) {
+                const auto &generator = get_cur_weather_gen();
+                const tripoint_abs_ms origin = here.get_abs( player );
+                double mean_c = 0;
+                for( int hours = 2; hours < 24; hours += 4 ) {
+                    mean_c += units::to_celsius( generator.get_weather_temperature(
+                                                     origin, calendar::turn - hours * 1_hours, g->get_seed() ) ) / 6;
+                }
+                indoor_reference_temperature = units::from_celsius( mean_c );
+                indoor_reference_time = calendar::turn;
+            }
+            const double retention = room_heat_retention( here, location, windspeed );
+            temp = units::from_celsius( units::to_celsius( temp ) * ( 1 - retention ) +
+                                        units::to_celsius( indoor_reference_temperature ) * retention );
+        }
+
         units::temperature_delta temp_mod;
         temp_mod = get_heat_radiation( location );
         temp_mod += get_convection_temperature( location );
