@@ -27,6 +27,7 @@ extern "C" {
 #include "cata_scope_helpers.h"
 #include "character_id.h"
 #include "condition.h"
+#include "global_vars.h"
 #include "json_loader.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
@@ -169,6 +170,19 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
                   "FACTION_CAMP_START", 1 );
     compare_near( R"({"u_near_om_location":"FACTION_CAMP_ANY","range":2})",
                   "FACTION_CAMP_ANY", 2 );
+
+    // A location read from a variable is evaluated per scanned tile, not hoisted.
+    const std::string target_key = "lua_platform_near_om_location_target";
+    REQUIRE( get_globals().maybe_get_global_value( target_key ) == nullptr );
+    on_out_of_scope clear_target( [&]() {
+        get_globals().remove_global_value( target_key );
+    } );
+    const std::string near_variable_json =
+        R"({"u_near_om_location":{"global_val":"lua_platform_near_om_location_target"},"range":1})";
+    get_globals().set_global_value( target_key, std::string( "field" ) );
+    compare_near( near_variable_json, "field", 1 );
+    get_globals().set_global_value( target_key, std::string( "forest" ) );
+    compare_near( near_variable_json, "forest", 1 );
 }
 
 TEST_CASE( "lua_platform_npc_overmap_conditions_match_native_beta_positions",
