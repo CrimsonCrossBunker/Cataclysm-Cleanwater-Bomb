@@ -581,7 +581,18 @@ VisitResponse temp_crafting_inventory::visit_items(
         if( it == nullptr ) {
             continue;
         }
-        if( visit_internal( func, it ) == VisitResponse::ABORT ) {
+        if( map_crafter_faction && loc.where_recursive() != item_location::type::character ) {
+            const auto available = [&]( item * node, item * parent ) {
+                const faction_id owner = node->get_owner();
+                if( !owner.is_null() && owner != *map_crafter_faction ) {
+                    return VisitResponse::NEXT;
+                }
+                return func( node, parent );
+            };
+            if( visit_internal( available, it ) == VisitResponse::ABORT ) {
+                return VisitResponse::ABORT;
+            }
+        } else if( visit_internal( func, it ) == VisitResponse::ABORT ) {
             return VisitResponse::ABORT;
         }
     }
