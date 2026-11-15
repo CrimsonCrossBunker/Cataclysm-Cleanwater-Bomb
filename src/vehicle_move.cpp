@@ -1636,11 +1636,11 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
     creature_tracker &creatures = get_creature_tracker();
     for( const tripoint_abs_ms &pt : get_points( true ) ) {
         const tripoint_bub_ms pos = here.get_bub( pt );
-        tripoint_bub_ms above( pos + tripoint::above );
-        const optional_vpart_position ovp = here.veh_at( above );
-        if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pos ) ||
+        const tripoint_bub_ms above( pos + tripoint::above );
+        if( !here.inbounds_z( above.z() ) ||
+            here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pos ) ||
             here.impassable_ter_furn( above ) ||
-            ovp ||
+            here.veh_at( above ) ||
             creatures.creature_at( above ) ) {
             p.add_msg_if_player( m_bad,
                                  _( "It would be unsafe to try and ascend when there are obstacles above you." ) );

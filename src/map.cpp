@@ -919,6 +919,9 @@ void map::cache_vehicle_parts( vehicle &veh )
             continue;
         }
         const tripoint_bub_ms p = veh.bub_part_pos( *this, vpr.part() );
+        if( !inbounds_z( p.z() ) ) {
+            continue;
+        }
         occupied_levels.insert( p.z() );
         level_cache &ch = get_cache( p.z() );
         ch.set_veh_cached_parts( p, veh, static_cast<int>( vpr.part_index() ) );

@@ -15076,7 +15076,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
 
             if( vp ) {
                 // Splitting a grid can move the selected part to another vehicle.
-                const point_rel_ms part_mount = vp->mount_pos3();
+                const tripoint_rel_ms part_mount = vp->mount_pos3();
                 const tripoint_bub_ms part_pos = removal_target->bub_part_pos( here, *vp );
                 removal_target->unlink_cables( here, part_mount, you, false,
                                                appliance_removal || vpi.location == vpart_location_structure,

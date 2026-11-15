@@ -4087,8 +4087,10 @@ ret_val<void> item::link_to( vehicle &veh, const tripoint_rel_ms &mount, link_st
         } else {
             const auto mounted_parts = veh.parts_at_relative( mount, true );
             tow_port = mounted_parts.empty() ? -1 : mounted_parts.front();
-            if( tow_port < 0 || veh.part( tow_port ).is_broken() ||
-                !veh.part( tow_port ).carried_stack.empty() ) {
+            if( tow_port < 0 || veh.part( tow_port ).is_broken() ) {
+                return ret_val<void>::make_failure( _( "You can't attach the tow-line there." ) );
+            }
+            if( !veh.part( tow_port ).carried_stack.empty() ) {
                 return ret_val<void>::make_failure( _( "You can't attach a tow-line to a racked part." ) );
             }
         }
