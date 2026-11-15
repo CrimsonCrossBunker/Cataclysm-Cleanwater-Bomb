@@ -14004,9 +14004,19 @@ void toolmod_add_activity_actor::finish( player_activity &act, Character &who )
         debugmsg( "toolmod_add_activity_actor lost target tool or toolmod" );
         return;
     }
+    const ret_val<void> installation_check = iuse::can_attach_toolmod( mod_installed,
+            tool_to_mod.get_item() );
+    if( !installation_check.success() ) {
+        who.add_msg_if_player( m_info, "%s", installation_check.str() );
+        return;
+    }
+    const ret_val<void> inserted = tool_to_mod->put_in( *mod_installed, pocket_type::MOD );
+    if( !inserted.success() ) {
+        who.add_msg_if_player( m_info, "%s", inserted.str() );
+        return;
+    }
     who.add_msg_if_player( m_good, _( "You successfully attached the %1$s to your %2$s." ),
                            mod_installed->tname(), tool_to_mod->tname() );
-    tool_to_mod->put_in( *mod_installed, pocket_type::MOD );
     tool_to_mod->on_contents_changed();
     mod_installed.remove_item();
 }

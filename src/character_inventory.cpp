@@ -1683,8 +1683,13 @@ bool Character::has_mission_item( int mission_id ) const
 
 void Character::toolmod_add( item_location tool, item_location mod )
 {
-    if( !tool && !mod ) {
+    if( !tool || !mod ) {
         debugmsg( "Tried toolmod installation but mod/tool not available" );
+        return;
+    }
+    const ret_val<void> installation_check = iuse::can_attach_toolmod( mod, tool.get_item() );
+    if( !installation_check.success() ) {
+        add_msg_if_player( m_info, "%s", installation_check.str() );
         return;
     }
     // first check at least the minimum requirements are met
