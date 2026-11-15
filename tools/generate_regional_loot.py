@@ -272,8 +272,9 @@ def render(value, indent=0, separator=""):
     """Render item groups with the repository JSON formatter's collection layout."""
     flat = _inline_json(value)
     if isinstance(value, (dict, list)):
-        # Match tools/format/format.cpp's byte limit, including a pending separator.
-        if indent >= 2 and len((separator + flat).encode("utf-8")) <= 120:
+        # Native depth starts at -1: root and immediate child collections wrap.
+        # Count the pending separator toward tools/format/format.cpp's byte limit.
+        if indent >= 4 and len((separator + flat).encode("utf-8")) <= 120:
             return flat
         left, right = ("{", "}") if isinstance(value, dict) else ("[", "]")
         if isinstance(value, dict):
