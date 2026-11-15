@@ -286,32 +286,46 @@ void item_pocket::restack()
 
 item *restack_charge_items( std::list<item> &contents, item *tracked )
 {
-    std::list<std::list<item>::iterator> stackable;
+    struct candidate {
+        std::list<item>::iterator iter;
+        size_t next;
+    };
+    std::vector<candidate> stackable;
     for( auto iter = contents.begin(); iter != contents.end(); ++iter ) {
         if( iter->count_by_charges() ) {
-            stackable.push_back( iter );
+            stackable.push_back( { iter, stackable.size() + 1 } );
         }
     }
-    auto outer = stackable.begin();
-    while( outer != stackable.end() ) {
+    const size_t end = stackable.size();
+    size_t head = 0;
+    size_t outer = head;
+    while( outer != end ) {
         bool rescan = false;
-        for( auto inner = stackable.begin(); inner != stackable.end(); ) {
-            if( inner == outer || !( *outer )->combine( **inner ) ) {
-                ++inner;
+        size_t previous = end;
+        for( size_t inner = head; inner != end; ) {
+            if( inner == outer || !stackable[outer].iter->combine( *stackable[inner].iter ) ) {
+                previous = inner;
+                inner = stackable[inner].next;
                 continue;
             }
-            if( &**inner == tracked ) {
-                tracked = &**outer;
+            if( &*stackable[inner].iter == tracked ) {
+                tracked = &*stackable[outer].iter;
             }
-            contents.erase( *inner );
-            inner = stackable.erase( inner );
-            if( stackable.front() != contents.begin() ) {
+            contents.erase( stackable[inner].iter );
+            const size_t next = stackable[inner].next;
+            if( previous == end ) {
+                head = next;
+            } else {
+                stackable[previous].next = next;
+            }
+            inner = next;
+            if( stackable[head].iter != contents.begin() ) {
                 rescan = true;
                 break;
             }
-            outer = stackable.begin();
+            outer = head;
         }
-        outer = rescan ? stackable.begin() : std::next( outer );
+        outer = rescan ? head : stackable[outer].next;
     }
     return tracked;
 }
