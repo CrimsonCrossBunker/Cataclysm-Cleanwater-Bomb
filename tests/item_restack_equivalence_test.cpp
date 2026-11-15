@@ -69,7 +69,7 @@ std::vector<stack_state> state_of( const std::list<item> &contents )
     std::vector<stack_state> ret;
     for( const item &it : contents ) {
         ret.push_back( { it.typeId(), it.charges, it.damage(), it.get_owner(), it.get_old_owner(),
-                        it.get_item_thermal_energy(), it.get_relative_rot(), it.item_counter } );
+                         it.get_item_thermal_energy(), it.get_relative_rot(), it.item_counter } );
     }
     return ret;
 }
