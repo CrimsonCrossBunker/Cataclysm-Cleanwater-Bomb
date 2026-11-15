@@ -1295,7 +1295,7 @@ std::vector<std::string> monster::extended_description() const
 
         tmp.emplace_back( string_format( _( "Current Speed: %1$d" ), get_speed() ) );
         tmp.emplace_back( string_format( _( "Anger: %1$d" ), anger ) );
-        tmp.emplace_back( string_format( _( "Friendly: %1$d" ), friendly ) );
+        tmp.emplace_back( string_format( _( "Friendly: %1$d" ), static_cast<int>( friendly ) ) );
         tmp.emplace_back( string_format( _( "Morale: %1$d" ), morale ) );
         if( aggro_character ) {
             tmp.emplace_back( string_format( _( "<color_red>Aggressive towards characters</color>" ) ) );
@@ -3498,6 +3498,53 @@ void monster::process_turn()
     Creature::process_turn();
 }
 
+namespace
+{
+void react_to_friend_event( const monster &subject, map &here, Creature *instigator,
+                            mon_trigger trigger, const char *message )
+{
+    const int light = g->light_level( subject.posz() );
+    const tripoint_bub_ms position = subject.pos_bub( here );
+    const auto react = [&]( monster &observer ) {
+        const bool anger = observer.type->has_anger_trigger( trigger );
+        const bool fear = !anger && observer.type->has_fear_trigger( trigger );
+        const bool placate = !anger && !fear && observer.type->has_placate_trigger( trigger );
+        if( !( anger || fear || placate ) ||
+            observer.faction->attitude( subject.faction ) != MFA_FRIENDLY ||
+            !here.sees( observer.pos_bub( here ), position, light ) ) {
+            return;
+        }
+        // Preserve the original priority and the character aggression side effect.
+        if( anger ) {
+            observer.anger += 15;
+            if( instigator && !instigator->is_monster() && !instigator->is_fake() ) {
+                add_msg_debug( debugmode::DF_MONSTER, message, observer.name(), subject.name() );
+                observer.aggro_character = true;
+            }
+        } else if( fear ) {
+            observer.morale -= 15;
+        } else {
+            observer.anger -= 15;
+        }
+    };
+    std::vector<shared_ptr_fast<monster>> candidates;
+    // The spatial query covers MAX_VIEW_DISTANCE in XY. Unlimited or longer
+    // map visibility must retain the full traversal; Z and LoS stay live.
+    if( light >= 0 && light <= MAX_VIEW_DISTANCE &&
+        get_creature_tracker().nearby_monster_targets( subject.pos_abs(), candidates ) ) {
+        for( const auto &candidate : candidates ) {
+            if( !candidate->is_dead() ) {
+                react( *candidate );
+            }
+        }
+    } else {
+        for( monster &observer : g->all_monsters() ) {
+            react( observer );
+        }
+    }
+}
+} // namespace
+
 void monster::die( map *here, Creature *nkiller )
 {
     if( dead ) {
@@ -3710,31 +3757,8 @@ void monster::die( map *here, Creature *nkiller )
                    type->has_placate_trigger( mon_trigger::FRIEND_DIED );
 
     if( trigger ) {
-        int light = g->light_level( posz() );
-        map &here = get_map();
-        for( monster &critter : g->all_monsters() ) {
-            // Do we actually care about this faction?
-            if( critter.faction->attitude( faction ) != MFA_FRIENDLY ) {
-                continue;
-            }
-
-            if( here.sees( critter.pos_bub(), pos_bub(), light ) ) {
-                // Anger trumps fear trumps ennui
-                if( critter.type->has_anger_trigger( mon_trigger::FRIEND_DIED ) ) {
-                    critter.anger += 15;
-                    if( nkiller != nullptr && !nkiller->is_monster() && !nkiller->is_fake() ) {
-                        // A character killed our friend
-                        add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by killing a friendly %s",
-                                       critter.name(), name() );
-                        critter.aggro_character = true;
-                    }
-                } else if( critter.type->has_fear_trigger( mon_trigger::FRIEND_DIED ) ) {
-                    critter.morale -= 15;
-                } else if( critter.type->has_placate_trigger( mon_trigger::FRIEND_DIED ) ) {
-                    critter.anger -= 15;
-                }
-            }
-        }
+        react_to_friend_event( *this, get_map(), nkiller, mon_trigger::FRIEND_DIED,
+                               "%s's character aggro triggered by killing a friendly %s" );
     }
 
     cata::lua_platform::dispatch_native_hook(
@@ -4532,30 +4556,8 @@ void monster::on_hit( map *here, Creature *source, bodypart_id,
                    type->has_placate_trigger( mon_trigger::FRIEND_ATTACKED );
 
     if( trigger ) {
-        int light = g->light_level( posz() );
-        for( monster &critter : g->all_monsters() ) {
-            // Do we actually care about this faction?
-            if( critter.faction->attitude( faction ) != MFA_FRIENDLY ) {
-                continue;
-            }
-
-            if( here->sees( critter.pos_bub( *here ), pos_bub( *here ), light ) ) {
-                // Anger trumps fear trumps ennui
-                if( critter.type->has_anger_trigger( mon_trigger::FRIEND_ATTACKED ) ) {
-                    critter.anger += 15;
-                    if( source != nullptr && !source->is_monster() && !source->is_fake() ) {
-                        // A character attacked our friend
-                        add_msg_debug( debugmode::DF_MONSTER, "%s's character aggro triggered by attacking a friendly %s",
-                                       critter.name(), name() );
-                        critter.aggro_character = true;
-                    }
-                } else if( critter.type->has_fear_trigger( mon_trigger::FRIEND_ATTACKED ) ) {
-                    critter.morale -= 15;
-                } else if( critter.type->has_placate_trigger( mon_trigger::FRIEND_ATTACKED ) ) {
-                    critter.anger -= 15;
-                }
-            }
-        }
+        react_to_friend_event( *this, *here, source, mon_trigger::FRIEND_ATTACKED,
+                               "%s's character aggro triggered by attacking a friendly %s" );
     }
     if( source != nullptr ) {
         if( Character *attacker = source->as_character() ) {

@@ -48,26 +48,53 @@ void monster_target_candidates::move( std::size_t index, const point &pos )
     if( previous == next ) {
         return;
     }
-    for( auto &entry : windows_ ) {
-        if( overlaps( entry.first, previous ) != overlaps( entry.first, next ) ) {
-            entry.second.ready = false;
+    // Defer invalidation to queried windows instead of visiting all cached
+    // windows for every moving monster. The history has a fixed memory bound.
+    movements_[movement_clock_ % movement_history_size] = { previous, next };
+    ++movement_clock_;
+    cells_[index] = next;
+}
+
+void monster_target_candidates::validate( cell key, window &entry )
+{
+    if( !entry.ready || entry.checked_movement == movement_clock_ ) {
+        return;
+    }
+    const std::uint64_t changes = movement_clock_ - entry.checked_movement;
+    if( changes > movement_history_size ) {
+        entry.ready = false;
+        return;
+    }
+    for( std::uint64_t i = 0; i < changes; ++i ) {
+        const movement &change = movements_[( entry.checked_movement + i ) % movement_history_size];
+        if( overlaps( key, change.previous ) != overlaps( key, change.next ) ) {
+            entry.ready = false;
+            return;
         }
     }
-    cells_[index] = next;
+    entry.checked_movement = movement_clock_;
 }
 
 void monster_target_candidates::warm( const point &pos )
 {
     if( windows_.size() < max_windows ) {
-        windows_.try_emplace( cell_at( pos ) );
+        auto entry = windows_.try_emplace( cell_at( pos ) );
+        if( entry.second ) {
+            entry.first->second.prefetch = true;
+            entry.first->second.checked_movement = movement_clock_;
+        }
     }
 }
 
-void monster_target_candidates::prepare( cata_thread_pool &pool )
+void monster_target_candidates::prepare( cata_thread_pool &pool, window &requested )
 {
     std::vector<std::pair<cell, window *>> pending;
     for( auto &entry : windows_ ) {
-        if( !entry.second.ready ) {
+        // Movement can make the original warmup locations irrelevant. Do not
+        // build those speculative windows after their position snapshot changed.
+        const bool prefetch = entry.second.prefetch &&
+                              entry.second.checked_movement == movement_clock_;
+        if( !entry.second.ready && ( &entry.second == &requested || prefetch ) ) {
             pending.emplace_back( entry.first, &entry.second );
         }
     }
@@ -116,6 +143,8 @@ void monster_target_candidates::prepare( cata_thread_pool &pool )
     }
     for( auto &entry : pending ) {
         entry.second->ready = true;
+        entry.second->prefetch = false;
+        entry.second->checked_movement = movement_clock_;
     }
 }
 
@@ -124,11 +153,17 @@ const monster_target_candidates::indices &monster_target_candidates::query(
 {
     const cell key = cell_at( pos );
     if( windows_.find( key ) == windows_.end() && windows_.size() == max_windows ) {
-        windows_.clear();
+        const auto oldest = std::min_element( windows_.begin(), windows_.end(),
+        []( const auto &lhs, const auto &rhs ) {
+            return lhs.second.last_used < rhs.second.last_used;
+        } );
+        windows_.erase( oldest );
     }
     window &entry = windows_[key];
+    entry.last_used = ++query_clock_;
+    validate( key, entry );
     if( !entry.ready ) {
-        prepare( pool );
+        prepare( pool, entry );
     }
     return entry.candidates;
 }

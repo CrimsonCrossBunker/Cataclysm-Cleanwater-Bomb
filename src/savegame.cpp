@@ -340,6 +340,7 @@ void game::unserialize_impl( const JsonObject &data )
 
 void scent_map::deserialize( const std::string &data, bool is_type )
 {
+    ++revision_;
     std::istringstream buffer( data );
     buffer.imbue( std::locale::classic() );
     if( is_type ) {

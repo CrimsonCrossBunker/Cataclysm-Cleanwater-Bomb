@@ -23,6 +23,7 @@
 #include "compatibility.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "monster_disposition.h"
 #include "monster_goal_policy.h"
 #include "monster_uid.h"
 #include "pet_slot.h"
@@ -37,6 +38,7 @@ class JsonOut;
 class effect_source;
 class item;
 class map;
+class monster_path_batch;
 enum class mon_trigger : int;
 enum class phase_id : int;
 struct monster_plan;
@@ -275,6 +277,7 @@ class monster : public Creature
         float rate_target( Creature &c, float best, bool smart = false ) const;
         // is it mating season?
         bool mating_angry() const;
+        void prepare_path_search( monster_path_batch &batch, const map &here ) const;
         void plan();
         void anger_hostile_seen( const monster_plan &mon_plan );
         void anger_mating_season( const monster_plan &mon_plan );
@@ -600,7 +603,7 @@ class monster : public Creature
         void move_special_item_to_inv( cata::value_ptr<item> &it );
 
         // DEFINING VALUES
-        int friendly = 0;
+        monster_friendliness friendly;
         int anger = 0;
         int morale = 2;
     private:
@@ -610,7 +613,7 @@ class monster : public Creature
         void recheck_fed_status();
     public:
         // Our faction (species, for most monsters)
-        mfaction_id faction;
+        monster_faction faction;
         // If we're related to a mission
         std::set<int> mission_ids;
         // Names of mission monsters fused with this monster

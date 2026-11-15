@@ -49,3 +49,21 @@ if(UNIX)
     add_test(NAME ai_reachability_fault COMMAND ai_reachability_fault_test)
     set_tests_properties(ai_reachability_fault PROPERTIES TIMEOUT 30)
 endif()
+
+add_executable(monster_motion_kernel_test
+    monster_motion_test.cpp
+    "${CCB_ROOT}/tests/monster_motion_profile_test.cpp"
+    "${CCB_ROOT}/tests/monster_disposition_test.cpp"
+    "${CCB_ROOT}/tests/route_snapshot_test.cpp"
+    "${CCB_ROOT}/tests/monster_scent_search_test.cpp"
+    "${CCB_ROOT}/tests/monster_candidate_reuse_test.cpp"
+    "${CCB_ROOT}/src/route_snapshot.cpp"
+    "${CCB_ROOT}/src/monster_scent_search.cpp"
+    "${CCB_ROOT}/src/monster_target_candidates.cpp"
+    "${CCB_ROOT}/src/thread_pool.cpp"
+    "${CCB_ROOT}/src/compute_budget.cpp")
+target_include_directories(monster_motion_kernel_test PRIVATE "${CCB_ROOT}/src")
+target_include_directories(monster_motion_kernel_test SYSTEM PRIVATE "${CCB_ROOT}/src/third-party")
+target_link_libraries(monster_motion_kernel_test PRIVATE Threads::Threads)
+add_test(NAME monster_motion_kernels COMMAND monster_motion_kernel_test)
+set_tests_properties(monster_motion_kernels PROPERTIES TIMEOUT 30)

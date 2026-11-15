@@ -3425,29 +3425,32 @@ bool mattack::parrot_at_danger( monster *parrot )
 {
     const map &here = get_map();
 
-    Creature *other = get_creature_tracker().find_reachable( *parrot, [parrot,
-    &here]( Creature * creature ) {
-        if( !creature->is_hallucination() && one_in( 20 ) ) {
-            if( creature->is_avatar() || creature->is_npc() ) {
-                Character *character = creature->as_character();
-                return character->attitude_to( *parrot ) == Creature::Attitude::HOSTILE &&
-                       parrot->sees( here, *character );
-            } else {
-                monster *monster = creature->as_monster();
-                return ( monster->faction->attitude( parrot->faction ) == mf_attitude::MFA_HATE ||
-                         ( monster->anger > 0 &&
-                           monster->faction->attitude( parrot->faction ) == mf_attitude::MFA_BY_MOOD ) ) &&
-                       parrot->sees( here, *monster );
-            }
+    creature_tracker &tracker = get_creature_tracker();
+    Creature *other = tracker.find_reachable( *parrot,
+    [parrot, &tracker]( const mfaction_id &faction ) {
+        const mf_attitude attitude = faction->attitude( parrot->faction );
+        // Characters can be hostile individually even in a friendly faction.
+        return attitude == MFA_HATE || attitude == MFA_BY_MOOD ||
+               tracker.faction_has_reachable_characters( faction );
+    }, [parrot, &here]( Creature *creature ) {
+        if( creature->is_hallucination() ) {
+            return false;
         }
-        return false;
+        bool hostile = false;
+        if( creature->is_avatar() || creature->is_npc() ) {
+            hostile = creature->as_character()->attitude_to( *parrot ) == Creature::Attitude::HOSTILE;
+        } else if( const monster *mon = creature->as_monster() ) {
+            const mf_attitude attitude = mon->faction->attitude( parrot->faction );
+            hostile = attitude == MFA_HATE || ( mon->anger > 0 && attitude == MFA_BY_MOOD );
+        }
+        // Ineligible creatures no longer consume random draws. Each eligible
+        // candidate retains its independent 1/20 chance, before the LOS check.
+        return hostile && one_in( 20 ) && parrot->sees( here, *creature );
     } );
-
     if( other ) {
         parrot_common( parrot );
         return true;
     }
-
     return false;
 }
 

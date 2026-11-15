@@ -35,6 +35,7 @@
 #include "maptile_fwd.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "monster_motion_profile.h"
 #include "monster_target_candidates.h"
 #include "mp_gamestate.h"
 #include "mp_world_session.h"
@@ -74,24 +75,30 @@ struct creature_tracker::reachability_state {
 struct creature_tracker::target_candidate_state {
     monster_target_candidates table{ MAX_VIEW_DISTANCE };
     std::unordered_map<const monster *, std::size_t> slots;
+    std::vector<shared_ptr_fast<monster>> members;
+    std::uint64_t friendliness_revision = monster_friendliness::revision();
 };
 
 bool creature_tracker::nearby_monster_targets( const tripoint_abs_ms &origin,
         std::vector<shared_ptr_fast<monster>> &out )
 {
     out.clear();
-    if( monsters_list.size() < 256 || monsters_list.size() > 4096 ) {
+    if( monsters_list.size() < 256 ) {
         return false;
     }
     try {
-        if( !target_candidates_ ) {
+        if( !target_candidates_ || target_candidates_->friendliness_revision !=
+            monster_friendliness::revision() ) {
             auto state = std::make_unique<target_candidate_state>();
             for( const auto &mon : monsters_list ) {
-                state->slots.emplace( mon.get(), state->slots.size() );
-                state->table.add( mon->pos_abs().xy().raw() );
+                if( mon->friendly == 0 ) {
+                    state->slots.emplace( mon.get(), state->members.size() );
+                    state->members.push_back( mon );
+                    state->table.add( mon->pos_abs().xy().raw() );
+                }
             }
-            // Share each coarse window across its observers, regardless of
-            // later friendliness changes. Workers see only copied cell values.
+            // Membership is rebuilt on zero/nonzero friendliness transitions.
+            // Positions and final attitude checks remain live.
             for( const auto &mon : monsters_list ) {
                 if( mon->friendly != 0 ) {
                     state->table.warm( mon->pos_abs().xy().raw() );
@@ -99,11 +106,14 @@ bool creature_tracker::nearby_monster_targets( const tripoint_abs_ms &origin,
             }
             target_candidates_ = std::move( state );
         }
+        if( target_candidates_->members.empty() ) {
+            return true;
+        }
         const monster_target_candidates::indices &indices =
             target_candidates_->table.query( origin.xy().raw(), get_thread_pool() );
         out.reserve( indices.size() );
         for( const std::size_t i : indices ) {
-            out.push_back( monsters_list[i] );
+            out.push_back( target_candidates_->members[i] );
         }
         return true;
     } catch( const std::bad_alloc & ) {
@@ -243,9 +253,7 @@ void creature_tracker::cache_location( const tripoint_abs_ms &pos,
     monsters_by_location[pos] = critter;
     if( target_candidates_ ) {
         const auto slot = target_candidates_->slots.find( critter.get() );
-        if( slot == target_candidates_->slots.end() ) {
-            target_candidates_.reset();
-        } else {
+        if( slot != target_candidates_->slots.end() ) {
             target_candidates_->table.move( slot->second, pos.xy().raw() );
         }
     }
@@ -262,6 +270,7 @@ size_t creature_tracker::size() const
 bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms &old_pos,
                                    const tripoint_abs_ms &new_pos )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::position );
     map &here = get_map();
 
     if( critter.is_dead() ) {
@@ -292,6 +301,7 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
         return true;
     }
 
+    monster_motion_profile::increment( monster_motion_profile::counter::position_fallbacks );
     const auto iter = std::find_if( monsters_list.begin(), monsters_list.end(),
     [&]( const shared_ptr_fast<monster> &ptr ) {
         return ptr.get() == &critter;
@@ -638,6 +648,7 @@ void creature_tracker::fill_passability_bitmap( const map &terrain, passability_
 
 void creature_tracker::reset_reachability_zones()
 {
+    reachability_character_factions_.clear();
     creatures_by_zone_and_faction_.clear();
     if( reachability_state_ ) {
         reachability_state_->regions.clear();
@@ -664,6 +675,10 @@ creature_tracker::reachability_zones &creature_tracker::zones_for( map &terrain 
 creature_tracker::reachable_factions *creature_tracker::reachable_creatures(
     const Creature &origin )
 {
+    if( reachability_faction_revision_ != monster_faction::revision() ) {
+        invalidate_reachability_cache();
+        reachability_faction_revision_ = monster_faction::revision();
+    }
     if( g->multiplayer_session().has_regions() ) {
         map &terrain = get_map();
         if( !terrain.has_loaded_submap( origin.pos_abs_sm() ) || origin.is_dead_state() ) {
@@ -803,6 +818,9 @@ void creature_tracker::flood_fill_zone( const Creature &origin, map &here,
         }
         if( Creature *creature = this->creature_at<Creature>( position, true ) ) {
             if( shared_ptr_fast<Creature> ptr = g->shared_from( *creature ) ) {
+                if( !creature->is_monster() ) {
+                    reachability_character_factions_.insert( creature->get_monster_faction() );
+                }
                 if( regional ) {
                     regional->assignments.insert_or_assign( creature, zone );
                     regional->members[zone][creature->get_monster_faction()].emplace_back( std::move( ptr ) );

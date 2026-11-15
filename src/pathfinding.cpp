@@ -25,6 +25,7 @@
 #include "game.h"
 #include "line.h"
 #include "map.h"
+#include "monster_path_batch.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "messages.h"
@@ -460,6 +461,9 @@ int map::extra_cost( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
 std::vector<tripoint_bub_ms> map::route( const Creature &who,
         const pathfinding_target &target ) const
 {
+    if( auto prepared = monster_path_batch::take( *this, who, target ) ) {
+        return std::move( *prepared );
+    }
     return route( who.pos_bub(), target, who.get_pathfinding_settings(), who.get_path_avoid() );
 }
 

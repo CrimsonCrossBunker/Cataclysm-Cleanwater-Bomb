@@ -1,5 +1,6 @@
 // Monster movement code; essentially, the AI
-#include "monster.h" // IWYU pragma: associated
+#include "monster.h"
+#include "monster_motion_profile.h" // IWYU pragma: associated
 
 #include <bodypart.h>
 #include <calendar.h>
@@ -49,6 +50,8 @@
 #include "mongroup.h"
 #include "monster_destination_plan.h"
 #include "monster_local_cache.h"
+#include "monster_path_batch.h"
+#include "monster_scent_batch.h"
 #include "monster_movement_plan.h"
 #include "monster_oracle.h"
 #include "monster_planning_reaction.h"
@@ -391,6 +394,8 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
 
 float monster::rate_target_impl( Creature &c, float best, bool smart, bool already_visible ) const
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::rate_target );
+    monster_motion_profile::increment( monster_motion_profile::counter::ratings );
     const map &here = get_map();
 
     const FastDistanceApproximation d = rl_dist_fast( pos_bub( here ), c.pos_bub( here ) );
@@ -573,6 +578,8 @@ bool monster::mating_angry() const
 
 void monster::plan()
 {
+    namespace profile = monster_motion_profile;
+    profile::scope timing( profile::stage::plan_setup );
     CATA_PROFILE_SCOPE();
     monster_plan mon_plan( *this );
 
@@ -588,6 +595,7 @@ void monster::plan()
     std::bitset<OVERMAP_LAYERS> seen_levels = here.get_inter_level_visibility( posz() );
     monster_attitude mood = attitude();
     Character &player_character = get_player_character();
+    timing.next( profile::stage::plan_player );
     // If this monster locks on via LoS, refresh the locked-on tracking effect
     if( has_flag( mon_flag_LOCKS_ON ) &&
         sees( here, player_character.pos_bub( here ), true ) ) {
@@ -618,7 +626,9 @@ void monster::plan()
         }
         anger_cub_threatened( mon_plan );
     } else if( friendly != 0 && !mon_plan.docile ) {
+        timing.next( profile::stage::plan_friendly );
         const auto consider = [&]( monster & tmp ) {
+            profile::increment( profile::counter::friendly_visits );
             if( tmp.friendly == 0 && tmp.attitude_to( *this ) == Attitude::HOSTILE &&
                 seen_levels.test( tmp.posz() + OVERMAP_DEPTH ) ) {
                 float rating = rate_target( tmp, mon_plan.dist, mon_plan.smart_planning );
@@ -654,8 +664,10 @@ void monster::plan()
         return;
     }
 
+    timing.next( profile::stage::plan_npcs );
     int valid_targets = ( mon_plan.target == nullptr ) ? 0 : 1;
     for( npc &who : g->all_npcs() ) {
+        profile::increment( profile::counter::npc_visits );
         mf_attitude faction_att = faction.obj().attitude( who.get_monster_faction() );
         if( faction_att == MFA_NEUTRAL || faction_att == MFA_FRIENDLY ) {
             continue;
@@ -715,6 +727,7 @@ void monster::plan()
         }
     }
 
+    timing.next( profile::stage::plan_hostile );
     mon_plan.fleeing = mon_plan.fleeing || ( mood == MATT_FLEE );
     // Throttle monster thinking, if there are no apparent threats, stop paying attention.
     constexpr int max_turns_for_rate_limiting = 1800;
@@ -730,6 +743,7 @@ void monster::plan()
             return !( faction_att == MFA_NEUTRAL || faction_att == MFA_FRIENDLY );
         },
         [this, &seen_levels, &mon_plan, &valid_targets]( Creature * other ) {
+            profile::increment( profile::counter::hostile_visits );
             if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
                 return;
             }
@@ -766,6 +780,7 @@ void monster::plan()
         } );
     }
 
+    timing.next( profile::stage::plan_vehicle );
     if( !mon_plan.target ) {
         // No other valid targets found, maybe there's a vehicle!
         std::set<tripoint_bub_ms> target_vehicles =
@@ -794,15 +809,17 @@ void monster::plan()
         turns_since_target = 0;
     }
 
+    timing.next( profile::stage::plan_group );
     // Friendly monsters here
     // Avoid for hordes of same-faction stuff or it could get expensive
-    const mfaction_id actual_faction = friendly == 0 ? faction : monfaction_player;
+    const mfaction_id actual_faction = friendly == 0 ? static_cast<const mfaction_id &>( faction ) : monfaction_player;
     mon_plan.swarms = mon_plan.swarms && mon_plan.target == nullptr; // Only swarm if we have no target
     if( mon_plan.group_morale || mon_plan.swarms ) {
         tracker.for_each_reachable( *this, [actual_faction]( const mfaction_id & other ) {
             return actual_faction == other;
         },
         [this, &seen_levels, &mon_plan]( Creature * other ) {
+            profile::increment( profile::counter::group_visits );
             if( !seen_levels.test( other->posz() + OVERMAP_DEPTH ) ) {
                 return;
             }
@@ -832,6 +849,7 @@ void monster::plan()
         } );
     }
 
+    timing.next( profile::stage::plan_goal );
     // Operating monster keep you safe while they operate, how nice....
     if( type->has_special_attack( "OPERATE" ) ) {
         if( has_effect( effect_operating ) ) {
@@ -960,6 +978,20 @@ bool monster::die_if_drowning( const tripoint_bub_ms &at_pos, const int chance )
     return false;
 }
 
+void monster::prepare_path_search( monster_path_batch &batch, const map &here ) const
+{
+    if( is_dead() || is_wandering() || !can_pathfind() || !here.inbounds( pos_abs() ) ) {
+        return;
+    }
+    const tripoint_bub_ms destination = here.get_bub( get_dest() );
+    const pathfinding_settings &settings = get_pathfinding_settings();
+    if( settings.max_dist < rl_dist( pos_abs(), get_dest() ) ||
+        ( !path.empty() && rl_dist( pos_bub(), path.front() ) < 2 && path.back() == destination ) ) {
+        return;
+    }
+    batch.add( *this, destination );
+}
+
 // General movement.
 // Currently, priority goes:
 // 1) Special Attack
@@ -968,6 +1000,8 @@ bool monster::die_if_drowning( const tripoint_bub_ms &at_pos, const int chance )
 // 4) Sound-based tracking
 void monster::move()
 {
+    namespace profile = monster_motion_profile;
+    profile::scope timing( profile::stage::move_setup );
     map &here = get_map();
 
     add_msg_debug( debugmode::DF_MONMOVE, "Monster %s starting monmove::move, remaining moves %d",
@@ -985,6 +1019,7 @@ void monster::move()
     }
     Character &player_character = get_player_character();
 
+    timing.next( profile::stage::move_behavior );
     behavior::monster_oracle_t oracle( this );
     behavior::tree goals;
     goals.add( type->get_goals() );
@@ -1000,6 +1035,7 @@ void monster::move()
             reset_special( action );
         }
     }
+    timing.next( profile::stage::move_specials );
     // record position before moving to put the player there if we're dragging
     tripoint_abs_ms drag_to = pos_abs();
 
@@ -1043,6 +1079,7 @@ void monster::move()
         }
     }
 
+    timing.next( profile::stage::move_effects );
     // Check if they're dragging a foe and find their hapless victim
     Character *dragged_foe = find_dragged_foe();
 
@@ -1104,6 +1141,7 @@ void monster::move()
             return; // don't move if friendly and passenger in a moving vehicle
         }
     }
+    timing.next( profile::stage::move_attitude );
     // Set attitude to attitude to our current target
     monster_attitude current_attitude = attitude( nullptr );
     if( !is_wandering() ) {
@@ -1137,6 +1175,7 @@ void monster::move()
         return;
     }
 
+    timing.next( profile::stage::move_neighbors );
     bool moved = false;
     tripoint_bub_ms destination;
 
@@ -1145,6 +1184,7 @@ void monster::move()
 
     // Check z-level neighbors too so creatures on stairs aren't falsely stuck
     for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, 1 ) ) {
+        profile::increment( profile::counter::neighbor_checks );
         if( dest != pos_bub() ) {
             if( can_move_to( dest ) &&
                 creatures.creature_at( dest, true ) == nullptr ) {
@@ -1154,6 +1194,7 @@ void monster::move()
         }
     }
 
+    timing.next( profile::stage::move_path );
     // If true, don't try to greedily avoid locally bad paths
     bool pathed = false;
     tripoint_bub_ms local_dest = here.get_bub( get_dest() );
@@ -1190,11 +1231,13 @@ void monster::move()
                 ( path.empty() || rl_dist( pos_bub(), path.front() ) >= 2 || path.back() != local_dest ) ) {
                 // We need a new path
                 if( can_pathfind() ) {
+                    profile::increment( profile::counter::routes );
                     path = here.route( *this, pathfinding_target::point( local_dest ) );
                     if( path.empty() ) {
                         increment_pathfinding_cd();
                     }
                 } else {
+                    profile::increment( profile::counter::straight_routes );
                     path = here.straight_route( pos_bub(), local_dest );
                     if( !path.empty() ) {
                         if( std::any_of( path.begin(), path.end(), get_path_avoid() ) ) {
@@ -1219,6 +1262,7 @@ void monster::move()
             }
         }
     }
+    timing.next( profile::stage::move_scent_sound );
     if( !moved && has_flag( mon_flag_SMELLS ) ) {
         // No sight... or our plans are invalid (e.g. moving through a transparent, but
         //  solid, square of terrain).  Fall back to smell if we have it.
@@ -1239,6 +1283,7 @@ void monster::move()
         }
     }
 
+    timing.next( profile::stage::move_selection );
     point_rel_ms new_d( destination.xy() - pos_bub().xy() );
 
     // toggle facing direction for sdl flip
@@ -1422,6 +1467,7 @@ void monster::move()
         moved = selection.selected;
         next_step = selection.destination;
     }
+    timing.next( profile::stage::move_commit );
     // Finished logic section.  By this point, we should have chosen a square to
     //  move to (moved = true).
     if( moved ) { // Actual effects of moving to the square we've chosen
@@ -1666,6 +1712,9 @@ tripoint_bub_ms monster::scent_move()
     if( !fleeing && scent_here > smell_threshold ) {
         // Smell too strong to track, wander around
         sdirection.push_back( pos_bub() );
+    } else if( const auto prepared = fleeing ? std::nullopt :
+               monster_scent_batch::directions( here, scents, pos_bub(), bestsmell ) ) {
+        sdirection = *prepared;
     } else {
         // Get direction of scent
         for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, SCENT_MAP_Z_REACH ) ) {
@@ -1916,6 +1965,7 @@ static std::vector<tripoint_bub_ms> get_bashing_zone( const tripoint_bub_ms &bas
 
 bool monster::bash_at( const tripoint_bub_ms &p )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::bash );
     map &here = get_map();
 
     if( p.z() != posz() ) {
@@ -2033,6 +2083,7 @@ std::map<damage_type_id, int> monster::group_bash_skill( const tripoint_bub_ms &
 
 bool monster::attack_at( const tripoint_bub_ms &p )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::attack );
     const map &here = get_map();
 
     // Aquatic monsters that are underwater should not be able to attack
@@ -2051,11 +2102,10 @@ bool monster::attack_at( const tripoint_bub_ms &p )
     }
 
     Character &player_character = get_player_character();
-    const bool sees_player = sees( here, player_character );
     // Targeting player location
     if( p == player_character.pos_bub() &&
         ( p.z() == pos_bub().z() || here.on_matching_stairs( pos_bub(), p ) ) ) {
-        if( sees_player ) {
+        if( sees( here, player_character ) ) {
             return melee_attack( player_character );
         } else {
             // Creature stumbles into a player it cannot see, briefly becoming aware of their location
@@ -2104,7 +2154,7 @@ bool monster::attack_at( const tripoint_bub_ms &p )
 
     // Attack last known position despite empty
     if( has_effect( effect_stumbled_into_invisible ) &&
-        here.has_field_at( p, field_fd_last_known ) && !sees_player &&
+        here.has_field_at( p, field_fd_last_known ) && !sees( here, player_character ) &&
         attitude_to( player_character ) == Attitude::HOSTILE ) {
         return attack_air( tripoint_bub_ms( p ) );
     }
@@ -2132,6 +2182,7 @@ static tripoint_bub_ms find_closest_stair( const tripoint_bub_ms &near_this,
 bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critter,
                        const float stagger_adjustment )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::step );
     map &here = get_map();
     const tripoint_bub_ms pos = pos_bub( here );
 
@@ -2385,6 +2436,7 @@ bool monster::move_to( const tripoint_bub_ms &p, bool force, bool step_on_critte
 
 bool monster::push_to( const tripoint_bub_ms &p, const int boost, const size_t depth )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::push );
     map &here = get_map();
 
     if( is_hallucination() ) {
@@ -2546,6 +2598,7 @@ void monster::stumble_involuntary()
  */
 void monster::stumble_base( const bool is_voluntary )
 {
+    monster_motion_profile::scope timing( monster_motion_profile::stage::stumble );
     // Only move every 10 turns.
     if( !one_in( 10 ) ) {
         return;
