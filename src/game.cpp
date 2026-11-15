@@ -381,8 +381,8 @@ static const quality_id qual_BUTCHER( "BUTCHER" );
 static const quality_id qual_CUT_FINE( "CUT_FINE" );
 static const quality_id qual_PRY( "PRY" );
 
-static const skill_id skill_driving( "driving" );
 static const skill_id skill_dodge( "dodge" );
+static const skill_id skill_driving( "driving" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_survival( "survival" );

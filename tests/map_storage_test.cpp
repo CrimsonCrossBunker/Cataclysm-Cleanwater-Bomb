@@ -447,7 +447,7 @@ TEST_CASE( "distant_terrain_reads_saved_submaps_without_reconstructing_missing_t
 {
     const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
-    const auto context = fixture.context( "a", "default", compressed );
+    const map_storage_context context = fixture.context( "a", "default", compressed );
     int overmap_lookups = 0;
     mapbuffer buffer( context, [&]( const tripoint_abs_omt & ) {
         ++overmap_lookups;

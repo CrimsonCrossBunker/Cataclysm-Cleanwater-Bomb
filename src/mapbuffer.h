@@ -163,7 +163,7 @@ class mapbuffer
         // caching it. Returns nullptr if the archive does not exist / fails to open.
         const std::unordered_set<std::string> *zzip_listing( const cata_path &zzip_path );
         submap_map_t submaps; // NOLINT(cata-serialize)
-        uint64_t content_revision_ = 0;
+        uint64_t content_revision_ = 0; // NOLINT(cata-serialize)
         const bool active_world_adapter_;
         std::unique_ptr<const map_storage_context> storage_;
         uniform_terrain_lookup uniform_terrain_;

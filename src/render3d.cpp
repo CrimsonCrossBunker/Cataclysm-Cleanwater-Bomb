@@ -2763,19 +2763,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         }
         const level_cache &sight_cache = here.get_cache_ref( observer_pos.z() );
         for( int i = 1; i <= steps; ++i ) {
-            const int x = observer_pos.x() + static_cast<int>( std::lround(
-                              static_cast<double>( d.x ) * i / steps ) );
-            const int y = observer_pos.y() + static_cast<int>( std::lround(
-                              static_cast<double>( d.y ) * i / steps ) );
-            const int rx = x - observer_pos.x();
-            const int ry = y - observer_pos.y();
-            if( rx * rx + ry * ry > VIEW_RADIUS * VIEW_RADIUS ) {
+            const point xy( observer_pos.x() + static_cast<int>( std::lround(
+                                static_cast<double>( d.x ) * i / steps ) ),
+                            observer_pos.y() + static_cast<int>( std::lround(
+                                    static_cast<double>( d.y ) * i / steps ) ) );
+            const point relative( xy.x - observer_pos.x(), xy.y - observer_pos.y() );
+            if( relative.x * relative.x + relative.y * relative.y > VIEW_RADIUS * VIEW_RADIUS ) {
                 break;
             }
-            const tripoint_bub_ms p( x, y, observer_pos.z() );
+            const tripoint_bub_ms p( xy.x, xy.y, observer_pos.z() );
             if( !here.inbounds( p ) ||
-                ( sight_cache.seen_cache[x][y] <= 0.0f &&
-                  sight_cache.camera_cache[x][y] <= 0.0f ) ) {
+                ( sight_cache.seen_cache[xy.x][xy.y] <= 0.0f &&
+                  sight_cache.camera_cache[xy.x][xy.y] <= 0.0f ) ) {
                 return cache_result( false );
             }
         }
