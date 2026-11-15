@@ -148,7 +148,8 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     const time_duration maturity = thresholds[std::max( 0, harvest - 1 )];
     const double per_model_day = model_days / to_days<double>( calendar::year_length() );
     const double average_need = climate.water_mm / climate.growing_days * per_model_day *
-                                std::max( 0.01f, water_use );
+                                std::max( 0.01f, water_use ) *
+                                iexamine::get_plant_water_consumption_multiplier( furniture );
     const bool covered = here.is_roofed( p ) || p.z() < 0;
     const int max_water = iexamine::get_plant_max_water( furniture );
     const north_america::crop_soil_properties soil = max_water > 0 ?
