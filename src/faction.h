@@ -40,6 +40,7 @@ class world_content_transaction;
 } // namespace cata::lua_platform
 class JsonOut;
 class JsonValue;
+class Character;
 class item;
 class npc;
 
@@ -199,7 +200,8 @@ class faction : public faction_template
 
         std::pair<nc_color, std::string> vitamin_stores( vitamin_type vit );
 
-        faction_price_rule const *get_price_rules( item const &it, npc const &guy ) const;
+        faction_price_rule const *get_price_rules( item const &it, npc const &guy,
+                const Character *customer = nullptr ) const;
 
         bool has_relationship( const faction_id &guy_id, npc_factions::relationship flag ) const;
         void add_to_membership( const character_id &guy_id, const std::string &guy_name, bool known );

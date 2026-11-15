@@ -34,8 +34,12 @@
 #include "map.h"
 #include "mission_companion.h"
 #include "mod_manager.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
+#include "mp_world_session.h"
 #include "mtype.h"
 #include "npc.h"
+#include "npc_radio.h"
 #include "output.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
@@ -55,8 +59,6 @@ template <typename T> struct enum_traits;
 
 static const faction_id faction_your_followers( "your_followers" );
 
-static const flag_id json_flag_TWO_WAY_RADIO( "TWO_WAY_RADIO" );
-
 template<>
 struct enum_traits<tab_mode> {
     static constexpr tab_mode last = tab_mode::NUM_TABS;
@@ -67,93 +69,6 @@ void faction_manager::display() const
 {
     faction_ui ui;
     ui.execute();
-}
-
-static bool has_radio( const Character &guy )
-{
-    return guy.cache_has_item_with_flag( json_flag_TWO_WAY_RADIO, true );
-}
-
-// is physically close enough to contact the beta without much hassle
-// mainly for followers
-static bool can_contact( const Character &alpha, const Character &beta )
-{
-    const map &here = get_map();
-
-    const bool too_far_omt = rl_dist( alpha.pos_abs_omt(), beta.pos_abs_omt() ) > 3;
-    const bool see_each_other = alpha.sees( here, beta );
-    return !too_far_omt || see_each_other ;
-}
-
-// opposite to previouis one, far enough to check for radio contact
-static radio_contact_result can_radio_contact( const Character &alpha, const Character &beta )
-{
-    bool u_has_radio = has_radio( alpha );
-    bool guy_has_radio = has_radio( beta );
-    if( u_has_radio && guy_has_radio ) {
-        if( !( alpha.posz() >= 0 && beta.posz() >= 0 ) &&
-            !( alpha.posz() == beta.posz() ) ) {
-            //Early exit
-            return radio_contact_result::TOO_FAR;
-        } else {
-            // TODO: better range calculation than just elevation.
-            const int base_range = 200;
-            float send_elev_boost = ( 1 + ( alpha.posz() * 0.1 ) );
-            float recv_elev_boost = ( 1 + ( beta.posz() * 0.1 ) );
-            if( ( square_dist( alpha.pos_abs_sm(),
-                               beta.pos_abs_sm() ) <= base_range * send_elev_boost * recv_elev_boost ) ) {
-                //Direct radio contact, both of their elevation are in effect
-                return radio_contact_result::YES;
-            } else {
-                //contact via camp radio tower
-                int recv_range = base_range * recv_elev_boost;
-                int send_range = base_range * send_elev_boost;
-                const int radio_tower_boost = 5;
-                // find camps that are near player or npc
-                const std::vector<camp_reference> &camps_near_player = overmap_buffer.get_camps_near(
-                            alpha.pos_abs_sm(), send_range * radio_tower_boost );
-                const std::vector<camp_reference> &camps_near_npc = overmap_buffer.get_camps_near(
-                            beta.pos_abs_sm(), recv_range * radio_tower_boost );
-                bool camp_to_npc = false;
-                bool camp_to_camp = false;
-                for( const camp_reference &i : camps_near_player ) {
-                    if( !i.camp->has_provides( "radio" ) ) {
-                        continue;
-                    }
-                    if( camp_to_camp ||
-                        square_dist( i.abs_sm_pos, beta.pos_abs_sm() ) <= recv_range * radio_tower_boost ) {
-                        //one radio tower relay
-                        camp_to_npc = true;
-                        break;
-                    }
-                    for( const camp_reference &j : camps_near_npc ) {
-                        //two radio tower relays
-                        if( ( j.camp )->has_provides( "radio" ) &&
-                            ( square_dist( i.abs_sm_pos, j.abs_sm_pos ) <= base_range * radio_tower_boost *
-                              radio_tower_boost ) ) {
-                            camp_to_camp = true;
-                            break;
-                        }
-                    }
-                }
-                if( camp_to_npc || camp_to_camp ) {
-                    return radio_contact_result::YES;
-                } else {
-                    return radio_contact_result::TOO_FAR;
-                }
-            }
-        }
-    }
-
-    if( guy_has_radio && !u_has_radio ) {
-        return radio_contact_result::ALPHA_NO_RADIO;
-    }
-
-    if( !guy_has_radio && u_has_radio ) {
-        return radio_contact_result::BETA_NO_RADIO;
-    }
-
-    return radio_contact_result::BOTH_NO_RADIO;
 }
 
 static std::vector<npc *> get_known_faction_radio_representative( const faction *fac )
@@ -203,9 +118,10 @@ bool faction_ui::execute()
         if( last_action == "CONFIRM" ) {
 
             if( selected_tab == tab_mode::TAB_FOLLOWERS && picked_follower != nullptr ) {
-                const bool interactable = can_contact( get_avatar(), *picked_follower );
+                const bool interactable = npc_radio::can_contact( get_map(), get_avatar(), *picked_follower );
                 const bool radio_interactable =
-                    can_radio_contact( get_avatar(), *picked_follower ) == radio_contact_result::YES;
+                    npc_radio::can_radio_contact( get_avatar(),
+                                                  *picked_follower ) == npc_radio::radio_contact_result::YES;
                 if( interactable || radio_interactable ) {
                     hide_ui = true;
 
@@ -532,7 +448,7 @@ void faction_ui::your_follower_display()
     // Can be radio-ed
     std::string can_see;
     nc_color see_color;
-    if( can_contact( get_avatar(), *picked_follower ) ) {
+    if( npc_radio::can_contact( get_map(), get_avatar(), *picked_follower ) ) {
         if( picked_follower->has_companion_mission() ) {
             can_see = _( "Press enter to recall from their mission." );
             see_color = c_light_red;
@@ -541,22 +457,23 @@ void faction_ui::your_follower_display()
             see_color = c_light_green;
         }
     } else {
-        const radio_contact_result rad = can_radio_contact( get_avatar(), *picked_follower );
+        const npc_radio::radio_contact_result rad = npc_radio::can_radio_contact( get_avatar(),
+                *picked_follower );
 
         switch( rad ) {
-            case radio_contact_result::ALPHA_NO_RADIO:
+            case npc_radio::radio_contact_result::ALPHA_NO_RADIO:
                 can_see = _( "You do not have a radio" );
                 see_color = c_light_red;
                 break;
-            case radio_contact_result::BETA_NO_RADIO:
+            case npc_radio::radio_contact_result::BETA_NO_RADIO:
                 can_see = _( "Follower does not have a radio" );
                 see_color = c_light_red;
                 break;
-            case radio_contact_result::BOTH_NO_RADIO:
+            case npc_radio::radio_contact_result::BOTH_NO_RADIO:
                 can_see = _( "Both you and follower need a radio" );
                 see_color = c_light_red;
                 break;
-            case radio_contact_result::TOO_FAR:
+            case npc_radio::radio_contact_result::TOO_FAR:
                 can_see = _( "Not within radio range" );
                 see_color = c_light_red;
                 break;
@@ -743,12 +660,20 @@ void faction_ui::other_faction_display()
 
 
     // Can you contact them by radio
-    const std::vector<npc *> applicable_repres = get_known_faction_radio_representative(
-                picked_faction );
-    if( !applicable_repres.empty() ) {
+    bool knows_representative;
+    if( cata_mp::is_client_mode() ) {
+        const auto &contacts = g->multiplayer_session().client_radio_contacts;
+        knows_representative = std::any_of( contacts.begin(), contacts.end(),
+        [&]( const cata_mp::radio_contact_view & contact ) {
+            return contact.faction == picked_faction->id;
+        } );
+    } else {
+        knows_representative = !get_known_faction_radio_representative( picked_faction ).empty();
+    }
+    if( knows_representative ) {
         cataimgui::draw_colored_text( _( "You know someone from this faction you can contact by radio." ),
                                       c_green, col_width );
-        if( !has_radio( get_avatar() ) ) {
+        if( !npc_radio::has_radio( get_avatar() ) ) {
             cataimgui::draw_colored_text( _( "Even if you do not have a radio right now." ),
                                           c_red, col_width );
         } else {
@@ -990,8 +915,29 @@ void faction_ui::draw_controls()
 
 void faction_ui::radio_the_faction()
 {
-    if( !has_radio( get_avatar() ) ) {
+    if( !npc_radio::has_radio( get_avatar() ) ) {
         popup( _( "You do not have a radio to contact anyone." ) );
+        return;
+    }
+
+    if( cata_mp::is_client_mode() ) {
+        std::vector<character_id> targets;
+        uilist call_npc_query;
+        call_npc_query.text = _( "Contact who?" );
+        for( const cata_mp::radio_contact_view &contact : g->multiplayer_session().client_radio_contacts ) {
+            if( contact.faction == picked_faction->id ) {
+                targets.push_back( contact.host_id );
+                call_npc_query.addentry( MENU_AUTOASSIGN, true, MENU_AUTOASSIGN, contact.name );
+            }
+        }
+        if( targets.empty() ) {
+            popup( _( "You do not know anyone you can contact." ) );
+            return;
+        }
+        call_npc_query.query();
+        if( call_npc_query.ret >= 0 && static_cast<size_t>( call_npc_query.ret ) < targets.size() ) {
+            cata_mp::client_start_radio_dialogue( targets[call_npc_query.ret] );
+        }
         return;
     }
 
@@ -1005,9 +951,9 @@ void faction_ui::radio_the_faction()
     uilist call_npc_query;
     call_npc_query.text = _( "Contact who?" );
     for( const npc *npc : applicable_repres ) {
-        const radio_contact_result res = can_radio_contact( get_avatar(), *npc );
+        const npc_radio::radio_contact_result res = npc_radio::can_radio_contact( get_avatar(), *npc );
         std::string desc = npc->disp_name();
-        if( res == radio_contact_result::YES ) {
+        if( res == npc_radio::radio_contact_result::YES ) {
             call_npc_query.addentry( MENU_AUTOASSIGN, true, MENU_AUTOASSIGN, npc->disp_name() );
         } else {
             // ALPHA_NO_RADIO & BOTH_NO_RADIO are excluded by check above

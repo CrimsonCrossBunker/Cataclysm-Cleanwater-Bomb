@@ -775,7 +775,7 @@ class zone_manager
         std::vector < zone_data const * > get_zones_at( const tripoint_abs_ms &where,
                 const zone_type_id &type,
                 const faction_id &fac = your_fac, const zone_query_context *query = nullptr ) const;
-        zone_data *create_vehicle_loot_zone( vehicle &vehicle, const point_rel_ms &mount_point,
+        zone_data *create_vehicle_loot_zone( vehicle &vehicle, const tripoint_rel_ms &mount_point,
                                              zone_data &new_zone, map *pmap = nullptr );
 
         bool remove( zone_data &zone, map *pmap = nullptr );

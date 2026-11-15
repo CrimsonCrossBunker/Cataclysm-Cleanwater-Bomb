@@ -89,7 +89,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -103,7 +104,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -473,7 +475,7 @@
     "type": "ITEM",
     "id": "stick_common",
     "copy-from": "stick",
-    "name": { "str": "stick" },
+    "name": { "str": "stick (bent)" },
     "description": "A respectable length of wood, just big enough to wrap your hand around.  It's a little bent, and that makes it useless for most things you'd want to make with it.  Also makes it a little harder to hit things with it.",
     "relative": { "melee_damage": { "bash": -1 } }
   }

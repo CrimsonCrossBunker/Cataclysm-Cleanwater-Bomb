@@ -977,7 +977,7 @@ class cata_tiles
         // Paint color to tint the vehicle part displayed at \p mount of \p veh,
         // or nullopt when it is unpainted or the VEHICLE_PART_COLOR option is off.
         std::optional<RGBColor> get_vpart_tint( const vehicle &veh,
-                                                const point_rel_ms &mount ) const;
+                                                const tripoint_rel_ms &mount ) const;
         std::optional<creature_render_view> capture_critter_view( const tripoint_bub_ms &p,
                 bool invisible ) const;
         void draw_entity_view( const entity_render_view &view, const tripoint_bub_ms &p,
@@ -1024,7 +1024,8 @@ class cata_tiles
          */
         bool draw_vehicle_preview( const catacurses::window &w_disp, const vehicle &veh,
                                    const point_rel_ms &cursor_vp_mount, int &cpart,
-                                   const std::optional<std::pair<point_rel_ms, point_rel_ms>> &selection = std::nullopt );
+                                   const std::optional<std::pair<point_rel_ms, point_rel_ms>> &selection = std::nullopt,
+                                   int deck = 0 );
 
         /** Convert an inclusive mount rectangle to pixels in the fixed vehicle preview layout. */
         static SDL_Rect vehicle_preview_selection_rect( const point_rel_ms &first,

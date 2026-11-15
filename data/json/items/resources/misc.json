@@ -14,7 +14,8 @@
     "weapon_category": [ "SHIVS" ],
     "price": "30 USD",
     "price_postapoc": "0 cent",
-    "melee_damage": { "stab": 8 }
+    "melee_damage": { "stab": 8 },
+    "stackable": true
   },
   {
     "type": "ITEM",

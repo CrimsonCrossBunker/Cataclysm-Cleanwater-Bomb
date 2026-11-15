@@ -2,9 +2,32 @@
 #ifndef CATA_SRC_LIQUID_TRANSFER_H
 #define CATA_SRC_LIQUID_TRANSFER_H
 
+#include <memory>
 #include <optional>
+#include <cstdint>
+#include <vector>
+
+#include "coords_fwd.h"
 
 class Character;
+class JsonValue;
+class activity_actor;
+class item_location;
+class map;
+class player_activity;
+struct item_source;
+struct tool_activity_target;
+struct unload_liquid_choice;
+
+void start_owned_liquid_transfer( Character &who, const item_source &source,
+                                  const unload_liquid_choice &destination );
+bool start_furniture_liquid_transfer( Character &who, map &here, const item_location &source,
+                                      const tool_activity_target &station,
+                                      const unload_liquid_choice &destination );
+std::unique_ptr<activity_actor> deserialize_owned_liquid_transfer( JsonValue &data );
+void append_owned_liquid_transfer_changes( const player_activity &activity,
+        std::vector<tripoint_abs_ms> &tiles, std::vector<int64_t> &vehicles );
+
 class item;
 struct liquid_dest_opt;
 

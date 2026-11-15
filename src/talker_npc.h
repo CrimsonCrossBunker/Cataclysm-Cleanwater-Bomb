@@ -14,6 +14,14 @@
 #include "type_id.h"
 
 class item_location;
+class map;
+
+bool can_offer_npc_item( const Character &donor, const npc &recipient, const map &here );
+
+struct npc_item_offer_result {
+    std::string reason;
+    bool needs_replacement = false;
+};
 
 /*
  */
@@ -135,6 +143,8 @@ class talker_npc : virtual public talker_npc_const,
         void add_debt( int cost ) override;
         std::string give_item_to( bool to_use ) override;
         std::string give_item_to( item_location offered, bool to_use );
+        npc_item_offer_result offer_item( item_location offered, bool use_item,
+                                          std::optional<bool> replace_armor = std::nullopt );
         bool buy_from( int amount ) override;
         void select_mission( mission *selected ) override;
         void check_missions() override;

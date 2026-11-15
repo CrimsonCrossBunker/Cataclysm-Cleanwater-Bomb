@@ -21,6 +21,7 @@ struct item_reference {
     // parent invalidating would also invalidate item_ref so it's safe to use a raw pointers here
     item *parent = nullptr;
     std::vector<item_pocket const *> pocket_chain;
+    int mount_level = 0;
 
     float spoil_multiplier() const;
     float insulation() const;
@@ -66,6 +67,8 @@ class active_item_cache
         bool add( item &it, point_sm_ms location, item *parent = nullptr,
                   std::vector<item_pocket const *> const &pocket_chain = {} );
         bool add( item &it, point_rel_ms location, item *parent = nullptr,
+                  std::vector<item_pocket const *> const &pocket_chain = {} );
+        bool add( item &it, tripoint_rel_ms location, item *parent = nullptr,
                   std::vector<item_pocket const *> const &pocket_chain = {} );
 
         /**

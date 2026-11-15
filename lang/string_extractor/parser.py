@@ -260,6 +260,7 @@ parsers = {
     "region_terrain_furniture": dummy_parser,
     "region_settings_forest_mapgen": dummy_parser,
     "region_settings_map_extras": dummy_parser,
+    "regional_climate_station": dummy_parser,
     "forest_biome_component": dummy_parser,
     "forest_biome_mapgen": dummy_parser,
     "map_extra_collection": dummy_parser,
