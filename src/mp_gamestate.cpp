@@ -6604,11 +6604,6 @@ void client_process_incoming()
                     std::to_string( post_apply_moves ) );
         }
     }
-    // (Repaint consolidated into the single throttled redraw at the END of this
-    // function. There used to be a second full refresh_display() here too — two
-    // per drain — which on the slower client doubled the per-grant render and,
-    // because divergent two-machine worlds make recv_count>0 every grant, paced
-    // the host's per-turn lockstep wait to ~2x render-speed. 2026-06-03.)
     // Snapshot drain-end state. Deduped so idle/locked do_turn (~60Hz) doesn't flood log.
     {
         const std::string msg = "[cdda-mp] CLI-DRAIN-END: moves=" +
@@ -6629,11 +6624,6 @@ void client_process_incoming()
     // in process_mp_events, so throttling only affects visual freshness, not the
     // round-trip. DIAG: log slow renders so we can see the actual cost.
     if( recv_count > 0 ) {
-        // One repaint per drained batch (the throttle experiment is reverted —
-        // it froze the client without helping the host, since a single render
-        // is ~236ms on the slow client and exceeds any useful throttle). The
-        // real fix is the client's render speed, not the render frequency.
-        // CLI-RENDER timing kept so we can measure that.
         const std::chrono::steady_clock::time_point r0 = std::chrono::steady_clock::now();
         g->invalidate_main_ui_adaptor();
         const std::chrono::steady_clock::time_point r1 = std::chrono::steady_clock::now();
@@ -6647,8 +6637,6 @@ void client_process_incoming()
         };
         const long rdur = ms( r0, r3 );
         if( rdur > 25 ) {
-            // Sub-timed so we know which call to cut: invalidate (cold cache rebuild)
-            // vs redraw (tile draw) vs present (framebuffer blit, slow w/o accel).
             mp_log( "[cdda-mp] CLI-RENDER: " + std::to_string( rdur ) + "ms (inval=" +
                     std::to_string( ms( r0, r1 ) ) + " redraw=" + std::to_string( ms( r1, r2 ) ) +
                     " present=" + std::to_string( ms( r2, r3 ) ) + ")" );
