@@ -1,3 +1,4 @@
+#include <character_id.h>
 #include <item_location.h>
 #include <npc_opinion.h>
 #include <ret_val.h>
@@ -8,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
