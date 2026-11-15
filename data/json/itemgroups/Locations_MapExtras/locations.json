@@ -657,7 +657,7 @@
       [ "howto_computer", 20 ],
       [ "touristmap", 25 ],
       [ "restaurantmap", 25 ],
-      [ "roadmap", 25 ],
+      { "group": "roadmap_stock", "prob": 25 },
       [ "trailmap", 25 ],
       [ "modern_tanner", 20 ],
       [ "pocket_survival", 20 ],

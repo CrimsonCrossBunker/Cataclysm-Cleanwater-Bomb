@@ -29,9 +29,11 @@ bool offer_starting_city();
 const std::vector<place> &cities();
 const std::vector<size_t> &cities_in( point_abs_om overmap );
 bool suitable_for_highway_intersection( point_abs_om overmap );
+bool military_base_region( point_abs_om overmap, unsigned seed );
 regional_climate::coordinates location( point_abs_ms position );
 // Empty outside the covered land. Coordinates use the same projection as the terrain atlas.
 std::string_view jurisdiction_at( point_abs_ms position );
+std::string chart_discovery_key( std::string_view jurisdiction );
 // New ambient spawns only. Existing monsters and mission targets keep their saved types.
 mtype_id regional_monster( const mtype_id &type, point_abs_ms position );
 
@@ -53,7 +55,8 @@ class scoped_regional_loot
 const item_group_id &regional_item_group( const item_group_id &base );
 const std::string &civic_flag_variant();
 // The caller can include a border to make shoreline classification independent of generation order.
-std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride = 1 );
+std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride = 1,
+                             bool chart = false );
 
 } // namespace north_america
 

@@ -1130,7 +1130,7 @@
       { "item": "satellitemap", "prob": 1 },
       { "item": "touristmap", "prob": 2 },
       { "item": "trailmap", "prob": 2 },
-      { "item": "roadmap", "prob": 1 }
+      { "group": "roadmap_stock", "prob": 1 }
     ]
   },
   {

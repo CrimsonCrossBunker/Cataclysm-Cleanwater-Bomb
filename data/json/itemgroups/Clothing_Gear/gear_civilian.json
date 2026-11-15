@@ -337,7 +337,7 @@
     "id": "traveler",
     "items": [
       [ "daypack", 20 ],
-      [ "roadmap", 6 ],
+      { "group": "roadmap_stock", "prob": 6 },
       [ "trailmap", 6 ],
       [ "touristmap", 4 ],
       { "item": "lighter", "prob": 60, "charges": [ 0, -1 ] },

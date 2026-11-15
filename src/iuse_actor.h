@@ -492,6 +492,7 @@ class reveal_map_actor : public iuse_actor
          * activated item. Skip if location is missing.
          */
         int radius = 0;
+        std::string atlas_jurisdiction;
         /**
          * Overmap terrain types that get revealed.
          */

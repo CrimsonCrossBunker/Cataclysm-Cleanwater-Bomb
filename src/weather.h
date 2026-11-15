@@ -241,6 +241,7 @@ class weather_manager
         time_point nextweather;
         /** temperature cache, cleared every turn, sparse map of map tripoints to temperatures */
         std::unordered_map< tripoint_bub_ms, units::temperature > temperature_cache;
+        mutable std::unordered_map<tripoint_abs_omt, units::temperature> ground_temperature_cache;
         // Per-OMT snow depth state, updated incrementally
         std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
         /*

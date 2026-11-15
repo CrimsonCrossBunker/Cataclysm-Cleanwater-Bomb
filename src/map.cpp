@@ -1697,7 +1697,8 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         for( const tripoint_abs_ms &p : veh.get_points() ) {
             const tripoint_bub_ms pos = get_bub( p );
             const ter_id &pter = ter( pos );
-            if( pter == ter_t_grass || north_america::canonical_soil( pter ) == ter_t_dirt ) {
+            const ter_id base = north_america::canonical_soil( pter );
+            if( base == ter_t_grass || base == ter_t_dirt ) {
                 ter_set( pos, north_america::tilled_soil( pter ) );
             }
         }
@@ -11851,9 +11852,9 @@ void map::rad_scorch( const tripoint_bub_ms &p, const time_duration &time_since_
             {ter_t_tree_hickory_harvested, ter_t_tree_hickory_dead},
         }};
 
-    const auto iter = dies_into.find( tid );
+    const auto iter = dies_into.find( north_america::canonical_soil( tid ) );
     if( iter != dies_into.end() ) {
-        ter_set( p, iter->second );
+        ter_set( p, north_america::preserve_soil( tid, iter->second.id() ) );
         return;
     }
 

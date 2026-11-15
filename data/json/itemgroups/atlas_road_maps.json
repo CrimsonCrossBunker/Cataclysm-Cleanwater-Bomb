@@ -1,0 +1,1187 @@
+[
+  {
+    "type": "item_group",
+    "id": "roadmap_stock",
+    "subtype": "distribution",
+    "items": [ ["roadmap", 100] ]
+  },
+  {
+    "type": "item_group",
+    "id": "atlas_maps_US",
+    "subtype": "distribution",
+    "items": [
+      [ "atlas_map_us-ak", 100 ],
+      [ "atlas_map_us-al", 100 ],
+      [ "atlas_map_us-ar", 100 ],
+      [ "atlas_map_us-az", 100 ],
+      [ "atlas_map_us-ca", 100 ],
+      [ "atlas_map_us-co", 100 ],
+      [ "atlas_map_us-ct", 100 ],
+      [ "atlas_map_us-dc", 100 ],
+      [ "atlas_map_us-de", 100 ],
+      [ "atlas_map_us-fl", 100 ],
+      [ "atlas_map_us-ga", 100 ],
+      [ "atlas_map_us-hi", 100 ],
+      [ "atlas_map_us-ia", 100 ],
+      [ "atlas_map_us-id", 100 ],
+      [ "atlas_map_us-il", 100 ],
+      [ "atlas_map_us-in", 100 ],
+      [ "atlas_map_us-ks", 100 ],
+      [ "atlas_map_us-ky", 100 ],
+      [ "atlas_map_us-la", 100 ],
+      [ "atlas_map_us-ma", 100 ],
+      [ "atlas_map_us-md", 100 ],
+      [ "atlas_map_us-me", 100 ],
+      [ "atlas_map_us-mi", 100 ],
+      [ "atlas_map_us-mn", 100 ],
+      [ "atlas_map_us-mo", 100 ],
+      [ "atlas_map_us-ms", 100 ],
+      [ "atlas_map_us-mt", 100 ],
+      [ "atlas_map_us-nc", 100 ],
+      [ "atlas_map_us-nd", 100 ],
+      [ "atlas_map_us-ne", 100 ],
+      [ "atlas_map_us-nh", 100 ],
+      [ "atlas_map_us-nj", 100 ],
+      [ "atlas_map_us-nm", 100 ],
+      [ "atlas_map_us-nv", 100 ],
+      [ "atlas_map_us-ny", 100 ],
+      [ "atlas_map_us-oh", 100 ],
+      [ "atlas_map_us-ok", 100 ],
+      [ "atlas_map_us-or", 100 ],
+      [ "atlas_map_us-pa", 100 ],
+      [ "atlas_map_us-ri", 100 ],
+      [ "atlas_map_us-sc", 100 ],
+      [ "atlas_map_us-sd", 100 ],
+      [ "atlas_map_us-tn", 100 ],
+      [ "atlas_map_us-tx", 100 ],
+      [ "atlas_map_us-ut", 100 ],
+      [ "atlas_map_us-va", 100 ],
+      [ "atlas_map_us-vt", 100 ],
+      [ "atlas_map_us-wa", 100 ],
+      [ "atlas_map_us-wi", 100 ],
+      [ "atlas_map_us-wv", 100 ],
+      [ "atlas_map_us-wy", 100 ]
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "atlas_maps_CA",
+    "subtype": "distribution",
+    "items": [
+      [ "atlas_map_ca-ab", 100 ],
+      [ "atlas_map_ca-bc", 100 ],
+      [ "atlas_map_ca-mb", 100 ],
+      [ "atlas_map_ca-nb", 100 ],
+      [ "atlas_map_ca-nl", 100 ],
+      [ "atlas_map_ca-ns", 100 ],
+      [ "atlas_map_ca-nt", 100 ],
+      [ "atlas_map_ca-nu", 100 ],
+      [ "atlas_map_ca-on", 100 ],
+      [ "atlas_map_ca-pe", 100 ],
+      [ "atlas_map_ca-qc", 100 ],
+      [ "atlas_map_ca-sk", 100 ],
+      [ "atlas_map_ca-yt", 100 ]
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "atlas_maps_MX",
+    "subtype": "distribution",
+    "items": [
+      [ "atlas_map_mx-agu", 100 ],
+      [ "atlas_map_mx-bcn", 100 ],
+      [ "atlas_map_mx-bcs", 100 ],
+      [ "atlas_map_mx-cam", 100 ],
+      [ "atlas_map_mx-chh", 100 ],
+      [ "atlas_map_mx-chp", 100 ],
+      [ "atlas_map_mx-cmx", 100 ],
+      [ "atlas_map_mx-coa", 100 ],
+      [ "atlas_map_mx-col", 100 ],
+      [ "atlas_map_mx-dur", 100 ],
+      [ "atlas_map_mx-gro", 100 ],
+      [ "atlas_map_mx-gua", 100 ],
+      [ "atlas_map_mx-hid", 100 ],
+      [ "atlas_map_mx-jal", 100 ],
+      [ "atlas_map_mx-mex", 100 ],
+      [ "atlas_map_mx-mic", 100 ],
+      [ "atlas_map_mx-mor", 100 ],
+      [ "atlas_map_mx-nay", 100 ],
+      [ "atlas_map_mx-nle", 100 ],
+      [ "atlas_map_mx-oax", 100 ],
+      [ "atlas_map_mx-pue", 100 ],
+      [ "atlas_map_mx-que", 100 ],
+      [ "atlas_map_mx-roo", 100 ],
+      [ "atlas_map_mx-sin", 100 ],
+      [ "atlas_map_mx-slp", 100 ],
+      [ "atlas_map_mx-son", 100 ],
+      [ "atlas_map_mx-tab", 100 ],
+      [ "atlas_map_mx-tam", 100 ],
+      [ "atlas_map_mx-tla", 100 ],
+      [ "atlas_map_mx-ver", 100 ],
+      [ "atlas_map_mx-yuc", 100 ],
+      [ "atlas_map_mx-zac", 100 ]
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "atlas_maps",
+    "subtype": "distribution",
+    "groups": [ ["atlas_maps_US", 100], ["atlas_maps_CA", 100], ["atlas_maps_MX", 100] ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-AB",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-ab", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-BC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-bc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-MB",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-mb", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-NB",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-nb", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-NL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-nl", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-NS",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-ns", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-NT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-nt", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-NU",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-nu", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-ON",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-on", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-PE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-pe", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-QC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-qc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-SK",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-sk", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-CA-YT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_ca-yt", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_CA", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-AGU",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-agu", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-BCN",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-bcn", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-BCS",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-bcs", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-CAM",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-cam", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-CHH",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-chh", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-CHP",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-chp", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-CMX",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-cmx", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-COA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-coa", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-COL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-col", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-DUR",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-dur", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-GRO",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-gro", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-GUA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-gua", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-HID",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-hid", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-JAL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-jal", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-MEX",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-mex", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-MIC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-mic", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-MOR",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-mor", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-NAY",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-nay", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-NLE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-nle", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-OAX",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-oax", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-PUE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-pue", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-QUE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-que", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-ROO",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-roo", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-SIN",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-sin", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-SLP",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-slp", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-SON",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-son", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-TAB",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-tab", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-TAM",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-tam", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-TLA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-tla", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-VER",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-ver", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-YUC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-yuc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-MX-ZAC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_mx-zac", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_MX", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-AK",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ak", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-AL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-al", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-AR",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ar", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-AZ",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-az", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-CA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ca", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-CO",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-co", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-CT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ct", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-DC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-dc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-DE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-de", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-FL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-fl", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-GA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ga", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-HI",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-hi", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-IA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ia", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-ID",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-id", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-IL",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-il", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-IN",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-in", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-KS",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ks", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-KY",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ky", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-LA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-la", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ma", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MD",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-md", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-ME",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-me", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MI",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-mi", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MN",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-mn", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MO",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-mo", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MS",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ms", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-MT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-mt", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-ND",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nd", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NE",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ne", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NH",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nh", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NJ",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nj", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NM",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nm", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NV",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-nv", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-NY",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ny", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-OH",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-oh", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-OK",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ok", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-OR",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-or", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-PA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-pa", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-RI",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ri", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-SC",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-sc", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-SD",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-sd", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-TN",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-tn", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-TX",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-tx", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-UT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-ut", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-VA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-va", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-VT",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-vt", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-WA",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-wa", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-WI",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-wi", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-WV",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-wv", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "roadmap_stock-US-WY",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "atlas_map_us-wy", "prob": 65 },
+      { "item": "roadmap", "prob": 20 },
+      { "group": "atlas_maps_US", "prob": 12 },
+      { "group": "atlas_maps", "prob": 3 }
+    ]
+  }
+]

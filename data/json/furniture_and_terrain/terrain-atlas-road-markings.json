@@ -1,0 +1,12 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_atlas_pavement_white",
+    "copy-from": "t_pavement",
+    "name": "lane marking",
+    "description": "A white lane marking painted on asphalt.",
+    "symbol": ".",
+    "color": "white",
+    "looks_like": "t_pavement"
+  }
+]

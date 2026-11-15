@@ -65,6 +65,8 @@
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
+#include "north_america.h"
+#include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_debug.h"
 #include "overmap_types.h"
@@ -302,6 +304,9 @@ void overmap_sidebar::draw_quick_reference()
     print_hint( "LIST_NOTES" );
     print_hint( "CREATE_POINT_OF_INTEREST" );
     print_hint( "MISSIONS" );
+    if( north_america::active() ) {
+        print_hint( "NORTH_AMERICA_ATLAS" );
+    }
 }
 
 void overmap_sidebar::draw_layer_info()
@@ -1993,6 +1998,119 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
     }
 }
 
+static void show_north_america_chart( point_abs_omt center, bool reveal_all )
+{
+    input_context controls( "OVERMAP" );
+    controls.register_directions();
+    controls.register_action( "zoom_in" );
+    controls.register_action( "zoom_out" );
+    controls.register_action( "CENTER" );
+    controls.register_action( "NORTH_AMERICA_ATLAS" );
+    controls.register_action( "QUIT" );
+    controls.register_action( "HELP_KEYBINDINGS" );
+
+    const point_abs_omt start = center;
+    int stride = 512;
+    catacurses::window chart;
+    ui_adaptor ui;
+    ui.on_screen_resize( [&]( ui_adaptor & adaptor ) {
+        chart = catacurses::newwin( TERMY, TERMX, point::zero );
+        adaptor.position_from_window( chart );
+    } );
+    ui.mark_resize();
+
+    ui.on_redraw( [&]( const ui_adaptor & ) {
+        werase( chart );
+        const int width = getmaxx( chart );
+        const int height = getmaxy( chart ) - 3;
+        if( width < 1 || height < 1 ) {
+            wnoutrefresh( chart );
+            return;
+        }
+        const point cursor( width / 2, height / 2 );
+        const point_abs_omt origin = center - cursor * stride;
+        const auto water = north_america::raster( origin, width, height, stride, true );
+        const auto roads = north_america::chart_roads( origin, width, height, stride );
+        const auto known = [&]( std::string_view jurisdiction ) {
+            return reveal_all || ( !jurisdiction.empty() &&
+                                   get_avatar().maybe_get_value( north_america::chart_discovery_key( jurisdiction ) ) );
+        };
+
+        mvwprintz( chart, point::zero, c_white, _( "North America atlas" ) );
+        for( int y = 0; y < height; ++y ) {
+            for( int x = 0; x < width; ++x ) {
+                const std::size_t index = y * width + x;
+                const point_abs_omt position = origin + point( x, y ) * stride;
+                const auto type = water[index];
+                const bool detail = known( north_america::jurisdiction_at( project_to<coords::ms>( position ) ) );
+                char glyph = ' ';
+                nc_color color = c_dark_gray;
+                if( type != north_america::terrain::ocean ) {
+                    glyph = '.';
+                }
+                if( detail ) {
+                    color = c_green;
+                    if( type == north_america::terrain::lake || type == north_america::terrain::river ) {
+                        glyph = '~';
+                        color = c_light_blue;
+                    }
+                    if( roads[index] ) {
+                        glyph = roads[index] >= 4 ? '=' : '-';
+                        color = roads[index] >= 4 ? c_yellow : c_light_gray;
+                    }
+                }
+                mvwputch( chart, point( x, y + 1 ), color, glyph );
+            }
+        }
+        std::string city_name;
+        for( const north_america::place &city : north_america::cities() ) {
+            if( stride >= 512 && city.population < 500000 ) {
+                continue;
+            }
+            const point screen = divide_xy_round_to_minus_infinity(
+                                     city.position.raw() - origin.raw(), stride );
+            if( screen.x < 0 || screen.y < 0 || screen.x >= width || screen.y >= height ||
+                !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
+                continue;
+            }
+            mvwputch( chart, screen + point( 0, 1 ), c_white, 'o' );
+            if( screen == cursor ) {
+                city_name = city.name;
+            }
+        }
+        mvwputch( chart, cursor + point( 0, 1 ), c_white, '+' );
+        const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
+        const std::string location = city_name.empty() ? std::string( code ) : city_name;
+        mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),
+                   stride * SEEX * 2 / 1000.0, known( code ) ? location :
+                   _( "Read a regional road map to reveal details." ) );
+        mvwprintz( chart, point( 0, height + 2 ), c_light_gray,
+                   _( "= Highway  - Road  ~ Water  o City  [%s] Overmap" ),
+                   controls.get_desc( "NORTH_AMERICA_ATLAS" ) );
+        wnoutrefresh( chart );
+    } );
+
+    while( true ) {
+        ui.invalidate_ui();
+        ui_manager::redraw();
+        const std::string action = controls.handle_input();
+        if( action == "QUIT" || action == "NORTH_AMERICA_ATLAS" ) {
+            return;
+        }
+        if( const auto direction = controls.get_direction_rel_omt( action ) ) {
+            const point next = center.raw() + direction->xy().raw() * stride * 3;
+            center = point_abs_omt( std::clamp( next.x, -450000, 450000 ),
+                                    std::clamp( next.y, -450000, 450000 ) );
+        } else if( action == "zoom_in" ) {
+            stride = std::max( 8, stride / 2 );
+        } else if( action == "zoom_out" ) {
+            stride = std::min( 8192, stride * 2 );
+        } else if( action == "CENTER" ) {
+            center = start;
+        }
+    }
+}
+
 static bool try_travel_to_destination( avatar &player_character, const tripoint_abs_omt curs,
                                        const tripoint_abs_omt dest, const bool driving )
 {
@@ -2175,6 +2293,9 @@ static tripoint_abs_omt display()
     ictxt.register_action( "EXPAND_OVERMAP_SIDEBAR_HEADERS" );
     ictxt.register_action( "TOGGLE_FAST_TRAVEL" );
     ictxt.register_action( "MISSIONS" );
+    if( north_america::active() ) {
+        ictxt.register_action( "NORTH_AMERICA_ATLAS" );
+    }
 
     if( data.debug_editor ) {
         ictxt.register_action( "PLACE_TERRAIN" );
@@ -2261,6 +2382,8 @@ static tripoint_abs_omt display()
                 g->look_around( true, pos_cpy, pos_rel, false, false, false, false, pos_rel );
             };
             action = "QUIT";
+        } else if( action == "NORTH_AMERICA_ATLAS" ) {
+            show_north_america_chart( curs.xy(), debug_mode || data.debug_editor );
         } else if( action == "CENTER" ) {
             curs = orig;
         } else if( action == "LEVEL_DOWN" && curs.z() > -OVERMAP_DEPTH ) {
