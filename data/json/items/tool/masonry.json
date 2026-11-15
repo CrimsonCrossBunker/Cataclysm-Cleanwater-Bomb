@@ -182,7 +182,8 @@
     "volume": "250 ml",
     "flags": [ "HURT_WHEN_WIELDED" ],
     "to_hit": { "grip": "bad", "length": "hand", "surface": "line", "balance": "neutral" },
-    "melee_damage": { "cut": 14 }
+    "melee_damage": { "cut": 14 },
+    "stackable": true
   },
   {
     "id": "heavy_masonrysaw_off",

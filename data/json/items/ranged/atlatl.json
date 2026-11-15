@@ -4,7 +4,7 @@
     "type": "ITEM",
     "category": "weapons",
     "name": { "str": "atlatl" },
-    "description": "Although spear throwing contraptions were used throughout the entire world, this design in particular hails from Mesoamericas.  It was especially popular among Peruvian natives, despite the Nahuatl origin of the name. It is a carved wooden spear thrower with a hook that holds the tail of a dart.  Its leverage helps launch atlatl darts and suitably sized javelins.   It'll also do well as a melee weapon in a pinch.",
+    "description": "Although spear throwing contraptions were used throughout the entire world, this design in particular hails from Mesoamericas.  It was especially popular among Peruvian natives, despite the Nahuatl origin of the name.  It is a carved wooden spear thrower with a hook that holds the tail of a dart.  Its leverage helps launch atlatl darts and suitably sized javelins.  It'll also do well as a melee weapon in a pinch.",
     "weight": "1200 g",
     "volume": "2100 ml",
     "symbol": "(",

@@ -27,6 +27,7 @@
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "math_parser_diag_value.h"
+#include "north_america.h"
 #include "options.h"
 #include "pocket_type.h"
 #include "relic.h"
@@ -40,6 +41,17 @@ static const fault_id fault_gun_dirt( "fault_gun_dirt" );
 static const fault_id fault_gun_unlubricated( "fault_gun_unlubricated" );
 
 static const flag_id json_flag_MISSION_ITEM( "MISSION_ITEM" );
+
+static Item_spawn_data *get_local_spawn_group( const item_group_id &id )
+{
+    const item_group_id &local = north_america::regional_item_group( id );
+    if( local != id ) {
+        if( Item_spawn_data *group = item_controller->get_group( local ) ) {
+            return group;
+        }
+    }
+    return item_controller->get_group( id );
+}
 
 std::size_t Item_spawn_data::create( ItemList &list,
                                      const time_point &birthday, spawn_flags flags ) const
@@ -216,7 +228,7 @@ item Single_item_creator::create_single_without_container( const time_point &bir
             return item( itype_id::NULL_ID(), birthday );
         }
         rec.push_back( group_id );
-        isd = item_controller->get_group( group_id );
+        isd = get_local_spawn_group( group_id );
         if( isd == nullptr ) {
             debugmsg( "unknown item spawn list %s", id.c_str() );
             return item( itype_id::NULL_ID(), birthday );
@@ -311,7 +323,7 @@ std::size_t Single_item_creator::create( ItemList &list,
                 return list.size() - prev_list_size;
             }
             rec.push_back( group_id );
-            Item_spawn_data *isd = item_controller->get_group( group_id );
+            Item_spawn_data *isd = get_local_spawn_group( group_id );
             if( isd == nullptr ) {
                 debugmsg( "unknown item spawn list %s", id.c_str() );
                 return list.size() - prev_list_size;
@@ -1098,7 +1110,7 @@ std::string item_group::potential_items( const item_group_id &group_id )
 item_group::ItemList item_group::items_from( const item_group_id &group_id,
         const time_point &birthday, spawn_flags flags )
 {
-    const Item_spawn_data *group = item_controller->get_group( group_id );
+    const Item_spawn_data *group = get_local_spawn_group( group_id );
     if( group == nullptr ) {
         return ItemList();
     }
@@ -1115,7 +1127,7 @@ item_group::ItemList item_group::items_from( const item_group_id &group_id )
 
 item item_group::item_from( const item_group_id &group_id, const time_point &birthday )
 {
-    const Item_spawn_data *group = item_controller->get_group( group_id );
+    const Item_spawn_data *group = get_local_spawn_group( group_id );
     if( group == nullptr ) {
         return item();
     }

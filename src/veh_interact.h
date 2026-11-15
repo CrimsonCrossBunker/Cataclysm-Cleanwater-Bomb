@@ -3,6 +3,7 @@
 #define CATA_SRC_VEH_INTERACT_H
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -12,12 +13,14 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "point.h"
@@ -26,9 +29,11 @@
 #include "vpart_position.h"
 
 class Character;
+class item;
+class JsonObject;
+class JsonOut;
 class map;
 class temp_crafting_inventory;
-class time_duration;
 class vpart_info;
 struct requirement_data;
 
@@ -73,6 +78,48 @@ enum vehicle_action {
     VEHICLE_LAST
 };
 
+struct vehicle_work_selection {
+    vehicle_action action = VEHICLE_QUIT;
+    tripoint_abs_ms origin;
+    tripoint_abs_ms position;
+    tripoint_rel_ms mount;
+    int64_t vehicle_uid = 0;
+    int64_t part_uid = 0;
+    faction_id owner;
+    vpart_id part_type;
+    item_source refill;
+    bool allow_theft = false;
+    bool allow_refill_theft = false;
+    bool allow_flight_loss = false;
+    bool allow_fold_loss = false;
+    std::string variant;
+    std::optional<double> direction;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
+time_duration vehicle_work_duration( vehicle_action action, const Character &who,
+                                     const vehicle &target, const vpart_info &info,
+                                     const vehicle_part *part );
+bool vehicle_work_in_reach( const Character &who, map &here, const vehicle &target );
+bool can_refill_vehicle_part( const vehicle_part &part, const item &source );
+std::optional<time_duration> validate_vehicle_work( Character &who, map &here, vehicle &target,
+        const vehicle_work_selection &selection, const vehicle_part *part, item_location fuel );
+units::angle query_vehicle_part_direction( map &here, const vehicle &target, const vpart_info &info,
+        const std::optional<point_rel_ms> &part_placement );
+units::angle query_vehicle_part_direction( map &here, const tripoint_bub_ms &position,
+        const vpart_info &info, units::angle facing );
+
+namespace cata_mp
+{
+void client_start_vehicle_work( map &here, vehicle_action action, vehicle &target,
+                                const tripoint_rel_ms &mount, const vpart_info &info,
+                                const vehicle_part *part, const item_location &refill,
+                                bool allow_flight_loss = false, bool allow_fold_loss = false,
+                                const std::string &variant = std::string() );
+} // namespace cata_mp
+
 namespace io
 {
 template<>
@@ -102,12 +149,14 @@ class veh_interact
             std::vector<point_rel_ms> mounts;
             vpart_id part_id;
             int part_index = -1;
+            int mount_level = 0;
         };
 
-        static void run( map &here,  vehicle &veh, const point_rel_ms &p );
+        static void run( map &here, vehicle &veh, const point_rel_ms &p, int deck = -1 );
 
         // Hidden parts must remain selectable even when no visible frame remains.
         static int part_at_mount( const vehicle &veh, const point_rel_ms &mount );
+        static int part_at_mount( const vehicle &veh, const tripoint_rel_ms &mount );
 
         // Inventory requirements are independent of the selected vehicle tile.
         static std::map<const vpart_info *, bool> installation_requirement_availability(
@@ -132,11 +181,12 @@ class veh_interact
 
         /** Structural/content denial for a service installation; skills and resources are ignored. */
         static std::optional<std::string> service_installation_denial( const vehicle &veh,
-                const point_rel_ms &mount, const vpart_info &vpart );
+                const point_rel_ms &mount, const vpart_info &vpart, int mount_level = 0 );
 
         /** Map obstruction denial, checked against the live vehicle rather than a planning copy. */
         static std::optional<std::string> service_installation_position_denial( map &here,
-                const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart );
+                const vehicle &veh, const point_rel_ms &mount, const vpart_info &vpart,
+                int mount_level = 0 );
 
         static constexpr int service_installation_area_limit = 4096;
 
@@ -144,7 +194,8 @@ class veh_interact
          * Returns no mounts for a rectangle larger than service_installation_area_limit.
          */
         static std::vector<point_rel_ms> service_installation_mounts( map &here, const vehicle &veh,
-                const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart );
+                const point_rel_ms &first, const point_rel_ms &second, const vpart_info &vpart,
+                int mount_level = 0 );
 
         /** Structural/content denial for a service removal; skills and resources are ignored. */
         static std::optional<std::string> service_removal_denial( const vehicle &veh,
@@ -158,6 +209,8 @@ class veh_interact
         // functionally, this works as the cursor position for the top-down vehicle view
         // see vehicle::build_interact_menu for initial assignment
         point_rel_ms cursor_vp_mount = point_rel_ms::zero;
+        int cursor_level = 0;
+        void change_deck( map &here, int dz );
         /* starting offset for vehicle parts description display and max offset for scrolling */
         int start_at = 0;
         int start_limit = 0;
@@ -177,6 +230,8 @@ class veh_interact
 
         // Command currently being run by the player
         vehicle_action sel_cmd = VEHICLE_QUIT;
+        bool flight_loss_confirmed = false;
+        bool fold_loss_confirmed = false;
 
         int cpart = -1;
         int page_size = 0;
@@ -273,7 +328,7 @@ class veh_interact
         // Returns true if exiting the screen
         bool do_unload( map &here );
         void do_assign_crew( map &here );
-        void do_relabel( const map &here );
+        void do_relabel( map &here );
         /*@}*/
 
         /**

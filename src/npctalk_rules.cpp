@@ -27,6 +27,7 @@
 #include "ui_manager.h"
 
 static std::map<cbm_recharge_rule, std::string> recharge_map = {
+    {cbm_recharge_rule::CBM_RECHARGE_AUTO, "<ally_rule_cbm_recharge_auto_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_ALL, "<ally_rule_cbm_recharge_all_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_MOST, "<ally_rule_cbm_recharge_most_text>" },
     {cbm_recharge_rule::CBM_RECHARGE_SOME, "<ally_rule_cbm_recharge_some_text>" },
@@ -35,6 +36,7 @@ static std::map<cbm_recharge_rule, std::string> recharge_map = {
 };
 
 static std::map<cbm_reserve_rule, std::string> reserve_map = {
+    {cbm_reserve_rule::CBM_RESERVE_AUTO, "<ally_rule_cbm_reserve_auto_text>" },
     {cbm_reserve_rule::CBM_RESERVE_ALL, "<ally_rule_cbm_reserve_all_text>" },
     {cbm_reserve_rule::CBM_RESERVE_MOST, "<ally_rule_cbm_reserve_most_text>" },
     {cbm_reserve_rule::CBM_RESERVE_SOME, "<ally_rule_cbm_reserve_some_text>" },

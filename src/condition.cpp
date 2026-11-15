@@ -974,29 +974,46 @@ conditional_t::func f_near_om_location( const JsonObject &jo, std::string_view m
     const dbl_or_var range = get_dbl_or_var( jo, "range", false, 1 );
     return [location, range, is_npc]( const_dialogue const & d ) {
         const tripoint_abs_omt omt_pos = d.const_actor( is_npc )->pos_abs_omt();
+        // A literal location is the same for every tile, so evaluate and classify it once.
+        // A variable or function location is still evaluated for each tile, after that
+        // tile's terrain is read: reading terrain can generate an overmap, and placing its
+        // specials can run EOCs or Lua that change the value.
+        const bool constant_location = location.is_constant();
+        std::string location_value;
+        bool camp_any = false;
+        bool camp_start = false;
+        const auto evaluate_location = [&]() {
+            location_value = location.evaluate( d );
+            camp_any = location_value == "FACTION_CAMP_ANY";
+            camp_start = location_value == "FACTION_CAMP_START";
+        };
+        if( constant_location ) {
+            evaluate_location();
+        }
         for( const tripoint_abs_omt &curr_pos : points_in_radius( omt_pos,
                 range.evaluate( d ) ) ) {
             const oter_id &omt_ter = overmap_buffer.ter( curr_pos );
-            const std::optional<mapgen_arguments> *maybe_args = overmap_buffer.mapgen_args( omt_pos );
-            const std::string &omt_str = omt_ter.id().str();
-            std::string location_value = location.evaluate( d );
+            if( !constant_location ) {
+                evaluate_location();
+            }
 
-            if( location_value == "FACTION_CAMP_ANY" ) {
+            if( camp_any ) {
                 std::optional<basecamp *> bcp = overmap_buffer.find_camp( curr_pos.xy() );
                 if( bcp ) {
                     return true;
                 }
                 // TODO: legacy check to be removed once primitive field camp OMTs have been purged
-                if( omt_str.find( "faction_base_camp" ) != std::string::npos ) {
+                if( omt_ter.id().str().find( "faction_base_camp" ) != std::string::npos ) {
                     return true;
                 }
-            } else if( location_value  == "FACTION_CAMP_START" &&
-                       !recipe_group::get_recipes_by_id( "all_faction_base_types", omt_ter, maybe_args ).empty() ) {
+            } else if( camp_start ) {
+                const auto *maybe_args = overmap_buffer.mapgen_args( omt_pos );
+                if( !recipe_group::get_recipes_by_id( "all_faction_base_types", omt_ter,
+                                                      maybe_args ).empty() ) {
+                    return true;
+                }
+            } else if( oter_no_dir_or_connections( omt_ter ) == location_value ) {
                 return true;
-            } else {
-                if( oter_no_dir_or_connections( omt_ter ) == location_value ) {
-                    return true;
-                }
             }
         }
         // should never get here this is for safety

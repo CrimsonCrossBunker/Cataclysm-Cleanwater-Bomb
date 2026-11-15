@@ -198,7 +198,8 @@
     "price_postapoc": "50 cent",
     "material": [ "brass", "glass" ],
     "weight": "5 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -213,7 +214,8 @@
     "price_postapoc": "50 cent",
     "material": [ "plastic" ],
     "weight": "25 g",
-    "volume": "1000 ml"
+    "volume": "1000 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -230,6 +232,7 @@
     "material": [ "vinyl" ],
     "melee_damage": { "bash": 4 },
     "weight": "327 g",
-    "volume": "1750 ml"
+    "volume": "1750 ml",
+    "stackable": true
   }
 ]

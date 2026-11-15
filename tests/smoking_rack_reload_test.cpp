@@ -4,7 +4,7 @@
 #include "cata_catch.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
-#include "iexamine.h"
+#include "smoking_rack.h"
 #include "item.h"
 #include "itype.h"
 #include "json.h"
@@ -66,7 +66,7 @@ TEST_CASE( "smoking_rack_without_embers_can_be_relit", "[item][smoking][save]" )
         embers.item_counter = to_turns<int>( 6_hours );
         here.add_item( pos, embers );
     }
-    iexamine::smoker_reconcile( here, pos );
+    smoking_rack::reconcile( here, pos );
     CHECK( ( here.furn( pos ) == active ) == has_timer );
     CHECK( here.i_at( pos ).begin()->typeId() == itype_id( "meat" ) );
     CHECK( here.i_at( pos ).begin()->has_flag( flag_PROCESSING ) == has_timer );

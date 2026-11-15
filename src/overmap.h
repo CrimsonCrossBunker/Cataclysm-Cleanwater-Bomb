@@ -781,6 +781,7 @@ class overmap
         void place_river( const std::vector<const overmap *> &neighbor_overmaps,
                           const overmap_river_node &initial_points, int river_scale = 1.0, bool major_river = false );
         void place_forests();
+        bool place_north_american_water();
         void place_lakes( const std::vector<const overmap *> &neighbor_overmaps );
         void place_oceans( const std::vector<const overmap *> &neighbor_overmaps );
         void place_rivers( const std::vector<const overmap *> &neighbor_overmaps );
