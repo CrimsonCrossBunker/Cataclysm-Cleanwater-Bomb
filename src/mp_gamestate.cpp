@@ -665,6 +665,8 @@ static void mp_partner_activity_transition_check()
 // Host: reset overmap-stream state so the next client gets a fresh bulk send.
 // Defined far below with the rest of the overmap-streaming code.
 
+// A mount marker is not a transferable mount relationship.
+static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_sleep( "sleep" );
 
 // ---------------------------------------------------------------------------
@@ -7518,6 +7520,24 @@ static std::string build_tile_changes( remote_player_session &recipient,
     return out;
 }
 
+static std::string monster_effects_json( const monster &subject )
+{
+    const std::vector<std::reference_wrapper<const effect>> effects = subject.get_effects();
+    if( effects.empty() ) {
+        return "[]";
+    }
+    std::ostringstream stream;
+    JsonOut out( stream );
+    out.start_array();
+    for( const effect &entry : effects ) {
+        if( entry.get_id() != effect_ridden ) {
+            out.write( entry );
+        }
+    }
+    out.end_array();
+    return stream.str();
+}
+
 static std::string build_monster_list( remote_player_session &recipient,
                                        const tripoint_abs_ms &center, int radius )
 {
@@ -7583,10 +7603,11 @@ static std::string build_monster_list( remote_player_session &recipient,
                           + ",\"z\":" + std::to_string( mp.z() )
                           + ",\"hp\":" + std::to_string( mon_ptr->get_hp() )
                           + ",\"facing\":" + std::to_string( mon_facing )
-                          + ",\"nickname\":" + nickname.str() + "}";
+                          + ",\"nickname\":" + nickname.str()
+                          + ",\"friendly\":" + std::to_string( mon_ptr->friendly )
+                          + ",\"effects\":" + monster_effects_json( *mon_ptr ) + "}";
         // Delta gate: emit only if new or changed since last broadcast. nid + id
-        // are stable, so an identical record string means x/y/z/hp/facing are all
-        // unchanged → the client already holds this exact state, omit it.
+        // are sent with the full observed state. An identical record can be omitted.
         auto cached = recipient.replication.server_mon_last_sent.find( nid );
         if( cached != recipient.replication.server_mon_last_sent.end() && cached->second == rec ) {
             ++n_skipped;
@@ -8094,6 +8115,29 @@ static void apply_vehicle_sync( JsonObject &jo )
     }
 }
 
+static void restore_monster_effects( monster &subject, const JsonObject &record )
+{
+    if( !record.has_array( "effects" ) ) {
+        return;
+    }
+    std::vector<effect> snapshot;
+    for( JsonObject data : record.get_array( "effects" ) ) {
+        const efftype_id id( data.get_string( "eff_type" ) );
+        const bodypart_str_id body_part( data.get_string( "bp" ) );
+        if( !id.is_valid() || id == effect_ridden ||
+            ( !body_part.is_null() && !body_part.is_valid() ) ) {
+            return;
+        }
+        effect entry;
+        entry.deserialize( data );
+        snapshot.push_back( entry );
+    }
+    if( subject.has_effect( effect_ridden ) ) {
+        snapshot.push_back( subject.get_effect( effect_ridden ) );
+    }
+    subject.restore_effects_snapshot( snapshot );
+}
+
 static void apply_monster_sync( JsonObject &jo )
 {
     if( !jo.has_array( "monsters" ) ) {
@@ -8253,9 +8297,15 @@ static void apply_monster_sync( JsonObject &jo )
             }
         }
 
+        const mtype_id mtype( mo.get_string( "id", "" ) );
+        if( mtype.is_valid() && best->type->id != mtype ) {
+            best->restore_replica_type( mtype );
+        }
         if( server_hp > 0 ) {
             best->set_hp( server_hp );
         }
+        best->friendly = mo.get_int( "friendly", best->friendly );
+        restore_monster_effects( *best, mo );
 
         // Sync facing direction for correct sprite flip.
         mo.read( "nickname", best->nickname );

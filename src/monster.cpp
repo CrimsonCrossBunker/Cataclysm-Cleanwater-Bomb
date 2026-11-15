@@ -420,8 +420,18 @@ void monster::on_effect_int_change( const efftype_id &/*eid*/, int /*intensity*/
 
 void monster::poly( const mtype_id &id )
 {
+    change_type( id, true );
+}
+
+void monster::restore_replica_type( const mtype_id &id )
+{
+    change_type( id, false );
+}
+
+void monster::change_type( const mtype_id &id, bool simulate )
+{
     double hp_percentage = static_cast<double>( hp ) / static_cast<double>( type->hp );
-    if( !no_extra_death_drops ) {
+    if( simulate && !no_extra_death_drops ) {
         generate_inventory();
     }
     type = &id.obj();
@@ -431,10 +441,12 @@ void monster::poly( const mtype_id &id )
     morale = type->morale;
     hp = static_cast<int>( hp_percentage * type->hp );
     special_attacks.clear();
-    dialogue d( get_talker_for( this ), get_talker_for( get_avatar() ) );
-    for( const auto &sa : type->special_attacks ) {
-        mon_special_attack &entry = special_attacks[sa.first];
-        entry.cooldown = sa.second->cooldown.evaluate( d );
+    if( simulate ) {
+        dialogue d( get_talker_for( this ), get_talker_for( get_avatar() ) );
+        for( const auto &sa : type->special_attacks ) {
+            mon_special_attack &entry = special_attacks[sa.first];
+            entry.cooldown = sa.second->cooldown.evaluate( d );
+        }
     }
     faction = type->default_faction;
     upgrades = type->upgrades;
