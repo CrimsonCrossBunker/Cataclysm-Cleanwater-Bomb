@@ -7449,8 +7449,10 @@ static void CheckMessages()
                         if( !is_quick_shortcut_touch ) {
                             update_finger_repeat_delay();
                         }
-                        const bool capture_imgui = android_ui_mode::is_new_ui_build() &&
-                                                   imclient && imclient->any_window_shown();
+                        const bool capture_imgui = android_imgui_touch::should_capture(
+                                                       android_ui_mode::is_new_ui_build(),
+                                                       imclient && imclient->any_window_shown(),
+                                                       touch_input_context.get_hud_scene_id() );
                         if( capture_imgui ) {
                             android_cancel_imgui_touch();
                             const ImVec2 position = android_imgui_touch_position(
