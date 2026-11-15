@@ -1323,16 +1323,18 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         return cached->second;
     }
 
-    //underground temperature = average New England temperature = 43F/6C
-    units::temperature temp = location.z() < 0 ? units::from_celsius(
-                                  get_cur_weather_gen().base_temperature ) : temperature;
+    units::temperature temp = location.z() < 0 ?
+                              get_area_temperature( project_to<coords::omt>( get_map().get_abs( location ) ) ) :
+                              temperature;
 
     if( !g->new_game && !g->swapping_dimensions ) {
         units::temperature_delta temp_mod;
         temp_mod = get_heat_radiation( location );
         temp_mod += get_convection_temperature( location );
         temp_mod += get_map().get_temperature_mod( location );
-        temp_mod += weather_id->temperature_modifier;
+        if( location.z() >= 0 || !north_america::active() ) {
+            temp_mod += weather_id->temperature_modifier;
+        }
 
         temp += temp_mod;
     }
@@ -1343,13 +1345,25 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
 
 units::temperature weather_manager::get_area_temperature( const tripoint_abs_omt &location ) const
 {
-    return location.z() < 0 ? units::from_celsius(
-               get_weather().get_cur_weather_gen().base_temperature ) : temperature;
+    if( location.z() >= 0 ) {
+        return temperature;
+    }
+    const weather_generator &generator = get_cur_weather_gen();
+    if( !north_america::active() ) {
+        return units::from_celsius( generator.base_temperature );
+    }
+    auto entry = ground_temperature_cache.find( location );
+    if( entry == ground_temperature_cache.end() ) {
+        entry = ground_temperature_cache.emplace( location, generator.get_ground_temperature(
+                    project_to<coords::ms>( location ), calendar::turn, g->get_seed() ) ).first;
+    }
+    return entry->second;
 }
 
 void weather_manager::clear_temp_cache()
 {
     temperature_cache.clear();
+    ground_temperature_cache.clear();
 }
 
 const weather_manager &get_weather_const()

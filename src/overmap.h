@@ -977,6 +977,7 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
+        void place_atlas_roads();
         /**
          * Walk over the overmap and attempt to place specials.
          * @param enabled_specials vector of objects that track specials being placed.

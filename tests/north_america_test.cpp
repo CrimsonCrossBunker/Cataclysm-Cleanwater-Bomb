@@ -1,3 +1,6 @@
+#include <algorithm>
+#include <cmath>
+
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
@@ -7,8 +10,11 @@
 #include "mapdata.h"
 #include "north_america.h"
 #include "north_america_soil.h"
+#include "north_america_transport.h"
 #include "options.h"
 #include "options_helpers.h"
+#include "weather.h"
+#include "weather_gen.h"
 
 TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america][worldgen]" )
 {
@@ -16,6 +22,7 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
     const item_group_id produce( "fresh_produce" );
     const item_group_id police( "police_armory_any_pistol" );
     const item_group_id swat_drops( "guns_swat" );
+    const item_group_id maps( "roadmap_stock" );
     const point_abs_ms toronto( -649984, -162480 );
     const point_abs_ms mexico_city( -2966130, 2139454 );
 
@@ -24,14 +31,17 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
         const north_america::scoped_regional_loot canada( toronto );
         CHECK( north_america::civic_flag_variant() == "canadian_flag" );
         CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-CA-ON" ) );
-        CHECK( north_america::regional_item_group( police ) == item_group_id( "police_armory_any_pistol-CA" ) );
+        CHECK( north_america::regional_item_group( police ) ==
+               item_group_id( "police_armory_any_pistol-CA" ) );
         CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-CA" ) );
+        CHECK( north_america::regional_item_group( maps ) == item_group_id( "roadmap_stock-CA-ON" ) );
     }
     {
         const north_america::scoped_regional_loot mexico( mexico_city );
         CHECK( north_america::civic_flag_variant() == "mexican_flag" );
         CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-MX-CMX" ) );
-        CHECK( north_america::regional_item_group( police ) == item_group_id( "police_armory_any_pistol-MX" ) );
+        CHECK( north_america::regional_item_group( police ) ==
+               item_group_id( "police_armory_any_pistol-MX" ) );
         CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-MX" ) );
     }
     g->north_america_world = false;
@@ -39,6 +49,7 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
     CHECK( north_america::civic_flag_variant().empty() );
     CHECK( north_america::regional_item_group( produce ) == produce );
     CHECK( north_america::regional_item_group( police ) == police );
+    CHECK( north_america::regional_item_group( maps ) == maps );
 }
 
 TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][farming]" )
@@ -62,6 +73,52 @@ TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][f
     CHECK( north_america::planted_soil( prairie_tilled.id() ) == prairie );
     CHECK( north_america::tilled_soil( dirt.id() ) == dirtmound );
     CHECK( north_america::planted_soil( dirtmound.id() ) == dirt );
+
+    const ter_str_id long_grass( "t_atlas_soil_prairie_long_grass" );
+    REQUIRE( long_grass.is_valid() );
+    CHECK( north_america::canonical_soil( long_grass.id() ) == ter_str_id( "t_grass_long" ) );
+    CHECK( long_grass->has_flag( ter_furn_flag::TFLAG_SMALL_HIDE ) );
+    CHECK( long_grass->transforms_into == ter_str_id( "t_atlas_soil_prairie_grass" ) );
+    CHECK( north_america::tilled_soil( long_grass.id() ) == prairie_tilled );
+    CHECK( north_america::preserve_soil( long_grass.id(), ter_str_id( "t_grass_dead" ).id() ) ==
+           ter_str_id( "t_atlas_soil_prairie_dead_grass" ) );
+}
+
+TEST_CASE( "atlas_roads_agree_across_chunk_edges", "[north_america][worldgen]" )
+{
+    // Highway 401 west of Toronto, including an observed twelve-lane section.
+    const point_abs_omt origin( -28800, -6450 );
+    const auto all = north_america::road_network( origin, 64, 64 );
+    const auto left = north_america::road_network( origin, 32, 64 );
+    const auto right = north_america::road_network( origin + point( 32, 0 ), 32, 64 );
+    REQUIRE( std::any_of( all.begin(), all.end(), []( const north_america::road_cell & tile ) {
+        return tile.lanes == 12;
+    } ) );
+    for( int y = 0; y < 64; ++y ) {
+        for( int x = 0; x < 32; ++x ) {
+            CHECK( left[y * 32 + x].connections == all[y * 64 + x].connections );
+            CHECK( right[y * 32 + x].connections == all[y * 64 + x + 32].connections );
+        }
+    }
+}
+
+TEST_CASE( "atlas_subsoil_uses_permafrost_and_annual_normals", "[north_america][weather]" )
+{
+    CHECK( north_america::permafrost_coverage_at( point_abs_ms( -2306833, -4917212 ) ) == 95 );
+    CHECK( north_america::permafrost_coverage_at( point_abs_ms( -2272670, -3965536 ) ) == 70 );
+    CHECK( north_america::permafrost_coverage_at( point_abs_ms::zero ) == 0 );
+
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    const weather_generator &generator = get_weather().get_cur_weather_gen();
+    const time_point summer = calendar::turn_zero + calendar::season_length() * 1.5;
+    const time_point winter = calendar::turn_zero + calendar::season_length() * 3.5;
+    const auto temperature = [&]( int z, const time_point & turn ) {
+        return units::to_celsius( generator.get_ground_temperature( tripoint_abs_ms( 0, 0, z ),
+                                  turn, 0 ) );
+    };
+    CHECK( std::abs( temperature( -1, summer ) - temperature( -1, winter ) ) > 1.0 );
+    CHECK( temperature( -6, summer ) == Approx( temperature( -6, winter ) ) );
 }
 
 TEST_CASE( "north_america_jurisdictions_follow_borders", "[north_america][worldgen]" )

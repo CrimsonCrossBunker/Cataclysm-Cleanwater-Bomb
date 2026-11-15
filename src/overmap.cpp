@@ -1,6 +1,7 @@
 #include "cube_direction.h" // IWYU pragma: associated
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_transport.h"
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -1083,13 +1084,16 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         // Polish rivers now so highways get the correct predecessors rather than river_center
         polish_river( neighbor_overmaps );
     }
-    if( settings->overmap_highway ) {
+    if( settings->overmap_highway && !atlas ) {
         highway_paths = place_highways( neighbor_overmaps );
+    }
+    if( atlas && settings->place_roads ) {
+        place_atlas_roads();
     }
     if( settings->city_spec ) {
         place_cities();
     }
-    if( settings->overmap_highway ) {
+    if( settings->overmap_highway && !atlas ) {
         place_highway_interchanges( highway_paths );
     }
     if( settings->city_spec ) {
@@ -1116,7 +1120,7 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     if( settings->place_specials ) {
         place_specials( enabled_specials );
     }
-    if( settings->overmap_highway ) {
+    if( settings->overmap_highway && !atlas ) {
         finalize_highways( highway_paths );
     }
     if( settings->forest_trail ) {
@@ -2282,6 +2286,44 @@ void overmap::place_swamps()
     }
 }
 
+void overmap::place_atlas_roads()
+{
+    const point_abs_omt origin = project_to<coords::omt>( pos() );
+    const auto network = north_america::road_network( origin, OMAPX, OMAPY );
+    const overmap_connection_id &connection = settings->overmap_connection.inter_city_road_connection;
+    auto &out = connections_out[connection];
+    static const oter_type_str_id road( "road" );
+    static const oter_type_str_id bridge( "bridge" );
+    for( int y = 0; y < OMAPY; ++y ) {
+        for( int x = 0; x < OMAPX; ++x ) {
+            const auto &tile = network[y * OMAPX + x];
+            if( !tile.connections ) {
+                continue;
+            }
+            const tripoint_om_omt p( x, y, 0 );
+            const oter_id previous = ter( p );
+            if( previous->is_water() ) {
+                const bool crosses_vertically = om_lines::has_segment( tile.connections,
+                                                om_direction::type::north ) ||
+                                                om_lines::has_segment( tile.connections, om_direction::type::south );
+                ter_set( p, bridge->get_rotated( crosses_vertically ? om_direction::type::north :
+                                                 om_direction::type::east ) );
+            } else if( connection->pick_subtype_for( previous ) ) {
+                ter_set( p, road->get_linear( tile.connections ) );
+            } else {
+                continue;
+            }
+            for( const auto direction : om_direction::all ) {
+                if( om_lines::has_segment( tile.connections, direction ) &&
+                    !inbounds( p + om_direction::displace( direction ) ) &&
+                    std::find( out.begin(), out.end(), p ) == out.end() ) {
+                    out.push_back( p );
+                }
+            }
+        }
+    }
+}
+
 void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps )
 {
     int op_city_size = settings->get_settings_city().city_size;
@@ -2292,8 +2334,39 @@ void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps
         settings->overmap_connection.inter_city_road_connection;
     std::vector<tripoint_om_omt> &roads_out = connections_out[overmap_connection_inter_city_road];
 
+    if( north_america::active() ) {
+        const overmap_connection &network = *overmap_connection_inter_city_road;
+        const auto mapped = north_america::road_network( project_to<coords::omt>( pos() ), OMAPX, OMAPY );
+        std::vector<point_om_omt> roads;
+        for( int y = 0; y < OMAPY; ++y ) {
+            for( int x = 0; x < OMAPX; ++x ) {
+                const oter_id terrain = ter( { x, y, 0 } );
+                if( mapped[y * OMAPX + x].connections && network.has( terrain ) && !terrain->is_water() ) {
+                    roads.emplace_back( x, y );
+                }
+            }
+        }
+        if( !roads.empty() ) {
+            const auto nearest_road = [&]( const point_om_omt & p ) {
+                return *std::min_element( roads.begin(), roads.end(),
+                [&]( const point_om_omt & a, const point_om_omt & b ) {
+                    return manhattan_dist( p, a ) < manhattan_dist( p, b );
+                } );
+            };
+            fallback_road_connection_point = nearest_road( point_om_omt( OMAPX / 2, OMAPY / 2 ) );
+            for( const city &settlement : cities ) {
+                const point_om_omt target = nearest_road( settlement.pos );
+                if( target != settlement.pos ) {
+                    build_connection( network, lay_out_connection( network, settlement.pos, target, 0,
+                                      false ), 0 );
+                }
+            }
+            return;
+        }
+    }
+
     // At least 3 exit points, to guarantee road continuity across overmaps
-    if( roads_out.size() < 3 ) {
+    if( !north_america::active() && roads_out.size() < 3 ) {
         for( const om_direction::type dir : om_direction::all ) {
             // only potentially add a new random connection toward ungenerated overmaps
             if( neighbor_overmaps[static_cast<int>( dir )] == nullptr ) {
@@ -3157,6 +3230,12 @@ bool overmap::contains_unique_special( const overmap_special_id &id ) const
     } ) != overmap_special_placements.end();
 }
 
+static bool allows_atlas_military_base( const overmap_special &special )
+{
+    static const overmap_special_id military_base( "mil_base" );
+    return north_america::active() && special.id == military_base;
+}
+
 bool overmap::can_place_special( const overmap_special &special, const tripoint_om_omt &p,
                                  om_direction::type dir, const bool must_be_unexplored ) const
 {
@@ -3165,7 +3244,7 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
     if( !special.id ) {
         return false;
     }
-    if( ( special.has_flag( "GLOBALLY_UNIQUE" ) &&
+    if( ( special.has_flag( "GLOBALLY_UNIQUE" ) && !allows_atlas_military_base( special ) &&
           overmap_buffer.contains_unique_special( special.id ) ) ||
         ( special.has_flag( "OVERMAP_UNIQUE" ) && contains_unique_special( special.id ) ) ) {
         return false;
@@ -3246,7 +3325,7 @@ std::vector<tripoint_om_omt> overmap::place_special(
         cata_assert( can_place_special( special, p, dir, must_be_unexplored ) );
     }
 
-    if( special.has_flag( "GLOBALLY_UNIQUE" ) ) {
+    if( special.has_flag( "GLOBALLY_UNIQUE" ) && !allows_atlas_military_base( special ) ) {
         overmap_buffer.add_unique_special( special.id );
         // Debug output if you want to know where all globally unique locations are
         //       point_abs_omt location = coords::project_to<coords::omt>(this->pos()) + p.xy().raw();
@@ -3382,7 +3461,9 @@ bool overmap::place_special_attempt(
                 continue;
             }
             // City check is the fastest => it goes first.
-            if( !special.can_belong_to_city( p, nearest_city, *this ) ) {
+            if( allows_atlas_military_base( special ) ?
+                approx_distance_to_city( p, 5 ).has_value() :
+                !special.can_belong_to_city( p, nearest_city, *this ) ) {
                 continue;
             }
             // See if we can actually place the special there.
@@ -3394,7 +3475,8 @@ bool overmap::place_special_attempt(
             place_special( special, p, rotation, nearest_city, false, must_be_unexplored );
 
             // Only this call site participates in deck accounting.
-            if( special.has_flag( "OVERMAP_UNIQUE" ) || special.has_flag( "GLOBALLY_UNIQUE" ) ) {
+            if( ( special.has_flag( "OVERMAP_UNIQUE" ) || special.has_flag( "GLOBALLY_UNIQUE" ) ) &&
+                !allows_atlas_military_base( special ) ) {
                 overmap_buffer.consume_deck_placement( special.id );
             }
 
@@ -3473,6 +3555,14 @@ void overmap::place_specials( overmap_special_batch &enabled_specials )
         }
         if( iter->special_details->has_flag( "OCEAN" ) && !overmap_has_ocean ) {
             iter = enabled_specials.erase( iter );
+            continue;
+        }
+
+        if( allows_atlas_military_base( *iter->special_details ) ) {
+            const int maximum = iter->special_details->get_constraints().occurrences.max;
+            const bool eligible = north_america::military_base_region( pos(), g->get_seed() );
+            iter->instances_placed = eligible ? std::max( 0, maximum - 1 ) : maximum;
+            ++iter;
             continue;
         }
 

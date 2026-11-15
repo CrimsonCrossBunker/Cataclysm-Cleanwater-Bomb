@@ -270,9 +270,11 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
             root.allow_omitted_members();
         } );
         read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_supplies.json",
-        [&]( const JsonValue & value ) {
+                             [&]( const JsonValue & value )
+        {
             const JsonObject root = value.get_object();
             const JsonArray state_groups = root.get_array( "regional_groups" );
+            const JsonArray map_groups = root.get_array( "atlas_map_groups" );
             const JsonArray service_groups = root.get_array( "service_groups" );
             const JsonObject flags = root.get_object( "civic_flags" );
             for( const JsonValue row : root.get_array( "jurisdictions" ) ) {
@@ -280,6 +282,7 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
                 const std::string country = code.substr( 0, 2 );
                 regional_loot_table &table = result[code];
                 table.add_groups( state_groups, code );
+                table.add_groups( map_groups, code );
                 if( flags.has_string( country ) ) {
                     table.civic_flag = flags.get_string( country );
                     table.add_groups( service_groups, country );
@@ -335,10 +338,10 @@ class water_grid
             }
         }
 
-        void paint_river( const feature &river ) {
+        void paint_river( const feature &river, bool chart ) {
             // The source supplies centerlines. A three-tile corridor preserves connectivity
             // at this resolution, including on diagonals and across overmap boundaries.
-            constexpr int radius = 3 * tile_metres / 2;
+            const int radius = std::max( 3 * tile_metres / 2, chart ? step / 2 : 0 );
             const point padding( radius, radius );
             if( !box.intersects( { river.box.min - padding, river.box.max + padding } ) ) {
                 return;
@@ -425,6 +428,11 @@ std::string_view jurisdiction_at( point_abs_ms position )
         }
     }
     return {};
+}
+
+std::string chart_discovery_key( std::string_view jurisdiction )
+{
+    return "north_america_chart_" + std::string( jurisdiction );
 }
 
 scoped_regional_loot::scoped_regional_loot( point_abs_ms position ) :
@@ -518,6 +526,40 @@ bool suitable_for_highway_intersection( point_abs_om overmap )
     return std::count( water.begin(), water.end(), terrain::land ) > samples * samples / 2;
 }
 
+bool military_base_region( point_abs_om overmap, unsigned seed )
+{
+    static const auto spacing = [] {
+        std::unordered_map<std::string, unsigned> result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_military_density.json",
+                             [&]( const JsonValue & value )
+        {
+            for( JsonMember member : value.get_object() ) {
+                const int one_in_overmaps = member.get_int();
+                if( one_in_overmaps > 0 ) {
+                    result.emplace( member.name(), static_cast<unsigned>( one_in_overmaps ) );
+                }
+            }
+        } );
+        return result;
+    }();
+    const point_abs_ms position = project_to<coords::ms>( overmap ) +
+                                  point( OMAPX * tile_metres / 2, OMAPY * tile_metres / 2 );
+    const std::string jurisdiction( jurisdiction_at( position ) );
+    auto entry = spacing.find( jurisdiction );
+    if( entry == spacing.end() ) {
+        entry = spacing.find( jurisdiction.substr( 0, 2 ) );
+    }
+    if( entry == spacing.end() ) {
+        return false;
+    }
+    unsigned hash = static_cast<unsigned>( overmap.x() ) * 3619419497U ^
+                    static_cast<unsigned>( overmap.y() ) * 19349663U ^ seed;
+    hash ^= hash >> 16;
+    hash *= 0x7feb352dU;
+    hash ^= hash >> 15;
+    return hash % entry->second == 0;
+}
+
 regional_climate::coordinates location( point_abs_ms position )
 {
     const double east = position.x();
@@ -538,7 +580,7 @@ regional_climate::coordinates location( point_abs_ms position )
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
 }
 
-std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride )
+std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride, bool chart )
 {
     const atlas &data = get_atlas();
     water_grid grid( origin, width, height, stride );
@@ -549,7 +591,7 @@ std::vector<terrain> raster( point_abs_omt origin, int width, int height, int st
         grid.paint( polygon, terrain::lake );
     }
     for( const feature &river : data.rivers ) {
-        grid.paint_river( river );
+        grid.paint_river( river, chart );
     }
     return std::move( grid.tiles );
 }

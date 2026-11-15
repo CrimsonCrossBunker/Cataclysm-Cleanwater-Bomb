@@ -110,13 +110,14 @@ struct weather_gen_common {
     double days_in_climate_month = 0;
     double normal_mean_c = 0;
     double normal_daily_range_c = 0;
+    double annual_mean_c = 0;
 };
 } // namespace
 
 static weather_gen_common get_common_data( const weather_generator &generator,
         const tripoint_abs_ms &location,
         const time_point &real_t,
-        unsigned seed )
+        unsigned seed, bool ground = false )
 {
     season_effective_time t( real_t );
     weather_gen_common result;
@@ -141,7 +142,14 @@ static weather_gen_common get_common_data( const weather_generator &generator,
     const double offset = days_year_start_to_midwinter / to_days<double>( calendar::year_length() );
     result.cyf = std::cos( tau * ( year_fraction - offset ) ); // [-1, 1]
     result.season = season_of_year( t.t );
+    result.annual_mean_c = generator.base_temperature;
     if( const auto climate = generator.climate_at( location ) ) {
+        if( ground ) {
+            result.annual_mean_c = 0;
+            for( const auto &month : climate->months ) {
+                result.annual_mean_c += ( month.high_c + month.low_c ) / 24.0;
+            }
+        }
         // Scale the January-first, 364-day calendar to the configured game year.
         const double model_day = std::fmod( year_fraction * 364.0 + 364.0, 364.0 );
         const int quarter = static_cast<int>( model_day / 91.0 );
@@ -228,6 +236,22 @@ units::temperature weather_generator::get_weather_temperature(
             seed ),
             season_effective_time( real_t ) );
 }
+units::temperature weather_generator::get_ground_temperature( const tripoint_abs_ms &location,
+        const time_point &real_t, unsigned seed ) const
+{
+    const weather_gen_common climate = get_common_data( *this, location, real_t, seed, true );
+    if( !climate.climate_month || location.z() <= -6 ) {
+        return units::from_celsius( climate.annual_mean_c );
+    }
+    const double depth = -location.z();
+    const double surface = units::to_celsius( weather_temperature_from_common_data( *this, climate,
+                           season_effective_time( real_t ) ) );
+    // Daily variations decay faster than the seasonal cycle.
+    const double seasonal = ( climate.normal_mean_c - climate.annual_mean_c ) * std::exp( -depth );
+    const double daily = ( surface - climate.normal_mean_c ) * std::exp( -3.0 * depth );
+    return units::from_celsius( climate.annual_mean_c + seasonal + daily );
+}
+
 w_point weather_generator::get_weather( const tripoint_abs_ms &location, const time_point &real_t,
                                         unsigned seed ) const
 {

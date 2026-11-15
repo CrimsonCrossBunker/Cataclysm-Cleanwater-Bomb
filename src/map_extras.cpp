@@ -31,6 +31,7 @@
 #include "line.h"
 #include "lua_platform_content.h"
 #include "map.h"
+#include "north_america_soil.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -273,9 +274,9 @@ static void dead_vegetation_parser( map &m, const tripoint_bub_ms &loc )
             {ter_t_grass_white, ter_t_grass_dead},
         }};
 
-    const auto iter = dies_into.find( tid );
+    const auto iter = dies_into.find( north_america::canonical_soil( tid ) );
     if( iter != dies_into.end() ) {
-        m.ter_set( loc, iter->second );
+        m.ter_set( loc, north_america::preserve_soil( tid, iter->second.id() ) );
     }
     // non-specific small vegetation falls into sticks, large dies and randomly falls
     const ter_t &tr = tid.obj();

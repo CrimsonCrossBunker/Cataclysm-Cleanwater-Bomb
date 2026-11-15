@@ -1,0 +1,20 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_atlas_permafrost",
+    "copy-from": "t_rock",
+    "name": "permafrost",
+    "description": "A solid mass of permanently frozen earth, gravel, and ground ice.",
+    "looks_like": "t_rock",
+    "color": "light_blue",
+    "bash": {
+      "str_min": 85,
+      "str_max": 350,
+      "sound": "crunch!",
+      "sound_fail": "thump!",
+      "ter_set": "t_dirt_underground",
+      "ter_set_bashed_from_above": "t_rock_floor_no_roof",
+      "items": [ { "item": "material_soil", "count": [ 30, 80 ] } ]
+    }
+  }
+]

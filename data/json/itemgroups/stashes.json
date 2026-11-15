@@ -348,7 +348,7 @@
         ],
         "prob": 20
       },
-      { "item": "roadmap", "prob": 5 },
+      { "group": "roadmap_stock", "prob": 5 },
       { "item": "trailmap", "prob": 5 },
       { "item": "whistle", "prob": 50 },
       { "item": "can_opener", "prob": 80 }
@@ -589,7 +589,7 @@
     "//": "collected over the years by someone who anticipated the Internet going down",
     "subtype": "collection",
     "entries": [
-      { "item": "roadmap", "prob": 99 },
+      { "group": "roadmap_stock", "prob": 99 },
       { "item": "trailmap", "prob": 90 },
       { "item": "urbexmap", "prob": 25 },
       { "item": "subwaystationmap", "prob": 75 },

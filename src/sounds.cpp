@@ -1870,11 +1870,12 @@ void sfx::do_footstep( const Character &ch )
             play_plmove_sound_variant( terrain.str(), seas_str, indoors, night );
             return;
         }
-        if( grass.count( terrain ) > 0 ) {
+        const ter_str_id canonical = north_america::canonical_soil( terrain.id() ).id();
+        if( grass.count( canonical ) > 0 ) {
             play_plmove_sound_variant( "walk_grass", seas_str, indoors, night );
             return;
         }
-        if( dirt.count( north_america::canonical_soil( terrain.id() ).id() ) > 0 ) {
+        if( dirt.count( canonical ) > 0 ) {
             play_plmove_sound_variant( "walk_dirt", seas_str, indoors, night );
             return;
         }

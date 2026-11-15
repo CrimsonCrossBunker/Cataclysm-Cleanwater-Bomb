@@ -80,6 +80,8 @@ class weather_generator
         void sort_weather();
         units::temperature get_weather_temperature( const tripoint_abs_ms &, const time_point &,
                 unsigned ) const;
+        units::temperature get_ground_temperature( const tripoint_abs_ms &, const time_point &,
+                unsigned ) const;
         std::optional<regional_climate::normals> climate_at( const tripoint_abs_ms & ) const;
 
         bool was_loaded = false;
