@@ -213,10 +213,7 @@ static void mp_log_impl( const std::string &msg, log_role role )
                              std::to_string( delta_ms ) + "ms] " + msg;
 
     // Also append to /tmp/cdda-mp-{server,client}.log so log capture doesn't
-    // require launching via start-mp.sh's stdout-tee.  Opens lazily on the
-    // first call once the mode is known; truncates on first open so each
-    // session's log starts fresh.  Re-opens with truncation if the mode
-    // changes (e.g. SP→host via the in-game menu).
+    // require launching via start-mp.sh's stdout-tee.
     static std::ofstream log_file;
     static std::string current_path;
     // Log directory: /tmp on unix (the stable path our tooling reads). Windows
