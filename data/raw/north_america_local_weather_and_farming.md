@@ -62,3 +62,36 @@ Atlas cities lay out major four-lane streets within mapped built-up
 districts. Local roads and building fronts use a bounded grid pass, and
 intercity highway geometry continues to come from the transport atlas.
 These changes affect newly generated overmaps.
+
+## Soil and recipes
+
+Atlas soil types modify the crop root zone's available water, rain infiltration,
+drainage, and root growth. Sandy and gravelly soils lose water sooner, fine clay
+lets rain in more slowly, and prairie black soil has a larger water reserve.
+Irrigated planters retain their existing growing medium. Soil and tilling
+variants share a profile. The relative gameplay parameters draw on
+[USDA NRCS material on available water capacity](https://www.nrcs.usda.gov/sites/default/files/2022-10/nrcs142p2_051590.pdf)
+and [FAO soil texture and infiltration tables](https://www.fao.org/4/v9926e/v9926e04.htm).
+
+Prickly pear and saguaro fruit are alternatives in the shared fresh sweet fruit
+ingredient group, including recipes that use it for drying, preserves, and
+juice. Fruit portions use one prickly pear or two 50 g saguaro servings.
+
+## Regional houses
+
+New residential lots in atlas cities can roll a local house based on the state's
+or province's jurisdiction at the lot. The existing city house pool provides
+the majority of homes and acts as a fallback. The geographic assignments are
+inspirations for layout and materials, with simplified roof profiles.
+
+| Region | Local variant and references |
+| --- | --- |
+| New England and Atlantic Canada | Compact, symmetrical wood cottage with a central stove. [Historic New England](https://www.historicnewengland.org/preservation/for-homeowners-communities/your-old-or-historic-home/architectural-style-guide/) |
+| Pacific Coast | Craftsman bungalow with a broad covered porch. [Washington State DAHP](https://dahp.wa.gov/historic-preservation/historic-buildings/architectural-style-guide/bungalow) |
+| Gulf Coast and parts of the Southeast | Narrow shotgun dwelling with aligned doors and a front porch. [NPS South Lakeview nomination](https://npgallery.nps.gov/NRHP/GetAsset/70a6649a-2bb9-4347-886f-d3b3883578a5) |
+| Prairies and northern Plains | Wood farmhouse with a sheltered entry. [Parks Canada, Seven Oaks House](https://www.pc.gc.ca/apps/dfhd/page_nhs_eng.aspx?id=17493) |
+| Great Lakes and parts of the Midwest and Northeast | Brick bungalow with a projecting front bay. [Chicago Landmarks](https://webapps1.chicago.gov/landmarksweb/static/pdf/Your_House_Has_A_History.pdf) |
+| Southwestern United States and northern Mexico | Adobe house with parapets and an enclosed patio. [NPS Pueblo Revival](https://home.nps.gov/subjects/architecture/pueblo.htm), [INAH Chihuahua](https://inah.gob.mx/images/suplementos/gacetinah/58/web/20250401_GacetINAH_58.pdf) |
+| Quebec | Stone dwelling with a gallery and central passage. [Canadian Register of Historic Places](https://www.historicplaces.ca/fr/rep-reg/place-lieu.aspx?id=12893&pid=0) |
+| Other Mexican regions | Street entry opening onto an inner courtyard with rooms around it. [INAH domestic building record](https://catalogonacionalmhi.inah.gob.mx/consulta_publica/detalle/12250) |
+| Other US regions | Low, wide suburban ranch with garage and rear patio. [NPS architectural survey](https://npgallery.nps.gov/GetAsset/5b084efe-c22d-4877-9b6b-66cfe86e6485) |

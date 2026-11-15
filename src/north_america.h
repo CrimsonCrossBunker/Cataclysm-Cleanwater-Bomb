@@ -33,6 +33,7 @@ bool military_base_region( point_abs_om overmap, unsigned seed );
 regional_climate::coordinates location( point_abs_ms position );
 // Empty outside the covered land. Coordinates use the same projection as the terrain atlas.
 std::string_view jurisdiction_at( point_abs_ms position );
+overmap_special_id regional_house_for( std::string_view jurisdiction );
 std::string chart_discovery_key( std::string_view jurisdiction );
 // New ambient spawns only. Existing monsters and mission targets keep their saved types.
 mtype_id regional_monster( const mtype_id &type, point_abs_ms position );

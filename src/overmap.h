@@ -888,7 +888,8 @@ class overmap
 
         // City Building
         overmap_special_id pick_random_building_to_place( int town_dist, int town_size,
-                const std::unordered_set<overmap_special_id> &placed_unique_buildings ) const;
+                const std::unordered_set<overmap_special_id> &placed_unique_buildings,
+                const tripoint_om_omt &building_pos, bool try_regional_house ) const;
 
         // urbanity and forestosity are biome stats that can be used to trigger changes in biome.
         // NOLINTNEXTLINE(cata-serialize)

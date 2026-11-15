@@ -4,8 +4,10 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
+#include <initializer_list>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -52,6 +54,47 @@ static pf::directed_path<point_om_omt> straight_path( const point_om_omt &source
     }
     res.nodes.emplace_back( p, om_direction::type::invalid );
     return res;
+}
+
+overmap_special_id north_america::regional_house_for( std::string_view jurisdiction )
+{
+    static const auto styles = [] {
+        std::unordered_map<std::string_view, overmap_special_id> result;
+        const auto add = [&]( const char *house, std::initializer_list<std::string_view> areas )
+        {
+            for( const std::string_view area : areas ) {
+                result.emplace( area, overmap_special_id( house ) );
+            }
+        };
+        add( "house_regional_cape_cod", { "US-CT", "US-MA", "US-ME", "US-NH", "US-RI", "US-VT",
+                                          "CA-NB", "CA-NL", "CA-NS", "CA-PE"
+                                        } );
+        add( "house_regional_craftsman", { "US-CA", "US-OR", "US-WA", "CA-BC" } );
+        add( "house_regional_shotgun", { "US-AL", "US-GA", "US-LA", "US-MS", "US-SC" } );
+        add( "house_regional_prairie", { "US-AK", "US-MN", "US-MT", "US-ND", "US-NE", "US-SD",
+                                         "CA-AB", "CA-MB", "CA-SK"
+                                       } );
+        add( "house_regional_brick_bungalow", { "US-IA", "US-IL", "US-IN", "US-MI", "US-MO",
+                                                "US-NJ", "US-NY", "US-OH", "US-PA", "US-WI", "CA-ON"
+                                              } );
+        add( "house_regional_adobe", { "US-AZ", "US-NM", "MX-CHH", "MX-COA", "MX-SON" } );
+        add( "house_regional_quebec", { "CA-QC" } );
+        return result;
+    }();
+    const auto found = styles.find( jurisdiction );
+    if( found != styles.end() ) {
+        return found->second;
+    }
+    const std::string_view country = jurisdiction.substr( 0, 3 );
+    if( country == "MX-" ) {
+        static const overmap_special_id patio( "house_regional_mexican_patio" );
+        return patio;
+    }
+    if( country == "US-" ) {
+        static const overmap_special_id ranch( "house_regional_ranch" );
+        return ranch;
+    }
+    return overmap_special_id::NULL_ID();
 }
 
 /*: the root is overmap::place_cities()
@@ -390,7 +433,8 @@ void overmap::build_cities()
 }
 
 overmap_special_id overmap::pick_random_building_to_place( int town_dist, int town_size,
-        const std::unordered_set<overmap_special_id> &placed_unique_buildings ) const
+        const std::unordered_set<overmap_special_id> &placed_unique_buildings,
+        const tripoint_om_omt &building_pos, bool try_regional_house ) const
 {
     const region_settings_city &city_spec = settings->get_settings_city();
     int shop_radius = city_spec.shop_radius;
@@ -409,6 +453,16 @@ overmap_special_id overmap::pick_random_building_to_place( int town_dist, int to
     int park_normal = park_radius;
     if( park_sigma > 0 ) {
         park_normal = std::max( park_normal, static_cast<int>( normal_roll( park_radius, park_sigma ) ) );
+    }
+    if( try_regional_house && town_dist >= std::max( shop_normal, park_normal ) &&
+        north_america::active() && one_in( 3 ) ) {
+        const point_abs_omt placement = project_to<coords::omt>( pos() ) + building_pos.xy().raw();
+        const point_abs_ms center = project_to<coords::ms>( placement ) + point( SEEX, SEEY );
+        const overmap_special_id house = north_america::regional_house_for(
+                                             north_america::jurisdiction_at( center ) );
+        if( !house.is_null() && house.is_valid() ) {
+            return house;
+        }
     }
     auto building_type_to_pick = [&]() {
         if( shop_normal > town_dist ) {
@@ -457,7 +511,7 @@ void overmap::place_building( const tripoint_om_omt &p, om_direction::type dir, 
 
     for( size_t retries = 10; retries > 0; --retries ) {
         const overmap_special_id building_tid = pick_random_building_to_place( town_dist, town.size,
-                                                placed_unique_buildings );
+                                                placed_unique_buildings, building_pos, retries == 10 );
         if( building_tid.is_null() ) {
             return;
         }

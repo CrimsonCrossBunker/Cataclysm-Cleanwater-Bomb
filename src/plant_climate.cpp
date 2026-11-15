@@ -13,6 +13,7 @@
 #include "itype.h"
 #include "map.h"
 #include "mapdata.h"
+#include "north_america_soil.h"
 #include "options.h"
 #include "units.h"
 #include "weather.h"
@@ -148,11 +149,15 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     const double per_model_day = model_days / to_days<double>( calendar::year_length() );
     const double average_need = climate.water_mm / climate.growing_days * per_model_day *
                                 std::max( 0.01f, water_use );
-    const double capacity = std::max( 12.0, average_need * 5 );
     const bool covered = here.is_roofed( p ) || p.z() < 0;
     const int max_water = iexamine::get_plant_max_water( furniture );
+    const north_america::crop_soil_properties soil = max_water > 0 ?
+            north_america::crop_soil_properties{} :
+            north_america::crop_soil_at( here.ter( p ) );
+    const double capacity = std::max( 12.0, average_need * 5 ) * soil.water_capacity;
     int irrigation = max_water > 0 ? iexamine::get_plant_water( seed ) : 0;
-    double moisture = seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 );
+    double moisture = std::clamp( seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 ),
+                                  0.0, capacity );
     time_point start = iexamine::get_plant_last_water_check( seed );
     if( start == time_point::from_turn( 0 ) ) {
         start = calendar::turn - seed.age();
@@ -176,13 +181,14 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         if( max_water > 0 && rain > 0 ) {
             irrigation = std::min( max_water, irrigation + static_cast<int>( rain / charge_mm ) );
         } else {
-            moisture = std::min( capacity, moisture + rain );
+            moisture = std::min( capacity, moisture + rain * soil.infiltration );
         }
         const int consumed = std::min( irrigation, static_cast<int>( std::ceil( need / charge_mm ) ) );
         irrigation -= consumed;
         const double available = moisture + consumed * charge_mm;
         const double water_ratio = std::clamp( available / need, 0.0, 1.0 );
         moisture = std::clamp( available - need, 0.0, capacity );
+        moisture -= std::max( 0.0, moisture - 0.5 * capacity ) * soil.drainage;
 
         if( effective >= maturity ) {
             effective += 1_days * rate;
@@ -198,7 +204,8 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
                                      std::max( mean, day.high - restraint ) ) * per_model_day /
                                      climate.degree_days;
         const double day_fraction = per_model_day / climate.growing_days;
-        const double progress = std::min( heat_fraction, day_fraction ) * water_ratio * rate;
+        const double progress = std::min( heat_fraction, day_fraction ) * water_ratio * rate *
+                                soil.root_growth;
         effective += maturity * progress;
     }
 
