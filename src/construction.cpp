@@ -57,6 +57,7 @@
 #include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
 #include "mtype.h"
+#include "north_america_soil.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -320,9 +321,11 @@ static bool has_pre_terrain( const construction &con, const tripoint_bub_ms &p )
             }
         }
     } else {
-        ter_id t = here.ter( p );
+        const ter_id t = here.ter( p );
+        const ter_id ordinary = north_america::canonical_soil( t );
         for( const auto &pre_terrain : con.pre_terrain ) {
-            if( t == ter_id( pre_terrain ) ) {
+            const ter_id required( pre_terrain );
+            if( t == required || ordinary == required ) {
                 return true;
             }
         }

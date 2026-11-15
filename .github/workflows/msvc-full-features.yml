@@ -192,6 +192,9 @@ jobs:
       run: |
           msbuild -m -p:Configuration=Release -p:Platform=x64 -p:UseSDL3=true -p:VcpkgManifestInstall=false "-target:Cataclysm-vcpkg-static;Cataclysm-test-vcpkg-static;JsonFormatter-vcpkg-static;zzip" msvc-full-features/Cataclysm-vcpkg-static.sln
 
+    - name: Build Windows co-op runtime
+      run: python build-scripts/build-coop-runtime.py --target x86_64-pc-windows-msvc --target-dir coop-rust --library-dir .
+
     - name: Post-build ccache manipulation
       id: trim-compiler-cache
       if: ${{ always() && !cancelled() && steps.compiler-cache.outcome == 'success' }}
@@ -284,6 +287,10 @@ jobs:
         if ($zips.Count -ne 1) {
             Write-Error "Expected exactly one release zip, found $($zips.Count)"
             exit 1
+        }
+        python -c "import ctypes, pathlib, zipfile; runtime = pathlib.Path('bindist/ccb_bevy_ecs_coop.dll'); assert zipfile.ZipFile('cataclysmdda-0.J.zip').read(runtime.name) == runtime.read_bytes(); assert ctypes.CDLL(str(runtime.resolve())).ccb_coop_abi_version() == 2"
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
         }
         Copy-Item -LiteralPath $zips[0].FullName -Destination "ccb-pr-windows-tiles-x64-$env:PR_NUMBER.zip"
     - name: upload PR Windows tiles x64 artifact

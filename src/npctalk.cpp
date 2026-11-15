@@ -802,15 +802,29 @@ std::vector < int > npcs_select_menu( const std::vector < Character * > &npc_lis
                                       const std::string &prompt,
                                       const std::function < bool( const Character * ) > &exclude_func )
 {
-    auto npc_enabled = [&exclude_func, &npc_list]( int list_index ) {
-        return exclude_func == nullptr || !exclude_func( npc_list[list_index] );
+    std::vector<std::string> names;
+    std::vector<bool> enabled;
+    names.reserve( npc_list.size() );
+    enabled.reserve( npc_list.size() );
+    for( const Character *candidate : npc_list ) {
+        names.push_back( candidate->name_and_maybe_activity() );
+        enabled.push_back( !exclude_func || !exclude_func( candidate ) );
+    }
+    return npcs_select_menu( names, prompt, enabled );
+}
+
+std::vector<int> npcs_select_menu( const std::vector<std::string> &names,
+                                   const std::string &prompt, const std::vector<bool> &enabled )
+{
+    const auto npc_enabled = [&enabled]( int index ) {
+        return enabled.empty() || enabled[index];
     };
 
     std::vector < int > picked;
-    if( npc_list.empty() ) {
+    if( names.empty() ) {
         return picked;
     }
-    const int npc_count = npc_list.size();
+    const int npc_count = names.size();
     int last_index = 0;
     do {
         uilist nmenu;
@@ -821,7 +835,7 @@ std::vector < int > npcs_select_menu( const std::vector < Character * > &npc_lis
                 entry = "* ";
             }
             bool enable = npc_enabled( i );
-            entry += npc_list[i]->name_and_maybe_activity();
+            entry += names[i];
             nmenu.addentry( i, enable, MENU_AUTOASSIGN, entry );
         }
         nmenu.addentry( npc_count, true, 'e', _( "Everyone" ) );
@@ -1801,6 +1815,58 @@ bool dialogue::prepare_topic()
     return topic_prepared_;
 }
 
+bool dialogue::request_remote_trade( dialogue_trade_request request )
+{
+    const bool paid = request.service_cost > 0;
+    if( request.service_cost < 0 || paid != static_cast<bool>( request.can_fulfill ) ||
+        paid != static_cast<bool>( request.fulfill ) ) {
+        return false;
+    }
+    return queue_remote_request( std::move( request ) );
+}
+
+bool dialogue::request_remote_seminar( dialogue_seminar_request request )
+{
+    return request.candidates && request.enroll && queue_remote_request( std::move( request ) );
+}
+
+bool dialogue::queue_remote_request( dialogue_remote_request request )
+{
+    if( !remote_prompts_enabled_ || !conversation_active_ || done || remote_request_ ) {
+        return false;
+    }
+    remote_request_ = std::move( request );
+    return true;
+}
+
+std::optional<dialogue_remote_request> dialogue::take_remote_request()
+{
+    return std::exchange( remote_request_, std::nullopt );
+}
+
+std::string dialogue::offer_item_to_interlocutor( bool use_item )
+{
+    if( !has_beta ) {
+        return {};
+    }
+    talker *recipient = actor( true );
+    if( !recipient ) {
+        return {};
+    }
+    Character *donor = mission_dialogue::resolve_dialogue_character( *this );
+    if( donor && donor != &get_avatar() && donor->has_native_player_control() &&
+        mission_dialogue::resolve_dialogue_npc( *this ) ) {
+        if( !by_radio && queue_remote_request( dialogue_item_offer_request{ use_item } ) ) {
+            reason.clear();
+        } else {
+            reason = _( "You cannot offer an item right now." );
+        }
+    } else {
+        reason = recipient->give_item_to( use_item );
+    }
+    return reason;
+}
+
 bool dialogue::advance_conversation( talk_topic next )
 {
     if( !conversation_active_ || !topic_prepared_ || conversation_step_in_progress_ ||
@@ -1854,6 +1920,7 @@ void dialogue::finish_conversation()
     conversation_active_ = false;
     topic_prepared_ = false;
     responses_pending_ = false;
+    remote_request_.reset();
     done = true;
     const on_out_of_scope end_session( [&]() {
         cata::lua_platform::end_dialogue_session( *this );
@@ -3198,6 +3265,10 @@ dialogue &dialogue::operator=( dialogue &&d ) noexcept
     d.conversation_active_ = false;
     topic_prepared_ = false;
     d.topic_prepared_ = false;
+    remote_prompts_enabled_ = false;
+    d.remote_prompts_enabled_ = false;
+    remote_request_.reset();
+    d.remote_request_.reset();
     prepared_challenge_.clear();
     last_topic_.clear();
     const_dialogue::operator=( std::move( static_cast < const_dialogue & >( d ) ) );
@@ -6068,8 +6139,8 @@ talk_effect_fun_t::func f_bulk_trade_accept( const JsonObject &jo, std::string_v
 
 talk_effect_fun_t::func f_npc_gets_item( bool to_use )
 {
-    return [to_use]( dialogue const & d ) {
-        d.reason = d.actor( true )->give_item_to( to_use );
+    return [to_use]( dialogue & d ) {
+        d.offer_item_to_interlocutor( to_use );
     };
 }
 
@@ -6434,13 +6505,18 @@ talk_effect_fun_t::func f_take_control_menu()
 talk_effect_fun_t::func f_make_radio_representative( const bool is_beta )
 {
     return [is_beta]( dialogue const & d ) {
-        npc *guy = d.actor( is_beta )->get_npc();
-        if( guy != nullptr ) {
-            guy->faction_representative = true;
-            get_avatar().faction_representatives.insert( guy->as_character()->getID() );
-        } else {
+        talker *representative = d.actor( is_beta );
+        npc *guy = representative ? representative->get_npc() : nullptr;
+        if( guy == nullptr ) {
             debugmsg( "Trying to make radio representative, but %s talker is nullptr.  %s",
                       is_beta ? "beta" : "alpha", d.get_callstack() );
+            return;
+        }
+        guy->faction_representative = true;
+        talker *other = d.actor( !is_beta );
+        Character *contact_owner = other ? other->get_character() : nullptr;
+        if( contact_owner != nullptr && contact_owner != guy && guy->getID().is_valid() ) {
+            contact_owner->faction_representatives.insert( guy->getID() );
         }
     };
 }
@@ -9335,6 +9411,18 @@ void talk_effect_t::set_effect( talkfunction_ptr ptr )
         } ), dialogue_consequence::none );
         return;
     }
+    if( ptr == &talk_function::start_trade ) {
+        set_effect_consequence( talk_effect_fun_t( []( dialogue & d ) {
+            Character *player = mission_dialogue::resolve_dialogue_character( d );
+            npc *provider = mission_dialogue::resolve_dialogue_npc( d );
+            if( player == &get_avatar() && provider ) {
+                talk_function::start_trade( *provider );
+            } else if( player && provider && player->has_native_player_control() ) {
+                d.request_remote_trade( { _( "Trade" ), true } );
+            }
+        } ), dialogue_consequence::none );
+        return;
+    }
     const auto set_character_npc_effect =
         [this]( void ( *fn )( npc &, Character & ),
     dialogue_consequence con = dialogue_consequence::none ) {
@@ -9405,8 +9493,7 @@ void talk_effect_t::set_effect( talkfunction_ptr ptr )
         set_character_npc_effect( &talk_function::lead_to_safety );
         return;
     }
-    if( ptr == &talk_function::start_trade ||
-        ptr == &talk_function::select_vehicle_part_service ||
+    if( ptr == &talk_function::select_vehicle_part_service ||
         ptr == static_cast < talkfunction_ptr >( &talk_function::barber_beard ) ||
         ptr == static_cast < talkfunction_ptr >( &talk_function::barber_hair ) ||
         ptr == static_cast < talkfunction_ptr >( &talk_function::bionic_install ) ||

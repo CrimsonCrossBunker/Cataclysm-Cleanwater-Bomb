@@ -89,7 +89,7 @@ SDL_Color get_map_color_at( const tripoint_bub_ms &p )
 {
     const map &here = get_map();
     if( const optional_vpart_position vp = here.veh_at( p ) ) {
-        const vpart_display vd = vp->vehicle().get_display_of_tile( vp->mount_pos() );
+        const vpart_display vd = vp->vehicle().get_display_of_tile( vp->mount_pos3() );
         return curses_color_to_SDL( vd.color );
     }
 
@@ -574,7 +574,7 @@ void pixel_minimap::render_cache( const tripoint_bub_ms &center )
     std::tie( quotient, remainder ) = coords::project_remain<coords::sm>( center );
 
     point_sm_ms ms_base_offset = point_sm_ms( ( total_tiles_count.x / 2 ) % SEEX,
-        ( total_tiles_count.y / 2 ) % SEEY );
+                                 ( total_tiles_count.y / 2 ) % SEEY );
     ms_offset = ms_base_offset - remainder;
 
     for( const auto &elem : cache ) {

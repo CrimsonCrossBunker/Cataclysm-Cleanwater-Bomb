@@ -443,11 +443,12 @@ std::pair<nc_color, std::string> faction::vitamin_stores( vitamin_type vit_type 
             msg ) );
 }
 
-faction_price_rule const *faction::get_price_rules( item const &it, npc const &guy ) const
+faction_price_rule const *faction::get_price_rules( item const &it, npc const &guy,
+        const Character *customer ) const
 {
     auto const el = std::find_if(
-    price_rules.crbegin(), price_rules.crend(), [&it, &guy]( faction_price_rule const & fc ) {
-        return fc.matches( it, guy );
+    price_rules.crbegin(), price_rules.crend(), [&]( faction_price_rule const & fc ) {
+        return customer ? fc.matches( it, guy, *customer ) : fc.matches( it, guy );
     } );
     if( el != price_rules.crend() ) {
         return &*el;

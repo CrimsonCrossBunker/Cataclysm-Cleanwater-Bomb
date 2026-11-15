@@ -11,9 +11,11 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "cata_lazy.h"
+#include "character_id.h"
 #include "dialogue_helpers.h"
 #include "dialogue_win.h"
 #include "global_vars.h"
@@ -288,6 +290,26 @@ enum class dialogue_start_result {
     started
 };
 
+struct dialogue_trade_request {
+    std::string title;
+    bool use_delegate = false;
+    int service_cost = 0;
+    std::function<bool()> can_fulfill = {};
+    std::function<void()> fulfill = {};
+};
+
+struct dialogue_seminar_request {
+    std::function<std::vector<std::pair<character_id, std::string>>()> candidates;
+    std::function<bool( dialogue &, const std::vector<character_id> & )> enroll;
+};
+
+struct dialogue_item_offer_request {
+    bool use_item = false;
+};
+
+using dialogue_remote_request = std::variant<dialogue_trade_request, dialogue_seminar_request,
+      dialogue_item_offer_request>;
+
 struct dialogue:
     public const_dialogue {
         /**
@@ -319,6 +341,14 @@ struct dialogue:
         }
         bool advance_conversation( talk_topic next );
         void finish_conversation();
+
+        void enable_remote_prompts() {
+            remote_prompts_enabled_ = true;
+        }
+        bool request_remote_trade( dialogue_trade_request request );
+        bool request_remote_seminar( dialogue_seminar_request request );
+        std::optional<dialogue_remote_request> take_remote_request();
+        std::string offer_item_to_interlocutor( bool use_item );
 
         std::string dynamic_line( const talk_topic &topic );
         void apply_speaker_effects( const talk_topic &the_topic );
@@ -371,6 +401,9 @@ struct dialogue:
         bool conversation_active_ = false;
         bool conversation_step_in_progress_ = false;
         bool topic_prepared_ = false;
+        bool remote_prompts_enabled_ = false;
+        std::optional<dialogue_remote_request> remote_request_;
+        bool queue_remote_request( dialogue_remote_request request );
         std::string prepared_challenge_;
         std::string last_topic_;
         // Reports whether the fallback native topic supplied the line, so overridden

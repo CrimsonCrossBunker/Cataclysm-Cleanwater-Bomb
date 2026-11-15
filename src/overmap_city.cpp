@@ -17,6 +17,8 @@
 #include "flood_fill.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "north_america.h"
+#include "north_america_ecology.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
@@ -105,6 +107,32 @@ void overmap::place_cities()
     const double omts_per_city = ( op_city_size * 2 + 1 ) * ( max_city_size * 2 + 1 ) * 3 / 4.0;
 
 
+    const bool atlas_world = north_america::active();
+    if( atlas_world ) {
+        for( const size_t index : north_america::cities_in( pos() ) ) {
+            const north_america::place &place = north_america::cities()[index];
+            const point_om_omt center = project_remain<coords::om>( place.position ).remainder;
+            for( const point_om_omt &candidate : closest_points_first( center, 12 ) ) {
+                const tripoint_om_omt p( candidate, 0 );
+                if( !inbounds( p ) || ter( p )->is_water() || city_tiles.count( candidate ) ) {
+                    continue;
+                }
+                city seed( place.name );
+                seed.pos_om = pos();
+                seed.pos = candidate;
+                seed.population = place.population;
+                seed.size = std::clamp( op_city_size + static_cast<int>(
+                                            std::sqrt( std::max( 0, place.population ) / 1000.0 ) ), 2, 55 );
+                ter_set( p, oter_road_nesw );
+                city_tiles.insert( candidate );
+                cities.push_back( seed );
+                break;
+            }
+        }
+        if( !cities.empty() ) {
+            return;
+        }
+    }
     const bool use_random_cities = city::get_all().empty();
 
     int num_cities_on_this_overmap = 0;
@@ -120,10 +148,14 @@ void overmap::place_cities()
         }
     } else {
         // Random cities if no cities were defined in regional settings
-        num_cities_on_this_overmap = roll_remainder( omts_per_overmap * city_map_coverage_ratio /
-                                     omts_per_city );
+        const double density = atlas_world ? north_america::rural_city_multiplier( pos() ) : 1.0;
+        num_cities_on_this_overmap = roll_remainder( density * omts_per_overmap *
+                                     city_map_coverage_ratio / omts_per_city );
     }
 
+    if( num_cities_on_this_overmap == 0 && !city_settings.is_megacity ) {
+        return;
+    }
     tripoint_range city_candidates_range = points_in_radius_where(
             tripoint_om_omt( OMAPX / 2, OMAPY / 2, 0 ),
     OMAPX / 2 - max_city_size, [&]( const tripoint_om_omt & p ) {

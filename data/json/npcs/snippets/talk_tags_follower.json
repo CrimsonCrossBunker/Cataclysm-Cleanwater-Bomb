@@ -1,6 +1,26 @@
 [
   {
     "type": "snippet",
+    "category": "<ally_rule_share_supplies_true_text>",
+    "text": [ "Share supplies and put surplus in loot zones." ]
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_share_supplies_false_text>",
+    "text": [ "Keep supplies and do not automatically deposit them." ]
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_cbm_recharge_auto_text>",
+    "text": "Recharge bionic power automatically based on danger and travel."
+  },
+  {
+    "type": "snippet",
+    "category": "<ally_rule_cbm_reserve_auto_text>",
+    "text": "Automatically reserve enough bionic power for defensive implants."
+  },
+  {
+    "type": "snippet",
     "category": "<hungry>",
     "//": "Complaint when the NPC is hungry and wants food.",
     "text": [

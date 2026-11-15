@@ -25,6 +25,7 @@
 #include "memory_fast.h"
 #include "player_identity.h"
 #include "point.h"
+#include "safe_reference.h"
 #include "type_id.h"
 #include "units.h"
 
@@ -57,7 +58,7 @@ struct monster_visible_info {
     // 7 0 1    unique_types uses these indices;
     // 6 8 2    0-7 are provide by direction_from()
     // 5 4 3    8 is used for local monsters (for when we explain them below)
-    std::array<std::vector<npc *>, 9 > unique_types;
+    std::array<std::vector<safe_reference<Creature>>, 9> unique_types;
     std::array<std::vector<std::pair<const mtype *, int>>, 9> unique_mons;
 
     // If the monster visible in this direction is dangerous
@@ -113,6 +114,9 @@ class avatar : public Character
         bool save_map_memory();
         void load_map_memory();
         void clear_map_memory();
+        void use_guest_map_memory( const cata_path &directory );
+        void use_local_map_memory();
+        bool has_guest_map_memory() const;
 
         // newcharacter.cpp
         bool create( character_type type, const std::string &tempname = "" );
@@ -234,8 +238,6 @@ class avatar : public Character
          */
         bool wield_contents( item &container, item *internal_item = nullptr, bool penalties = true,
                              int base_cost = INVENTORY_HANDLING_PENALTY );
-        /** Handles sleep attempts by the player, starts ACT_TRY_SLEEP activity */
-        void try_to_sleep( const time_duration &dur );
         void set_pos_abs_only( const tripoint_abs_ms &loc );
         /** Handles reading effects and returns true if activity started */
         bool read( item_location &book, item_location ereader = {} );
@@ -245,14 +247,6 @@ class avatar : public Character
         void add_snippet( snippet_id snippet );
         bool has_seen_snippet( const snippet_id &snippet ) const;
         const std::set<snippet_id> &get_snippets();
-
-        /** smash a map feature */
-        struct smash_result {
-            bool can_smash;
-            bool did_smash;
-            bool success;
-        };
-        smash_result smash( tripoint_bub_ms &smashp );
 
         /**
          * Opens the targeting menu to pull a nearby creature towards the character.
@@ -400,7 +394,6 @@ class avatar : public Character
         vproto_id starting_vehicle = vproto_id::NULL_ID();
         std::vector<mtype_id> starting_pets;
         std::set<character_id> follower_ids;
-        std::set<character_id> faction_representatives;
 
         mutable bool aim_cache_dirty = true;
         // dirty the aim cache and record that the aim cone may have changed
