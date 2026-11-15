@@ -381,6 +381,7 @@ static const quality_id qual_BUTCHER( "BUTCHER" );
 static const quality_id qual_CUT_FINE( "CUT_FINE" );
 static const quality_id qual_PRY( "PRY" );
 
+static const skill_id skill_driving( "driving" );
 static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_gun( "gun" );
@@ -3755,7 +3756,7 @@ void game::draw_vehicle_guidance()
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
                                   vehicles::vmiph_per_tile ) ), 0, 60 );
-    const double skill = u.get_skill_level( skill_id( "driving" ) );
+    const double skill = u.get_skill_level( skill_driving );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
                                         ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
@@ -3788,12 +3789,13 @@ void game::draw_vehicle_guidance()
                 for( const double side : {
                          left, right
                      } ) {
-                    const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
-                    const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
-                    min_x = std::min( min_x, x - uncertainty );
-                    max_x = std::max( max_x, x + uncertainty );
-                    min_y = std::min( min_y, y - uncertainty );
-                    max_y = std::max( max_y, y + uncertainty );
+                    const point corner_offset(
+                        std::lround( along * std::cos( angle ) - side * std::sin( angle ) ),
+                        std::lround( along * std::sin( angle ) + side * std::cos( angle ) ) );
+                    min_x = std::min( min_x, corner_offset.x - uncertainty );
+                    max_x = std::max( max_x, corner_offset.x + uncertainty );
+                    min_y = std::min( min_y, corner_offset.y - uncertainty );
+                    max_y = std::max( max_y, corner_offset.y + uncertainty );
                 }
             }
             for( int x = min_x; x <= max_x; ++x ) {
