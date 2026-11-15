@@ -18,6 +18,7 @@
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "safe_reference.h"
 #include "type_id.h"
 
 static const string_id<npc_template> npc_template_test_npc_trader( "test_npc_trader" );
@@ -60,7 +61,9 @@ void remove_npc_and_check( map &m, tripoint_bub_ms const &loc, update_mapgen_id 
     check_creature( loc, nid, false );
 
     for( const auto &visible_npcs : get_avatar().get_mon_visible().unique_types ) {
-        for( const npc *visible : visible_npcs ) {
+        for( const safe_reference<Creature> &entry : visible_npcs ) {
+            REQUIRE( entry );
+            const npc *visible = entry->as_npc();
             REQUIRE( visible );
             CHECK_FALSE( visible->is_dead() );
         }

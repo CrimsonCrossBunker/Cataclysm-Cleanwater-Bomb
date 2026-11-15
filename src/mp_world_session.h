@@ -3,11 +3,14 @@
 #define CATA_SRC_MP_WORLD_SESSION_H
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "mp_actor_binding.h"
+#include "map_simulation_regions.h"
 #include "mp_apply_watchdog.h"
 #include "mp_client_conn.h"
 #include "mp_pickup.h"
@@ -19,8 +22,23 @@
 #include "mp_player_feedback.h"
 #include "mp_world_state.h"
 
+class game;
+class map;
+class scent_map;
+
 namespace cata_mp
 {
+// Resident views share MAPBUFFER and the world's entity registries. This
+// record owns only the local map window and its scent state.
+struct resident_region {
+    resident_region( const game &owner, const player_id &player );
+    ~resident_region();
+
+    player_id player;
+    std::unique_ptr<map> terrain;
+    std::unique_ptr<scent_map> scent;
+};
+
 // One authenticated player's control, turn and replication state. Neither a
 // reconnect nor another recipient may borrow these baselines or pending ACKs.
 struct remote_player_session {
@@ -59,6 +77,7 @@ struct world_session {
         world_replication_state replication;
         std::map<uint64_t, std::unique_ptr<remote_player_session>> remote_players;
         bool host_waiting_for_clients = false;
+        bool refreshing_regions = false;
         int last_monmove_ms = 0;
         int host_wait_elapsed_ms = 0;
         uint32_t grant_sequence = 0;
@@ -84,6 +103,28 @@ struct world_session {
         remote_player_session *find_remote( character_id actor ) const;
         bool accepts_remote_event( const peer_admission &admission ) const;
 
+        resident_region &load_region( const game &owner, map &primary, const player_id &player,
+                                      const tripoint_abs_sm &center );
+        resident_region *find_region( const player_id &player ) const;
+        void recenter_region( map &primary, resident_region &region, const tripoint_abs_sm &center );
+        void retire_region( map &primary, const player_id &player );
+        scent_map *scent_for( const map &terrain ) const;
+        std::vector<std::reference_wrapper<resident_region>> active_regions() const;
+        map_simulation_regions simulation_regions( const map &primary ) const;
+        std::vector<std::reference_wrapper<map>> active_maps( map &primary ) const;
+        // Absolute positions keep pending support work valid when views scroll.
+        std::set<tripoint_abs_ms> pending_support;
+        template<typename Visitor>
+        void visit_resident_maps( map &primary, const Visitor &visit ) const {
+            visit( primary );
+            for( const auto &entry : regions_ ) {
+                visit( *entry.second->terrain );
+            }
+        }
+        map *loaded_map_at( map &primary, const tripoint_abs_sm &position ) const;
+        map &map_for( map &primary, const tripoint_abs_sm &position ) const;
+        bool has_regions() const;
+
         void reset();
 
         // Menu/CLI probes precede setup(). Preserve only an unadopted attempt;
@@ -91,6 +132,8 @@ struct world_session {
         void prepare_for_world_load();
 
     private:
+        // Stable player IDs make overlap priority independent of transport IDs.
+        std::map<player_id, std::unique_ptr<resident_region>> regions_;
         void reset_state( bool preserve_pending_client );
 };
 } // namespace cata_mp

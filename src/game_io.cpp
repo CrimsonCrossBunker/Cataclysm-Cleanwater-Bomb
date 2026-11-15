@@ -43,6 +43,7 @@
 #include "character_id.h"
 #include "clzones.h"
 #include "coordinates.h"
+#include "current_map.h"
 #include "debug.h"
 #include "dependency_tree.h"
 #include "diary.h"
@@ -63,7 +64,9 @@
 #include "loading_ui.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
+#include "mp_world_session.h"
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_id_compat.h"
@@ -295,8 +298,13 @@ void game::load_map( const tripoint_abs_sm &pos_sm,
                      const bool pump_events )
 {
     map &here = get_map();
-
-    here.load( pos_sm, true, pump_events );
+    if( &here == &reality_bubble() && multiplayer_session().has_regions() ) {
+        const map_simulation_regions regions = multiplayer_session().simulation_regions( here );
+        here.save( &regions );
+        here.load( pos_sm, true, false, &regions );
+    } else {
+        here.load( pos_sm, true, pump_events );
+    }
 }
 
 void game::move_save_to_graveyard()
@@ -381,6 +389,10 @@ bool game::load( const save_t &name )
     const cata_path worldpath = PATH_INFO::world_base_save_path();
     const bool recovering_transition = save_snapshot::dimension_transition_pending( worldpath );
     if( recovering_transition ) {
+        if( cata_mp::is_client_mode() ) {
+            popup( _( "Load this character in single-player first to recover an interrupted dimension transition." ) );
+            return false;
+        }
         if( !save_snapshot::recover_dimension_transition( worldpath ) ) {
             debugmsg( "Could not recover interrupted dimension travel; refusing to load a partial save." );
             return false;
@@ -417,7 +429,7 @@ bool game::load( const save_t &name )
                     if( world_generator->active_world->has_compression_enabled() ) {
                         std::optional<zzip> z = zzip::load( ( save_file_path + zzip_suffix ).get_unrelative_path() );
                         abort = !z.has_value() ||
-                                  !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
+                        !read_from_zzip_optional( z.value(), save_file_path.get_unrelative_path().filename(),
                         [this]( std::string_view sv ) {
                             unserialize( std::string{ sv } );
                         } );
@@ -433,7 +445,9 @@ bool game::load( const save_t &name )
             {
                 _( "Map memory" ), [&]()
                 {
-                    u.load_map_memory();
+                    if( !cata_mp::is_client_mode() ) {
+                        u.load_map_memory();
+                    }
                 }
             },
             {
@@ -504,7 +518,7 @@ bool game::load( const save_t &name )
                         // The vehicle stores the IDs of the boarded players, so update it, too.
                         if( u.in_vehicle ) {
                             if( const std::optional<vpart_reference> vp = here.veh_at(
-                                    u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
+                                        u.pos_bub() ).part_with_feature( "BOARDABLE", true ) ) {
                                 vp->part().passenger_id = u.getID();
                             }
                         }
@@ -673,12 +687,23 @@ bool game::save_dimension_data()
 }
 bool game::save_maps()
 {
-    map &here = get_map();
-
     try {
-        here.save();
+        map &primary = reality_bubble();
+        auto &session = multiplayer_session();
+        std::vector<std::reference_wrapper<const map>> resident{ std::cref( primary ) };
+        if( session.has_regions() ) {
+            const map_simulation_regions regions = session.simulation_regions( primary );
+            for( const auto &entry : session.active_maps( primary ) ) {
+                entry.get().save( &regions );
+                if( &entry.get() != &primary ) {
+                    resident.emplace_back( entry.get() );
+                }
+            }
+        } else {
+            primary.save();
+        }
         overmap_buffer.save(); // can throw
-        MAPBUFFER.save( false, &here ); // can throw
+        MAPBUFFER.save( false, resident ); // can throw
         return true;
     } catch( const std::exception &err ) {
         popup( _( "Failed to save the maps: %s" ), err.what() );
@@ -833,6 +858,13 @@ bool game::save()
     }
     restore_on_out_of_scope restore_saving( save_in_progress );
     save_in_progress = true;
+    if( cata_mp::is_client_mode() ) {
+        return !u.has_guest_map_memory() || u.save_map_memory();
+    }
+    std::optional<swap_map> primary_context;
+    if( &get_map() != &reality_bubble() ) {
+        primary_context.emplace( reality_bubble() );
+    }
     // total_time_played accumulates real wall-clock seconds, which is inherently
     // non-deterministic. Under input replay we freeze the delta at 0 so the
     // persisted playtime (written to both .pt and the character .sav) is
@@ -944,7 +976,7 @@ void game::write_memorial_file( std::string sLastWords )
 {
     const std::string &memorial_dir = PATH_INFO::memorialdir();
     const std::string &memorial_active_world_dir = memorial_dir +
-        world_generator->active_world->world_name + "/";
+            world_generator->active_world->world_name + "/";
 
     //Check if both dirs exist. Nested assure_dir_exist fails if the first dir of the nested dir does not exist.
     if( !assure_dir_exist( memorial_dir ) ) {
@@ -955,7 +987,7 @@ void game::write_memorial_file( std::string sLastWords )
 
     if( !assure_dir_exist( memorial_active_world_dir ) ) {
         dbg( D_ERROR ) <<
-        "game:write_memorial_file: Unable to make active world directory in memorial directory.";
+                       "game:write_memorial_file: Unable to make active world directory in memorial directory.";
         debugmsg( "Could not make '%s' directory", memorial_active_world_dir );
         return;
     }
@@ -1042,8 +1074,14 @@ void game::quicksave( bool automatic )
     }
     restore_on_out_of_scope restore_quicksaving( quicksave_in_progress );
     quicksave_in_progress = true;
+    if( cata_mp::is_client_mode() ) {
+        if( !save() ) {
+            add_msg( m_bad, _( "Could not save your exploration memory." ) );
+        }
+        return;
+    }
     const bool finishing_dimension_rollback = !automatic &&
-        save_snapshot::dimension_rollback_exists( world_generator->active_world->folder_path() );
+            save_snapshot::dimension_rollback_exists( world_generator->active_world->folder_path() );
     //Don't autosave if the player hasn't done anything since the last autosave/quicksave,
     if( !moves_since_last_save && !dimension_checkpoint_pending &&
         !world_generator->active_world->world_saves.empty() && !finishing_dimension_rollback ) {
@@ -1073,6 +1111,9 @@ void game::quicksave( bool automatic )
 
 void game::quickload()
 {
+    if( cata_mp::is_client_mode() ) {
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;
@@ -1118,6 +1159,10 @@ void game::quickload()
 
 void game::snapshot_menu()
 {
+    if( cata_mp::is_client_mode() ) {
+        popup( _( "Only the co-op host can manage world snapshots." ) );
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;
@@ -1189,6 +1234,10 @@ void game::snapshot_menu()
 
 void game::quit_to_last_snapshot()
 {
+    if( cata_mp::is_client_mode() ) {
+        popup( _( "Only the co-op host can restore a world snapshot." ) );
+        return;
+    }
     WORLD *active_world = world_generator->active_world;
     if( active_world == nullptr ) {
         return;

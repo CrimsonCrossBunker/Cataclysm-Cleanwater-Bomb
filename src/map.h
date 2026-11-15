@@ -16,6 +16,7 @@
 #include <optional>
 #include <set>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -79,8 +80,10 @@ class field;
 class field_entry;
 class item_location;
 class mapgendata;
+class map_simulation_regions;
 class monster;
 class relic_procgen_data;
+class scent_map;
 class submap;
 class vehicle;
 class zone_data;
@@ -486,6 +489,7 @@ class map
          * Callback invoked when a vehicle has moved.
          */
         void on_vehicle_moved( int smz );
+        void on_vehicle_opening_changed( vehicle &veh, const tripoint_abs_ms &part );
 
         struct apparent_light_info {
             bool obstructed;
@@ -545,7 +549,7 @@ class map
          * if they have been loaded from disc and the are added by map::generate, too.
          * So when do they not appear in the mapbuffer?
          */
-        void save();
+        void save( const map_simulation_regions *regions = nullptr );
         /**
          * Load submaps into @ref grid. This might create new submaps if
          * the @ref mapbuffer can not deliver the requested submap (as it does
@@ -558,16 +562,17 @@ class map
          * you set this to true, do ensure that the map is not accessed before
          * this function returns (for example, UIs that draw the map should be
          * disabled).
+         * @param regions Active simulation views, if loading for co-op.
          */
         void load( const tripoint_abs_sm &w, bool update_vehicles,
-                   bool pump_events = false );
+                   bool pump_events = false, const map_simulation_regions *regions = nullptr );
         /**
          * Shift the map along the vector s.
          * This is like loading the map with coordinates derived from the current
          * position of the map (@ref abs_sub) plus the shift vector.
          * Note: the map must have been loaded before this can be called.
          */
-        void shift( const point_rel_sm &s );
+        void shift( const point_rel_sm &s, const map_simulation_regions *regions = nullptr );
         /**
          * Moves the map vertically to (not by!) newz.
          * Does not actually shift anything, only forces cache updates.
@@ -822,10 +827,21 @@ class map
                         PathfindingFlags p_special ) const;
         // Catches up renewable generation (solar/wind/water) for off-map vehicles
         // that are connected to in-bubble grids via cables.
-        void resolve_off_map_grid_generation();
+        void resolve_off_map_grid_generation( const map_simulation_regions *regions,
+                                              std::unordered_set<vehicle *> &resolved );
         // Re-enables appliance parts that were disabled by power_parts() deficit
         // when the connected grid actually has battery charge available.
-        void resolve_appliance_grid_power();
+        void resolve_appliance_grid_power( std::unordered_set<vehicle *> &resolved );
+        void cache_vehicle_parts( vehicle &veh );
+        void refresh_vehicle_in_shared_views( vehicle &veh, const tripoint_abs_sm &old_pos,
+                                              const submap *old_storage );
+        void forget_vehicle_projection( vehicle &veh );
+        void move_vehicles( std::unordered_set<int64_t> *advanced );
+        void clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles );
+        void idle_vehicles( std::unordered_set<int64_t> *advanced,
+                            const map_simulation_regions *regions );
+        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicles,
+                         const std::unordered_set<int64_t> *assigned );
     public:
 
         // Vehicles: Common to 2D and 3D
@@ -859,8 +875,8 @@ class map
         void destroy_vehicle( vehicle *veh );
         // Vehicle movement
         void vehmove();
-        // Selects a vehicle to move, returns false if no moving vehicles
-        bool vehproceed( VehicleList &vehicle_list );
+        void vehmove( const std::vector<std::reference_wrapper<map>> &views,
+                      const map_simulation_regions &regions );
 
         // Vehicles
         VehicleList get_vehicles( const tripoint_bub_ms &start, const tripoint_bub_ms &end );
@@ -973,7 +989,7 @@ class map
             return ter( tripoint_bub_ms( p, abs_sub.z() ) );
         }
 
-        void furniture_terrain_emit_fields();
+        void furniture_terrain_emit_fields( const map_simulation_regions *regions = nullptr );
 
         int get_map_damage( const tripoint_bub_ms &p ) const;
         void set_map_damage( const tripoint_bub_ms &p, int dmg );
@@ -1343,7 +1359,8 @@ class map
          * Moved here from weather.cpp for speed. Decays fire, washable fields and scent.
          * Washable fields are decayed only by 1/3 of the amount fire is.
          */
-        void decay_fields_and_scent( const time_duration &amount );
+        void decay_fields_and_scent( const time_duration &amount,
+                                     const map_simulation_regions *regions = nullptr );
 
         // Signs
         std::string get_signage( const tripoint_bub_ms &p ) const;
@@ -1631,7 +1648,7 @@ class map
                                   const units::mass &burned_mass );
         // See fields.cpp
         void process_fields();
-        void process_fields_in_submap( submap *current_submap, const tripoint_bub_sm &submap_pos );
+        void process_fields( scent_map &scents, const map_simulation_regions &regions );
         /**
          * Apply field effects to the creature when it's on a square with fields.
          */
@@ -1757,6 +1774,14 @@ class map
         // Is called when field intensity is changed.
         // Invalidates relevan map caches, such as transparency cache.
         void on_field_modified( const tripoint_bub_ms &p, const field_type &fd_type );
+        template<typename Visitor>
+        void visit_tile_views( const tripoint_bub_ms &p, const Visitor &visit );
+        void refresh_furniture_cache( const tripoint_bub_ms &p, const furn_t &old_f,
+                                      const furn_t &new_f );
+        void refresh_terrain_cache( const tripoint_bub_ms &p, const ter_t &old_t,
+                                    const ter_t &new_t, const trap_id &placed_trap );
+        void refresh_trap_cache( const tripoint_bub_ms &p, const trap_id &old_trap,
+                                 const trap_id &new_trap );
 
         template<typename Map>
         static cata::copy_const<Map, field_entry> *get_field_helper(
@@ -1954,6 +1979,7 @@ class map
         }
         bool inbounds( const tripoint_bub_ms &p ) const;
         bool has_loaded_submap( const tripoint_bub_ms &p ) const;
+        bool has_loaded_submap( const tripoint_abs_sm &p ) const;
         bool inbounds( const tripoint_abs_ms &p ) const;
         bool inbounds( const tripoint_abs_sm &p ) const {
             return inbounds( project_to<coords::omt>( p ) );
@@ -2004,7 +2030,8 @@ class map
          * when starting a new game, or after teleportation or after moving vertically).
          * If false, monsters are not spawned in view of player character.
          */
-        void spawn_monsters( bool ignore_sight, bool spawn_nonlocal = false );
+        void spawn_monsters( bool ignore_sight, bool spawn_nonlocal = false,
+                             const map_simulation_regions *regions = nullptr );
 
         /**
         * Checks to see if the corpse that is rotting away generates items when it does.
@@ -2037,7 +2064,8 @@ class map
 
     protected:
         void saven( const tripoint_bub_sm &grid );
-        void loadn( const point_bub_sm &grid, bool update_vehicles );
+        void loadn( const point_bub_sm &grid, bool update_vehicles,
+                    const map_simulation_regions *regions );
         /**
          * Whether the reservation index may be cleared before the walk.  A pass that
          * does not walk every craft holding a record has to be additive, or it erases
@@ -2059,7 +2087,9 @@ class map
          * Fast forward a submap that has just been loading into this map.
          * This is used to rot and remove rotten items, grow plants, fill funnels etc.
          */
-        void actualize( const tripoint_rel_sm &grid );
+        void actualize( const tripoint_rel_sm &grid, const map_simulation_regions *regions = nullptr );
+        void index_submap_location( const submap &sm, const point_sm_ms &local,
+                                    const tripoint_bub_ms &p );
         /**
          * Hacks in missing tree tops. It CAN be done in other ways, but it would be a lot of work
          * to get regional translation code to deal with chunks instead of terrain, and then use these
@@ -2311,10 +2341,13 @@ class map
         // handles all the bash results of specific terrain or furniture
         void drop_bash_results( const map_data_common_t &ter_furn, const tripoint_bub_ms &p );
 
-        void process_items();
+        void process_items( const map_simulation_regions *regions = nullptr );
         // All active items connected to the power_grid with their connection points.
         std::vector<item_reference> item_network_connections( vehicle *power_grid );
     private:
+        void process_fields( scent_map &scents, const map_simulation_regions *regions );
+        void process_fields_in_submap( submap *current_submap, const tripoint_bub_sm &submap_pos,
+                                       scent_map &scents );
         // Iterates over every item on the map, passing each item to the provided function.
         void process_items_in_submap( submap &current_submap, const tripoint_rel_sm &gridp );
         void process_items_in_vehicles( submap &current_submap );
