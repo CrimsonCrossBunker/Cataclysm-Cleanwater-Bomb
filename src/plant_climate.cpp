@@ -174,6 +174,14 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     start = std::max( start, calendar::turn - crop_history );
     const auto position = here.get_abs( p );
     const double rate = growth_speed * furniture.plant->growth_multiplier;
+    double temperature_offset = 0;
+    if( &here == &get_map() ) {
+        weather_manager &weather = get_weather();
+        const units::temperature ambient = weather.forced_temperature.value_or( weather.temperature );
+        // Historical weather has no heater state; use the current local temperature offset.
+        temperature_offset = units::to_celsius( weather.get_temperature( p ) ) -
+                             units::to_celsius( ambient );
+    }
     for( ; start + 1_days <= calendar::turn; start += 1_days ) {
         const crop_day day = sample_day( position, start );
         const double stage = std::clamp( effective / maturity, 0.0, 1.0 );
@@ -201,9 +209,9 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         }
         const double mean = ( day.low + day.high ) / 2;
         const double restraint = covered ? ( day.high - day.low ) * 0.2 : 0;
-        const double heat_fraction = climate.heat_units( std::min( mean, day.low + restraint ),
-                                     std::max( mean, day.high - restraint ) ) * per_model_day /
-                                     climate.degree_days;
+        const double low = std::min( mean, day.low + restraint ) + temperature_offset;
+        const double high = std::max( mean, day.high - restraint ) + temperature_offset;
+        const double heat_fraction = climate.heat_units( low, high ) * per_model_day / climate.degree_days;
         const double day_fraction = per_model_day / climate.growing_days;
         const double progress = std::min( heat_fraction, day_fraction ) * water_ratio * rate *
                                 soil.root_growth;
