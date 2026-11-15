@@ -73,6 +73,7 @@
     "type": "ITEM",
     "name": { "str": "makeshift bandage" },
     "copy-from": "bandages",
+    "stackable": false,
     "description": "A reasonably clean piece of cloth wrapped for use as a simple bandage.  Better than nothing.",
     "//": "10 x 60 cm, three out of a sheet",
     "weight": "8 g",
