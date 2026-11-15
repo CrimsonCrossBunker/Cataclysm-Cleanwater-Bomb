@@ -463,7 +463,8 @@
     "volume": "2 ml",
     "weight": "10 g",
     "longest_side": "30 cm",
-    "display_type": "BY_LENGTH"
+    "display_type": "BY_LENGTH",
+    "stackable": true
   },
   {
     "type": "ITEM",
