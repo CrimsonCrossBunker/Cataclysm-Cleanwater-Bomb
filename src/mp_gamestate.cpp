@@ -240,12 +240,8 @@ static void mp_log_impl( const std::string &msg, log_role role )
         if( log_file.is_open() ) {
             log_file.close();
         }
-        // Append (don't rotate per session — that split a play session across
-        // .log/.log.1 and hid debug data, 2026-06-03).  ONE exception: if the
-        // file has grown past a hard cap, truncate on open so it can't grow
-        // unbounded across dozens of launches.  Only fires at the start of a new
-        // launch, never mid-session, so it never pulls live data out from under
-        // a debugging run.
+        // Append across sessions. If the log exceeds the size cap, truncate it when
+        // opening the file.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
                 1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
