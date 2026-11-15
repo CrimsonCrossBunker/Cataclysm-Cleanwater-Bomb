@@ -293,7 +293,8 @@ def firing_mode_signature(mode):
 # Parse the gun data represented in JSON to what we care about
 def simplify_gun_data(jo):
     if "modes" in jo:
-        jo["modes"] = sorted(firing_mode_signature(mode) for mode in jo["modes"])
+        jo["modes"] = sorted(firing_mode_signature(mode)
+                             for mode in jo["modes"])
     else:
         jo["modes"] = [(1, 0)]
     # We only care how much damage it deals

@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <coordinates.h>
 #include <cstdint>
@@ -312,6 +313,7 @@ class target_ui
         // Weapon being fired/thrown
         item *relevant = nullptr;
         bool defer_target_effects = false;
+        bool abort_if_no_targets = false;
         // Cached selection range from player's position
         int range = 0;
         // Sling launches share throwing accuracy, but have their own cost and labels.
@@ -477,7 +479,8 @@ class target_ui
         // Calculates distance from 'src'. For consistency, prefer using this over rl_dist.
         int dist_fn( const tripoint_bub_ms &p );
 
-        // CCB: 判断跨楼层目标是否在武器垂直 reach 内（Reach 模式专用）。
+        // CCB: whether a cross-z target is within the weapon's vertical reach
+        // (Reach mode only).
         bool reach_z_in_range( const tripoint_bub_ms &p );
 
         // Set creature (or tile) under cursor as player's last target
@@ -589,6 +592,7 @@ target_handler::trajectory target_handler::mode_fire( avatar &you, aim_activity_
     ui.you = &you;
     ui.mode = target_ui::TargetMode::Fire;
     ui.activity = &activity;
+    ui.abort_if_no_targets = activity.abort_if_no_targets;
     ui.sweeping = activity.sweeping;
     ui.relevant = &*activity.get_weapon();
     gun_mode gun = ui.relevant->gun_current_mode();
@@ -664,7 +668,7 @@ target_handler::trajectory target_handler::mode_unarmed_reach( avatar &you )
 }
 
 target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turret_data &turret,
-        item &preview, std::optional<firearm_sweep> *sweep )
+        item &preview, std::optional<firearm_sweep> *sweep, bool reaiming )
 {
     target_ui ui = target_ui();
     ui.you = &you;
@@ -673,6 +677,7 @@ target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turr
     ui.relevant = &preview;
     ui.sweeping = sweep != nullptr;
     ui.defer_target_effects = true;
+    ui.abort_if_no_targets = reaiming;
     ui.range = turret.range();
     ui.ammo = turret.ammo_data();
 
@@ -1661,9 +1666,6 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         }
     }
 
-    // Cleanwater: 撤销 PR #86232 (Remove dumb gun cheese)
-    // 方法：删除 times_shot_target 计数器和射击次数限制，恢复无条件技能训练
-
     // usage of any attached bipod is dependent upon terrain or on being prone
     bool bipod = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_MOUNTABLE, pos_bub( here ) ) ||
                  is_prone();
@@ -1698,6 +1700,7 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
                    get_skill_level( gun_skill ) ) ;
     tripoint_bub_ms aim = target;
     int curshot = 0;
+    std::chrono::steady_clock::time_point sound_burst_start;
     int hits = 0; // total shots on target
     int delay = 0; // delayed recoil that has yet to be applied
     // Snapshot the gun slot. The wielded item can stop being a gun
@@ -1736,7 +1739,10 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
 
         // Add gunshot noise
         make_gun_sound_effect( *this, shots > 1, &gun );
-        sfx::generate_gun_sound( *this, gun );
+        if( firing_rpm > 0 && curshot == 0 ) {
+            sound_burst_start = std::chrono::steady_clock::now();
+        }
+        sfx::generate_gun_sound( *this, gun, firing_rpm, curshot, sound_burst_start );
         // Muzzle flash light overlay (visible, loud firearms only).
         make_gun_flash_effect( *this, aim, gun );
 
@@ -1891,7 +1897,6 @@ int Character::fire_gun_impl( map &here, const tripoint_bub_ms &target, int shot
         }
     }
 
-    // Cleanwater: 撤销 PR #86232 — 恢复无条件技能训练（删除 times_shot_target < 100 限制）
     // Practice the base gun skill proportionally to number of hits, but always by one.
     if( firing != nullptr && !gun.has_flag( flag_WONT_TRAIN_MARKSMANSHIP ) ) {
         practice( skill_gun, ( hits + 1 ) * 5 );
@@ -3731,11 +3736,13 @@ target_handler::trajectory target_ui::run()
     }
     update_target_list();
 
-    if( activity && activity->abort_if_no_targets && targets.empty() ) {
+    if( abort_if_no_targets && targets.empty() ) {
         // this branch is taken when already shot once and re-entered
         // aiming, if no targets are available we want to abort so
         // players don't arrive at aiming ui with nothing to shoot at.
-        activity->aborted = true;
+        if( activity ) {
+            activity->aborted = true;
+        }
         traj.clear();
         return traj;
     }
@@ -4173,11 +4180,8 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
                                get_map().observer_z_range( *you ) ) + src.z();
         // Or across z-levels (in melee)
         if( mode == TargetMode::Reach && src.z() != valid_pos.z() ) {
-            // CCB: 与 melee.cpp 的 can_reach_attack 保持一致。
-            // 上游默认大部分近战武器垂直延伸为 0（禁止跨楼层），
-            // 但本分叉恢复了"水平延伸>1的武器(长矛等)至少可跨 1 层 Z 轴攻击"。
-            // 此处的光标移动判定必须同步放开，否则会出现：可锁定楼下敌人却无法
-            // 把光标移过去，导致 dst 停在默认值、射程显示异常(如 92)且无法锁定。
+            // CCB: keep cursor movement aligned with can_reach_attack and
+            // reach_z_in_range; long-reach weapons may cross one z-level.
             int vert_reach = relevant ? relevant->current_reach_range( *you ).second :
                              null_item_reference().current_reach_range( *you ).second;
             const int horiz_reach = relevant ? relevant->reach_range( *you ).first :
@@ -4374,7 +4378,7 @@ tripoint_bub_ms target_ui::choose_initial_target()
 
     // Try previously targeted creature
     shared_ptr_fast < Creature > cr = you->last_target.lock();
-    if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
+    if( cr && !cr->is_dead_state() && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
         return cr->pos_bub();
     }
 
@@ -4403,6 +4407,10 @@ bool target_ui::try_reacquire_target( bool critter, tripoint_bub_ms &new_dst )
     if( critter ) {
         // Try to re-acquire the creature
         shared_ptr_fast < Creature > cr = you->last_target.lock();
+        if( cr && cr->is_dead_state() ) {
+            new_dst = choose_initial_target();
+            return false;
+        }
         if( cr && pl_sees( *cr ) && dist_fn( cr->pos_bub() ) <= range ) {
             new_dst = cr->pos_bub();
             return true;
@@ -4454,18 +4462,16 @@ void target_ui::update_status()
         status = Status::OutOfRange;
     } else if( mode == TargetMode::Reach && src.z() != dst.z() &&
                !reach_z_in_range( dst ) ) {
-        // CCB: 仅当跨楼层超出武器垂直 reach 时才判为超距。
-        // 与 set_cursor_pos / can_reach_attack 保持一致，使长矛等武器
-        // 可以锁定并攻击垂直 reach 之内的楼上/楼下敌人。
+        // CCB: only cross-z targets outside the weapon's vertical reach are
+        // out of range.
         status = Status::OutOfRange;
     } else {
         status = Status::Good;
     }
 }
 
-// CCB: 判断跨楼层目标是否在武器垂直 reach 内。
-// 与 melee.cpp 的 can_reach_attack / set_cursor_pos 的判定保持一致：
-// 水平 reach>1 的武器(长矛等)垂直 reach 至少为 1，可跨 1 层楼攻击。
+// CCB: whether p is within the weapon's vertical reach on another z-level.
+// Matches can_reach_attack and the cursor-movement check in set_cursor_pos.
 bool target_ui::reach_z_in_range( const tripoint_bub_ms &p )
 {
     int vert_reach = relevant ? relevant->current_reach_range( *you ).second :

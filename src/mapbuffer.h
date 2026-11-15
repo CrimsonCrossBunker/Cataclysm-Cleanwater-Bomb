@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAPBUFFER_H
 #define CATA_SRC_MAPBUFFER_H
 
+#include <cstddef>
 #include <functional>
 #include <list>
 #include <map>
@@ -10,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "coordinates.h"
 #include "submap_prefetch.h"
@@ -36,13 +38,16 @@ class mapbuffer
         explicit mapbuffer( map_storage_context storage, uniform_terrain_lookup uniform = {} );
         ~mapbuffer();
 
+        std::size_t submap_count() const;
+
         /** Store all submaps in this instance into savefiles.
          * @param delete_after_save If true, the saved submaps are removed
          * from the mapbuffer (and deleted).
          **/
-        // With a residency map, evict successfully saved quads outside that map.
-        // Without one, retain them unless delete_after_save was requested.
-        void save( bool delete_after_save = false, const map *resident_map = nullptr );
+        // Evict successfully saved quads outside every supplied resident map.
+        // An empty list retains all quads unless delete_after_save is set.
+        void save( bool delete_after_save = false,
+                   const std::vector<std::reference_wrapper<const map>> &resident_maps = {} );
 
         /** Delete all buffered submaps. **/
         void clear();

@@ -1,6 +1,13 @@
 [
   {
     "type": "technique",
+    "id": "test_active_accurate_strike",
+    "copy-from": "test_active_strike",
+    "name": "Test Accurate Strike",
+    "flat_bonuses": [ { "stat": "hit", "scale": 10000.0 } ]
+  },
+  {
+    "type": "technique",
     "id": "test_active_cooldown_strike",
     "copy-from": "test_active_strike",
     "name": "Test Cooldown Strike",
@@ -65,6 +72,16 @@
     "manual_activation": true,
     "melee_allowed": true,
     "messages": [ "You actively strike %s", "<npcname> actively strikes %s" ],
+    "attack_vectors": [ "vector_foot_sole" ]
+  },
+  {
+    "type": "technique",
+    "id": "test_manual_cooldown_strike",
+    "name": "Test Cooldown Strike",
+    "manual_activation": true,
+    "cooldown": "10 s",
+    "melee_allowed": true,
+    "messages": [ "You strike %s", "<npcname> strikes %s" ],
     "attack_vectors": [ "vector_foot_sole" ]
   },
   {
@@ -182,6 +199,8 @@
     "techniques": [
       "test_technique",
       "test_active_strike",
+      "test_active_accurate_strike",
+      "test_manual_cooldown_strike",
       "test_tech_condition_sweep",
       "test_tech_condition_stun",
       "test_tech_condition_knockback",

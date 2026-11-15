@@ -139,7 +139,8 @@ void add_fallback_zone( npc &guy )
             << "Added fallack loot zones for NPC trader " << guy.name;
 }
 
-std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy )
+std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy,
+        std::vector<tripoint_abs_ms> *changed_tiles )
 {
     zone_manager &zmgr = zone_manager::get_manager();
     map &here = get_map();
@@ -169,6 +170,9 @@ std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy 
                 leftover = _to_map( it, here, dpoint_here );
             }
             if( !leftover ) {
+                if( changed_tiles ) {
+                    changed_tiles->push_back( dpoint );
+                }
                 break;
             }
         }

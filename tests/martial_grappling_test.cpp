@@ -29,6 +29,7 @@
 #include "map_helpers_tests.h"
 #include "map_scale_constants.h"
 #include "martialarts.h"
+#include "lua_platform_loader.h"
 #include "monster.h"
 #include "mtype.h"
 #include "pimpl.h"
@@ -39,10 +40,12 @@
 
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_harnessed( "harnessed" );
+static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_tied( "tied" );
 
+static const itype_id itype_bindle( "bindle" );
 static const itype_id itype_club_wooden( "club_wooden" );
 
 static const matec_id tec_aikido_projection( "tec_aikido_projection" );
@@ -56,6 +59,13 @@ static constexpr tripoint_bub_ms dude_pos( HALF_MAPSIZE_X, HALF_MAPSIZE_Y, 0 );
 
 static avatar &prepare_grappler( const std::string &style = "style_judo" )
 {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    static bool platform_world_ready = false;
+    if( !platform_world_ready ) {
+        cata::lua_platform::on_world_ready( true );
+        platform_world_ready = true;
+    }
+#endif
     clear_avatar();
     clear_map();
     avatar &dude = get_avatar();
@@ -73,6 +83,7 @@ TEST_CASE( "active_grappling_is_bound_to_appropriate_styles",
            "[martial_arts][active_technique][grappling]" )
 {
     const std::vector<std::pair<std::string, std::string>> styles = {
+        { "style_brawling", "tec_brawl_grapple_throw" },
         { "style_judo", "tec_judo_hip_throw" },
         { "style_aikido", "tec_aikido_projection" },
         { "style_pankration", "tec_pankration_slam" },
@@ -89,13 +100,17 @@ TEST_CASE( "active_grappling_is_bound_to_appropriate_styles",
              } ) {
             CHECK( std::find( available.begin(), available.end(), technique ) != available.end() );
             CHECK( technique->manual_activation );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+            CHECK( technique->lua_platform_mod == "ccb" );
+            CHECK_FALSE( technique->lua_platform_grapple_handler.empty() );
+#endif
         }
         if( !entry.second.empty() ) {
             CHECK( std::find( available.begin(), available.end(),
                               matec_id( entry.second ) ) != available.end() );
         }
     }
-    for( const char *style : {
+    for( const std::string style : {
              "style_boxing", "style_none"
          } ) {
         avatar &dude = prepare_grappler( style );
@@ -110,6 +125,7 @@ TEST_CASE( "active_grappling_hold_controls_without_punch_damage",
 {
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+
     const int health = target.get_hp();
     const int stamina = dude.get_stamina();
     REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
@@ -141,6 +157,7 @@ TEST_CASE( "active_grappling_drag_and_throw_use_owned_grips",
 {
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+
     const tripoint_abs_ms origin = dude.pos_abs();
     CHECK_FALSE( dude.use_active_technique( target, tec_grapple_drag ) );
     CHECK_FALSE( dude.use_active_technique( target, tec_judo_hip_throw ) );
@@ -164,7 +181,6 @@ TEST_CASE( "active_grappling_drag_and_throw_use_owned_grips",
     CHECK( dude.has_effect( tec_judo_hip_throw->grapple_cooldown_effect() ) );
 }
 
-
 TEST_CASE( "active_grappling_drag_updates_underwater_state",
            "[martial_arts][active_technique][grappling]" )
 {
@@ -178,12 +194,12 @@ TEST_CASE( "active_grappling_drag_updates_underwater_state",
     dude.set_underwater( true );
     const tripoint_abs_ms origin = dude.pos_abs();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
-    REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+    REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
     if( stays_in_water ) {
-        CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        CHECK_FALSE( dude.use_active_technique( target, tec_grapple_drag ) );
         CHECK( dude.pos_abs() == origin );
     } else {
-        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
+        REQUIRE( dude.use_active_technique( target, tec_grapple_drag ) );
         CHECK( dude.pos_abs() == origin + tripoint::west );
     }
     CHECK( dude.is_underwater() == stays_in_water );
@@ -196,20 +212,20 @@ TEST_CASE( "active_grappling_requires_physical_and_unrestricted_hands",
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
     const bool held = GENERATE( false, true );
     if( held ) {
-        REQUIRE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
+        REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
     }
     SECTION( "incorporeal" ) {
-        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+        dude.add_effect( effect_incorporeal, 1_minutes );
     }
     SECTION( "restricted_hands" ) {
-        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
+        REQUIRE( dude.wear_item( item( itype_bindle ), false, false ) );
     }
     const int moves = dude.get_moves();
     const int stamina = dude.get_stamina();
     const int health = target.get_hp();
-    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_hold" ) ) );
-    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_grapple_drag" ) ) );
-    CHECK_FALSE( dude.use_active_technique( target, matec_id( "tec_judo_hip_throw" ) ) );
+    CHECK_FALSE( dude.use_active_technique( target, tec_grapple_hold ) );
+    CHECK_FALSE( dude.use_active_technique( target, tec_grapple_drag ) );
+    CHECK_FALSE( dude.use_active_technique( target, tec_judo_hip_throw ) );
     CHECK( dude.get_moves() == moves );
     CHECK( dude.get_stamina() == stamina );
     CHECK( dude.pos_bub() == dude_pos );
@@ -411,6 +427,7 @@ TEST_CASE( "active_grappling_releases_when_holder_cannot_maintain_control",
 {
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+
     REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
     SECTION( "separation" ) {
         dude.setpos( get_map(), dude_pos + tripoint::west );
@@ -425,13 +442,13 @@ TEST_CASE( "active_grappling_releases_when_holder_cannot_maintain_control",
         dude.add_effect( effect_downed, 1_minutes );
     }
     SECTION( "broken_arm" ) {
-        dude.set_part_hp_cur( bodypart_id( "arm_l" ), 0 );
+        dude.set_part_hp_cur( body_part_arm_l, 0 );
     }
     SECTION( "incorporeal" ) {
-        dude.add_effect( efftype_id( "incorporeal" ), 1_minutes );
+        dude.add_effect( effect_incorporeal, 1_minutes );
     }
     SECTION( "restricted_hands" ) {
-        REQUIRE( dude.wear_item( item( itype_id( "bindle" ) ), false, false ) );
+        REQUIRE( dude.wear_item( item( itype_bindle ), false, false ) );
     }
     target.move_effects( false );
     CHECK_FALSE( target.has_effect( effect_martial_grapple ) );
@@ -442,6 +459,7 @@ TEST_CASE( "active_grappling_rechecks_stamina_and_grip_ownership",
 {
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+
     SECTION( "actual_weight_cost_exceeds_remaining_stamina" ) {
         dude.set_stamina( tec_grapple_hold->grapple_stamina );
         CHECK( tec_grapple_hold->activation_allowed( dude, "start" ) );
@@ -466,6 +484,7 @@ TEST_CASE( "active_grappling_only_holds_one_target_and_cooldowns_expire",
     avatar &dude = prepare_grappler();
     monster &first = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
     monster &second = spawn_test_monster( "mon_zombie", dude_pos + tripoint::north );
+
     REQUIRE( dude.use_active_technique( first, tec_grapple_hold ) );
     CHECK_FALSE( dude.use_active_technique( second, tec_grapple_hold ) );
     dude.remove_effect( tec_grapple_hold->grapple_cooldown_effect() );
@@ -488,6 +507,7 @@ TEST_CASE( "active_grappling_effects_preserve_sources_and_cooldowns_in_save_data
 {
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+
     REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
     for( const effect &original : {
              target.get_effect( effect_martial_grapple ),
@@ -510,11 +530,17 @@ TEST_CASE( "active_grappling_throw_cooldown_cannot_be_bypassed_by_style_switch",
     avatar &dude = prepare_grappler();
     monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
     REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
+
     REQUIRE( dude.use_active_technique( target, tec_judo_hip_throw ) );
     dude.martial_arts_data->add_martialart( style_aikido );
     dude.martial_arts_data->set_style( style_aikido );
+
     CHECK( tec_judo_hip_throw->grapple_cooldown_effect() ==
            tec_aikido_projection->grapple_cooldown_effect() );
+    CHECK( dude.technique_cooldown_remaining( tec_judo_hip_throw ) ==
+           tec_judo_hip_throw->grapple_cooldown );
+    CHECK( dude.technique_cooldown_remaining( tec_aikido_projection ) ==
+           tec_judo_hip_throw->grapple_cooldown );
     CHECK_FALSE( tec_aikido_projection->activation_allowed( dude, "start" ) );
     const int stamina = dude.get_stamina();
     const int moves = dude.get_moves();

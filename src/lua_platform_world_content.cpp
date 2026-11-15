@@ -4474,7 +4474,8 @@ void world_content_transaction::impl::apply_vehicle()
         }
         const auto matches_placement = []( const vehicle_prototype::part_def & existing,
         const vehicle_part_placement_data & requested, const bool exact ) {
-            if( existing.pos != point_rel_ms( requested.position.x, requested.position.y ) ||
+            if( existing.mount_level != 0 ||
+                existing.pos != point_rel_ms( requested.position.x, requested.position.y ) ||
                 existing.part != vpart_id( requested.part ) ||
                 existing.variant != requested.variant ) {
                 return false;

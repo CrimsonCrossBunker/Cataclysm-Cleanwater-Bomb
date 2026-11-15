@@ -64,6 +64,7 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "martialarts.h"
 #include "mapdata.h"
 #include "mattack_common.h"
 #include "melee.h"
@@ -76,6 +77,7 @@
 #include "mongroup.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -138,7 +140,6 @@ static const efftype_id effect_in_pit( "in_pit" );
 static const efftype_id effect_leashed( "leashed" );
 static const efftype_id effect_lightsnare( "lightsnare" );
 static const efftype_id effect_maimed_arm( "maimed_arm" );
-static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_monster_armor( "monster_armor" );
 static const efftype_id effect_monster_saddled( "monster_saddled" );
 static const efftype_id effect_nemesis_buff( "nemesis_buff" );
@@ -150,7 +151,6 @@ static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_photophobia( "photophobia" );
 static const efftype_id effect_poison( "poison" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-// Cleanwater: 撤销 PR #86067 — 删除 revived_marker 声明
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_run( "run" );
 static const efftype_id effect_spooked( "spooked" );
@@ -2644,19 +2644,8 @@ bool monster::movement_impaired()
 
 bool monster::move_effects( bool )
 {
-    if( has_effect( effect_martial_grapple ) ) {
-        Creature *const source = get_effect( effect_martial_grapple ).get_source().resolve_creature();
-        Character *const holder = source ? source->as_character() : nullptr;
-        if( holder && !holder->is_dead_state() && is_adjacent( holder, false ) &&
-            !holder->is_mounted() && !holder->get_wielded_item() && holder->get_working_arm_count() >= 2 &&
-            holder->has_two_arms_lifting() &&
-            !holder->worn_with_flag( flag_RESTRICT_HANDS ) &&
-            !holder->has_effect( efftype_id( "incorporeal" ) ) &&
-            !holder->has_effect( effect_downed ) && !holder->in_sleep_state() &&
-            holder->get_stamina() >= 100 ) {
-            return false;
-        }
-        remove_effect( effect_martial_grapple );
+    if( martial_grapple_blocks_movement( *this ) ) {
+        return false;
     }
     // This function is relatively expensive, we want that cached
     // IMPORTANT: If adding any new effects here, make SURE to
@@ -3529,7 +3518,6 @@ void monster::die( map *here, Creature *nkiller )
             ch = get_killer()->get_summoner()->as_character();
         }
         if( !is_hallucination() && ch != nullptr ) {
-            // Cleanwater: 撤销 PR #86067 — 恢复无条件击杀经验
             const int kill_xp = compute_kill_xp( type->id );
             cata::event e = cata::event::make<event_type::character_kills_monster>( ch->getID(), type->id,
                             kill_xp );
@@ -3800,6 +3788,7 @@ void monster::generate_inventory( bool disableDrops )
         return;
     }
 
+    const north_america::scoped_regional_loot loot( pos_abs().xy() );
     std::vector<item> new_items = item_group::items_from( type->death_drops,
                                   calendar::start_of_cataclysm,
                                   spawn_flags::use_spawn_rate );
@@ -3828,6 +3817,7 @@ void monster::drop_items_on_death( map *here, item *corpse ) const
         return;
     }
 
+    const north_america::scoped_regional_loot loot( pos_abs().xy() );
     std::vector<item> new_items = item_group::items_from( type->death_drops,
                                   calendar::start_of_cataclysm,
                                   spawn_flags::use_spawn_rate );
@@ -4618,7 +4608,6 @@ void monster::hear_sound( const tripoint_bub_ms &source, const int vol, const in
         return;
     }
 
-    // Cleanwater: 撤销 PR #83963 — 僵尸重新受火焰声音吸引
     int tmp_provocative = provocative || volume >= normal_roll( 30, 5 );
     // already following a more interesting sound,
     // so 50% will try to stick to it, and 50% will move in direction of a new sound
@@ -4864,7 +4853,7 @@ std::function<bool( const tripoint_bub_ms & )> monster::get_path_avoid() const
     return [this]( const tripoint_bub_ms & p ) {
         map &here = get_map();
         // If we can't move there and can't bash it, don't path through it.
-        if( !can_move_to( p ) && ( !bash_skill().empty() || !here.is_bashable( p ) ) ) {
+        if( !can_move_to( p ) && ( !type->bash_skill.empty() || !here.is_bashable( p ) ) ) {
             return true;
         }
 

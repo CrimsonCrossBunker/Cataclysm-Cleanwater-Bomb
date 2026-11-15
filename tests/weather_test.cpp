@@ -72,7 +72,9 @@ struct year_of_weather_data {
 static year_of_weather_data collect_weather_data( unsigned seed )
 {
     scoped_weather_override null_weather( WEATHER_NULL );
-    const weather_generator &wgen = get_weather().get_cur_weather_gen();
+    // Keep the original statistical checks for generators that do not opt into station data.
+    weather_generator wgen = get_weather().get_cur_weather_gen();
+    wgen.climate_station.clear();
 
     const time_point begin = calendar::turn_zero;
     const time_point end = begin + calendar::year_length();

@@ -15,10 +15,12 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
 
+#include "activity_actor_definitions.h"
 #include "anatomy.h"
 #include "avatar.h"
 #include "bionics.h"
@@ -29,6 +31,7 @@
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_attire.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
@@ -45,6 +48,8 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "field.h"
+#include "field_type.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
@@ -52,6 +57,7 @@
 #include "item.h"
 #include "item_components.h"
 #include "item_contents.h"
+#include "item_group.h"
 #include "item_location.h"
 #include "itype.h"
 #include "line.h"
@@ -73,6 +79,7 @@
 #include "options.h"
 #include "output.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "popup.h"
@@ -133,6 +140,7 @@ static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_narcosis( "narcosis" );
 static const efftype_id effect_natural_stance( "natural_stance" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_relax_gas( "relax_gas" );
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_tied( "tied" );
@@ -527,7 +535,6 @@ float Character::hit_roll() const
                                   mounted_creature->pet_equipment_melee_hit_multiplier() );
     }
 
-    // Cleanwater: 撤销 PR #81632 — 移除载具近战惩罚
     hit *= get_modifier( character_modifier_melee_attack_roll_mod );
 
     return melee::melee_hit_range( hit );
@@ -666,7 +673,7 @@ static void melee_train( Character &you, int lo, int hi, int training_level, con
 bool Character::try_break_relax_gas( const std::string &msg_success,
                                      const std::string &msg_failure )
 {
-    const effect &pacify = get_effect( efftype_id( "relax_gas" ), bodypart_str_id( "mouth" ).id() );
+    const effect &pacify = get_effect( effect_relax_gas, body_part_mouth.id() );
     if( pacify.is_null() ) {
         return true;
     } else if( one_in( pacify.get_intensity() ) ) {
@@ -793,7 +800,13 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
     recalculate_enchantment_cache();
 
     melee::melee_stats.attack_count += 1;
-    int hit_spread = t.deal_melee_attack( this, hit_roll() );
+    float attack_roll = hit_roll();
+    if( validated_technique ) {
+        attack_roll += std::get<0>( *validated_technique )->hit_bonus( *this );
+    } else if( force_technique.is_valid() ) {
+        attack_roll += force_technique->hit_bonus( *this );
+    }
+    int hit_spread = t.deal_melee_attack( this, attack_roll );
     // Optional visual lunge of the attacker toward the target (tiles build only).
     g->draw_creature_attack( *this, t );
     if( !t.is_avatar() ) {
@@ -927,6 +940,11 @@ bool Character::melee_attack_abstract( Creature &t, bool allow_special,
 
         // trigger martial arts on-miss effects
         martial_arts_data->ma_onmiss_effects( *this );
+        if( validated_technique ) {
+            if( npc *const person = t.as_npc() ) {
+                person->on_attacked( *this );
+            }
+        }
     } else {
         melee::melee_stats.hit_count += 1;
         // Remember if we see the monster at start - it may change
@@ -1205,6 +1223,216 @@ int Character::get_total_melee_stamina_cost( const item *weap ) const
     return std::min<int>( -50, proficiency_multiplier * ( mod_sta + melee - stance_malus ) );
 }
 
+bool melee::has_revivable_corpse( map &here, const tripoint_bub_ms &target )
+{
+    const map_stack items = here.i_at( target );
+    return std::any_of( items.begin(), items.end(), []( const item & candidate ) {
+        return candidate.can_revive();
+    } );
+}
+
+Character::smash_result Character::smash( map &here, tripoint_bub_ms &smashp,
+        std::optional<bool> vehicle_theft )
+{
+    smash_result ret;
+    const character_action_guard actor( *this );
+    const auto context = here.get_context_reference();
+    const tripoint_abs_ms origin = pos_abs();
+    if( is_mounted() ) {
+        auto *mons = mounted_creature.get();
+        if( mons->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+            if( !mons->check_mech_powered() ) {
+                add_msg( m_bad, _( "Your %s refuses to move as its batteries have been drained." ),
+                         mons->get_name() );
+                return ret;
+            }
+        }
+    }
+    const int move_cost = !is_armed() ? 80 :
+                          get_wielded_item()->attack_time( *this ) * 0.8;
+    bool mech_smash = false;
+    if( is_mounted() ) {
+        mech_smash = true;
+    }
+
+    bool smash_floor = false;
+    if( smashp.z() != posz() ) {
+        if( smashp.z() > posz() ) {
+            // TODO: Knock on the ceiling
+            return ret;
+        }
+
+        smashp.z() = posz();
+        smash_floor = true;
+    }
+
+    get_event_bus().send<event_type::character_smashes_tile>(
+        getID(), here.ter( smashp ).id(), here.furn( smashp ).id() );
+    if( !actor || !context || pos_abs() != origin || is_dead_state() ) {
+        return ret;
+    }
+    if( is_mounted() ) {
+        monster *crit = mounted_creature.get();
+        if( crit->has_flag( mon_flag_RIDEABLE_MECH ) ) {
+            crit->use_mech_power( 3_kJ );
+        }
+    }
+    std::map<damage_type_id, int> smash_damage = smash_ability();
+    for( const auto &field : here.field_at( smashp ) ) {
+        const field_type_id type = field.first;
+        const std::optional<map_fd_bash_info> &bash_info = type->bash_info;
+        if( !bash_info ) {
+            continue;
+        }
+        const int damage = bash_info->damage_to( smash_damage );
+        if( ( damage <= 0 && one_in( 10 ) ) || type->indestructible ) {
+            add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), type->get_name() );
+            ret.did_smash = true;
+        } else if( damage > 0 && x_in_y( damage, bash_info->hp() ) ) {
+            sounds::sound( smashp, bash_info->sound_vol, sounds::sound_t::combat, bash_info->sound, true,
+                           "smash",
+                           "field" );
+            here.remove_field( smashp, type );
+            here.spawn_items( smashp, item_group::items_from( bash_info->drop_group, calendar::turn ) );
+            if( !bash_info->destroyed_field.first.is_null() ) {
+                here.add_field( smashp, bash_info->destroyed_field.first, bash_info->destroyed_field.second );
+            }
+            mod_moves( - bash_info->fd_bash_move_cost );
+            add_msg( m_info, bash_info->field_bash_msg_success.translated() );
+            ret.did_smash = true;
+            ret.success = true;
+        } else {
+            sounds::sound( smashp, bash_info->sound_fail_vol, sounds::sound_t::combat, bash_info->sound_fail,
+                           true, "smash",
+                           "field" );
+
+            ret.can_smash = damage > 0;
+            ret.did_smash = true;
+        }
+        if( ret.did_smash && !bash_info->hit_field.first.is_null() ) {
+            here.add_field( smashp, bash_info->hit_field.first, bash_info->hit_field.second );
+        }
+        return ret;
+    }
+
+    if( melee::has_revivable_corpse( here, smashp ) ) {
+        player_activity pulp{ pulp_activity_actor( here.get_abs( smashp ) ) };
+        if( vehicle_theft ) {
+            pulp.set_execution( activity_execution::authoritative );
+        }
+        assign_activity( pulp );
+        return ret;
+    }
+
+    if( vehicle *veh = veh_pointer_or_null( here.veh_at( smashp ) ) ) {
+        if( vehicle_theft && veh->has_owner() && !veh->is_owned_by( *this ) && !*vehicle_theft ) {
+            return ret;
+        }
+        if( !veh->handle_potential_theft( *this, false, !vehicle_theft.has_value() ) ||
+            !actor || !context || pos_abs() != origin ) {
+            return ret;
+        }
+    }
+
+    if( !has_weapon() ) {
+        std::pair<bodypart_id, int> best_part_to_smash = this->best_part_to_smash();
+        if( best_part_to_smash.first != bodypart_str_id::NULL_ID() && here.is_bashable( smashp ) ) {
+            std::string name_to_bash = _( "thing" );
+            if( here.is_bashable_furn( smashp ) ) {
+                name_to_bash = here.furnname( smashp );
+            } else if( here.is_bashable_ter( smashp ) ) {
+                name_to_bash = here.tername( smashp );
+            }
+            if( !best_part_to_smash.first->smash_message.empty() ) {
+                add_msg( best_part_to_smash.first->smash_message, name_to_bash );
+            } else {
+                //~ %1$s - bodypart name in accusative, %2$s - furniture/terrain name
+                add_msg( _( "You use your %1$s to smash the %2$s." ),
+                         body_part_name_accusative( best_part_to_smash.first ), name_to_bash );
+            }
+        }
+    }
+
+    const bash_params bash_result = here.bash( smashp, smash_damage, false, false, smash_floor );
+    if( !actor || !context || pos_abs() != origin ) {
+        return ret;
+    }
+    ret.can_smash = bash_result.can_bash;
+    // Weariness scaling
+    float weary_mult = 1.0f;
+    item_location weapon = used_weapon();
+    if( bash_result.did_bash ) {
+        ret.did_smash = true;
+        if( !mech_smash ) {
+            set_activity_level( MODERATE_EXERCISE );
+            handle_melee_wear( weapon );
+            if( !actor || !context || pos_abs() != origin ) {
+                return ret;
+            }
+            weary_mult = 1.0f / exertion_adjusted_move_multiplier( MODERATE_EXERCISE );
+
+            const int mod_sta = 2 * get_standard_stamina_cost();
+            burn_energy_arms( mod_sta );
+
+            if( static_cast<int>( get_skill_level( skill_melee ) ) == 0 ) {
+                practice( skill_melee, rng( 0, 1 ) * rng( 0, 1 ) );
+            }
+            if( weapon ) {
+                const int glass_portion = weapon->made_of( material_glass );
+                float glass_fraction = glass_portion / static_cast<float>( weapon->type->mat_portion_total );
+                if( std::isnan( glass_fraction ) || glass_fraction > 1.f ) {
+                    glass_fraction = 0.f;
+                }
+                const int vol = weapon->volume() * glass_fraction / 250_ml;
+                if( glass_portion && rng( 0, vol + 3 ) < vol ) {
+                    add_msg( m_bad, _( "Your %s shatters!" ), weapon->tname() );
+                    weapon->spill_contents( pos_bub() );
+                    sounds::sound( pos_bub(), 24, sounds::sound_t::combat, "CRACK!", true, "smash",
+                                   "glass" );
+                    deal_damage( nullptr, bodypart_id( "hand_r" ), damage_instance( damage_cut,
+                                 rng( 0,
+                                      vol ) ) );
+                    if( vol > 20 ) {
+                        // Hurt left arm too, if it was big
+                        deal_damage( nullptr, bodypart_id( "hand_l" ), damage_instance( damage_cut,
+                                     rng( 0, static_cast<int>( vol * .5 ) ) ) );
+                    }
+                    remove_weapon();
+                    check_dead_state( &here );
+                }
+            }
+        }
+        mod_moves( -move_cost * weary_mult );
+        recoil = MAX_RECOIL;
+
+        if( bash_result.success ) {
+            ret.success = true;
+            // Bash results in destruction of target
+            g->draw_async_anim( smashp, "bash_complete", "X", c_light_gray );
+        } else if( bash_result.did_bash ) {
+            // Bash effective but target not yet destroyed
+            g->draw_async_anim( smashp, "bash_effective", "/", c_light_gray );
+        } else {
+            // Bash not effective
+            g->draw_async_anim( smashp, "bash_ineffective" );
+            if( one_in( 10 ) ) {
+                if( here.has_furn( smashp ) && here.furn( smashp ).obj().bash ) {
+                    // %s is the smashed furniture
+                    add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), here.furnname( smashp ) );
+                } else {
+                    // %s is the smashed terrain
+                    add_msg( m_neutral, _( "You don't seem to be damaging the %s." ), here.tername( smashp ) );
+                }
+            }
+        }
+
+    } else {
+        add_msg( _( "There's nothing there to smash!" ) );
+    }
+
+    return ret;
+}
+
 bool Character::can_reach_attack( const Creature &target ) const
 {
     if( pos_bub().z() == target.pos_bub().z() ) {
@@ -1222,9 +1450,8 @@ bool Character::can_reach_attack( const Creature &target ) const
         vert_reach = null_item_reference().current_reach_range( *this ).second;
     }
 
-    // CCB: 移除 PR #85753 (RenechCDDA/remove_vertical_melee) 的跨Z轴攻击限制
-    // 原PR将大部分武器的垂直延伸设为0，完全禁止跨楼层攻击
-    // 此处恢复：水平延伸>1的武器（长矛等）至少可跨1层Z轴攻击
+    // CCB: weapons with horizontal reach greater than one keep at least one
+    // z-level of vertical reach, even when the derived vertical reach is zero.
     if( maybe_weapon && maybe_weapon->reach_range( *this ).first > 1 && vert_reach < 1 ) {
         vert_reach = 1;
     }
@@ -1710,6 +1937,34 @@ std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id> Character::pick_tech
                          sub_bodypart_str_id::NULL_ID() ) );
 }
 
+time_duration Character::technique_cooldown_remaining( const matec_id &technique ) const
+{
+    time_duration remaining = martial_arts_data->technique_cooldown_remaining( technique );
+    if( technique.is_valid() && !technique->grapple_action.empty() &&
+        has_effect( technique->grapple_cooldown_effect() ) ) {
+        remaining = std::max( remaining,
+                              get_effect( technique->grapple_cooldown_effect() ).get_duration() );
+    }
+    return remaining;
+}
+
+void Character::start_technique_cooldown( const matec_id &technique )
+{
+    martial_arts_data->start_technique_cooldown( technique, technique->activation_cooldown( *this ) );
+}
+
+std::vector<std::pair<matec_id, time_duration>> Character::active_technique_cooldowns() const
+{
+    std::vector<std::pair<matec_id, time_duration>> result;
+    for( const ma_technique &technique : ma_technique::get_all() ) {
+        const time_duration remaining = technique_cooldown_remaining( technique.id );
+        if( remaining > 0_turns ) {
+            result.emplace_back( technique.id, remaining );
+        }
+    }
+    return result;
+}
+
 std::vector<matec_id> Character::active_techniques( const bool include_unavailable ) const
 {
     std::vector<matec_id> available;
@@ -1817,11 +2072,16 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_if_player( m_info, _( "Release the object you are dragging before grappling." ) );
         return false;
     }
-    monster *const victim = target.as_monster();
-    if( !victim || victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
+    Creature *const victim = &target;
+    const monster *const creature = target.as_monster();
+    const Character *const person = target.as_character();
+    if( victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
         victim->has_flag( json_flag_CANNOT_MOVE ) || victim->has_flag( mon_flag_PLASTIC ) ||
-        victim->has_flag( mon_flag_FLIES ) || victim->type->bodytype == "blob" ||
-        victim->type->bodytype == "snake" || victim->type->bodytype == "fish" ||
+        victim->has_flag( mon_flag_FLIES ) ||
+        ( creature && ( creature->type->bodytype == "blob" || creature->type->bodytype == "snake" ||
+                        creature->type->bodytype == "fish" ) ) ||
+        ( person && ( person->is_mounted() || person->in_vehicle ||
+                      person->has_effect( effect_incorporeal ) ) ) ||
         victim->has_effect( effect_ridden ) ||
         victim->has_effect( effect_harnessed ) ||
         victim->has_effect( effect_tied ) ) {
@@ -1844,17 +2104,41 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     }
     const int size_difference = static_cast<int>( victim->get_size() ) -
                                 static_cast<int>( attacker.get_size() );
-    const float capacity = std::max( 1.0f, ( attacker.get_str() * 10.0f +
-                                     attacker.get_skill_level( skill_unarmed ) * 5.0f ) *
-                                     technique.grapple_power / 100.0f );
-    const float load = units::to_kilogram( victim->get_weight() ) / capacity;
-    if( size_difference > 1 || load > 1.0f ) {
+    cata::lua_platform::grapple_plan plan;
+    if( !technique.lua_platform_grapple_handler.empty() ) {
+        const std::optional<cata::lua_platform::grapple_plan> scripted =
+            cata::lua_platform::invoke_technique_grapple_handler(
+                technique.id.str(), technique.lua_platform_mod, technique.lua_platform_grapple_handler,
+                attacker, target, technique.grapple_power, technique.grapple_stamina );
+        if( !scripted ) {
+            return false;
+        }
+        plan = *scripted;
+    } else {
+        const float capacity = std::max( 1.0f, ( attacker.get_str() * 10.0f +
+                                         attacker.get_skill_level( skill_unarmed ) * 5.0f ) *
+                                         technique.grapple_power / 100.0f );
+        const float load = units::to_kilogram( victim->get_weight() ) / capacity;
+        plan.allowed = size_difference <= 1 && load <= 1.0f;
+        if( plan.allowed ) {
+            plan.stamina_cost = technique.grapple_stamina +
+                                static_cast<int>( technique.grapple_stamina * load );
+            plan.move_cost = static_cast<int>( 100 + 100 * load + std::max( 0, size_difference ) * 25 );
+            plan.duration_turns = technique.grapple_action == "hold" ?
+                                  std::max( 2, static_cast<int>( 6 - 3 * load ) - std::max( 0, size_difference ) ) :
+                                  std::max( 1, static_cast<int>( 4 - 2 * load ) - std::max( 0, size_difference ) );
+            plan.damage = std::max( 1.0f, ( attacker.get_str() +
+                                            attacker.get_skill_level( skill_unarmed ) ) *
+                                    technique.grapple_power / 100.0f * ( 1.0f - load * 0.5f ) *
+                                    technique.damage_multiplier( attacker, damage_bash ) /
+                                    ( 1.0f + 0.5f * std::max( 0, size_difference ) ) );
+        }
+    }
+    if( !plan.allowed ) {
         attacker.add_msg_if_player( m_info, _( "That target is too large or heavy for this technique." ) );
         return false;
     }
-    const int stamina = technique.grapple_stamina +
-                        static_cast<int>( technique.grapple_stamina * load );
-    if( attacker.get_stamina() < stamina ) {
+    if( attacker.get_stamina() < plan.stamina_cost ) {
         attacker.add_msg_if_player( m_info,
                                     _( "You lack the stamina to grapple a target of this weight." ) );
         return false;
@@ -1887,7 +2171,8 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
           here.veh_at( retreat ) || here.veh_at( attacker.pos_bub() ) ||
           here.veh_at( victim->pos_bub() ) ||
           ( technique.grapple_action == "drag" &&
-            ( !victim->can_move_to( attacker.pos_bub() ) ||
+            ( ( creature && !creature->can_move_to( attacker.pos_bub() ) ) ||
+              ( person && here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, attacker.pos_bub() ) ) ||
               here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, retreat ) ||
               attacker.has_effect( effect_grabbed ) ||
               attacker.has_effect( effect_beartrap ) ||
@@ -1901,20 +2186,21 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
         attacker.add_msg_if_player( m_info, _( "This target cannot be thrown off its feet." ) );
         return false;
     }
-    attacker.mod_stamina( -stamina );
-    attacker.mod_moves( -static_cast<int>( 100 + 100 * load + std::max( 0, size_difference ) * 25 ) );
+    attacker.mod_stamina( -plan.stamina_cost );
+    attacker.mod_moves( -plan.move_cost );
     attacker.add_effect( technique.grapple_cooldown_effect(), technique.grapple_cooldown );
+    if( npc *const person = victim->as_npc() ) {
+        person->on_attacked( attacker );
+    }
     if( technique.grapple_action == "hold" ) {
-        for( monster &other : g->all_monsters() ) {
+        for( Creature &other : g->all_creatures() ) {
             if( other.has_effect( effect_martial_grapple ) &&
                 other.get_effect( effect_martial_grapple ).get_source().get_character_id() == attacker.getID() ) {
                 other.remove_effect( effect_martial_grapple );
             }
         }
-        const int duration = std::max( 2, static_cast<int>( 6 - 3 * load ) -
-                                       std::max( 0, size_difference ) );
         victim->add_effect( effect_source( &attacker ), effect_martial_grapple,
-                            time_duration::from_turns( duration ) );
+                            time_duration::from_turns( plan.duration_turns ) );
         attacker.add_msg_player_or_npc( _( "You establish a grappling grip on %s!" ),
                                         _( "<npcname> establishes a grappling grip on %s!" ), victim->disp_name() );
     } else if( technique.grapple_action == "drag" ) {
@@ -1929,16 +2215,10 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     } else {
         victim->remove_effect( effect_martial_grapple );
         victim->setpos( here, retreat );
-        const int duration = std::max( 1, static_cast<int>( 4 - 2 * load ) -
-                                       std::max( 0, size_difference ) );
         victim->add_effect( effect_source( &attacker ), effect_downed,
-                            time_duration::from_turns( duration ) );
-        const float damage = std::max( 1.0f, ( attacker.get_str() +
-                                               attacker.get_skill_level( skill_unarmed ) ) *
-                                       technique.grapple_power / 100.0f * ( 1.0f - load * 0.5f ) *
-                                       technique.damage_multiplier( attacker, damage_bash ) /
-                                       ( 1.0f + 0.5f * std::max( 0, size_difference ) ) );
-        victim->deal_damage( &attacker, bodypart_id( "torso" ), damage_instance( damage_bash, damage ) );
+                            time_duration::from_turns( plan.duration_turns ) );
+        victim->deal_damage( &attacker, bodypart_id( "torso" ), damage_instance( damage_bash,
+                             plan.damage ) );
         victim->check_dead_state( &here );
         here.creature_on_trap( *victim );
         attacker.add_msg_player_or_npc( _( "You throw %s to the ground!" ),
@@ -1957,12 +2237,69 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     return true;
 }
 
+
+
+static std::optional<cata::lua_platform::technique_position_plan> prepare_position_technique(
+    const Character &actor, const tripoint_bub_ms &position, const matec_id &technique,
+    const std::string_view phase )
+{
+    map &here = get_map();
+    if( !technique.is_valid() || !technique->targets_position() ||
+        !technique->can_activate() || !technique->activation_allowed( actor, "start" ) ||
+        !technique->is_valid_character( actor ) ||
+        actor.technique_cooldown_remaining( technique ) > 0_turns ||
+        actor.has_flag( json_flag_CANNOT_ATTACK ) || actor.is_mounted() ||
+        actor.in_sleep_state() || actor.has_effect( effect_incorporeal ) ||
+        !here.inbounds( position ) || position.z() != actor.pos_bub().z() ||
+        rl_dist( actor.pos_bub(), position ) != 1 || !actor.sees( here, position ) ||
+        get_creature_tracker().creature_at( position, true ) || here.veh_at( position ) ) {
+        return std::nullopt;
+    }
+    const std::vector<matec_id> granted = actor.active_techniques();
+    if( std::find( granted.begin(), granted.end(), technique ) == granted.end() ||
+        !actor.martial_arts_data->choose_attack_vector( actor, technique ) ) {
+        return std::nullopt;
+    }
+    const auto plan = cata::lua_platform::invoke_technique_position_handler(
+                          technique.str(), technique->lua_platform_mod,
+                          technique->lua_platform_apply_handler, actor, position, phase );
+    if( !plan || !plan->allowed || plan->stamina_cost > actor.get_stamina() ||
+        get_creature_tracker().creature_at( position, true ) || here.veh_at( position ) ||
+        rl_dist( actor.pos_bub(), position ) != 1 || actor.pos_bub().z() != position.z() ) {
+        return std::nullopt;
+    }
+    return plan;
+}
+
+bool Character::can_use_active_technique_at( const tripoint_bub_ms &position,
+        const matec_id &technique ) const
+{
+    return prepare_position_technique( *this, position, technique, "target" ).has_value();
+}
+
+bool Character::use_active_technique( const tripoint_bub_ms &position,
+                                      const matec_id &technique )
+{
+    const auto plan = prepare_position_technique( *this, position, technique, "execute" );
+    if( !plan ) {
+        return false;
+    }
+    mod_stamina( -plan->stamina_cost );
+    mod_moves( -plan->move_cost );
+    start_technique_cooldown( technique );
+    add_msg_if_player( m_info, _( "You perform %s." ), technique->name.translated() );
+    if( plan->bash_power > 0 ) {
+        get_map().bash( position, plan->bash_power );
+    }
+    return true;
+}
+
 bool Character::use_active_technique( Creature &target, const matec_id &technique )
 {
-    if( !technique.is_valid() || technique == tec_mounted_charge ||
-        !technique->can_activate() || ( !technique->grapple_action.empty() &&
-                                        !technique->activation_allowed( *this, "start" ) ) ||
+    if( !technique.is_valid() || technique->targets_position() || technique == tec_mounted_charge ||
+        !technique->can_activate() || !technique->activation_allowed( *this, "start" ) ||
         &target == this || target.is_dead_state() ||
+        !technique->activation_allowed( *this, "target", &target ) ||
         has_flag( json_flag_CANNOT_ATTACK ) ||
         ( is_mounted() && mounted_creature && mounted_creature->has_flag( mon_flag_RIDEABLE_MECH ) ) ||
         pos_bub().z() != target.pos_bub().z() ) {
@@ -1997,14 +2334,13 @@ bool Character::use_active_technique( Creature &target, const matec_id &techniqu
     reach_attacking = technique->reach_tec || distance > 1;
     const std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>> selected =
                 evaluate_technique( technique, target, weapon, false, false, false, true );
-    if( selected && !technique->grapple_action.empty() ) {
-        return use_grapple_technique( *this, target, *technique );
-    }
     if( !selected || ( distance > 1 && !std::get<1>( *selected )->weapon ) ) {
         return false;
     }
     const time_duration cooldown = technique->activation_cooldown( *this );
-    const bool executed = melee_attack( target, false, technique, true, -1, selected );
+    const bool executed = !technique->grapple_action.empty() ?
+                          use_grapple_technique( *this, target, *technique ) :
+                          melee_attack( target, false, technique, true, -1, selected );
     if( executed ) {
         martial_arts_data->start_technique_cooldown( technique, cooldown );
     }
@@ -2018,6 +2354,13 @@ std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
 {
     // this could be more robust but for now it should work fine
     bool is_loaded = weap && weap->is_magazine_full();
+
+    if( tec_id->targets_position() ) {
+        return std::nullopt;
+    }
+    if( !manual_activation && !tec_id->activation_allowed( *this, "target", &t ) ) {
+        return std::nullopt;
+    }
 
     // ignore "dummy" techniques like WBLOCK_1
     if( tec_id->dummy ) {
@@ -2089,7 +2432,8 @@ std::optional<std::tuple<matec_id, attack_vector_id, sub_bodypart_str_id>>
 
     // if critical then select only from critical tecs
     // but allow the technique if its crit ok
-    if( !manual_activation && !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) {
+    if( ( manual_activation && tec_id->crit_tec ) ||
+        ( !manual_activation && !tec_id->crit_ok && ( crit != tec_id->crit_tec ) ) ) {
         add_msg_debug( debugmode::DF_MELEE, "Attack is%s critical, attack discarded", crit ? "" : "n't" );
         return std::nullopt;
     }

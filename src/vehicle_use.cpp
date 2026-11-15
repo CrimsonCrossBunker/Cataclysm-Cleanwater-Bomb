@@ -70,6 +70,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america_soil.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -136,7 +137,6 @@ static const quality_id qual_SCREW( "SCREW" );
 
 static const skill_id skill_mechanics( "mechanics" );
 
-static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
 
 static const vpart_id vpart_horn_bicycle( "horn_bicycle" );
@@ -599,7 +599,7 @@ void vehicle::enable_patrol( map &here, Character &who )
     }
 }
 
-void vehicle::honk_horn( map &here ) const
+void vehicle::honk_horn( map &here, const Character &who ) const
 {
     const bool no_power = !fuel_left( here, fuel_type_battery );
     bool honked = false;
@@ -611,7 +611,7 @@ void vehicle::honk_horn( map &here ) const
             continue;
         }
         if( !honked ) {
-            add_msg( _( "You honk the horn!" ) );
+            who.add_msg_if_player( _( "You honk the horn!" ) );
             honked = true;
         }
         //Get global position of horn
@@ -633,7 +633,7 @@ void vehicle::honk_horn( map &here ) const
     }
 
     if( !honked ) {
-        add_msg( _( "You honk the horn, but nothing happens." ) );
+        who.add_msg_if_player( _( "You honk the horn, but nothing happens." ) );
     }
 }
 
@@ -995,7 +995,8 @@ void vehicle::operate_planter( map &here )
         if( seed == seeds.end() ) {
             continue;
         }
-        const bool plant = here.ter( position ) == ter_t_dirtmound &&
+        const ter_id terrain = here.ter( position );
+        const bool plant = north_america::canonical_soil( terrain ) == ter_t_dirtmound &&
                            here.furn( position ) == furn_str_id::NULL_ID() && here.i_at( position ).empty();
         if( !plant && part( index ).info().has_flag( "ADVANCED_PLANTER" ) ) {
             continue;
@@ -1015,7 +1016,7 @@ void vehicle::operate_planter( map &here )
             seeds.erase( seed );
         }
         if( plant ) {
-            here.set( position, ter_t_dirt, furn_f_plant_seed );
+            here.set( position, north_america::planted_soil( terrain ), furn_f_plant_seed );
         }
         item &stored = here.add_item( position, std::move( planted ) );
         if( !operation.valid() ) {
@@ -1241,7 +1242,7 @@ bool vehicle::can_close( int part_index, Character &who )
 
 void vehicle::open_all_at( map &here, int p )
 {
-    for( const int elem : parts_at_relative( parts[p].mount, true, true ) ) {
+    for( const int elem : parts_at_relative( parts[p].mount_pos3(), true, true ) ) {
         const vehicle_part &vp = parts[elem];
         if( vp.info().has_flag( VPFLAG_OPENABLE ) ) {
             // Note that this will open multi-square and non-multipart parts in the tile. This
@@ -1265,19 +1266,25 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
         if( opening && prt.locked ) {
             unlock( parti );
         }
-        prt.open = opening;
+        const auto set_open = [&]( vehicle_part & vp ) {
+            vp.open = opening;
+            const tripoint_bub_ms location = bub_part_pos( here, vp );
+            if( here.inbounds( location ) ) {
+                here.set_transparency_cache_dirty( location );
+                here.set_seen_cache_dirty( location );
+            }
+        };
+        set_open( prt );
         if( prt.is_fake ) {
-            parts.at( prt.fake_part_to ).open = opening;
+            set_open( parts.at( prt.fake_part_to ) );
         } else if( prt.has_fake ) {
-            parts.at( prt.fake_part_at ).open = opening;
+            set_open( parts.at( prt.fake_part_at ) );
         }
     };
     //find_lines_of_parts() doesn't return the part_index we passed, so we set it on its own
     part_open_or_close( part_index, opening );
     insides_dirty = true;
-    here.set_transparency_cache_dirty( sm_pos.z() );
-    const tripoint_abs_ms part_location = mount_to_tripoint_abs( parts[part_index].mount );
-    here.set_seen_cache_dirty( here.get_bub( part_location ) );
+    const tripoint_abs_ms part_location = abs_part_pos( part_index );
     const int dist = rl_dist( get_player_character().pos_abs(), part_location );
     if( dist < 20 ) {
         sfx::play_variant_sound( opening ? "vehicle_open" : "vehicle_close",
@@ -1291,6 +1298,7 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
 
     coeff_air_changed = true;
     coeff_air_dirty = true;
+    here.on_vehicle_opening_changed( *this, part_location );
 }
 
 /**
@@ -2043,7 +2051,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .on_submit( [this, vp] {
             const vpart_position non_fake( *this, get_non_fake_part( vp.part_index() ) );
             const point_rel_ms start_pos = non_fake.mount_pos().rotate( 2 );
-            g->exam_vehicle( *this, start_pos );
+            g->exam_vehicle( *this, start_pos, non_fake.mount_pos3().z() );
         } );
 
         menu.add( tracking_on ? _( "Forget vehicle position" ) : _( "Remember vehicle position" ) )
@@ -2284,9 +2292,10 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     if( controls_here ) {
         if( has_part( "HORN" ) ) {
             menu.add( _( "Honk horn" ) )
+            .skip_theft_check()
             .skip_locked_check()
             .hotkey( "SOUND_HORN" )
-            .on_submit( [this, here] { honk_horn( *here ); } );
+            .on_submit( [control_action] { control_action( "horn" ); } );
         }
     }
 
@@ -2297,7 +2306,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .skip_locked_check()
         .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
-            unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, true );
+            unlink_cables( *here, vp.mount_pos3(), get_player_character(), true, true, true );
             get_player_character().pause();
         } );
     }
@@ -2308,7 +2317,7 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
         .skip_locked_check()
         .hotkey( "DISCONNECT_CABLES" )
         .on_submit( [here, this, vp] {
-            unlink_cables( *here, vp.mount_pos(), get_player_character(), true, true, false );
+            unlink_cables( *here, vp.mount_pos3(), get_player_character(), true, true, false );
             get_player_character().pause();
         } );
     }

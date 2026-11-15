@@ -584,7 +584,7 @@
     "type": "MONSTER",
     "name": { "str_sp": "Reclaimer" },
     "description": "A titanic, featureless mass of writhing flesh anchored to the ground and stretching as if invisible hands are trying to tear it apart.  It relentlessly reaches towards nearby corpses with its appendages, as if trying to take hold of them.",
-    "//": "When enough zombies are killed in a short timespan and many still remain, the reclaimer will appear if it hasn't been killed.",
+    "//": "When enough zombies are killed in a short timespan and many still remain, the reclaimer can appear once 50 days have passed since the cataclysm if it hasn't been killed.",
     "//2": "It creates a few reclaimer spawns when it appears and creates more if severely injured.  It doesn't move or attack, as its role is to recycle dead zombies and interfere with those powerful enough to kill many zombies in a short time.",
     "//3": "It doesn't appear if there's not enough standing zombies, as it relies on them for its protection.",
     "default_faction": "zombie",
@@ -695,8 +695,8 @@
     "id": "EOC_SINGULARITY_RECLAIMER_SETUP",
     "eoc_type": "EVENT",
     "required_event": "game_start",
-    "//": "This sets the reclaimer as able to spawn when the game starts.  There's no need for a pre-spawn delay as it requires the player to be able to kill many zombies in a short time to spawn.  If the player is able to encounter it, they are well-equiped to survive it.",
-    "//2": "can_appear tracks if the reclaimer is still unkilled, while cannot_spawn is used to force a delay between two encounters.",
+    "//": "This marks the reclaimer as unkilled when the game starts.  The kill event only allows encounters once 50 days have passed since the cataclysm.",
+    "//2": "can_appear tracks if the reclaimer is still unkilled, while next_spawn stores the earliest time of the next encounter.",
     "effect": [ { "math": [ "reclaimer_can_appear = 1" ] } ]
   },
   {
@@ -710,8 +710,9 @@
     "condition": {
       "and": [
         { "npc_has_species": "ZOMBIE" },
+        { "math": [ "time_since('cataclysm', 'unit':'days') >= 50" ] },
         { "math": [ "reclaimer_can_appear == 1" ] },
-        { "math": [ "reclaimer_cannot_spawn == 0" ] },
+        { "math": [ "time('now') >= reclaimer_next_spawn" ] },
         {
           "not": {
             "or": [
@@ -1258,7 +1259,7 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_SINGULARITY_RECLAIMER_APPEAR",
-    "//": "Makes the reclaimer appear near the player for approximatively a minute, zeroes out the variable and prevents it from increasing for about a day.",
+    "//": "Makes the reclaimer appear near the player for approximately a minute, zeroes out the kill counter and prevents another encounter for seven days.",
     "//2": "Ever forced ground meat through a mesh colander?  It appears and retreats out of the ground in a similar way, oozing through anything on its way.  It still need space on the other side to emerge, so it only appears outdoors.",
     "effect": [
       {
@@ -1286,7 +1287,7 @@
         "outdoor_only": true
       },
       { "math": [ "reclaimer_can_appear = 0" ] },
-      { "math": [ "reclaimer_cannot_spawn = 1" ] },
+      { "math": [ "reclaimer_next_spawn = time('now') + time('7 days')" ] },
       { "math": [ "mon_singularity_reclaimer_time_active = 0" ] },
       {
         "u_message": "Something emerges from below as the zombie hits the ground…",
@@ -1358,13 +1359,18 @@
   {
     "type": "effect_on_condition",
     "id": "EOC_SINGULARITY_RECLAIMER_RESET_SPAWN",
-    "recurrence": [ "20 hours", "28 hours" ],
+    "recurrence": "7 days",
     "global": true,
     "run_for_npcs": false,
     "//": "This resets the variable that stops the reclaimer from spawning and warning too often.",
-    "condition": { "or": [ { "math": [ "reclaimer_cannot_spawn > 0" ] }, { "math": [ "reclaimer_recent_warning > 0" ] } ] },
+    "condition": {
+      "and": [
+        { "math": [ "time('now') >= reclaimer_next_spawn" ] },
+        { "or": [ { "math": [ "reclaimer_next_spawn > 0" ] }, { "math": [ "reclaimer_recent_warning > 0" ] } ] }
+      ]
+    },
     "deactivate_condition": { "math": [ "reclaimer_can_appear == 0" ] },
-    "effect": [ { "math": [ "reclaimer_cannot_spawn = 0" ] }, { "math": [ "reclaimer_recent_warning = 0" ] } ]
+    "effect": [ { "math": [ "reclaimer_next_spawn = 0" ] }, { "math": [ "reclaimer_recent_warning = 0" ] } ]
   },
   {
     "type": "SPELL",

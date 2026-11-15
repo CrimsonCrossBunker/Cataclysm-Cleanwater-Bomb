@@ -38,6 +38,7 @@
     "stackable": true
   },
   {
+    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "stick",
     "symbol": "/",
@@ -45,7 +46,7 @@
     "name": { "str": "straight stick" },
     "description": "A respectable length of wood, just big enough to wrap your hand around.  Relatively straight and makes a decent melee weapon.",
     "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
+    "techniques": [ "WBLOCK_1", "MOUNTED_CHARGE" ],
     "flags": [ "TRADER_AVOID", "FIREWOOD" ],
     "weapon_category": [ "BATONS" ],
     "weight": "1500 g",
@@ -88,7 +89,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -102,7 +104,8 @@
     "volume": "5000 ml",
     "longest_side": "190 cm",
     "flags": [ "FIREWOOD", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -259,7 +262,8 @@
     "price": "50 USD",
     "price_postapoc": "1 USD",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 6 }
+    "melee_damage": { "bash": 6 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -276,7 +280,8 @@
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
     "price": "50 cent",
     "price_postapoc": "1 cent",
-    "flags": [ "FIREWOOD" ]
+    "flags": [ "FIREWOOD" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -330,7 +335,8 @@
     "price": "400 USD",
     "price_postapoc": "50 cent",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 16 }
+    "melee_damage": { "bash": 16 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -462,13 +468,14 @@
     "price": "300 USD",
     "price_postapoc": "20 cent",
     "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 12 }
+    "melee_damage": { "bash": 12 },
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "stick_common",
     "copy-from": "stick",
-    "name": { "str": "stick" },
+    "name": { "str": "stick (bent)" },
     "description": "A respectable length of wood, just big enough to wrap your hand around.  It's a little bent, and that makes it useless for most things you'd want to make with it.  Also makes it a little harder to hit things with it.",
     "relative": { "melee_damage": { "bash": -1 } }
   }

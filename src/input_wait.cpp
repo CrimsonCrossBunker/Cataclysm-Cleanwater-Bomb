@@ -28,6 +28,9 @@ void take_sooner( std::optional<uint32_t> &acc, const uint32_t ms )
 int input_wait_timeout_ms( const input_wait_state &state )
 {
     std::optional<uint32_t> wait = state.input_ms;
+    if( state.sound_ms ) {
+        take_sooner( wait, *state.sound_ms );
+    }
     if( state.present_ms ) {
         take_sooner( wait, *state.present_ms );
     } else if( state.platform_ms ) {

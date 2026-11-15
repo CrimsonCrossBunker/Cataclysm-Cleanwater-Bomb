@@ -91,8 +91,6 @@ const availability &cached_availability( std::map<const recipe *, availability> 
 enum class craft_confirm_result {
     ok,
     cannot_craft,
-    // Cleanwater: 撤销 PR #87043 (Cap recipes that make more than 4096 items)
-    // 方法：删除 too_many_results 枚举值
     too_dark
 };
 
@@ -101,7 +99,6 @@ enum class craft_confirm_result {
 craft_confirm_result can_start_craft(
     const recipe &rec,
     const availability &avail,
-    // Cleanwater: 撤销 PR #87043 — 移除 batch_size 参数
     const Character &crafter );
 
 // Recipe sort comparator for the crafting menu recipe list.

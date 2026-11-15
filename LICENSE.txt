@@ -26,7 +26,7 @@ PLF List and PLF Colony (src/list.h, src/colony.h) are licensed under the zLib l
 
 --------------------------------------------------------------------------------
 
-getpost (tools/json_tools/format/getpost.h) is licensed under the MIT license, see file for text of license.
+getpost (tools/format/getpost.h) is licensed under the MIT license, see file for text of license.
 
 --------------------------------------------------------------------------------
 

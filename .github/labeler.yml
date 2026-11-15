@@ -259,8 +259,7 @@ labels:
     matcher:
       files:
         - data/json/npcs/BG_trait_groups.json
-        - data/json/npcs/Personality_trait_groups.json
-        - data/json/npcs/personality_traits.json
+        - data/json/mutations/npc_personality.json
         - "**/**Backgrounds**"
         - "**/Backgrounds**"
         - "**/**snippets**"
@@ -299,7 +298,7 @@ labels:
         - "**/**overmap**"
         - "**/overmap**"
         - "**/overmap/**"
-        - "data/json/regional_map_settings.json"
+        - "data/json/region_settings/region_settings/regional_map_settings.json"
         - "**/mapgen_palettes/**"
 
   - label: "Martial Arts"

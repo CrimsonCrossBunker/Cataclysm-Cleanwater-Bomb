@@ -921,7 +921,7 @@ veh_collision vehicle::part_collision( map &here, int part, const tripoint_abs_m
     tripoint_bub_ms pos = here.get_bub( p );
     // Vertical collisions need to be handled differently
     // All collisions have to be either fully vertical or fully horizontal for now
-    const bool vert_coll = bash_floor || p.z() != sm_pos.z();
+    const bool vert_coll = bash_floor || p.z() != abs_part_pos( part ).z();
     Creature *critter = get_creature_tracker().creature_at( p, true );
     Character *ph = dynamic_cast<Character *>( critter );
 
@@ -1359,12 +1359,8 @@ double vehicle::wheel_damage_chance_vs_item( const item &it, const vehicle_part 
     }
     // Items attempting to do damage use the best/hardest possible value, the pointy bits.
     const double item_hardness = item_hardness_calc( it ).second;
-    // CCB: 大幅降低车轮碾压损坏概率，碾压碎片基本不伤轮胎
-    // 原公式 pow(hardness_ratio, 2.0) → 木材 (30/80)² = 14%，几棵树就废
-    // 新公式 pow(hardness_ratio, 6.0) + 上限 0.2，因为大部分碎片不应损坏轮胎：
-    //   - 木材/家具 (30/80)⁶ ≈ 0.2% — 基本无害
-    //   - 中等硬度 (50/80)⁶ ≈ 5.9% — 偶尔有威胁
-    //   - 钢制碎块 (80/80)⁶ = 100% → 封顶 20% — 即使最硬物品损坏概率也很低
+    // CCB: soften wheel damage from debris by using a sixth-power hardness
+    // ratio capped at 0.2 instead of upstream's squared ratio.
     // It is exponentially more difficult for soft items to damage wheels, even if you're hitting a lot of them.
     const double chance_to_damage = std::min( std::pow( item_hardness / wheel_hardness, 6.0 ), 0.2 );
     add_msg_debug( debugmode::DF_VEHICLE_MOVE,
@@ -1636,11 +1632,11 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
     creature_tracker &creatures = get_creature_tracker();
     for( const tripoint_abs_ms &pt : get_points( true ) ) {
         const tripoint_bub_ms pos = here.get_bub( pt );
-        tripoint_bub_ms above( pos + tripoint::above );
-        const optional_vpart_position ovp = here.veh_at( above );
-        if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pos ) ||
+        const tripoint_bub_ms above( pos + tripoint::above );
+        if( !here.inbounds_z( above.z() ) ||
+            here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pos ) ||
             here.impassable_ter_furn( above ) ||
-            ovp ||
+            here.veh_at( above ) ||
             creatures.creature_at( above ) ) {
             p.add_msg_if_player( m_bad,
                                  _( "It would be unsafe to try and ascend when there are obstacles above you." ) );
@@ -2274,7 +2270,7 @@ bool vehicle::level_vehicle( map &here )
     // make sure that all parts are either supported across levels or on the same level
     std::map<int, bool> no_support;
     for( vehicle_part &prt : parts ) {
-        if( prt.info().location != vpart_location_structure ) {
+        if( prt.mount_level != 0 || prt.info().location != vpart_location_structure ) {
             continue;
         }
         const tripoint_bub_ms part_pos = bub_part_pos( here, prt );
@@ -2306,7 +2302,7 @@ bool vehicle::level_vehicle( map &here )
             adjust_level = true;
             // drop unsupported parts 1 zlevel
             for( size_t prt = 0; prt < parts.size(); prt++ ) {
-                if( abs_part_pos( prt ).z() == zlevel ) {
+                if( abs_part_pos( prt ).z() - parts[prt].mount_level == zlevel ) {
                     dropped_parts.insert( static_cast<int>( prt ) );
                 }
             }
@@ -2370,7 +2366,12 @@ void vehicle::check_falling_or_floating()
     }
     // TODO: Make the vehicle "slide" towards its center of weight
     //  when it's not properly supported
-    const std::set<tripoint_abs_ms> &pts = get_points();
+    std::set<tripoint_abs_ms> pts;
+    for( const vpart_reference &vp : get_all_parts() ) {
+        if( vp.part().mount_level == 0 ) {
+            pts.insert( vp.pos_abs() );
+        }
+    }
     if( pts.empty() ) {
         // Dirty vehicle with no parts
         is_falling = false;
@@ -2674,7 +2675,7 @@ void vehicle::update_active_fakes()
         const vehicle_part &part_real = parts.at( part_fake.fake_part_to );
         const tripoint_rel_ms &fake_precalc = part_fake.precalc[0];
         const tripoint_rel_ms &real_precalc = part_real.precalc[0];
-        const vpart_edge_info &real_edge = edges[part_real.mount];
+        const vpart_edge_info &real_edge = edges[part_real.mount_pos3()];
         const bool is_protrusion = part_real.info().has_flag( "PROTRUSION" );
 
         if( real_edge.forward != -1 ) {

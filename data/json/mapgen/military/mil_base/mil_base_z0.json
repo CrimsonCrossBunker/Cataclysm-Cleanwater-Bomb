@@ -676,9 +676,9 @@
         "V": [ { "item": "tools_common", "chance": 50, "repeat": [ 0, 1 ] } ],
         "U": [
           { "item": "SUS_office_filing_cabinet", "chance": 50, "repeat": [ 1, 10 ] },
-          { "item": "guns_common", "chance": 50, "repeat": [ 1, 2 ] },
+          { "item": "regional_military_surplus_firearms", "chance": 50, "repeat": [ 1, 2 ] },
           { "item": "ammo_common_boxed", "chance": 50, "repeat": [ 2, 4 ] },
-          { "item": "mags_common", "chance": 50, "repeat": [ 2, 3 ] }
+          { "item": "regional_military_surplus_magazines", "chance": 50, "repeat": [ 2, 3 ] }
         ],
         "^": [ { "item": "mil_base_iv", "chance": 70 } ]
       },
@@ -787,7 +787,7 @@
         { "item": "m2010mag", "x": 20, "y": 12, "chance": 75, "repeat": 10 },
         { "item": "hk417mag_20rd", "x": 20, "y": 12, "chance": 75, "repeat": 16 },
         { "item": "hk417mag_10rd", "x": 20, "y": 12, "chance": 75, "repeat": 8 },
-        { "group": "ammo_can_300_full", "x": 22, "y": 12, "chance": 75, "repeat": 6 },
+        { "group": "regional_military_reserve_ammo", "x": 22, "y": 12, "chance": 75, "repeat": 6 },
         { "group": "ammo_can_223_mg_any_full", "x": 22, "y": 9, "chance": 75, "repeat": 5 },
         { "group": "ammo_can_308_mg_any_full", "x": 22, "y": 9, "chance": 75, "repeat": 5 },
         { "group": "ammo_shotgun_milspec", "x": 22, "y": 10, "chance": 75, "repeat": 10 },

@@ -105,6 +105,14 @@ TEST_CASE( "mp_actor_admission_requires_valid_identity", "[multiplayer][actor_bi
     binding.reset();
     CHECK_FALSE( binding.retained( world ) );
     CHECK_FALSE( binding.resolve_loaded( &actor, world ) );
+
+    actor.remove_value( "mp_proxy" );
+    actor.set_value( "mp_npc_replica", std::string( "1" ) );
+    CHECK_THROWS_WITH( binding.bind_player( actor, owner, world, controls.claim( owner, actor ) ),
+                       "Invalid multiplayer actor ownership" );
+    CHECK_FALSE( controls.is_claimed( actor ) );
+    binding.bind_view( actor, world );
+    CHECK( binding.resolve_loaded( &actor, world ) == &actor );
 }
 
 TEST_CASE( "mp_actor_binding_releases_world_control_and_rejects_wrong_assignment",

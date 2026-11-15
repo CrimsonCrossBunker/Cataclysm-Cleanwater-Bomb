@@ -133,7 +133,7 @@ static const widget_id widget_stamina_graph_classic( "stamina_graph_classic" );
 static const widget_id widget_style_desc( "style_desc" );
 static const widget_id widget_technique_cooldowns( "technique_cooldowns" );
 
-// test widgets defined in data/json/sidebar.json and data/mods/TEST_DATA/widgets.json
+// widgets used by these tests are defined in data/json/ui/ and data/mods/TEST_DATA/widgets.json
 static const widget_id widget_test_2_column_layout( "test_2_column_layout" );
 static const widget_id widget_test_3_column_layout( "test_3_column_layout" );
 static const widget_id widget_test_4_column_layout( "test_4_column_layout" );

@@ -1624,9 +1624,13 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 0.75f;
                     }
                 }
-                sleepiness_multiplier += comfort * 0.025f;
+                const float comfort_bonus = comfort <= 10 ? comfort * 0.025f
+                                            : 0.25f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 10.0f ) / 5.0f );
+                sleepiness_multiplier += std::min( 1.0f, comfort_bonus );
                 if( comfort >= 5 ) {
-                    rest_modifier += std::min( 1.0f, ( comfort - 5 ) * 0.025f );
+                    const float deprivation_bonus = comfort <= 35 ? ( comfort - 5 ) * 0.025f
+                                                    : 0.75f + 0.125f * std::log1p( ( static_cast<float>( comfort ) - 35.0f ) / 5.0f );
+                    rest_modifier += std::min( 1.5f, deprivation_bonus );
                 }
                 int current_sleepiness = get_sleepiness();
                 if( current_sleepiness >= sleepiness_levels::TIRED ) {
@@ -1638,8 +1642,7 @@ void Character::update_needs( int rate_multiplier )
                         sleepiness_multiplier += 1.0f;
                     }
                 }
-                int sleepiness_recovered =
-                    static_cast<int>( std::round( recovered * sleepiness_multiplier ) );
+                int sleepiness_recovered = roll_remainder( recovered * sleepiness_multiplier );
                 mod_sleepiness( -sleepiness_recovered );
 
                 // REDUCE SLEEP DEPRIVATION
@@ -1664,7 +1667,7 @@ void Character::update_needs( int rate_multiplier )
                 }
 
                 // Recovered is multiplied by 2 as well, since we spend 1/3 of the day sleeping
-                mod_sleep_deprivation( -rest_modifier * ( recovered * 2 ) );
+                mod_sleep_deprivation( -roll_remainder( rest_modifier * ( recovered * 2 ) ) );
 
             }
         }
@@ -2218,7 +2221,7 @@ float Character::get_bmi() const
 float Character::get_bmi_lean() const
 {
     //strength BMIs decrease to zero as you starve (muscle atrophy)
-    // CCB: 调整瘦体重BMI公式，降低力量对体重的贡献
+    // CCB: scale lean BMI with a smaller strength contribution than upstream.
     if( get_bmi_fat() < character_weight_category::normal ) {
         const stat_mod wpen = get_weight_penalty();
         return 14.0f + ( get_str_base() / 4.0f ) - wpen.strength;
@@ -2449,7 +2452,7 @@ int Character::get_stamina_max() const
     }
     // Since adding cardio, 'player_max_stamina' is really 'base max stamina' and gets further modified
     // by your CV fitness.  Name has been kept this way to avoid needing to change the code.
-    // Default base maximum stamina and cardio scaling are defined in data/core/game_balance.json
+    // Default base maximum stamina and cardio scaling are defined in data/core/external_options.json
     static const std::string player_max_stamina( "PLAYER_MAX_STAMINA_BASE" );
     static const std::string player_cardiofit_stamina_scale( "PLAYER_CARDIOFIT_STAMINA_SCALING" );
 

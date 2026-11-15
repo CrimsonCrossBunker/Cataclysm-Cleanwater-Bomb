@@ -306,6 +306,7 @@ class game
          * that skip JSON/mod reloading.
          */
         void reset_game_state();
+        bool north_america_world = false;
 
         /**
          * Reload a save in place without bouncing through the main menu,
@@ -330,9 +331,6 @@ class game
 
         /** Returns false if saving failed. */
         bool save();
-
-        //用于在快速读取时跳过绘制的标志
-        bool isdraw = true;
 
         /** Returns a list of currently active character saves. */
         std::vector<std::string> list_active_saves();
@@ -697,12 +695,14 @@ class game
         /** Makes any nearby NPCs on the overmap active. */
         void load_npcs();
         void load_npcs( map *here );
+        void unload_creatures_outside_resident_maps();
 
         /** NPCs who saw player interacting with their stuff (disassembling, cutting etc)
         * will notify the player that thievery was witnessed and make angry at the player. */
         void on_witness_theft( const item &target );
         void on_witness_theft( const item &target, Character &p );
     private:
+        void activate_npcs( map &here, const std::vector<shared_ptr_fast<npc>> &nearby );
         /** Unloads all NPCs.
          *
          * If you call this you must later call load_npcs, lest caches get
@@ -848,9 +848,6 @@ class game
                                   int &line, int last_line, const visibility_variables &cache );
 
         void draw_look_around_cursor( const tripoint_bub_ms &lp, const visibility_variables &cache );
-
-        /** Long description of (visible) things at tile. */
-        // void extended_description( const tripoint &p ); // Has no implementation, so assuming it's a stub for future expansion.
 
         void draw_trail_to_square( const tripoint_rel_ms &t, bool bDrawX );
 
@@ -1021,7 +1018,7 @@ class game
         void exam_appliance( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero );
 
         /** open vehicle interaction screen */
-        void exam_vehicle( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero );
+        void exam_vehicle( vehicle &veh, const point_rel_ms &cp = point_rel_ms::zero, int deck = -1 );
 
         /** Attempt to load first valid save (if any) in world */
         bool load( const std::string &world );
