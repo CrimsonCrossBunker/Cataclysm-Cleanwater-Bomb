@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "climate_seasons.h"
 #include "flexbuffer_json.h"
 #include "math_defines.h"
 #include "point.h"
@@ -214,5 +215,6 @@ void load_station( const JsonObject &jo, const std::string & )
 void reset()
 {
     stations.clear();
+    set_calendar_location( std::nullopt );
 }
 } // namespace regional_climate

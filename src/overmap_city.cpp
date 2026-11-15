@@ -108,25 +108,39 @@ void overmap::place_cities()
 
 
     const bool atlas_world = north_america::active();
+    const point_abs_omt atlas_origin = project_to<coords::omt>( pos() );
     if( atlas_world ) {
-        for( const size_t index : north_america::cities_in( pos() ) ) {
-            const north_america::place &place = north_america::cities()[index];
-            const point_om_omt center = project_remain<coords::om>( place.position ).remainder;
+        const auto add_atlas_city = [&]( const north_america::place & place, point_abs_omt origin,
+        int size, bool bounded ) {
+            const point_om_omt center = project_remain<coords::om>( origin ).remainder;
             for( const point_om_omt &candidate : closest_points_first( center, 12 ) ) {
                 const tripoint_om_omt p( candidate, 0 );
                 if( !inbounds( p ) || ter( p )->is_water() || city_tiles.count( candidate ) ) {
+                    continue;
+                }
+                if( bounded && !north_america::in_urban_footprint( atlas_origin + candidate.raw() ) ) {
                     continue;
                 }
                 city seed( place.name );
                 seed.pos_om = pos();
                 seed.pos = candidate;
                 seed.population = place.population;
-                seed.size = std::clamp( op_city_size + static_cast<int>(
-                                            std::sqrt( std::max( 0, place.population ) / 1000.0 ) ), 2, 55 );
+                seed.size = size;
                 ter_set( p, oter_road_nesw );
                 city_tiles.insert( candidate );
                 cities.push_back( seed );
                 break;
+            }
+        };
+        for( const north_america::urban_district &district : north_america::urban_districts_in( pos() ) ) {
+            const north_america::place &place = north_america::cities()[district.city_index];
+            add_atlas_city( place, district.center, 23, true );
+        }
+        for( const size_t index : north_america::cities_in( pos() ) ) {
+            const north_america::place &place = north_america::cities()[index];
+            if( !north_america::in_urban_footprint( place.position ) ) {
+                add_atlas_city( place, place.position, north_america::named_city_size( place.population ),
+                                false );
             }
         }
         if( !cities.empty() ) {
@@ -158,8 +172,9 @@ void overmap::place_cities()
     }
     tripoint_range city_candidates_range = points_in_radius_where(
             tripoint_om_omt( OMAPX / 2, OMAPY / 2, 0 ),
-    OMAPX / 2 - max_city_size, [&]( const tripoint_om_omt & p ) {
-        return ter( p ) == settings->default_oter[OVERMAP_DEPTH];
+    OMAPX / 2 - ( atlas_world ? 10 : max_city_size ), [&]( const tripoint_om_omt & p ) {
+        return ter( p ) == settings->default_oter[OVERMAP_DEPTH] &&
+               ( !atlas_world || north_america::rural_population_band( atlas_origin + p.xy().raw() ) > 0 );
     } );
     std::vector<tripoint_om_omt> city_candidates( city_candidates_range.begin(),
             city_candidates_range.end() );
@@ -218,6 +233,10 @@ void overmap::place_cities()
             // TODO: put cities closer to the edge when they can span overmaps
             // don't draw cities across the edge of the map, they will get clipped
             selected_point = random_entry_removed( city_candidates );
+            if( atlas_world ) {
+                size = std::min( std::max( op_city_size, 2 ),
+                                 north_america::rural_town_size( atlas_origin + selected_point.xy().raw() ) );
+            }
             // remove candidates within 2 tiles of selection
             for( const tripoint_om_omt &remove_radius : points_in_radius( selected_point, 2 ) ) {
                 std::vector<tripoint_om_omt>::iterator removed_point =
@@ -315,6 +334,13 @@ void overmap::place_building( const tripoint_om_omt &p, om_direction::type dir, 
 {
     const tripoint_om_omt building_pos = p + om_direction::displace( dir );
     const om_direction::type building_dir = om_direction::opposite( dir );
+    if( north_america::active() ) {
+        const auto origin = project_to<coords::omt>( pos() );
+        if( north_america::in_urban_footprint( origin + town.pos.raw() ) &&
+            !north_america::in_urban_footprint( origin + building_pos.xy().raw() ) ) {
+            return;
+        }
+    }
 
     const int town_dist = ( trig_dist( building_pos.xy(), town.pos ) * 100 ) / std::max( town.size, 1 );
 
@@ -336,14 +362,19 @@ void overmap::place_building( const tripoint_om_omt &p, om_direction::type dir, 
 }
 
 pf::directed_path<point_om_omt> overmap::lay_out_street( const overmap_connection &connection,
-        const point_om_omt &source, om_direction::type dir, size_t len )
+        const point_om_omt &source, om_direction::type dir, size_t len, bool bounded_urban )
 {
     const int &highway_width = settings->overmap_highway ?
                                settings->get_settings_highway().width_of_segments : 0;
-    auto valid_placement = [this]( const overmap_connection & connection, const tripoint_om_omt pos,
+    const auto origin = project_to<coords::omt>( pos() );
+    auto valid_placement = [this, bounded_urban, origin]( const overmap_connection & connection,
+                           const tripoint_om_omt pos,
     om_direction::type dir ) {
         if( !inbounds( pos, 1 ) ) {
             return false;  // Don't approach overmap bounds.
+        }
+        if( bounded_urban && !north_america::in_urban_footprint( origin + pos.xy().raw() ) ) {
+            return false;
         }
         const oter_id &ter_id = ter( pos );
         // TODO: Make it so the city picks a bridge direction ( ns or ew ) and allows bridging over rivers in that direction with the same logic as highways
@@ -424,7 +455,11 @@ void overmap::build_city_street(
         debugmsg( "Invalid road direction." );
         return;
     }
-    const pf::directed_path<point_om_omt> street_path = lay_out_street( connection, p, dir, cs + 1 );
+    const bool bounded_urban = north_america::active() &&
+                               north_america::in_urban_footprint( project_to<coords::omt>( pos() ) +
+                                       town.pos.raw() );
+    const pf::directed_path<point_om_omt> street_path = lay_out_street( connection, p, dir, cs + 1,
+            bounded_urban );
 
     if( street_path.nodes.size() <= 1 ) {
         return; // Don't bother.

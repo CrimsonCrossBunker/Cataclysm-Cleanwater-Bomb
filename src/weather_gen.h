@@ -69,7 +69,9 @@ class weather_generator
          * by the @ref map). You can use @ref map::getabs to get an absolute position from a
          * relative position (relative to the map you called getabs on).
          */
-        w_point get_weather( const tripoint_abs_ms &, const time_point &, unsigned ) const;
+        w_point get_weather( const tripoint_abs_ms &, const time_point &, unsigned,
+                             bool randomize_wind = true,
+                             const std::optional<regional_climate::normals> *known_climate = nullptr ) const;
         weather_type_id get_weather_conditions( const tripoint_abs_ms &, const time_point &,
                                                 unsigned seed ) const;
         weather_type_id get_weather_conditions( const w_point & ) const;
@@ -83,6 +85,7 @@ class weather_generator
         units::temperature get_ground_temperature( const tripoint_abs_ms &, const time_point &,
                 unsigned ) const;
         std::optional<regional_climate::normals> climate_at( const tripoint_abs_ms & ) const;
+        std::optional<regional_climate::coordinates> climate_location( const tripoint_abs_ms & ) const;
 
         bool was_loaded = false;
         void load( const JsonObject &jo, std::string_view );

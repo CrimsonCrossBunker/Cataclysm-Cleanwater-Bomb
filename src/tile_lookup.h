@@ -22,7 +22,8 @@ class tile_lookup_frame
 {
     public:
         tile_lookup_frame( std::shared_ptr<const tileset> bundle, season_type season,
-                           bool cache_results = true );
+                           bool cache_results = true,
+                           std::optional<season_type> foliage_season = std::nullopt );
         ~tile_lookup_frame();
         tile_lookup_frame( const tile_lookup_frame & ) = delete;
         tile_lookup_frame &operator=( const tile_lookup_frame & ) = delete;
@@ -81,6 +82,7 @@ class tile_lookup_frame
         };
         const std::shared_ptr<const tileset> bundle_;
         const season_type season_;
+        const std::optional<season_type> foliage_season_;
         const bool cache_results_;
         size_t requests_ = 0;
         size_t cache_hits_ = 0;
@@ -90,7 +92,6 @@ class tile_lookup_frame
         std::unordered_map<subtile_key, subtile_result, subtile_key_hash> subtiles_;
         std::optional<tile_lookup_res> resolve( const std::string &id, TILE_CATEGORY category,
                                                 const std::string &variant, int jumps_limit );
-        std::optional<tile_lookup_res> find_with_season( const std::string &id ) const;
         template<typename T>
         std::optional<tile_lookup_res> find_by_string_id( std::string_view id,
                 TILE_CATEGORY category, int jumps_limit );

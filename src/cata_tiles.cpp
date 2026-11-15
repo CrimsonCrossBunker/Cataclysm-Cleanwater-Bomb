@@ -648,7 +648,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     // reflects the current frame.
     advance_all_transient_effects();
 
-    tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ) );
+    tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ), true,
+                              foliage_season_of_year( calendar::turn ) );
     restore_on_out_of_scope restore_lookup( lookup_frame_ );
     lookup_frame_ = &lookup;
     sprite_command_frame command_frame( tileset_ptr );
@@ -1003,18 +1004,20 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         if( g->display_overlay_state( ACTION_DISPLAY_SNOW_DEPTH ) && !invisible[0] ) {
                             const double snow_mm = get_weather().get_snow_depth_mm(
                                                        project_to<coords::omt>( here.get_abs( pos ) ) );
-                            short color;
+                            short color = catacurses::dark_gray;
                             const short bold = 8;
-                            if( snow_mm >= 500 ) {
-                                color = catacurses::white + bold;
-                            } else if( snow_mm >= 250 ) {
-                                color = catacurses::cyan + bold;
-                            } else if( snow_mm >= 100 ) {
-                                color = catacurses::blue + bold;
-                            } else if( snow_mm >= 1 ) {
-                                color = catacurses::green + bold;
-                            } else {
-                                color = catacurses::dark_gray;
+                            switch( classify_snow( snow_mm ) ) {
+                                case snow_cover::deep:
+                                    color = catacurses::white + bold;
+                                    break;
+                                case snow_cover::medium:
+                                    color = catacurses::cyan + bold;
+                                    break;
+                                case snow_cover::light:
+                                    color = catacurses::green + bold;
+                                    break;
+                                case snow_cover::none:
+                                    break;
                             }
 
                             std::string snow_str = string_format( "%.0f", snow_mm );
@@ -3016,7 +3019,8 @@ cata_tiles::find_tile_looks_like( const std::string &id, TILE_CATEGORY category,
     }
     // Bullet, overlay and overmap queries outside a terrain frame observe the
     // current bundle/season and never inherit a previous frame's cached miss.
-    tile_lookup_frame query( tileset_ptr, season_of_year( calendar::turn ), false );
+    tile_lookup_frame query( tileset_ptr, season_of_year( calendar::turn ), false,
+                             foliage_season_of_year( calendar::turn ) );
     return query.find( id, category, variant, looks_like_jumps_limit );
 }
 

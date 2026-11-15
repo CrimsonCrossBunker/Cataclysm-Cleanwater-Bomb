@@ -1767,7 +1767,8 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
     }
     sprite_lookup_key key{ id, variant, static_cast<int>( cat ), subtile, rota,
                            force_rota ? 1 : 0,
-                           static_cast<int>( season_of_year( calendar::turn ) ) };
+                           static_cast<int>( season_of_year( calendar::turn ) ) +
+                           season_type::NUM_SEASONS *static_cast<int>( foliage_season_of_year( calendar::turn ) ) };
     sprite_lookup_cache &cache = sprite_cache();
     if( const auto it = cache.find( key ); it != cache.end() ) {
         const cached_sprite_lookup_3d &cached = *it->second;

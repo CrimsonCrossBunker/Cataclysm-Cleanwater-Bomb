@@ -27,8 +27,10 @@ const std::array<std::string, 8> tile_lookup_frame::subtile_keys = {{
 };
 
 tile_lookup_frame::tile_lookup_frame( std::shared_ptr<const tileset> bundle,
-                                      season_type season, bool cache_results ) :
-    bundle_( std::move( bundle ) ), season_( season ), cache_results_( cache_results )
+                                      season_type season, bool cache_results,
+                                      std::optional<season_type> foliage_season ) :
+    bundle_( std::move( bundle ) ), season_( season ), foliage_season_( foliage_season ),
+    cache_results_( cache_results )
 {
     cata_assert( bundle_ );
 }
@@ -39,7 +41,7 @@ tile_lookup_frame::~tile_lookup_frame()
     if( cache_results_ ) {
         CATA_PROFILE_SCOPE_NAMED( "tiles.lookup_frame_summary" );
         const std::string counts = string_format( "requests=%zu;hits=%zu;ids=%zu",
-            requests_, cache_hits_, results_.size() );
+                                   requests_, cache_hits_, results_.size() );
         CATA_PROFILE_TEXT( counts.c_str(), counts.size() );
         CATA_PROFILE_PLOT( "tiles.subtile_requests", static_cast<int64_t>( subtile_requests_ ) );
         CATA_PROFILE_PLOT( "tiles.subtile_cache_hits", static_cast<int64_t>( subtile_cache_hits_ ) );
@@ -131,9 +133,24 @@ std::optional<tile_lookup_res> tile_lookup_frame::find( const std::string &id,
     return result;
 }
 
-std::optional<tile_lookup_res> tile_lookup_frame::find_with_season( const std::string &id ) const
+static bool uses_foliage_season( const std::string &id, TILE_CATEGORY category )
 {
-    return bundle_->find_tile_type_by_season( id, season_ );
+    const auto vegetation = []( const map_data_common_t &ground ) {
+        return ground.has_flag( ter_furn_flag::TFLAG_TREE ) ||
+               ground.has_flag( ter_furn_flag::TFLAG_SHRUB ) ||
+               ground.has_flag( ter_furn_flag::TFLAG_FLOWER ) ||
+               ground.has_flag( ter_furn_flag::TFLAG_PLANT ) ||
+               ground.has_flag( ter_furn_flag::TFLAG_GRAZABLE );
+    };
+    if( category == TILE_CATEGORY::TERRAIN ) {
+        const ter_str_id terrain( id );
+        return terrain.is_valid() && vegetation( terrain.obj() );
+    }
+    if( category == TILE_CATEGORY::FURNITURE ) {
+        const furn_str_id furniture( id );
+        return furniture.is_valid() && vegetation( furniture.obj() );
+    }
+    return false;
 }
 
 template<typename T>
@@ -155,6 +172,11 @@ tile_lookup_frame::resolve( const std::string &id, TILE_CATEGORY category,
     if( id.empty() || looks_like_jumps_limit <= 0 ) {
         return std::nullopt;
     }
+    const season_type season = foliage_season_ && *foliage_season_ != season_ &&
+                               uses_foliage_season( id, category ) ? *foliage_season_ : season_;
+    const auto find_with_season = [&]( const std::string & key ) {
+        return bundle_->find_tile_type_by_season( key, season );
+    };
 
     // Every returned id/tile belongs to the bundle pinned by this frame.
     // Try the variant first

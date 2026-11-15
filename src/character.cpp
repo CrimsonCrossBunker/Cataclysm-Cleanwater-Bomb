@@ -324,7 +324,6 @@ static const json_character_flag json_flag_PRED4( "PRED4" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
 static const json_character_flag json_flag_SAPIOVORE( "SAPIOVORE" );
 static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
-static const json_character_flag json_flag_SNOWWALKING( "SNOWWALKING" );
 static const json_character_flag json_flag_STEADY( "STEADY" );
 static const json_character_flag json_flag_SUPER_CLAIRVOYANCE( "SUPER_CLAIRVOYANCE" );
 static const json_character_flag json_flag_TOUGH_FEET( "TOUGH_FEET" );
@@ -6743,20 +6742,22 @@ float Character::speed_rating() const
     return ret;
 }
 
-int Character::run_cost( int base_cost, bool diag ) const
+int Character::run_cost( int base_cost, bool diag,
+                         const std::optional<tripoint_bub_ms> &destination ) const
 {
     float movecost = static_cast < float >( base_cost );
     if( diag ) {
         movecost /= M_SQRT2; // because effect logic assumes 100 base cost
     }
-    run_cost_effects( movecost );
+    run_cost_effects( movecost, destination );
     if( diag ) {
         movecost *= M_SQRT2;
     }
     return static_cast < int >( movecost );
 }
 
-std::vector < run_cost_effect > Character::run_cost_effects( float &movecost ) const
+std::vector < run_cost_effect > Character::run_cost_effects( float &movecost,
+        const std::optional<tripoint_bub_ms> &destination ) const
 {
     std::vector < run_cost_effect > effects;
 
@@ -6919,12 +6920,11 @@ std::vector < run_cost_effect > Character::run_cost_effects( float &movecost ) c
         run_cost_effect_add( 10, _( "Roots" ) );
     }
 
-    // Snow depth movement penalty (outdoor, unroofed tiles only)
-    if( here.is_outside( pos_bub() ) && !here.is_roofed( pos_bub() ) ) {
-        const double snow_mm = get_weather().get_snow_depth_mm( pos_abs_omt() );
-        if( snow_mm >= 100 && !has_flag( json_flag_LEVITATION )
-            && !has_flag( json_flag_SNOWWALKING ) ) {
-            const int penalty = snow_mm >= 500 ? 100 : ( snow_mm >= 250 ? 50 : 20 );
+    if( !has_flag( json_flag_LEVITATION ) &&
+        !( is_mounted() && mounted_creature && mounted_creature->flies() ) ) {
+        const int penalty = snow_move_penalty(
+                                get_weather().get_snow_cover( here, destination.value_or( pos_bub() ) ) );
+        if( penalty > 0 ) {
             run_cost_effect_add( penalty, _( "Snow" ) );
         }
     }

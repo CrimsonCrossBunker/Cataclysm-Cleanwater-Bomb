@@ -112,7 +112,6 @@ static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_napalm( "napalm" );
 static const itype_id itype_pressurized_tank( "pressurized_tank" );
 
-static const json_character_flag json_flag_SNOWWALKING( "SNOWWALKING" );
 
 static const material_id material_iflesh( "iflesh" );
 
@@ -1870,21 +1869,12 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
         }
         cost += fieldcost;
 
-        // snow
-        int snowcost = 0;
-        if( where == to && here.is_outside( pos_bub() ) && !here.is_roofed( pos_bub() ) &&
-            !terrain.has_flag( ter_furn_flag::TFLAG_SWIMMABLE ) &&
-            !terrain.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER ) ) {
-            const double snow_mm = get_weather().get_snow_depth_mm( pos_abs_omt() );
-            if( snow_mm >= 100 && !has_flag( json_flag_FLIES ) && !has_flag( json_flag_SNOWWALKING ) ) {
-                snowcost = snow_mm >= 500 ? 4 : ( snow_mm >= 250 ? 2 : 1 );
-            }
-        }
-
-        cost += snowcost;
     }
 
     int movecost = std::max( tilecosts[from] + tilecosts[to], 1 ) * 25;
+    if( !has_flag( json_flag_FLIES ) ) {
+        movecost += snow_move_penalty( get_weather().get_snow_cover( here, to ) );
+    }
 
     add_msg_debug( debugmode::DF_MONMOVE, "%s t1:%i  t2:%i movecost: %i", name(), tilecosts[from],
                    tilecosts[to], movecost );

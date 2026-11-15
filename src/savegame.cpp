@@ -1812,6 +1812,7 @@ void weather_manager::serialize_all( JsonOut &json )
                 json.member( "x", pair.first.x() );
                 json.member( "y", pair.first.y() );
                 json.member( "depth_mm", pair.second.depth_mm );
+                json.member( "water_mm", pair.second.water_mm );
                 json.member( "last_update", pair.second.last_update );
                 json.end_object();
             }
@@ -1843,16 +1844,18 @@ void weather_manager::unserialize_all( const JsonObject &w )
     get_weather().snow_depth_map.clear();
     if( w.has_array( "snow_depth" ) ) {
         for( JsonObject entry : w.get_array( "snow_depth" ) ) {
-            // Normalize z to 0: snow depth is z-agnostic
-            tripoint_abs_omt pos( entry.get_int( "x" ), entry.get_int( "y" ), 0 );
+            // Coalesce old per-tile entries into surface weather cells.
+            const tripoint_abs_omt pos = snow_climate_cell(
+                                             tripoint_abs_omt( entry.get_int( "x" ), entry.get_int( "y" ), 0 ) );
             // Consume "z" if present (old save format stored per-z entries)
             if( entry.has_int( "z" ) ) {
                 entry.get_int( "z" );
             }
             omt_snow_state state;
             entry.read( "depth_mm", state.depth_mm );
+            entry.read( "water_mm", state.water_mm );
             entry.read( "last_update", state.last_update );
-            // If duplicate xy from different z-levels, keep the deeper snow
+            // Keep the deeper observation when several old entries share a cell.
             auto it = get_weather().snow_depth_map.find( pos );
             if( it == get_weather().snow_depth_map.end() || state.depth_mm > it->second.depth_mm ) {
                 get_weather().snow_depth_map[pos] = state;
