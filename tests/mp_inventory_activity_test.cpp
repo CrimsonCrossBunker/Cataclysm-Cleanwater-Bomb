@@ -19861,6 +19861,7 @@ TEST_CASE( "owned_vehicle_refill_preserves_the_selected_tank_and_liquid_through_
 TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on_host",
            "[mp_inventory_activity][vehicle_work_owned]" )
 {
+    const restore_on_out_of_scope restore_turn( calendar::turn );
     const int deck = GENERATE( 0, 1 );
     CAPTURE( deck );
     vehicle_control_fixture fixture;
@@ -19892,6 +19893,8 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     selection.owner = target->get_owner();
     selection.part_type = frame;
     const int part_count = target->part_count_real();
+    set_time_to_day();
+    REQUIRE( who.fine_detail_vision_mod() <= 4 );
 
     fixture.run( who, vehicle_work_request( fixture, who, selection ) );
     CHECK_FALSE( who.activity );
