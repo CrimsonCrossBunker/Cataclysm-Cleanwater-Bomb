@@ -84,6 +84,7 @@
 #include "mongroup.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_soil.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
@@ -2670,6 +2671,23 @@ class jmapgen_item_group : public jmapgen_piece
         }
 };
 
+static const itype_id itype_american_flag( "american_flag" );
+static const itype_id itype_national_flag( "national_flag" );
+
+static bool is_civic_flagpole( const map &here, const tripoint_bub_ms &pos )
+{
+    if( !here.inbounds( pos ) ) {
+        return false;
+    }
+    static const furn_str_id flagpole( "f_flagpole" );
+    static const furn_str_id wooden_flagpole( "f_wooden_flagpole" );
+    static const furn_str_id indoor_flagpole( "f_indoor_flagpole" );
+    static const furn_str_id indoor_wooden_flagpole( "f_indoor_flagpole_wooden" );
+    const furn_id pole = here.furn( pos );
+    return pole == flagpole || pole == wooden_flagpole ||
+           pole == indoor_flagpole || pole == indoor_wooden_flagpole;
+}
+
 /** Place items from an item group */
 class jmapgen_loot : public jmapgen_piece
 {
@@ -2716,8 +2734,18 @@ class jmapgen_loot : public jmapgen_piece
                 spawn.reserve( 20 );
                 isd->create( spawn, calendar::start_of_cataclysm,
                              spawn_flags::use_spawn_rate );
-                dat.m.spawn_items( tripoint_bub_ms( rng( x.val, x.valmax ), rng( y.val, y.valmax ),
-                                                    dat.zlevel() + z.get() ), spawn );
+                const tripoint_bub_ms pos( rng( x.val, x.valmax ), rng( y.val, y.valmax ),
+                                           dat.zlevel() + z.get() );
+                const std::string &civic_variant = north_america::civic_flag_variant();
+                if( !civic_variant.empty() && is_civic_flagpole( dat.m, pos ) &&
+                    itype_national_flag.is_valid() ) {
+                    for( item &it : spawn ) {
+                        if( it.typeId() == itype_american_flag && !it.has_itype_variant( false ) ) {
+                            it.convert( itype_national_flag ).set_itype_variant( civic_variant );
+                        }
+                    }
+                }
+                dat.m.spawn_items( pos, spawn );
             }
         }
 
@@ -3079,10 +3107,15 @@ class jmapgen_spawn_item : public jmapgen_piece
             // 100% chance = exactly 1 item, otherwise scale by item spawn rate.
             const float spawn_rate = get_option<float>( "ITEM_SPAWNRATE" );
             int spawn_count = ( c == 100 ) ? 1 : roll_remainder( c * spawn_rate / 100.0f );
+            const std::string &civic_variant = north_america::civic_flag_variant();
+            const bool can_localize = chosen_id == itype_american_flag && variant.empty() &&
+                                      !civic_variant.empty() && itype_national_flag.is_valid();
             for( int i = 0; i < spawn_count; i++ ) {
-                dat.m.spawn_item( tripoint_bub_ms( x.get(), y.get(), dat.zlevel() + z.get() ), chosen_id,
-                                  amount.get(),
-                                  0, calendar::start_of_cataclysm, 0, flags, variant, faction );
+                const tripoint_bub_ms pos( x.get(), y.get(), dat.zlevel() + z.get() );
+                const bool localize = can_localize && is_civic_flagpole( dat.m, pos );
+                dat.m.spawn_item( pos, localize ? itype_national_flag : chosen_id, amount.get(), 0,
+                                  calendar::start_of_cataclysm, 0, flags,
+                                  localize ? civic_variant : variant, faction );
             }
         }
 
@@ -6872,6 +6905,7 @@ void map::draw_map( mapgendata &dat )
 
     resolve_regional_terrain_and_furniture( dat );
     north_america::place_native_vegetation( dat );
+    north_america::place_native_soil( dat );
     // End of draw_map
 }
 

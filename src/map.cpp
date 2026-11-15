@@ -98,6 +98,7 @@
 #include "mp_world_session.h"
 #include "mtype.h"
 #include "north_america.h"
+#include "north_america_soil.h"
 #include "options.h"
 #include "output.h"
 #include "overmap.h"
@@ -1696,8 +1697,8 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         for( const tripoint_abs_ms &p : veh.get_points() ) {
             const tripoint_bub_ms pos = get_bub( p );
             const ter_id &pter = ter( pos );
-            if( pter == ter_t_dirt || pter == ter_t_grass ) {
-                ter_set( pos, ter_t_dirtmound );
+            if( pter == ter_t_grass || north_america::canonical_soil( pter ) == ter_t_dirt ) {
+                ter_set( pos, north_america::tilled_soil( pter ) );
             }
         }
     }
@@ -2697,8 +2698,9 @@ bool map::furn_set( const tripoint_bub_ms &p, const furn_id &new_furniture, cons
     }
 
     if( new_f.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
-        if( current_submap->get_ter( l ) == ter_t_dirtmound ) {
-            ter_set( p, ter_t_dirt );
+        const ter_id soil = current_submap->get_ter( l );
+        if( north_america::canonical_soil( soil ) == ter_t_dirtmound ) {
+            ter_set( p, north_america::planted_soil( soil ) );
         }
     }
 
@@ -5816,7 +5818,7 @@ void map::bash_ter_furn( const tripoint_bub_ms &p, bash_params &params, bool rep
                 smash_ter = false;
                 bash.reset();
             }
-        } else if( !ter_bash.ter_set && ter( p ) == ter_t_dirt ) {
+        } else if( !ter_bash.ter_set && north_america::canonical_soil( ter( p ) ) == ter_t_dirt ) {
             // As above, except for no-z-levels case
             smash_ter = false;
             bash.reset();

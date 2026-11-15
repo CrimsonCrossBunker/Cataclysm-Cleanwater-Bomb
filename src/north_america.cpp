@@ -19,6 +19,14 @@ namespace north_america
 {
 struct regional_loot_table {
     std::unordered_map<item_group_id, item_group_id> groups;
+    std::string civic_flag;
+
+    void add_groups( const JsonArray &ids, const std::string &suffix ) {
+        for( const JsonValue value : ids ) {
+            const std::string base = value.get_string();
+            groups.emplace( item_group_id( base ), item_group_id( base + "-" + suffix ) );
+        }
+    }
 };
 
 namespace
@@ -254,17 +262,29 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
                 const std::string firearm_profile = entry.get_string( 1 );
                 const std::string uniform_profile = entry.get_string( 2 );
                 regional_loot_table &table = result[code];
-                const auto add_groups = [&]( const JsonArray & groups, const std::string & suffix ) {
-                    for( const JsonValue value : groups ) {
-                        const std::string base = value.get_string();
-                        table.groups.emplace( item_group_id( base ), item_group_id( base + "-" + suffix ) );
-                    }
-                };
-                add_groups( state_groups, code );
-                add_groups( firearm_groups, firearm_profile );
-                add_groups( uniform_groups, uniform_profile );
+                table.add_groups( state_groups, code );
+                table.add_groups( firearm_groups, firearm_profile );
+                table.add_groups( uniform_groups, uniform_profile );
             }
             // These keys are consumed by the offline data generator.
+            root.allow_omitted_members();
+        } );
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_supplies.json",
+        [&]( const JsonValue & value ) {
+            const JsonObject root = value.get_object();
+            const JsonArray state_groups = root.get_array( "regional_groups" );
+            const JsonArray service_groups = root.get_array( "service_groups" );
+            const JsonObject flags = root.get_object( "civic_flags" );
+            for( const JsonValue row : root.get_array( "jurisdictions" ) ) {
+                const std::string code = row.get_array().get_string( 0 );
+                const std::string country = code.substr( 0, 2 );
+                regional_loot_table &table = result[code];
+                table.add_groups( state_groups, code );
+                if( flags.has_string( country ) ) {
+                    table.civic_flag = flags.get_string( country );
+                    table.add_groups( service_groups, country );
+                }
+            }
             root.allow_omitted_members();
         } );
         return result;
@@ -434,6 +454,12 @@ const item_group_id &regional_item_group( const item_group_id &base )
         }
     }
     return base;
+}
+
+const std::string &civic_flag_variant()
+{
+    static const std::string original;
+    return current_loot_table ? current_loot_table->civic_flag : original;
 }
 
 mtype_id regional_monster( const mtype_id &type, point_abs_ms position )
