@@ -154,7 +154,10 @@
       { "item": "glowstick", "prob": 10, "charges": 1400 },
       { "item": "flashlight", "prob": 20, "charges": [ 0, 300 ] },
       { "distribution": [ { "item": "umbrella" }, { "item": "teleumbrella" } ], "prob": 40 },
-      { "distribution": [ { "group": "roadmap_stock" }, { "item": "trailmap" }, { "item": "touristmap" } ], "prob": 10 },
+      {
+        "distribution": [ { "group": "roadmap_stock" }, { "item": "trailmap" }, { "item": "touristmap" } ],
+        "prob": 10
+      },
       {
         "distribution": [ { "item": "gasdiscount_silver" }, { "item": "gasdiscount_gold" }, { "item": "gasdiscount_platinum" } ],
         "prob": 10
