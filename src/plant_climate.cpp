@@ -148,7 +148,8 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     const time_duration maturity = thresholds[std::max( 0, harvest - 1 )];
     const double per_model_day = model_days / to_days<double>( calendar::year_length() );
     const double average_need = climate.water_mm / climate.growing_days * per_model_day *
-                                std::max( 0.01f, water_use );
+                                std::max( 0.01f, water_use ) *
+                                iexamine::get_plant_water_consumption_multiplier( furniture );
     const bool covered = here.is_roofed( p ) || p.z() < 0;
     const int max_water = iexamine::get_plant_max_water( furniture );
     const north_america::crop_soil_properties soil = max_water > 0 ?
@@ -173,6 +174,14 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     start = std::max( start, calendar::turn - crop_history );
     const auto position = here.get_abs( p );
     const double rate = growth_speed * furniture.plant->growth_multiplier;
+    double temperature_offset = 0;
+    if( &here == &get_map() ) {
+        weather_manager &weather = get_weather();
+        const units::temperature ambient = weather.forced_temperature.value_or( weather.temperature );
+        // Historical weather has no heater state; use the current local temperature offset.
+        temperature_offset = units::to_celsius( weather.get_temperature( p ) ) -
+                             units::to_celsius( ambient );
+    }
     for( ; start + 1_days <= calendar::turn; start += 1_days ) {
         const crop_day day = sample_day( position, start );
         const double stage = std::clamp( effective / maturity, 0.0, 1.0 );
@@ -200,9 +209,9 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         }
         const double mean = ( day.low + day.high ) / 2;
         const double restraint = covered ? ( day.high - day.low ) * 0.2 : 0;
-        const double heat_fraction = climate.heat_units( std::min( mean, day.low + restraint ),
-                                     std::max( mean, day.high - restraint ) ) * per_model_day /
-                                     climate.degree_days;
+        const double low = std::min( mean, day.low + restraint ) + temperature_offset;
+        const double high = std::max( mean, day.high - restraint ) + temperature_offset;
+        const double heat_fraction = climate.heat_units( low, high ) * per_model_day / climate.degree_days;
         const double day_fraction = per_model_day / climate.growing_days;
         const double progress = std::min( heat_fraction, day_fraction ) * water_ratio * rate *
                                 soil.root_growth;
@@ -222,6 +231,16 @@ int fruit_model_day( time_point when )
 {
     const time_duration year = calendar::year_length();
     return static_cast<int>( ( ( time_past_new_year( when ) + year ) % year ) / year * model_days );
+}
+
+bool has_local_fruit_climate( const tripoint_abs_ms &pos )
+{
+    const auto &generator = get_weather_const().get_cur_weather_gen();
+    if( !generator.climate_location( pos ) ) {
+        return false;
+    }
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
+    return cell_at( cell, generator ).normals.has_value();
 }
 
 std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
