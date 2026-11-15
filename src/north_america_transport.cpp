@@ -222,7 +222,7 @@ bool draw_mapped_road( mapgendata &dat )
                                      north ? center : center - side, 0 );
         const units::angle heading = north ? ( heading_positive ? 90_degrees : 270_degrees ) :
                                      ( heading_positive ? 0_degrees : 180_degrees );
-        dat.m.add_vehicle( highway->pick(), where, heading, -1, 1 );
+        dat.m.add_vehicle( highway->pick(), where, heading, -1, veh_spawn_status::DISABLED );
     }
     return true;
 }
