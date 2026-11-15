@@ -1,13 +1,12 @@
-#include <cstddef>
 #include <iterator>
 #include <list>
-#include <random>
 #include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
 #include "item.h"
 #include "item_pocket.h"
+#include "rng.h"
 #include "type_id.h"
 
 static const itype_id itype_9mm( "9mm" );
@@ -94,26 +93,24 @@ TEST_CASE( "restack_charge_items_matches_original_algorithm", "[item][stacking][
         REQUIRE( item( type, calendar::turn ).count_by_charges() == by_charges );
     }
 
-    std::mt19937 rng( 20261104 );
-    auto roll = [&rng]( int lo, int hi ) {
-        return std::uniform_int_distribution<int>( lo, hi )( rng );
-    };
+    // Fixed seed so that a failing round can be reproduced.
+    rng_set_engine_seed( 20261104 );
     for( int round = 0; round < 1000; ++round ) {
         std::list<item> actual;
-        const int count = roll( 0, 24 );
+        const int count = rng( 0, 24 );
         for( int i = 0; i < count; ++i ) {
-            const itype_id &type = types[roll( 0, static_cast<int>( types.size() ) - 1 )];
+            const itype_id &type = types[rng( 0, static_cast<int>( types.size() ) - 1 )];
             item it( type, calendar::turn );
             if( it.count_by_charges() ) {
-                it.charges = roll( 1, 20 );
+                it.charges = rng( 1, 20 );
             }
-            if( roll( 0, 3 ) == 0 ) {
+            if( rng( 0, 3 ) == 0 ) {
                 it.force_set_damage( 1000 );
             }
             actual.push_back( it );
         }
         std::list<item> expected = actual;
-        const int tracked = count == 0 ? -1 : roll( -1, count - 1 );
+        const int tracked = count == 0 ? -1 : rng( -1, count - 1 );
 
         item *expected_tracked = original_restack( expected, nth( expected, tracked ) );
         item *actual_tracked = restack_charge_items( actual, nth( actual, tracked ) );
