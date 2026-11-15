@@ -20109,7 +20109,7 @@ TEST_CASE( "owned_appliance_plug_checks_both_ports_and_applies_the_native_grid_o
         REQUIRE( laid_cable->has_link_data() );
         CHECK( laid_cable->link().t_veh.get() == source );
         CHECK( laid_cable->link().t_abs_pos == source->pos_abs() );
-        CHECK( laid_cable->link().t_mount == source->part( 1 ).mount );
+        CHECK( laid_cable->link().t_mount == source->part( 1 ).mount_pos3() );
         CHECK( laid_cable->link().t_part_uid == selection.destination.part_id );
     } else {
         REQUIRE( destination->part_count_real() == 2 );
