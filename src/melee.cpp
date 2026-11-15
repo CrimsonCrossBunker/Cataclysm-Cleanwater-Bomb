@@ -2077,7 +2077,6 @@ static bool use_grapple_technique( Character &attacker, Creature &target,
     const Character *const person = target.as_character();
     if( victim->is_hallucination() || victim->has_flag( mon_flag_IMMOBILE ) ||
         victim->has_flag( json_flag_CANNOT_MOVE ) || victim->has_flag( mon_flag_PLASTIC ) ||
-        victim->has_flag( mon_flag_FLIES ) ||
         ( creature && ( creature->type->bodytype == "blob" || creature->type->bodytype == "snake" ||
                         creature->type->bodytype == "fish" ) ) ||
         ( person && ( person->is_mounted() || person->in_vehicle ||

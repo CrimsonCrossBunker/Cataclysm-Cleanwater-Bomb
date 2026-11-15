@@ -1,3 +1,4 @@
+#include <character_id.h>
 #include <item_location.h>
 #include <npc_opinion.h>
 #include <ret_val.h>
@@ -8,6 +9,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -20,6 +22,8 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "damage.h"
+#include "effect.h"
+#include "effect_source.h"
 #include "enums.h"
 #include "faction.h"
 // IWYU pragma: no_include <flexbuffer_json.h>
@@ -134,6 +138,63 @@ static avatar &prepare_grappler( const std::string &style = "style_judo" )
     dude.martial_arts_data->set_style( martial_art );
     dude.set_moves( 1000 );
     return dude;
+}
+
+TEST_CASE( "active_grappling_can_hold_drag_and_throw_flying_targets",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler( "style_brawling" );
+    const std::string target_id = GENERATE( "mon_goose", "mon_goose_canadian" );
+    monster &target = spawn_test_monster( target_id, dude_pos + tripoint::east );
+    const tripoint_abs_ms origin = dude.pos_abs();
+    target.set_hp( 1000 );
+    const int health = target.get_hp();
+    REQUIRE( target.has_flag( mon_flag_FLIES ) );
+    REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
+    REQUIRE( target.has_effect( effect_martial_grapple ) );
+    CHECK( target.get_effect( effect_martial_grapple ).get_source().get_character_id() ==
+           dude.getID() );
+    CHECK_FALSE( target.move_effects( false ) );
+    REQUIRE( dude.use_active_technique( target, tec_grapple_drag ) );
+    CHECK( dude.pos_abs() == origin + tripoint::west );
+    CHECK( target.pos_abs() == origin );
+    CHECK( target.has_effect( effect_martial_grapple ) );
+    CHECK( target.get_hp() == health );
+    REQUIRE( dude.use_active_technique( target, tec_brawl_grapple_throw ) );
+    CHECK( target.pos_abs() == origin + tripoint::west * 2 );
+    CHECK_FALSE( target.has_effect( effect_martial_grapple ) );
+    CHECK( target.has_effect( effect_downed ) );
+    CHECK( target.get_hp() < health );
+}
+
+TEST_CASE( "martial_art_techniques_do_not_filter_flying_targets", "[martial_arts]" )
+{
+    avatar &dude = prepare_grappler( "style_brawling" );
+    const std::string technique_id = GENERATE( "SWEEP", "tec_brawl_power", "tec_brawl_trip" );
+    CAPTURE( technique_id );
+    const matec_id technique( technique_id );
+    if( technique_id == "SWEEP" ) {
+        dude.set_wielded_item( item( itype_club_wooden ) );
+    }
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    mtype target_type = *target.type;
+    restore_on_out_of_scope restore_type( target.type );
+    target.type = &target_type;
+    REQUIRE( dude.evaluate_technique( technique, target, dude.used_weapon(), technique->crit_tec,
+                                      false, false ).has_value() );
+    target_type.set_flag( mon_flag_FLIES );
+    REQUIRE( dude.evaluate_technique( technique, target, dude.used_weapon(), technique->crit_tec,
+                                      false, false ).has_value() );
+    damage_instance damage;
+    int move_cost = 100;
+    item_location weapon;
+    dude.perform_technique( *technique, target, damage, move_cost, weapon );
+    if( technique->down_dur > 0 ) {
+        CHECK_FALSE( target.is_immune_effect( effect_downed ) );
+        CHECK( target.has_effect( effect_downed ) );
+    } else {
+        CHECK( target.has_effect( effect_stunned ) );
+    }
 }
 
 TEST_CASE( "brawling_grapple_throw_uses_lua_and_preserves_existing_style",

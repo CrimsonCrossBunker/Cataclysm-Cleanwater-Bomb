@@ -2172,7 +2172,7 @@ bool monster::is_immune_effect( const efftype_id &effect ) const
             return x_in_y( 3, 4 );
         } else {
             return type->bodytype == "snake" || type->bodytype == "blob" || type->bodytype == "fish" ||
-                   has_flag( mon_flag_FLIES ) || has_flag( mon_flag_IMMOBILE ) || has_flag( json_flag_CANNOT_MOVE );
+                   has_flag( mon_flag_IMMOBILE ) || has_flag( json_flag_CANNOT_MOVE );
         }
     }
     return false;

@@ -276,17 +276,16 @@
     "name": "Sweep Attack",
     "melee_allowed": true,
     "skill_requirements": [ { "name": "melee", "level": 3 } ],
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "messages": [ "You sweep %s", "<npcname> sweeps %s" ],
     "description": "Down 2 turns, min 3 melee",
@@ -421,14 +420,13 @@
     "melee_allowed": true,
     "required_buffs_all": [ "buff_aikido_onblock" ],
     "crit_ok": true,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -447,7 +445,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "down_dur": 1,
     "knockback_dist": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.7 } ],
@@ -462,14 +460,13 @@
     "melee_allowed": true,
     "required_buffs_all": [ "buff_aikido_ondodge" ],
     "crit_ok": true,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -488,7 +485,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "down_dur": 1,
     "knockback_dist": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.7 } ],
@@ -514,14 +511,13 @@
         "message": "The weapon of %s has been forced out of their hands!"
       }
     ],
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -540,7 +536,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "down_dur": 1,
     "knockback_dist": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.7 } ],
@@ -566,14 +562,13 @@
         "message": "The weapon of %s has been forced out of their hands!"
       }
     ],
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -592,7 +587,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "down_dur": 1,
     "knockback_dist": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.7 } ],
@@ -634,17 +629,16 @@
     "melee_allowed": true,
     "block_counter": true,
     "crit_ok": true,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.8 } ],
     "attack_vectors": [ "vector_null" ]
@@ -775,16 +769,15 @@
     "knockback_dist": 1,
     "knockback_spread": 1,
     "stun_dur": 1,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.5 } ],
     "attack_vectors": [ "vector_punch", "vector_slime_punch", "vector_paw_rat_punch", "vector_little_paw_punch" ]
@@ -827,11 +820,10 @@
             { "npc_bodytype": "bear" },
             { "npc_bodytype": "angel" }
           ]
-        },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-stunned</info> target of <info>similar</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-stunned</info> target of <info>similar</info> size",
     "stun_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.4 } ],
     "attack_vectors": [ "vector_punch", "vector_slime_punch", "vector_paw_rat_punch", "vector_little_paw_punch" ]
@@ -930,16 +922,15 @@
     "crit_tec": true,
     "knockback_dist": 1,
     "stun_dur": 1,
-    "//condition": "Similar size and no flying or blobs",
+    "//condition": "Similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "not": { "npc_has_effect": "stunned" } },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "not": { "npc_has_effect": "stunned" } }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed and non-stunned</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed and non-stunned</info> target of <info>similar or smaller</info> size",
     "attack_vectors": [ "vector_punch", "vector_slime_punch", "vector_paw_rat_punch", "vector_little_paw_punch" ]
   },
   {
@@ -954,11 +945,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "u_val('size') - 1 <= n_val('size')" ] },
         { "or": [ { "npc_bodytype": "angel" }, { "npc_bodytype": "human" } ] },
-        { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "not": { "npc_has_effect": "downed" } }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size",
     "down_dur": 1,
     "attack_vectors": [ "vector_shin" ]
   },
@@ -1014,11 +1004,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "u_val('size') - 1 <= n_val('size')" ] },
         { "or": [ { "npc_bodytype": "angel" }, { "npc_bodytype": "human" } ] },
-        { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "not": { "npc_has_effect": "downed" } }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "movecost", "scale": 0.75 },
@@ -1071,11 +1060,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 1.25 },
@@ -1162,11 +1150,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "u_val('size') - 1 <= n_val('size')" ] },
         { "or": [ { "npc_bodytype": "angel" }, { "npc_bodytype": "human" } ] },
-        { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "not": { "npc_has_effect": "downed" } }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 1.4 },
@@ -1289,11 +1276,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "attack_vectors": [ "vector_null" ]
   },
@@ -1411,11 +1397,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "mult_bonuses": [
       { "stat": "movecost", "scale": 0.5 },
@@ -1478,11 +1463,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 0.5 },
@@ -1523,11 +1507,10 @@
         { "math": [ "u_val('size') <= n_val('size')" ] },
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "npc_bodytype": "human" },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "npc_bodytype": "human" }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.25 } ],
     "attack_vectors": [ "vector_grasp" ]
@@ -1555,11 +1538,10 @@
         { "math": [ "u_val('size') <= n_val('size')" ] },
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "npc_bodytype": "human" },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "npc_bodytype": "human" }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.25 } ],
     "attack_vectors": [ "vector_grasp" ]
@@ -1579,11 +1561,10 @@
         { "math": [ "u_val('size') <= n_val('size')" ] },
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "npc_bodytype": "human" },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "npc_bodytype": "human" }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical</info> size",
     "down_dur": 1,
     "stun_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.5 } ],
@@ -1699,11 +1680,10 @@
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 1.1 },
@@ -1795,11 +1775,10 @@
             { "npc_bodytype": "bear" },
             { "npc_bodytype": "angel" }
           ]
-        },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-stunned</info> target of <info>similar</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-stunned</info> target of <info>similar</info> size",
     "stun_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.4 } ],
     "attack_vectors": [ "vector_punch", "vector_slime_punch", "vector_paw_rat_punch", "vector_little_paw_punch" ]
@@ -1923,11 +1902,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "attack_vectors": [ "vector_grasp" ]
   },
@@ -2057,11 +2035,10 @@
       "and": [
         { "math": [ "u_val('size') >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>identical or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "movecost", "scale": 0.8 }, { "stat": "damage", "type": "bash", "scale": 2.0 } ],
     "attack_vectors": [ "vector_punch", "vector_slime_punch", "vector_paw_rat_punch", "vector_little_paw_punch" ]
@@ -2084,11 +2061,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "attack_vectors": [ "vector_null" ]
   },
@@ -2338,11 +2314,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "weighting": 3,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
@@ -2362,11 +2337,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "weighting": 3,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
@@ -2382,17 +2356,16 @@
     "melee_allowed": true,
     "weapon_categories_allowed": "QUARTERSTAVES",
     "crit_ok": true,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "weighting": 2,
     "attack_vectors": [ "vector_null" ]
@@ -2472,11 +2445,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "attack_vectors": [ "vector_null" ]
   },
@@ -2569,17 +2541,16 @@
     "skill_requirements": [ { "name": "unarmed", "level": 2 } ],
     "unarmed_allowed": true,
     "crit_tec": true,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "attack_vectors": [ "vector_foot_sole" ]
   },
@@ -2635,14 +2606,13 @@
     "down_dur": 2,
     "knockback_dist": 2,
     "knockback_spread": 2,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "math": [ "n_val('size') != 1" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -2661,7 +2631,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 2.0 } ],
     "attack_vectors": [ "vector_grasp" ]
   },
@@ -2677,11 +2647,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 2,
     "attack_vectors": [ "vector_null" ]
   },
@@ -2884,11 +2853,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 0.5 },
@@ -2948,13 +2916,12 @@
     "unarmed_allowed": true,
     "crit_tec": true,
     "down_dur": 2,
-    "//condition": "Humanoids of similar size and no flying",
+    "//condition": "Humanoids of similar size",
     "condition": {
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
         { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] },
         {
           "or": [
             {
@@ -2973,7 +2940,7 @@
         }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets <info>grabbing you</info>",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets <info>grabbing you</info>",
     "knockback_dist": 2,
     "mult_bonuses": [
       { "stat": "movecost", "scale": 1.5 },
@@ -3028,11 +2995,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "attack_vectors": [ "vector_foot_toes", "vector_avian_talons", "vector_hoof_kick", "vector_digitigrade_paws", "vector_shin" ]
   },
@@ -3131,11 +3097,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "movecost", "scale": 0.75 },
@@ -3227,11 +3192,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [ { "stat": "damage", "type": "bash", "scale": 1.25 } ],
     "attack_vectors": [ "vector_grasp" ]
@@ -3379,11 +3343,10 @@
       "and": [
         { "math": [ "u_val('size') + 1 >= n_val('size')" ] },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size",
     "down_dur": 1,
     "mult_bonuses": [
       { "stat": "damage", "type": "bash", "scale": 1.2 },
@@ -3422,11 +3385,10 @@
           ]
         },
         { "not": { "npc_has_effect": "downed" } },
-        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] },
-        { "or": [ { "not": { "npc_has_flag": "FLIES" } }, { "npc_has_flag": "DISABLE_FLIGHT" } ] }
+        { "or": [ { "npc_bodytype": "human" }, { "npc_bodytype": "angel" } ] }
       ]
     },
-    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size incapable of flight, may fail on targets grabbing you",
+    "condition_desc": "* Only works on a <info>non-downed humanoid</info> target of <info>similar or smaller</info> size, may fail on targets grabbing you",
     "down_dur": 1,
     "knockback_dist": 1,
     "knockback_follow": true,
