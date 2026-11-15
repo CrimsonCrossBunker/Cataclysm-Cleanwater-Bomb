@@ -299,11 +299,9 @@ TEST_CASE( "npc_autonomy_sharing_requires_bilateral_permission_and_conserves_sup
     npc &recipient = autonomy_test_follower( point_bub_ms( 51, 50 ) );
     REQUIRE( donor.wear_item( item( itype_id( "debug_backpack" ) ), false ) );
     REQUIRE( recipient.wear_item( item( itype_id( "debug_backpack" ) ), false ) );
-    item medicine( itype_id( "bandages" ) );
-    REQUIRE_FALSE( medicine.count_by_charges() );
-    for( int count = 0; count < 12; ++count ) {
-        REQUIRE( donor.i_add( medicine ) );
-    }
+    const item medicine( itype_id( "bandages" ), calendar::turn, 12 );
+    REQUIRE( medicine.count_by_charges() );
+    REQUIRE( donor.i_add( medicine ) );
     REQUIRE( donor.rules.has_flag( ally_rule::share_supplies ) );
     REQUIRE( recipient.rules.has_flag( ally_rule::share_supplies ) );
     donor.rules.clear_flag( ally_rule::share_supplies );
@@ -317,17 +315,17 @@ TEST_CASE( "npc_autonomy_sharing_requires_bilateral_permission_and_conserves_sup
     REQUIRE( donor.sees( get_map(), recipient ) );
     donor.autonomous_supply_step();
     REQUIRE( donor.autonomy.plan.task == npc_autonomy_task::share );
-    CHECK( recipient.amount_of( medicine.typeId() ) == 0 );
+    CHECK( recipient.charges_of( medicine.typeId() ) == 0 );
     SECTION( "permission revoked during preparation" ) {
         recipient.rules.clear_flag( ally_rule::share_supplies );
         complete_autonomy_plan( donor );
-        CHECK( recipient.amount_of( medicine.typeId() ) == 0 );
-        CHECK( donor.amount_of( medicine.typeId() ) == 12 );
+        CHECK( recipient.charges_of( medicine.typeId() ) == 0 );
+        CHECK( donor.charges_of( medicine.typeId() ) == 12 );
     }
     SECTION( "authorized transfer retains the donor reserve" ) {
         complete_autonomy_plan( donor );
-        CHECK( recipient.amount_of( medicine.typeId() ) == 1 );
-        CHECK( donor.amount_of( medicine.typeId() ) == 11 );
+        CHECK( recipient.charges_of( medicine.typeId() ) == 6 );
+        CHECK( donor.charges_of( medicine.typeId() ) == 6 );
     }
 }
 
@@ -805,10 +803,10 @@ TEST_CASE( "npc_autonomy_supply_distribution_prioritizes_the_wounded_recipient",
     REQUIRE( donor.autonomy.plan.task == npc_autonomy_task::share );
     CHECK( donor.autonomy.plan.recipient == wounded.getID() );
     complete_autonomy_plan( donor );
-    CHECK( wounded.amount_of( itype_id( "bandages" ) ) > 0 );
-    CHECK( healthy.amount_of( itype_id( "bandages" ) ) == 0 );
-    CHECK( donor.amount_of( itype_id( "bandages" ) ) +
-           wounded.amount_of( itype_id( "bandages" ) ) == 12 );
+    CHECK( wounded.charges_of( itype_id( "bandages" ) ) > 0 );
+    CHECK( healthy.charges_of( itype_id( "bandages" ) ) == 0 );
+    CHECK( donor.charges_of( itype_id( "bandages" ) ) +
+           wounded.charges_of( itype_id( "bandages" ) ) == 12 );
 }
 
 
@@ -928,10 +926,8 @@ TEST_CASE( "npc_autonomy_disabling_sharing_does_not_disable_authorized_surplus_d
     clear_avatar();
     npc &guy = autonomy_test_follower( point_bub_ms( 50, 50 ) );
     REQUIRE( guy.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
-    const item medicine( itype_id( "bandages" ) );
-    for( int i = 0; i < 12; ++i ) {
-        REQUIRE( guy.i_add( medicine ) );
-    }
+    const item medicine( itype_id( "bandages" ), calendar::turn, 12 );
+    REQUIRE( guy.i_add( medicine ) );
     guy.rules.clear_flag( ally_rule::share_supplies );
     zone_manager &zones = zone_manager::get_manager();
     zones.clear();
@@ -947,10 +943,15 @@ TEST_CASE( "npc_autonomy_disabling_sharing_does_not_disable_authorized_surplus_d
     guy.set_moves( 100 );
     REQUIRE( guy.autonomous_supply_step() );
     REQUIRE( guy.autonomy.plan.task == npc_autonomy_task::deposit );
+    const int planned_quantity = guy.autonomy.plan.quantity;
+    REQUIRE( planned_quantity > 0 );
     complete_autonomy_plan( guy );
-    CHECK( guy.amount_of( medicine.typeId() ) == 11 );
     REQUIRE( get_map().i_at( destination ).size() == 1 );
     CHECK( get_map().i_at( destination ).begin()->typeId() == medicine.typeId() );
+    CHECK( get_map().i_at( destination ).begin()->charges == planned_quantity );
+    CHECK( guy.charges_of( medicine.typeId() ) + planned_quantity == 12 );
+    guy.refresh_autonomous_inventory( true );
+    CHECK( guy.autonomy.healing_units == guy.autonomy.healing_target );
 }
 
 TEST_CASE( "npc_autonomy_decision_cooldown_and_emergency_preemption",
@@ -1171,7 +1172,7 @@ TEST_CASE( "npc_retrieves_a_nearby_loaded_gun_before_a_distant_enemy_enters_mele
     REQUIRE_FALSE( here.add_item_or_charges( ground, gun ).is_null() );
     const tripoint_bub_ms clutter = guy.pos_bub() + point::north;
     for( int stack = 0; stack < 65; ++stack ) {
-        here.add_item( clutter, item( itype_id( "bandages" ) ) );
+        here.add_item( clutter, item( itype_id( "bandages_makeshift" ) ) );
     }
     REQUIRE( here.i_at( clutter ).size() >= 65 );
     monster &enemy = spawn_test_monster( "mon_zombie", guy.pos_bub() + tripoint( 20, 0, 0 ) );
