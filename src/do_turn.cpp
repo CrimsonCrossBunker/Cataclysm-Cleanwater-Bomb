@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
@@ -1019,12 +1020,22 @@ void game::simulate_turn_prefix()
 
     local_player_controller().update_body();
 
-    // Auto-save if autosave is enabled (suppressed in client mode — server owns saves)
-    if( !cata_mp::is_client_mode() &&
-        get_option<bool>( "AUTOSAVE" ) &&
-        calendar::once_every( 1_turns * get_option<int>( "AUTOSAVE_TURNS" ) ) &&
-        !u.is_dead_state() ) {
-        autosave();
+    // Use the normal character and map save cycle for eviction. Check cache
+    // pressure at most once per game minute.
+    if( !cata_mp::is_client_mode() && get_option<bool>( "AUTOSAVE" ) && !u.is_dead_state() ) {
+        if( calendar::once_every( 1_turns * get_option<int>( "AUTOSAVE_TURNS" ) ) ) {
+            autosave();
+        } else if( calendar::once_every( 1_minutes ) ) {
+            std::size_t resident_capacity = 0;
+            multiplayer_session().visit_resident_maps( m, [&]( const map & terrain ) {
+                const std::size_t width = terrain.getmapsize();
+                const std::size_t levels = terrain.supports_zlevels() ? OVERMAP_LAYERS : 1;
+                resident_capacity += width * width * levels;
+            } );
+            if( MAPBUFFER.submap_count() > 2 * resident_capacity ) {
+                autosave();
+            }
+        }
     }
 
     weather.update_weather();
