@@ -974,14 +974,28 @@ conditional_t::func f_near_om_location( const JsonObject &jo, std::string_view m
     const dbl_or_var range = get_dbl_or_var( jo, "range", false, 1 );
     return [location, range, is_npc]( const_dialogue const & d ) {
         const tripoint_abs_omt omt_pos = d.const_actor( is_npc )->pos_abs_omt();
-        // The requested location does not depend on the scanned tile, so evaluate it
-        // (and classify it) once instead of once per tile in the radius.
-        const std::string location_value = location.evaluate( d );
-        const bool camp_any = location_value == "FACTION_CAMP_ANY";
-        const bool camp_start = location_value == "FACTION_CAMP_START";
+        // A literal location is the same for every tile, so evaluate and classify it once.
+        // A variable or function location is still evaluated for each tile, after that
+        // tile's terrain is read: reading terrain can generate an overmap, and placing its
+        // specials can run EOCs or Lua that change the value.
+        const bool constant_location = location.is_constant();
+        std::string location_value;
+        bool camp_any = false;
+        bool camp_start = false;
+        const auto evaluate_location = [&]() {
+            location_value = location.evaluate( d );
+            camp_any = location_value == "FACTION_CAMP_ANY";
+            camp_start = location_value == "FACTION_CAMP_START";
+        };
+        if( constant_location ) {
+            evaluate_location();
+        }
         for( const tripoint_abs_omt &curr_pos : points_in_radius( omt_pos,
                 range.evaluate( d ) ) ) {
             const oter_id &omt_ter = overmap_buffer.ter( curr_pos );
+            if( !constant_location ) {
+                evaluate_location();
+            }
 
             if( camp_any ) {
                 std::optional<basecamp *> bcp = overmap_buffer.find_camp( curr_pos.xy() );
