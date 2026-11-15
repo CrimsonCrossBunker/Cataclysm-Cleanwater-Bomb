@@ -39,8 +39,11 @@ std::optional<vpart_reference> vehicle_cable_endpoint_at( map &here,
                     veh.has_tow_attached() || veh.is_towed() || veh.is_towing() ) ) {
         return std::nullopt;
     }
-    const int port = towing ? veh.part_at( veh.coord_translate( at->mount_pos() ) ) :
-                     veh.avail_linkable_part( at->mount_pos(), kind == link_state::vehicle_port );
+    const tripoint_rel_ms mount = at->mount_pos3();
+    const std::vector<int> tow_parts = towing ? veh.parts_at_relative( mount, true ) :
+                                       std::vector<int>();
+    const int port = towing ? ( tow_parts.empty() ? -1 : tow_parts.front() ) :
+                     veh.avail_linkable_part( mount, kind == link_state::vehicle_port );
     if( port < 0 || veh.part( port ).removed || veh.part( port ).is_fake ||
         veh.abs_part_pos( port ) != position ||
         ( towing && ( veh.part( port ).is_broken() || !veh.part( port ).carried_stack.empty() ) ) ) {

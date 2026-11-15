@@ -565,6 +565,7 @@ class vpart_info
 
 struct vehicle_item_spawn {
     point_rel_ms pos;
+    int mount_level = 0;
     int chance = 0;
     /** Chance [0-100%] for items to spawn with ammo (plus default magazine if necessary) */
     int with_ammo = 0;
@@ -586,6 +587,7 @@ struct vehicle_prototype {
     public:
         struct part_def {
             point_rel_ms pos;
+            int mount_level = 0;
             vpart_id part;
             std::string variant;
             int with_ammo = 0;
@@ -595,7 +597,8 @@ struct vehicle_prototype {
             std::vector<itype_id> tools;
 
             bool operator==( const part_def &other ) const {
-                return pos == other.pos && part == other.part && variant == other.variant &&
+                return pos == other.pos && mount_level == other.mount_level && part == other.part &&
+                       variant == other.variant &&
                        with_ammo == other.with_ammo && ammo_types == other.ammo_types && ammo_qty == other.ammo_qty &&
                        fuel == other.fuel && tools == other.tools;
             }
@@ -606,10 +609,12 @@ struct vehicle_prototype {
             std::string name;
             std::string filter;
             point_rel_ms pt;
+            int mount_level = 0;
 
             void deserialize( const JsonObject &jo );
             bool operator==( const zone_def &other ) const {
-                return zone_type == other.zone_type && name == other.name && filter == other.name && pt == other.pt;
+                return zone_type == other.zone_type && name == other.name && filter == other.name &&
+                       pt == other.pt && mount_level == other.mount_level;
             }
         };
 

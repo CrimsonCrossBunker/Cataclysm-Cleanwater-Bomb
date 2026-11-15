@@ -3940,7 +3940,7 @@ void client_start_item_move( const item_move_selection &selection )
 }
 
 void client_start_vehicle_work( map &here, vehicle_action action, vehicle &target,
-                                const point_rel_ms &mount, const vpart_info &info,
+                                const tripoint_rel_ms &mount, const vpart_info &info,
                                 const vehicle_part *part, const item_location &refill,
                                 bool allow_flight_loss, bool allow_fold_loss, const std::string &variant )
 {
@@ -4017,7 +4017,7 @@ void client_start_vehicle_work( map &here, vehicle_action action, vehicle &targe
         if( info.has_flag( VPFLAG_CONE_LIGHT ) || info.has_flag( VPFLAG_WIDE_CONE_LIGHT ) ||
             info.has_flag( VPFLAG_HALF_CIRCLE_LIGHT ) ) {
             selection.direction = units::to_degrees( query_vehicle_part_direction(
-                                      here, target, info, target.coord_translate( mount ) ) );
+                                      here, here.get_bub( selection.position ), info, target.face.dir() ) );
         }
     }
     if( !current() ) {

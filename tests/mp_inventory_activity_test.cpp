@@ -19819,7 +19819,7 @@ TEST_CASE( "owned_vehicle_refill_preserves_the_selected_tank_and_liquid_through_
     selection.action = VEHICLE_REFILL;
     selection.origin = who.pos_abs();
     selection.position = target->abs_part_pos( tank_index );
-    selection.mount = target->part( tank_index ).mount;
+    selection.mount = target->part( tank_index ).mount_pos3();
     selection.vehicle_uid = target->uid().get_value();
     selection.part_uid = target->part( tank_index ).get_base().uid().get_value();
     selection.owner = target->get_owner();
@@ -19861,6 +19861,9 @@ TEST_CASE( "owned_vehicle_refill_preserves_the_selected_tank_and_liquid_through_
 TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on_host",
            "[mp_inventory_activity][vehicle_work_owned]" )
 {
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    const int deck = GENERATE( 0, 1 );
+    CAPTURE( deck );
     vehicle_control_fixture fixture;
     map &here = get_map();
     npc &who = fixture.remote();
@@ -19872,17 +19875,26 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     target->set_owner( who );
     const vpart_id frame( "frame" );
     REQUIRE( target->install_part( here, point_rel_ms::zero, frame ) >= 0 );
+    if( deck != 0 ) {
+        REQUIRE( target->install_part( here, tripoint_rel_ms::above, frame ) >= 0 );
+        const tripoint_bub_ms upstairs = who.pos_bub() + tripoint::above;
+        here.ter_set( upstairs, ter_id( "t_floor" ) );
+        who.setpos( here, upstairs, false );
+    }
     here.add_vehicle_to_cache( target );
 
     vehicle_work_selection selection;
     selection.action = VEHICLE_INSTALL;
     selection.origin = who.pos_abs();
-    selection.mount = point_rel_ms( 1, 0 );
+    selection.mount = tripoint_rel_ms( 1, 0, deck );
     selection.position = target->mount_to_tripoint_abs( selection.mount );
+    here.ter_set( here.get_bub( selection.position ), ter_id( "t_floor" ) );
     selection.vehicle_uid = target->uid().get_value();
     selection.owner = target->get_owner();
     selection.part_type = frame;
     const int part_count = target->part_count_real();
+    set_time_to_day();
+    REQUIRE( who.fine_detail_vision_mod() <= 4 );
 
     fixture.run( who, vehicle_work_request( fixture, who, selection ) );
     CHECK_FALSE( who.activity );
@@ -19890,6 +19902,13 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     CHECK( target->part_count_real() == part_count );
 
     who.set_mutation( trait_id( "DEBUG_HS" ) );
+    auto wrong_deck = selection;
+    wrong_deck.mount.z() = 1 - deck;
+    fixture.run( who, vehicle_work_request( fixture, who, wrong_deck ) );
+    CHECK_FALSE( who.activity );
+    CHECK( target->part_count_real() == part_count );
+    REQUIRE( validate_vehicle_work( who, here, *target, selection, nullptr,
+                                    item_location() ) );
     fixture.run( who, vehicle_work_request( fixture, who, selection ) );
     REQUIRE( who.activity.id() == activity_id( "ACT_VEHICLE" ) );
     CHECK( who.activity.moves_left == to_moves<int>( 1_seconds ) );
@@ -19900,6 +19919,7 @@ TEST_CASE( "owned_vehicle_install_rechecks_native_requirements_and_times_work_on
     CHECK_FALSE( who.activity );
     CHECK( target->part_count_real() == part_count + 1 );
     CHECK_FALSE( target->parts_at_relative( selection.mount, false ).empty() );
+    CHECK( target->parts_at_relative( wrong_deck.mount, false ).empty() );
 
     const vpart_id board( "board" );
     const int index = target->install_part( here, selection.mount, board );
@@ -20098,7 +20118,7 @@ TEST_CASE( "owned_appliance_plug_checks_both_ports_and_applies_the_native_grid_o
         REQUIRE( laid_cable->has_link_data() );
         CHECK( laid_cable->link().t_veh.get() == source );
         CHECK( laid_cable->link().t_abs_pos == source->pos_abs() );
-        CHECK( laid_cable->link().t_mount == source->part( 1 ).mount );
+        CHECK( laid_cable->link().t_mount == source->part( 1 ).mount_pos3() );
         CHECK( laid_cable->link().t_part_uid == selection.destination.part_id );
     } else {
         REQUIRE( destination->part_count_real() == 2 );

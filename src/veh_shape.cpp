@@ -195,7 +195,7 @@ void veh_shape::change_part_shape( vpart_reference vpr ) const
             const vehicle_part &selected = veh.part( index );
             if( !selected.removed && selected.get_base().uid().get_value() == uid &&
                 chosen_variant != selected.variant ) {
-                cata_mp::client_start_vehicle_work( here, VEHICLE_SHAPE, veh, selected.mount,
+                cata_mp::client_start_vehicle_work( here, VEHICLE_SHAPE, veh, selected.mount_pos3(),
                                                     selected.info(), &selected, item_location(),
                                                     false, false, chosen_variant );
             }

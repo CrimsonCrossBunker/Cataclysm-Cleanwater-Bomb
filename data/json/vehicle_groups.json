@@ -107,6 +107,7 @@
       [ "bus_rack", 200 ],
       [ "bus_tour", 50 ],
       [ "rv", 500 ],
+      [ "rv_double_decker", 100 ],
       [ "limousine", 200 ],
       [ "lux_rv", 100 ],
       [ "meth_lab", 200 ],
@@ -321,6 +322,7 @@
       [ "bus_rack", 125 ],
       [ "bus_tour", 25 ],
       [ "rv", 800 ],
+      [ "rv_double_decker", 160 ],
       [ "limousine", 200 ],
       [ "lux_rv", 100 ],
       [ "surv_rv", 1 ],
@@ -495,6 +497,7 @@
       [ "humvee", 100 ],
       [ "humvee_gl", 50 ],
       [ "rv", 200 ],
+      [ "rv_double_decker", 40 ],
       [ "limousine", 100 ],
       [ "schoolbus", 200 ],
       [ "bus_tour", 50 ],
@@ -870,6 +873,7 @@
       [ "car_mini", 250 ],
       [ "car_hybrid", 200 ],
       [ "rv", 250 ],
+      [ "rv_double_decker", 50 ],
       [ "meth_lab", 50 ],
       [ "beetle", 400 ],
       [ "schoolbus", 100 ],
@@ -986,6 +990,7 @@
       [ "car_anmlcmpt", 100 ],
       [ "suv", 400 ],
       [ "rv", 200 ],
+      [ "rv_double_decker", 40 ],
       [ "van_motorhome", 50 ],
       [ "car_hybrid", 200 ],
       [ "cube_van_cheap", 200 ],
@@ -1807,7 +1812,8 @@
       [ "van_full-size_hybrid", 50 ],
       [ "van_mini", 200 ],
       [ "van_mini_hybrid", 50 ],
-      [ "rv", 50 ]
+      [ "rv", 50 ],
+      [ "rv_double_decker", 10 ]
     ]
   },
   {

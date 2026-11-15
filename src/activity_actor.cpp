@@ -14670,9 +14670,8 @@ bool vehicle_activity_actor::start_owned_work( Character &who, map &here,
         return false;
     }
     // Validate the wire mount before negating it for the legacy activity fields.
-    const point_rel_ms mount = actor.sub_activity == VEHICLE_INSTALL ?
-                               actor.owned_work->mount : target->part( actor.vp_index ).mount;
-    actor.vp_mount_location_opp = tripoint_rel_ms( mount, 0 );
+    actor.vp_mount_location_opp = actor.sub_activity == VEHICLE_INSTALL ?
+                                  actor.owned_work->mount : target->part( actor.vp_index ).mount_pos3();
     actor.vp_mount_location = -actor.vp_mount_location_opp;
     actor.vehicle_act_duration = *duration;
     const character_action_guard lifetime( who );
@@ -14735,6 +14734,7 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
     const safe_reference<vehicle> target_ref = target ? target->get_safe_reference() :
             safe_reference<vehicle>();
     const point_rel_ms mount_loc = vp_mount_location.xy();
+    const int deck = vp_mount_location_opp.z();
     complete_vehicle( act, you );
     if( !lifetime || ( act && act.identity_generation() != identity ) ) {
         return;
@@ -14754,13 +14754,11 @@ void vehicle_activity_actor::finish( player_activity &act, Character &you )
     if( !you.is_npc() ) {
         if( target_ref ) {
             here.invalidate_map_cache( here.get_abs_sub().z() );
-            // TODO: Z (and also where the activity is queued)
-            // Or not, because the vehicle coordinates are dropped anyway
             if( you.backlog.empty() || !you.backlog.front().is_multi_type() ) {
                 if( target_ref->is_appliance() ) {
                     g->exam_appliance( *target_ref, mount_loc );
                 } else {
-                    g->exam_vehicle( *target_ref, mount_loc );
+                    g->exam_vehicle( *target_ref, mount_loc, deck );
                 }
             }
             return;
@@ -14791,12 +14789,21 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
     const tripoint_abs_ms act_pos = vp_location;
     vehicle &veh = *target;
     const point_rel_ms d = vp_mount_location_opp.xy();
+    const tripoint_rel_ms deck_mount = vp_mount_location_opp;
     const vpart_id part_id = vp_id;
     const vpart_info &vpinfo = part_id.obj();
     const int vp_ind = vp_index;
 
     switch( sub_activity ) {
         case VEHICLE_INSTALL: {
+            const ret_val<void> valid_mount = veh.can_mount( deck_mount, vpinfo );
+            if( !valid_mount.success() ) {
+                you.add_msg_player_or_npc( m_info,
+                                           _( "You cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                           _( "<npcname> cannot install %2$s on vehicle deck %1$d: %3$s" ),
+                                           deck_mount.z() + 1, vpinfo.name(), valid_mount.str() );
+                break;
+            }
             const temp_crafting_inventory &inv = you.crafting_inventory();
             const requirement_data reqs = vpinfo.install_requirements();
             if( !reqs.can_make_with_inventory( &you, inv, is_crafting_component, 1, craft_flags::none,
@@ -14808,38 +14815,38 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 break;
             }
 
-            // consume items extracting a match for the parts base item
             item base;
             std::vector<item> installed_with;
-            for( const std::vector<item_comp> &e : reqs.get_components() ) {
-                for( item &obj : you.consume_items( e, 1, is_crafting_component, [&vpinfo]( const itype_id & itm ) {
-                return itm == vpinfo.base_item;
-            }, false, true ) ) {
-                    if( obj.typeId() == vpinfo.base_item ) {
-                        base = obj;
-                    } else {
-                        installed_with.push_back( obj );
+            if( you.has_trait( trait_DEBUG_HS ) ) {
+                base = item( vpinfo.base_item );
+            } else {
+                for( const std::vector<item_comp> &e : reqs.get_components() ) {
+                    for( item &obj : you.consume_items( e, 1, is_crafting_component,
+                    [&vpinfo]( const itype_id & itm ) {
+                    return itm == vpinfo.base_item;
+                }, false, true ) ) {
+                        if( obj.typeId() == vpinfo.base_item ) {
+                            base = obj;
+                        } else {
+                            installed_with.push_back( obj );
+                        }
                     }
                 }
-            }
-            if( base.is_null() ) {
-                if( !you.has_trait( trait_DEBUG_HS ) ) {
+                if( base.is_null() ) {
                     add_msg( m_info, _( "Could not find base part in requirements for %s." ), vpinfo.name() );
                     break;
-                } else {
-                    base = item( vpinfo.base_item );
                 }
-            }
-
-            for( const auto &e : reqs.get_tools() ) {
-                you.consume_tools( e );
+                for( const auto &e : reqs.get_tools() ) {
+                    you.consume_tools( e );
+                }
             }
 
             you.invalidate_crafting_inventory();
-            const int partnum = veh.install_part( here, d, part_id, std::move( base ), installed_with );
+            const int partnum = veh.install_part( here, deck_mount, part_id, std::move( base ),
+                                                  installed_with );
             if( partnum < 0 ) {
-                debugmsg( "complete_vehicle install part fails dx=%d dy=%d id=%s",
-                          d.x(), d.y(), part_id.c_str() );
+                debugmsg( "complete_vehicle install part fails dx=%d dy=%d dz=%d id=%s",
+                          d.x(), d.y(), deck_mount.z(), part_id.c_str() );
                 break;
             }
             ::vehicle_part &vp_new = veh.part( partnum );
@@ -14862,7 +14869,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
                 }
             }
 
-            const tripoint_bub_ms vehp = veh.pos_bub( here ) + tripoint_rel_ms( q, 0 );
+            const tripoint_bub_ms vehp = veh.bub_part_pos( here, partnum );
             // TODO: allow boarding for non-players as well.
             Character *const pl = get_creature_tracker().creature_at<Character>( vehp );
             if( vpinfo.has_flag( VPFLAG_BOARDABLE ) && pl ) {
@@ -15068,7 +15075,7 @@ void vehicle_activity_actor::complete_vehicle( player_activity &act, Character &
 
             if( vp ) {
                 // Splitting a grid can move the selected part to another vehicle.
-                const point_rel_ms part_mount = vp->mount;
+                const tripoint_rel_ms part_mount = vp->mount_pos3();
                 const tripoint_bub_ms part_pos = removal_target->bub_part_pos( here, *vp );
                 removal_target->unlink_cables( here, part_mount, you, false,
                                                appliance_removal || vpi.location == vpart_location_structure,
@@ -17833,8 +17840,9 @@ bool vehicle_part_install_service_activity_actor::can_install_order( map &here,
         return !entry.reserved_part.is_null() &&
                entry.reserved_part.typeId() == part_id->base_item &&
                !veh_interact::service_installation_position_denial( here, target, entry.mount,
-                       part_id.obj() ) &&
-               !veh_interact::service_installation_denial( target, entry.mount, part_id.obj() );
+                       part_id.obj(), entry.mount_level ) &&
+               !veh_interact::service_installation_denial( target, entry.mount, part_id.obj(),
+                       entry.mount_level );
     }
 
     std::vector<vehicle_part> preview_parts;
@@ -17859,13 +17867,15 @@ bool vehicle_part_install_service_activity_actor::can_install_order( map &here,
             return false;
         }
         if( veh_interact::service_installation_position_denial( here, target, entry.mount,
-                part_id.obj() ) ) {
+                part_id.obj(), entry.mount_level ) ) {
             return false;
         }
-        if( veh_interact::service_installation_denial( preview, entry.mount, part_id.obj() ) ) {
+        if( veh_interact::service_installation_denial( preview, entry.mount, part_id.obj(),
+                entry.mount_level ) ) {
             return false;
         }
-        if( preview.install_part( *preview_map.cast_to_map(), entry.mount, part_id,
+        if( preview.install_part( *preview_map.cast_to_map(),
+                                  tripoint_rel_ms( entry.mount, entry.mount_level ), part_id,
                                   item( entry.reserved_part ) ) < 0 ) {
             return false;
         }
@@ -17953,7 +17963,8 @@ void vehicle_part_install_service_activity_actor::finish( player_activity &act, 
             installed.variant = variant;
         }
         installed.direction = units::from_degrees( direction_degrees );
-        const int index = target->install_part( here, entry.mount, std::move( installed ) );
+        const tripoint_rel_ms mount( entry.mount, entry.mount_level );
+        const int index = target->install_part( here, mount, std::move( installed ) );
         if( index < 0 ) {
             for( const int installed_index : installed_indices ) {
                 target->part( installed_index ).removed = true;
@@ -18013,6 +18024,7 @@ void vehicle_part_install_service_activity_actor::serialize( JsonOut &jsout ) co
     for( const vehicle_part_install_service_entry &entry : entries ) {
         jsout.start_object();
         jsout.member( "mount", entry.mount );
+        jsout.member( "mount_level", entry.mount_level );
         jsout.member( "reserved_part", entry.reserved_part );
         jsout.member( "supplied_by_mechanic", entry.supplied_by_mechanic );
         jsout.member( "paid_cost", entry.paid_cost );
@@ -18039,6 +18051,7 @@ std::unique_ptr<activity_actor> vehicle_part_install_service_activity_actor::des
     const auto read_entry = [&actor]( const JsonObject & entry_data ) {
         vehicle_part_install_service_entry entry;
         entry_data.read( "mount", entry.mount );
+        entry_data.read( "mount_level", entry.mount_level );
         entry_data.read( "reserved_part", entry.reserved_part );
         entry_data.read( "supplied_by_mechanic", entry.supplied_by_mechanic );
         entry_data.read( "paid_cost", entry.paid_cost );
@@ -18208,7 +18221,7 @@ void vehicle_part_remove_service_activity_actor::finish( player_activity &act, C
 
     const std::string part_name = part.name();
     const std::string vehicle_name = target->name;
-    const point_rel_ms part_mount = part.mount;
+    const tripoint_rel_ms part_mount = part.mount_pos3();
     bool removes_entire_vehicle = true;
     for( int index = 0; index < target->part_count(); ++index ) {
         const vehicle_part &candidate = target->part( index );

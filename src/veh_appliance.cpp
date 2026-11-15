@@ -481,7 +481,8 @@ void veh_app_interact::refill( )
                            1 );
     if( target ) {
         if( cata_mp::is_client_mode() ) {
-            cata_mp::client_start_vehicle_work( get_map(), VEHICLE_REFILL, *veh, pt->mount, pt->info(), pt,
+            cata_mp::client_start_vehicle_work( get_map(), VEHICLE_REFILL, *veh, pt->mount_pos3(), pt->info(),
+                                                pt,
                                                 target );
             return;
         }
@@ -575,7 +576,7 @@ void veh_app_interact::remove( map &here )
         //~ Prompt the player if they want to remove the appliance. %s = appliance name.
     } else if( query_yn( _( "Are you sure you want to take down the %s?" ), veh->name ) ) {
         if( cata_mp::is_client_mode() ) {
-            cata_mp::client_start_vehicle_work( here, VEHICLE_REMOVE_APPLIANCE, *veh, vp->mount, vpinfo,
+            cata_mp::client_start_vehicle_work( here, VEHICLE_REMOVE_APPLIANCE, *veh, vp->mount_pos3(), vpinfo,
                                                 vp, item_location() );
             return;
         }

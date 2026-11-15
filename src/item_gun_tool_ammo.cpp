@@ -4044,7 +4044,7 @@ std::string item::link_name() const
 
 ret_val<void> item::link_to( const optional_vpart_position &linked_vp, link_state link_type )
 {
-    return linked_vp ? link_to( linked_vp->vehicle(), linked_vp->mount_pos(), link_type ) :
+    return linked_vp ? link_to( linked_vp->vehicle(), linked_vp->mount_pos3(), link_type ) :
            ret_val<void>::make_failure();
 }
 
@@ -4055,15 +4055,20 @@ ret_val<void> item::link_to( const optional_vpart_position &first_linked_vp,
         return ret_val<void>::make_failure();
     }
     // Link up the second vehicle first so, if it's a tow cable, the first vehicle will tow the second.
-    ret_val<void> result = link_to( second_linked_vp->vehicle(), second_linked_vp->mount_pos(),
+    ret_val<void> result = link_to( second_linked_vp->vehicle(), second_linked_vp->mount_pos3(),
                                     link_type );
     if( !result.success() ) {
         return result;
     }
-    return link_to( first_linked_vp->vehicle(), first_linked_vp->mount_pos(), link_type );
+    return link_to( first_linked_vp->vehicle(), first_linked_vp->mount_pos3(), link_type );
 }
 
 ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state link_type )
+{
+    return link_to( veh, tripoint_rel_ms( mount, 0 ), link_type );
+}
+
+ret_val<void> item::link_to( vehicle &veh, const tripoint_rel_ms &mount, link_state link_type )
 {
     map &here = get_map();
 
@@ -4073,14 +4078,19 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
 
     // First, check if the desired link is actually possible.
 
+    int tow_port = -1;
     if( link_type == link_state::vehicle_tow ) {
         if( veh.has_tow_attached() || veh.is_towed() || veh.is_towing() ) {
             return ret_val<void>::make_failure( _( "That vehicle already has a tow-line attached." ) );
-        } else if( !veh.is_external_part( mount ) ) {
+        } else if( !veh.is_external_part( &here, veh.mount_to_tripoint( &here, mount ) ) ) {
             return ret_val<void>::make_failure( _( "You can't attach a tow-line to an internal part." ) );
         } else {
-            const int part_at = veh.part_at( veh.coord_translate( mount ) );
-            if( part_at != -1 && !veh.part( part_at ).carried_stack.empty() ) {
+            const auto mounted_parts = veh.parts_at_relative( mount, true );
+            tow_port = mounted_parts.empty() ? -1 : mounted_parts.front();
+            if( tow_port < 0 || veh.part( tow_port ).is_broken() ) {
+                return ret_val<void>::make_failure( _( "You can't attach the tow-line there." ) );
+            }
+            if( !veh.part( tow_port ).carried_stack.empty() ) {
                 return ret_val<void>::make_failure( _( "You can't attach a tow-line to a racked part." ) );
             }
         }
@@ -4115,7 +4125,7 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
         link().t_abs_pos = link().t_veh->pos_abs();
         link().t_mount = mount;
         const int port = link_type == link_state::vehicle_tow ?
-                         veh.part_at( veh.coord_translate( mount ) ) :
+                         tow_port :
                          veh.avail_linkable_part( mount, link_type == link_state::vehicle_port );
         link().t_part_uid = port >= 0 ? veh.part( port ).get_base().uid().get_value() : 0;
         link().s_bub_pos = tripoint_bub_ms::min; // Forces the item to check the length during process_link.
@@ -4146,11 +4156,11 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
 
     // Prepare target tripoints for the cable parts that'll be added to the selected/previous vehicles
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> prev_part_target = std::make_pair(
-                veh.pos_abs() + veh.coord_translate( mount ),
+                veh.mount_to_tripoint_abs( mount ),
                 veh.pos_abs() );
     const std::pair<tripoint_abs_ms, tripoint_abs_ms> sel_part_target = std::make_pair(
-                link().t_abs_pos + prev_veh->coord_translate( link().t_mount ),
-                link().t_abs_pos );
+                prev_veh->mount_to_tripoint_abs( link().t_mount ),
+                prev_veh->pos_abs() );
 
     for( const vpart_reference &vpr : prev_veh->get_any_parts( VPFLAG_POWER_TRANSFER ) ) {
         if( vpr.part().target.first == prev_part_target.first &&
@@ -4178,7 +4188,7 @@ ret_val<void> item::link_to( vehicle &veh, const point_rel_ms &mount, link_state
         return ret_val<void>::make_failure();
     }
 
-    const point_rel_ms prev_mount = link().t_mount;
+    const tripoint_rel_ms prev_mount = link().t_mount;
 
     const ret_val<void> can_mount1 = prev_veh->can_mount( prev_mount, *vpid );
     if( !can_mount1.success() ) {
@@ -4414,7 +4424,7 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
             return false;
         }
         link().length = rl_dist( here.get_abs( pos ), link().t_abs_pos ) +
-                        link().t_mount.abs().x() + link().t_mount.abs().y();
+                        link().t_mount.abs().x() + link().t_mount.abs().y() + link().t_mount.abs().z();
         if( check_length() ) {
             return reset_link( true, carrier );
         }
@@ -4424,7 +4434,7 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
     // Find the vp_part index the cable is linked to.
     const auto matches_port = [&]( int index ) {
         const vehicle_part &part = t_veh->part( index );
-        return !part.removed && !part.is_fake && !part.is_broken() && part.mount == link().t_mount &&
+        return !part.removed && !part.is_fake && !part.is_broken() && part.mount_pos3() == link().t_mount &&
                ( link().t_part_uid <= 0 || is_eoc_relocation ||
                  part.get_base().uid().get_value() == link().t_part_uid );
     };
@@ -4453,9 +4463,11 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
             }
         }
     } else if( link_has_state( link_state::vehicle_tow ) ) {
-        const int port = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
-        if( port >= 0 && matches_port( port ) ) {
-            link_vp_index = port;
+        for( const int port : t_veh->parts_at_relative( link().t_mount, true ) ) {
+            if( matches_port( port ) ) {
+                link_vp_index = port;
+                break;
+            }
         }
     }
     if( link_vp_index == -1 ) {
@@ -4478,8 +4490,8 @@ bool item::process_link( map &here, Character *carrier, const tripoint_bub_ms &p
     link().last_processed = calendar::turn;
 
     // Set the new absolute position to the vehicle's origin.
-    tripoint_abs_ms new_t_abs_pos = t_veh->pos_abs();;
-    tripoint_bub_ms t_veh_bub_pos = here.get_bub( new_t_abs_pos );;
+    tripoint_abs_ms new_t_abs_pos = t_veh->pos_abs();
+    tripoint_bub_ms t_veh_bub_pos = here.get_bub( new_t_abs_pos );
     if( link().t_abs_pos != new_t_abs_pos ) {
         link().t_abs_pos = new_t_abs_pos;
         length_check_needed = true;
@@ -4663,7 +4675,7 @@ bool item::reset_link( bool unspool_if_too_long, Character *p, int vpart_index,
             vehicle *t_veh = link().t_veh.get();
             const auto matches_port = [&]( int index ) {
                 const vehicle_part &part = t_veh->part( index );
-                return part.mount == link().t_mount &&
+                return part.mount_pos3() == link().t_mount &&
                        ( link().t_part_uid <= 0 || part.get_base().uid().get_value() == link().t_part_uid );
             };
             if( link().target == link_state::vehicle_port ) {
@@ -4689,9 +4701,11 @@ bool item::reset_link( bool unspool_if_too_long, Character *p, int vpart_index,
                     }
                 }
             } else if( link_has_state( link_state::vehicle_tow ) ) {
-                const int port = t_veh->part_at( t_veh->coord_translate( link().t_mount ) );
-                if( port >= 0 && matches_port( port ) ) {
-                    vpart_index = port;
+                for( const int port : t_veh->parts_at_relative( link().t_mount, true ) ) {
+                    if( matches_port( port ) ) {
+                        vpart_index = port;
+                        break;
+                    }
                 }
             }
         }

@@ -5878,7 +5878,7 @@ std::optional<int> link_up_actor::link_to_veh_app( Character *p, item &it,
 
     const auto can_link = [&here, &to_ports]( const tripoint_bub_ms & point ) {
         const optional_vpart_position ovp = here.veh_at( point );
-        return ovp && ovp->vehicle().avail_linkable_part( ovp->mount_pos(), to_ports ) != -1;
+        return ovp && ovp->vehicle().avail_linkable_part( ovp->mount_pos3(), to_ports ) != -1;
     };
     const std::optional<tripoint_bub_ms> pnt_ = choose_adjacent_highlight(
                 here, _( "Attach the cable where?" ),
@@ -5938,7 +5938,7 @@ std::optional<int> link_up_actor::attach_to_vehicle( Character &who, item &it, m
         }
         if( power_cord && previous->is_powergrid() && destination.is_powergrid() ) {
             const tripoint_abs_ms from = previous->mount_to_tripoint_abs( it.link().t_mount );
-            const tripoint_abs_ms to = destination.mount_to_tripoint_abs( endpoint.mount_pos() );
+            const tripoint_abs_ms to = destination.mount_to_tripoint_abs( endpoint.mount_pos3() );
             if( from.z() == to.z() && from.xy().raw().distance( to.xy().raw() ) <= 1.5f &&
                 previous->merge_appliance_into_grid( &here, destination ) ) {
                 previous->part_removal_cleanup( here );
@@ -5950,7 +5950,7 @@ std::optional<int> link_up_actor::attach_to_vehicle( Character &who, item &it, m
     }
 
     const bool had_bio_link = it.link_has_state( link_state::bio_cable );
-    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos(),
+    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos3(),
                                  to_ports ? link_state::vehicle_port : link_state::vehicle_battery );
     if( !result.success() ) {
         who.add_msg_if_player( m_bad, result.str() );
@@ -5966,7 +5966,7 @@ std::optional<int> link_up_actor::attach_to_vehicle( Character &who, item &it, m
             it.reset_link( true, &who );
         }
     } else {
-        const int part_index = destination.avail_linkable_part( endpoint.mount_pos(), to_ports );
+        const int part_index = destination.avail_linkable_part( endpoint.mount_pos3(), to_ports );
         const std::string name = part_index == -1 ? destination.name :
                                  destination.part( part_index ).name( false );
         if( had_bio_link ) {
@@ -6017,7 +6017,7 @@ std::optional<int> link_up_actor::attach_tow_cable( Character &who, item &it, ma
         return std::nullopt;
     }
     vehicle &destination = endpoint.vehicle();
-    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos(),
+    const ret_val<void> result = it.link_to( destination, endpoint.mount_pos3(),
                                  link_state::vehicle_tow );
     if( !result.success() ) {
         who.add_msg_if_player( m_bad, result.str() );
