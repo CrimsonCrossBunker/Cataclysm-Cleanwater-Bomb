@@ -32,6 +32,7 @@
 #include "memory_fast.h"
 #include "mission_companion.h"
 #include "npc_attack.h"
+#include "npc_autonomy.h"
 #include "npc_opinion.h"
 #include "pimpl.h"
 #include "point.h"
@@ -300,6 +301,7 @@ const std::unordered_map<std::string, aim_rule> aim_rule_strs = { {
 
 // How much CBM power should remain before attempting to recharge, values are percents of power
 enum class cbm_recharge_rule : int {
+    CBM_RECHARGE_AUTO = -1,
     CBM_RECHARGE_ALL = 90,
     CBM_RECHARGE_MOST = 75,
     CBM_RECHARGE_SOME = 50,
@@ -307,6 +309,7 @@ enum class cbm_recharge_rule : int {
     CBM_RECHARGE_NONE = 10
 };
 const std::unordered_map<std::string, cbm_recharge_rule> cbm_recharge_strs = { {
+        { "CBM_RECHARGE_AUTO", cbm_recharge_rule::CBM_RECHARGE_AUTO },
         { "CBM_RECHARGE_ALL", cbm_recharge_rule::CBM_RECHARGE_ALL },
         { "CBM_RECHARGE_MOST", cbm_recharge_rule::CBM_RECHARGE_MOST },
         { "CBM_RECHARGE_SOME", cbm_recharge_rule::CBM_RECHARGE_SOME },
@@ -317,6 +320,7 @@ const std::unordered_map<std::string, cbm_recharge_rule> cbm_recharge_strs = { {
 
 // How much CBM power to reserve for defense, values are percents of total power
 enum class cbm_reserve_rule : int {
+    CBM_RESERVE_AUTO = -1,
     CBM_RESERVE_ALL = 100,
     CBM_RESERVE_MOST = 75,
     CBM_RESERVE_SOME = 50,
@@ -324,6 +328,7 @@ enum class cbm_reserve_rule : int {
     CBM_RESERVE_NONE = 0
 };
 const std::unordered_map<std::string, cbm_reserve_rule> cbm_reserve_strs = { {
+        { "CBM_RESERVE_AUTO", cbm_reserve_rule::CBM_RESERVE_AUTO },
         { "CBM_RESERVE_ALL", cbm_reserve_rule::CBM_RESERVE_ALL },
         { "CBM_RESERVE_MOST", cbm_reserve_rule::CBM_RESERVE_MOST },
         { "CBM_RESERVE_SOME", cbm_reserve_rule::CBM_RESERVE_SOME },
@@ -352,7 +357,8 @@ enum class ally_rule : int {
     forbid_engage = 16384,
     follow_distance_2 = 32768,
     lock_doors = 65536,
-    avoid_locks = 131072
+    avoid_locks = 131072,
+    share_supplies = 262144
 };
 // NOLINTEND(optin.core.EnumCastOutOfRange)
 
@@ -455,6 +461,13 @@ const std::unordered_map<std::string, ally_rule_data> ally_rule_strs = { {
             }
         },
         {
+            "share_supplies", {
+                ally_rule::share_supplies,
+                "<ally_rule_share_supplies_true_text>",
+                "<ally_rule_share_supplies_false_text>"
+            }
+        },
+        {
             "avoid_locks", {
                 ally_rule::avoid_locks,
                 "<ally_rule_avoid_locks_true_text>",
@@ -497,8 +510,8 @@ struct npc_follower_rules {
     aim_rule aim = aim_rule::WHEN_CONVENIENT;
     burst_rule burst = burst_rule::ADAPTIVE;
     bool allow_sweep = false;
-    cbm_recharge_rule cbm_recharge = cbm_recharge_rule::CBM_RECHARGE_SOME;
-    cbm_reserve_rule cbm_reserve = cbm_reserve_rule::CBM_RESERVE_SOME;
+    cbm_recharge_rule cbm_recharge = cbm_recharge_rule::CBM_RECHARGE_AUTO;
+    cbm_reserve_rule cbm_reserve = cbm_reserve_rule::CBM_RESERVE_AUTO;
     ally_rule flags = ally_rule::DEFAULT; // NOLINT(cata-serialize)
     ally_rule override_enable = ally_rule::DEFAULT; // NOLINT(cata-serialize)
     ally_rule overrides = ally_rule::DEFAULT; // NOLINT(cata-serialize)
@@ -1066,6 +1079,46 @@ class npc : public Character
         int minimum_item_value() const;
         // Find the worst value in our inventory
         void update_worst_item_value();
+        void refresh_autonomous_inventory( bool force = false );
+        int autonomous_pickup_quantity( const item &it );
+        double autonomous_item_score( const item &it );
+        double autonomous_armor_score( const item &it ) const;
+        bool autonomous_equipment_step();
+        bool autonomous_weapon_step();
+        bool autonomous_reload_step();
+        bool autonomous_carried_weapon_step();
+        item::reload_option autonomous_reload_option( const item_location &base, bool combat );
+        bool autonomous_gun_readiness( const item_location &gun, item &prepared, int &move_cost,
+                                       bool combat );
+        bool autonomous_continue_plan();
+        bool autonomous_supply_step();
+        bool autonomous_organize_step();
+        bool autonomous_tactical_step();
+        double autonomous_decision_score( const std::string &action, double urgency,
+                                          int move_cost = 100, double risk = 0.0 ) const;
+        void autonomous_decision_result( const std::string &action, bool succeeded );
+        int autonomous_reserved_damage( const Creature &target ) const;
+        void autonomous_reserve_attack( const Creature &target, int damage );
+        bool autonomous_position_reserved( const tripoint_abs_ms &position, bool seat ) const;
+        bool autonomous_plan_equipment( item_location candidate, item_location previous );
+        double autonomous_outfit_penalty( const item &candidate, const item *previous );
+        bool autonomous_follow_maintenance();
+        bool autonomous_maintenance_allowed() const;
+        bool autonomous_announce( const std::string &action, const std::string &line,
+                                  bool urgent = false );
+        bool autonomous_target_reserved( const item &it ) const;
+        bool autonomous_patient_reserved( const Character &patient ) const;
+        bool autonomous_patient_route( const Character &patient );
+        tripoint_bub_ms autonomous_follow_position();
+        npc_action autonomous_combat_action();
+        npc_action autonomous_needs_action();
+        Character *autonomous_triage_patient();
+        int autonomous_care_priority( const Character &patient );
+        bool autonomous_action_window( int move_cost, int approach_tiles = 0 ) const;
+        const std::string &autonomous_reason() const {
+            return autonomy.reason;
+        }
+        npc_autonomy_state autonomy; // NOLINT(cata-serialize)
         double value( const item &it ) const;
         double value( const item &it, double market_price ) const;
         faction_price_rule const *get_price_rules( item const &it,
@@ -1162,6 +1215,7 @@ class npc : public Character
         bool wants_to_recharge_cbm();
         // has power available to use offensive CBMs
         bool can_use_offensive_cbm() const;
+        units::energy available_offensive_cbm_power() const;
         // return false if not present or can't be activated; true if present and already active
         // or if the call activates it
         bool use_bionic_by_id( const bionic_id &cbm_id, bool eff_only = false );
@@ -1461,6 +1515,10 @@ class npc : public Character
          * Do not use when placing an NPC in mapgen.
          */
         void travel_overmap( const tripoint_abs_omt &pos );
+        character_id follower_leader_id() const;
+        Character *follower_leader() const;
+        void set_follower_leader( character_id leader );
+        bool is_autonomy_teammate( const Character &other ) const;
         npc_attitude get_attitude() const override;
         void set_attitude( npc_attitude new_attitude );
         void set_mission( npc_mission new_mission );
@@ -1499,6 +1557,7 @@ class npc : public Character
         // Type of complaint->last time we complained about this type
         std::map < std::string, time_point > complaints;
 
+        friend struct npc_autonomy_test_access;
         npc_short_term_cache ai_cache;
 
         std::map < npc_need, npc_need_goal_cache > goal_cache;
@@ -1736,6 +1795,7 @@ class npc : public Character
         // the weapon we're actually holding when using bionic fake guns
         item real_weapon;
         character_id legacy_opinion_owner;
+        character_id follower_leader_;
         std::map < character_id, npc_opinion > opinions;
         character_id opinion_owner() const;
         // the index of the bionics for the fake gun;

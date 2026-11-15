@@ -2564,35 +2564,33 @@ void npc_follower_rules::deserialize( const JsonObject &data )
     burst = saved_burst >= static_cast<int>( burst_rule::ADAPTIVE ) &&
             saved_burst <= static_cast<int>( burst_rule::FULL_AUTO )
             ? static_cast<burst_rule>( saved_burst ) : burst_rule::ADAPTIVE;
-    int tmpreserve = 50;
+    int tmpreserve = static_cast<int>( cbm_reserve_rule::CBM_RESERVE_AUTO );
     data.read( "cbm_reserve", tmpreserve );
     cbm_reserve = static_cast<cbm_reserve_rule>( tmpreserve );
-    int tmprecharge = 50;
+    int tmprecharge = static_cast<int>( cbm_recharge_rule::CBM_RECHARGE_AUTO );
     data.read( "cbm_recharge", tmprecharge );
     cbm_recharge = static_cast<cbm_recharge_rule>( tmprecharge );
 
-    // deserialize the flags so they can be changed between save games
+    // Missing rules inherit current defaults; saved commands take precedence.
+    const npc_follower_rules defaults;
     for( const auto &rule : ally_rule_strs ) {
-        bool tmpflag = false;
-        // legacy to handle rules that were saved before overrides
+        bool tmpflag = defaults.has_flag( rule.second.rule, false );
+        // Legacy unprefixed values are superseded by explicitly saved rules.
         data.read( rule.first, tmpflag );
-        if( tmpflag ) {
-            set_flag( rule.second.rule );
-        } else {
-            clear_flag( rule.second.rule );
-        }
         data.read( "rule_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_flag( rule.second.rule );
         } else {
             clear_flag( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_enable_" + rule.first, tmpflag );
         if( tmpflag ) {
             enable_override( rule.second.rule );
         } else {
             disable_override( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_override( rule.second.rule );
@@ -2917,6 +2915,8 @@ void npc::load( const JsonObject &data )
         faction_api_version = 0;
     }
 
+    follower_leader_ = character_id();
+    data.read( "follower_leader", follower_leader_ );
     if( data.read( "attitude", atttmp ) ) {
         attitude = static_cast<npc_attitude>( atttmp );
         static const std::set<npc_attitude> legacy_attitudes = {{
@@ -3077,6 +3077,9 @@ void npc::store( JsonOut &json ) const
         json.member( "my_fac", fac_id.c_str() );
     }
     json.member( "attitude", static_cast<int>( attitude ) );
+    if( follower_leader_.is_valid() ) {
+        json.member( "follower_leader", follower_leader_ );
+    }
     json.member( "previous_attitude", static_cast<int>( previous_attitude ) );
     json.member( "op_of_u", op_of_u );
     json.member( "op_of_u_owner", opinion_owner() );
