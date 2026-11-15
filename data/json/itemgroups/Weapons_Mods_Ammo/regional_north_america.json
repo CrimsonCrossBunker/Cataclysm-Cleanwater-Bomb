@@ -2215,16 +2215,36 @@
       { "group": "guns_shotgun_common_display-canada", "prob": 8 }
     ]
   },
-  { "type": "item_group", "id": "guns_pistol_common-canada", "subtype": "distribution", "entries": [  ] },
-  { "type": "item_group", "id": "guns_pistol_common_display-canada", "subtype": "distribution", "entries": [  ] },
-  { "type": "item_group", "id": "guns_pistol_common_boxed-canada", "subtype": "distribution", "entries": [  ] },
+  {
+    "type": "item_group",
+    "id": "guns_pistol_common-canada",
+    "subtype": "distribution",
+    "entries": [  ]
+  },
+  {
+    "type": "item_group",
+    "id": "guns_pistol_common_display-canada",
+    "subtype": "distribution",
+    "entries": [  ]
+  },
+  {
+    "type": "item_group",
+    "id": "guns_pistol_common_boxed-canada",
+    "subtype": "distribution",
+    "entries": [  ]
+  },
   {
     "type": "item_group",
     "id": "guns_pistol_common_everyday_carry-canada",
     "subtype": "distribution",
     "entries": [  ]
   },
-  { "type": "item_group", "id": "guns_pistol_hunting_display-canada", "subtype": "distribution", "entries": [  ] },
+  {
+    "type": "item_group",
+    "id": "guns_pistol_hunting_display-canada",
+    "subtype": "distribution",
+    "entries": [  ]
+  },
   {
     "type": "item_group",
     "id": "guns_rifle_common-canada",

@@ -713,7 +713,12 @@
     "subtype": "distribution",
     "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
-  { "type": "item_group", "id": "mags_pistol_hunting-canada", "subtype": "distribution", "entries": [  ] },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-canada",
+    "subtype": "distribution",
+    "entries": [  ]
+  },
   {
     "type": "item_group",
     "id": "mags_rifle_hunting-canada",
