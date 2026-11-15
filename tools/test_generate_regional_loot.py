@@ -1,6 +1,8 @@
 """Checks the shipped boundary coverage and generated game item groups."""
 
 import json
+import os
+import subprocess
 import unittest
 
 from generate_regional_loot import DATA, ITEMS, POLICY, build, magazine_capacity, records, render
@@ -33,6 +35,20 @@ class RegionalJsonFormatTest(unittest.TestCase):
         lines = render([boundary, boundary]).splitlines()
         self.assertEqual(lines[1], "  " + flat + ",")
         self.assertEqual(lines[2], "  {")
+
+    def test_native_formatter_keeps_generated_layout(self):
+        name = "json_formatter.exe" if os.name == "nt" else "json_formatter.cgi"
+        formatter = DATA.parent / "tools/format" / name
+        if not formatter.is_file():
+            self.skipTest("Native JSON formatter is not built")
+        from generate_regional_supplies import build as build_supplies
+        for path in (*build(), *build_supplies()):
+            with self.subTest(path=path):
+                original = path.read_text(encoding="utf-8")
+                result = subprocess.run([str(formatter)], input=original, text=True,
+                                        encoding="utf-8", capture_output=True,
+                                        check=True, timeout=30)
+                self.assertEqual(result.stdout, original)
 
 
 class RegionalLootTest(unittest.TestCase):
