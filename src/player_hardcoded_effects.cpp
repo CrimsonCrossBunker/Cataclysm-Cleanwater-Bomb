@@ -1687,12 +1687,14 @@ void Character::hardcoded_effects( effect &it )
             }
         } else {
             if( dur == 2_turns ) {
-                if( player_character.has_alarm_clock() ) {
-                    sounds::sound( player_character.pos_bub( here ), 16, sounds::sound_t::alarm,
+                if( has_alarm_clock() ) {
+                    sounds::sound( pos, 16, sounds::sound_t::alarm,
                                    _( "beep-beep-beep!" ), false, "tool", "alarm_clock" );
-                    const std::string alarm = _( "Your alarm is going off." );
-                    g->cancel_activity_or_ignore_query( distraction_type::noise, alarm );
-                    add_msg( _( "Your alarm went off." ) );
+                    if( is_avatar() ) {
+                        g->cancel_activity_or_ignore_query( distraction_type::noise,
+                                                            _( "Your alarm is going off." ) );
+                    }
+                    add_msg_if_player( _( "Your alarm went off." ) );
                 }
             }
         }

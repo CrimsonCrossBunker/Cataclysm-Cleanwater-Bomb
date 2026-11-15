@@ -137,7 +137,9 @@ int main( int argc, char **argv )
         harness_host = &host;
         renet_context raw;
         if( mode == "host" ) {
-            if( !host.start( port, "口令\"\\", "abc", welcome_data() ) ) {
+            require( argc <= 4, "host port [room players]" );
+            const int players = argc == 4 ? std::stoi( argv[3] ) : default_room_players;
+            if( !host.start( port, "口令\"\\", "abc", welcome_data(), players ) ) {
                 std::cout << "ERROR " << wire_quote( host.error() ) << std::endl;
                 return 0;
             }

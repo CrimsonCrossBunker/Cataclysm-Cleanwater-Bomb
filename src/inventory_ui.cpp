@@ -5543,8 +5543,10 @@ trade_selector::trade_selector( trade_ui *parent, Character &u,
     ctxt.register_action( ACTION_SWITCH_PANES );
     ctxt.register_action( ACTION_AUTOBALANCE );
     ctxt.register_action( ACTION_BANKBALANCE );
-    resize( size, origin );
-    _ui = create_or_get_ui_adaptor();
+    if( _parent ) {
+        resize( size, origin );
+        _ui = create_or_get_ui_adaptor();
+    }
 }
 
 trade_selector::select_t trade_selector::to_trade() const

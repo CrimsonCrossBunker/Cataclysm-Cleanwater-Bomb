@@ -801,10 +801,16 @@ bool map_data_common_t::has_examine( iexamine_examine_function func ) const
 
 bool map_data_common_t::has_examine( const std::string &action ) const
 {
-    return !examine_actor.empty() && std::find_if( examine_actor.begin(),
-    examine_actor.end(), [action]( const cata::clone_ptr<iexamine_actor> &a ) {
+    return find_examine_actor( action ) != nullptr;
+}
+
+const iexamine_actor *map_data_common_t::find_examine_actor( const std::string &action ) const
+{
+    const auto found = std::find_if( examine_actor.begin(),
+    examine_actor.end(), [&action]( const cata::clone_ptr<iexamine_actor> &a ) {
         return a->type == action;
-    } ) != examine_actor.end();
+    } );
+    return found == examine_actor.end() ? nullptr : found->get();
 }
 
 void map_data_common_t::set_examine( const iexamine_functions &func )

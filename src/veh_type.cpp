@@ -1452,7 +1452,7 @@ void vehicle_item_spawn::deserialize( const JsonObject &jo )
 {
     mandatory( jo, false, "x", pos.x() );
     mandatory( jo, false, "y", pos.y() );
-    optional( jo, false, "z", mount_level, numeric_bound_reader{ 0, 10 }, 0 );
+    optional( jo, false, "z", mount_level, numeric_bound_reader{ 0, vehicle::max_deck_level }, 0 );
 
     mandatory( jo, false, "chance", chance, numeric_bound_reader{ 0, 100 } );
 

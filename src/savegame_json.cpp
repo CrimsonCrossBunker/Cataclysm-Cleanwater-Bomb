@@ -101,6 +101,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "morale.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -1371,6 +1372,8 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
         setID( tmpid );
     }
     load_mission_state( data );
+    faction_representatives.clear();
+    data.read( "faction_representatives", faction_representatives );
 
     data.read( "activity", activity );
     if( data.has_array( "backlog" ) ) {
@@ -1748,6 +1751,9 @@ void Character::store( JsonOut &json ) const
     json.member( "book_chapters", book_chapters );
     store_grab_state( json );
     store_mission_state( json );
+    if( is_avatar() || !faction_representatives.empty() ) {
+        json.member( "faction_representatives", faction_representatives );
+    }
     json.member( "kill_tracker", kill_statistics_ );
     json.member( "items_identified", items_identified );
     json.member( "in_vehicle", in_vehicle );
@@ -2357,7 +2363,6 @@ void avatar::store( JsonOut &json ) const
     if( shadow_npc ) {
         json.member( "shadow_npc", *shadow_npc );
     }
-    json.member( "faction_representatives", faction_representatives );
     // someday, npcs may drive
     json.member( "controlling_vehicle", controlling_vehicle );
 
@@ -2449,7 +2454,6 @@ void avatar::load( const JsonObject &data, const JsonObject *legacy_kills )
         shadow_npc = std::make_unique<npc>();
         data.read( "shadow_npc", *shadow_npc );
     }
-    data.read( "faction_representatives", faction_representatives );
     data.read( "controlling_vehicle", controlling_vehicle );
 
     // Preserve the shared loader's identity. Re-grabbing here could bind a
@@ -4114,6 +4118,12 @@ void item::link_data::serialize( JsonOut &jsout ) const
     jsout.member( "link_t_abs_pos", t_abs_pos );
     jsout.member( "link_t_mount", t_mount.xy() );
     jsout.member( "link_t_mount_level", t_mount.z() );
+    if( t_part_uid > 0 ) {
+        jsout.member( "link_t_part_uid", t_part_uid );
+    }
+    if( s_item_uid > 0 ) {
+        jsout.member( "link_s_item_uid", s_item_uid );
+    }
     jsout.member( "link_length", length );
     jsout.member( "link_max_length", max_length );
     jsout.member( "link_last_processed", last_processed );
@@ -4133,6 +4143,8 @@ void item::link_data::deserialize( const JsonObject &data )
     point_rel_ms mount;
     data.read( "link_t_mount", mount );
     t_mount = tripoint_rel_ms( mount, data.get_int( "link_t_mount_level", 0 ) );
+    t_part_uid = data.has_member( "link_t_part_uid" ) ? data.get_int64( "link_t_part_uid" ) : 0;
+    s_item_uid = data.has_member( "link_s_item_uid" ) ? data.get_int64( "link_s_item_uid" ) : 0;
     data.read( "link_length", length );
     data.read( "link_max_length", max_length );
     data.read( "link_last_processed", last_processed );
@@ -4839,6 +4851,10 @@ void vehicle_part::deserialize( const JsonObject &data )
 
 void vehicle_part::serialize( JsonOut &json ) const
 {
+    const npc *passenger = g && passenger_id.is_valid() && has_flag( vp_flag::passenger_flag )
+                           ? g->critter_by_id<npc>( passenger_id ) : nullptr;
+    // Co-op guests are restored by the player store, independently of vehicles.
+    const bool guest_seat = passenger && cata_mp::is_player_proxy( *passenger );
     json.start_object();
     json.member( "id", info_->id.str() );
     if( !variant.empty() ) {
@@ -4855,7 +4871,8 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "blood", blood );
     json.member( "enabled", enabled );
     json.member( "power_disabled", power_disabled );
-    json.member( "flags", flags );
+    json.member( "flags", guest_seat ? flags & ~static_cast<uint32_t>( vp_flag::passenger_flag )
+                 : flags );
     if( !carried_stack.empty() ) {
         std::stack<vehicle_part::carried_part_data> carried_copy = carried_stack;
         json.member( "carried_stack" );
@@ -4866,7 +4883,7 @@ void vehicle_part::serialize( JsonOut &json ) const
         }
         json.end_array();
     }
-    json.member( "passenger_id", passenger_id );
+    json.member( "passenger_id", guest_seat ? character_id() : passenger_id );
     json.member( "crew_id", crew_id );
     if( precalc[0].z() ) {
         json.member( "z_offset", precalc[0].z() );

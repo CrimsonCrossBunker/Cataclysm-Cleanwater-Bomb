@@ -547,10 +547,13 @@ TEST_CASE( "paid_ledge_throw_uses_the_owners_view_and_only_charges_peeking_once"
         } else {
             intent.peek_request = 0; // A distant throw origin needs the paid permission.
         }
+        // The Catch2 section listener reseeds the game RNG on entry.
+        const cata_default_random_engine before_rejected_throw =
+            rng_get_engine(); // NOLINT(cata-determinism) Snapshot only; no independent draws.
         CHECK_FALSE( cata_mp::execute_throw_intent( who, here, intent, &changed ) );
         CHECK( who.get_moves() == moves - who.get_speed() * 2 );
         CHECK( who.get_wielded_item()->charges == 10 );
-        CHECK( rng_get_engine() == rng );
+        CHECK( rng_get_engine() == before_rejected_throw );
     }
     CHECK( who.pos_abs() == origin );
     CHECK( get_avatar().get_moves() == host_moves );

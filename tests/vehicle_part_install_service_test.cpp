@@ -159,7 +159,7 @@ TEST_CASE( "vehicle_installation_service_preserves_the_selected_deck",
     CHECK( f.target->part_count() == original_count + static_cast<int>( entries.size() ) );
     for( const vehicle_part_install_service_entry &entry : entries ) {
         CHECK( f.target->part_with_feature( tripoint_rel_ms( entry.mount, 1 ),
-                                           "HORN", false ) >= 0 );
+                                            "HORN", false ) >= 0 );
         CHECK( f.target->parts_at_relative( entry.mount, false ).size() == 2 );
     }
     CHECK( f.mechanic->get_value( "vehicle_part_service_status" ).str() == "complete" );

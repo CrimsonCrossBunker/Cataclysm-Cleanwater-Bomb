@@ -9,6 +9,7 @@
 // IWYU pragma: no_include <sys/signal.h>
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <clocale>
 #include <cstdio>
@@ -22,6 +23,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -327,6 +329,7 @@ struct cli_opts {
     bool server_mode = false;
     bool host_mode = false;
     bool client_mode = false;
+    std::optional<int> host_players;
     std::string client_host;
     uint16_t client_port = 8080;
     std::string client_name;
@@ -632,6 +635,24 @@ cli_opts parse_commandline( int argc, const char **argv )
                 }
             },
             {
+                "--host-players", "<count>",
+                "Listen-server capacity including the host (2–32, default 4)",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    const char *const end = params[0] + std::strlen( params[0] );
+                    int players = 0;
+                    const auto parsed = std::from_chars( params[0], end, players );
+                    if( parsed.ec != std::errc() || parsed.ptr != end ||
+                        !cata_mp::valid_room_size( players ) )
+                    {
+                        return -1;
+                    }
+                    result.host_players = players;
+                    return 1;
+                }
+            },
+            {
                 "--port", "<port>",
                 "UDP port for multiplayer server (default 8080)",
                 section_default,
@@ -690,6 +711,10 @@ cli_opts parse_commandline( int argc, const char **argv )
 
     process_args( argv, argc, first_pass_arguments );
     process_args( argv, argc, second_pass_arguments );
+    if( result.host_players && ( !result.host_mode || result.client_mode || result.server_mode ) ) {
+        std::cerr << "--host-players requires --host.\n";
+        std::exit( EXIT_FAILURE );
+    }
 
     return result;
 }
@@ -1246,7 +1271,8 @@ int main( int argc, const char *argv[] )
                                  getVersionString() );
     } else if( cli.host_mode ) {
         if( !cata_mp::mp_request_host_session( cli.client_port, cli.server_password,
-                                               getVersionString() ) ) {
+                                               getVersionString(),
+                                               cli.host_players.value_or( cata_mp::default_room_players ) ) ) {
             close_game( EXIT_FAILURE );
         }
         printf( "[ccb-mp] Host armed on port %d; starts after world load\n", cli.client_port );

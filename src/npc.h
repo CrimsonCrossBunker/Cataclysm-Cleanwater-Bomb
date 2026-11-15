@@ -1068,8 +1068,10 @@ class npc : public Character
         void update_worst_item_value();
         double value( const item &it ) const;
         double value( const item &it, double market_price ) const;
-        faction_price_rule const *get_price_rules( item const &it ) const;
-        bool wear_if_wanted( const item &it, std::string &reason );
+        faction_price_rule const *get_price_rules( item const &it,
+                const Character *customer = nullptr ) const;
+        bool wear_if_wanted( const item &it, std::string &reason, item_location *offered = nullptr );
+        bool wield_offered_item( item_location &source, Character &donor );
         bool can_read( const item &book, std::vector < std::string > &fail_reasons );
         time_duration time_to_read( const item &book, const Character &reader ) const;
         void do_npc_read( bool ebook = false );
@@ -1102,6 +1104,7 @@ class npc : public Character
          * to check contents, call this on the items inside the item.
          */
         bool will_accept_from_player( const item &it ) const;
+        bool will_accept_from_player( const item &it, const Character &donor ) const;
 
         bool wants_to_sell( const item_location &it ) const;
         ret_val < void > wants_to_sell( const item_location &it, int at_price ) const;
@@ -1114,7 +1117,9 @@ class npc : public Character
 
         bool will_exchange_items_freely() const;
         int max_credit_extended() const;
+        int max_credit_extended( const npc_opinion &opinion ) const;
         int max_willing_to_owe() const;
+        int max_willing_to_owe( const npc_opinion &opinion ) const;
 
         // AI helpers
         void regen_ai_cache();
@@ -1212,11 +1217,9 @@ class npc : public Character
 
         void witness_thievery( item *it ) override;
 
-        /* shift() works much like monster::shift(), and is called when the player moves
-         * from one submap to an adjacent submap.  It updates our position (shifting by
-         * 12 tiles), as well as our plans.
-         */
+        // Rebase bubble-local AI state when the active map window moves.
         void shift( const point_rel_sm &s );
+        void update_ai_map_origin( const map &terrain );
 
         // Movement; the following are defined in npcmove.cpp
         void move(); // Picks an action & a target and calls execute_action
@@ -1639,6 +1642,7 @@ class npc : public Character
         int  worst_item_value = 0; // The value of our least-wanted item
 
         std::vector < tripoint_bub_ms > path; // Our movement plans
+        std::optional<point_abs_sm> ai_map_origin; // NOLINT(cata-serialize)
 
         //Set mission source or squad leader for a patrol
         std::string companion_mission_role_id;

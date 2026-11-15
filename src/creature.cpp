@@ -797,10 +797,11 @@ Creature *Creature::auto_find_hostile_target( int range, int &boo_hoo, int area 
     vehicle *in_veh = is_fake() ? veh_pointer_or_null( here.veh_at( pos_bub( here ) ) ) : nullptr;
     if( pldist < iff_dist && angle_iff ) {
         area_iff = area > 0;
-        // Player inside vehicle won't be hit by shots from the roof,
-        // so we can fire "through" them just fine.
+        // The shot starts at the mount. A player on that tile has no bearing
+        // from the turret and cannot block shots leaving it.
+        // Players inside the same vehicle are also protected from roof fire.
         const optional_vpart_position vp = here.veh_at( player_pos );
-        if( in_veh && veh_pointer_or_null( vp ) == in_veh && vp->is_inside() ) {
+        if( in_veh && veh_pointer_or_null( vp ) == in_veh && ( pldist == 0 || vp->is_inside() ) ) {
             angle_iff = false; // No angle IFF, but possibly area IFF
         } else if( pldist < 3 ) {
             // granularity increases with proximity

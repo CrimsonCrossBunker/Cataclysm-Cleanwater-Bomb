@@ -208,7 +208,7 @@ TEST_CASE( "vehicle_deck_zones_follow_their_cargo", "[vehicle][decks][zones][sav
         lower_cargo = true;
     }
     here.add_vehicle_to_cache( &veh );
-    const auto add_zone = [&]( const tripoint_rel_ms &mount ) {
+    const auto add_zone = [&]( const tripoint_rel_ms & mount ) {
         const tripoint_abs_ms pos = veh.mount_to_tripoint_abs( mount );
         REQUIRE( zones.add( "Cargo", zone_type_id( "LOOT_FOOD" ), veh.get_owner(), false, true,
                             pos, pos, nullptr, true, &here ) != nullptr );
@@ -260,9 +260,9 @@ TEST_CASE( "vehicle_deck_cables_reconnect_and_disconnect_at_the_selected_port",
     item lower_cord( itype_id( "test_power_cord" ) );
     item upper_cord( itype_id( "test_power_cord" ) );
     REQUIRE( lower_cord.link_to( here.veh_at( veh.bub_part_pos( here, lower ) ),
-                                link_state::vehicle_port ).success() );
+                                 link_state::vehicle_port ).success() );
     REQUIRE( upper_cord.link_to( here.veh_at( veh.bub_part_pos( here, upper ) ),
-                                link_state::vehicle_port ).success() );
+                                 link_state::vehicle_port ).success() );
     CHECK( upper_cord.link().t_mount == tripoint_rel_ms::above );
 
     std::ostringstream buffer;
@@ -295,7 +295,7 @@ TEST_CASE( "vehicle_deck_power_connections_install_on_the_selected_deck",
     const int upper = veh.install_part( here, tripoint_rel_ms::above, vpart_id( "dashboard" ) );
     REQUIRE( upper >= 0 );
     vehicle *other = here.add_vehicle( vproto_id( "none" ), tripoint_bub_ms( 62, 60, 0 ),
-                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
+                                       0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( other != nullptr );
     REQUIRE( other->install_part( here, tripoint_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
     const int port = other->install_part( here, tripoint_rel_ms::zero, vpart_id( "dashboard" ) );
