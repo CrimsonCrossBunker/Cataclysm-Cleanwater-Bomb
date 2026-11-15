@@ -45,6 +45,14 @@ def store_groups(policy, existing):
 
 
 def armory_groups(policy):
+    assembled_weapons = policy["assembled_weapons"]
+
+    def weapon_entry(weapon, **fields):
+        # A group can install a conversion before the outer entry sets charges.
+        if weapon in assembled_weapons:
+            return reference(assembled_weapons[weapon], **fields)
+        return item(weapon, **fields)
+
     groups = [
         group("regional_military_reserve_ammo", [reference("ammo_can_300_full")]),
         group("regional_military_surplus_firearms", [reference("guns_common")]),
@@ -63,8 +71,8 @@ def armory_groups(policy):
             weapon, mag, ammo = equipment[role]
             kit_name = f"regional_service_kit_{role}-{country}"
             case_name = f"regional_service_case_{role}-{country}"
-            guns[role] = item(weapon, charges=[0, 8])
-            groups.append(group(kit_name, [item(weapon), item(mag)], "collection"))
+            guns[role] = weapon_entry(weapon, charges=[0, 8])
+            groups.append(group(kit_name, [weapon_entry(weapon), item(mag)], "collection"))
             groups.append(group(case_name, [reference(kit_name), reference(ammo)], "collection"))
             kits.append(reference(kit_name, weight))
             cases.append(reference(case_name, weight))
@@ -79,11 +87,11 @@ def armory_groups(policy):
         pistol_groups = [reference(ident, 50) for ident in equipment["police_pistols"]]
         police_pistol, police_pistol_mag, spare_pistol = equipment["police_field_sidearm"]
         police_rifle, police_rifle_mag, spare_rifle = equipment["police_field_rifle"]
-        pistol_in_field = item(police_pistol, charges=[0, 8], damage=[0, 3])
-        rifle_in_field = item(police_rifle, charges=[0, 15], damage=[0, 3])
+        pistol_in_field = weapon_entry(police_pistol, charges=[0, 8], damage=[0, 3])
+        rifle_in_field = weapon_entry(police_rifle, charges=[0, 15], damage=[0, 3])
         police_magazines = [item(police_pistol_mag), item(police_rifle_mag), item("mp5mag")]
         issue_rifles = [{**guns["rifle"], "prob": 85}, {**guns["secondary"], "prob": 15}]
-        rifle_guns = [*issue_rifles, item(equipment["sniper"][0], 5)]
+        rifle_guns = [*issue_rifles, weapon_entry(equipment["sniper"][0], prob=5)]
         support_guns = [guns[role] for role in ("support", "medium_support") if role in guns]
         variants = {
             "police_armory_any_pistol": pistol_groups,
@@ -108,7 +116,7 @@ def armory_groups(policy):
             "military_grenadier_assault_rifles": [guns["rifle"]],
             "military_standard_lmgs": support_guns,
             "military_standard_sniper_rifles": [guns["sniper"]],
-            "military_standard_shotguns": [item(equipment["shotgun"], charges=[0, 4])],
+            "military_standard_shotguns": [weapon_entry(equipment["shotgun"], charges=[0, 4])],
             "guns_rifle_milspec": rifle_guns,
             "guns_pistol_milspec": [guns["sidearm"]],
             "guns_smg_milspec": [item("hk_mp5")],
@@ -118,7 +126,7 @@ def armory_groups(policy):
             "milspec_arsenal_group_guns": kits,
             "milspec_arsenal_group_ammo_full": reserve,
             "regional_military_reserve_ammo": [reference(equipment["sniper"][2])],
-            "regional_military_surplus_firearms": rifle_guns + [item(equipment["sidearm"][0], 30)],
+            "regional_military_surplus_firearms": rifle_guns + [weapon_entry(equipment["sidearm"][0], prob=30)],
             "regional_military_surplus_magazines": magazines,
         }
         if variants.keys() != set(policy["service_groups"]):

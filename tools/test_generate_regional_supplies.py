@@ -44,7 +44,11 @@ class RegionalSuppliesTest(unittest.TestCase):
             for role in ("sidearm", "rifle", "support", "sniper", "secondary"):
                 gun, magazine, ammo = equipment[role]
                 kit = self.groups[f"regional_service_kit_{role}-{country}"]
-                self.assertEqual([entry["item"] for entry in kit["entries"]], [gun, magazine])
+                assembly = self.policy["assembled_weapons"].get(gun)
+                weapon_entry = {"group": assembly} if assembly else {"item": gun}
+                self.assertEqual(kit["entries"], [
+                    {**weapon_entry, "prob": 100}, {"item": magazine, "prob": 100}
+                ])
                 case = self.groups[f"regional_service_case_{role}-{country}"]
                 self.assertEqual(case["entries"][1]["group"], ammo)
                 self.assertIn(ammo, {
@@ -62,7 +66,11 @@ class RegionalSuppliesTest(unittest.TestCase):
                                ("longguns_cop", "police_field_rifle")):
                 gun, magazine, spare = equipment[role]
                 carried = self.groups[f"{stem}_in_field-{country}"]["entries"]
-                self.assertEqual(carried[0]["item"], gun)
+                assembly = self.policy["assembled_weapons"].get(gun)
+                if assembly:
+                    self.assertEqual(carried[0]["group"], assembly)
+                else:
+                    self.assertEqual(carried[0]["item"], gun)
                 self.assertEqual(carried[1]["group"], spare)
                 self.assertEqual(
                     self.groups[f"{stem}_in_field_no_gun-{country}"]["entries"][0]["group"],
@@ -71,6 +79,19 @@ class RegionalSuppliesTest(unittest.TestCase):
                 self.assertIn(magazine, {
                     entry["item"] for entry in self.groups[f"mags_cop-{country}"]["entries"]
                 })
+
+    def test_canadian_m4_is_assembled_before_loading(self):
+        conversion_groups = records([
+            DATA / "json/itemgroups/Weapons_Mods_Ammo/conversions/conversion_guns.json"
+        ])
+        receiver = conversion_groups["modular_m4a1"]["entries"][0]
+        self.assertEqual(receiver["item"], "modular_m4_carbine")
+        self.assertIn("retool_ar15_223rem_medium", receiver["contents-item"])
+        self.assertNotIn('"item": "modular_m4_carbine"', json.dumps(self.groups))
+        for stem, count in (("longguns_cop_loaded", 15), ("military_standard_assault_rifles", 8)):
+            gun = next(entry for entry in self.groups[f"{stem}-CA"]["entries"]
+                       if entry.get("group") == "modular_m4a1")
+            self.assertEqual(gun["charges"], [0, count])
 
     def test_soil_atlas_has_prairie_and_desert_terrain(self):
         atlas = json.loads((DATA / "raw/north_america.soils").read_text(encoding="utf-8"))

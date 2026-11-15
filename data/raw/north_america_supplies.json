@@ -180,6 +180,9 @@
     "temperate": [ "jacket_light", "coat_rain" ],
     "warm": [ "jacket_light", "duster" ]
   },
+  "assembled_weapons": {
+    "modular_m4_carbine": "modular_m4a1"
+  },
   "armories": {
     "CA": {
       "police_pistols": [ "police_armory_glock_17", "police_armory_glock_19" ],
