@@ -149,7 +149,7 @@
     "subtype": "distribution",
     "entries": [
       { "group": "9mm_loose", "prob": 209 },
-      { "item": "22_lr", "charges": [1, 20], "prob": 204 },
+      { "item": "22_lr", "charges": [ 1, 20 ], "prob": 204 },
       { "group": "223_loose", "prob": 125 },
       { "group": "45_loose", "prob": 49 },
       { "group": "380_loose", "prob": 48 },
@@ -162,31 +162,31 @@
       { "group": "44_loose", "prob": 15 },
       { "group": "3006_loose", "prob": 8 },
       { "group": "45colt_loose", "prob": 8 },
-      { "item": "3030", "charges": [1, 10], "prob": 5 },
-      { "item": "762_54R", "charges": [1, 10], "prob": 4 },
-      { "item": "270win_jsp", "charges": [1, 10], "prob": 3 },
+      { "item": "3030", "charges": [ 1, 10 ], "prob": 5 },
+      { "item": "762_54R", "charges": [ 1, 10 ], "prob": 4 },
+      { "item": "270win_jsp", "charges": [ 1, 10 ], "prob": 3 },
       { "group": "410_loose", "prob": 3 },
       { "group": "10mm_loose", "prob": 1 },
-      { "item": "300_winmag", "charges": [1, 10], "prob": 1 },
+      { "item": "300_winmag", "charges": [ 1, 10 ], "prob": 1 },
       { "group": "303_loose", "prob": 1 },
       { "group": "30carbine_loose", "prob": 1 },
       { "group": "32_loose", "prob": 1 },
-      { "item": "338lapua_hpbt", "charges": [1, 10], "prob": 1 },
+      { "item": "338lapua_hpbt", "charges": [ 1, 10 ], "prob": 1 },
       { "group": "357sig_loose", "prob": 1 },
       { "group": "38super_loose", "prob": 1 },
-      { "item": "450_ftx", "charges": [1, 10], "prob": 1 },
-      { "item": "454_Casull", "charges": [1, 10], "prob": 1 },
+      { "item": "450_ftx", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "454_Casull", "charges": [ 1, 10 ], "prob": 1 },
       { "group": "4570_loose", "prob": 1 },
-      { "item": "500_Magnum", "charges": [1, 10], "prob": 1 },
-      { "item": "545", "charges": [1, 10], "prob": 1 },
-      { "item": "57mm_lf", "charges": [1, 10], "prob": 1 },
-      { "item": "762_25", "charges": [1, 10], "prob": 1 },
-      { "item": "300blk", "charges": [1, 10], "prob": 1 },
-      { "item": "9x18mm", "charges": [1, 10], "prob": 1 },
+      { "item": "500_Magnum", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "545", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "57mm_lf", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "762_25", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "300blk", "charges": [ 1, 10 ], "prob": 1 },
+      { "item": "9x18mm", "charges": [ 1, 10 ], "prob": 1 },
       { "group": "50beowulf_loose", "prob": 1 },
-      { "item": "77mm_arisaka_jsp", "charges": [1, 10], "prob": 1 },
+      { "item": "77mm_arisaka_jsp", "charges": [ 1, 10 ], "prob": 1 },
       { "group": "50AE_loose", "prob": 1 },
-      { "item": "458wm", "charges": [1, 10], "prob": 1 }
+      { "item": "458wm", "charges": [ 1, 10 ], "prob": 1 }
     ]
   },
   {
@@ -225,211 +225,211 @@
     "type": "item_group",
     "id": "ammo_common_boxed-open",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-open",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-open",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-open",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-open",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-restricted10",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-restricted10",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-restricted10",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-restricted10",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-restricted10",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-restricted17",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-restricted17",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-restricted17",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-restricted17",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-restricted17",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-restricted15",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-restricted15",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-restricted15",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-restricted15",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-restricted15",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-hawaii",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_used-hawaii",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_used", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_used", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed_looted-hawaii",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_boxed_looted", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_boxed_looted", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_loose-hawaii",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_common_loose", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_common_loose", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_hunting-hawaii",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_original_ammo_hunting", "prob": 100} ]
+    "entries": [ { "group": "regional_original_ammo_hunting", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -505,18 +505,18 @@
     "id": "ammo_common_loose-canada",
     "subtype": "distribution",
     "entries": [
-      { "item": "22_lr", "charges": [1, 20], "prob": 408 },
+      { "item": "22_lr", "charges": [ 1, 20 ], "prob": 408 },
       { "group": "223_loose", "prob": 125 },
       { "group": "762_loose", "prob": 34 },
       { "group": "12_loose", "prob": 52 },
       { "group": "308_loose", "prob": 50 },
       { "group": "3006_loose", "prob": 16 },
-      { "item": "3030", "charges": [1, 10], "prob": 10 },
-      { "item": "762_54R", "charges": [1, 10], "prob": 4 },
-      { "item": "270win_jsp", "charges": [1, 10], "prob": 6 },
+      { "item": "3030", "charges": [ 1, 10 ], "prob": 10 },
+      { "item": "762_54R", "charges": [ 1, 10 ], "prob": 4 },
+      { "item": "270win_jsp", "charges": [ 1, 10 ], "prob": 6 },
       { "group": "410_loose", "prob": 6 },
       { "group": "303_loose", "prob": 2 },
-      { "item": "338lapua_hpbt", "charges": [1, 10], "prob": 2 },
+      { "item": "338lapua_hpbt", "charges": [ 1, 10 ], "prob": 2 },
       { "group": "4570_loose", "prob": 2 }
     ]
   },
@@ -605,14 +605,14 @@
     "id": "ammo_common_loose-mexico",
     "subtype": "distribution",
     "entries": [
-      { "item": "22_lr", "charges": [1, 20], "prob": 408 },
+      { "item": "22_lr", "charges": [ 1, 20 ], "prob": 408 },
       { "group": "380_loose", "prob": 48 },
       { "group": "12_loose", "prob": 52 },
       { "group": "308_loose", "prob": 50 },
       { "group": "38_loose", "prob": 19 },
       { "group": "3006_loose", "prob": 16 },
-      { "item": "3030", "charges": [1, 10], "prob": 10 },
-      { "item": "270win_jsp", "charges": [1, 10], "prob": 6 },
+      { "item": "3030", "charges": [ 1, 10 ], "prob": 10 },
+      { "item": "270win_jsp", "charges": [ 1, 10 ], "prob": 6 },
       { "group": "410_loose", "prob": 6 },
       { "group": "303_loose", "prob": 2 },
       { "group": "4570_loose", "prob": 2 }
@@ -639,570 +639,570 @@
     "type": "item_group",
     "id": "ammo_common_boxed-CA-AB",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-BC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-MB",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-NB",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-NL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-NS",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-NT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-NU",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-ON",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-PE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-QC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-SK",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-CA-YT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-canada", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-AGU",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-BCN",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-BCS",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-CAM",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-CHH",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-CHP",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-CMX",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-COA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-COL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-DUR",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-GRO",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-GUA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-HID",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-JAL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-MEX",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-MIC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-MOR",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-NAY",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-NLE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-OAX",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-PUE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-QUE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-ROO",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-SIN",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-SLP",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-SON",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-TAB",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-TAM",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-TLA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-VER",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-YUC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-MX-ZAC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-mexico", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-AK",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-AL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-AR",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-AZ",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-CO",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted15", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-CT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-DC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-DE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted17", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted17", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-FL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-GA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-HI",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-hawaii", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-hawaii", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-IA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-ID",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-IL",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted_split", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted_split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-IN",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-KS",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-KY",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-LA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MD",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-ME",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MI",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MN",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MO",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MS",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-MT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-ND",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NE",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NH",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NJ",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NM",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NV",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-NY",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-OH",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-OK",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-OR",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-PA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-RI",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-SC",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-SD",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-TN",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-TX",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-UT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-VA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted15", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-VT",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-split", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-WA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-restricted10", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-WI",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-WV",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "ammo_common_boxed-US-WY",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_common_boxed-open", "prob": 100} ]
+    "entries": [ { "group": "ammo_common_boxed-open", "prob": 100 } ]
   }
 ]
