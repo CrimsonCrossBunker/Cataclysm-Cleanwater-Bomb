@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "bodypart.h"
 #include "color.h"
@@ -215,6 +216,9 @@ std::string weight_string( const Character &u );
 // Functions returning colorized string
 // gets the string that describes your health
 std::string health_string( const Character &u );
+
+std::vector<std::string> get_encumbrance_description( const Character &you,
+        const bodypart_id &bp );
 
 // Force the overmap widget cache to rebuild on next access.
 void invalidate_overmap_cache();
