@@ -171,7 +171,6 @@ TEST_CASE( "lua_platform_overmap_location_queries_match_native_conditions",
     compare_near( R"({"u_near_om_location":"FACTION_CAMP_ANY","range":2})",
                   "FACTION_CAMP_ANY", 2 );
 
-    // A location read from a variable is evaluated per scanned tile, not hoisted.
     const std::string target_key = "lua_platform_near_om_location_target";
     REQUIRE( get_globals().maybe_get_global_value( target_key ) == nullptr );
     on_out_of_scope clear_target( [&]() {
