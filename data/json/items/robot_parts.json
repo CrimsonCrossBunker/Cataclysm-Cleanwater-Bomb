@@ -18,42 +18,48 @@
     "id": "targeting_module",
     "name": { "str": "targeting module" },
     "description": "A module that integrates visual and proprioceptive information from peripheric sensors and outputs information necessary for accurate aiming.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "identification_module",
     "name": { "str": "identification module" },
     "description": "A module that continuously runs image recognition algorithms to differentiate friend from foe.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "pathfinding_module",
     "name": { "str": "pathfinding module" },
     "description": "A module that uses a combination of vector integration and egocentric mapping to find the best path available.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "memory_module",
     "name": { "str": "memory banks module" },
     "description": "A module that allows for the storage and recovery of information.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "sensor_module",
     "name": { "str": "sensor array" },
     "description": "A wide range of sensors meant to give the ability to perceive the surrounding world.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "self_monitoring_module",
     "name": { "str_sp": "self monitoring sensors" },
     "description": "An array of sensors and diagnostic modules allowing a robot to perceive itself.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -68,21 +74,24 @@
     "name": { "str": "basic AI core" },
     "description": "A very basic AI core with minimal cognitive abilities.",
     "weight": "125 g",
-    "copy-from": "ai_module"
+    "copy-from": "ai_module",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "ai_module_advanced",
     "name": { "str": "advanced AI core" },
     "description": "An advanced AI core with impressive cognitive abilities.",
-    "copy-from": "ai_module"
+    "copy-from": "ai_module",
+    "stackable": true
   },
   {
     "type": "ITEM",
     "id": "gun_module",
     "name": { "str": "gun operating system" },
     "description": "A system that can operate most conventional weapons.",
-    "copy-from": "robot_module_abstract"
+    "copy-from": "robot_module_abstract",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -96,7 +105,8 @@
     "price": "500 USD",
     "price_postapoc": "1 USD",
     "material": [ "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -110,7 +120,8 @@
     "price": "1 kUSD",
     "price_postapoc": "1 USD",
     "material": [ "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -124,7 +135,8 @@
     "price": "400 USD",
     "price_postapoc": "1 USD",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -138,7 +150,8 @@
     "price": "1 kUSD",
     "price_postapoc": "2 USD 50 cent",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -152,7 +165,8 @@
     "price": "1 kUSD",
     "price_postapoc": "2 USD 50 cent",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -166,7 +180,8 @@
     "price": "6 kUSD",
     "price_postapoc": "2 USD 50 cent",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -180,7 +195,8 @@
     "price": "1 kUSD",
     "price_postapoc": "1 USD",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -194,7 +210,8 @@
     "price": "1 kUSD",
     "price_postapoc": "1 USD",
     "material": [ "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -207,7 +224,8 @@
     "volume": "20 L",
     "price": "2 kUSD",
     "material": [ "steel" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -221,6 +239,7 @@
     "price": "1 kUSD",
     "price_postapoc": "1 USD",
     "material": [ "steel", "plastic" ],
-    "category": "spare_parts"
+    "category": "spare_parts",
+    "stackable": true
   }
 ]

@@ -1129,7 +1129,8 @@
     "material": [ "powder_nonflam" ],
     "volume": "1250 ml",
     "weight": "790 g",
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2369,7 +2370,8 @@
     "//": "1.2m x 2 cm x 36 cm",
     "volume": "8640 ml",
     "weight": "260 g",
-    "longest_side": "120 cm"
+    "longest_side": "120 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",

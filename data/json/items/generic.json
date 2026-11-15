@@ -407,7 +407,8 @@
     "material": [ "flesh" ],
     "flags": [ "NO_SALVAGE" ],
     "weight": "50 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -430,7 +431,8 @@
     "price_postapoc": "0 cent",
     "material": [ "stone" ],
     "weight": "100 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -685,7 +687,8 @@
     "longest_side": "204 mm",
     "flags": [ "HURT_WHEN_WIELDED" ],
     "to_hit": { "grip": "bad", "length": "hand", "surface": "line", "balance": "neutral" },
-    "melee_damage": { "cut": 14 }
+    "melee_damage": { "cut": 14 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -767,7 +770,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "weight": "1 g",
-    "volume": "3 ml"
+    "volume": "3 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -842,7 +846,8 @@
     "volume": "6 ml",
     "price": "7 USD",
     "price_postapoc": "1 USD",
-    "material": [ "steel" ]
+    "material": [ "steel" ],
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -875,7 +880,8 @@
     "price_postapoc": "10 cent",
     "material": [ "wood", "steel" ],
     "weight": "40 kg",
-    "volume": "30 L"
+    "volume": "30 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -959,7 +965,8 @@
     "material": [ "steel" ],
     "weight": "100 g",
     "volume": "60 ml",
-    "longest_side": "10 cm"
+    "longest_side": "10 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -974,7 +981,8 @@
     "material": [ "steel" ],
     "weight": "10 g",
     "volume": "5 ml",
-    "longest_side": "3 cm"
+    "longest_side": "3 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1034,7 +1042,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "weight": "226 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1048,7 +1057,8 @@
     "price_postapoc": "50 cent",
     "material": [ "steel" ],
     "weight": "226 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1062,7 +1072,8 @@
     "price_postapoc": "10 cent",
     "material": [ "iron" ],
     "weight": "226 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1176,7 +1187,8 @@
     "price_postapoc": "10 cent",
     "material": [ "aluminum", "plastic" ],
     "weight": "5 g",
-    "volume": "5 ml"
+    "volume": "5 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1190,7 +1202,8 @@
     "price_postapoc": "1 USD",
     "material": [ "steel", "plastic" ],
     "weight": "5 g",
-    "volume": "5 ml"
+    "volume": "5 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1204,7 +1217,8 @@
     "price_postapoc": "1 USD",
     "material": [ "steel", "plastic" ],
     "weight": "5 g",
-    "volume": "1 ml"
+    "volume": "1 ml",
+    "stackable": true
   },
   {
     "id": "broken_kord",
@@ -1628,7 +1642,8 @@
     "material": [ "plastic" ],
     "weight": "18 g",
     "//": "A stick of DDR4 SRAM is 133.35 x 31.25 x 4.2mm, or 17.5ml. We round up a touch.",
-    "volume": "18 ml"
+    "volume": "18 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1642,7 +1657,8 @@
     "price_postapoc": "25 cent",
     "material": [ "aluminum", "plastic" ],
     "weight": "113 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1656,7 +1672,8 @@
     "price_postapoc": "10 cent",
     "material": [ "plastic" ],
     "weight": "114 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1672,7 +1689,8 @@
     "weight": "480 g",
     "volume": "250 ml",
     "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
-    "melee_damage": { "bash": 2 }
+    "melee_damage": { "bash": 2 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1702,7 +1720,8 @@
     "weight": "13 kg",
     "volume": "15 L",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 7 }
+    "melee_damage": { "bash": 7 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1718,7 +1737,8 @@
     "weight": "500 g",
     "volume": "250 ml",
     "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
-    "melee_damage": { "bash": 1 }
+    "melee_damage": { "bash": 1 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1748,7 +1768,8 @@
     "price_postapoc": "50 cent",
     "material": [ "glass" ],
     "weight": "1 g",
-    "volume": "1 ml"
+    "volume": "1 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1762,7 +1783,8 @@
     "price_postapoc": "10 cent",
     "material": [ "glass" ],
     "weight": "30 g",
-    "volume": "2 ml"
+    "volume": "2 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1854,7 +1876,8 @@
     "price_postapoc": "10 cent",
     "material": [ "copper" ],
     "weight": "68 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1868,7 +1891,8 @@
     "price_postapoc": "25 cent",
     "material": [ "steel", "plastic" ],
     "weight": "125 g",
-    "volume": "25 ml"
+    "volume": "25 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1882,7 +1906,8 @@
     "price_postapoc": "10 cent",
     "material": [ "plastic" ],
     "weight": "26 g",
-    "volume": "15 ml"
+    "volume": "15 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1896,7 +1921,8 @@
     "price_postapoc": "10 cent",
     "material": [ "aluminum" ],
     "weight": "14 g",
-    "volume": "5 ml"
+    "volume": "5 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -1950,7 +1976,8 @@
     "weight": "362 g",
     "volume": "500 ml",
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 3 }
+    "melee_damage": { "bash": 3 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2007,7 +2034,8 @@
     "price_postapoc": "10 cent",
     "material": [ "steel" ],
     "weight": "50 g",
-    "volume": "50 ml"
+    "volume": "50 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2283,7 +2311,8 @@
     "price": "19 USD 99 cent",
     "price_postapoc": "10 cent",
     "weight": "660 g",
-    "volume": "250 ml"
+    "volume": "250 ml",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2317,7 +2346,8 @@
     "price_postapoc": "25 cent",
     "material": [ "powder_nonflam" ],
     "weight": "2340 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2332,7 +2362,8 @@
     "price_postapoc": "15 cent",
     "material": [ "powder_nonflam" ],
     "weight": "2340 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -2387,7 +2418,8 @@
     "price_postapoc": "10 cent",
     "material": [ "soil" ],
     "weight": "2340 g",
-    "volume": "1 L"
+    "volume": "1 L",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -3015,7 +3047,8 @@
     "name": { "str": "drone memory bank" },
     "description": "A memory bank containing the information collected by the meteorologist drone.",
     "copy-from": "robot_module_abstract",
-    "flags": [ "TRADER_AVOID" ]
+    "flags": [ "TRADER_AVOID" ],
+    "stackable": true
   },
   {
     "id": "gasdiscount_silver",
@@ -3081,7 +3114,8 @@
     "weight": "10 g",
     "volume": "250 ml",
     "price": "5 USD",
-    "price_postapoc": "10 cent"
+    "price_postapoc": "10 cent",
+    "stackable": true
   },
   {
     "id": "shrapnel",
@@ -3158,7 +3192,8 @@
     "symbol": "#",
     "color": "dark_gray",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 8 }
+    "melee_damage": { "bash": 8 },
+    "stackable": true
   },
   {
     "id": "condensor_coil",
@@ -3174,7 +3209,8 @@
     "symbol": "#",
     "color": "dark_gray",
     "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 8 }
+    "melee_damage": { "bash": 8 },
+    "stackable": true
   },
   {
     "id": "refrigerant_tank",
@@ -3204,7 +3240,8 @@
     "material": [ "qt_steel" ],
     "weight": "1500 g",
     "volume": "500 ml",
-    "melee_damage": { "bash": 6 }
+    "melee_damage": { "bash": 6 },
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -3277,7 +3314,8 @@
     "material": [ "steel" ],
     "weight": "5 kg",
     "volume": "5 L",
-    "melee_damage": { "bash": 8 }
+    "melee_damage": { "bash": 8 },
+    "stackable": true
   },
   {
     "type": "ITEM",

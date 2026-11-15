@@ -12,7 +12,8 @@
     "material": [ "budget_steel" ],
     "weight": "5 kg",
     "volume": "20 L",
-    "longest_side": "60 cm"
+    "longest_side": "60 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -27,7 +28,8 @@
     "material": [ "budget_steel" ],
     "weight": "25 kg",
     "volume": "250 L",
-    "longest_side": "69 cm"
+    "longest_side": "69 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -42,7 +44,8 @@
     "material": [ "budget_steel", "glass" ],
     "weight": "1 kg",
     "volume": "2 L",
-    "longest_side": "65 cm"
+    "longest_side": "65 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -57,7 +60,8 @@
     "material": [ "budget_steel", "glass" ],
     "weight": "10 kg",
     "volume": "20 L",
-    "longest_side": "69 cm"
+    "longest_side": "69 cm",
+    "stackable": true
   },
   {
     "type": "ITEM",
@@ -72,6 +76,7 @@
     "material": [ "budget_steel" ],
     "weight": "5 kg",
     "volume": "20 L",
-    "longest_side": "69 cm"
+    "longest_side": "69 cm",
+    "stackable": true
   }
 ]

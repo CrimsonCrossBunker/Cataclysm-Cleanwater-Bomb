@@ -1132,7 +1132,8 @@
     "price_postapoc": "50 cent",
     "material": [ "glass" ],
     "symbol": "^",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "glass_tube_small",
@@ -1356,7 +1357,8 @@
     "material": [ "plastic" ],
     "looks_like": "plastic_chunk",
     "symbol": "T",
-    "color": "white"
+    "color": "white",
+    "stackable": true
   },
   {
     "id": "rack_test_tube",
@@ -1371,7 +1373,8 @@
     "material": [ "plastic" ],
     "looks_like": "plastic_chunk",
     "symbol": "#",
-    "color": "yellow"
+    "color": "yellow",
+    "stackable": true
   },
   {
     "id": "rack_test_tube_micro",
@@ -1386,7 +1389,8 @@
     "material": [ "plastic" ],
     "looks_like": "plastic_chunk",
     "symbol": "#",
-    "color": "yellow"
+    "color": "yellow",
+    "stackable": true
   },
   {
     "id": "stand_ring",
@@ -1406,7 +1410,8 @@
     "symbol": "l",
     "color": "light_gray",
     "melee_damage": { "bash": 3 },
-    "//2": "Based on https://www.amazon.com/dp/B08ZSC1H5F"
+    "//2": "Based on https://www.amazon.com/dp/B08ZSC1H5F",
+    "stackable": true
   },
   {
     "id": "stand_ring_clamps",
@@ -1423,7 +1428,8 @@
     "looks_like": "scrap",
     "symbol": "[",
     "color": "light_gray",
-    "melee_damage": { "bash": 2 }
+    "melee_damage": { "bash": 2 },
+    "stackable": true
   },
   {
     "id": "sextant",
