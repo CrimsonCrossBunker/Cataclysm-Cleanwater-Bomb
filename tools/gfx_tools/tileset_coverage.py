@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-生成贴图贡献追踪表（中文表头 CSV）
+Build a sprite-contribution tracking CSV with Chinese column headers.
 
-将「游戏需要的全部贴图 ID」与「贴图包已有 ID」「overlay ID」做外连接，
-聚合成每个游戏实体一行的表格，标记已有/缺失，并附带贡献协作所需的
-空列（提交、贡献者、完成状态），供团队认领与填写。
+Outer-join every sprite ID the game needs against the IDs present in the
+tileset and the overlay IDs.  Aggregate the result into one row per game
+entity, mark existing/missing entries, and add empty collaboration columns
+(commit, contributor, status) for contributors to claim and fill in.
 
-用法（先用官方工具链生成三份 CSV）:
+Usage (generate the three input CSVs with the standard toolchain first):
 
   cd Cataclysm-Cleanwater-Bomb
 
@@ -16,20 +17,20 @@
 
   python3 tools/json_tools/generate_overlay_ids.py > all_overlay_ids.csv
 
-  # 注意：list_tileset_ids.py 读取的是 compose 之后的成品目录（含 tile_config.json）
+  # Note: list_tileset_ids.py reads a composed tileset directory (with tile_config.json).
   python3 tools/gfx_tools/list_tileset_ids.py <composed_tileset_dir> > tileset_ids.csv
 
   python3 tools/gfx_tools/tileset_coverage.py \\
    all_game_ids.csv all_overlay_ids.csv tileset_ids.csv \\
    tileset_coverage_output.csv
 
-输出 CSV 列:
+Output CSV columns:
   类型, ID, 名称, 形似, 当前贴图, 完成状态, 提交, 贡献者, 备注
 
-  当前贴图: 已有 / 形似回退 / 缺失
-  完成状态: 已合并(已有贴图) / 待领取(缺失) —— 进行中 / 已完成 由贡献者手动更新
-  提交:     留空，供贡献者填入图片链接（如 ![](url)）
-  贡献者:   留空，供认领者填写
+  当前贴图: existing / looks_like fallback / missing
+  完成状态: merged (sprite exists) / open (missing); in-progress and done are maintained manually
+  提交:     empty; contributors add an image link, e.g. ![](url)
+  贡献者:   empty; the claimant fills this in
 """
 import argparse
 import re
@@ -62,20 +63,20 @@ DELETION_RE = (
     r'$'
 )
 
-# 输出表格的中文列名（顺序即输出顺序）
+# Output column names; their order is preserved in the CSV.
 OUTPUT_COLUMNS = [
     '类型', 'ID', '名称', '形似',
     '当前贴图', '完成状态', '提交', '贡献者', '备注',
 ]
 
-# 当前贴图 / 完成状态 取值
+# Values for the sprite-status and completion-status columns.
 SPRITE_HAVE = '已有'
 SPRITE_LOOKS_LIKE = '形似回退'
 SPRITE_MISSING = '缺失'
 
-STATUS_MERGED = '已合并'      # 已有贴图，视为已并入贴图包
-STATUS_TODO = '待领取'        # 缺失，等待认领
-# 另有「进行中」「已完成」由贡献者在表中手动更新
+STATUS_MERGED = '已合并'      # Sprite exists; treat it as merged into the tileset.
+STATUS_TODO = '待领取'        # Sprite is missing and open for claiming.
+# Contributors maintain the in-progress and done states manually in the table.
 
 
 def strip_overlay_id(overlay_id: str) -> str:
@@ -145,7 +146,8 @@ def merge_datasets(
     """
     Match IDs between game data, overlays and tileset
 
-    （下例仅作示意，输出行顺序依赖 pandas 版本，故跳过严格比对）
+    (The example is illustrative; output order depends on the pandas version,
+    so strict comparison is skipped.)
 
     >>> merge_datasets({  # doctest: +SKIP
     ...     'type': ['ARMOR', 'TOOL', 'BOOK'],
@@ -207,21 +209,24 @@ def merge_datasets(
 
 def build_contribution_table(merged: pandas.DataFrame) -> pandas.DataFrame:
     """
-    将外连接结果聚合成每个游戏实体一行的贡献追踪表。
+    Aggregate the outer-join result into one tracking row per game entity.
 
-    - 只保留游戏真正需要贴图的实体（type 非空，来自 --tileset 的类型集合）
-    - 同一 id 的多行（overlay 撑出）聚合：只要任一行匹配到 tileset_id 即视为「已有」
-    - 计入 looks_like 回退：自身无贴图但 looks_like 指向的 id 有贴图 -> 形似回退
-    - 追加协作空列：提交 / 贡献者 / 备注
+    - Keep only entities that actually need sprites (non-empty type, from the
+      --tileset type set).
+    - Collapse multiple rows for one id (created by overlays): if any row
+      matches a tileset_id, the entity counts as existing.
+    - Account for looks_like fallback: no direct sprite, but the referenced id
+      has one.
+    - Append empty collaboration columns: commit / contributor / note.
     """
-    # 仅游戏实体（type 非空）
+    # Keep only game entities (non-empty type).
     game = merged[merged['type'].notna()].copy()
     game['_has_direct'] = game['tileset_id'].notna()
 
-    # 贴图包中已存在的全部 id（用于 looks_like 回退判断）
+    # All IDs present in the tileset, used for looks_like fallback.
     drawn_ids = set(game.loc[game['_has_direct'], 'id'].astype(str))
 
-    # 缺省列兜底（--tileset 若未导出某列时不报错）
+    # Fill in absent columns instead of failing when --tileset omitted them.
     for col in ('name', 'looks_like'):
         if col not in game.columns:
             game[col] = pandas.NA
@@ -242,7 +247,7 @@ def build_contribution_table(merged: pandas.DataFrame) -> pandas.DataFrame:
         return SPRITE_MISSING
 
     def status_state(sprite: str) -> str:
-        # 已有(含形似回退)默认视为已合并；真缺失为待领取
+        # Existing entries (including fallback) count as merged; truly missing ones are open.
         return STATUS_TODO if sprite == SPRITE_MISSING else STATUS_MERGED
 
     agg['当前贴图'] = agg.apply(sprite_state, axis=1)
@@ -258,7 +263,7 @@ def build_contribution_table(merged: pandas.DataFrame) -> pandas.DataFrame:
         'looks_like': '形似',
     })
 
-    # 排序：缺失优先（待领取的排前面方便认领），再按类型、ID
+    # Sort missing entries first for claiming, then by type and ID.
     sprite_order = {SPRITE_MISSING: 0, SPRITE_LOOKS_LIKE: 1, SPRITE_HAVE: 2}
     agg['_order'] = agg['当前贴图'].map(sprite_order).fillna(9)
     agg = agg.sort_values(['_order', '类型', 'ID']).drop(columns='_order')
@@ -268,7 +273,7 @@ def build_contribution_table(merged: pandas.DataFrame) -> pandas.DataFrame:
 
 def write_output(data: pandas.DataFrame, output_filename: str) -> int:
     """
-    Write the resulting DataFrame to a file (UTF-8 with BOM so Excel 正确识别中文)
+    Write the resulting DataFrame to a file (UTF-8 with BOM so Excel detects Chinese text).
     """
     data.to_csv(output_filename, index=False, encoding='utf-8-sig')
     return 0
@@ -285,7 +290,7 @@ if __name__ == '__main__':
     arg_parser.add_argument('tileset_coverage_output.csv')
     arg_parser.add_argument(
         '--raw', action='store_true',
-        help='输出未聚合的原始外连接结果（英文列），而非中文贡献追踪表',
+        help='emit the unaggregated outer-join result with English columns instead of the Chinese tracking table',
     )
     args_dict = vars(arg_parser.parse_args())
 

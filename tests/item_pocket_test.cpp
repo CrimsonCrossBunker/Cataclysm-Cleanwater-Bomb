@@ -139,7 +139,7 @@ static const pocket_type pocket_container = pocket_type::CONTAINER;
 // ------------
 //
 // These tests are focused on the `item_pocket` and `pocket_data` classes, and how they implement
-// the "pocket_data" section of JSON item definitions (as documented in doc/JSON_FLAGS.md).
+// the "pocket_data" section of JSON item definitions (as documented in doc/JSON/ITEM.md).
 //
 // To run all tests in this file:
 //

@@ -4,7 +4,7 @@
 # jq -f tools/json_tools/jq/regional_terrain.jq data/**.json
 
 # To diff two different entries (most useful for the base game settings and a mod), run the following (adjust paths to relevant files):
-# diff <(jq -f tools/json_tools/jq/regional_terrain.jq data/json/regional_map_settings.json) <(jq -f tools/json_tools/jq/regional_terrain.jq data/mods/rural_biome/rural_regional_map_settings.json)
+# diff <(jq -f tools/json_tools/jq/regional_terrain.jq data/json/region_settings/region_settings/regional_map_settings.json) <(jq -f tools/json_tools/jq/regional_terrain.jq data/mods/rural_biome/region_settings/region_settings/rural_regional_map_settings.json)
 
 .[]
 | select(.type | test("region_settings"))?

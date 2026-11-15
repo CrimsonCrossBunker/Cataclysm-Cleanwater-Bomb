@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """
-生成 CCB 贴图覆盖率与贡献追踪工作簿。
+Build the CCB sprite-coverage and contribution workbook.
 
-脚本直接读取 CCB 的新物品格式（``type: ITEM`` + ``subtypes``），解析
-``copy-from`` 继承，并区分：
+The script reads CCB's item format directly (``type: ITEM`` + ``subtypes``),
+resolves ``copy-from`` inheritance, and distinguishes:
 
-* 已有：期望的贴图 ID 直接存在；
-* 回退可用：通过 ``looks_like``、中性/性别贴图或兼容旧 ID 可以显示；
-* 缺失：没有直接贴图，也没有可用回退。
+* existing: the expected sprite ID is present directly;
+* fallback: the sprite can be shown through ``looks_like``, a neutral/gendered
+  sprite, or a compatible legacy ID;
+* missing: no direct sprite and no usable fallback.
 
-默认扫描 ``data/json`` 和 ``data/mods``，跳过测试、调试与迁移数据。贴图源
-仓库中使用时，通过 ``--data-dir`` 指向游戏仓库的数据目录。
+By default it scans ``data/json`` and ``data/mods``, skipping test, debug, and
+migration data.  When used from a sprite repository, point ``--data-dir`` at
+the game repository's data directories.
 
-用法：
+Usage:
 
   python3 tools/gfx_tools/compose.py --use-all --only-json . /tmp/composed
   python3 tools/gfx_tools/list_tileset_ids.py /tmp/composed > /tmp/tileset_ids.csv
   python3 tools/gfx_tools/tileset_workbook.py /tmp/tileset_ids.csv \
     --output 贴图贡献追踪表.xlsx
 
-贴图源仓库中：
+From a sprite repository:
 
   python3 tools/gfx_tools/tileset_workbook.py /tmp/tileset_ids.csv \
     --data-dir ../Cataclysm-Cleanwater-Bomb/data/json \
@@ -124,7 +126,7 @@ def _is_under(path, directory):
 
 
 def load_json_objects(data_dirs, exclude_dirs=()):
-    """读取数据并返回 ``[(对象, 来源文件)]``；解析错误会明确失败。"""
+    """Read data and return ``[(object, source_file)]``; parse errors fail loudly."""
     objects = []
     seen_files = set()
     for data_dir in data_dirs:
@@ -152,7 +154,7 @@ def load_json_objects(data_dirs, exclude_dirs=()):
 
 
 class JsonResolver:
-    """解析覆盖率所需的少量 JSON 继承字段。"""
+    """Resolve the few JSON inheritance fields needed for coverage."""
 
     SET_FIELDS = {'subtypes', 'flags'}
 
@@ -161,7 +163,7 @@ class JsonResolver:
         self.cache = {}
         for obj, _source in objects:
             for ref in _object_refs(obj):
-                # 核心数据先加载；模组中的局部覆盖不应抹掉完整定义。
+                # Load core data first; a partial mod definition must not erase the full one.
                 self.by_ref.setdefault(ref, obj)
 
     def value(self, obj, field, trail=()):

@@ -535,7 +535,6 @@ float Character::hit_roll() const
                                   mounted_creature->pet_equipment_melee_hit_multiplier() );
     }
 
-    // Cleanwater: 撤销 PR #81632 — 移除载具近战惩罚
     hit *= get_modifier( character_modifier_melee_attack_roll_mod );
 
     return melee::melee_hit_range( hit );
@@ -1451,9 +1450,8 @@ bool Character::can_reach_attack( const Creature &target ) const
         vert_reach = null_item_reference().current_reach_range( *this ).second;
     }
 
-    // CCB: 移除 PR #85753 (RenechCDDA/remove_vertical_melee) 的跨Z轴攻击限制
-    // 原PR将大部分武器的垂直延伸设为0，完全禁止跨楼层攻击
-    // 此处恢复：水平延伸>1的武器（长矛等）至少可跨1层Z轴攻击
+    // CCB: weapons with horizontal reach greater than one keep at least one
+    // z-level of vertical reach, even when the derived vertical reach is zero.
     if( maybe_weapon && maybe_weapon->reach_range( *this ).first > 1 && vert_reach < 1 ) {
         vert_reach = 1;
     }

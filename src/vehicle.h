@@ -870,7 +870,7 @@ class vpart_display
  * - To keep info consistent, always use
  *   `map::board_vehicle()` and `map::unboard_vehicle()` for
  *   boarding/unboarding player.
- * - To add new predesigned vehicle, add an entry to data/raw/vehicles.json
+ * - To add new predesigned vehicle, add an entry under data/json/vehicles/
  *   similar to the existing ones. Keep in mind, that positive x coordinate points
  *   forwards, negative x is back, positive y is to the right, and
  *   negative y to the left:

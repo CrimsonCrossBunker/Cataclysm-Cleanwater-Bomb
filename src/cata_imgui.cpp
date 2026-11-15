@@ -736,10 +736,9 @@ bool cataimgui::client::want_capture_mouse()
         return false;
     }
 
-    // 检查悬停的窗口是否是 QUERY_POPUP（窗口名以 QUERY_POPUP 开头）
+    // QUERY_POPUP windows must not capture mouse input; let the game handle clicks.
     if( ctx->HoveredWindow && ctx->HoveredWindow->Name ) {
         if( strncmp( ctx->HoveredWindow->Name, "QUERY_POPUP", 11 ) == 0 ) {
-            // QUERY_POPUP 窗口不捕获鼠标，让游戏处理点击
             return false;
         }
     }

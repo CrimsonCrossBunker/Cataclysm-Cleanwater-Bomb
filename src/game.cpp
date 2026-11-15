@@ -312,7 +312,6 @@ static const efftype_id effect_no_sight( "no_sight" );
 static const efftype_id effect_onfire( "onfire" );
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_psi_stunned( "psi_stunned" );
-// Cleanwater: 撤销 PR #86067 — 删除 revived_marker 声明
 static const efftype_id effect_ridden( "ridden" );
 static const efftype_id effect_riding( "riding" );
 static const efftype_id effect_stunned( "stunned" );
@@ -3836,9 +3835,8 @@ void game::draw( ui_adaptor &ui )
 {
     // Skip drawing while an in-place reload (quickload / snapshot restore) is
     // tearing down and rebuilding game state; drawing then would touch
-    // half-cleared structures. isdraw guards save/load; should_draw guards
-    // snapshot restore — either being false means we must not draw.
-    if( !isdraw || !should_draw ) {
+    // half-cleared structures.
+    if( !should_draw ) {
         return;
     }
 
@@ -5619,7 +5617,6 @@ bool game::revive_corpse( const tripoint_bub_ms &p, item &it, int radius )
         }
     }
 
-    // Cleanwater: 撤销 PR #86067 — 恢复 times_combatted_player 从尸体继承，删除 revived_marker 标记
     if( it.get_var( "times_combatted", 0.0 ) > 0.0 ) {
         critter.times_combatted_player = it.get_var( "times_combatted", 0.0 );
     }
