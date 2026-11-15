@@ -1,4 +1,6 @@
 #include "cata_catch.h"
+
+#include <algorithm>
 #include "coordinates.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
@@ -14,8 +16,30 @@ TEST_CASE( "north_america_geographic_vegetation_and_population", "[north_america
     CHECK( north_america::ecoregion_code( fairbanks ) == "3.1" );
     CHECK( north_america::forest_adjustment( fairbanks ) > north_america::forest_adjustment(
                winnipeg ) );
-    CHECK( north_america::rural_city_multiplier( project_to<coords::om>( winnipeg ) ) >
-           north_america::rural_city_multiplier( project_to<coords::om>( nunavut ) ) );
+    CHECK( north_america::rural_city_multiplier( project_to<coords::om>( winnipeg + point( 600,
+            0 ) ) ) > north_america::rural_city_multiplier( project_to<coords::om>( nunavut ) ) );
+}
+
+TEST_CASE( "north_america_uses_footprints_and_limits_remote_town_sizes", "[north_america]" )
+{
+    const point_abs_om winnipeg = project_to<coords::om>( point_abs_omt( -75949, -46747 ) );
+    const auto &districts = north_america::urban_districts_in( winnipeg );
+    REQUIRE( !districts.empty() );
+    CHECK( north_america::in_urban_footprint( districts.front().center ) );
+    CHECK( north_america::rural_town_size( districts.front().center ) == 0 );
+
+    const auto &places = north_america::cities();
+    const auto churchill = std::find_if( places.begin(),
+    places.end(), []( const north_america::place & p ) {
+        return p.name == "Churchill";
+    } );
+    REQUIRE( churchill != places.end() );
+    const int city_size = north_america::named_city_size( churchill->population );
+    for( int east = -720; east <= 720; east += 120 ) {
+        for( int north = -720; north <= 720; north += 120 ) {
+            CHECK( north_america::rural_town_size( churchill->position + point( east, north ) ) < city_size );
+        }
+    }
 }
 
 TEST_CASE( "north_america_coarse_highway_samples_match_full_raster", "[north_america]" )

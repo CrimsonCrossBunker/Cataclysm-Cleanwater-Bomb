@@ -8839,12 +8839,12 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return false;
         }
         const double crit_speed = who.mount_speed();
-        const double base_moves = who.run_cost( mcost, diag ) * 100.0 / crit_speed;
+        const double base_moves = who.run_cost( mcost, diag, dest_loc ) * 100.0 / crit_speed;
         const double encumb_moves = who.get_weight() / 4800.0_gram;
         who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag ) );
+        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.

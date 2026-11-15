@@ -1,4 +1,5 @@
 #include "weather.h"
+#include "climate_seasons.h"
 
 #include <color.h>
 #include <pimpl.h>
@@ -1092,6 +1093,7 @@ const weather_generator &weather_manager::get_cur_weather_gen() const
 
 void weather_manager::on_game_start()
 {
+    regional_climate::set_calendar_location( std::nullopt );
     if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
         weather_override = static_cast<weather_type_id>
                            ( get_option<std::string>( "ETERNAL_WEATHER" ) );
@@ -1121,6 +1123,8 @@ void weather_manager::update_weather()
     if( weather_id == WEATHER_NULL || calendar::turn >= nextweather ) {
         w_point &w = *weather_precise;
         const weather_generator &weather_gen = get_cur_weather_gen();
+        regional_climate::set_calendar_location( weather_gen.climate_location(
+                    player_character.pos_abs() ) );
         w = weather_gen.get_weather( player_character.pos_abs(), calendar::turn,
                                      g->get_seed() );
         weather_type_id old_weather = weather_id;
@@ -1198,35 +1202,107 @@ void weather_manager::update_weather()
     update_snow_depth();
 }
 
-// Maximum time delta to apply in a single catch-up update (1 hour).
-// Beyond this, weather has certainly changed and the approximation is too coarse.
-static constexpr time_duration max_snow_catchup = 1_hours;
-// Snow-water equivalent ratio: 1mm liquid precipitation = 12mm snow depth
-static constexpr double snow_water_ratio = 12.0;
-// Melt rate in mm snow per degree-C above freezing per hour.
-// Derived from degree-day factor ~4 mm SWE/C/day at 12:1 ratio:
-// 4/24 * 12 = 2.0.  Real-world range is 1.5-3.0 for open ground.
-static constexpr double melt_rate_per_deg_per_hour = 2.0;
-// Maximum snow depth in mm
-static constexpr double max_snow_depth = 800.0;
-
-// Snow depth is tracked at z=0 only; weather is uniform across z-levels.
-static tripoint_abs_omt ground_level_omt( const tripoint_abs_omt &omt )
+namespace
 {
-    return tripoint_abs_omt( omt.x(), omt.y(), 0 );
+constexpr int snow_cell_width = 32;
+constexpr time_duration snow_history = 28_days;
+constexpr double max_snow_depth_mm = 800.0;
+constexpr double legacy_snow_ratio = 12.0;
+
+void catch_up_snow( omt_snow_state &pack, const tripoint_abs_omt &cell,
+                    const weather_manager &weather, time_point now )
+{
+    const weather_generator &generator = weather.get_cur_weather_gen();
+    const auto position = project_to<coords::ms>( cell + point( snow_cell_width / 2,
+                          snow_cell_width / 2 ) );
+    const auto climate = generator.climate_at( position );
+    const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
+    const weather_type_id forced = eternal == "normal" ? weather.weather_override :
+                                   weather_type_id( eternal );
+    time_point start = std::max( pack.last_update, now - snow_history );
+    while( start < now ) {
+        const time_duration step = std::min( now - start, now - start > 7_days ? 3_hours : 1_hours );
+        const w_point sample = generator.get_weather( position, start + step / 2, g->get_seed(),
+                               false, &climate );
+        const weather_type_id type = forced != WEATHER_NULL ? forced :
+                                     generator.get_weather_conditions( sample );
+        const auto climate_rate = forced == WEATHER_NULL ? regional_precipitation_rate( type, sample ) :
+                                  std::nullopt;
+        const double rate = climate_rate.value_or( precip_mm_per_hour( type->precip ) );
+        advance_snowpack( pack, rate,
+                          units::to_celsius( weather.forced_temperature.value_or( sample.temperature ) ),
+                          sample.humidity, sample.windpower, to_hours<double>( step ) );
+        start += step;
+    }
+    pack.last_update = now;
+}
+} // namespace
+
+tripoint_abs_omt snow_climate_cell( const tripoint_abs_omt &location )
+{
+    const point cell = divide_xy_round_to_minus_infinity( location.xy().raw(), snow_cell_width );
+    return tripoint_abs_omt( cell.x * snow_cell_width, cell.y * snow_cell_width, 0 );
+}
+
+snow_cover classify_snow( double depth_mm )
+{
+    if( depth_mm >= 500 ) {
+        return snow_cover::deep;
+    }
+    if( depth_mm >= 250 ) {
+        return snow_cover::medium;
+    }
+    return depth_mm >= 1 ? snow_cover::light : snow_cover::none;
+}
+
+int snow_move_penalty( snow_cover cover )
+{
+    return cover == snow_cover::deep ? 100 : cover == snow_cover::medium ? 50 : 0;
+}
+
+void advance_snowpack( omt_snow_state &pack, double water_rate, double temperature_c,
+                       double humidity, double wind_mph, double hours )
+{
+    if( pack.water_mm < 0 ) {
+        pack.water_mm = pack.depth_mm / legacy_snow_ratio;
+    }
+    const double snow_fraction = std::clamp( ( 2.0 - temperature_c ) / 3.0, 0.0, 1.0 );
+    const double snowfall = water_rate * snow_fraction * hours;
+    const double fresh_ratio = std::clamp( 12.0 - temperature_c * 0.7, 6.0, 22.0 );
+    pack.water_mm += snowfall;
+    pack.depth_mm += snowfall * fresh_ratio;
+    if( pack.water_mm <= 0 ) {
+        pack.depth_mm = 0;
+        return;
+    }
+
+    // Estimate melt in water equivalents with a degree-day factor. Rain
+    // adds a small melt contribution when it falls on an above-freezing pack.
+    const double thaw = std::max( 0.0, temperature_c );
+    const double melt_rate = 4.0 / 24 * thaw + 0.025 * water_rate * ( 1 - snow_fraction ) * thaw;
+    const double dryness = 1 - std::clamp( humidity / 100, 0.0, 1.0 );
+    const double sublimation = dryness * ( 0.025 + 0.004 * std::min( wind_mph, 40.0 ) );
+    const double remaining = std::max( 0.0, pack.water_mm - ( melt_rate + sublimation ) * hours );
+    pack.depth_mm *= remaining / pack.water_mm;
+    pack.water_mm = remaining;
+
+    const double settled_depth = std::min( pack.depth_mm, remaining * 5.0 );
+    pack.depth_mm = settled_depth + ( pack.depth_mm - settled_depth ) *
+                    std::exp( -hours * ( 0.004 + thaw * 0.001 ) );
+    if( pack.depth_mm > max_snow_depth_mm ) {
+        pack.water_mm *= max_snow_depth_mm / pack.depth_mm;
+        pack.depth_mm = max_snow_depth_mm;
+    }
 }
 
 void weather_manager::update_snow_depth()
 {
-    if( !calendar::once_every( 1_minutes ) ) {
+    if( !calendar::once_every( 1_minutes ) || weather_id == WEATHER_NULL ) {
         return;
     }
-
-    // Prune dead entries once per hour
-    if( calendar::once_every( 1_hours ) ) {
+    if( calendar::once_every( 1_days ) ) {
         for( auto it = snow_depth_map.begin(); it != snow_depth_map.end(); ) {
-            if( it->second.depth_mm <= 0.001 &&
-                calendar::turn - it->second.last_update > 6_hours ) {
+            if( calendar::turn - it->second.last_update > snow_history ) {
                 it = snow_depth_map.erase( it );
             } else {
                 ++it;
@@ -1234,76 +1310,54 @@ void weather_manager::update_snow_depth()
         }
     }
 
-    if( weather_id == WEATHER_NULL ) {
-        // No valid weather yet - just keep timestamps current
-        for( auto &pair : snow_depth_map ) {
-            pair.second.last_update = calendar::turn;
-        }
+    const tripoint_abs_omt cell = snow_climate_cell( get_player_character().pos_abs_omt() );
+    auto existing = snow_depth_map.find( cell );
+    if( existing == snow_depth_map.end() ) {
+        get_snow_depth_mm( cell );
         return;
     }
-
-    // Ensure the player's current OMT is tracked, seeded from nearest neighbor
-    const tripoint_abs_omt player_omt = ground_level_omt(
-                                            get_player_character().pos_abs_omt() );
-    if( snow_depth_map.find( player_omt ) == snow_depth_map.end() ) {
-        omt_snow_state seeded;
-        seeded.depth_mm = get_snow_depth_mm( player_omt );
-        seeded.last_update = calendar::turn;
-        snow_depth_map[player_omt] = seeded;
+    omt_snow_state &pack = existing->second;
+    const time_duration elapsed = calendar::turn - pack.last_update;
+    if( elapsed <= 0_turns ) {
+        return;
     }
-
-    const bool is_snowing = weather_id->precip != precip_class::none && !weather_id->rains;
-    const double accum_rate = is_snowing ?
-                              climate_precipitation_mm_per_hour.value_or(
-                                  precip_mm_per_hour( weather_id->precip ) ) * snow_water_ratio : 0.0;
-    const bool is_melting = temperature > 0_C;
-    const double melt_rate = is_melting ?
-                             melt_rate_per_deg_per_hour * units::to_celsius( temperature ) : 0.0;
-
-    for( auto &pair : snow_depth_map ) {
-        omt_snow_state &state = pair.second;
-
-        time_duration dt = calendar::turn - state.last_update;
-        if( dt > max_snow_catchup ) {
-            dt = max_snow_catchup;
-        }
-        if( dt <= 0_seconds ) {
-            state.last_update = calendar::turn;
-            continue;
-        }
-
-        const double hours = to_seconds<double>( dt ) / 3600.0;
-
-        if( accum_rate > 0 ) {
-            state.depth_mm += accum_rate * hours;
-        }
-        if( is_melting && state.depth_mm > 0 ) {
-            state.depth_mm -= melt_rate * hours;
-        }
-
-        state.depth_mm = std::clamp( state.depth_mm, 0.0, max_snow_depth );
-        state.last_update = calendar::turn;
+    if( elapsed > 1_hours ) {
+        catch_up_snow( pack, cell, *this, calendar::turn );
+        return;
     }
+    const double precipitation = climate_precipitation_mm_per_hour.value_or(
+                                     precip_mm_per_hour( weather_id->precip ) );
+    advance_snowpack( pack, precipitation,
+                      units::to_celsius( forced_temperature.value_or( temperature ) ),
+                      weather_precise->humidity, windspeed, to_hours<double>( elapsed ) );
+    pack.last_update = calendar::turn;
 }
 
-double weather_manager::get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const
+double weather_manager::get_snow_depth_mm( const tripoint_abs_omt &location ) const
 {
-    const tripoint_abs_omt ground_pos = ground_level_omt( omt_pos );
-    auto it = snow_depth_map.find( ground_pos );
-    if( it != snow_depth_map.end() ) {
-        return it->second.depth_mm;
+    if( location.z() < 0 || !g || weather_id == WEATHER_NULL ) {
+        return 0;
     }
-    // Seed from nearest neighbor that has data
-    double best_depth = 0.0;
-    int best_dist = INT_MAX;
-    for( const auto &pair : snow_depth_map ) {
-        const int dist = square_dist( ground_pos, pair.first );
-        if( dist < best_dist ) {
-            best_dist = dist;
-            best_depth = pair.second.depth_mm;
-        }
+    const tripoint_abs_omt cell = snow_climate_cell( location );
+    auto [it, inserted] = snow_depth_map.try_emplace( cell );
+    if( inserted ) {
+        it->second.last_update = calendar::turn - snow_history;
     }
-    return best_depth;
+    if( calendar::turn - it->second.last_update >= 1_hours ) {
+        catch_up_snow( it->second, cell, *this, calendar::turn );
+    }
+    return it->second.depth_mm;
+}
+
+snow_cover weather_manager::get_snow_cover( const map &here,
+        const tripoint_bub_ms &position ) const
+{
+    if( position.z() < 0 || !here.inbounds( position ) || !here.is_outside( position ) ||
+        here.is_roofed( position ) || here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ||
+        here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, position ) ) {
+        return snow_cover::none;
+    }
+    return classify_snow( get_snow_depth_mm( project_to<coords::omt>( here.get_abs( position ) ) ) );
 }
 
 void weather_manager::set_nextweather( time_point t )

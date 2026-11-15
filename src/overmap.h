@@ -918,7 +918,7 @@ class overmap
             const point_om_omt &dest, int z, bool must_be_unexplored ) const;
         pf::directed_path<point_om_omt> lay_out_street(
             const overmap_connection &connection, const point_om_omt &source,
-            om_direction::type dir, size_t len );
+            om_direction::type dir, size_t len, bool bounded_urban );
     public:
         void build_connection(
             const overmap_connection &connection, const pf::directed_path<point_om_omt> &path, int z,

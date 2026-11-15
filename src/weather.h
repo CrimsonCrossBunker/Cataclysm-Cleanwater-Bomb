@@ -199,7 +199,23 @@ void weather_sound( const translation &sound_message, std::string_view sound_eff
 struct omt_snow_state {
     double depth_mm = 0;
     time_point last_update = calendar::turn;
+    double water_mm = -1;
 };
+
+class map;
+
+enum class snow_cover : uint8_t {
+    none,
+    light,
+    medium,
+    deep
+};
+
+tripoint_abs_omt snow_climate_cell( const tripoint_abs_omt &location );
+snow_cover classify_snow( double depth_mm );
+int snow_move_penalty( snow_cover cover );
+void advance_snowpack( omt_snow_state &pack, double water_rate, double temperature_c,
+                       double humidity, double wind_mph, double hours );
 
 class weather_manager
 {
@@ -215,6 +231,7 @@ class weather_manager
         void update_snow_depth();
         // Snow depth in mm at a given OMT (0 if no data)
         double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
+        snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature
         units::temperature temperature = 0_K;
         bool lightning_active = false;
@@ -243,7 +260,7 @@ class weather_manager
         std::unordered_map< tripoint_bub_ms, units::temperature > temperature_cache;
         mutable std::unordered_map<tripoint_abs_omt, units::temperature> ground_temperature_cache;
         // Per-OMT snow depth state, updated incrementally
-        std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
+        mutable std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
         /*
         * Returns current temperature of given tile. Includes temperature modifications from
         * radiative and convective sources, such as fires or hot air from heaters.
