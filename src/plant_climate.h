@@ -38,6 +38,8 @@ struct fruit_climate_profile {
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
                                    const furn_t &furniture, float growth_speed, float water_use );
 
+bool has_local_fruit_climate( const tripoint_abs_ms &pos );
+
 // First ripe day of the current model year. No value if the climate cannot ripen the fruit.
 std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
         const tripoint_abs_ms &pos );

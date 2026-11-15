@@ -3525,7 +3525,7 @@ const harvest_id &map::get_harvest( const tripoint_bub_ms &pos ) const
         return furn_harvest;
     }
     const ter_t &ground = ter( pos ).obj();
-    if( ground.fruit_climate ) {
+    if( ground.fruit_climate && has_local_fruit_climate( get_abs( pos ) ) ) {
         if( !ground.has_flag( ter_furn_flag::TFLAG_HARVESTED ) &&
             local_fruit_is_ripe( *ground.fruit_climate, get_abs( pos ), calendar::turn ) ) {
             return ground.fruit_climate->harvest;
@@ -11672,7 +11672,7 @@ void map::restock_fruits( const tripoint_bub_ms &p, const time_duration &time_si
     if( !ter.has_flag( ter_furn_flag::TFLAG_HARVESTED ) ) {
         return; // Already harvestable. Do nothing.
     }
-    if( ter.fruit_climate ) {
+    if( ter.fruit_climate && has_local_fruit_climate( get_abs( p ) ) ) {
         const auto ripe = local_fruit_ripe_day( *ter.fruit_climate, get_abs( p ) );
         if( ripe && local_fruit_is_ripe( *ter.fruit_climate, get_abs( p ), calendar::turn ) ) {
             const time_duration year = calendar::year_length();

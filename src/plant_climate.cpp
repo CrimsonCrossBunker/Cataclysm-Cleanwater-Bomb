@@ -224,6 +224,16 @@ int fruit_model_day( time_point when )
     return static_cast<int>( ( ( time_past_new_year( when ) + year ) % year ) / year * model_days );
 }
 
+bool has_local_fruit_climate( const tripoint_abs_ms &pos )
+{
+    const auto &generator = get_weather_const().get_cur_weather_gen();
+    if( !generator.climate_location( pos ) ) {
+        return false;
+    }
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
+    return cell_at( cell, generator ).normals.has_value();
+}
+
 std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
         const tripoint_abs_ms &pos )
 {
