@@ -1908,7 +1908,8 @@
     "looks_like": "withered",
     "description": "A handful of dry leaves(?) from an alien plant.  Despite their otherworldly origin, they have very few uses and are thus (almost) only good for burning.",
     "color": "red",
-    "symbol": ","
+    "symbol": ",",
+    "stackable": true
   },
   {
     "type": "ITEM",
