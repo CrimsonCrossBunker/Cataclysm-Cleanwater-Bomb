@@ -77,6 +77,7 @@
 #include "mongroup.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -3789,6 +3790,7 @@ void monster::generate_inventory( bool disableDrops )
         return;
     }
 
+    const north_america::scoped_regional_loot loot( pos_abs().xy() );
     std::vector<item> new_items = item_group::items_from( type->death_drops,
                                   calendar::start_of_cataclysm,
                                   spawn_flags::use_spawn_rate );
@@ -3817,6 +3819,7 @@ void monster::drop_items_on_death( map *here, item *corpse ) const
         return;
     }
 
+    const north_america::scoped_regional_loot loot( pos_abs().xy() );
     std::vector<item> new_items = item_group::items_from( type->death_drops,
                                   calendar::start_of_cataclysm,
                                   spawn_flags::use_spawn_rate );

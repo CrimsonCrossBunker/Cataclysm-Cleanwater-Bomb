@@ -9,6 +9,7 @@
 #include "city.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "mongroup.h"
 #include "mp_client_conn.h"
 #include "options.h"
 #include "path_info.h"
@@ -16,6 +17,10 @@
 
 namespace north_america
 {
+struct regional_loot_table {
+    std::unordered_map<item_group_id, item_group_id> groups;
+};
+
 namespace
 {
 
@@ -152,6 +157,123 @@ const atlas &get_atlas()
     return instance;
 }
 
+struct jurisdiction_polygon {
+    std::string code;
+    feature area;
+
+    bool contains( point p ) const {
+        if( !area.box.intersects( { p, p } ) ) {
+            return false;
+        }
+        const auto edges = area.edges_by_band.find( edge_band( p.y ) );
+        if( edges == area.edges_by_band.end() ) {
+            return false;
+        }
+        bool inside = false;
+        for( const auto &[a, b] : edges->second ) {
+            if( ( a.y > p.y ) == ( b.y > p.y ) ) {
+                continue;
+            }
+            const double x = a.x + static_cast<double>( b.x - a.x ) * ( p.y - a.y ) / ( b.y - a.y );
+            if( p.x < x ) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+};
+
+constexpr int jurisdiction_cell_size = 131072;
+
+point jurisdiction_cell( point p )
+{
+    const auto index = []( int metres ) {
+        return metres / jurisdiction_cell_size - ( metres % jurisdiction_cell_size < 0 ? 1 : 0 );
+    };
+    return point( index( p.x ), index( p.y ) );
+}
+
+struct jurisdiction_index {
+    std::vector<jurisdiction_polygon> polygons;
+    std::unordered_map<point, std::vector<size_t>> cells;
+};
+
+const jurisdiction_index &jurisdictions()
+{
+    static const auto index = [] {
+        jurisdiction_index result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.jurisdictions",
+        [&]( const JsonValue & value ) {
+            const JsonObject root = value.get_object();
+            if( root.get_int( "version" ) != 1 ) {
+                root.throw_error( "Unknown North America jurisdictions version" );
+            }
+            for( const JsonValue row : root.get_array( "polygons" ) ) {
+                const JsonArray entry = row.get_array();
+                feature area;
+                for( const JsonValue ring : entry.get_array( 1 ) ) {
+                    auto path = read_path( ring.get_array() );
+                    if( path.size() >= 4 && path.front() == path.back() ) {
+                        area.paths.push_back( std::move( path ) );
+                    }
+                }
+                if( !area.paths.empty() ) {
+                    area.box = extent( area.paths.front() );
+                    index_edges( area );
+                    // Queries use only the indexed edges and the bounding box.
+                    area.paths.clear();
+                    const point low = jurisdiction_cell( area.box.min );
+                    const point high = jurisdiction_cell( area.box.max );
+                    for( int x = low.x; x <= high.x; ++x ) {
+                        for( int y = low.y; y <= high.y; ++y ) {
+                            result.cells[point( x, y )].push_back( result.polygons.size() );
+                        }
+                    }
+                    result.polygons.push_back( { entry.get_string( 0 ), std::move( area ) } );
+                }
+            }
+        } );
+        return result;
+    }();
+    return index;
+}
+
+const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables()
+{
+    static const auto tables = [] {
+        std::unordered_map<std::string, regional_loot_table> result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_loot.json",
+        [&]( const JsonValue & value ) {
+            const JsonObject root = value.get_object();
+            const JsonArray state_groups = root.get_array( "state_groups" );
+            const JsonArray firearm_groups = root.get_array( "firearm_groups" );
+            const JsonArray uniform_groups = root.get_array( "uniform_groups" );
+            for( const JsonValue row : root.get_array( "jurisdictions" ) ) {
+                const JsonArray entry = row.get_array();
+                const std::string code = entry.get_string( 0 );
+                const std::string firearm_profile = entry.get_string( 1 );
+                const std::string uniform_profile = entry.get_string( 2 );
+                regional_loot_table &table = result[code];
+                const auto add_groups = [&]( const JsonArray & groups, const std::string & suffix ) {
+                    for( const JsonValue value : groups ) {
+                        const std::string base = value.get_string();
+                        table.groups.emplace( item_group_id( base ), item_group_id( base + "-" + suffix ) );
+                    }
+                };
+                add_groups( state_groups, code );
+                add_groups( firearm_groups, firearm_profile );
+                add_groups( uniform_groups, uniform_profile );
+            }
+            // These keys are consumed by the offline data generator.
+            root.allow_omitted_members();
+        } );
+        return result;
+    }();
+    return tables;
+}
+
+thread_local const regional_loot_table *current_loot_table = nullptr;
+
 class water_grid
 {
     public:
@@ -267,6 +389,77 @@ bool active()
 {
     static const dimension_id earth( "default" );
     return g && g->north_america_world && g->get_dimension_prefix() == earth;
+}
+
+std::string_view jurisdiction_at( point_abs_ms position )
+{
+    const auto &index = jurisdictions();
+    const auto candidates = index.cells.find( jurisdiction_cell( position.raw() ) );
+    if( candidates == index.cells.end() ) {
+        return {};
+    }
+    for( size_t candidate : candidates->second ) {
+        const jurisdiction_polygon &polygon = index.polygons[candidate];
+        if( polygon.contains( position.raw() ) ) {
+            return polygon.code;
+        }
+    }
+    return {};
+}
+
+scoped_regional_loot::scoped_regional_loot( point_abs_ms position ) :
+    previous( current_loot_table )
+{
+    current_loot_table = nullptr;
+    if( active() ) {
+        const auto &tables = regional_loot_tables();
+        const auto found = tables.find( std::string( jurisdiction_at( position ) ) );
+        if( found != tables.end() ) {
+            current_loot_table = &found->second;
+        }
+    }
+}
+
+scoped_regional_loot::~scoped_regional_loot()
+{
+    current_loot_table = previous;
+}
+
+const item_group_id &regional_item_group( const item_group_id &base )
+{
+    if( current_loot_table ) {
+        const auto found = current_loot_table->groups.find( base );
+        if( found != current_loot_table->groups.end() ) {
+            return found->second;
+        }
+    }
+    return base;
+}
+
+mtype_id regional_monster( const mtype_id &type, point_abs_ms position )
+{
+    static const mtype_id swat( "mon_zombie_swat" );
+    static const mtype_id marine( "mon_zombie_marine" );
+    static const mtype_id stalker( "mon_zombie_marine_upgrade" );
+    static const mtype_id swat_ca( "mon_zombie_swat_ca" );
+    static const mtype_id swat_mx( "mon_zombie_swat_mx" );
+    static const mtype_id marine_ca( "mon_zombie_marine_ca" );
+    static const mtype_id marine_mx( "mon_zombie_marine_mx" );
+    static const mtype_id stalker_ca( "mon_zombie_marine_upgrade_ca" );
+    static const mtype_id stalker_mx( "mon_zombie_marine_upgrade_mx" );
+    if( ( type != swat && type != marine && type != stalker ) || !active() ) {
+        return type;
+    }
+    const std::string_view code = jurisdiction_at( position );
+    const bool canada = code.substr( 0, 3 ) == "CA-";
+    if( !canada && code.substr( 0, 3 ) != "MX-" ) {
+        return type;
+    }
+    const mtype_id &variant = type == swat ? ( canada ? swat_ca : swat_mx ) :
+                             type == marine ? ( canada ? marine_ca : marine_mx ) :
+                             ( canada ? stalker_ca : stalker_mx );
+    return variant.is_valid() && !MonsterGroupManager::monster_is_blacklisted( variant ) ?
+           variant : type;
 }
 
 bool offer_starting_city()

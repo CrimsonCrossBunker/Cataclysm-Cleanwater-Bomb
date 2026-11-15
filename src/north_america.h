@@ -3,10 +3,12 @@
 #define CATA_SRC_NORTH_AMERICA_H
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "coordinates.h"
 #include "regional_climate.h"
+#include "type_id.h"
 
 namespace north_america
 {
@@ -28,6 +30,27 @@ const std::vector<place> &cities();
 const std::vector<size_t> &cities_in( point_abs_om overmap );
 bool suitable_for_highway_intersection( point_abs_om overmap );
 regional_climate::coordinates location( point_abs_ms position );
+// Empty outside the covered land. Coordinates use the same projection as the terrain atlas.
+std::string_view jurisdiction_at( point_abs_ms position );
+// New ambient spawns only. Existing monsters and mission targets keep their saved types.
+mtype_id regional_monster( const mtype_id &type, point_abs_ms position );
+
+struct regional_loot_table;
+
+// Supplies the origin for nested loot groups without changing non-geographic item APIs.
+class scoped_regional_loot
+{
+    public:
+        explicit scoped_regional_loot( point_abs_ms position );
+        ~scoped_regional_loot();
+        scoped_regional_loot( const scoped_regional_loot & ) = delete;
+        scoped_regional_loot &operator=( const scoped_regional_loot & ) = delete;
+
+    private:
+        const regional_loot_table *previous;
+};
+
+const item_group_id &regional_item_group( const item_group_id &base );
 // The caller can include a border to make shoreline classification independent of generation order.
 std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride = 1 );
 
