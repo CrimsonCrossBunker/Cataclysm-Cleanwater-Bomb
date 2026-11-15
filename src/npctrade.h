@@ -2,7 +2,9 @@
 #ifndef CATA_SRC_NPCTRADE_H
 #define CATA_SRC_NPCTRADE_H
 
+#include <functional>
 #include <list>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,6 +47,10 @@ class item_pricing
 };
 namespace npc_trading
 {
+// A remotely controlled player also has an npc body. Pricing and refusal
+// rules apply only to the merchant side of a player trade.
+const npc *merchant( const Character &who );
+
 bool pay_npc( npc &np, int cost );
 bool pay_npc( npc &np, Character &payer, int cost );
 
@@ -60,9 +66,31 @@ bool npc_can_fit_items( npc const &np, trade_selector::select_t const &to_trade 
 void update_npc_owed( npc &np, int your_balance, int your_sale_value );
 int cash_to_favor( const npc &, int cash );
 
-std::list<item> transfer_items( trade_selector::select_t &stuff, Character &giver,
-                                Character &receiver, std::list<item_location *> &from_map,
-                                bool use_escrow );
+struct trade_terms {
+    int balance = 0;
+    int owed_after = 0;
+    int bank_change = 0;
+    int sale_value = 0;
+    int purchase_value = 0;
+    int owed_before = 0;
+    int sold_before = 0;
+    int cash_before = 0;
+    bool free_exchange = false;
+
+    bool operator==( const trade_terms &rhs ) const;
+};
+
+// Callers supply locations from the merchant's and player's current trade
+// lists. The engine checks the exact quantities, prices and account.
+std::optional<trade_terms> quote_trade( const Character &player, const npc &trader,
+                                        const trade_selector::select_t &sales,
+                                        const trade_selector::select_t &purchases,
+                                        int service_cost, bool use_bank );
+bool commit_trade( Character &player, npc &trader, const trade_selector::select_t &sales,
+                   const trade_selector::select_t &purchases, int service_cost, bool use_bank,
+                   const trade_terms &confirmed,
+                   std::vector<tripoint_abs_ms> *changed_tiles = nullptr,
+                   const std::function<void()> &after_settlement = {} );
 double net_price_adjustment( const Character &buyer, const Character &seller );
 bool trade( npc &p, int cost, const std::string &deal );
 std::vector<item_pricing> init_selling( npc &p );

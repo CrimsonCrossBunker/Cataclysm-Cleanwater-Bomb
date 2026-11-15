@@ -3,6 +3,7 @@
 
 #include <map>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -23,6 +24,7 @@
 #include "mutation.h"
 #include "npc.h"
 #include "npc_opinion.h"
+#include "npc_radio.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "rng.h"
@@ -62,7 +64,7 @@ void write_player_view( JsonOut &out, const player_id &id, const npc &actor,
     out.member( "help_target", observation.partner_help_target );
     out.member( "activity_pct", observation.partner_activity_pct );
     out.member( "activity_moves", observation.partner_activity_moves_total );
-    out.member( "luminance", observation.mp_remote_player_luminance );
+    out.member( "luminance", actor.active_light() );
     out.member( "hp" );
     out.start_array();
     for( const bodypart_id &part : actor.get_all_body_parts() ) {
@@ -476,5 +478,36 @@ void apply_mission_view( const JsonObject &message, Character &who )
         }
     }
     who.load_mission_state( message );
+}
+
+void write_radio_contacts( JsonOut &out, const Character &who )
+{
+    out.start_array();
+    for( const character_id &id : who.faction_representatives ) {
+        const npc *contact = g->find_npc( id );
+        if( contact == nullptr || contact->is_dead() || contact->is_hallucination() ||
+            is_player_proxy( *contact ) || !npc_radio::knows_representative( who, *contact ) ) {
+            continue;
+        }
+        out.start_object();
+        out.member( "id", id.get_value() );
+        out.member( "faction", contact->get_fac_id().str() );
+        out.member( "name", contact->get_name() );
+        out.end_object();
+    }
+    out.end_array();
+}
+
+void apply_radio_contacts( const JsonArray &message, std::vector<radio_contact_view> &contacts )
+{
+    std::vector<radio_contact_view> snapshot;
+    for( const JsonObject entry : message ) {
+        const character_id id( entry.get_int( "id" ) );
+        if( id.is_valid() ) {
+            snapshot.push_back( { id, faction_id( entry.get_string( "faction" ) ),
+                                  entry.get_string( "name" ) } );
+        }
+    }
+    contacts = std::move( snapshot );
 }
 } // namespace cata_mp

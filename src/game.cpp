@@ -3715,7 +3715,8 @@ void game::vehicle_turning_assist()
         veh->can_use_rails( here ) || !veh->valid_wheel_config( here ) ||
         veh->steering_effectiveness( here ) <= 0.0f || !veh->can_control_on_land( u ) ||
         veh->is_autodriving || veh->autopilot_on ) {
-        add_msg( m_info, _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
+        add_msg( m_info,
+                 _( "Turning assistance requires a forward-moving land vehicle under your control." ) );
         return;
     }
     const safe_reference<vehicle> lifetime = veh->get_safe_reference();
@@ -3735,13 +3736,15 @@ void game::vehicle_turning_assist()
     const double lateral = -delta.x() * std::sin( heading ) + delta.y() * std::cos( heading );
     const std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( forward, lateral );
     if( !arc ) {
-        add_msg( m_info, _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
+        add_msg( m_info,
+                 _( "That point requires too sharp a turn.  Choose a point farther ahead and to one side." ) );
         return;
     }
     veh->pldrive( here, u, 0, 0, 0, arc );
     if( lifetime && veh->turning_arc ) {
         vehicle_guidance = true;
-        add_msg( m_info, _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
+        add_msg( m_info,
+                 _( "Turning assistance engaged.  Steer manually, brake, or choose this action again to cancel." ) );
     }
 }
 
@@ -3772,10 +3775,10 @@ void game::draw_vehicle_guidance()
     // Match the movement engine's tile-step budget for one second.  Drag,
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
-                                 vehicles::vmiph_per_tile ) ), 0, 60 );
+                                  vehicles::vmiph_per_tile ) ), 0, 60 );
     const double skill = u.get_skill_level( skill_id( "driving" ) );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
-                                       ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
+                                        ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
     std::set<tripoint_bub_ms> estimate;
     tripoint_bub_ms predicted = origin;
@@ -3787,10 +3790,12 @@ void game::draw_vehicle_guidance()
     for( int step = 0; step <= steps; ++step ) {
         const double angle = to_radians( ray.dir() );
         // Project the two sides of the vehicle along its predicted heading.
-        for( const double side : { left - 1.0, right + 1.0 } ) {
+        for( const double side : {
+                 left - 1.0, right + 1.0
+             } ) {
             const tripoint_bub_ms p = predicted + point(
-                                         std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
-                                         std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
+                                          std::lround( front * std::cos( angle ) - side * std::sin( angle ) ),
+                                          std::lround( front * std::sin( angle ) + side * std::cos( angle ) ) );
             guides.insert( p );
         }
         if( step == steps ) {
@@ -3798,8 +3803,12 @@ void game::draw_vehicle_guidance()
             int max_x = INT_MIN;
             int min_y = INT_MAX;
             int max_y = INT_MIN;
-            for( const double along : { rear, front } ) {
-                for( const double side : { left, right } ) {
+            for( const double along : {
+                     rear, front
+                 } ) {
+                for( const double side : {
+                         left, right
+                     } ) {
                     const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
                     const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
                     min_x = std::min( min_x, x - uncertainty );
@@ -6085,9 +6094,11 @@ bool game::npc_menu( npc &who )
             cata_mp::client_mark_action_sent();
             u.mod_moves( -10 );
         } else if( cata_mp::is_hosting() && cata_mp::is_partner_npc( who.getID() ) ) {
-            add_msg( _( "You tap %s on the shoulder." ), who.get_name() );
-            cata_mp::mark_wake_client_pending( who.getID() );
-            u.mod_moves( -10 );
+            const std::string name = who.get_name();
+            if( cata_mp::tap_waiting_partner( u, who ) ) {
+                add_msg( _( "You tap %s on the shoulder." ), name );
+                u.mod_moves( -10 );
+            }
         }
 #endif
     } else if( choice == help_with_task ) {
@@ -6492,22 +6503,6 @@ bool game::warn_player_maybe_anger_local_faction( bool really_bad_offense,
             asking_for_public_goods, std::nullopt );
 }
 
-static void apply_pickup_selection( avatar &who, const drop_locations &items )
-{
-#ifdef MP_ENABLED
-    if( cata_mp::is_client_mode() ) {
-        Pickup::selection selection;
-        for( const drop_location &entry : items ) {
-            selection.targets.push_back( entry.first );
-            selection.quantities.push_back( entry.second );
-        }
-        cata_mp::client_request_pickup( selection );
-        return;
-    }
-#endif
-    who.pick_up( items );
-}
-
 void game::pickup()
 {
     map &here = get_map();
@@ -6521,13 +6516,13 @@ void game::pickup()
         return;
     }
     // Pick up items only from the selected tile
-    apply_pickup_selection( u, game_menus::inv::pickup( {where_.value()} ) );
+    u.pick_up( game_menus::inv::pickup( {where_.value()} ) );
 }
 
 void game::pickup_all()
 {
     // Pick up items from current and all adjacent tiles
-    apply_pickup_selection( u, game_menus::inv::pickup() );
+    u.pick_up( game_menus::inv::pickup() );
 }
 
 void game::pickup( const tripoint_bub_ms &p )
@@ -6541,7 +6536,7 @@ void game::pickup( const tripoint_bub_ms &p )
     add_draw_callback( hilite_cb );
 
     // Pick up items only from the selected tile
-    apply_pickup_selection( u, game_menus::inv::pickup( {p} ) );
+    u.pick_up( game_menus::inv::pickup( {p} ) );
 }
 
 // Derive a presentation viewpoint without executing movement, callbacks or gravity.
@@ -10913,7 +10908,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return;
     }
     if( const Character *other = get_creature_tracker().creature_at<Character>( stairs ) ) {
-        if( other != &who && other->is_player_controlled() ) {
+        if( other != &who && ( other->is_avatar() || other->is_player_controlled() ) ) {
             who.add_msg_if_player( _( "Another player is blocking the stairs." ) );
             return;
         }
@@ -11397,8 +11392,8 @@ std::optional<tripoint_bub_ms> game::find_or_make_stairs( Character &who, map &m
         if( Creature *blocking_creature = creatures.creature_at( stairs.value() ) ) {
             npc *guy = dynamic_cast<npc *>( blocking_creature );
             monster *mon = dynamic_cast<monster *>( blocking_creature );
-            if( blocking_creature != &who && blocking_creature->as_character() &&
-                blocking_creature->as_character()->is_player_controlled() ) {
+            const Character *other = blocking_creature->as_character();
+            if( other && other != &who && ( other->is_avatar() || other->is_player_controlled() ) ) {
                 who.add_msg_if_player( _( "Another player is blocking the stairs." ) );
                 return std::nullopt;
             }
@@ -13040,11 +13035,11 @@ pulp_data game::calculate_character_ability_to_pulp( const Character &you )
 
     // bash is good, but the rest physical damages can be useful also
     damage_instance di;
-    u.roll_damage( damage_cut, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
+    you.roll_damage( damage_cut, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
+                     sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
-    u.roll_damage( damage_stab, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
-                   sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
+    you.roll_damage( damage_stab, false, di, true, pair_bash.second, attack_vector_id::NULL_ID(),
+                     sub_bodypart_str_id::NULL_ID(), 1.f, 0.f );
 
     for( const damage_unit &du : di ) {
         // potentially move it to json, if someone find necrotic mace +3 should pulp faster for some reason

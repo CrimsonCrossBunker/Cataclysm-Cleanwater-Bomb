@@ -6,12 +6,17 @@
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "faction.h"
+#include "game.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "map.h"
+#include "map_helpers.h"
 #include "map_selector.h"
 #include "npc.h"
 #include "npctrade.h"
+#include "cata_scope_helpers.h"
+#include "player_control.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
@@ -85,6 +90,87 @@ TEST_CASE( "basic_price_check", "[npc][trade]" )
     int const price_combined = trading_price( *buyer, *seller, bck_entry );
 
     CHECK( price_separate == Approx( price_combined ).margin( 1 ) );
+}
+
+TEST_CASE( "npc_trade_settles_the_player_and_exact_charge_stack",
+           "[npc][trade][multiplayer]" )
+{
+    using namespace npc_trading;
+    clear_avatar();
+    clear_map();
+    avatar &host = get_avatar();
+    npc &trader = spawn_npc( { 50, 50 }, "test_npc_trader" );
+    npc &remote = spawn_npc( { 51, 50 }, "test_talker" );
+    const on_out_of_scope cleanup( []() {
+        clear_npcs();
+    } );
+    const auto control = g->player_controls().claim(
+                             player_id( std::string( 32, 'b' ) ), remote );
+    REQUIRE( control.get() == &remote );
+    REQUIRE( merchant( remote ) == nullptr );
+    REQUIRE( merchant( trader ) == &trader );
+    REQUIRE( trader.is_shopkeeper() );
+    REQUIRE_FALSE( trader.will_exchange_items_freely() );
+
+    clear_character( remote );
+    const itype_id ammo( "9mm" );
+    item pack( itype_debug_backpack );
+    pack.force_insert_item( item( ammo, calendar::turn, 80 ), pocket_type::CONTAINER );
+    const auto worn = remote.wear_item( pack, false );
+    REQUIRE( worn );
+    item *other_stack = ( *worn )->get_contents().all_items_top().front();
+    remote.set_wielded_item( item( ammo, calendar::turn, 40 ) );
+    item_location selected = remote.get_wielded_item();
+    REQUIRE( selected );
+    selected->set_owner( remote );
+
+    map &here = get_map();
+    const tripoint_bub_ms stock_tile = trader.pos_bub( here );
+    item gated_stock( itype_hammer );
+    const item_location gated( map_cursor( here.get_abs( stock_tile ) ), &gated_stock );
+    remote.set_value( "bool_test_tools_access", "no" );
+    CHECK_FALSE( trader.wants_to_sell( gated, 1, remote ).success() );
+    remote.set_value( "bool_test_tools_access", "yes" );
+    CHECK( trader.wants_to_sell( gated, 1, remote ).success() );
+
+    item stock( itype_hammer );
+    stock.set_owner( trader );
+    item &listed = here.add_item_or_charges( stock_tile, stock );
+    REQUIRE_FALSE( listed.is_null() );
+    const trade_selector::select_t sales{ { selected, 13 } };
+    const trade_selector::select_t purchases{
+        { item_location( map_cursor( here.get_abs( stock_tile ) ), &listed ), 1 }
+    };
+    trader.op_of_u.owed = 80;
+    trader.opinion_of( remote.getID() ).owed = 30000;
+    trader.opinion_of( remote.getID() ).sold = 0;
+    remote.cash = 56;
+    host.cash = 11;
+
+    const auto offer = quote_trade( remote, trader, sales, purchases, 0, false );
+    REQUIRE( offer );
+    REQUIRE( offer->sale_value > 0 );
+    trader.opinion_of( remote.getID() ).owed += 1;
+    CHECK_FALSE( commit_trade( remote, trader, sales, purchases, 0, false, *offer ) );
+    CHECK( selected->charges == 40 );
+    CHECK( other_stack->charges == 80 );
+    REQUIRE( purchases.front().first );
+
+    const auto current = quote_trade( remote, trader, sales, purchases, 0, false );
+    REQUIRE( current );
+    REQUIRE( commit_trade( remote, trader, sales, purchases, 0, false, *current ) );
+    CHECK( selected->charges == 27 );
+    CHECK( other_stack->charges == 80 );
+    CHECK_FALSE( purchases.front().first );
+    CHECK( remote.has_amount( itype_hammer, 1 ) );
+    CHECK_FALSE( host.has_amount( itype_hammer, 1 ) );
+    CHECK( trader.opinion_of( remote.getID() ).owed == current->owed_after );
+    CHECK( trader.opinion_of( remote.getID() ).sold == current->sale_value );
+    CHECK( trader.op_of_u.owed == 80 );
+    CHECK( remote.cash == 56 );
+    CHECK( host.cash == 11 );
+    CHECK_FALSE( commit_trade( remote, trader, sales, purchases, 0, false, *current ) );
+    CHECK( selected->charges == 27 );
 }
 
 TEST_CASE( "faction_price_rules", "[npc][factions][trade]" )

@@ -116,11 +116,8 @@ int partner_activity_pct();
 // distraction prompts, or manual interrupts all break burst mode naturally.
 bool mp_in_burst_mode();
 
-// Host-only: queue a one-shot "wake_client" signal that piggy-backs on the
-// next serialize_remote_player_state broadcast.  Client consumes it and
-// cancels its own wait activity.  Used by the host's tap-on-shoulder
-// dispatch when the host is interrupting the client's wait.
-void mark_wake_client_pending( character_id target );
+// Settle a nearby partner's wait interruption on the authoritative actor.
+bool tap_waiting_partner( const Character &who, Character &target );
 
 // Host-only: queue a one-shot signal that the host swapped with / pushed the
 // client this turn (host-initiated, performed locally on the host).  The next
@@ -168,11 +165,6 @@ void client_process_incoming();
 // while client mode is disabled. UI-capable messages require the normal UI context.
 bool client_apply_message( const std::string &msg );
 
-// Run blocking UI that was deferred out of the network-recv path (e.g. the smash
-// "Keep smashing?" prompt).  Call from do_turn() right after
-// client_process_incoming(), where a top-level UI context is valid.
-void client_resolve_pending_ui();
-
 // Block until the server has sent the initial position and the avatar has been
 // teleported to the host area.  Call once after the game world is loaded but
 // before the first do_turn(), so the player never sees their scenario start tile.
@@ -219,9 +211,6 @@ void client_mark_action_sent();
 // server's acknowledgement (moves<=0 packet).  Used by do_turn() to block the
 // game loop and by mp_dispatch to avoid double-sending while ack is pending.
 bool is_client_waiting_for_ack();
-
-// Save the last smash action JSON so it can be re-queued for "keep smashing".
-void client_set_autosmash_json( const std::string &json );
 
 // Client only: after any action that consumed avatar moves, send a "wait" to
 // the server so the grant/ack cycle advances.  If pre_moves is provided, only
@@ -511,11 +500,6 @@ void mp_log( const std::string &msg );
 // No-op outside MP. Throttled internally (emits only when newseen / nearest-hostile
 // distance / safe_mode change) so it never floods the log during 200-turn/sec FF.
 void mp_log_safemode_check( int newseen, int mostseen, int safe_mode );
-
-// Client only: re-send the client's current worn-item list, skin tone, hair,
-// and wielded weapon to the server so the remote NPC proxy stays in sync.
-// Call after any wear/take-off/wield action.
-void client_resync_worn();
 
 // Client only: if the avatar has an active wait-type activity (ACT_WAIT,
 // ACT_WAIT_STAMINA, etc.), dispatch a "wait" action to the server so its

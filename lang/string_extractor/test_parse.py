@@ -28,6 +28,14 @@ except ImportError:
 
 
 class JsonFileParsingTest(unittest.TestCase):
+    def test_climate_station_names_are_not_game_text(self):
+        root = Path(__file__).resolve().parents[2]
+        messages.clear()
+        self.addCleanup(messages.clear)
+
+        parse_json_file(root / "data/json/regional_climate/us_stations.json")
+        self.assertFalse(messages)
+
     def test_mounted_data_extracts_pet_slot_text(self):
         root = Path(__file__).resolve().parents[2]
         messages.clear()

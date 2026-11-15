@@ -59,9 +59,10 @@ void remove_npc_and_check( map &m, tripoint_bub_ms const &loc, update_mapgen_id 
     manual_mapgen( omt, manual_update_mapgen, id );
     check_creature( loc, nid, false );
 
-    for( auto const &t : get_avatar().get_mon_visible().unique_types ) {
-        for( npc *n : t ) {
-            REQUIRE( !n->is_dead() ); // REQUIRE( dont-segfault-bro )
+    for( const auto &visible_npcs : get_avatar().get_mon_visible().unique_types ) {
+        for( const npc *visible : visible_npcs ) {
+            REQUIRE( visible );
+            CHECK_FALSE( visible->is_dead() );
         }
     }
 }

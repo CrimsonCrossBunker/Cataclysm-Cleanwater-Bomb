@@ -67,6 +67,7 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "player_control.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "rng.h"
@@ -2739,6 +2740,25 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
     provider.op_of_u.owed = 50000;
     provider.opinion_of( remote.getID() ).owed = 50000;
 
+    SECTION( "radio_contact_discovery_belongs_to_the_speaker_and_survives_save" ) {
+        dialogue remote_d( get_talker_for( remote ), get_talker_for( provider ) );
+        const JsonValue definition = json_loader::from_string(
+                                         R"({"effect":"npc_make_radio_representative"})" );
+        const talk_effect_t learn_contact( definition.get_object(), "effect", "test" );
+        learn_contact.apply( remote_d );
+
+        CHECK( provider.faction_representative );
+        CHECK( remote.faction_representatives.count( provider.getID() ) == 1 );
+        CHECK( host.faction_representatives.count( provider.getID() ) == 0 );
+
+        std::ostringstream encoded;
+        JsonOut out( encoded );
+        remote.serialize( out );
+        npc restored;
+        restored.deserialize( json_loader::from_string( encoded.str() ).get_object() );
+        CHECK( restored.faction_representatives == remote.faction_representatives );
+    }
+
     SECTION( "session_training_selection_and_remote_paid_or_reward_training" ) {
         const skill_id skill_speech( "speech" );
         provider.set_skill_level( skill_driving, 5 );
@@ -2817,16 +2837,52 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
                remote_owed_before + miss->get_value() );
     }
 
-    SECTION( "remote_offer_cannot_take_the_hosts_item" ) {
-        host.wield( host.i_add( item( itype_knife_huge ) ) );
+    SECTION( "remote_offer_can_take_only_the_speakers_item" ) {
+        const auto control = g->player_controls().claim(
+                                 player_id( std::string( 32, 'c' ) ), remote );
+        REQUIRE( control.get() == &remote );
+        provider.setpos( get_map(), remote.pos_bub() + tripoint::west );
+        provider.clear_worn();
+        REQUIRE( provider.wear_item( item( itype_id( "debug_backpack" ) ), false ) );
+        host.set_wielded_item( item( itype_knife_huge ) );
         item_location offered = host.get_wielded_item();
         REQUIRE( offered );
         talker_npc receiver( &provider );
         receiver.bind_interlocutor( remote.getID(), &remote );
         CHECK( receiver.give_item_to( offered, false ) ==
-               _( "Offering items is not available in remote dialogue yet." ) );
+               _( "You are not carrying that item." ) );
         CHECK( offered.held_by( host ) );
         CHECK( host.is_wielding( *offered ) );
+
+        const itype_id gift( "rock" );
+        remote.set_wielded_item( item( gift ) );
+        const item_location remote_offer = remote.get_wielded_item();
+        const int before = provider.amount_of( gift );
+        CHECK( receiver.give_item_to( remote_offer, false ) ==
+               provider.chat_snippets().snip_give_carry.translated() );
+        CHECK_FALSE( remote_offer );
+        CHECK( provider.amount_of( gift ) == before + 1 );
+        CHECK( offered.held_by( host ) );
+
+        provider.set_hunger( 100 );
+        const int host_trust = provider.op_of_u.trust;
+        const int remote_trust = provider.opinion_of( remote.getID() ).trust;
+        remote.set_wielded_item( item( itype_id( "test_apple" ) ) );
+        const item_location food = remote.get_wielded_item();
+        CHECK( receiver.give_item_to( food, true ) ==
+               provider.chat_snippets().snip_consume_eat.translated() );
+        CHECK_FALSE( food );
+        CHECK( provider.opinion_of( remote.getID() ).trust > remote_trust );
+        CHECK( provider.op_of_u.trust == host_trust );
+
+        provider.remove_weapon();
+        remote.set_wielded_item( item( itype_knife_huge ) );
+        const item_location weapon = remote.get_wielded_item();
+        CHECK( receiver.give_item_to( weapon, true ) ==
+               provider.chat_snippets().snip_give_wield.translated() );
+        CHECK_FALSE( weapon );
+        REQUIRE( provider.get_wielded_item() );
+        CHECK( provider.get_wielded_item()->typeId() == itype_knife_huge );
     }
 
     SECTION( "remote_buy_from_follow_and_services_target_remote_character" ) {

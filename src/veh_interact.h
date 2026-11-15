@@ -3,6 +3,7 @@
 #define CATA_SRC_VEH_INTERACT_H
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
@@ -12,12 +13,14 @@
 #include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "color.h"
 #include "coordinates.h"
 #include "cursesdef.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "point.h"
@@ -26,9 +29,11 @@
 #include "vpart_position.h"
 
 class Character;
+class item;
+class JsonObject;
+class JsonOut;
 class map;
 class temp_crafting_inventory;
-class time_duration;
 class vpart_info;
 struct requirement_data;
 
@@ -72,6 +77,48 @@ enum vehicle_action {
     VEHICLE_QUIT,        // 'q' or ' '
     VEHICLE_LAST
 };
+
+struct vehicle_work_selection {
+    vehicle_action action = VEHICLE_QUIT;
+    tripoint_abs_ms origin;
+    tripoint_abs_ms position;
+    point_rel_ms mount;
+    int64_t vehicle_uid = 0;
+    int64_t part_uid = 0;
+    faction_id owner;
+    vpart_id part_type;
+    item_source refill;
+    bool allow_theft = false;
+    bool allow_refill_theft = false;
+    bool allow_flight_loss = false;
+    bool allow_fold_loss = false;
+    std::string variant;
+    std::optional<double> direction;
+
+    void serialize( JsonOut &out ) const;
+    void deserialize( const JsonObject &data );
+};
+
+time_duration vehicle_work_duration( vehicle_action action, const Character &who,
+                                     const vehicle &target, const vpart_info &info,
+                                     const vehicle_part *part );
+bool vehicle_work_in_reach( const Character &who, map &here, const vehicle &target );
+bool can_refill_vehicle_part( const vehicle_part &part, const item &source );
+std::optional<time_duration> validate_vehicle_work( Character &who, map &here, vehicle &target,
+        const vehicle_work_selection &selection, const vehicle_part *part, item_location fuel );
+units::angle query_vehicle_part_direction( map &here, const vehicle &target, const vpart_info &info,
+        const std::optional<point_rel_ms> &part_placement );
+units::angle query_vehicle_part_direction( map &here, const tripoint_bub_ms &position,
+        const vpart_info &info, units::angle facing );
+
+namespace cata_mp
+{
+void client_start_vehicle_work( map &here, vehicle_action action, vehicle &target,
+                                const point_rel_ms &mount, const vpart_info &info,
+                                const vehicle_part *part, const item_location &refill,
+                                bool allow_flight_loss = false, bool allow_fold_loss = false,
+                                const std::string &variant = std::string() );
+} // namespace cata_mp
 
 namespace io
 {
@@ -177,6 +224,8 @@ class veh_interact
 
         // Command currently being run by the player
         vehicle_action sel_cmd = VEHICLE_QUIT;
+        bool flight_loss_confirmed = false;
+        bool fold_loss_confirmed = false;
 
         int cpart = -1;
         int page_size = 0;
@@ -273,7 +322,7 @@ class veh_interact
         // Returns true if exiting the screen
         bool do_unload( map &here );
         void do_assign_crew( map &here );
-        void do_relabel( const map &here );
+        void do_relabel( map &here );
         /*@}*/
 
         /**

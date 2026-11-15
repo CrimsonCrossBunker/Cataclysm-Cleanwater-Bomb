@@ -8,13 +8,13 @@
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "craft_reservation.h"
-#include "iexamine.h"
 #include "inventory.h"
 #include "item.h"
 #include "itype.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "point.h"
+#include "smoking_rack.h"
 #include "temp_crafting_inventory.h"
 #include "type_id.h"
 #include "value_ptr.h"
@@ -157,8 +157,10 @@ TEST_CASE( "lighting_smoking_rack_consumes_split_charcoal", "[crafting][smoking]
     here.add_item( pos, item( itype_meat, calendar::turn, 1 ) );
     here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 0 ) );
     here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 800 ) );
-    here.add_item( pos, item( itype_charcoal, calendar::turn_zero, 800 ) );
-    REQUIRE( iexamine::smoker_fire( get_avatar(), pos ) );
+    item refill( itype_charcoal, calendar::turn_zero, 800 );
+    refill.set_var( "item_note", "refill" );
+    here.add_item( pos, refill );
+    REQUIRE( smoking_rack::ignite( get_avatar(), here, pos ) );
     CHECK( here.furn( pos ) == furn_f_smoking_rack_active );
     int charcoal_stacks = 0;
     for( const item &it : here.i_at( pos ) ) {

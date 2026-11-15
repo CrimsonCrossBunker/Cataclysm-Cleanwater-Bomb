@@ -28,6 +28,7 @@
 #include "map_iterator.h"
 #include "messages.h"
 #include "monster.h"
+#include "mp_client_conn.h"
 #include "music.h"
 #include "npc.h"
 #include "output.h"
@@ -567,6 +568,13 @@ static bool describe_sound( sounds::sound_t category, bool from_player_position 
 
 void sounds::process_sound_markers( Character *you )
 {
+    const bool client_view = you->is_avatar() && cata_mp::is_client_mode();
+    if( client_view && you->in_sleep_state() ) {
+        // The host resolves sleep and alarm sounds. Local audio must not wake
+        // the replica or expire its alarm before the next authoritative state.
+        sounds_since_last_turn.clear();
+        return;
+    }
     const map &here = get_map();
 
     bool is_deaf = you->is_deaf();
@@ -698,7 +706,7 @@ void sounds::process_sound_markers( Character *you )
             }
         }
 
-        if( !you->has_effect( effect_sleep ) && you->has_effect( effect_alarm_clock ) &&
+        if( !client_view && !you->has_effect( effect_sleep ) && you->has_effect( effect_alarm_clock ) &&
             !you->has_flag( json_flag_ALARMCLOCK ) ) {
             // if we don't have effect_sleep but we're in_sleep_state, either
             // we were trying to fall asleep for so long our alarm is now going

@@ -13,7 +13,8 @@ class EcologyBakeTest(unittest.TestCase):
                                               [0, 1, 2, 2], [3, 1, 1, 3]])
 
     def test_forest_fraction_ignores_water_and_no_data(self):
-        fine = np.array([[[[1, 6], [8, 18], [0, 18]], [[8, 0], [14, 15], [18, 0]]]])
+        fine = np.array(
+            [[[[1, 6], [8, 18], [0, 18]], [[8, 0], [14, 15], [18, 0]]]])
         np.testing.assert_array_equal(forest_cover_bands(fine), [[4, 1, 0]])
 
 

@@ -1,7 +1,5 @@
 #include "tool_activity_target.h"
 
-#include <vector>
-
 #include "action.h"
 #include "activity_actor_definitions.h"
 #include "cata_scope_helpers.h"
@@ -157,21 +155,7 @@ item_location locate_cutting_tool( Character &who, item &tool )
     // Native use callbacks receive an item pointer. Recover its actual ancestry
     // before retaining it: an in-place torch can be on the ground or in cargo.
     const auto locate = [&]( auto & owner ) -> item_location {
-        if( !owner.has_item( tool ) )
-        {
-            return item_location::nowhere;
-        }
-        std::vector<item *> path{ &tool };
-        while( item *parent = owner.find_parent( *path.back() ) )
-        {
-            path.push_back( parent );
-        }
-        item_location result( owner, path.back() );
-        for( auto part = path.rbegin() + 1; part != path.rend(); ++part )
-        {
-            result = item_location( result, *part );
-        }
-        return result;
+        return locate_item_with_parents( item_location( owner, &tool ) );
     };
     if( item_location carried = locate( who ) ) {
         return carried;

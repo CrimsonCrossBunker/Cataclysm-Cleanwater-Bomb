@@ -84,6 +84,7 @@ void world_session::reset_state( bool preserve_pending_client )
     client_host_player_id = {};
     client_player_views.clear();
     client_npc_views.clear();
+    client_radio_contacts.clear();
     client_host_spawned = false;
     stale_proxy_cleanup_done = false;
 }

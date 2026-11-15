@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -4118,66 +4119,59 @@ std::vector<item *> Character::get_bionic_fuels( const bionic_id &bio )
     return stored_fuels;
 }
 
+namespace
+{
+std::vector<item *> cable_power_sources( Character &who, const flag_id &flag, link_state supply )
+{
+    std::set<int64_t> attached;
+    std::set<int64_t> connected;
+    int legacy_connections = 0;
+    for( const item_location &cable : who.cache_get_items_with( flag_CABLE_SPOOL ) ) {
+        if( !cable->has_link_data() || cable->link().source != supply ) {
+            continue;
+        }
+        const int64_t uid = cable->link().s_item_uid;
+        const bool complete = cable->link_has_states( supply, link_state::bio_cable );
+        if( uid > 0 ) {
+            attached.insert( uid );
+            if( complete ) {
+                connected.insert( uid );
+            }
+        } else if( complete ) {
+            ++legacy_connections;
+        }
+    }
+
+    std::vector<item *> result;
+    if( connected.empty() && legacy_connections == 0 ) {
+        return result;
+    }
+    for( item_location device : who.all_items_loc() ) {
+        if( !device || !device->has_flag( flag ) || device->get_var( "cable" ) != "plugged_in" ||
+            ( supply == link_state::ups && !device->ammo_remaining() ) ) {
+            continue;
+        }
+        const int64_t uid = device->uid().get_value();
+        if( connected.count( uid ) &&
+            ( supply != link_state::solarpack || who.is_worn( *device ) ) ) {
+            result.push_back( device.get_item() );
+        } else if( legacy_connections > 0 && !attached.count( uid ) ) {
+            result.push_back( device.get_item() );
+            --legacy_connections;
+        }
+    }
+    return result;
+}
+} // namespace
+
 std::vector<item *> Character::get_cable_ups()
 {
-    std::vector<item *> stored_fuels;
-
-    int n = cache_get_items_with( flag_CABLE_SPOOL, []( const item_location & it ) {
-        return it->link_has_states( link_state::ups, link_state::bio_cable );
-    } ).size();
-    if( n == 0 ) {
-        return stored_fuels;
-    }
-
-    // There is no way to check which cable is connected to which ups
-    // So if there are multiple cables and some of them are only partially connected this may add wrong ups
-    for( item_location it : all_items_loc() ) {
-        if( it->has_flag( flag_IS_UPS ) && it->get_var( "cable" ) == "plugged_in" &&
-            it->ammo_remaining( ) ) {
-            stored_fuels.emplace_back( it.get_item() );
-            n--;
-        }
-        if( n == 0 ) {
-            break;
-        }
-    }
-
-    if( n > 0 && weapon.has_flag( flag_IS_UPS ) && weapon.get_var( "cable" ) == "plugged_in" &&
-        weapon.ammo_remaining( ) ) {
-        stored_fuels.emplace_back( &weapon.first_ammo() );
-    }
-
-    return stored_fuels;
+    return cable_power_sources( *this, flag_IS_UPS, link_state::ups );
 }
 
 std::vector<item *> Character::get_cable_solar()
 {
-    std::vector<item *> solar_sources;
-
-    int n = cache_get_items_with( flag_CABLE_SPOOL, []( const item_location & it ) {
-        return it->link_has_states( link_state::solarpack, link_state::bio_cable );
-    } ).size();
-    if( n == 0 ) {
-        return solar_sources;
-    }
-
-    // There is no way to check which cable is connected to which solar pack
-    // So if there are multiple cables and some of them are only partially connected this may add wrong solar pack
-    for( item_location it : all_items_loc() ) {
-        if( it->has_flag( flag_SOLARPACK_ON ) && it->get_var( "cable" ) == "plugged_in" ) {
-            solar_sources.emplace_back( it.get_item() );
-            n--;
-        }
-        if( n == 0 ) {
-            break;
-        }
-    }
-
-    if( n > 0 && weapon.has_flag( flag_SOLARPACK_ON ) && weapon.get_var( "cable" ) == "plugged_in" ) {
-        solar_sources.emplace_back( &weapon );
-    }
-
-    return solar_sources;
+    return cable_power_sources( *this, flag_SOLARPACK_ON, link_state::solarpack );
 }
 
 std::vector<vehicle *> Character::get_cable_vehicle() const
