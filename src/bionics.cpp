@@ -664,8 +664,7 @@ void npc::check_or_use_weapon_cbm( const bionic_id &cbm_id )
     if( is_using_bionic_weapon() ) {
         return;
     }
-    const float allowed_ratio = static_cast<int>( rules.cbm_reserve ) / 100.0f;
-    const units::energy free_power = get_power_level() - get_max_power_level() * allowed_ratio;
+    const units::energy free_power = available_offensive_cbm_power();
     if( free_power <= 0_mJ ) {
         return;
     }

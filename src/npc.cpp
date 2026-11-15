@@ -2058,6 +2058,7 @@ void npc::mutiny()
     my_fac->respects_u -= 5;
     my_fac->trusts_u -= 5;
     g->remove_npc_follower( getID() );
+    set_follower_leader( character_id() );
     set_fac( faction_amf );
     rules = npc_follower_rules(); // Mutinous NPCs no longer follower your rules
     job.clear_all_priorities();
@@ -3436,6 +3437,7 @@ bool npc::is_dead() const
 
 void npc::reboot()
 {
+    autonomy = {};
     //The NPC got into an infinite loop, in game.cpp  -monmove() - a debugmsg just popped up
     // informing player of this.
     // put them to sleep and reboot their brain.
@@ -3763,6 +3765,7 @@ void npc::npc_update_body()
 void npc::on_load( map *here )
 {
     update_ai_map_origin( *here );
+    autonomy = npc_autonomy_state{};
     // Reconcile only changed traits; an unchanged personality must not
     // repeatedly activate passive enchantments when re-entering the bubble.
     generate_personality_traits();
@@ -4174,6 +4177,10 @@ std::vector<std::string> npc::extended_description() const
                       c_yellow ) :
                       colorize( _( "Unaware of you" ), c_green ) );
 
+    if( is_player_ally() && !autonomy.reason.empty() ) {
+        tmp.emplace_back( string_format( _( "Current plan: %s" ), autonomy.reason ) );
+    }
+
     if( hit_by_player ) {
         tmp.emplace_back( "--" );
         tmp.emplace_back( _( "Is still innocent and killing them will be considered murder." ) );
@@ -4336,6 +4343,47 @@ bool npc::has_activity() const
     return mission == NPC_MISSION_ACTIVITY && attitude == NPCATT_ACTIVITY;
 }
 
+character_id npc::follower_leader_id() const
+{
+    return follower_leader_.is_valid() ? follower_leader_ : get_player_character().getID();
+}
+
+Character *npc::follower_leader() const
+{
+    Character &host = get_player_character();
+    if( !follower_leader_.is_valid() || follower_leader_ == host.getID() ) {
+        return host.is_dead_state() ? nullptr : &host;
+    }
+    Character *leader = g->critter_by_id<Character>( follower_leader_ );
+    if( !leader || leader->is_dead_state() || !leader->is_player_controlled() ||
+        !get_map().has_loaded_submap( leader->pos_bub() ) ) {
+        return nullptr;
+    }
+    return leader;
+}
+
+void npc::set_follower_leader( character_id leader )
+{
+    if( follower_leader_ == leader ) {
+        return;
+    }
+    follower_leader_ = leader;
+    last_player_seen_pos.reset();
+    clear_committed_goal();
+    path.clear();
+    autonomy = {};
+}
+
+bool npc::is_autonomy_teammate( const Character &other ) const
+{
+    if( other.getID() == follower_leader_id() ) {
+        return true;
+    }
+    const npc *peer = other.as_npc();
+    return peer && !peer->is_player_controlled() && peer->is_player_ally() &&
+           peer->follower_leader_id() == follower_leader_id();
+}
+
 npc_attitude npc::get_attitude() const
 {
     return attitude;
@@ -4409,10 +4457,11 @@ npc_follower_rules::npc_follower_rules()
 
     set_flag( ally_rule::use_guns );
     clear_flag( ally_rule::use_grenades );
-    set_flag( ally_rule::use_silent );
+    clear_flag( ally_rule::use_silent );
     set_flag( ally_rule::avoid_friendly_fire );
 
-    clear_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::share_supplies );
     clear_flag( ally_rule::allow_bash );
     set_flag( ally_rule::allow_sleep );
     set_flag( ally_rule::allow_complain );

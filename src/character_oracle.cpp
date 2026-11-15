@@ -36,9 +36,8 @@ static const trait_id trait_IGNORE_SOUND( "IGNORE_SOUND" );
 
 // Vehicle currently in motion that the player is inside, otherwise nullptr.
 // NPCs should neither path toward it (collision risk) nor try to board it.
-static const vehicle *player_moving_vehicle()
+static const vehicle *player_moving_vehicle( const Character &p )
 {
-    const Character &p = get_player_character();
     if( !p.in_vehicle ) {
         return nullptr;
     }
@@ -440,12 +439,12 @@ status_t character_oracle_t::npc_is_following( std::string_view ) const
         return status_t::failure;
     }
     // Wait until the player parks; don't path into a moving vehicle.
-    if( player_moving_vehicle() ) {
+    const Character *leader = n->follower_leader();
+    if( !leader || player_moving_vehicle( *leader ) ) {
         return status_t::failure;
     }
-    const Character &player = get_player_character();
-    const int dist = rl_dist( n->pos_abs(), player.pos_abs() );
-    if( dist <= n->desired_follow_radius() && n->posz() == player.posz() ) {
+    const int dist = rl_dist( n->pos_abs(), leader->pos_abs() );
+    if( dist <= n->desired_follow_radius() && n->posz() == leader->posz() ) {
         return status_t::success;
     }
     return status_t::running;
@@ -457,14 +456,14 @@ float character_oracle_t::npc_following_urgency( std::string_view ) const
     if( !n || !n->can_follow_player_now() ) {
         return 0.0f;
     }
-    if( player_moving_vehicle() ) {
+    const Character *leader = n->follower_leader();
+    if( !leader || player_moving_vehicle( *leader ) ) {
         return 0.0f;
     }
-    const Character &player = get_player_character();
-    if( n->posz() != player.posz() ) {
+    if( n->posz() != leader->posz() ) {
         return 0.6f;
     }
-    const int dist = rl_dist( n->pos_abs(), player.pos_abs() );
+    const int dist = rl_dist( n->pos_abs(), leader->pos_abs() );
     const int radius = n->desired_follow_radius();
     if( dist <= radius ) {
         return 0.0f;
@@ -478,12 +477,12 @@ status_t character_oracle_t::npc_should_embark( std::string_view ) const
     if( !n || !n->is_walking_with() || n->has_flag( json_flag_CANNOT_MOVE ) ) {
         return status_t::failure;
     }
-    const Character &player = get_player_character();
-    if( !player.in_vehicle ) {
+    const Character *leader = n->follower_leader();
+    if( !leader || !leader->in_vehicle ) {
         return status_t::failure;
     }
     // Boarding a moving vehicle is impossible; wait for the player to stop.
-    if( player_moving_vehicle() ) {
+    if( player_moving_vehicle( *leader ) ) {
         return status_t::failure;
     }
     // Stays running once the NPC is in the vehicle: the action handler

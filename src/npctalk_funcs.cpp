@@ -2447,6 +2447,7 @@ void talk_function::follow( npc &p )
 void talk_function::follow( npc &p, Character &u )
 {
     g->add_npc_follower( p.getID() );
+    p.set_follower_leader( u.getID() );
     if( avatar *av = u.as_avatar() ) {
         av->follower_ids.insert( p.getID() );
     }
@@ -2525,6 +2526,7 @@ void talk_function::leave( npc &p )
 {
     add_msg( _( "%s leaves." ), p.get_name() );
     g->remove_npc_follower( p.getID() );
+    p.set_follower_leader( character_id() );
     std::string new_fac_id = "solo_";
     new_fac_id += p.name;
     new_fac_id += std::to_string( p.getID().get_value() );
