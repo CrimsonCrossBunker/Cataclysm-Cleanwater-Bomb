@@ -79,6 +79,7 @@
 #include "mission.h"
 #include "mission_companion.h"
 #include "mongroup.h"
+#include "north_america_soil.h"
 #include "npc.h"
 #include "npctalk.h"
 #include "omdata.h"
@@ -3472,7 +3473,8 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
     const tripoint_abs_omt omt_tgt = e_data->second.pos;
 
     const auto is_dirtmound = []( const tripoint_omt_ms & pos, tinymap & bay1, tinymap & bay2 ) {
-        return ( bay1.ter( pos ) == ter_t_dirtmound ) && ( !bay2.has_furn( pos ) );
+        return north_america::canonical_soil( bay1.ter( pos ) ) == ter_t_dirtmound &&
+               !bay2.has_furn( pos );
     };
     const auto is_unplowed = []( const tripoint_omt_ms & pos, tinymap & farm_map ) {
         const ter_id &farm_ter = farm_map.ter( pos );
@@ -3546,7 +3548,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                 if( is_dirtmound( pos, *farm_json, farm_map ) && is_unplowed( pos, farm_map ) ) {
                     plots_cnt += 1;
                     if( comp ) {
-                        farm_map.ter_set( pos, ter_t_dirtmound );
+                        farm_map.ter_set( pos, north_america::tilled_soil( farm_map.ter( pos ) ) );
                     }
                 }
                 break;
@@ -3571,7 +3573,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                         }
                         used_seed.front().set_age( 0_turns );
                         farm_map.add_item_or_charges( pos, used_seed.front() );
-                        farm_map.set( pos, ter_t_dirt, furn_f_plant_seed );
+                        farm_map.set( pos, north_america::planted_soil( farm_map.ter( pos ) ), furn_f_plant_seed );
                         if( !tmp_seed->count_by_charges() ) {
                             comp->companion_mission_inv.remove_item( tmp_seed );
                         }
@@ -3631,7 +3633,7 @@ std::pair<size_t, std::string> basecamp::farm_action( const point_rel_omt &dir, 
                                 }
                                 farm_map.i_clear( pos );
                                 farm_map.furn_set( pos, furn_str_id::NULL_ID() );
-                                farm_map.ter_set( pos, ter_t_dirt );
+                                farm_map.ter_set( pos, north_america::planted_soil( farm_map.ter( pos ) ) );
                             } else {
                                 plant_names.insert( item::nname( itype_id( seed->type->seed->fruit_id ) ) );
                             }
@@ -4487,7 +4489,7 @@ bool basecamp::survey_field_return( const mission_id &miss_id )
         const tripoint_omt_ms mapmax = { 2 * SEEX - 1, 2 * SEEY - 1, where.z() };
         const std::unordered_set<ter_str_id> match_terrains = { ter_t_clay, ter_t_dirt, ter_t_dirtmound, ter_t_grass, ter_t_grass_dead, ter_t_grass_golf, ter_t_grass_long, ter_t_grass_tall, ter_t_moss, ter_t_sand };
         for( const tripoint_omt_ms &p : target.points_in_rectangle( mapmin, mapmax ) ) {
-            if( match_terrains.find( target.ter( p ).id() ) == match_terrains.end() ) {
+            if( match_terrains.count( north_america::canonical_soil( target.ter( p ) ).id() ) == 0 ) {
                 mismatch_tiles++;
             }
         }

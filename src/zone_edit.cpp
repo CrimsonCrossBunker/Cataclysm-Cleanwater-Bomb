@@ -428,7 +428,7 @@ bool bounded_edit_geometry( const Character &who, const zone_edit_definition &de
 }
 
 vehicle *resolve_zone_vehicle( const zone_edit_definition &definition, const faction_id &faction,
-                               point_rel_ms *mount = nullptr )
+                               tripoint_rel_ms *mount = nullptr )
 {
     if( !definition.vehicle_bound || definition.personal || definition.vehicle <= 0 ||
         definition.part <= 0 ||
@@ -448,7 +448,7 @@ vehicle *resolve_zone_vehicle( const zone_edit_definition &definition, const fac
         if( part.has_feature( "CARGO" ) && part.part().get_base().uid().get_value() == definition.part &&
             owner->abs_part_pos( part.part() ) == position ) {
             if( mount ) {
-                *mount = part.mount_pos();
+                *mount = part.mount_pos3();
             }
             return owner;
         }
@@ -512,7 +512,7 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
     std::set<std::string> changed_identities;
     int64_t geometry_budget = 1024 * 1024;
     std::map<std::string, zone_data> prepared;
-    std::map<std::string, std::pair<vehicle *, point_rel_ms>> vehicle_targets;
+    std::map<std::string, std::pair<vehicle *, tripoint_rel_ms>> vehicle_targets;
     std::set<std::string> resulting_ids( current_order.begin(), current_order.end() );
     for( const zone_edit_change &change : batch.changes ) {
         if( !zone_data::valid_identity( change.identity ) || !changed.insert( change.identity ).second ||
@@ -570,7 +570,7 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
                     definition.type == zone_type_CONSTRUCTION_BLUEPRINT ) ) ) {
                 return false;
             }
-            point_rel_ms mount;
+            tripoint_rel_ms mount;
             vehicle *owner = resolve_zone_vehicle( definition, faction, &mount );
             if( !owner || ( change.before && ( definition.vehicle != change.before->vehicle ||
                                                definition.part != change.before->part || geometry_changed ) ) ) {
@@ -666,7 +666,7 @@ bool zone_edit_session::apply( Character &who, zone_manager &manager, const zone
             zone.set_vehicle_owner( *owner );
             owner->loot_zones.emplace( target.second, std::move( zone ) );
             owner->zones_dirty = true;
-            here.register_vehicle_zone( owner, who.pos_abs().z() );
+            here.register_vehicle_zone( owner );
         }
     }
     manager.zones = std::move( replacement );

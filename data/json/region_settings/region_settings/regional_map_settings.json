@@ -1664,6 +1664,7 @@
     "type": "weather_generator",
     "id": "default",
     "base_temperature": 11.1,
+    "climate_station": "bedford_hanscom",
     "base_humidity": 70.0,
     "base_pressure": 1015.0,
     "base_wind": 3.4,

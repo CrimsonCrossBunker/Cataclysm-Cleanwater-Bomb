@@ -1,0 +1,1360 @@
+[
+  {
+    "type": "item_group",
+    "subtype": "distribution",
+    "id": "regional_original_mags_common",
+    "//": "Collections of magazines for guns that ignore magazine limits.  Shouldn't be found in places such as gunstores, and should only be found in private areas like homes.  Weighted by caliber.",
+    "items": [
+      { "group": "common_magazines_9mm", "prob": 209 },
+      { "group": "common_magazines_10mm", "prob": 9 },
+      { "group": "common_magazines_22lr", "prob": 204 },
+      { "group": "common_magazines_30_carbine", "prob": 1 },
+      { "group": "common_magazines_32", "prob": 44 },
+      { "group": "common_magazines_38", "prob": 34 },
+      { "group": "common_magazines_40sw", "prob": 40 },
+      { "group": "common_magazines_44", "prob": 15 },
+      { "group": "common_magazines_45", "prob": 49 },
+      { "group": "common_magazines_57", "prob": 4 },
+      { "group": "common_magazines_223", "prob": 125 },
+      { "group": "common_magazines_303", "prob": 19 },
+      { "group": "common_magazines_308", "prob": 25 },
+      { "group": "common_magazines_380", "prob": 48 },
+      { "group": "common_magazines_762", "prob": 34 },
+      { "group": "common_magazines_762R", "prob": 4 },
+      { "group": "common_magazines_3006", "prob": 8 },
+      { "group": "common_magazines_450", "prob": 1 },
+      { "group": "common_magazines_12", "prob": 8 },
+      { "group": "uncommon_magazines", "prob": 3 },
+      { "group": "magazines_ak74", "prob": 1 },
+      { "item": "500_speedloader5", "prob": 1 },
+      { "item": "ruger_pr_mag", "prob": 1 },
+      { "item": "454_speedloader5", "prob": 25 },
+      { "item": "50beowulf_ar15mag", "prob": 2 },
+      { "item": "m1911mag_10rd_38super", "prob": 2 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-open",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14mag", "prob": 45 },
+      { "item": "m14smallmag", "prob": 22 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 6 },
+      { "item": "mossberg_590m_mag_15", "prob": 12 },
+      { "item": "mossberg_590m_mag_20", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 3 },
+      { "item": "ruger10", "prob": 30 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "ruger20", "prob": 60 },
+      { "item": "ruger5", "prob": 15 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 31 },
+      { "item": "stanag20", "prob": 62 },
+      { "item": "stanag30", "prob": 125 },
+      { "item": "stanag5", "prob": 15 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 },
+      { "group": "regional_original_mags_common", "prob": 1281 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-open",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14mag", "prob": 45 },
+      { "item": "m14smallmag", "prob": 22 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 6 },
+      { "item": "mossberg_590m_mag_15", "prob": 12 },
+      { "item": "mossberg_590m_mag_20", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 3 },
+      { "item": "ruger10", "prob": 30 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "ruger20", "prob": 60 },
+      { "item": "ruger5", "prob": 15 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 31 },
+      { "item": "stanag20", "prob": 62 },
+      { "item": "stanag30", "prob": 125 },
+      { "item": "stanag5", "prob": 15 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 },
+      { "group": "regional_original_mags_common", "prob": 1281 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-open",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-open"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-open",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14mag", "prob": 45 },
+      { "item": "m14smallmag", "prob": 22 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 6 },
+      { "item": "mossberg_590m_mag_15", "prob": 12 },
+      { "item": "mossberg_590m_mag_20", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 3 },
+      { "item": "ruger10", "prob": 30 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "ruger20", "prob": 60 },
+      { "item": "ruger5", "prob": 15 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 31 },
+      { "item": "stanag20", "prob": 62 },
+      { "item": "stanag30", "prob": 125 },
+      { "item": "stanag5", "prob": 15 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 },
+      { "group": "regional_original_mags_common", "prob": 1281 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-open",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 },
+      { "group": "regional_original_mags_common", "prob": 587 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-open",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "m14mag", "prob": 45 },
+      { "item": "m14smallmag", "prob": 22 },
+      { "item": "ruger10", "prob": 30 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "ruger20", "prob": 60 },
+      { "item": "ruger5", "prob": 15 },
+      { "item": "stanag10", "prob": 31 },
+      { "item": "stanag20", "prob": 62 },
+      { "item": "stanag30", "prob": 125 },
+      { "item": "stanag5", "prob": 15 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "group": "regional_original_mags_common", "prob": 648 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14smallmag", "prob": 45 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 12 },
+      { "item": "ruger10", "prob": 60 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "ruger5", "prob": 30 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 125 },
+      { "item": "stanag5", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14smallmag", "prob": 45 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 12 },
+      { "item": "ruger10", "prob": 60 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "ruger5", "prob": 30 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 125 },
+      { "item": "stanag5", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-split",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-split"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m14smallmag", "prob": 45 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "mossberg_590m_mag_10", "prob": 25 },
+      { "item": "mossberg_590m_mag_5", "prob": 12 },
+      { "item": "ruger10", "prob": 60 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "ruger5", "prob": 30 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "stanag10", "prob": 125 },
+      { "item": "stanag5", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "m14smallmag", "prob": 45 },
+      { "item": "ruger10", "prob": 60 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "ruger5", "prob": 30 },
+      { "item": "stanag10", "prob": 125 },
+      { "item": "stanag5", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-restricted10",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-restricted10",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-restricted10",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted10"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-restricted10",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-restricted10",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-restricted10",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-restricted17",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-restricted17",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-restricted17",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted17"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-restricted17",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-restricted17",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 50 },
+      { "item": "glock17_17", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-restricted17",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "steyr_scout_mag", "prob": 25 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-restricted15",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-restricted15",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-restricted15",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted15"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-restricted15",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-restricted15",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-restricted15",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022mag", "prob": 62 },
+      { "item": "ruger1022mag_15", "prob": 125 },
+      { "item": "steyr_scout_mag", "prob": 25 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-restricted_split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-restricted_split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-restricted_split",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted_split"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-restricted_split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "ruger1022mag", "prob": 125 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-restricted_split",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag", "prob": 110 },
+      { "item": "glockmag_10", "prob": 55 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag", "prob": 55 },
+      { "item": "m9mag_10rd", "prob": 27 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-restricted_split",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-hawaii",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-hawaii",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-hawaii",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-hawaii"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-hawaii",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-hawaii",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "glock17_10", "prob": 100 },
+      { "item": "glockmag_10", "prob": 110 },
+      { "item": "m1911mag", "prob": 60 },
+      { "item": "m9mag_10rd", "prob": 55 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-hawaii",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-canada",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-canada",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-canada",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-canada"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-canada",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-canada",
+    "subtype": "distribution",
+    "entries": []
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-canada",
+    "subtype": "distribution",
+    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-mexico",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted-mexico",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged-mexico",
+    "subtype": "distribution",
+    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-mexico"} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_hunting-mexico",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "rugerlcpmag", "prob": 70 },
+      { "item": "steyr_scout_mag", "prob": 25 },
+      { "item": "wp22mag", "prob": 60 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_pistol_hunting-mexico",
+    "subtype": "distribution",
+    "entries": [ {"item": "rugerlcpmag", "prob": 70}, {"item": "wp22mag", "prob": 60} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_rifle_hunting-mexico",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "ruger1022bigmag", "prob": 125 },
+      { "item": "ruger1022mag", "prob": 31 },
+      { "item": "ruger1022mag_15", "prob": 62 },
+      { "item": "steyr_scout_mag", "prob": 25 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-AB",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-BC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-MB",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-NB",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-NL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-NS",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-NT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-NU",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-ON",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-PE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-QC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-SK",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-CA-YT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-AGU",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-BCN",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-BCS",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-CAM",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-CHH",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-CHP",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-CMX",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-COA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-COL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-DUR",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-GRO",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-GUA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-HID",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-JAL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-MEX",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-MIC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-MOR",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-NAY",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-NLE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-OAX",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-PUE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-QUE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-ROO",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-SIN",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-SLP",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-SON",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-TAB",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-TAM",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-TLA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-VER",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-YUC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-MX-ZAC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-AK",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-AL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-AR",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-AZ",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-CA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-CO",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted15", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-CT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-DC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-DE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted17", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-FL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-GA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-HI",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-hawaii", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-IA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-ID",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-IL",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted_split", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-IN",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-KS",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-KY",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-LA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MD",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-ME",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MI",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MN",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MO",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MS",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-MT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-ND",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NE",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NH",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NJ",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NM",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NV",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-NY",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-OH",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-OK",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-OR",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-PA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-RI",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-SC",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-SD",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-TN",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-TX",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-UT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-VA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted15", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-VT",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-split", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-WA",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-WI",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-WV",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common-US-WY",
+    "subtype": "distribution",
+    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+  }
+]

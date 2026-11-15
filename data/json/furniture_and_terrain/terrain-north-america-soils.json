@@ -1,0 +1,200 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam",
+    "copy-from": "t_dirt",
+    "name": "loam",
+    "description": "A crumbly mixture of sand, silt, and clay.",
+    "looks_like": "t_dirt",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled loam",
+    "description": "The upper layer of this loam has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam",
+    "copy-from": "t_dirt",
+    "name": "sandy soil",
+    "description": "Pale, gritty topsoil with a large proportion of sand.",
+    "looks_like": "t_dirt",
+    "color": "yellow"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled sandy soil",
+    "description": "The upper layer of this sandy soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "yellow"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam",
+    "copy-from": "t_dirt",
+    "name": "silt-rich soil",
+    "description": "Fine, powdery earth that packs smoothly when it is wet.",
+    "looks_like": "t_dirt",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled silt-rich soil",
+    "description": "The upper layer of this silt-rich soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam",
+    "copy-from": "t_dirt",
+    "name": "clay loam",
+    "description": "Loamy topsoil with enough clay to hold together when damp.",
+    "looks_like": "t_dirt",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled clay loam",
+    "description": "The upper layer of this clay loam has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay",
+    "copy-from": "t_dirt",
+    "name": "heavy clay soil",
+    "description": "Dense, clay-rich soil that forms hard clods as it dries.",
+    "looks_like": "t_dirt",
+    "color": "red"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled heavy clay soil",
+    "description": "The upper layer of this heavy clay soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "red"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic",
+    "copy-from": "t_dirt",
+    "name": "organic-rich soil",
+    "description": "Dark soil mixed with a great deal of decomposed plant material.",
+    "looks_like": "t_dirt",
+    "color": "dark_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled organic-rich soil",
+    "description": "The upper layer of this organic-rich soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "dark_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly",
+    "copy-from": "t_dirt",
+    "name": "gravelly soil",
+    "description": "Loose topsoil interspersed with small stones and gravel.",
+    "looks_like": "t_dirt",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled gravelly soil",
+    "description": "The upper layer of this gravelly soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous",
+    "copy-from": "t_dirt",
+    "name": "calcareous soil",
+    "description": "Pale soil mixed with chalky particles of calcium carbonate.",
+    "looks_like": "t_dirt",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled calcareous soil",
+    "description": "The upper layer of this calcareous soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie",
+    "copy-from": "t_dirt",
+    "name": "dark prairie soil",
+    "description": "Deep, dark topsoil rich in organic material from grass roots.",
+    "looks_like": "t_dirt",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled dark prairie soil",
+    "description": "The upper layer of this dark prairie soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "brown"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic",
+    "copy-from": "t_dirt",
+    "name": "volcanic soil",
+    "description": "Loose, porous earth formed from volcanic material.",
+    "looks_like": "t_dirt",
+    "color": "dark_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled volcanic soil",
+    "description": "The upper layer of this volcanic soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "dark_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol",
+    "copy-from": "t_dirt",
+    "name": "leached forest soil",
+    "description": "Acidic forest soil with a light layer of leached material.",
+    "looks_like": "t_dirt",
+    "color": "light_gray"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_tilled",
+    "copy-from": "t_dirtmound",
+    "name": "tilled leached forest soil",
+    "description": "The upper layer of this leached forest soil has been loosened for planting.",
+    "looks_like": "t_dirtmound",
+    "color": "light_gray"
+  }
+]

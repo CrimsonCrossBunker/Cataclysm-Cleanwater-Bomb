@@ -101,6 +101,7 @@
 #include "mission.h"
 #include "monster.h"
 #include "morale.h"
+#include "mp_actor_binding.h"
 #include "mtype.h"
 #include "mutation.h"
 #include "npc.h"
@@ -1371,6 +1372,8 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
         setID( tmpid );
     }
     load_mission_state( data );
+    faction_representatives.clear();
+    data.read( "faction_representatives", faction_representatives );
 
     data.read( "activity", activity );
     if( data.has_array( "backlog" ) ) {
@@ -1748,6 +1751,9 @@ void Character::store( JsonOut &json ) const
     json.member( "book_chapters", book_chapters );
     store_grab_state( json );
     store_mission_state( json );
+    if( is_avatar() || !faction_representatives.empty() ) {
+        json.member( "faction_representatives", faction_representatives );
+    }
     json.member( "kill_tracker", kill_statistics_ );
     json.member( "items_identified", items_identified );
     json.member( "in_vehicle", in_vehicle );
@@ -2357,7 +2363,6 @@ void avatar::store( JsonOut &json ) const
     if( shadow_npc ) {
         json.member( "shadow_npc", *shadow_npc );
     }
-    json.member( "faction_representatives", faction_representatives );
     // someday, npcs may drive
     json.member( "controlling_vehicle", controlling_vehicle );
 
@@ -2449,7 +2454,6 @@ void avatar::load( const JsonObject &data, const JsonObject *legacy_kills )
         shadow_npc = std::make_unique<npc>();
         data.read( "shadow_npc", *shadow_npc );
     }
-    data.read( "faction_representatives", faction_representatives );
     data.read( "controlling_vehicle", controlling_vehicle );
 
     // Preserve the shared loader's identity. Re-grabbing here could bind a
@@ -2560,35 +2564,33 @@ void npc_follower_rules::deserialize( const JsonObject &data )
     burst = saved_burst >= static_cast<int>( burst_rule::ADAPTIVE ) &&
             saved_burst <= static_cast<int>( burst_rule::FULL_AUTO )
             ? static_cast<burst_rule>( saved_burst ) : burst_rule::ADAPTIVE;
-    int tmpreserve = 50;
+    int tmpreserve = static_cast<int>( cbm_reserve_rule::CBM_RESERVE_AUTO );
     data.read( "cbm_reserve", tmpreserve );
     cbm_reserve = static_cast<cbm_reserve_rule>( tmpreserve );
-    int tmprecharge = 50;
+    int tmprecharge = static_cast<int>( cbm_recharge_rule::CBM_RECHARGE_AUTO );
     data.read( "cbm_recharge", tmprecharge );
     cbm_recharge = static_cast<cbm_recharge_rule>( tmprecharge );
 
-    // deserialize the flags so they can be changed between save games
+    // Missing rules inherit current defaults; saved commands take precedence.
+    const npc_follower_rules defaults;
     for( const auto &rule : ally_rule_strs ) {
-        bool tmpflag = false;
-        // legacy to handle rules that were saved before overrides
+        bool tmpflag = defaults.has_flag( rule.second.rule, false );
+        // Legacy unprefixed values are superseded by explicitly saved rules.
         data.read( rule.first, tmpflag );
-        if( tmpflag ) {
-            set_flag( rule.second.rule );
-        } else {
-            clear_flag( rule.second.rule );
-        }
         data.read( "rule_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_flag( rule.second.rule );
         } else {
             clear_flag( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_enable_" + rule.first, tmpflag );
         if( tmpflag ) {
             enable_override( rule.second.rule );
         } else {
             disable_override( rule.second.rule );
         }
+        tmpflag = false;
         data.read( "override_" + rule.first, tmpflag );
         if( tmpflag ) {
             set_override( rule.second.rule );
@@ -2913,6 +2915,8 @@ void npc::load( const JsonObject &data )
         faction_api_version = 0;
     }
 
+    follower_leader_ = character_id();
+    data.read( "follower_leader", follower_leader_ );
     if( data.read( "attitude", atttmp ) ) {
         attitude = static_cast<npc_attitude>( atttmp );
         static const std::set<npc_attitude> legacy_attitudes = {{
@@ -3073,6 +3077,9 @@ void npc::store( JsonOut &json ) const
         json.member( "my_fac", fac_id.c_str() );
     }
     json.member( "attitude", static_cast<int>( attitude ) );
+    if( follower_leader_.is_valid() ) {
+        json.member( "follower_leader", follower_leader_ );
+    }
     json.member( "previous_attitude", static_cast<int>( previous_attitude ) );
     json.member( "op_of_u", op_of_u );
     json.member( "op_of_u_owner", opinion_owner() );
@@ -4112,7 +4119,14 @@ void item::link_data::serialize( JsonOut &jsout ) const
     jsout.member( "link_i_state", source );
     jsout.member( "link_t_state", target );
     jsout.member( "link_t_abs_pos", t_abs_pos );
-    jsout.member( "link_t_mount", t_mount );
+    jsout.member( "link_t_mount", t_mount.xy() );
+    jsout.member( "link_t_mount_level", t_mount.z() );
+    if( t_part_uid > 0 ) {
+        jsout.member( "link_t_part_uid", t_part_uid );
+    }
+    if( s_item_uid > 0 ) {
+        jsout.member( "link_s_item_uid", s_item_uid );
+    }
     jsout.member( "link_length", length );
     jsout.member( "link_max_length", max_length );
     jsout.member( "link_last_processed", last_processed );
@@ -4129,7 +4143,11 @@ void item::link_data::deserialize( const JsonObject &data )
     data.read( "link_i_state", source );
     data.read( "link_t_state", target );
     data.read( "link_t_abs_pos", t_abs_pos );
-    data.read( "link_t_mount", t_mount );
+    point_rel_ms mount;
+    data.read( "link_t_mount", mount );
+    t_mount = tripoint_rel_ms( mount, data.get_int( "link_t_mount_level", 0 ) );
+    t_part_uid = data.has_member( "link_t_part_uid" ) ? data.get_int64( "link_t_part_uid" ) : 0;
+    s_item_uid = data.has_member( "link_s_item_uid" ) ? data.get_int64( "link_s_item_uid" ) : 0;
     data.read( "link_length", length );
     data.read( "link_max_length", max_length );
     data.read( "link_last_processed", last_processed );
@@ -4777,6 +4795,12 @@ void vehicle_part::deserialize( const JsonObject &data )
 
     data.read( "mount_dx", mount.x() );
     data.read( "mount_dy", mount.y() );
+    data.read( "mount_level", mount_level );
+    if( mount_level < 0 || mount_level > 10 ) {
+        data.throw_error_at( "mount_level", "vehicle deck out of range" );
+    }
+    precalc[0].z() = mount_level;
+    precalc[1].z() = mount_level;
     data.read( "open", open );
     int direction_int;
     data.read( "direction", direction_int );
@@ -4830,6 +4854,10 @@ void vehicle_part::deserialize( const JsonObject &data )
 
 void vehicle_part::serialize( JsonOut &json ) const
 {
+    const npc *passenger = g && passenger_id.is_valid() && has_flag( vp_flag::passenger_flag )
+                           ? g->critter_by_id<npc>( passenger_id ) : nullptr;
+    // Co-op guests are restored by the player store, independently of vehicles.
+    const bool guest_seat = passenger && cata_mp::is_player_proxy( *passenger );
     json.start_object();
     json.member( "id", info_->id.str() );
     if( !variant.empty() ) {
@@ -4838,12 +4866,16 @@ void vehicle_part::serialize( JsonOut &json ) const
     json.member( "base", base );
     json.member( "mount_dx", mount.x() );
     json.member( "mount_dy", mount.y() );
+    if( mount_level != 0 ) {
+        json.member( "mount_level", mount_level );
+    }
     json.member( "open", open );
     json.member( "direction", std::lround( to_degrees( direction ) ) );
     json.member( "blood", blood );
     json.member( "enabled", enabled );
     json.member( "power_disabled", power_disabled );
-    json.member( "flags", flags );
+    json.member( "flags", guest_seat ? flags & ~static_cast<uint32_t>( vp_flag::passenger_flag )
+                 : flags );
     if( !carried_stack.empty() ) {
         std::stack<vehicle_part::carried_part_data> carried_copy = carried_stack;
         json.member( "carried_stack" );
@@ -4854,7 +4886,7 @@ void vehicle_part::serialize( JsonOut &json ) const
         }
         json.end_array();
     }
-    json.member( "passenger_id", passenger_id );
+    json.member( "passenger_id", guest_seat ? character_id() : passenger_id );
     json.member( "crew_id", crew_id );
     if( precalc[0].z() ) {
         json.member( "z_offset", precalc[0].z() );
@@ -4909,6 +4941,7 @@ void label::deserialize( const JsonObject &data )
     data.read( "x", x() );
     data.read( "y", y() );
     data.read( "text", text );
+    data.read( "z", mount_level );
 }
 
 void label::serialize( JsonOut &json ) const
@@ -4917,6 +4950,9 @@ void label::serialize( JsonOut &json ) const
     json.member( "x", x() );
     json.member( "y", y() );
     json.member( "text", text );
+    if( mount_level != 0 ) {
+        json.member( "z", mount_level );
+    }
     json.end_object();
 }
 
@@ -5032,14 +5068,15 @@ void vehicle::deserialize( const JsonObject &data )
 
     refresh( );
 
-    point p;
-    zone_data zd;
     for( JsonObject sdata : data.get_array( "zones" ) ) {
         sdata.allow_omitted_members();
+        point_rel_ms p;
+        zone_data zd;
         sdata.read( "point", p );
+        const int mount_level = sdata.get_int( "mount_level", 0 );
         sdata.read( "zone", zd );
         zd.set_vehicle_owner( *this );
-        loot_zones.emplace( p, zd );
+        loot_zones.emplace( tripoint_rel_ms( p, mount_level ), zd );
     }
     data.read( "other_tow_point", tow_data.other_towing_point );
     // Note that it's possible for a vehicle to be loaded midway
@@ -5115,7 +5152,8 @@ void vehicle::serialize( JsonOut &json ) const
     json.start_array();
     for( auto const &z : loot_zones ) {
         json.start_object();
-        json.member( "point", z.first );
+        json.member( "point", z.first.xy() );
+        json.member( "mount_level", z.first.z() );
         json.member( "zone", z.second );
         json.end_object();
     }

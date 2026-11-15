@@ -1,0 +1,60 @@
+[
+  {
+    "id": "mon_zombie_swat_ca",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_swat",
+    "looks_like": "mon_zombie_swat",
+    "name": { "str": "ERT zombie" },
+    "description": "This armored zombie wears the battered insignia of a Canadian police Emergency Response Team.",
+    "death_drops": "mon_zombie_swat_death_drops-ca"
+  },
+  {
+    "id": "mon_zombie_swat_mx",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_swat",
+    "looks_like": "mon_zombie_swat",
+    "name": { "str": "FERI zombie" },
+    "description": "This armored zombie once served in the Mexican National Guard's Fuerza Especial de Reacción e Intervención.",
+    "death_drops": "mon_zombie_swat_death_drops-mx"
+  },
+  {
+    "id": "mon_zombie_marine_ca",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_marine",
+    "looks_like": "mon_zombie_marine",
+    "name": { "str": "naval boarding party zombie" },
+    "description": "The torn combat uniform on this corpse identifies it as a former member of a Royal Canadian Navy boarding party.",
+    "death_drops": "mon_zombie_marine_death_drops-ca",
+    "upgrades": { "half_life": 152, "into": "mon_zombie_marine_upgrade_ca" }
+  },
+  {
+    "id": "mon_zombie_marine_mx",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_marine",
+    "looks_like": "mon_zombie_marine",
+    "name": { "str": "Mexican marine zombie" },
+    "description": "An insignia on the remains of this corpse's uniform marks it as an infantry member of the Armada de México.",
+    "death_drops": "mon_zombie_marine_death_drops-mx",
+    "upgrades": { "half_life": 152, "into": "mon_zombie_marine_upgrade_mx" }
+  },
+  {
+    "id": "mon_zombie_marine_upgrade_ca",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_marine_upgrade",
+    "looks_like": "mon_zombie_marine_upgrade",
+    "name": { "str": "bestial stalker" },
+    "description": "This clawed creature stalks on all fours, dragging scraps of a Royal Canadian Navy combat uniform.",
+    "death_drops": "mon_zombie_marine_death_drops-ca",
+    "upgrades": false
+  },
+  {
+    "id": "mon_zombie_marine_upgrade_mx",
+    "type": "MONSTER",
+    "copy-from": "mon_zombie_marine_upgrade",
+    "looks_like": "mon_zombie_marine_upgrade",
+    "name": { "str": "bestial stalker" },
+    "description": "This clawed creature stalks on all fours, dragging scraps of a Mexican naval infantry uniform.",
+    "death_drops": "mon_zombie_marine_death_drops-mx",
+    "upgrades": false
+  }
+]

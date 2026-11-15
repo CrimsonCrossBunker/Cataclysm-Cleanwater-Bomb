@@ -31,6 +31,7 @@
 #include "output.h"
 #include "overmap.h"
 #include "overmapbuffer.h"
+#include "safe_reference.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
 #include "tileray.h"
@@ -1411,8 +1412,11 @@ static std::string get_compass_for_direction( const cardinal_direction dir, int 
     const int d = static_cast<int>( dir );
     const monster_visible_info &mon_visible = get_avatar().get_mon_visible();
     std::vector<std::pair<std::string, nc_color>> syms;
-    for( npc *n : mon_visible.unique_types[d] ) {
-        switch( n->get_attitude() ) {
+    for( const safe_reference<Creature> &entry : mon_visible.unique_types[d] ) {
+        if( !entry ) {
+            continue;
+        }
+        switch( static_cast<const npc &>( *entry ).get_attitude() ) {
             case NPCATT_KILL:
                 syms.emplace_back( "@", c_red );
                 break;
@@ -1451,10 +1455,14 @@ std::string display::colorized_compass_legend_text( int width, int max_height, i
 {
     const monster_visible_info &mon_visible = get_avatar().get_mon_visible();
     std::vector<std::string> names;
-    for( const std::vector<npc *> &nv : mon_visible.unique_types ) {
-        for( const npc *n : nv ) {
+    for( const auto &visible : mon_visible.unique_types ) {
+        for( const safe_reference<Creature> &entry : visible ) {
+            if( !entry ) {
+                continue;
+            }
+            const npc &n = static_cast<const npc &>( *entry );
             std::string name;
-            switch( n->get_attitude() ) {
+            switch( n.get_attitude() ) {
                 case NPCATT_KILL:
                     name = colorize( "@", c_red );
                     break;
@@ -1465,7 +1473,7 @@ std::string display::colorized_compass_legend_text( int width, int max_height, i
                     name = colorize( "@", c_pink );
                     break;
             }
-            name = string_format( "%s %s", name, n->get_name() );
+            name = string_format( "%s %s", name, n.get_name() );
             names.emplace_back( name );
         }
     }

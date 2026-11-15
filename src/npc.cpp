@@ -7,6 +7,7 @@
 #include <coordinates.h>
 #include <inventory.h>
 #include <item_location.h>
+#include "item_disposition.h"
 #include <lru_cache.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
@@ -22,6 +23,7 @@
 #include <atomic>
 #include <climits>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <functional>
@@ -29,7 +31,9 @@
 #include <iterator>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <ostream>
+#include <set>
 
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
@@ -939,7 +943,7 @@ void npc::set_fac( const faction_id &id )
 
 void npc::apply_ownership_to_inv()
 {
-    for( item*&e : inv_dump() ) {
+    for( item *&e : inv_dump() ) {
         e->set_owner( *this );
     }
 }
@@ -1314,7 +1318,7 @@ void npc::place_on_map( map *here )
     const tripoint_bub_ms pos = pos_bub( *here );
 
     for( const tripoint_bub_ms &p : closest_points_first( pos, 1, SEEX + 1 ) ) {
-        if( g->is_empty( p ) ) {
+        if( here->has_loaded_submap( p ) && g->is_empty( here, here->get_abs( p ) ) ) {
             setpos( *here, p );
             return;
         }
@@ -1565,7 +1569,7 @@ void npc::do_npc_read( bool ebook )
     }
 }
 
-bool npc::wear_if_wanted( const item &it, std::string &reason )
+bool npc::wear_if_wanted( const item &it, std::string &reason, item_location *offered )
 {
     // Note: this function isn't good enough to use with NPC AI alone
     // Restrict it to player's orders for now
@@ -1573,6 +1577,26 @@ bool npc::wear_if_wanted( const item &it, std::string &reason )
         reason = _( "This can't be worn." );
         return false;
     }
+    const character_action_guard wearer( *this );
+    Character *donor = offered && *offered ? offered->carrier() : nullptr;
+    const std::optional<character_action_guard> giver = donor ?
+            std::optional<character_action_guard>( std::in_place, *donor ) : std::nullopt;
+    std::set<int64_t> replaceable;
+    if( offered ) {
+        std::vector<item *> garments;
+        worn.inv_dump( garments );
+        for( const item *garment : garments ) {
+            if( !craft_reservation::contains_reserved_or_live_craft( *garment ) ) {
+                replaceable.insert( garment->uid().get_value() );
+            }
+        }
+    }
+    const auto put_on = [&]() {
+        return offered ? ( giver && *giver && *offered &&
+                           ( *offered )->typeId() == it.typeId() &&
+                           ( *offered )->count() == it.count() && wear_transferred_item( *offered, *donor ) ) :
+               !!wear_item( it, false );
+    };
 
     // Splints ignore limits, but only when being equipped on a broken part
     // TODO: Drop splints when healed
@@ -1581,7 +1605,7 @@ bool npc::wear_if_wanted( const item &it, std::string &reason )
             if( is_limb_broken( bp ) && !has_effect( effect_mending, bp.id() ) &&
                 it.covers( bp ) ) {
                 reason = chat_snippets().snip_wear.translated();
-                return !!wear_item( it, false );
+                return put_on();
             }
         }
     }
@@ -1593,7 +1617,7 @@ bool npc::wear_if_wanted( const item &it, std::string &reason )
         if( can_wear( it ).success() ) {
             // TODO: Hazmat/power armor makes this not work due to 1 boots/headgear limit
 
-            if( !!wear_item( it, false ) ) {
+            if( put_on() ) {
                 reason = chat_snippets().snip_wear.translated();
                 return true;
             } else {
@@ -1610,20 +1634,25 @@ bool npc::wear_if_wanted( const item &it, std::string &reason )
             // Find an item that covers the same body part as the new item
             item_location armor_covering = worn.first_item_covering_bp( *this, bp );
             if( armor_covering && !( is_limb_broken( bp ) && armor_covering->has_flag( flag_SPLINT ) ) ) {
+                if( offered && ( !giver || !*giver || !*offered ||
+                                 replaceable.count( armor_covering->uid().get_value() ) == 0 ||
+                                 craft_reservation::contains_reserved_or_live_craft( *armor_covering ) ) ) {
+                    break;
+                }
                 //create an item_location for player::takeoff to handle.
                 took_off = takeoff( armor_covering );
                 break;
             }
         }
 
-        if( !took_off || worn.size() >= size_before ) {
+        if( !wearer || !took_off || worn.size() >= size_before ) {
             // Shouldn't happen, but does
             reason = _( "I tried but couldn't wear it." );
             return false;
         }
     }
     reason = chat_snippets().snip_wear.translated();
-    return worn.empty() && wear_item( it, false );
+    return worn.empty() && put_on();
 }
 
 void npc::stow_item( item &it )
@@ -1766,6 +1795,51 @@ bool npc::wield( item_location loc, bool remove_old )
 
     choose_best_MA_style( this );
     invalidate_range_cache();
+    return true;
+}
+
+bool npc::wield_offered_item( item_location &source, Character &donor )
+{
+    const character_action_guard receiver( *this );
+    const character_action_guard giver( donor );
+    if( !receiver || !giver || !source || !source.held_by( donor ) ||
+        !can_wield( *source ).success() ) {
+        return false;
+    }
+    const itype_id offered_type = source->typeId();
+    const int offered_count = source->count();
+    if( has_wield_conflicts( *source ) ) {
+        item_location old = get_wielded_item();
+        if( !old || !can_unwield( *old ).success() ||
+            craft_reservation::contains_reserved_or_live_craft( *old ) ) {
+            return false;
+        }
+        if( is_using_bionic_weapon() ) {
+            deactivate_or_discharge_bionic_weapon( true );
+        } else {
+            // Use the NPC's usual wear, stash, then drop preference without a host menu.
+            const int wear_cost = item_wear_cost( *old );
+            if( wear_transferred_item( old, *this ) ) {
+                if( receiver ) {
+                    mod_moves( -wear_cost );
+                }
+            } else {
+                const bool can_stash_old = can_stash( *old ) && !old->will_spill();
+                const item_disposition disposition{ can_stash_old ? "inventory" : "drop", 0, 0 };
+                if( !execute_item_disposition( *this, old, disposition ) ) {
+                    return false;
+                }
+            }
+        }
+    }
+    if( !receiver || !giver || !source || source->typeId() != offered_type ||
+        source->count() != offered_count || !wield_transferred_item( source, donor ) ) {
+        return false;
+    }
+    if( receiver ) {
+        choose_best_MA_style( this );
+        invalidate_range_cache();
+    }
     return true;
 }
 
@@ -1984,6 +2058,7 @@ void npc::mutiny()
     my_fac->respects_u -= 5;
     my_fac->trusts_u -= 5;
     g->remove_npc_follower( getID() );
+    set_follower_leader( character_id() );
     set_fac( faction_amf );
     rules = npc_follower_rules(); // Mutinous NPCs no longer follower your rules
     job.clear_all_priorities();
@@ -2267,7 +2342,6 @@ ret_val<void> npc::wants_to_sell( const item_location &it, int at_price ) const
 ret_val<void> npc::wants_to_sell( const item_location &it, const int at_price,
                                   const Character &buyer ) const
 {
-    static_cast<void>( buyer );
     if( will_exchange_items_freely() ) {
         return ret_val<void>::make_success();
     }
@@ -2281,7 +2355,7 @@ ret_val<void> npc::wants_to_sell( const item_location &it, const int at_price,
     }
 
     for( const shopkeeper_item_group &ig : myclass->get_shopkeeper_items() ) {
-        if( ig.can_sell( *this ) ) {
+        if( ig.can_sell( *this, &buyer ) ) {
             continue;
         }
         item const *const check_it = it->this_or_single_content();
@@ -2357,6 +2431,11 @@ bool npc::will_exchange_items_freely() const
 // of credit at most.
 int npc::max_credit_extended() const
 {
+    return max_credit_extended( op_of_u );
+}
+
+int npc::max_credit_extended( const npc_opinion &opinion ) const
+{
     if( is_player_ally() ) {
         return INT_MAX;
     }
@@ -2367,18 +2446,22 @@ int npc::max_credit_extended() const
     const int credit_altruism = 100;
     const int credit_anger    = -200;
 
-    return std::max( 0,
-                     op_of_u.trust * credit_trust +
-                     op_of_u.value * credit_value +
-                     op_of_u.fear  * credit_fear  +
-                     personality.altruism * credit_altruism +
-                     op_of_u.anger * credit_anger
-                   );
+    const int64_t credit = static_cast<int64_t>( opinion.trust ) * credit_trust +
+                           static_cast<int64_t>( opinion.value ) * credit_value +
+                           static_cast<int64_t>( opinion.fear ) * credit_fear +
+                           personality.altruism * credit_altruism +
+                           static_cast<int64_t>( opinion.anger ) * credit_anger;
+    return static_cast<int>( std::clamp<int64_t>( credit, 0, INT_MAX ) );
 }
 
 // How much is the NPC willing to owe the player?
 // This is much more generous, as it's the essentially the player holding the risk here.
 int npc::max_willing_to_owe() const
+{
+    return max_willing_to_owe( op_of_u );
+}
+
+int npc::max_willing_to_owe( const npc_opinion &opinion ) const
 {
     if( is_player_ally() ) {
         return INT_MAX;
@@ -2394,15 +2477,13 @@ int npc::max_willing_to_owe() const
     // NPCs will usually be happy to owe at least credit_default, but may be willing to owe
     // more if they trust, value, are fearful, or altruistic.
     // Angry NPCs could conceiveably refuse to owe you money, out of spite.
-    return std::max( 0,
-                     credit_default +
-                     std::max( 0, op_of_u.trust ) * credit_trust +
-                     std::max( 0, op_of_u.value ) * credit_value +
-                     std::max( 0, op_of_u.fear )  * credit_fear  +
-                     std::max( 0, static_cast<int>( personality.altruism ) ) * credit_altruism +
-                     op_of_u.anger * credit_anger
-                   );
-
+    const int64_t credit = credit_default +
+                           std::max<int64_t>( 0, opinion.trust ) * credit_trust +
+                           std::max<int64_t>( 0, opinion.value ) * credit_value +
+                           std::max<int64_t>( 0, opinion.fear ) * credit_fear +
+                           std::max<int64_t>( 0, personality.altruism ) * credit_altruism +
+                           static_cast<int64_t>( opinion.anger ) * credit_anger;
+    return static_cast<int>( std::clamp<int64_t>( credit, 0, INT_MAX ) );
 }
 
 void npc::shop_restock()
@@ -2679,11 +2760,11 @@ double npc::value( const item &it, double market_price ) const
     return std::round( ret * market_price );
 }
 
-faction_price_rule const *npc::get_price_rules( item const &it ) const
+faction_price_rule const *npc::get_price_rules( item const &it, const Character *customer ) const
 {
-    faction_price_rule const *ret = myclass->get_price_rules( it, *this );
+    faction_price_rule const *ret = myclass->get_price_rules( it, *this, customer );
     if( ret == nullptr && get_faction() != nullptr ) {
-        ret = get_faction()->get_price_rules( it, *this );
+        ret = get_faction()->get_price_rules( it, *this, customer );
     }
     return ret;
 }
@@ -3335,6 +3416,18 @@ void npc::shift( const point_rel_sm &s )
     // TODO: convert these to absolute coords and get rid of shift()
     maybe_shift( wanted_item_pos, -shift );
     path.clear();
+    if( ai_map_origin ) {
+        *ai_map_origin += s;
+    }
+}
+
+void npc::update_ai_map_origin( const map &terrain )
+{
+    const point_abs_sm origin = terrain.get_abs_sub().xy();
+    if( ai_map_origin && origin != *ai_map_origin ) {
+        shift( origin - *ai_map_origin );
+    }
+    ai_map_origin = origin;
 }
 
 bool npc::is_dead() const
@@ -3344,6 +3437,7 @@ bool npc::is_dead() const
 
 void npc::reboot()
 {
+    autonomy = {};
     //The NPC got into an infinite loop, in game.cpp  -monmove() - a debugmsg just popped up
     // informing player of this.
     // put them to sleep and reboot their brain.
@@ -3670,6 +3764,8 @@ void npc::npc_update_body()
 
 void npc::on_load( map *here )
 {
+    update_ai_map_origin( *here );
+    autonomy = npc_autonomy_state{};
     // Reconcile only changed traits; an unchanged personality must not
     // repeatedly activate passive enchantments when re-entering the bubble.
     generate_personality_traits();
@@ -3950,11 +4046,18 @@ std::ostream &operator<< ( std::ostream &os, const npc_need &need )
 
 bool npc::will_accept_from_player( const item &it ) const
 {
+    return will_accept_from_player( it, get_player_character() );
+}
+
+bool npc::will_accept_from_player( const item &it, const Character &donor ) const
+{
     if( is_hallucination() ) {
         return false;
     }
 
-    if( is_minion() || get_player_character().has_trait( trait_DEBUG_MIND_CONTROL ) ||
+    const bool trusted = donor.is_avatar() ? is_minion() :
+                         is_player_ally() && opinion_of( donor.getID() ).trust >= 5;
+    if( trusted || donor.has_trait( trait_DEBUG_MIND_CONTROL ) ||
         it.has_flag( flag_NPC_SAFE ) ) {
         return true;
     }
@@ -4073,6 +4176,10 @@ std::vector<std::string> npc::extended_description() const
     tmp.emplace_back( sees( here, player_character ) ? colorize( _( "Aware of your presence" ),
                       c_yellow ) :
                       colorize( _( "Unaware of you" ), c_green ) );
+
+    if( is_player_ally() && !autonomy.reason.empty() ) {
+        tmp.emplace_back( string_format( _( "Current plan: %s" ), autonomy.reason ) );
+    }
 
     if( hit_by_player ) {
         tmp.emplace_back( "--" );
@@ -4236,6 +4343,47 @@ bool npc::has_activity() const
     return mission == NPC_MISSION_ACTIVITY && attitude == NPCATT_ACTIVITY;
 }
 
+character_id npc::follower_leader_id() const
+{
+    return follower_leader_.is_valid() ? follower_leader_ : get_player_character().getID();
+}
+
+Character *npc::follower_leader() const
+{
+    Character &host = get_player_character();
+    if( !follower_leader_.is_valid() || follower_leader_ == host.getID() ) {
+        return host.is_dead_state() ? nullptr : &host;
+    }
+    Character *leader = g->critter_by_id<Character>( follower_leader_ );
+    if( !leader || leader->is_dead_state() || !leader->is_player_controlled() ||
+        !get_map().has_loaded_submap( leader->pos_bub() ) ) {
+        return nullptr;
+    }
+    return leader;
+}
+
+void npc::set_follower_leader( character_id leader )
+{
+    if( follower_leader_ == leader ) {
+        return;
+    }
+    follower_leader_ = leader;
+    last_player_seen_pos.reset();
+    clear_committed_goal();
+    path.clear();
+    autonomy = {};
+}
+
+bool npc::is_autonomy_teammate( const Character &other ) const
+{
+    if( other.getID() == follower_leader_id() ) {
+        return true;
+    }
+    const npc *peer = other.as_npc();
+    return peer && !peer->is_player_controlled() && peer->is_player_ally() &&
+           peer->follower_leader_id() == follower_leader_id();
+}
+
 npc_attitude npc::get_attitude() const
 {
     return attitude;
@@ -4309,10 +4457,11 @@ npc_follower_rules::npc_follower_rules()
 
     set_flag( ally_rule::use_guns );
     clear_flag( ally_rule::use_grenades );
-    set_flag( ally_rule::use_silent );
+    clear_flag( ally_rule::use_silent );
     set_flag( ally_rule::avoid_friendly_fire );
 
-    clear_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::allow_pick_up );
+    set_flag( ally_rule::share_supplies );
     clear_flag( ally_rule::allow_bash );
     set_flag( ally_rule::allow_sleep );
     set_flag( ally_rule::allow_complain );

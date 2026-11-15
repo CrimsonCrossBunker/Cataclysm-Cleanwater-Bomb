@@ -595,7 +595,7 @@ void editmap_ui::draw_main_ui_overlay()
                                                false );
                     }
                     if( const optional_vpart_position ovp = tmpmap.veh_at( tmp_p ) ) {
-                        const vpart_display vd = ovp->vehicle().get_display_of_tile( ovp->mount_pos() );
+                        const vpart_display vd = ovp->vehicle().get_display_of_tile( ovp->mount_pos3() );
                         char part_mod = 0;
                         if( vd.is_open ) {
                             part_mod = 1;
