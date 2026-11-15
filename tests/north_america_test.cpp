@@ -3,9 +3,57 @@
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "game.h"
+#include "item_group.h"
 #include "north_america.h"
 #include "options.h"
 #include "options_helpers.h"
+
+TEST_CASE( "north_america_jurisdictions_follow_borders", "[north_america][worldgen]" )
+{
+    CHECK( north_america::jurisdiction_at( point_abs_ms::zero ) == "US-MA" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( -2366147, 738224 ) ) == "US-TX" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( -649984, -162480 ) ) == "CA-ON" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( -2966130, 2139454 ) ) == "MX-CMX" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( -3487129, -1904703 ) ) == "US-WA" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( -3485687, -1906585 ) ) == "CA-BC" );
+    CHECK( north_america::jurisdiction_at( point_abs_ms( 105754, -803 ) ).empty() );
+}
+
+TEST_CASE( "north_america_regional_loot_scope_uses_spawn_location",
+           "[north_america][item_group]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    const item_group_id magazines( "mags_common" );
+    const item_group_id texas_magazines( "mags_common-US-TX" );
+    const item_group_id police_footwear( "cop_shoes" );
+    const point_abs_ms dallas( -2366147, 738224 );
+    const point_abs_ms toronto( -649984, -162480 );
+    const mtype_id swat( "mon_zombie_swat" );
+    const mtype_id ert( "mon_zombie_swat_ca" );
+    REQUIRE( item_group::group_is_defined( texas_magazines ) );
+
+    g->north_america_world = false;
+    {
+        const north_america::scoped_regional_loot classic( dallas );
+        CHECK( north_america::regional_item_group( magazines ) == magazines );
+        CHECK( north_america::regional_monster( swat, toronto ) == swat );
+    }
+
+    g->north_america_world = true;
+    {
+        const north_america::scoped_regional_loot texas( dallas );
+        CHECK( north_america::regional_item_group( magazines ) == texas_magazines );
+        CHECK( item_group::item_from( police_footwear ).typeId() == itype_id( "boots_western" ) );
+        {
+            const north_america::scoped_regional_loot massachusetts( point_abs_ms::zero );
+            CHECK( north_america::regional_item_group( magazines ) == magazines );
+        }
+        CHECK( north_america::regional_item_group( magazines ) == texas_magazines );
+    }
+    CHECK( north_america::regional_item_group( magazines ) == magazines );
+    CHECK( north_america::regional_monster( swat, toronto ) == ert );
+    CHECK( north_america::regional_monster( swat, dallas ) == swat );
+}
 
 TEST_CASE( "north_america_is_a_new_world_map_option", "[north_america][option]" )
 {

@@ -97,6 +97,7 @@
 #include "mp_client_conn.h"
 #include "mp_world_session.h"
 #include "mtype.h"
+#include "north_america.h"
 #include "options.h"
 #include "output.h"
 #include "overmap.h"
@@ -12195,6 +12196,8 @@ void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &grou
 
     if( pop ) {
         // Populate the group from its population variable.
+        const tripoint_bub_ms origin = rebase_bub( coords::project_to<coords::ms>( gp ) );
+        const point_abs_ms spawn_area = get_abs( origin ).xy();
         for( int m = 0; m < pop; m++ ) {
             std::vector<MonsterGroupResult> spawn_details =
                 MonsterGroupManager::GetResultFromGroup( group.type, &pop );
@@ -12202,7 +12205,7 @@ void map::spawn_monsters_submap_group( const tripoint_rel_sm &gp, mongroup &grou
                 if( !mgr.id ) {
                     continue;
                 }
-                monster tmp( mgr.id );
+                monster tmp( north_america::regional_monster( mgr.id, spawn_area ) );
 
                 // If a monster came from a horde population, configure them to always be willing to rejoin a horde.
                 if( group.horde ) {
@@ -12279,7 +12282,8 @@ void map::spawn_monsters_submap( const tripoint_rel_sm &gp, bool ignore_sight, b
         const tripoint_range<tripoint_bub_ms> points = points_in_radius( center, 3 );
 
         for( int j = 0; j < i.count; j++ ) {
-            monster tmp( i.type );
+            monster tmp( i.mission_id > 0 ? i.type :
+                         north_america::regional_monster( i.type, get_abs( center ).xy() ) );
 
             if( tmp.type->in_species( species_FERAL ) ) {
                 if( one_in( 100 ) ) {

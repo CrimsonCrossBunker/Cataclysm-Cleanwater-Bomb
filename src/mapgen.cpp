@@ -82,8 +82,9 @@
 #include "mission.h"
 #include "mod_id_compat.h"
 #include "mongroup.h"
-#include "npc.h"
+#include "north_america.h"
 #include "north_america_ecology.h"
+#include "npc.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
@@ -185,6 +186,8 @@ static constexpr int MON_RADIUS = 3;
 void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save_results,
                     bool run_post_process )
 {
+    const north_america::scoped_regional_loot loot( project_to<coords::ms>( p.xy() ) +
+            point( SEEX, SEEY ) );
     dbg( D_INFO ) << "map::generate( g[" << g.get() << "], p[" << p << "], "
                   "when[" << to_string( when ) << "] )";
     // Restore the caller's mode on success and failure, including nested use.
@@ -7996,6 +7999,8 @@ ret_val<void> update_mapgen_function_json::update_map( const mapgendata &md,
         const tripoint_rel_ms &offset,
         const bool verify ) const
 {
+    const north_america::scoped_regional_loot loot( project_to<coords::ms>(
+                md.m.get_abs_sub().xy() ) + point( SEEX, SEEY ) );
     mapgendata md_with_params( md, get_args( md, mapgen_parameter_scope::omt ), flags_ );
 
     rotation_guard rot( md_with_params );
