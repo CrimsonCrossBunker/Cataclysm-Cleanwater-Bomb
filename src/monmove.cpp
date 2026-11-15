@@ -112,6 +112,7 @@ static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_napalm( "napalm" );
 static const itype_id itype_pressurized_tank( "pressurized_tank" );
 
+static const json_character_flag json_flag_SNOWWALKING( "SNOWWALKING" );
 
 static const material_id material_iflesh( "iflesh" );
 
@@ -1872,7 +1873,7 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
     }
 
     int movecost = std::max( tilecosts[from] + tilecosts[to], 1 ) * 25;
-    if( !has_flag( json_flag_FLIES ) ) {
+    if( !has_flag( json_flag_FLIES ) && !has_flag( json_flag_SNOWWALKING ) ) {
         movecost += snow_move_penalty( get_weather().get_snow_cover( here, to ) );
     }
 
