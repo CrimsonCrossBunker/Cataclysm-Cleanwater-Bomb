@@ -4,7 +4,7 @@
     "subtypes": [ "COMESTIBLE" ],
     "id": "regional_avocado",
     "copy-from": "apple",
-    "name": { "str": "avocado", "str_pl": "avocados" },
+    "name": { "str": "avocado" },
     "description": "A dark-skinned fruit with soft green flesh and a large pit.",
     "looks_like": "apple",
     "weight": "200 g",
