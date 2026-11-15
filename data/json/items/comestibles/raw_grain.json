@@ -438,17 +438,7 @@
     ],
     "into": "flour",
     "recipe": "flour_mill_1_15",
-    "stackable": true,
-    "crop_climate": {
-      "base_c": 4.4,
-      "optimum_c": 21,
-      "min_c": -13,
-      "max_c": 34,
-      "degree_days": 1080,
-      "water_mm": 480,
-      "growing_days": 120,
-      "water_peak": 0.7
-    }
+    "stackable": true
   },
   {
     "type": "ITEM",
