@@ -81,6 +81,8 @@ class dispersion_sources;
 class effect;
 class enchant_cache;
 class faction;
+class gun_mode;
+struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;
@@ -1251,6 +1253,12 @@ class Character : public Creature, public visitable
         int active_technique_range( const matec_id &technique ) const;
         /** Executes one selected technique after checking its current target requirements. */
         bool use_active_technique( Creature &target, const matec_id &technique );
+        bool can_use_active_technique_at( const tripoint_bub_ms &position,
+                                          const matec_id &technique ) const;
+        bool use_active_technique( const tripoint_bub_ms &position, const matec_id &technique );
+        time_duration technique_cooldown_remaining( const matec_id &technique ) const;
+        void start_technique_cooldown( const matec_id &technique );
+        std::vector<std::pair<matec_id, time_duration>> active_technique_cooldowns() const;
         void perform_technique( const ma_technique &technique, Creature &t, damage_instance &di,
                                 int &move_cost, item_location &cur_weapon );
 
@@ -2009,10 +2017,11 @@ class Character : public Creature, public visitable
         * @param item_wear item_location of item to be worn.
         * @param interactive Alert player and drain moves if true.
         * @param theft_consent Explicit ownership decision, or nullopt to ask locally.
+        * @param quantity Explicit selected charges, or zero for normal wear.
         */
         std::optional<std::list<item>::iterator>
         wear( item_location item_wear, bool interactive = true,
-              std::optional<bool> theft_consent = std::nullopt );
+              std::optional<bool> theft_consent = std::nullopt, int quantity = 0 );
 
         /** Used for eating object at a location. Removes item if all of it was consumed.
         *   @returns trinary enum NONE, SOME or ALL amount consumed.
@@ -2318,11 +2327,12 @@ class Character : public Creature, public visitable
         item_location try_add( item it, int &copies_remaining, const item *avoid = nullptr,
                                const item *original_inventory_item = nullptr, bool allow_wield = true,
                                bool ignore_pkt_settings = false );
-        // As try_add, but debit nearby ground/cargo before acquisition
-        // callbacks. A callback may consume the accepted item and return nowhere;
-        // the source handle is cleared once its transfer has committed.
+        // As try_add, but debit the exact source before acquisition callbacks.
+        // A supplied donor must carry the source. The cleared source handle
+        // records a committed transfer even if a callback consumes the new item.
         item_location transfer_item_to_inventory( item_location &source, item prepared,
-                bool allow_wield = true );
+                bool allow_wield = true, Character *donor = nullptr );
+        bool transfer_furniture_item_to_inventory( item_location &source );
         /** Checks to see if it's possible to add an item to the inventory. */
         bool can_add( const item &it, const item *avoid = nullptr,
                       bool allow_wield = true,
@@ -2468,13 +2478,14 @@ class Character : public Creature, public visitable
         /** How much dispersion does one point of target's dodge add when throwing at said target? */
         int throw_dispersion_per_dodge( bool add_encumbrance = true ) const;
 
-        /** Multipliers from the currently wielded item that affect throwing. */
-        float throw_damage_multiplier() const;
-        float throw_range_multiplier() const;
-        float throw_stamina_multiplier() const;
-        float throw_dispersion_multiplier() const;
-        float throw_speed_multiplier() const;
-        float throw_weight_multiplier() const;
+        /** Multipliers from the currently wielded item that affect a compatible thrown item. */
+        float throw_damage_multiplier( const item &thrown ) const;
+        float throw_range_multiplier( const item &thrown ) const;
+        float throw_stamina_multiplier( const item &thrown ) const;
+        float throw_dispersion_multiplier( const item &thrown ) const;
+        float throw_speed_multiplier( const item &thrown ) const;
+        /** Weight has opposite benefit directions for damage and handling costs. */
+        float throw_weight_multiplier( const item &thrown, bool for_damage = false ) const;
         bool is_fcl_railgun_throw( const item &thrown ) const;
 
         /** True if unarmed */
@@ -2638,6 +2649,7 @@ class Character : public Creature, public visitable
          * @return whether both removal and replacement were successful (they are performed atomically)
          */
         bool wield( item_location loc, bool remove_old = true );
+        bool wield_charges( item_location source, int quantity );
 
         /**
          * Wield an item, unwielding currently wielded item (if any).
@@ -2868,6 +2880,13 @@ class Character : public Creature, public visitable
 
         std::pair < bodypart_id, int > best_part_to_smash() const;
         virtual std::map < damage_type_id, int > smash_ability() const;
+        struct smash_result {
+            bool can_smash = false;
+            bool did_smash = false;
+            bool success = false;
+        };
+        smash_result smash( map &here, tripoint_bub_ms &target,
+                            std::optional<bool> vehicle_theft = std::nullopt );
 
         // checks if your character is immune to an effect or field based on field_immunity_data
         bool check_immunity_data( const field_immunity_data &ft ) const override;
@@ -3096,6 +3115,9 @@ class Character : public Creature, public visitable
         void load_mission_state( const JsonObject &data );
         void store_mission_state( JsonOut &out ) const;
 
+        // World contacts belong to this character, including a remote player.
+        std::set<character_id> faction_representatives;
+
         // Full carried-item persistence/replication, not a gameplay action.
         // Loading preserves item identities and does not replay pickup/wear
         // hooks. Parse all roots before replacing the current owned items.
@@ -3104,8 +3126,8 @@ class Character : public Creature, public visitable
         void refresh_carried_item_caches();
         // Portable body, abilities and carried state. Identity, position,
         // activities and other world relationships remain owned by the receiver.
-        void store_player_state( JsonOut &json ) const;
-        void load_player_state( const JsonObject &data );
+        void store_player_state( JsonOut &out ) const;
+        void load_player_state( const JsonObject &snapshot );
 
         // Replica-only needs/morale state; no ingestion, digestion or gameplay hooks.
         void store_needs_state( JsonOut &json ) const;
@@ -3116,8 +3138,8 @@ class Character : public Creature, public visitable
         // Activity result projection; restore progress without practicing again.
         void store_practice_state( JsonOut &json, bool include_recipes = false ) const;
         void load_practice_state( const JsonObject &data );
-        void store_turn_state( JsonOut &json ) const;
-        void load_turn_state( const JsonObject &data );
+        void store_turn_state( JsonOut &out ) const;
+        void load_turn_state( const JsonObject &snapshot );
 
         int scent = 0;
         pimpl < bionic_collection > my_bionics;
@@ -3552,6 +3574,11 @@ class Character : public Creature, public visitable
          */
 
         int fire_gun( const tripoint_bub_ms &target, int shots = 1 );
+        /** Fire a selected mode. A nonzero burst request uses a skill-adjusted count and RPM timing. */
+        int fire_gun( map &here, const tripoint_bub_ms &target, const gun_mode &mode,
+                      const item_location &ammo = item_location(), int burst_rounds = 0 );
+        int fire_gun_sweep( map &here, const firearm_sweep &sweep, const gun_mode &mode,
+                            int round_limit, bool protect_friendlies );
         /**
          *  Fires a gun or auxiliary gunmod (ignoring any current mode)
          *  @param target where the first shot is aimed at (may vary for later shots)
@@ -3565,6 +3592,13 @@ class Character : public Creature, public visitable
         /** Execute a throw */
         dealt_projectile_attack throw_item( const tripoint_bub_ms &target, const item &to_throw,
                                             const std::optional < tripoint_bub_ms > &blind_throw_from_pos = std::nullopt );
+
+    private:
+        int fire_gun_impl( map &here, const tripoint_bub_ms &target, int shots, item &gun,
+                           item_location ammo, bool spend_attack_moves, int firing_rpm = 0,
+                           bool spend_burst_moves = false,
+                           const std::vector<tripoint_bub_ms> *sweep_targets = nullptr,
+                           bool protect_friendlies = false );
 
     protected:
         void on_damage_of_type( const effect_source &source, int adjusted_damage,
@@ -4496,7 +4530,7 @@ class Character : public Creature, public visitable
         mutable std::optional < units::mass > cached_weight_carried = std::nullopt;
 
         void store( JsonOut &json ) const;
-        void load( const JsonObject &data );
+        void load( const JsonObject &data, const JsonObject *legacy_kills = nullptr );
 
         // --------------- Values ---------------
         pimpl < SkillLevelMap > _skills;
@@ -4658,6 +4692,9 @@ class Character : public Creature, public visitable
         };
         mutable std::unordered_map < std::string, inv_search_cache > inv_search_caches;
     protected:
+        bool wield_transferred_item( item_location &source, Character &donor );
+        bool wear_transferred_item( item_location &source, Character &donor );
+
         // Bionic IDs are unique only within a character. Used to unambiguously identify bionics in a character
         bionic_uid weapon_bionic_uid = 0;
         mutable bionic_uid next_bionic_uid = 0;  // NOLINT(cata-serialize)
@@ -4683,7 +4720,7 @@ class Character : public Creature, public visitable
         item_location try_add_impl( item it, const item *avoid, const item *original_inventory_item,
                                     bool allow_wield, bool ignore_pkt_settings, item_location *source );
         bool wield_impl( item &it, std::optional < int > obtain_cost, bool combat,
-                         item_location *source, item_location *result );
+                         item_location *source, item_location *result, int source_charges = 0 );
         /* cached recipes, which are invalidated if the turn changes */
         mutable time_point cached_recipe_turn;
         pimpl < recipe_subset > cached_recipe_subset;

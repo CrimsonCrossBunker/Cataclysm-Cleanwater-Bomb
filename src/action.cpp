@@ -39,6 +39,9 @@
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "messages.h"
+#ifdef MP_ENABLED
+    #include "mp_gamestate.h"
+#endif
 #include "options.h"
 #include "output.h"
 #include "path_info.h"
@@ -265,6 +268,8 @@ std::string action_ident( action_id act )
             return "throw_wielded";
         case ACTION_FIRE:
             return "fire";
+        case ACTION_FIRE_SWEEP:
+            return "fire_sweep";
         case ACTION_FIRE_BURST:
             return "fire_burst";
         case ACTION_CAST_SPELL:
@@ -399,6 +404,8 @@ std::string action_ident( action_id act )
             return "high_five";
         case ACTION_COOP_CHAT:
             return "coop_chat";
+        case ACTION_COOP_SESSION:
+            return "coop_session";
         case ACTION_MANAGE_ANDROID_EXTRA_BUTTONS:
             return "manage_android_extra_buttons";
         case ACTION_ITEMACTION:
@@ -475,6 +482,7 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_HELP:
         case ACTION_MAIN_MENU:
         case ACTION_KEYBINDINGS:
+        case ACTION_COOP_SESSION:
         case ACTION_OPTIONS:
         case ACTION_AUTOPICKUP:
         case ACTION_AUTONOTES:
@@ -1197,6 +1205,7 @@ action_id handle_action_menu( map &here )
             REGISTER_ACTION( ACTION_THROW );
             REGISTER_ACTION( ACTION_THROW_WIELDED );
             REGISTER_ACTION( ACTION_FIRE_BURST );
+            REGISTER_ACTION( ACTION_FIRE_SWEEP );
             REGISTER_ACTION( ACTION_PICK_STYLE );
             REGISTER_ACTION( ACTION_ACTIVE_TECHNIQUE );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_TRAVEL_MODE );
@@ -1305,6 +1314,11 @@ action_id handle_main_menu()
     REGISTER_ACTION( ACTION_DISTRACTION_MANAGER );
     REGISTER_ACTION( ACTION_COLOR );
     REGISTER_ACTION( ACTION_WORLD_MODS );
+#ifdef MP_ENABLED
+    if( !cata_mp::is_client_mode() && !cata_mp::is_server_mode() ) {
+        REGISTER_ACTION( ACTION_COOP_SESSION );
+    }
+#endif
     REGISTER_ACTION( ACTION_ACTIONMENU );
 #if defined(__ANDROID__)
     entries.emplace_back( ACTION_MANAGE_ANDROID_EXTRA_BUTTONS, true, std::nullopt,

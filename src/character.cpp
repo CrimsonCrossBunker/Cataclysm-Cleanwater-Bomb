@@ -4027,7 +4027,7 @@ int Character::throw_range( const item &it ) const
     const bool do_railgun = is_fcl_railgun_throw( tmp );
 
     /** @ARM_STR determines maximum weight that can be thrown */
-    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier();
+    const float weight_mult = do_railgun ? 1.0f : throw_weight_multiplier( tmp );
     const units::mass effective_weight = tmp.weight() * weight_mult;
     if( ( effective_weight / 113_gram ) > str * 15 )  {
         return 0;
@@ -4098,19 +4098,21 @@ int Character::throw_range( const item &it ) const
         const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
                 flag_RAILGUN_THROW_MULTIPLIER.is_valid();
         if( has_railgun_throw_multiplier && wielded &&
-            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-            range_multiplier *= wielded->type->throw_range_multiplier;
+            wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+            wielded->type->throw_correction ) {
+            range_multiplier *= wielded->type->throw_correction->range_multiplier;
         }
         if( wielded && wielded->is_gun() ) {
             for( const item *mod : wielded->gunmods() ) {
                 if( has_railgun_throw_multiplier &&
-                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-                    range_multiplier *= mod->type->gunmod->throw_range_multiplier;
+                    mod->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) &&
+                    mod->type->gunmod->throw_correction ) {
+                    range_multiplier *= mod->type->gunmod->throw_correction->range_multiplier;
                 }
             }
         }
     } else {
-        range_multiplier = throw_range_multiplier();
+        range_multiplier = throw_range_multiplier( tmp );
     }
     ret = static_cast<int>( std::round( ret * range_multiplier ) );
 
@@ -4121,17 +4123,25 @@ int Character::throw_range( const item &it ) const
     return ret;
 }
 
-// Combines a wielded item's own throwing multiplier with the multiplicative and
-// additive bonuses of any installed gunmods:
+// Combines a wielded item's own throwing correction with the multiplicative and
+// additive bonuses of compatible installed gunmods:
 // final = base * product( mod multipliers ) + sum( mod adds ).
-static float throw_bonus_with_mods( const item_location &wielded, float base,
-                                    float islot_gunmod::*mult, float islot_gunmod::*add )
+static float throw_bonus_with_mods( const Character &thrower, const item &thrown,
+                                    float throw_correction_data::*mult,
+                                    float islot_gunmod::*add, bool lower_is_better )
 {
+    const item_location wielded = thrower.get_wielded_item();
+    const float skill = thrower.get_skill_level( skill_throw );
     const bool has_railgun_throw_multiplier = fcl_mod_is_active() &&
             flag_RAILGUN_THROW_MULTIPLIER.is_valid();
-    if( has_railgun_throw_multiplier && wielded &&
-        wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) {
-        base = 1.0f;
+    float base = 1.0f;
+    if( wielded &&
+        !( has_railgun_throw_multiplier &&
+           wielded->has_flag( flag_RAILGUN_THROW_MULTIPLIER ) ) &&
+        wielded->type->throw_correction &&
+        wielded->type->throw_correction->applies_to( thrown ) ) {
+        const throw_correction_data &correction = *wielded->type->throw_correction;
+        base = correction.skill_adjusted_bonus( correction.*mult, skill, lower_is_better );
     }
     float mult_total = 1.0f;
     float add_total = 0.0f;
@@ -4142,8 +4152,11 @@ static float throw_bonus_with_mods( const item_location &wielded, float base,
                 continue;
             }
             const islot_gunmod &slot = *mod->type->gunmod;
-            mult_total *= slot.*mult;
-            add_total += slot.*add;
+            if( slot.throw_correction && slot.throw_correction->applies_to( thrown ) ) {
+                const throw_correction_data &correction = *slot.throw_correction;
+                mult_total *= correction.skill_adjusted_bonus( correction.*mult, skill, lower_is_better );
+                add_total += correction.skill_adjusted_bonus( slot.*add, skill, lower_is_better, 0.0f );
+            }
         }
     }
     return base * mult_total + add_total;
@@ -4158,58 +4171,46 @@ bool Character::is_fcl_railgun_throw( const item &thrown ) const
     return !is_mounted() || mounted_creature->mech_str_addition() == 0;
 }
 
-float Character::throw_damage_multiplier() const
+float Character::throw_damage_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_damage_multiplier : 1.0f,
-                                  &islot_gunmod::throw_damage_multiplier,
-                                  &islot_gunmod::throw_damage_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::damage_multiplier,
+                                  &islot_gunmod::throw_damage_add, false );
 }
 
-float Character::throw_range_multiplier() const
+float Character::throw_range_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_range_multiplier : 1.0f,
-                                  &islot_gunmod::throw_range_multiplier,
-                                  &islot_gunmod::throw_range_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::range_multiplier,
+                                  &islot_gunmod::throw_range_add, false );
 }
 
-float Character::throw_stamina_multiplier() const
+float Character::throw_stamina_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_stamina_multiplier : 1.0f,
-                                  &islot_gunmod::throw_stamina_multiplier,
-                                  &islot_gunmod::throw_stamina_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::stamina_multiplier,
+                                  &islot_gunmod::throw_stamina_add, true );
 }
 
-float Character::throw_dispersion_multiplier() const
+float Character::throw_dispersion_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_dispersion_multiplier : 1.0f,
-                                  &islot_gunmod::throw_dispersion_multiplier,
-                                  &islot_gunmod::throw_dispersion_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::dispersion_multiplier,
+                                  &islot_gunmod::throw_dispersion_add, true );
 }
 
-float Character::throw_speed_multiplier() const
+float Character::throw_speed_multiplier( const item &thrown ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_speed_multiplier : 1.0f,
-                                  &islot_gunmod::throw_speed_multiplier,
-                                  &islot_gunmod::throw_speed_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::speed_multiplier,
+                                  &islot_gunmod::throw_speed_add, true );
 }
 
-float Character::throw_weight_multiplier() const
+float Character::throw_weight_multiplier( const item &thrown, bool for_damage ) const
 {
-    const item_location wielded = get_wielded_item();
-    return throw_bonus_with_mods( wielded,
-                                  wielded ? wielded->type->throw_weight_multiplier : 1.0f,
-                                  &islot_gunmod::throw_weight_multiplier,
-                                  &islot_gunmod::throw_weight_add );
+    return throw_bonus_with_mods( *this, thrown,
+                                  &throw_correction_data::weight_multiplier,
+                                  &islot_gunmod::throw_weight_add, !for_damage );
 }
 
 const std::vector<material_id> Character::fleshy = { material_flesh, material_hflesh };
@@ -4637,6 +4638,12 @@ std::string Character::activity_level_str() const
 
 void Character::mend_item( item_location &&obj, bool interactive )
 {
+    if( !obj ) {
+        return;
+    }
+#ifdef MP_ENABLED
+    const bool remote = is_avatar() && cata_mp::is_client_mode();
+#endif
     if( has_trait( trait_DEBUG_HS ) ) {
         uilist menu;
         menu.text = _( "Toggle which fault?" );
@@ -4652,7 +4659,17 @@ void Character::mend_item( item_location &&obj, bool interactive )
             return;
         }
         menu.query();
-        if( menu.ret >= 0 ) {
+        if( menu.ret >= 0 && obj ) {
+#ifdef MP_ENABLED
+            if( remote ) {
+                item_repair::mending_selection selection{ item_repair::capture_target( *this, obj ),
+                        opts[menu.ret].first, fault_fix_id() };
+                selection.debug_toggle = true;
+                selection.expected_fault = opts[menu.ret].second;
+                cata_mp::client_start_mending( obj, std::move( selection ) );
+                return;
+            }
+#endif
             if( opts[menu.ret].second ) {
                 obj->remove_fault( opts[menu.ret].first );
             } else {
@@ -4675,15 +4692,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
     for( const fault_id &f : obj->faults ) {
         for( const fault_fix_id &fix_id : f->get_fixes() ) {
             const fault_fix &fix = *fix_id;
-            mending_option opt{ f, fix, true };
-            for( const auto &[skill_id, level] : fix.skills ) {
-                if( get_greater_skill_or_knowledge_level( skill_id ) < level ) {
-                    opt.doable = false;
-                    break;
-                }
-            }
-            opt.doable &= fix.get_requirements().can_make_with_inventory( this, inv, is_crafting_component );
-            mending_options.emplace_back( opt );
+            mending_options.push_back( { f, fix, item_repair::can_mend_fault( *this, fix ) } );
         }
     }
 
@@ -4747,19 +4756,7 @@ void Character::mend_item( item_location &&obj, bool interactive )
                                         fix.mod_damage / itype::damage_scale );
             }
 
-            opt.time_to_fix = fix.time;
-            // if an item has a time saver flag multiply total time by that flag's time factor
-            for( const auto &[flag_id, mult] : fix.time_save_flags ) {
-                if( obj->has_flag( flag_id ) ) {
-                    opt.time_to_fix *= mult;
-                }
-            }
-            // if you have a time saver prof multiply total time by that prof's time factor
-            for( const auto &[proficiency_id, mult] : fix.time_save_profs ) {
-                if( has_proficiency( proficiency_id ) ) {
-                    opt.time_to_fix *= mult;
-                }
-            }
+            opt.time_to_fix = item_repair::fault_repair_time( *this, *obj, fix );
             descr += string_format( _( "Time required: <color_cyan>%s</color>\n" ),
                                     to_string_approx( opt.time_to_fix ) );
             if( fix.skills.empty() ) {
@@ -4829,6 +4826,9 @@ void Character::mend_item( item_location &&obj, bool interactive )
         sel = static_cast < int >( std::distance( repair_options.begin(), available ) );
     }
 
+    if( !obj ) {
+        return;
+    }
     if( sel >= static_cast < int >( mending_options.size() ) ) {
         item_repair::start( *this, obj, repair_options[sel - mending_options.size()] );
         return;
@@ -4844,6 +4844,14 @@ void Character::mend_item( item_location &&obj, bool interactive )
         }
 
         const fault_fix &fix = opt.fix;
+#ifdef MP_ENABLED
+        if( remote ) {
+            cata_mp::client_start_mending( obj, { item_repair::capture_target( *this, obj ),
+                                                  opt.fault, fix.id
+                                                } );
+            return;
+        }
+#endif
         assign_activity( mend_item_activity_actor( opt.time_to_fix, obj, opt.fault, fix.id ) );
     }
 }

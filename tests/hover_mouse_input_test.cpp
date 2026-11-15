@@ -1,6 +1,6 @@
 #include <string>
 
-#include "catch/catch.hpp"
+#include "cata_catch.h"
 
 #include "hover_mouse_input.h"
 

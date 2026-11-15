@@ -13,14 +13,17 @@
 #include "activity_actor_definitions.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_attire.h"
 #include "color.h"
 #include "coordinates.h"
+#include "crafting.h"
 #include "debug.h"
 #include "enums.h"
 #include "flag.h"
 #include "gunmod_ui.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_pocket.h"
 #include "itype.h"
 #include "map.h"
 #include "map_selector.h"
@@ -206,19 +209,34 @@ void Character::gunmod_add( item &gun, item &mod, const std::optional<itype_id> 
     item_location selected_mod( *this, &mod );
     std::string mod_name = mod.tname();
 
-    if( is_wielding( mod ) ) {
-        const ret_val<void> can_stow = can_unwield( mod );
-        if( !can_stow.success() ) {
-            add_msg_if_player( m_info, "%s", can_stow.c_str() );
-            return;
+    const item_location wielded = get_wielded_item();
+    if( !is_wielding( gun ) && ( is_wielding( mod ) ||
+                                 ( wielded && wielded->has_item( mod ) ) || gun.has_item( mod ) ) ) {
+        if( is_wielding( mod ) ) {
+            const ret_val<void> can_stow = can_unwield( mod );
+            if( !can_stow.success() ) {
+                add_msg_if_player( m_info, "%s", can_stow.c_str() );
+                return;
+            }
         }
-        const item_location stowed_mod = try_add( mod, &gun, &mod, false );
-        if( !stowed_mod ) {
+        std::pair<item_location, item_pocket *> destination;
+        worn.best_pocket( *this, mod, &gun, destination );
+        if( !destination.second ) {
             add_msg_if_player( _( "You have no room to store the %s." ), mod_name );
             return;
         }
+        const ret_val<item *> stored = destination.second->insert_item( mod );
+        if( !stored.success() ) {
+            add_msg_if_player( m_info, "%s", stored.c_str() );
+            return;
+        }
+        item_location stowed_mod( destination.first, stored.value() );
         mod_moves( -item_handling_cost( mod ) );
-        remove_weapon();
+        i_rem( &mod );
+        stowed_mod.on_contents_changed();
+        stowed_mod->on_pickup( *this );
+        craft_relocated( stowed_mod );
+        calc_encumbrance();
         selected_mod = stowed_mod;
     }
 

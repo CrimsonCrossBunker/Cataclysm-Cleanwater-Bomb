@@ -41,7 +41,7 @@
     "install_time": "5 m",
     "dispersion_modifier": 10,
     "//durability_modifier": -1,
-    "mode_modifier": [ [ "AUTO", "auto", 4 ] ],
+    "mode_modifier": [ [ "AUTO", "auto-rpm", "750" ] ],
     "min_skills": [ [ "rifle", 2 ] ]
   },
   {
@@ -66,7 +66,7 @@
     "consume_chance": 300,
     "consume_divisor": 110,
     "//durability_modifier": -3,
-    "mode_modifier": [ [ "DEFAULT", "auto", 14 ] ],
+    "mode_modifier": [ [ "DEFAULT", "auto-rpm", "750" ] ],
     "min_skills": [ [ "mechanics", 2 ], [ "rifle", 3 ] ],
     "flags": [ "CONSUMABLE" ]
   },
@@ -88,7 +88,7 @@
     "//": "Install time should be short as it is simply a replacement back plate, installed by slightly more than field stripping the gun.",
     "install_time": "5 m",
     "//durability_modifier": -1,
-    "mode_modifier": [ [ "AUTO", "auto", 5 ] ],
+    "mode_modifier": [ [ "AUTO", "auto-rpm", "1200" ] ],
     "min_skills": [ [ "pistol", 2 ] ]
   },
   {
@@ -133,7 +133,7 @@
     "consume_chance": 50,
     "consume_divisor": 110,
     "//durability_modifier": -3,
-    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "burst", 4 ] ],
+    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "850" ] ],
     "min_skills": [ [ "mechanics", 4 ], [ "rifle", 5 ] ],
     "flags": [ "INSTALL_DIFFICULT", "CONSUMABLE" ]
   },
@@ -180,7 +180,7 @@
     "consume_chance": 50,
     "consume_divisor": 110,
     "//durability_modifier": -3,
-    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "burst", 4 ] ],
+    "mode_modifier": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "650" ] ],
     "min_skills": [ [ "mechanics", 4 ], [ "rifle", 5 ] ],
     "flags": [ "INSTALL_DIFFICULT", "CONSUMABLE" ]
   }

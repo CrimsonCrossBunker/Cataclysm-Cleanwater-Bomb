@@ -1,7 +1,9 @@
 #include "sling.h"
 
+#include <mp_firearm.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -11,11 +13,14 @@
 
 #include "avatar.h"
 #include "ballistics.h"
-#include "character.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "dispersion.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
 #include "flag.h"
@@ -25,6 +30,7 @@
 #include "item.h"
 #include "item_location.h"
 #include "item_pocket.h"
+#include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -37,16 +43,12 @@
 #include "mp_throw.h"
 #include "mtype.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "projectile.h"
 #include "ranged.h"
+#include "ret_val.h"
 #include "translations.h"
 #include "type_id.h"
-#include "coordinates.h"
-#include "creature.h"
-#include "enums.h"
-#include "item_transformation.h"
-#include "point.h"
-#include "ret_val.h"
 #include "units.h"
 #include "weakpoint.h"
 
@@ -151,6 +153,7 @@ std::optional<dealt_projectile_attack> launch_sling( Character &who, item_locati
     const tripoint_bub_ms source = who.pos_bub();
     const int moves = sling_launch_moves( who, ammo );
     const int stamina = who.get_standard_stamina_cost( &round );
+    const float stamina_multiplier = who.throw_stamina_multiplier( round );
     const int dispersion = who.throwing_dispersion( round,
                            get_creature_tracker().creature_at( *target ), false );
     projectile proj = who.thrown_item_projectile( round );
@@ -184,7 +187,7 @@ std::optional<dealt_projectile_attack> launch_sling( Character &who, item_locati
         ammo.remove_item();
     }
     who.mod_moves( -( moves - activation.moves ) );
-    who.mod_stamina( static_cast<int>( std::round( stamina * who.throw_stamina_multiplier() ) ) );
+    who.mod_stamina( static_cast<int>( std::round( stamina * stamina_multiplier ) ) );
     if( round.has_flag( flag_ACT_ON_RANGED_HIT ) ) {
         proj.proj_effects.insert( ammo_effect_ACT_ON_RANGED_HIT );
     }
@@ -285,7 +288,7 @@ void aim_sling( avatar &who )
         return;
     }
     item round = single_round( *ammo );
-    auto intent = cata_mp::make_throw_intent( who, ammo );
+    cata_mp::throw_intent intent = cata_mp::make_throw_intent( who, ammo );
     intent.method = cata_mp::throw_method::sling;
     g->temp_exit_fullscreen();
     const target_handler::trajectory trajectory = target_handler::mode_sling( who, round,

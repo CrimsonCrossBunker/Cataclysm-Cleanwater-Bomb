@@ -351,6 +351,7 @@ jobs:
       if: ${{ env.SKIP == 'false' && runner.os == 'macOS' }}
       run: |
           HOMEBREW_NO_AUTO_UPDATE=yes HOMEBREW_NO_INSTALL_CLEANUP=yes brew install gettext ccache parallel
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
     - name: install PR dmgdist dependencies (mac)
       if: ${{ env.SKIP == 'false' && ((github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (github.event_name == 'workflow_dispatch' && inputs.package_artifacts)) && runner.os == 'macOS' && matrix.tiles == 1 && matrix.sdl3 == 1 }}
       continue-on-error: ${{ github.event_name != 'workflow_dispatch' || !inputs.package_artifacts }}
@@ -487,6 +488,7 @@ jobs:
       run: |
         set -eo pipefail
         make -j1 CCACHE=1 LINTJSON=0 DEBUG_SYMBOLS=1 NATIVE=osx TILES=1 SOUND=1 SDL3=1 RELEASE=1 LOCALIZE=1 LANGUAGES=all BACKTRACE=1 PCH=0 UNIVERSAL_BINARY=1 WARN_STALE_DATA=0 dmgdist
+        lipo Cataclysm.app/Contents/Resources/libccb_bevy_ecs_coop.dylib -verify_arch x86_64 arm64
         cp -- Cataclysm.dmg "ccb-pr-macos-tiles-${PR_NUMBER}.dmg"
     - name: upload PR macOS tiles artifact
       id: upload-pr-macos-tiles

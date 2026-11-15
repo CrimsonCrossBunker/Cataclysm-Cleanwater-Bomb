@@ -38,6 +38,7 @@
 #include "rng.h"
 #include "skill.h"
 #include "ret_val.h"
+#include "type_id.h"
 
 namespace
 {
@@ -126,6 +127,90 @@ static item_location equip_bow( Character &who )
     who.set_stamina( who.get_stamina_max() );
     who.recoil = 3000;
     return item_location( bag, &bag->only_item() );
+}
+
+TEST_CASE( "authoritative_rpm_fire_uses_selected_burst_and_actual_round_cost",
+           "[multiplayer][firearm][gun_rpm]" )
+{
+    firearm_fixture fixture;
+    npc &actor = fixture.remote();
+    const int available = GENERATE( 2, 15 );
+    item pistol( itype_id( "glock_18c" ) );
+    pistol.set_flag( flag_id( "NEVER_JAMS" ) );
+    pistol.ammo_set( itype_id( "9mm" ), available );
+    actor.set_wielded_item( pistol );
+    actor.set_skill_level( skill_id( "pistol" ), MAX_SKILL );
+
+    cata_mp::firearm_state state;
+    cata_mp::firearm_intent intent;
+    intent.weapon = actor.get_wielded_item()->uid().get_value();
+    intent.mode = gun_mode_id( "AUTO" );
+    intent.origin = actor.pos_abs();
+    intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    intent.action = "prepare";
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+
+    const int moves = actor.get_moves();
+    const int speed = actor.get_speed();
+    const int rpm = actor.get_wielded_item()->gun_current_mode().rpm;
+    REQUIRE( rpm > 0 );
+    intent.action = "FIRE";
+    for( const int invalid : {
+             0, 1, 31
+         } ) {
+        intent.burst_rounds = invalid;
+        CHECK( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+               cata_mp::firearm_outcome::rejected );
+        CHECK( actor.get_moves() == moves );
+        CHECK( actor.get_wielded_item()->ammo_remaining() == available );
+    }
+
+    intent.burst_rounds = 3;
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::finished );
+    const int fired = available == 2 ? 2 : 3;
+    CHECK( actor.get_wielded_item()->ammo_remaining() == available - fired );
+    CHECK( actor.get_moves() == moves - firearm_burst_move_cost( fired, rpm, speed ) );
+}
+
+TEST_CASE( "authoritative_fixed_burst_uses_the_weapon_count_and_rate",
+           "[multiplayer][firearm][gun_rpm]" )
+{
+    firearm_fixture fixture;
+    npc &actor = fixture.remote();
+    arm_shooter( actor, itype_id( "modular_m16a4" ) );
+    item &rifle = *actor.get_wielded_item();
+    rifle.set_flag( flag_id( "NEVER_JAMS" ) );
+    actor.set_skill_level( rifle.gun_skill(), 0 );
+    actor.set_moves( 1000 );
+
+    cata_mp::firearm_state state;
+    cata_mp::firearm_intent intent;
+    intent.weapon = rifle.uid().get_value();
+    intent.mode = gun_mode_id( "BURST" );
+    intent.origin = actor.pos_abs();
+    intent.target = get_map().get_abs( tripoint_bub_ms( 64, 60, 0 ) );
+    intent.action = "prepare";
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::aiming );
+
+    const int ammo_before = rifle.ammo_remaining();
+    REQUIRE( ammo_before >= 3 );
+    const int moves_before = actor.get_moves();
+    const int speed = actor.get_speed();
+    intent.action = "FIRE";
+    intent.burst_rounds = 7;
+    CHECK( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+           cata_mp::firearm_outcome::rejected );
+    CHECK( rifle.ammo_remaining() == ammo_before );
+    CHECK( actor.get_moves() == moves_before );
+
+    intent.burst_rounds = 0;
+    REQUIRE( cata_mp::execute_firearm_intent( actor, get_map(), state, intent ) ==
+             cata_mp::firearm_outcome::finished );
+    CHECK( rifle.ammo_remaining() == ammo_before - 3 );
+    CHECK( actor.get_moves() == moves_before - firearm_burst_move_cost( 3, 800, speed ) );
 }
 
 TEST_CASE( "authoritative_bow_matches_avatar_loading_damage_stamina_and_rng",

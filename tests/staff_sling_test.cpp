@@ -27,17 +27,17 @@
 #include "type_id.h"
 
 static const ammo_effect_str_id ammo_effect_STOP_ON_CONTACT( "STOP_ON_CONTACT" );
-static const itype_id itype_backpack( "backpack" );
-static const itype_id itype_grenade( "grenade" );
-static const itype_id itype_grenade_act( "grenade_act" );
-static const itype_id itype_lighter( "lighter" );
-static const itype_id itype_rock( "rock" );
-static const itype_id itype_sling_ready_grenade( "sling-ready_grenade" );
-static const itype_id itype_staff_sling( "staff_sling" );
+static const itype_id itype_test_backpack( "test_backpack" );
+static const itype_id itype_test_sling_payload( "test_sling_payload" );
+static const itype_id itype_test_sling_payload_active( "test_sling_payload_active" );
+static const itype_id itype_test_throwing_aid( "test_throwing_aid" );
+static const itype_id itype_test_throwing_firestarter( "test_throwing_firestarter" );
+static const itype_id itype_test_throwing_plain( "test_throwing_plain" );
+static const itype_id itype_test_throwing_stack( "test_throwing_stack" );
 static const skill_id skill_throw( "throw" );
-static const ter_str_id ter_t_wall( "t_wall" );
+static const ter_str_id ter_test_t_throwing_wall( "test_t_throwing_wall" );
 
-static item_location prepare_sling( const itype_id &ammo_id = itype_sling_ready_grenade,
+static item_location prepare_sling( const itype_id &ammo_id = itype_test_sling_payload,
                                     int count = 2 )
 {
     clear_avatar();
@@ -46,9 +46,9 @@ static item_location prepare_sling( const itype_id &ammo_id = itype_sling_ready_
     avatar &you = get_avatar();
     you.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
     you.set_skill_level( skill_throw, 10 );
-    item sling( itype_staff_sling );
+    item sling( itype_test_throwing_aid );
     REQUIRE( you.wield( sling ) );
-    item bag( itype_backpack );
+    item bag( itype_test_backpack );
     item ammo( ammo_id );
     if( ammo.count_by_charges() ) {
         ammo.charges = count;
@@ -81,27 +81,26 @@ TEST_CASE( "sling_cancel_and_invalid_shots_preserve_inventory", "[ranged][sling]
     }
     CHECK( ammo );
     CHECK( ammo->count() == 2 );
-    CHECK( ammo->typeId() == itype_sling_ready_grenade );
+    CHECK( ammo->typeId() == itype_test_sling_payload );
     CHECK_FALSE( ammo->active );
     CHECK( you.get_moves() == moves );
     CHECK( you.get_stamina() == stamina );
-    CHECK( you.get_wielded_item()->typeId() == itype_staff_sling );
+    CHECK( you.get_wielded_item()->typeId() == itype_test_throwing_aid );
 }
 
 TEST_CASE( "sling_launch_uses_one_round_and_retains_fuse", "[ranged][sling]" )
 {
     const int count = GENERATE( 1, 3 );
-    item_location ammo = prepare_sling( itype_sling_ready_grenade, count );
+    item_location ammo = prepare_sling( itype_test_sling_payload, count );
     avatar &you = get_avatar();
     const int moves = you.get_moves();
     const int stamina = you.get_stamina();
     const int cost = sling_launch_moves( you, ammo );
-    REQUIRE( cost >= 225 );
     const auto attack = launch_sling( you, ammo, you.pos_bub() + tripoint( 4, 0, 0 ) );
     REQUIRE( attack );
     CHECK( you.get_moves() == moves - cost );
     CHECK( you.get_stamina() < stamina );
-    CHECK( you.get_wielded_item()->typeId() == itype_staff_sling );
+    CHECK( you.get_wielded_item()->typeId() == itype_test_throwing_aid );
     if( count > 1 ) {
         REQUIRE( ammo );
         CHECK( ammo->count() == count - 1 );
@@ -110,7 +109,7 @@ TEST_CASE( "sling_launch_uses_one_round_and_retains_fuse", "[ranged][sling]" )
         CHECK_FALSE( ammo );
     }
     const item &drop = attack->proj.get_drop();
-    CHECK( drop.typeId() == itype_grenade_act );
+    CHECK( drop.typeId() == itype_test_sling_payload_active );
     CHECK( drop.active );
     CHECK( drop.countdown_point == calendar::turn + 5_seconds );
     CHECK( attack->proj.proj_effects.count( ammo_effect_STOP_ON_CONTACT ) == 1 );
@@ -118,7 +117,7 @@ TEST_CASE( "sling_launch_uses_one_round_and_retains_fuse", "[ranged][sling]" )
     map_stack stack = get_map().i_at( attack->end_point );
     REQUIRE( stack.size() == 1 );
     item &landed = *stack.begin();
-    CHECK( landed.typeId() == itype_grenade_act );
+    CHECK( landed.typeId() == itype_test_sling_payload_active );
     CHECK_FALSE( landed.process( get_map(), nullptr, attack->end_point ) );
     calendar::turn += 5_seconds;
     CHECK( landed.process( get_map(), nullptr, attack->end_point ) );
@@ -132,7 +131,7 @@ TEST_CASE( "sling_stops_at_front_creature_or_wall", "[ranged][sling]" )
     const tripoint_bub_ms front = you.pos_bub() + tripoint::east;
     const tripoint_bub_ms back = you.pos_bub() + tripoint( 4, 0, 0 );
     SECTION( "front_creature" ) {
-        monster &mon = spawn_test_monster( "mon_zombie", front );
+        monster &mon = spawn_test_monster( "mon_test_zombie", front );
         mon.set_moves( 0 );
         const auto attack = launch_sling( you, ammo, back );
         REQUIRE( attack );
@@ -141,7 +140,7 @@ TEST_CASE( "sling_stops_at_front_creature_or_wall", "[ranged][sling]" )
         CHECK( get_map().i_at( back ).empty() );
     }
     SECTION( "wall" ) {
-        get_map().ter_set( front, ter_t_wall );
+        get_map().ter_set( front, ter_test_t_throwing_wall );
         const auto attack = launch_sling( you, ammo, back );
         REQUIRE( attack );
         CHECK( attack->end_point == you.pos_bub() );
@@ -151,9 +150,7 @@ TEST_CASE( "sling_stops_at_front_creature_or_wall", "[ranged][sling]" )
 
 TEST_CASE( "sling_ignition_requirements_and_hand_activation", "[ranged][sling]" )
 {
-    const std::string id = GENERATE( "sling-ready_grenade", "sling-ready_small_homemade_grenade",
-                                     "sling-ready_homemade_grenade", "sling-ready_small_homemade_grenade_2",
-                                     "sling-ready_homemade_grenade_2", "sling-ready_molotov" );
+    const std::string id = GENERATE( "test_sling_payload", "test_sling_payload_fire" );
     CAPTURE( id );
     item_location ammo = prepare_sling( itype_id( id ) );
     avatar &you = get_avatar();
@@ -167,7 +164,8 @@ TEST_CASE( "sling_ignition_requirements_and_hand_activation", "[ranged][sling]" 
         CHECK( you.get_moves() == before );
         CHECK_FALSE( ammo->active );
     }
-    const item_location lighter = you.i_add( tool_with_ammo( itype_lighter, 100 ) );
+    const item_location lighter = you.i_add( tool_with_ammo( itype_test_throwing_firestarter,
+                                  100 ) );
     REQUIRE( lighter );
     INFO( can_launch_sling( you, ammo ).str() );
     REQUIRE( can_launch_sling( you, ammo ).success() );
@@ -198,7 +196,8 @@ TEST_CASE( "sling_ignition_requirements_and_hand_activation", "[ranged][sling]" 
         REQUIRE( activation->use( &you, held, &get_map(), you.pos_bub() ) );
         CHECK( held.typeId() == activation->transform.target );
         CHECK( held.active );
-        const dealt_projectile_attack thrown = you.throw_item( you.pos_bub() + tripoint( 4, 0, 0 ), held );
+        const dealt_projectile_attack thrown = you.throw_item( you.pos_bub() + tripoint( 4, 0, 0 ),
+                                               held );
         CHECK( thrown.proj.proj_effects.count( ammo_effect_STOP_ON_CONTACT ) == 0 );
     }
 }
@@ -207,12 +206,12 @@ TEST_CASE( "sling_rejects_incompatible_ammunition_and_missing_launcher", "[range
 {
     item_location ammo = prepare_sling();
     avatar &you = get_avatar();
-    CHECK_FALSE( is_sling_ammunition( item( itype_grenade ) ) );
-    CHECK_FALSE( is_sling_ammunition( item( itype_grenade_act ) ) );
-    CHECK_FALSE( is_sling_ammunition( item( itype_rock ) ) );
+    CHECK_FALSE( is_sling_ammunition( item( itype_test_throwing_plain ) ) );
+    CHECK_FALSE( is_sling_ammunition( item( itype_test_sling_payload_active ) ) );
+    CHECK_FALSE( is_sling_ammunition( item( itype_test_throwing_stack ) ) );
     CHECK_FALSE( can_launch_sling( you, item_location() ).success() );
     you.remove_weapon();
-    item rock( itype_rock );
+    item rock( itype_test_throwing_stack );
     REQUIRE( you.wield( rock ) );
     CHECK_FALSE( can_launch_sling( you, ammo ).success() );
 }

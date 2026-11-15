@@ -28,6 +28,7 @@ struct firearm_intent {
     std::optional<item_source> ammo;
     unsigned int bionic = 0;
     int64_t request = 0;
+    int burst_rounds = 0;
 };
 
 // One owned shooter's aiming session; never shared between peers or worlds.

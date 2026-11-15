@@ -599,7 +599,7 @@ void vehicle::enable_patrol( map &here, Character &who )
     }
 }
 
-void vehicle::honk_horn( map &here ) const
+void vehicle::honk_horn( map &here, const Character &who ) const
 {
     const bool no_power = !fuel_left( here, fuel_type_battery );
     bool honked = false;
@@ -611,7 +611,7 @@ void vehicle::honk_horn( map &here ) const
             continue;
         }
         if( !honked ) {
-            add_msg( _( "You honk the horn!" ) );
+            who.add_msg_if_player( _( "You honk the horn!" ) );
             honked = true;
         }
         //Get global position of horn
@@ -633,7 +633,7 @@ void vehicle::honk_horn( map &here ) const
     }
 
     if( !honked ) {
-        add_msg( _( "You honk the horn, but nothing happens." ) );
+        who.add_msg_if_player( _( "You honk the horn, but nothing happens." ) );
     }
 }
 
@@ -1275,9 +1275,7 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
     //find_lines_of_parts() doesn't return the part_index we passed, so we set it on its own
     part_open_or_close( part_index, opening );
     insides_dirty = true;
-    here.set_transparency_cache_dirty( sm_pos.z() );
     const tripoint_abs_ms part_location = mount_to_tripoint_abs( parts[part_index].mount );
-    here.set_seen_cache_dirty( here.get_bub( part_location ) );
     const int dist = rl_dist( get_player_character().pos_abs(), part_location );
     if( dist < 20 ) {
         sfx::play_variant_sound( opening ? "vehicle_open" : "vehicle_close",
@@ -1291,6 +1289,7 @@ void vehicle::open_or_close( map &here, const int part_index, const bool opening
 
     coeff_air_changed = true;
     coeff_air_dirty = true;
+    here.on_vehicle_opening_changed( *this, part_location );
 }
 
 /**
@@ -2284,9 +2283,10 @@ void vehicle::build_interact_menu( veh_menu &menu, map *here, const tripoint_bub
     if( controls_here ) {
         if( has_part( "HORN" ) ) {
             menu.add( _( "Honk horn" ) )
+            .skip_theft_check()
             .skip_locked_check()
             .hotkey( "SOUND_HORN" )
-            .on_submit( [this, here] { honk_horn( *here ); } );
+            .on_submit( [control_action] { control_action( "horn" ); } );
         }
     }
 

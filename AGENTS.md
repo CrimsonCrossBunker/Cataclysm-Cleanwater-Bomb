@@ -178,3 +178,8 @@ Android, tools, and documentation:
   checks are complete.
 - A CCB-Docs PR may be prepared before its source PR merges, but it stays draft.
   After source merge, refresh it to the final commit before merging the docs.
+
+## Other Notes
+
+- Do not keep work report notes that only prove you are using vibe coding at code. Ensure that any newly added code comments are necessary.
+- The need for testing does not mean that every minor modification must be tested by editing complete tool scripts such as `tests/`. Files tracked by Git are not the backyard of Agents tools, and for small changes or only JSON data changes that do not affect existing tests, it may not be necessary to track them to the repository.

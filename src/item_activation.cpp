@@ -66,15 +66,28 @@ bool supports_owned_item_activation( const item &source, const std::string &meth
     return use && use->get_actor_ptr() && use->get_actor_ptr()->supports_owned_activation();
 }
 
-bool query_item_activation_choices( const item &source, const std::string &method,
+bool query_item_activation_choices( const item_location &location, const std::string &method,
                                     item_activation_choices &choices )
 {
+    if( !location ) {
+        return false;
+    }
+    const item &source = *location;
     choices = {};
     if( method.empty() ) {
         return supports_owned_item_activation( source, method );
     }
     if( method == "LUMBER" ) {
         return query_lumber_choices( get_avatar(), choices );
+    }
+    if( method == "link_up" ) {
+        const use_function *use = source.type->get_use( method );
+        const auto *link = use ? dynamic_cast<const link_up_actor *>( use->get_actor_ptr() ) : nullptr;
+        if( !link ) {
+            return false;
+        }
+        choices.cable_link = query_cable_link( get_avatar(), get_map(), location, *link );
+        return choices.cable_link.has_value();
     }
     if( method == "REMOTEVEH" ) {
         return query_remote_vehicle_choices( get_avatar(), source, choices );
@@ -99,6 +112,9 @@ bool query_item_activation_choices( const item &source, const std::string &metho
 bool valid_item_activation_choices( const item &source, const std::string &method,
                                     const item_activation_choices &choices )
 {
+    if( choices.cable_link && method != "link_up" ) {
+        return false;
+    }
     if( method.empty() ) {
         return choices.empty() && supports_owned_item_activation( source, method );
     }
@@ -155,6 +171,13 @@ static bool activate_owned_item( Character &who, item_location source,
         if( !use || !source->ammo_sufficient( &who, method ) ||
             !use->can_call( who, *used, &here, position ).success() ) {
             return false;
+        }
+        if( choices.cable_link ) {
+            const auto *link = dynamic_cast<const link_up_actor *>( use->get_actor_ptr() );
+            if( !link || used != source.get_item() ||
+                !valid_cable_link( who, here, *used, *link, *choices.cable_link ) ) {
+                return false;
+            }
         }
     }
 

@@ -155,6 +155,10 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         ( !prepare && ( state.weapon != intent.weapon || state.bionic != intent.bionic ) ) ) {
         return firearm_outcome::rejected;
     }
+    const bool needs_burst = ( fire || threshold ) && selected->second.full_auto();
+    if( needs_burst ? !valid_firearm_burst_rounds( intent.burst_rounds ) : intent.burst_rounds != 0 ) {
+        return firearm_outcome::rejected;
+    }
     item_location ammo;
     const bool reload_and_shoot = selected->second->has_flag( flag_RELOAD_AND_SHOOT );
     const bool needs_ammo = reload_and_shoot && !selected->second->ammo_remaining();
@@ -325,10 +329,14 @@ firearm_outcome execute_firearm_intent( Character &who, map &here,
         return firearm_outcome::rejected;
     }
     gun = weapon->gun_current_mode();
+    if( !gun || gun.melee() || gun.full_auto() != needs_burst ||
+        weapon->gun_get_mode_id() != intent.mode ) {
+        return firearm_outcome::rejected;
+    }
     if( gun->has_flag( flag_RELOAD_AND_SHOOT ) && !gun->ammo_remaining() && !ammo ) {
         return firearm_outcome::rejected;
     }
-    who.fire_gun( here, target, gun.qty, *gun, ammo );
+    who.fire_gun( here, target, gun, ammo, intent.burst_rounds );
     return firearm_outcome::finished;
 }
 } // namespace cata_mp

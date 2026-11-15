@@ -391,6 +391,9 @@ void Character::try_remove_impeding_effect()
 
 bool Character::move_effects( bool attacking )
 {
+    if( martial_grapple_blocks_movement( *this ) && !attacking ) {
+        return false;
+    }
     if( has_effect( effect_downed ) ) {
         try_remove_downed();
         return false;

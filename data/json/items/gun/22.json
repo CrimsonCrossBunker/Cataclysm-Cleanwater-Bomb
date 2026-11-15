@@ -147,7 +147,7 @@
       }
     ],
     "price_postapoc": "15 USD",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ]
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ]
   },
   {
     "id": "ruger_lcr_22",

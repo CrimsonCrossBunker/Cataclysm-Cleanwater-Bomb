@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_SOUNDS_H
 #define CATA_SRC_SOUNDS_H
 
+#include <chrono>
 #include <optional>
 #include <string> // IWYU pragma: keep
 #include <string_view>
@@ -201,7 +202,8 @@ void play_activity_sound( std::string_view id, std::string_view variant, int vol
 void play_activity_sound( std::string_view id, std::string_view variant,
                           std::string_view season, int volume );
 void end_activity_sounds();
-void generate_gun_sound( const Character &source_arg, const item &firing );
+void generate_gun_sound( const Character &source_arg, const item &firing, int rpm,
+                         int shot_index, std::chrono::steady_clock::time_point burst_start );
 void generate_melee_sound( const item &weapon, const tripoint_bub_ms &source,
                            const tripoint_bub_ms &target, bool hit,
                            bool targ_mon = false, std::string_view material = "flesh" );

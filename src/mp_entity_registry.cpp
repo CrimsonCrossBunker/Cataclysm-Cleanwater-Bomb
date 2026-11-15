@@ -208,6 +208,18 @@ bool monster_mirrors::bind( uint32_t id, monster &value )
     return true;
 }
 
+monster *monster_mirrors::unbind( uint32_t id )
+{
+    const auto wire = impl_->uids.find( id );
+    if( wire == impl_->uids.end() ) {
+        return nullptr;
+    }
+    monster *value = find( id );
+    impl_->monsters.erase( wire->second );
+    impl_->uids.erase( wire );
+    return value;
+}
+
 uint32_t monster_mirrors::known_id( const monster &value ) const
 {
     return cata_mp::known_id( impl_->monsters, value );

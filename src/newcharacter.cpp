@@ -64,6 +64,7 @@
 #include "monster.h"
 #include "mutation.h"
 #include "npc.h"
+#include "north_america.h"
 #include "options.h"
 #include "output.h"
 #include "overmap_ui.h"
@@ -2348,11 +2349,68 @@ void draw_location( const avatar &you )
     }
 }
 
+static bool show_starting_city()
+{
+    return get_option<bool>( "SELECT_STARTING_CITY" ) || north_america::offer_starting_city();
+}
+
+static void choose_north_american_city( avatar &you )
+{
+    const auto &places = north_america::cities();
+    std::vector<std::pair<std::string, std::string>> regions;
+    for( const north_america::place &place : places ) {
+        const std::pair<std::string, std::string> region( place.country, place.region );
+        if( regions.empty() || regions.back() != region ) {
+            regions.push_back( region );
+        }
+    }
+
+    uilist region_menu;
+    region_menu.title = _( "Starting state, province, or territory" );
+    region_menu.filtering = true;
+    region_menu.addentry( 0, true, 'd', _( "Default (near Boston, Massachusetts)" ) );
+    for( size_t i = 0; i < regions.size(); ++i ) {
+        region_menu.addentry( i + 1, true, MENU_AUTOASSIGN,
+                              string_format( "%s — %s", regions[i].first, regions[i].second ) );
+    }
+    region_menu.query();
+    if( region_menu.ret < 0 ) {
+        return;
+    }
+    if( region_menu.ret == 0 ) {
+        you.starting_city.reset();
+        you.world_origin.reset();
+        return;
+    }
+
+    const auto &[country, region] = regions[region_menu.ret - 1];
+    uilist city_menu;
+    city_menu.title = string_format( _( "Starting city near %s" ), region );
+    city_menu.filtering = true;
+    for( size_t i = 0; i < places.size(); ++i ) {
+        const north_america::place &place = places[i];
+        if( place.country == country && place.region == region ) {
+            city_menu.addentry( i, true, MENU_AUTOASSIGN, place.name );
+        }
+    }
+    city_menu.query();
+    if( city_menu.ret >= 0 ) {
+        const north_america::place &place = places[city_menu.ret];
+        city selected( place.name );
+        std::tie( selected.pos_om, selected.pos ) = project_remain<coords::om>( place.position );
+        selected.population = place.population;
+        you.world_origin = selected.pos_om;
+        you.starting_city = std::move( selected );
+    }
+}
+
 void draw_starting_city( const avatar &you )
 {
     char_creation::draw_action_button( _( "Starting city:" ), "CHOOSE_CITY" );
     if( you.starting_city.has_value() ) {
         cataimgui::draw_colored_text( you.starting_city->name, c_white );
+    } else if( north_america::offer_starting_city() ) {
+        cataimgui::draw_colored_text( _( "Near Boston, Massachusetts" ), c_white );
     } else {
         cataimgui::draw_colored_text( _( "Random" ), c_light_gray );
     }
@@ -2742,7 +2800,7 @@ void character_creator_ui::setup_input_context( input_context &cc_ictxt, bool qu
     cc_ictxt.register_action( "SCROLL_INFOBOX_UP" );
     cc_ictxt.register_action( "SCROLL_INFOBOX_DOWN" );
     cc_ictxt.register_action( "TOGGLE_TOP_BAR" );
-    if( get_option<bool>( "SELECT_STARTING_CITY" ) ) {
+    if( char_creation::show_starting_city() ) {
         cc_ictxt.register_action( "CHOOSE_CITY" );
     }
     cc_ictxt.register_action( "CHOOSE_LOCATION" );
@@ -3416,7 +3474,7 @@ void draw_adaptive_character_creator_details( const character_creator_tab tab,
                 ImGui::TableNextColumn();
                 char_creation::draw_location( you );
                 draw_spacer();
-                if( get_option<bool>( "SELECT_STARTING_CITY" ) ) {
+                if( char_creation::show_starting_city() ) {
                     char_creation::draw_starting_city( you );
                     draw_spacer();
                 }
@@ -3869,7 +3927,7 @@ void character_creator_ui_impl::draw_summary()
         ImGui::TableNextColumn();
         char_creation::draw_location( u );
         draw_spacer();
-        if( get_option<bool>( "SELECT_STARTING_CITY" ) ) {
+        if( char_creation::show_starting_city() ) {
             char_creation::draw_starting_city( u );
             draw_spacer();
         }
@@ -4382,7 +4440,9 @@ bool character_creator_ui::handle_action( const std::string &action )
                                     _( "Select game start date" ), calendar_ui::granularity::hour, true ) );
     } else if( action == "RESET_CALENDAR" ) {
         get_scenario()->reset_calendar();
-    } else if( action == "CHOOSE_CITY" ) {
+    } else if( action == "CHOOSE_CITY" && north_america::offer_starting_city() ) {
+        char_creation::choose_north_american_city( you );
+    } else if( action == "CHOOSE_CITY" && !city::get_all().empty() ) {
         std::vector<city> cities( city::get_all() );
         const auto cities_cmp_population = []( const city & a, const city & b ) {
             return std::tie( a.population, a.name ) > std::tie( b.population, b.name );

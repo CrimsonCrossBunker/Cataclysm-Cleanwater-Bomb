@@ -2660,10 +2660,10 @@ sol::table ranged_attack_character(
     item_location wielded = attacker->get_wielded_item();
     if( wielded && wielded->is_gun() ) {
         const gun_mode mode = wielded->gun_current_mode();
-        if( mode.qty > 0 && wielded->ammo_sufficient(
-                attacker, mode.qty * 2 ) ) {
+        const int available = mode.shots_available( calendar::turn );
+        if( available > 0 && wielded->ammo_sufficient( attacker, available * 2 ) ) {
             attempted = true;
-            shots = attacker->fire_gun( target.value->pos_bub(), mode.qty );
+            shots = attacker->fire_gun( get_map(), target.value->pos_bub(), mode );
         }
     }
     sol::table value = state.create_table();

@@ -1,14 +1,15 @@
 <!-- CCB-DOC-MOVED-START -->
-> [!IMPORTANT] **Moved / 已迁移**
+> [!IMPORTANT] **Migration in progress / 迁移中**
 >
 > Stable document ID / 稳定文档 ID: `json.inheritance`
 > 中文: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/inheritance/
 > English: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/inheritance/
-> Moved date / 迁移日期: `2026-08-02`
-> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
-> The maintained documentation now lives in CCB-Docs.
-> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
-> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+> Migration start date / 开始迁移日期: `2026-08-02`
+> Source commit referenced by the last migration record / 上次迁移记录参考 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> CCB-Docs is still a work in progress; the links above are migration targets.
+> CCB-Docs 仍在整理中；上方链接为迁移目标。
+> Updates to this in-repository body are optional for now, and no comprehensive revision is currently planned. Developers may update it as needed. Some content has not been checked against the current CCB implementation; consult the relevant source code when using or updating it. Documentation may be updated alongside new or changed features. The retained body will serve as a reference for later documentation migration and reorganization, which may rewrite or omit the original text.
+> 本仓库正文暂不列入必须更新项，暂不安排全面整理，是否更新由开发者按实际需要决定。部分内容尚未按当前 CCB 实现核实，使用和更新时应检查相关源码。新增或改动功能时，可同步更新相关文档。保留正文将作为后续文档迁移与整理的参考来源，后续整理不保证原文保留。
 <!-- CCB-DOC-MOVED-END -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -120,7 +121,7 @@ Another example.  Reloaded ammo is derived from the factory equivalent but with 
 Not all `type`s work the same.  For `"type": "MONSTER"`, `relative` uses different fields than `"type": "ITEM"`:
 
 ```jsonc
-    "//": "MONSTER uses the same melee_damage field that ITEM does, but also has "melee_dice" and "melee_dice_sides",
+    "//": "MONSTER uses melee_damage, melee_dice and melee_dice_sides.",
     "relative": { 
       "melee_dice": 1, 
       "melee_dice_sides": 5, 
@@ -135,7 +136,7 @@ Same as above, now with `proportional`:
 ```
 
 
-It is possible to define an `abstract` ID that exists only for other `type`s to inherit from and cannot itself be used in game.  This is done to facilitate maintenance and reduce line count.  In the following condensed example, `magazine_belt` provides values common to all implemented ammo belts:
+It is possible to define an `abstract` ID that exists only for other objects to inherit from and cannot itself be used in game.  This is done to facilitate maintenance and reduce line count.  In the following condensed example, `magazine_belt` provides values common to all implemented ammo belts:
 
 ```jsonc
 {
@@ -164,7 +165,7 @@ It is possible to define an `abstract` ID that exists only for other `type`s to 
 
 The following additional rules apply:
 
-* Missing mandatory fields, such as `volume` do not result in errors as the `abstract` type is discarded after JSON loading completes.
+* Abstract objects still run through the type's loader. Required fields must be supplied or inherited; discarding abstracts after loading does not waive validation. For `ITEM`, `volume` is optional, not an example of a mandatory field that abstracts may omit.
 * Missing optional fields are set to the usual defaults for that type.
 
 
@@ -181,7 +182,6 @@ item_group
 material
 MONSTER
 MONSTER_FACTION
-monstergroup
 mutation
 overmap_terrain
 recipe
@@ -195,26 +195,24 @@ vitamin
 `overmap_special` and `city_building` only partially support `copy-from`
 - Mutable specials will extend `check_for_locations_area` if `check_for_locations` is not specified 
 
-To find out if a type supports `copy-from`, you need to know if it has implemented generic_factory.  To find out if this is the case, do the following:
-* Open [init.cpp](https://github.com/CleverRaven/Cataclysm-DDA/tree/master/src/init.cpp)
-* Find the line that mentions your type, for example `add( "gate", &gates::load );`.
-* Copy the load function, in this case it would be *gates::load*.
-* Use this in [the search bar on github](https://github.com/CleverRaven/Cataclysm-DDA/search?q=%22gates%3A%3Aload%22&unscoped_q=%22gates%3A%3Aload%22&type=Code) to find the file that contains *gates::load* (Note, you cannot search for ":" in file finder.  The search will simply ignore this symbol.).
-* In the search results you find [gates.cpp](https://github.com/CleverRaven/Cataclysm-DDA/tree/master/src/gates.cpp). open it.
-* In gates.cpp, find the generic_factory line, it looks like this: `generic_factory<gate_data> gates_data( "gate type", "handle", "other_handles" );`.
-* Since the generic_factory line is present, you can now conclude that it supports `copy-from`.
-* If you don't find generic_factory present, it does not support copy-from. The exact set of supported types in this repository may differ from upstream CleverRaven/Cataclysm-DDA; check the current source to be sure.
+To check inheritance support in CCB, follow the registered loader in the current source:
+* Find the JSON `type` in [init.cpp](../../src/init.cpp), for example `add( "gate", &gates::load );`.
+* Open the implementation of that loader. In [gates.cpp](../../src/gates.cpp), `gates::load` delegates to `gates_data.load( jo, src );`, where `gates_data` is declared as `generic_factory<gate_data> gates_data( "gate type" );`.
+* A loader that delegates to `generic_factory::load` uses the inheritance handling in [generic_factory.h](../../src/generic_factory.h). For a type that does not delegate to a factory, inspect its manual `copy-from` handling instead; `item_group` is one such case.
+* An include of `generic_factory.h`, or an unrelated factory elsewhere in the same file, does not establish support for the type being checked.
+* To check individual modifiers, follow the member's loading code as well. Whole-object inheritance does not guarantee that every member supports the same modifiers.
 
 
 ## Behavior
 
-A common misconception is that every `type` that supports `copy-from` will also support `extend`, `delete`, `proportional` and `relative`, in the same way as one's most commonly seen object: `ITEM`.  As explained above, this is not the case; some types handle these fields manually (which is undesired), others use generic_factory.  `extend` and `delete` only apply to JSON members that have containers as their underlying C++ types, and `proportional`/`relative` handling must be implemented with corresponding C++ functions.  
+Support for `copy-from` does not imply support for `extend`, `delete`, `proportional` and `relative` on every member. Some loaders handle these modifiers manually; others use shared readers in [generic_factory.h](../../src/generic_factory.h). The member's loader or reader determines which modifiers work and whether an explicitly supplied value replaces or merges with inherited data.
 
-In summary, there is no "default" JSON inheritance, only shared degrees of support; check the relevant C++ if `copy-from` behavior is uncertain, and looking for an existing (and functional!) example is always a good idea.  Some types that implement partial or non-standard `copy-from` support (non-exhaustive list):
-* `monstergroup` extends by default.  This prevents mods copying monstergroup definitions from replacing vanilla monstergroup lists.  To replace the *entire* list, add `"override": true` to the monstergroup object.
-* `SPELL` has limited support, given their behavior is governed by its spell `effect`.  Flags are not always inherited.  Testing is required to guarantee an inherited spell will behave as intended, use at your own risk.
-* The `vitamins` field from `material` extends by default.
-* `vitamin` supports `copy-from`, `extend`, and `delete`. `extend`/`delete` only apply to the container fields `flags`, `disease`, `disease_excess`, and `decays_into`; `relative` and `proportional` are not supported.
+Check the current CCB source and working examples when behavior is uncertain. The following cases need particular care (non-exhaustive list):
+* `item_group` only accepts `copy-from` referring to an already loaded group with the same ID. Add entries under `extend`; it cannot copy from a group with a different ID. See [item group extension](ITEM_SPAWN.md#adding-to-item-groups).
+* `monstergroup` does not read `copy-from`. Redefining an existing group with the same ID appends monster entries by default; use `"override": true` to replace the group instead. This behavior is implemented in [mongroup.cpp](../../src/mongroup.cpp).
+* `SPELL.flags` preserves inherited flags when omitted and adds to them when explicitly supplied. Its manual loader does not implement `extend`/`delete` for flags. Check the spell's effect as well when changing its behavior; see [magic.cpp](../../src/magic.cpp).
+* `material.vitamins` replaces inherited entries when supplied directly. Use `extend` or `delete` to modify inherited entries instead; see [material.cpp](../../src/material.cpp).
+* `vitamin` supports `copy-from`; the container fields `flags`, `disease`, `disease_excess` and `decays_into` accept `extend`/`delete`. The optional numeric field `max` accepts `relative` and `proportional`, whereas mandatory `min` and `rate` do not. See [vitamin.cpp](../../src/vitamin.cpp).
 
 
 ## Guidelines

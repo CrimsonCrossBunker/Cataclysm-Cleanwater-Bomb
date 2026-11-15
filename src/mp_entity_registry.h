@@ -44,8 +44,7 @@ class entity_registry
 
 // Client-only association of a host's wire IDs with local native incarnations.
 // A fresh client replication state starts empty, even if native monsters remain.
-// begin_sync retires unloaded objects before applying a packet; dead objects
-// still in the tracker remain addressable for the existing death-report policy.
+// begin_sync retires unloaded objects before applying a packet.
 class monster_mirrors
 {
     public:
@@ -58,6 +57,7 @@ class monster_mirrors
 
         void begin_sync( const creature_tracker &tracker );
         bool bind( uint32_t id, monster &value );
+        monster *unbind( uint32_t id );
         uint32_t known_id( const monster &value ) const;
         monster *find( uint32_t id ) const;
 

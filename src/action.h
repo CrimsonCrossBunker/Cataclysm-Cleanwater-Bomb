@@ -180,6 +180,7 @@ enum action_id : int {
     ACTION_THROW_WIELDED,
     /** Fire the wielded weapon, or open fire menu if none */
     ACTION_FIRE,
+    ACTION_FIRE_SWEEP,
     /** Burst-fire the current weapon */
     ACTION_FIRE_BURST,
     /** Change fire mode of the current weapon */
@@ -367,6 +368,7 @@ enum action_id : int {
     /** Interact with the current or nearby tile */
     ACTION_INTERACT,
     ACTION_COOP_CHAT,
+    ACTION_COOP_SESSION,
     ACTION_PASS_ITEM,
     ACTION_HIGH_FIVE,
     ACTION_MANAGE_ANDROID_EXTRA_BUTTONS,

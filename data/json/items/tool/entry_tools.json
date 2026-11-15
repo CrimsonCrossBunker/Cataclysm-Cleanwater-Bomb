@@ -79,6 +79,7 @@
     "melee_damage": { "bash": 4, "stab": 15 }
   },
   {
+    "mounted_charge": null,
     "id": "makeshift_crowbar",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

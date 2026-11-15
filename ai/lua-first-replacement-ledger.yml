@@ -31,26 +31,26 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:f9e658aacd2612dd63c38024bea04df06069f217926566bc6236923cfe8f5921
-  entry_count: 192
+  source_fingerprint: sha256:e7d3d80717f180aee26dd48e641fdb18624986db9f95dc7a94ea84d0fbe4b08b
+  entry_count: 193
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:f9e658aacd2612dd63c38024bea04df06069f217926566bc6236923cfe8f5921
+  source_fingerprint: sha256:e7d3d80717f180aee26dd48e641fdb18624986db9f95dc7a94ea84d0fbe4b08b
   entry_count: 276
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:f9e658aacd2612dd63c38024bea04df06069f217926566bc6236923cfe8f5921
+  source_fingerprint: sha256:e7d3d80717f180aee26dd48e641fdb18624986db9f95dc7a94ea84d0fbe4b08b
   entry_count: 329
 summary:
-  total: 797
+  total: 798
   implemented_verified: 1
   implemented_unverified: 89
   bounded_implemented_verified: 0
   bounded_implemented_unverified: 672
   primitive_available_unverified: 23
-  planned: 2
+  planned: 3
   private_adapter: 0
   reviewed_not_applicable: 10
 entries:
@@ -10579,6 +10579,15 @@ entries:
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
   verification: source_only
+- inventory: json-object-types
+  selector: regional_climate_station
+  target_kind: platform_domain
+  target: content.gameplay
+  status: planned
+  legacy_dependency: public_legacy
+  evidence:
+  - data/reference/json/ccb_json_object_types.json
+  verification: not_run
 - inventory: json-object-types
   selector: relic_procgen_data
   target_kind: platform_domain

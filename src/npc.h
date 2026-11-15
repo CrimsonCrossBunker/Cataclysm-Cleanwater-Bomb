@@ -283,6 +283,13 @@ enum class aim_rule : int {
     // If you can't aim, don't shoot
     STRICTLY_PRECISE
 };
+
+enum class burst_rule : int {
+    ADAPTIVE = 0,
+    SHORT,
+    LONG,
+    FULL_AUTO
+};
 const std::unordered_map<std::string, aim_rule> aim_rule_strs = { {
         { "AIM_WHEN_CONVENIENT", aim_rule::WHEN_CONVENIENT },
         { "AIM_SPRAY", aim_rule::SPRAY },
@@ -488,6 +495,8 @@ const std::unordered_map<std::string, ally_rule_data> ally_rule_strs = { {
 struct npc_follower_rules {
     combat_engagement engagement;
     aim_rule aim = aim_rule::WHEN_CONVENIENT;
+    burst_rule burst = burst_rule::ADAPTIVE;
+    bool allow_sweep = false;
     cbm_recharge_rule cbm_recharge = cbm_recharge_rule::CBM_RECHARGE_SOME;
     cbm_reserve_rule cbm_reserve = cbm_reserve_rule::CBM_RESERVE_SOME;
     ally_rule flags = ally_rule::DEFAULT; // NOLINT(cata-serialize)
@@ -964,7 +973,7 @@ class npc : public Character
         std::string get_specified_talk_topic( std::string const &topic_id );
         float character_danger( const Character &u ) const;
         float vehicle_danger( int radius ) const;
-        void pretend_fire( npc *source, int shots, item &gun ); // fake ranged attack for hallucination
+        void pretend_fire( const gun_mode &mode, int burst_rounds = 0 );
         // True if our anger is at least equal to...
         bool turned_hostile() const;
         bool turned_hostile( character_id who ) const;
@@ -1059,8 +1068,10 @@ class npc : public Character
         void update_worst_item_value();
         double value( const item &it ) const;
         double value( const item &it, double market_price ) const;
-        faction_price_rule const *get_price_rules( item const &it ) const;
-        bool wear_if_wanted( const item &it, std::string &reason );
+        faction_price_rule const *get_price_rules( item const &it,
+                const Character *customer = nullptr ) const;
+        bool wear_if_wanted( const item &it, std::string &reason, item_location *offered = nullptr );
+        bool wield_offered_item( item_location &source, Character &donor );
         bool can_read( const item &book, std::vector < std::string > &fail_reasons );
         time_duration time_to_read( const item &book, const Character &reader ) const;
         void do_npc_read( bool ebook = false );
@@ -1093,6 +1104,7 @@ class npc : public Character
          * to check contents, call this on the items inside the item.
          */
         bool will_accept_from_player( const item &it ) const;
+        bool will_accept_from_player( const item &it, const Character &donor ) const;
 
         bool wants_to_sell( const item_location &it ) const;
         ret_val < void > wants_to_sell( const item_location &it, int at_price ) const;
@@ -1105,7 +1117,9 @@ class npc : public Character
 
         bool will_exchange_items_freely() const;
         int max_credit_extended() const;
+        int max_credit_extended( const npc_opinion &opinion ) const;
         int max_willing_to_owe() const;
+        int max_willing_to_owe( const npc_opinion &opinion ) const;
 
         // AI helpers
         void regen_ai_cache();
@@ -1203,11 +1217,9 @@ class npc : public Character
 
         void witness_thievery( item *it ) override;
 
-        /* shift() works much like monster::shift(), and is called when the player moves
-         * from one submap to an adjacent submap.  It updates our position (shifting by
-         * 12 tiles), as well as our plans.
-         */
+        // Rebase bubble-local AI state when the active map window moves.
         void shift( const point_rel_sm &s );
+        void update_ai_map_origin( const map &terrain );
 
         // Movement; the following are defined in npcmove.cpp
         void move(); // Picks an action & a target and calls execute_action
@@ -1630,6 +1642,7 @@ class npc : public Character
         int  worst_item_value = 0; // The value of our least-wanted item
 
         std::vector < tripoint_bub_ms > path; // Our movement plans
+        std::optional<point_abs_sm> ai_map_origin; // NOLINT(cata-serialize)
 
         //Set mission source or squad leader for a patrol
         std::string companion_mission_role_id;

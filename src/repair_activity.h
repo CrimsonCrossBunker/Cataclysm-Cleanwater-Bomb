@@ -2,6 +2,10 @@
 #ifndef CATA_SRC_REPAIR_ACTIVITY_H
 #define CATA_SRC_REPAIR_ACTIVITY_H
 
+#include <coordinates.h>
+#include <point.h>
+#include <requirements.h>
+#include <type_id.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -9,6 +13,7 @@
 
 #include "activity_actor.h"
 #include "craft_command.h"
+#include "item_repair.h"
 #include "item_source.h"
 
 class Character;
@@ -18,7 +23,6 @@ class JsonValue;
 class item;
 class item_location;
 class map;
-class player_activity;
 class repair_item_actor;
 class vehicle;
 struct vehicle_control_selection;
@@ -34,7 +38,7 @@ enum class repair_repeat : int {
     CANCEL = 7,
 };
 
-repair_repeat query_repair_repeat( Character &who, const item &tool, const item &target,
+repair_repeat query_repair_repeat( Character &who, const item &tool, const item &fix,
                                    const repair_item_actor &actor, repair_repeat previous );
 
 // A portable source or a particular tool supplied by particular vehicle hardware.
@@ -54,6 +58,7 @@ struct repair_activity_choice {
     item_source target;
     int repeat = 0;
     comp_selection<item_comp> material;
+    bool change_target = false;
     void serialize( JsonOut &out ) const;
     void deserialize( const JsonObject &data );
 };
@@ -63,6 +68,7 @@ class repair_activity_actor : public activity_actor
     public:
         repair_tool_source source;
         std::optional<repair_activity_choice> choice;
+        std::optional<item_repair::repair_target> preferred_target;
         bool waiting = true;
 
         const activity_id &get_type() const override;
@@ -79,7 +85,8 @@ class repair_activity_actor : public activity_actor
         void run_local( Character &who );
 };
 
-bool start_owned_repair( Character &who, item_location tool, const std::string &method );
+bool start_owned_repair( Character &who, item_location tool, const std::string &method,
+                         std::optional<item_repair::repair_target> selected = std::nullopt );
 bool has_vehicle_repair_tool( const vehicle &target, const tripoint_abs_ms &position );
 bool valid_vehicle_repair( Character &who, map &here, vehicle &target,
                            const tripoint_abs_ms &position, const repair_tool_source &source );

@@ -32,7 +32,7 @@
     "durability": 8,
     "min_cycle_recoil": 270,
     "barrel_volume": "500 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 5 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "900" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "brass catcher", 1 ],
@@ -110,7 +110,7 @@
     "ranged_damage": { "damage_type": "stab", "amount": 5 },
     "dispersion": 60,
     "durability": 8,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 3 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "900" ] ],
     "clip_size": 25,
     "reload": 200,
     "valid_mod_locations": [
@@ -339,7 +339,7 @@
     "dispersion": 280,
     "durability": 6,
     "min_cycle_recoil": 39,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 6 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
     "barrel_volume": "250 ml",
     "valid_mod_locations": [
       [ "barrel", 1 ],
@@ -590,7 +590,7 @@
     "durability": 9,
     "reload": 200,
     "barrel_volume": "500 ml",
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "BURST", "4 rd.", 4 ], [ "AUTO", "auto", 6 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "brust-rpm", "900", 4 ], [ "AUTO", "auto-rpm", "1800" ] ],
     "valid_mod_locations": [
       [ "barrel", 1 ],
       [ "grip", 1 ],
@@ -686,7 +686,7 @@
     "skill": "rifle",
     "dispersion": 30,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 4 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "1200" ] ],
     "barrel_volume": "500 ml",
     "valid_mod_locations": [
       [ "grip", 1 ],
@@ -778,7 +778,7 @@
     "skill": "shotgun",
     "dispersion": 335,
     "durability": 9,
-    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto", 2 ] ],
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ], [ "AUTO", "auto-rpm", "600" ] ],
     "valid_mod_locations": [
       [ "grip", 1 ],
       [ "mechanism", 2 ],

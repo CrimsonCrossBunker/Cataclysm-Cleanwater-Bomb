@@ -2601,7 +2601,8 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
     } else if( blink && overmap_buffer.is_marked_dangerous( omp ) ) {
         ret.second = c_red;
         ret.first = "X";
-    } else if( blink && opts.mission_inbounds && opts.mission_target && !opts.hilite_mission &&
+    } else if( ( blink || opts.hilite_mission ) && opts.mission_inbounds && opts.mission_target &&
+               ( !opts.hilite_mission || omp.z() != opts.mission_target->z() ) &&
                omp.xy() == opts.mission_target->xy() ) {
         // Mission target, display always, player should know where it is anyway.
         ret.second = c_red;
@@ -2715,7 +2716,7 @@ std::pair<std::string, nc_color> oter_symbol_and_color( const tripoint_abs_omt &
         }
     }
 
-    if( opts.hilite_mission && opts.mission_target && opts.mission_target->xy() == omp.xy() ) {
+    if( opts.hilite_mission && opts.mission_target && *opts.mission_target == omp ) {
         ret.second = red_background( ret.second );
     }
     if( opts.hilite_pc && opts.show_pc && opts.center.xy() == omp.xy() ) {

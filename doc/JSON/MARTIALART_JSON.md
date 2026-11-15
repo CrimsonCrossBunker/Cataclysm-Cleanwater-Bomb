@@ -1,14 +1,15 @@
 <!-- CCB-DOC-MOVED-START -->
-> [!IMPORTANT] **Moved / 已迁移**
+> [!IMPORTANT] **Migration in progress / 迁移中**
 >
 > Stable document ID / 稳定文档 ID: `json.martial-arts`
 > 中文: https://crimsoncrossbunker.github.io/CCB-Docs/reference/json/martial-arts/
 > English: https://crimsoncrossbunker.github.io/CCB-Docs/en/reference/json/martial-arts/
-> Moved date / 迁移日期: `2026-08-02`
-> Last in-repository commit / 仓库内最后适用 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
-> The maintained documentation now lives in CCB-Docs.
-> This in-repository body is no longer maintained. The historical body is retained through `2027-02-02` and may then be removed; this bilingual entry banner remains permanently.
-> 本仓库正文不再维护；历史正文至少保留到上述日期，之后可删除，但本双语迁移入口永久保留。
+> Migration start date / 开始迁移日期: `2026-08-02`
+> Source commit referenced by the last migration record / 上次迁移记录参考 commit: `0378ca2b84303cf614c617c9d9eaa50138cd21ff`
+> CCB-Docs is still a work in progress; the links above are migration targets.
+> CCB-Docs 仍在整理中；上方链接为迁移目标。
+> Updates to this in-repository body are optional for now, and no comprehensive revision is currently planned. Developers may update it as needed. Some content has not been checked against the current CCB implementation; consult the relevant source code when using or updating it. Documentation may be updated alongside new or changed features. The retained body will serve as a reference for later documentation migration and reorganization, which may rewrite or omit the original text.
+> 本仓库正文暂不列入必须更新项，暂不安排全面整理，是否更新由开发者按实际需要决定。部分内容尚未按当前 CCB 实现核实，使用和更新时应检查相关源码。新增或改动功能时，可同步更新相关文档。保留正文将作为后续文档迁移与整理的参考来源，后续整理不保证原文保留。
 <!-- CCB-DOC-MOVED-END -->
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -135,6 +136,59 @@ Additionally, when read externally (such as, by EOCs), their syntax is `mabuff:I
 ## Techniques
 
 Techniques are special attacks performed while using a given MA style.  These are automatically used according to their specific requirements, as defined in their JSON blocks:
+
+An offensive, non-counter, non-critical-only technique with an attack vector can set
+`"manual_activation": true` to require explicit activation.  Such techniques may
+set `"cooldown": "10 s"`; the default is zero and negative durations are invalid.
+A positive cooldown requires `manual_activation`.  Cooldowns belong to the
+character and technique ID, so changing weapons or styles does not reset them.
+They use game time and survive saving and loading.
+Lua-authored `ccb.content.Technique` definitions use the integer `cooldown_turns`
+option with the same default and manual-activation requirement.  Replacements
+must set it explicitly when retaining a cooldown.
+
+An executed attack starts its cooldown even when it misses.  Canceling target
+selection or failing validation does not.  Mounted charge starts its cooldown
+on its first movement or executed attack; subsequent steps and resuming a saved
+charge do not restart it.  A running charge may continue during its own cooldown.
+The separate `grapple_cooldown` remains shared by grappling actions of the same
+kind; when both cooldowns apply, both must expire before another activation.
+
+Core grappling techniques are defined in `data/mods/dda/grappling.lua` using
+`require("ccb")`. Their stable technique IDs and style membership are unchanged.
+`grapple_action` (`hold`, `drag`, or `throw`), `grapple_power`, `grapple_stamina`,
+and `grapple_cooldown_turns` configure the native grappling action. Grappling
+requires manual activation, `strictly_unarmed`, an attack vector, no reach, and
+positive power, base stamina and shared cooldown.
+
+The optional `grapple_plan` names a registered Lua handler. It receives detached
+strength, Unarmed Combat level, relative size, target weight in kilograms, power,
+and base stamina values. Return `{ allowed = false }` to reject an action, or
+return `allowed = true` together with integer `stamina_cost`, `move_cost`,
+`duration_turns`, and numeric `damage`. Stamina must be nonnegative; move cost
+and duration must be positive. Integer fields must fit a native `int`; damage
+must be finite, nonnegative and fit a native `float`. Damage is bash damage
+before armor and is applied only by throws. Dragging never refreshes the hold.
+Handlers calculate a plan without changing the world. Native code checks grip
+ownership, usable limbs, target anatomy, space, restraints and available stamina
+before applying it, then handles movement, traps, damage and cooldowns once.
+Lua techniques can call `technique:style("style_brawling")` to append themselves
+to an existing or locally staged style without replacing its buffs, requirements
+or other techniques. These additions roll back with the content transaction.
+The core Brawling style uses this for its grip, drag and body-lock trip.
+
+`active_when` handlers receive a `target` phase during creature selection and
+again before execution. Its detached `target` snapshot includes a typed creature
+handle, category, hostility, adjacency, weight, size difference and grip ownership.
+Returning false rejects the target before costs. Manual techniques may target
+non-hostile monsters and NPCs; the avatar UI confirms non-hostile attacks before
+execution. NPC grapples use the same movement restraint and grip-release checks
+as monster grapples, but do not prevent the victim from attacking. Critical-only
+techniques, like counters, remain automatic and cannot be manually forced.
+
+Missing runtimes, callback errors and malformed plans reject the action without
+charging resources or falling back to an ordinary attack. Legacy JSON-defined
+grapples without a Lua plan retain their native formula.
 
 ```jsonc
 {

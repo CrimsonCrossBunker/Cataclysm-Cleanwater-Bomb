@@ -212,7 +212,7 @@ TEST_CASE( "requirement_extension", "[requirement]" )
 
     SECTION( "multigroup_tool_extension" ) {
         const std::vector<std::vector<tool_comp>> &req_tool =
-            requirement_data_explosives_casting_standard->get_tools();
+                requirement_data_explosives_casting_standard->get_tools();
 
         REQUIRE( !req_tool.empty() );
         REQUIRE( req_tool.size() == 2 );
@@ -288,6 +288,42 @@ TEST_CASE( "red_meat_preservation_requirements", "[requirement][curing]" )
            expected_vacuum_packable );
 }
 
+TEST_CASE( "disassembly_requirements_remove_empty_quality_groups", "[requirement][disassembly]" )
+{
+    requirement_data original;
+    SECTION( "no original tool qualities" ) {}
+    SECTION( "knitting quality is no longer required" ) {
+        original = requirement_data( {}, { { quality_requirement( quality_id( "KNIT" ), 1, 1 ) } }, {} );
+    }
+    SECTION( "glare protection is no longer required" ) {
+        original = requirement_data( {}, { { quality_requirement( quality_id( "GLARE" ), 1, 1 ) } }, {} );
+    }
+    const requirement_data disassembly = original.disassembly_requirements();
+    CHECK( disassembly.get_qualities().empty() );
+    CHECK( disassembly.can_make_with_inventory( nullptr, temp_crafting_inventory(),
+            return_true<item> ) );
+}
+
+TEST_CASE( "disassembly_requirements_preserve_required_qualities", "[requirement][disassembly]" )
+{
+    requirement_data original;
+    quality_id expected;
+    SECTION( "an unchanged quality" ) {
+        expected = qual_HAMMER;
+        original = requirement_data( {}, { { quality_requirement( expected, 1, 1 ) } }, {} );
+    }
+    SECTION( "sewing is replaced by cutting" ) {
+        expected = quality_id( "CUT" );
+        original = requirement_data( {}, { { quality_requirement( quality_id( "SEW" ), 1, 1 ) } }, {} );
+    }
+    const requirement_data disassembly = original.disassembly_requirements();
+    REQUIRE( disassembly.get_qualities().size() == 1 );
+    REQUIRE( disassembly.get_qualities().front().size() == 1 );
+    CHECK( disassembly.get_qualities().front().front().type == expected );
+    CHECK_FALSE( disassembly.can_make_with_inventory( nullptr, temp_crafting_inventory(),
+                 return_true<item> ) );
+}
+
 TEST_CASE( "requirement_checks_follow_their_actor_mode", "[requirement]" )
 {
     clear_avatar();
@@ -309,7 +345,7 @@ TEST_CASE( "requirement_checks_follow_their_actor_mode", "[requirement]" )
 
             THEN( "an inventory-only check is decided on the passed inventory alone" ) {
                 CHECK_FALSE( req.can_make_with_inventory( nullptr, empty_inv,
-                        return_true<item> ) );
+                             return_true<item> ) );
                 CHECK_FALSE( qual_req.has( nullptr, empty_inv, return_true<item> ) );
             }
         }
@@ -319,7 +355,7 @@ TEST_CASE( "requirement_checks_follow_their_actor_mode", "[requirement]" )
 
             THEN( "an inventory-only check grants none of it, at any level" ) {
                 CHECK_FALSE( req.can_make_with_inventory( nullptr, empty_inv,
-                        return_true<item> ) );
+                             return_true<item> ) );
                 CHECK_FALSE( qual_req.has( nullptr, empty_inv, return_true<item> ) );
                 CHECK_FALSE( tool_req.has( nullptr, empty_inv, return_true<item> ) );
                 CHECK_FALSE( comp_req.has( nullptr, empty_inv, return_true<item> ) );
@@ -341,7 +377,7 @@ TEST_CASE( "requirement_checks_follow_their_actor_mode", "[requirement]" )
 
             THEN( "the NPC is not granted the avatar's hammerspace" ) {
                 CHECK_FALSE( req.can_make_with_inventory( &guy, empty_inv,
-                        return_true<item> ) );
+                             return_true<item> ) );
             }
 
             THEN( "the NPC's own trait is what grants it" ) {

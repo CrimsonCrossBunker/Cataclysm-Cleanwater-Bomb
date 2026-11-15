@@ -33,7 +33,7 @@
     "name": { "str": "star-stone" },
     "description": "A strange chunk of what looks like stone in the shape of a seven-pointed star.  Its surface is smooth with thin lines in it, like driftwood, but despite that it doesn't seem to reflect any light.",
     "material": [ "stone" ],
-    "flags": [ "TRADER_AVOID" ],
+    "flags": [ "TRADER_AVOID", "SLING_PROJECTILE" ],
     "symbol": "*",
     "color": "white",
     "weight": "657 g",

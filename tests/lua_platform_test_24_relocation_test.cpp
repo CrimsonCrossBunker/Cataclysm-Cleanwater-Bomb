@@ -1337,6 +1337,16 @@ TEST_CASE( "lua_platform_relocation_rejects_vehicle_coupled_states_without_mutat
     SECTION( "active remote" ) {
         platform_vehicle_relocation_fixture fixture( 730, 29 );
         REQUIRE( fixture.test_vehicle );
+        map &here = fixture.get_map();
+        get_avatar().setpos( here, fixture.source_local + tripoint_rel_ms::west, false );
+        REQUIRE( fixture.test_vehicle->install_part( here, point_rel_ms::zero,
+                 vpart_id( "drive_by_wire_controls" ) ) >= 0 );
+        const int battery = fixture.test_vehicle->install_part( here, point_rel_ms::zero,
+                            vpart_id( "battery_car" ) );
+        REQUIRE( battery >= 0 );
+        fixture.test_vehicle->part( battery ).ammo_set( itype_id( "battery" ), 100 );
+        fixture.test_vehicle->refresh();
+        here.add_vehicle_to_cache( fixture.test_vehicle );
         item_location remote_control = get_avatar().i_add(
                                            item( itype_remotevehcontrol,
                                                    calendar::turn_zero ) );
