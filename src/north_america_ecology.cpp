@@ -149,9 +149,9 @@ const ecology_atlas &get_ecology()
     return data;
 }
 
-static constexpr std::array<point, 8> district_neighbors{{
+constexpr std::array<point, 8> district_neighbors{{
         point::north, point::east, point::south, point::west,
-        point( 1, -1 ), point( 1, 1 ), point( -1, 1 ), point( -1, -1 )
+        point::north_east, point::south_east, point::south_west, point::north_west
     }};
 
 struct urban_atlas {
