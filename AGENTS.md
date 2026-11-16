@@ -7,6 +7,16 @@ rules and does not replace this file.
 本文件刻意保留离线可用的最小上下文。修改某个子系统前，先读取路径上最近的
 `AGENTS.md`；子目录规则只补充本文件，不覆盖全局规则。
 
+## Required development skill
+
+Before starting work in this repository, read and apply the installed
+`ccb-dev-rules` skill at `$CODEX_HOME/skills/ccb-dev-rules/SKILL.md`
+(`~/.codex/skills/ccb-dev-rules/SKILL.md` when `CODEX_HOME` is unset).
+Use it on every development task in this directory and its subdirectories,
+and read its task-specific references as directed by the skill. Follow the
+applicable `AGENTS.md` files as well. If the skill is missing, report that
+before proceeding rather than silently skipping it.
+
 ## Sources of truth / 权威来源
 
 - Runtime behaviour: C++/Java/Lua source and tests in this repository.

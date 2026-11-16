@@ -84,7 +84,7 @@ activity_handlers::do_turn_functions = {
 
 const std::map< activity_id, std::function<void( player_activity *, Character * )> >
 activity_handlers::finish_functions = {
-    { ACT_REPAIR_ITEM, repair_item_finish }
+    { ACT_REPAIR_ITEM, activity_handlers::repair_item_finish }
 };
 
 bool activity_handlers::resume_for_multi_activities( Character &you )

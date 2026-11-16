@@ -850,7 +850,9 @@ static bool tile_blocks_vehicle( const map &here, const tripoint_bub_ms &pos,
     // Bashable non-flat terrain/furniture causes collision (bushes, open
     // windows, fences). NOCOLLIDE excluded (e.g. railroad tracks).
     if( here.is_bashable_ter_furn( pos, false ) &&
-        !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NOCOLLIDE, pos ) ) {
+        !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NOCOLLIDE, pos ) &&
+        !( here.has_flag_ter( ter_furn_flag::TFLAG_RAIL, pos ) &&
+           !here.is_bashable_furn( pos ) ) ) {
         return true;
     }
 

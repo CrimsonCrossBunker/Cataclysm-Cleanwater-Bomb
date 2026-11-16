@@ -2490,7 +2490,7 @@ recipe_result renderer_resource_coordinator::recipe_device_lost()
         return { recipe_outcome::failure };
     }
     if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
-        vp->release_gpu_resources();
+        vp->release_gpu_resources( true );
     }
     if( check_pause_abort() ) {
         return { recipe_outcome::failure };

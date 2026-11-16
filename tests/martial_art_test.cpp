@@ -1,3 +1,4 @@
+#include <map>
 #include <character_id.h>
 #include <item_location.h>
 #include <npc_opinion.h>
@@ -1155,4 +1156,48 @@ TEST_CASE( "active_technique_cooldowns_do_not_disable_automatic_techniques",
     dude.martial_arts_data->start_technique_cooldown( technique, 8_seconds );
     CHECK_FALSE( dude.active_technique_availability( technique ).success() );
     CHECK( dude.evaluate_technique( technique, target, dude.used_weapon(), false, false, false ) );
+}
+
+TEST_CASE( "legacy_active_technique_cooldowns_migrate_to_martial_arts",
+           "[martial_arts][active_technique][cooldown][save]" )
+{
+    restore_on_out_of_scope restore_time( calendar::turn );
+    calendar::turn = calendar::turn_zero + 1_hours;
+    clear_avatar();
+    avatar &dude = get_avatar();
+    const time_duration current_duration = GENERATE( 0_seconds, 12_seconds );
+    const time_duration legacy_duration = GENERATE( -2_seconds, 8_seconds );
+    REQUIRE( test_manual_cooldown_strike.is_valid() );
+    dude.martial_arts_data->start_technique_cooldown( test_manual_cooldown_strike,
+            current_duration );
+    std::ostringstream serialized;
+    JsonOut output( serialized );
+    dude.serialize( output );
+    std::string saved = serialized.str();
+    const std::map<matec_id, time_point> legacy_deadlines = {
+        { test_manual_cooldown_strike, calendar::turn + legacy_duration }
+    };
+    std::ostringstream legacy;
+    JsonOut legacy_output( legacy );
+    legacy_output.start_object();
+    legacy_output.member( "technique_cooldowns", legacy_deadlines );
+    legacy_output.end_object();
+    const std::string legacy_data = legacy.str();
+    REQUIRE( !saved.empty() );
+    REQUIRE( saved.front() == '{' );
+    saved.insert( 1, legacy_data.substr( 1, legacy_data.size() - 2 ) + ',' );
+    calendar::turn += 3_seconds;
+    const time_duration expected = std::max( 0_seconds,
+                                   std::max( current_duration, legacy_duration ) - 3_seconds );
+    avatar restored;
+    restored.deserialize( json_loader::from_string( saved ).get_object() );
+    CHECK( restored.technique_cooldown_remaining( test_manual_cooldown_strike ) == expected );
+    std::ostringstream upgraded;
+    JsonOut upgraded_output( upgraded );
+    restored.serialize( upgraded_output );
+    const JsonObject upgraded_data = json_loader::from_string( upgraded.str() ).get_object();
+    CHECK_FALSE( upgraded_data.has_member( "technique_cooldowns" ) );
+    avatar round_tripped;
+    round_tripped.deserialize( upgraded_data );
+    CHECK( round_tripped.technique_cooldown_remaining( test_manual_cooldown_strike ) == expected );
 }

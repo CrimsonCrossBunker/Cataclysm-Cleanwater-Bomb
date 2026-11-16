@@ -2245,6 +2245,9 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
             get_map().get_abs( tripoint_bub_ms( 61, 60, 0 ) ).raw() );
     sol::protected_function spawn = fixture.services["spawns"]["monster"];
     const cata::lua_platform::script_game_id type( "monster", "mon_test_zombie" );
+    monster expected( mon_test_zombie );
+    rng_set_engine_seed( 58163 );
+    expected.try_upgrade( true );
     rng_set_engine_seed( 58163 );
     sol::protected_function_result call = mode == 0 ? spawn( type, position, 0 ) :
                                           spawn( type, position, 0, mode == 1 );
@@ -2265,8 +2268,8 @@ TEST_CASE( "lua_platform_spawn_upgrade_option_preserves_default_and_explicit_dis
         CHECK( actual->type->id == mon_test_zombie );
         CHECK( actual->get_upgrade_time() == -1 );
     } else {
-        CHECK( ( actual->type->id != mon_test_zombie || actual->get_upgrade_time() >= 0 ||
-                 !actual->can_upgrade() ) );
+        CHECK( actual->type->id == expected.type->id );
+        CHECK( actual->get_upgrade_time() == expected.get_upgrade_time() );
     }
     g->clear_zombies();
 }

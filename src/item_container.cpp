@@ -985,7 +985,12 @@ bool item::has_unrestricted_pockets() const
 void item::remove_internal( const std::function<bool( item & )> &filter,
                             int &count, std::list<item> &res )
 {
+    const size_t mod_count = contents.all_items_top( pocket_type::MOD ).size();
     contents.remove_internal( filter, count, res );
+    if( contents.all_items_top( pocket_type::MOD ).size() != mod_count ) {
+        update_modified_pockets();
+        on_contents_changed();
+    }
 }
 
 std::list<const item *> item::all_items_top() const

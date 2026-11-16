@@ -7169,6 +7169,7 @@ static bool is_allowed_water_source( const ter_t &t )
         itype_water, itype_water_clean
     };
     return !t.liquid_source_item_id.is_null() &&
+           t.liquid_source_count == std::make_pair( 0, 0 ) &&
            allowed.count( t.liquid_source_item_id ) > 0;
 }
 

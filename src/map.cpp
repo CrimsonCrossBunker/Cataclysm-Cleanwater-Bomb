@@ -1770,10 +1770,19 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         const float vehicle_grounded_wheel_area = static_cast<int>( vehicle_wheel_traction( veh, true ) );
         const float weight_to_damage_factor = 0.05f; // Nobody likes a magic number.
         const float vehicle_mass_kg = to_kilogram( veh.total_mass( *this ) );
+        const bool can_bump_on_rails = !veh.is_flying_in_air() && !veh.can_use_rails( *this );
+        bool bumped_on_rails = false;
 
         for( const int vp_wheel_idx : wheel_indices ) {
             vehicle_part &vp_wheel = veh.part( vp_wheel_idx );
             const tripoint_bub_ms wheel_p = veh.bub_part_pos( *this, vp_wheel );
+            const ter_t &wheel_terrain = ter( wheel_p ).obj();
+            if( can_bump_on_rails && wheel_terrain.has_flag( ter_furn_flag::TFLAG_RAIL ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NOCOLLIDE ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) &&
+                !wheel_terrain.has_flag( ter_furn_flag::TFLAG_DEEP_WATER ) ) {
+                bumped_on_rails = true;
+            }
             if( one_in( 2 ) && displace_water( wheel_p ) ) {
                 sounds::sound( wheel_p, 4, sounds::sound_t::movement, _( "splash!" ), false,
                                "environment", "splash" );
@@ -1794,6 +1803,10 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
                 smash_items( wheel_p, wheel_damage, string_format( _( "weight of %1$s" ), veh.disp_name() ),
                              &vp_wheel, &veh );
             }
+        }
+        if( bumped_on_rails ) {
+            sounds::sound( veh.pos_bub( *this ), std::clamp( std::abs( veh.velocity ) / 400, 2, 12 ),
+                           sounds::sound_t::movement, _( "thump-thump!" ) );
         }
     }
     if( veh.is_towing() ) {

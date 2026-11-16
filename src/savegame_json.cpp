@@ -926,6 +926,15 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
     } else {
         data.read( "martial_arts_data", martial_arts_data );
     }
+    if( data.has_member( "technique_cooldowns" ) ) {
+        std::map<matec_id, time_point> legacy_cooldowns;
+        data.read( "technique_cooldowns", legacy_cooldowns );
+        for( const auto &entry : legacy_cooldowns ) {
+            if( entry.first.is_valid() && entry.second > calendar::turn ) {
+                martial_arts_data->start_technique_cooldown( entry.first, entry.second - calendar::turn );
+            }
+        }
+    }
 
     JsonObject vits = data.get_object( "vitamin_levels" );
     vits.allow_omitted_members();

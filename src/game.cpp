@@ -791,6 +791,7 @@ void game::reset_game_state()
     npc_lifetimes_ptr->reset();
     new_game = true;
     north_america_world = false;
+    save_loading_failed = false;
     dimension_checkpoint_pending = false;
 
     next_npc_id = character_id( 1 );
@@ -818,6 +819,7 @@ void game::reset_game_state()
     sounds::reset_sounds();
     clear_zombies();
     critter_tracker->clear_npcs();
+    overmap_buffer.clear_npcs();
     faction_manager_ptr->clear();
     power_networks_ptr->clear();
     mission::clear_all();
@@ -865,8 +867,6 @@ bool game::reload_active_save( const save_t &save_file )
 
     zone_manager::get_manager().clear();
 
-    // These are world-level and not reset by reset_game_state(); the full
-    // main-menu reload clears them via teardown, so do it here too.
     MAPBUFFER.clear();
     overmap_buffer.clear();
 
@@ -938,9 +938,6 @@ bool game::start_game()
     get_safemode().load_global();
 
     init_autosave();
-    //Needs to be explicitly reset so a previously loaded world state doesn't leak into the new game
-    dimension_prefix = dimension_world_default;
-    overmap_buffer.init_region_layout();
 
     background_pane background;
     static_popup popup;
@@ -948,7 +945,6 @@ bool game::start_game()
     ui_manager::redraw();
     refresh_display();
 
-    load_master();
     if( north_america::offer_starting_city() ) {
         north_america_world = true;
     }
@@ -976,6 +972,7 @@ bool game::start_game()
 #endif
     std::unordered_map<std::string, std::string> associated_parameters;
     const bool select_starting_city = get_option<bool>( "SELECT_STARTING_CITY" );
+    const overmap_global_state starting_overmap_state = overmap_buffer.global_state;
     do {
 #ifdef MP_ENABLED
         if( !omtstart.is_invalid() ) {
@@ -1002,6 +999,7 @@ bool game::start_game()
 
             MAPBUFFER.clear();
             overmap_buffer.clear();
+            overmap_buffer.global_state = starting_overmap_state;
             overmap_buffer.init_region_layout();
 
             if( !query_yn(
@@ -11230,7 +11228,17 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     if( !save_maps() || !save_dimension_data() ) {
         return false;
     }
-    player.save_map_memory();
+    bool saved_memory = false;
+    try {
+        saved_memory = player.save_map_memory();
+    } catch( const std::exception &err ) {
+        debugmsg( "Failed to save map memory before dimension travel: %s", err.what() );
+    }
+    if( !saved_memory ) {
+        save_loading_failed = true;
+        uquit = QUIT_NOSAVED;
+        return false;
+    }
     for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
         here.clear_vehicle_list( z );
     }
@@ -11242,7 +11250,11 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
     // Clear the previous dimension before loading the destination's global state.
     overmap_buffer.clear();
     // Load in data specific to the dimension (like weather)
-    load_dimension_data();
+    load_dimension_data( true );
+    if( save_loading_failed ) {
+        uquit = QUIT_NOSAVED;
+        return false;
+    }
 
     // Clear the immediate game area around the player
     MAPBUFFER.clear();

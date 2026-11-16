@@ -1376,7 +1376,8 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
         weather_manager_ref.windspeed_override = saved_windspeed_override;
         weather_manager_ref.nextweather = saved_nextweather;
         weather_manager_ref.temperature_cache = saved_temperature_cache;
-        if constexpr( weather_precise_copyable ) {
+        if constexpr( std::is_copy_constructible_v<weather_precise_type> &&
+                      std::is_copy_assignable_v<weather_precise_type> ) {
             *weather_manager_ref.weather_precise = *saved_weather_precise;
         }
     } );

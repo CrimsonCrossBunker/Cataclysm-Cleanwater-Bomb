@@ -109,4 +109,3 @@ endif ()
 
 configure_file(test/lit.site.cfg.in test/lit.site.cfg @ONLY)
 configure_file(test/.clang-tidy test/.clang-tidy COPYONLY)
-

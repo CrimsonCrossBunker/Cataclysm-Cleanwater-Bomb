@@ -22,6 +22,8 @@
 #include <lua_platform_handle.h>
 #include <lua_platform_runtime.h>
 #include <map.h>
+#include <map_helpers.h>
+#include "player_helpers.h"
 #include <memory_fast.h>
 #include <monster.h>
 #include <monster_uid.h>
@@ -521,6 +523,7 @@ TEST_CASE( "lua_platform_persistent_task_vehicle_actor_reacquires_persistent_ide
            "[lua][platform][runtime][tasks][handles][vehicle]" )
 {
     clear_map_without_vision();
+    clear_avatar();
     cata::lua_platform::clear_active_runtimes();
 
     sol::state lua;

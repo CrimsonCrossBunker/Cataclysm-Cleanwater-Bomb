@@ -90,6 +90,7 @@
 #include "item_transformation.h"
 #include "iteminfo_query.h"
 #include "itype.h"
+#include "iuse_actor.h"
 #include "json.h"
 #include "json_loader.h"
 #include "line.h"
@@ -4508,7 +4509,8 @@ std::optional<int> iuse::hotplate_atomic( Character *p, item *it, const tripoint
     if( p->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( it->typeId() == itype_atomic_coffeepot || it->typeId() == itype_afs_atompot || it->typeId() == itype_fcl_atomic_coffeemaker || it->typeId() == itype_fcl_atompot ) {
+    if( it->typeId() == itype_atomic_coffeepot || it->typeId() == itype_afs_atompot ||
+        it->typeId() == itype_fcl_atomic_coffeemaker || it->typeId() == itype_fcl_atompot ) {
         heat_solid_items( p, it, p->pos_bub() );
     }
 
@@ -4828,6 +4830,67 @@ std::optional<int> iuse::gunmod_attach( Character *p, item *it, const tripoint_b
     } while( true );
 }
 
+ret_val<void> iuse::can_attach_toolmod( const item_location &mod, const item *tool )
+{
+    if( !mod || !mod->is_toolmod() ) {
+        return ret_val<void>::make_failure( _( "That tool modification is no longer available." ) );
+    }
+
+    bool installed = false;
+    if( mod.has_parent() ) {
+        const item_pocket *pocket = mod.parent_item()->contained_where( *mod );
+        installed = pocket && pocket->is_type( pocket_type::MOD );
+    }
+    if( !installed ) {
+        const auto find_mod = [&mod]( item * candidate, item * ) {
+            for( const item *attached : candidate->all_items_top( pocket_type::MOD ) ) {
+                if( attached == mod.get_item() ) {
+                    return VisitResponse::ABORT;
+                }
+            }
+            return VisitResponse::NEXT;
+        };
+        if( Character *carrier = mod.carrier() ) {
+            installed = carrier->visit_items( find_mod ) == VisitResponse::ABORT;
+        } else if( const vehicle_cursor *cursor = mod.veh_cursor() ) {
+            installed = cursor->visit_items( find_mod ) == VisitResponse::ABORT;
+        } else if( mod.where_recursive() == item_location::type::map ) {
+            installed = map_cursor( mod.pos_abs() ).visit_items( find_mod ) == VisitResponse::ABORT;
+        }
+    }
+    if( installed ) {
+        return ret_val<void>::make_failure(
+                   _( "You must remove this modification from its tool before installing it elsewhere." ) );
+    }
+    if( !tool ) {
+        return ret_val<void>::make_success();
+    }
+    if( tool == mod.get_item() || !tool->is_tool() ) {
+        return ret_val<void>::make_failure( _( "You can only install this modification on a tool." ) );
+    }
+    if( ( mod->has_flag( flag_USE_UPS ) || mod->has_flag( flag_USES_BIONIC_POWER ) ) &&
+        ( tool->has_flag( flag_IS_UPS ) || tool->has_flag( flag_USE_UPS ) ||
+          tool->has_flag( flag_USES_BIONIC_POWER ) ) ) {
+        return ret_val<void>::make_failure( _( "This tool already uses an external power supply." ) );
+    }
+    if( !tool->toolmods().empty() ) {
+        return ret_val<void>::make_failure( _( "This tool is already modified." ) );
+    }
+    if( tool->magazine_current() ) {
+        return ret_val<void>::make_failure(
+                   _( "Remove the battery before installing a tool modification." ) );
+    }
+    if( tool->has_flag( flag_INTEGRATED ) ) {
+        return ret_val<void>::make_failure( _( "You can't modify an integrated tool." ) );
+    }
+    for( const ammotype &ammo : mod->type->mod->acceptable_ammo ) {
+        if( tool->type->tool->ammo_id.count( ammo ) ) {
+            return ret_val<void>::make_success();
+        }
+    }
+    return ret_val<void>::make_failure( _( "This modification is incompatible with the tool." ) );
+}
+
 std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_bub_ms & )
 {
     if( !it || !it->is_toolmod() ) {
@@ -4839,29 +4902,15 @@ std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_
         return std::nullopt;
     }
 
-    auto filter = [&it]( const item & e ) {
-        // don't allow ups or bionic battery mods on a UPS or UPS-powered/bionic-powered tools
-        if( ( it->has_flag( flag_USE_UPS ) || it->has_flag( flag_USES_BIONIC_POWER ) ) &&
-            ( e.has_flag( flag_IS_UPS ) || e.has_flag( flag_USE_UPS ) ||
-              e.has_flag( flag_USES_BIONIC_POWER ) ) ) {
-            return false;
-        }
-
-        // can't mod non-tool, or a tool with existing mods, or a battery currently installed
-        if( !e.is_tool() || !e.toolmods().empty() || e.magazine_current() ) {
-            return false;
-        }
-
-        // can't mod integrated tools
-        if( e.has_flag( flag_INTEGRATED ) ) {
-            return false;
-        }
-
-        // can only attach to unmodified tools that use compatible ammo
-        return std::any_of( it->type->mod->acceptable_ammo.begin(),
-        it->type->mod->acceptable_ammo.end(), [&]( const ammotype & at ) {
-            return e.type->tool->ammo_id.count( at );
-        } );
+    item_location mod( *p, it );
+    const ret_val<void> source_check = can_attach_toolmod( mod );
+    if( !source_check.success() ) {
+        p->add_msg_if_player( m_info, "%s", source_check.str() );
+        return std::nullopt;
+    }
+    mod = form_loc_recursive( *p, *it );
+    auto filter = [&mod]( const item & candidate ) {
+        return can_attach_toolmod( mod, &candidate ).success();
     };
 
     item_location loc = g->inv_map_splice( filter, _( "Select tool to modify:" ), 1,
@@ -4879,7 +4928,7 @@ std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_
         }
     }
 
-    p->toolmod_add( std::move( loc ), item_location( *p, it ) );
+    p->toolmod_add( std::move( loc ), std::move( mod ) );
     return 0;
 }
 

@@ -3576,7 +3576,9 @@ bool WORLD::set_compression_enabled( bool enabled )
                     if( !save_zzip ) {
                         return false;
                     }
-                    save_zzip->add_file( save_file_name, savefile_contents );
+                    if( !save_zzip->add_file( save_file_name, savefile_contents ) ) {
+                        return false;
+                    }
                     files_to_clean.push_back( save );
                 }
             }

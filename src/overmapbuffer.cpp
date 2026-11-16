@@ -1731,6 +1731,20 @@ void overmapbuffer::populate_followers_vec( std::vector<npc *> &followers,
     }
 }
 
+void overmapbuffer::clear_npcs()
+{
+    for( auto &entry : overmaps ) {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+        for( const auto &survivor : entry.second->npcs ) {
+            cata::lua_platform::retire_npc_handle_identity( *survivor );
+        }
+#endif
+        entry.second->npcs.clear();
+    }
+    platform_npc_index_.clear();
+    platform_authoritative_missing_npcs_.clear();
+}
+
 void overmapbuffer::foreach_npc( const std::function<void( npc & )> &callback )
 {
     for( auto &it : overmaps ) {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import nturl2path
 import os
 import shutil
 import subprocess
@@ -253,6 +254,29 @@ class ModSdkTest(unittest.TestCase):
                     with self.assertRaisesRegex(
                             ValueError, "LuaLS report for"):
                         mod_sdk.check_mod(mod, "luals")
+
+    def test_encoded_windows_drive_preserves_path_escaping(self):
+        with tempfile.TemporaryDirectory() as directory:
+            mod = self.make_sdk(Path(directory), "example")
+
+            def diagnose(command, **kwargs):
+                log = next(part.split("=", 1)[1] for part in command
+                           if part.startswith("--logpath="))
+                uri = "file:///c%3A/path%20with%20spaces/percent%2520.lua"
+                report = {uri: [{
+                    "range": {"start": {"line": 1, "character": 2}},
+                    "code": "undefined-global", "message": "test"}]}
+                (Path(log) / "check.json").write_text(
+                    json.dumps(report), encoding="utf-8")
+                return subprocess.CompletedProcess(command, 0, "", "")
+
+            with (
+                patch.object(mod_sdk.subprocess, "run", side_effect=diagnose),
+                patch.object(mod_sdk, "url2pathname", nturl2path.url2pathname),
+            ):
+                self.assertEqual(mod_sdk.check_mod(mod, "luals"), [
+                    "C:\\path with spaces\\percent%20.lua:2:3: "
+                    "undefined-global: test"])
 
     def test_checker_crash_is_not_a_clean_report(self):
         with tempfile.TemporaryDirectory() as directory:

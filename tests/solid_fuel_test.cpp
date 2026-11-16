@@ -105,10 +105,10 @@ TEST_CASE( "steam_engines_do_not_collect_unserved_fuel_demand", "[vehicle][fuel]
     const int battery = veh->install_part( here, point_rel_ms::zero, vpart_small_storage_battery );
     REQUIRE( battery >= 0 );
     REQUIRE( veh->part( battery ).ammo_set( itype_battery, 1000 ) > 0 );
-    const int engine = veh->install_part( here, point_rel_ms::zero, engine_type );
+    int engine = veh->install_part( here, point_rel_ms::zero, engine_type );
     REQUIRE( engine >= 0 );
     REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
-    const int bunker = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_fuel_bunker );
+    int bunker = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_fuel_bunker );
     REQUIRE( bunker >= 0 );
     veh->part( engine ).enabled = true;
     veh->part( engine ).fuel_set( itype_charcoal );
@@ -138,9 +138,23 @@ TEST_CASE( "steam_engines_do_not_collect_unserved_fuel_demand", "[vehicle][fuel]
         JsonValue parsed = json_loader::from_string( text );
         JsonObject obj = parsed;
         veh->deserialize( obj );
+        veh->refresh();
+        engine = veh->part_with_feature( point_rel_ms::zero, "ENGINE", true );
+        bunker = -1;
+        for( const int fuel_index : veh->fuel_containers ) {
+            if( veh->part( fuel_index ).mount == point_rel_ms( 1, 0 ) ) {
+                REQUIRE( bunker == -1 );
+                bunker = fuel_index;
+            }
+        }
+        REQUIRE( engine >= 0 );
+        REQUIRE( bunker >= 0 );
     }
 
     veh->part( bunker ).ammo_set( itype_charcoal );
+    CAPTURE( engine_type, engine, bunker, veh->part( engine ).enabled,
+             veh->part( engine ).damage_percent(), veh->part( engine ).fuel_current(),
+             veh->fuel_left( here, itype_charcoal ) );
     REQUIRE( veh->start_engine( here, veh->part( engine ) ) );
     veh->consume_fuel( here, 1000, false );
     const int consumed = full - veh->fuel_left( here, itype_charcoal );

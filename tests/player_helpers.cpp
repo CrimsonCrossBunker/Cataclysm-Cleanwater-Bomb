@@ -122,6 +122,11 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy.clear_morale();
     dummy.activity.set_to_null();
     dummy.backlog.clear();
+    dummy.clear_destination();
+    dummy.mounted_creature.reset();
+    dummy.mounted_creature_id = 0;
+    dummy.in_vehicle = false;
+    dummy.controlling_vehicle = false;
     // Reset age/height before stored kcal since get_healthy_kcal()
     // depends on height.
     dummy.reset_chargen_attributes();
@@ -235,6 +240,7 @@ void clear_avatar()
     avatar.clear_identified();
     avatar.clear_nutrition();
     avatar.reset_all_missions();
+    avatar.zone_sort_viewport = {};
     // Records outlive the items they claim.
     clear_reservations();
 }

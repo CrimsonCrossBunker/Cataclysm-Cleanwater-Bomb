@@ -38,7 +38,9 @@ empty_export_loads = (empty_export_loads or 0) + 1
 
     cata::lua_platform::mod_definition metadata;
     std::string error;
-    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    const bool metadata_loaded = cata::lua_platform::read_mod_definition( files.root, metadata, error );
+    INFO( error );
+    REQUIRE( metadata_loaded );
     CHECK( error.empty() );
     CHECK( metadata.id == "platform-loader-policy-test" );
 

@@ -33,7 +33,7 @@ static std::vector<std::optional<player_id>> excluded_owners;
 
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages( size_t count )
 {
-    count = std::min( count, messages.size() );
+    count = count == 0 ? messages.size() : std::min( count, messages.size() );
     return { messages.end() - static_cast<std::ptrdiff_t>( count ), messages.end() };
 }
 std::vector<std::pair<std::string, std::string>> Messages::recent_messages_with_formatting(

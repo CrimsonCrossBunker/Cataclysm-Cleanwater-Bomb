@@ -7358,3 +7358,22 @@ TEST_CASE( "npc_warmth_indoor_hold_timeout", "[npc][needs][warmth]" )
         CHECK( hold_count > 0 );
     }
 }
+
+TEST_CASE( "game_reset_discards_cached_npcs_before_factions", "[npc][save_integrity]" )
+{
+    clear_map();
+    npc &survivor = spawn_npc( { 50, 50 }, "test_talker" );
+    REQUIRE( survivor.get_faction() != nullptr );
+    REQUIRE_FALSE( overmap_buffer.get_npcs_near_player( HALF_MAPSIZE ).empty() );
+    const tripoint_abs_omt position = survivor.pos_abs_omt();
+    const auto summary = overmap_buffer.get_omt_summary( position );
+    REQUIRE( summary != nullptr );
+
+    g->reset_game_state();
+
+    CHECK( g->all_npcs().items.empty() );
+    CHECK( overmap_buffer.get_npcs_near_player( HALF_MAPSIZE ).empty() );
+    CHECK( overmap_buffer.get_omt_summary( position ) == summary );
+    g->reload_npcs();
+    CHECK( g->all_npcs().items.empty() );
+}

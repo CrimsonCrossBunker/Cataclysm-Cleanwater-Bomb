@@ -357,11 +357,16 @@ ofstream_wrapper::ofstream_wrapper( const std::filesystem::path &path,
 
 ofstream_wrapper::~ofstream_wrapper()
 {
+    if( !file_stream.is_open() ) {
+        return;
+    }
     try {
-        close();
+        file_stream.close();
     } catch( ... ) {
         // ignored in destructor
     }
+    std::error_code error;
+    std::filesystem::remove( temp_path, error );
 }
 
 std::istream &safe_getline( std::istream &ins, std::string &str )
@@ -434,12 +439,13 @@ std::string read_compressed_file_to_string( std::istream &fin )
 
     } while( ret == Z_OK );
 
+    const std::string error_message = zs.msg ? zs.msg : "incomplete compressed data";
     inflateEnd( &zs );
 
     if( ret != Z_STREAM_END ) { // an error occurred that was not EOF
         std::ostringstream oss;
         oss << "Exception during zlib decompression: (" << ret << ") "
-            << zs.msg;
+            << error_message;
         throw std::runtime_error( oss.str() );
     }
     return outstring;
@@ -481,12 +487,16 @@ std::unique_ptr<std::istream> read_maybe_compressed_file( const std::string &pat
 static bool is_gzipped( std::ifstream &fin )
 {
     // (byte1 == 0x1f) && (byte2 == 0x8b)
-    std::array<char, 2> header;
+    std::array<char, 2> header{};
     fin.read( header.data(), 2 );
+    const bool gzipped = fin.gcount() == 2 && header[0] == '\x1f' && header[1] == '\x8b';
     fin.clear();
     fin.seekg( 0, std::ios::beg ); // reset read position
+    if( !fin ) {
+        throw std::runtime_error( "seeking file failed" );
+    }
 
-    return ( header[0] == '\x1f' ) && ( header[1] == '\x8b' );
+    return gzipped;
 }
 
 std::unique_ptr<std::istream> read_maybe_compressed_file( const std::filesystem::path &path )
@@ -538,11 +548,20 @@ std::optional<std::string> read_whole_file( const std::filesystem::path &path )
             outstring = read_compressed_file_to_string( fin );
         } else {
             fin.seekg( 0, std::ios_base::end );
-            std::streamoff size = fin.tellg();
+            const std::streamoff size = fin.tellg();
+            if( size < 0 ) {
+                throw std::runtime_error( "determining file size failed" );
+            }
             fin.seekg( 0 );
+            if( !fin ) {
+                throw std::runtime_error( "seeking file failed" );
+            }
 
             outstring.resize( size );
             fin.read( outstring.data(), size );
+            if( !fin || fin.gcount() != size ) {
+                throw std::runtime_error( "reading file failed" );
+            }
         }
         if( fin.bad() ) {
             throw std::runtime_error( "reading file failed" );
@@ -608,10 +627,10 @@ bool read_from_zzip_optional( const zzip &z,
                               const std::filesystem::path &file,
                               const std::function<void( std::string_view )> &reader )
 {
-    if( !z.has_file( file ) ) {
-        return false;
-    }
     try {
+        if( !z.has_file( file ) ) {
+            return false;
+        }
         std::vector<std::byte> file_data = z.get_file( file );
         std::string_view sv{ reinterpret_cast<const char *>( file_data.data() ), file_data.size() };
         reader( sv );
@@ -627,10 +646,10 @@ bool read_from_zzip_optional( const std::shared_ptr<zzip_stack> &z,
                               const std::filesystem::path &file,
                               const std::function<void( std::string_view )> &reader )
 {
-    if( !z || !z->has_file( file ) ) {
-        return false;
-    }
     try {
+        if( !z || !z->has_file( file ) ) {
+            return false;
+        }
         std::vector<std::byte> file_data = z->get_file( file );
         std::string_view sv{ reinterpret_cast<const char *>( file_data.data() ), file_data.size() };
         reader( sv );

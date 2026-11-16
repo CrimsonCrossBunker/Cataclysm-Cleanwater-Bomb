@@ -208,4 +208,3 @@ for _, profile in ipairs(profiles) do
     for _, category in ipairs(profile.categories or {}) do technique:weapon_category(category) end
     ccb.content.add(technique)
 end
-

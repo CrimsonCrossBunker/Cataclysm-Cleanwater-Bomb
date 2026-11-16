@@ -563,7 +563,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     [runtime]() {
         return runtime;
     },
-    []() {
+    [world_generation]() {
         return world_generation;
     }, []() {} );
     cata::lua_platform::install_npc_api(
@@ -571,7 +571,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     [runtime]() {
         return runtime;
     },
-    []() {
+    [world_generation]() {
         return world_generation;
     }, []() {}, []() {}, []() {} );
 
@@ -617,7 +617,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
     const auto current_runtime = [runtime]() {
         return runtime;
     };
-    const auto current_world = []() {
+    const auto current_world = [world_generation]() {
         return world_generation;
     };
     cata::lua_platform::install_game_handle_api(

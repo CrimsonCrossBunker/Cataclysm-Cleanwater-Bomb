@@ -2673,6 +2673,16 @@ bool game::do_regular_action( action_id &act, avatar &player_character,
             avatar_action::active_technique( player_character, here );
             break;
 
+        case ACTION_ACTIVE_TECHNIQUE:
+#ifdef MP_ENABLED
+            if( cata_mp::is_client_mode() ) {
+                add_msg( m_info, _( "Active techniques are not available to remote players yet." ) );
+                break;
+            }
+#endif
+            avatar_action::active_technique( player_character, here );
+            break;
+
         case ACTION_RELOAD_ITEM: {
 #ifdef MP_ENABLED
             const int pre_reload_moves = player_character.get_moves();

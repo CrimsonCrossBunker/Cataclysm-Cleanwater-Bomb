@@ -179,6 +179,7 @@ std::optional<int> talking_doll( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> tazer( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> teleport( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> toolmod_attach( Character *, item *, const tripoint_bub_ms & );
+ret_val<void> can_attach_toolmod( const item_location &mod, const item *tool = nullptr );
 std::optional<int> towel( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> unfold_generic( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> vibe( Character *, item *, const tripoint_bub_ms & );

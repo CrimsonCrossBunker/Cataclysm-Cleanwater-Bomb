@@ -87,4 +87,3 @@ TEST_CASE( "automatic_food_distribution_uses_an_accessible_camp", "[camp][npc]" 
         CHECK( trader.get_faction()->food_supply().kcal() == 0 );
     }
 }
-

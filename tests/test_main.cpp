@@ -43,7 +43,9 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "json.h"
+#include "lua_platform_loader.h"
 #include "map.h"
+#include "mapbuffer.h"
 #include "messages.h"
 #include "mission.h"
 #include "options.h"
@@ -178,6 +180,7 @@ static void init_global_game_state( const std::vector<mod_id> &mods,
     get_avatar().move_to( tripoint_abs_ms::zero );
 
     get_weather().update_weather();
+    cata::lua_platform::on_world_ready( true );
 }
 
 // Split s on separator sep, returning parts as a pair. Returns empty string as
@@ -216,6 +219,7 @@ namespace
 
 struct CataListener : Catch::TestEventListenerBase {
     using TestEventListenerBase::TestEventListenerBase;
+    bool platform_catalog_dirty = false;
 
     void testRunStarting( Catch::TestRunInfo const & ) override {
         DebugLog( D_INFO, DC_ALL ) << "Running Catch2 session:" << std::endl;
@@ -230,6 +234,30 @@ struct CataListener : Catch::TestEventListenerBase {
     }
 
     void testCaseStarting( Catch::TestCaseInfo const &testInfo ) override {
+        const bool platform_test = std::find( testInfo.tags.begin(), testInfo.tags.end(),
+                                              "platform" ) != testInfo.tags.end();
+        if( game_initialized && platform_catalog_dirty && !platform_test ) {
+            cata::lua_platform::shutdown();
+            g->reset_game_state();
+            get_avatar() = avatar();
+            get_map() = map();
+            MAPBUFFER.clear();
+            overmap_buffer.clear();
+            g->load_core_data();
+            g->load_world_modfiles();
+            get_avatar().create( character_type::NOW );
+            get_avatar().setID( g->assign_npc_id(), false );
+            overmap_buffer.init_region_layout();
+            overmap_special_batch empty_specials( point_abs_om{} );
+            overmap_buffer.create_custom_overmap( point_abs_om{}, empty_specials );
+            get_map().load( tripoint_abs_sm::zero, false );
+            get_avatar().setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+            cata::lua_platform::on_world_ready( true );
+            platform_catalog_dirty = false;
+        }
+        if( platform_test ) {
+            platform_catalog_dirty = true;
+        }
         if( !game_initialized && !fail_to_init_game_state ) {
             bool is_nogame = std::find( testInfo.tags.begin(), testInfo.tags.end(),
                                         "nogame" ) != testInfo.tags.end();

@@ -3,10 +3,14 @@
 #include "game.h" // IWYU pragma: associated
 
 #include <algorithm>
+#include <exception>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
@@ -18,6 +22,7 @@
 #include "basecamp.h"
 #include "cata_io.h"
 #include "cata_path.h"
+#include "cata_scope_helpers.h"
 #include "city.h"
 #include "colony.h"
 #include "coordinates.h"
@@ -90,6 +95,14 @@ const int savegame_version = 39;
  * support for backwards compatibility as well.
  */
 int savegame_loading_version = savegame_version;
+
+static void require_save_array( const JsonObject &data, std::string_view name )
+{
+    const JsonValue value = data.get_member( name );
+    if( !value.test_array() ) {
+        value.throw_error( "Expected an array" );
+    }
+}
 
 /*
  * Save to opened character.sav
@@ -210,7 +223,11 @@ static size_t chkversion( std::istream &fin )
             savegame_loading_version = savedver;
         }
     }
-    return fin.tellg();
+    const std::streampos position = fin.tellg();
+    if( position == std::streampos( -1 ) ) {
+        throw std::runtime_error( "Could not determine save JSON offset" );
+    }
+    return static_cast<size_t>( position );
 }
 
 /*
@@ -226,8 +243,8 @@ void game::unserialize( std::istream &fin, const cata_path &path )
             data.read( "savegame_loading_version", savegame_loading_version );
         }
         unserialize_impl( data );
-    } catch( const JsonError &jsonerr ) {
-        debugmsg( "Bad save json\n%s", jsonerr.c_str() );
+    } catch( const std::exception & ) {
+        save_loading_failed = true;
         throw;
     }
 }
@@ -238,14 +255,42 @@ void game::unserialize( std::string fin )
         JsonObject data = json_loader::from_string( std::move( fin ) );
         savegame_loading_version = data.get_int( "savegame_loading_version" );
         unserialize_impl( data );
-    } catch( const JsonError &jsonerr ) {
-        debugmsg( "Bad save json\n%s", jsonerr.c_str() );
+    } catch( const std::exception & ) {
+        save_loading_failed = true;
         throw;
     }
 }
 
 void game::unserialize_impl( const JsonObject &data )
 {
+    const JsonObject player = data.get_member( "player" ).get_object();
+    player.get_string( "name" );
+    for( const std::string_view name : {
+             "str_max", "dex_max", "int_max", "per_max"
+         } ) {
+        player.get_int( name );
+    }
+    std::optional<tripoint_bub_ms> legacy_position;
+    if( player.has_member( "location" ) ) {
+        tripoint_abs_ms location;
+        player.get_member( "location" ).read( location, true );
+    } else {
+        legacy_position.emplace( player.get_int( "posx" ), player.get_int( "posy" ),
+                                 player.get_int( "posz" ) );
+    }
+    require_save_array( player, "inv" );
+    const JsonValue worn = player.get_member( "worn" );
+    if( !worn.test_array() ) {
+        const JsonObject outfit = worn.get_object();
+        outfit.allow_omitted_members();
+        require_save_array( outfit, "worn" );
+    }
+    for( const std::string_view name : {
+             "turn", "calendar_start", "run_mode", "levx", "levy",
+             "levz", "om_x", "om_y"
+         } ) {
+        data.get_int( name );
+    }
     int tmpturn = 0;
     int tmpcalstart = 0;
     int tmprun = 0;
@@ -258,14 +303,16 @@ void game::unserialize_impl( const JsonObject &data )
     calendar::initial_season = static_cast<season_type>( data.get_int( "initial_season",
                                static_cast<int>( SPRING ) ) );
 
-    dimension_id loaded_dimension_prefix;
-    if( data.read( "dimension_prefix", loaded_dimension_prefix ) ) {
-        if( !loaded_dimension_prefix.is_valid() ) {
-            debugmsg( "invalid dimension loaded, using default dimension instead" );
-            loaded_dimension_prefix = dimension_world_default;
-        }
-        dimension_prefix = loaded_dimension_prefix;
-        load_dimension_data();
+    dimension_id loaded_dimension_prefix = dimension_world_default;
+    data.read( "dimension_prefix", loaded_dimension_prefix );
+    if( !loaded_dimension_prefix.is_valid() ) {
+        debugmsg( "invalid dimension loaded, using default dimension instead" );
+        loaded_dimension_prefix = dimension_world_default;
+    }
+    dimension_prefix = loaded_dimension_prefix;
+    load_dimension_data();
+    if( save_loading_failed ) {
+        throw std::runtime_error( "Failed to load the character's dimension data" );
     }
 
     data.read( "auto_travel_mode", auto_travel_mode );
@@ -309,6 +356,9 @@ void game::unserialize_impl( const JsonObject &data )
     data.read( "turnssincelastmon", turnssincelastmon );
     data.read( "bVMonsterLookFire", bVMonsterLookFire );
 
+    if( legacy_position ) {
+        u.set_pos_abs_only( get_map().get_abs( *legacy_position ) );
+    }
     // Older saves kept this character's count in the game root. Migrate it
     // before native loading/cache reconstruction, which can query that count.
     const JsonObject player_data = data.get_object( "player" );
@@ -1694,22 +1744,41 @@ void mission::unserialize_all( const JsonArray &ja )
 void game::unserialize_master( const cata_path &file_name, std::istream &fin )
 {
     savegame_loading_version = 0;
-    size_t json_offset = chkversion( fin );
     try {
+        const size_t json_offset = chkversion( fin );
         JsonValue jv = json_loader::from_path_at_offset( file_name, json_offset );
         unserialize_master( jv );
-    } catch( const JsonError &e ) {
-        debugmsg( "error loading %s: %s", SAVE_MASTER, e.c_str() );
+    } catch( const std::exception & ) {
+        save_loading_failed = true;
+        throw;
     }
 }
 
 void game::unserialize_master( const JsonValue &jv )
 {
+    JsonObject game_json = jv;
+    game_json.get_int( "next_mission_id" );
+    game_json.get_int( "next_npc_id" );
+    game_json.get_member( "seed" ).get_uint();
+    for( const std::string_view name : {
+             "active_missions", "factions"
+         } ) {
+        require_save_array( game_json, name );
+    }
+    if( game_json.has_member( "timed_events" ) ) {
+        require_save_array( game_json, "timed_events" );
+    }
+    for( const std::string_view name : {
+             "next_item_uid", "next_monster_uid", "next_vehicle_uid"
+         } ) {
+        if( game_json.has_member( name ) ) {
+            game_json.get_member( name ).get_int64();
+        }
+    }
     // Reset state that has no clear-on-load hook of its own; otherwise a
     // save without the field inherits the previous game's queue.
     get_item_wakeups().clear();
     north_america_world = false;
-    JsonObject game_json = jv;
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
         if( name == "next_mission_id" ) {
@@ -1748,22 +1817,60 @@ void game::unserialize_master( const JsonValue &jv )
     }
 }
 
+bool game::unserialize_legacy_dimension_data( const cata_path &path, std::istream &fin )
+{
+    restore_on_out_of_scope restore_version( savegame_loading_version );
+    savegame_loading_version = 0;
+    const size_t json_offset = chkversion( fin );
+    const JsonValue data = json_loader::from_path_at_offset( path, json_offset );
+    const JsonObject master = data.get_object();
+    master.allow_omitted_members();
+    if( !master.has_member( "weather" ) ||
+        ( !master.has_member( "overmapbuffer" ) && !master.has_member( "placed_unique_specials" ) ) ) {
+        return false;
+    }
+    if( master.has_member( "overmapbuffer" ) ) {
+        unserialize_dimension_data( data );
+    } else {
+        weather_manager::unserialize_all( master.get_object( "weather" ) );
+        overmap_buffer.global_state.clear();
+        overmap_buffer.deserialize_placed_unique_specials( master.get_member( "placed_unique_specials" ) );
+        power_networks().clear();
+    }
+    return true;
+}
+
 void game::unserialize_dimension_data( const cata_path &file_name, std::istream &fin )
 {
+    restore_on_out_of_scope restore_version( savegame_loading_version );
     savegame_loading_version = 0;
-    size_t json_offset = chkversion( fin );
     try {
+        const size_t json_offset = chkversion( fin );
         JsonValue jv = json_loader::from_path_at_offset( file_name, json_offset );
         unserialize_dimension_data( jv );
-    } catch( const JsonError &e ) {
-        debugmsg( "error loading %s: %s", SAVE_DIMENSION_DATA, e.c_str() );
+    } catch( const std::exception & ) {
+        save_loading_failed = true;
+        throw;
     }
 }
 
 void game::unserialize_dimension_data( const JsonValue &jv )
 {
-    power_networks().clear();
     JsonObject game_json = jv;
+    const JsonObject weather = game_json.get_member( "weather" ).get_object();
+    weather.allow_omitted_members();
+    weather.get_float( "temperature" );
+    const JsonObject overmap = game_json.get_member( "overmapbuffer" ).get_object();
+    overmap.allow_omitted_members();
+    require_save_array( overmap, "placed_unique_specials" );
+    overmap.get_int( "overmap_count" );
+    if( game_json.has_member( "power_networks" ) ) {
+        const JsonObject networks = game_json.get_member( "power_networks" ).get_object();
+        networks.allow_omitted_members();
+        networks.get_int( "next_id" );
+        require_save_array( networks, "networks" );
+    }
+    power_networks().clear();
     for( JsonMember jsin : game_json ) {
         std::string name = jsin.name();
         if( name == "weather" ) {
@@ -1827,8 +1934,7 @@ void weather_manager::unserialize_all( const JsonObject &w )
     w.read( "lightning", get_weather().lightning_active );
     w.read( "weather_id", get_weather().weather_id );
     w.read( "next_weather", get_weather().nextweather );
-    float read_temperature;
-    w.read( "temperature", read_temperature );
+    const float read_temperature = w.get_float( "temperature" );
     get_weather().temperature = units::from_fahrenheit( read_temperature );
     w.read( "winddirection", get_weather().winddirection );
     w.read( "windspeed", get_weather().windspeed );
@@ -1945,61 +2051,53 @@ void timed_event_manager::unserialize_all( const JsonArray &ja )
 void game::serialize_master( std::ostream &fout )
 {
     fout << "# version " << savegame_version << std::endl;
-    try {
-        JsonOut json( fout, true ); // pretty-print
-        json.start_object();
+    JsonOut json( fout, true ); // pretty-print
+    json.start_object();
 
-        json.member( "next_mission_id", next_mission_id );
-        json.member( "next_npc_id", next_npc_id );
-        json.member( "next_item_uid", next_item_uid );
-        json.member( "next_monster_uid", next_monster_uid );
-        json.member( "next_vehicle_uid", next_vehicle_uid );
-        json.member( "next_construction_uid", next_construction_uid );
+    json.member( "next_mission_id", next_mission_id );
+    json.member( "next_npc_id", next_npc_id );
+    json.member( "next_item_uid", next_item_uid );
+    json.member( "next_monster_uid", next_monster_uid );
+    json.member( "next_vehicle_uid", next_vehicle_uid );
+    json.member( "next_construction_uid", next_construction_uid );
 
-        json.member( "active_missions" );
-        mission::serialize_all( json );
+    json.member( "active_missions" );
+    mission::serialize_all( json );
 
-        json.member( "timed_events" );
-        timed_event_manager::serialize_all( json );
+    json.member( "timed_events" );
+    timed_event_manager::serialize_all( json );
 
-        json.member( "item_wakeups" );
-        get_item_wakeups().serialize( json );
+    json.member( "item_wakeups" );
+    get_item_wakeups().serialize( json );
 
-        json.member( "factions", *faction_manager_ptr );
-        json.member( "seed", seed );
-        if( north_america_world ) {
-            json.member( "north_america_world", north_america_world );
-        }
-        if( weather.climate_origin ) {
-            json.member( "climate_origin", *weather.climate_origin );
-        }
-
-        json.end_object();
-    } catch( const JsonError &e ) {
-        debugmsg( "error saving to %s: %s", SAVE_MASTER, e.c_str() );
+    json.member( "factions", *faction_manager_ptr );
+    json.member( "seed", seed );
+    if( north_america_world ) {
+        json.member( "north_america_world", north_america_world );
     }
+    if( weather.climate_origin ) {
+        json.member( "climate_origin", *weather.climate_origin );
+    }
+
+    json.end_object();
 }
 
 void game::serialize_dimension_data( std::ostream &fout )
 {
     fout << "# version " << savegame_version << std::endl;
-    try {
-        JsonOut json( fout, true ); // pretty-print
-        json.start_object();
+    JsonOut json( fout, true ); // pretty-print
+    json.start_object();
 
-        json.member( "overmapbuffer" );
-        overmap_buffer.global_state.serialize( json );
+    json.member( "overmapbuffer" );
+    overmap_buffer.global_state.serialize( json );
 
-        json.member( "weather" );
-        weather_manager::serialize_all( json );
+    json.member( "weather" );
+    weather_manager::serialize_all( json );
 
-        json.member( "power_networks" );
-        power_networks().serialize( json );
+    json.member( "power_networks" );
+    power_networks().serialize( json );
 
-        json.end_object();
-    } catch( const JsonError &e ) {
-        debugmsg( "error saving to %s: %s", SAVE_DIMENSION_DATA, e.c_str() );
-    }
+    json.end_object();
 }
 
 void faction_manager::serialize( JsonOut &jsout ) const
@@ -2039,7 +2137,7 @@ void cata::lua_platform::detail::erase_platform_var_migration(
     get_globals().migrations.erase( value.from_id );
 }
 
-std::vector < std::pair < std::string, std::string>>
+std::vector<std::pair<std::string, std::string>>
         cata::lua_platform::detail::var_migration_snapshot()
 {
     std::vector < std::pair < std::string, std::string>> result;

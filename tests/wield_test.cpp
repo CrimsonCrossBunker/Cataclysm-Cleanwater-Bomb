@@ -82,6 +82,8 @@ TEST_CASE( "wool_gloves_preserve_two_handed_wielding", "[wield]" )
     clear_avatar();
     avatar &guy = get_avatar();
     const item tool{ itype_hammer_sledge };
+    REQUIRE( itype_hammer_sledge.is_valid() );
+    REQUIRE( tool.is_two_handed( guy ) );
     // Wounded but usable hands must not become a missing arm just from gloves.
     for( const bodypart_id hand : {
              bodypart_id( "hand_l" ), bodypart_id( "hand_r" )

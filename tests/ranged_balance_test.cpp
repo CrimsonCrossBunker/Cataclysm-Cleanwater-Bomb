@@ -545,7 +545,7 @@ static void shoot_monster( const itype_id &gun_type, const std::vector<itype_id>
             break;
         }
         mon.die( &here, nullptr );
-    } while( damage.n() < 1000 ); // In fact, stable results can only be obtained when n reaches 10000
+    } while( damage.n() < 10000 );
     const double avg = damage.avg();
     CAPTURE( damage.n() );
     CAPTURE( gun_type );

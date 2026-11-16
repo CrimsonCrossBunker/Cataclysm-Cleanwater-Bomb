@@ -20,4 +20,3 @@ foreach (FILE_NAME ${FILE_LIST})
         message(STATUS "File \"$ENV{DESTDIR}${FILE_NAME}\" does not exist.")
     endif ()
 endforeach ()
-

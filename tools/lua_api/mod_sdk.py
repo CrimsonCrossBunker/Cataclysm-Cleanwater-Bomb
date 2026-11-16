@@ -259,8 +259,10 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
             if uri.startswith("file:"):
                 parsed = urlparse(uri)
                 host = parsed.netloc if parsed.netloc != "localhost" else ""
+                pathname = re.sub(r"^/([A-Za-z])%3[aA](?=/|$)",
+                                  r"/\1:", parsed.path)
                 path = url2pathname(
-                    ("//" + host if host else "") + parsed.path
+                    ("//" + host if host else "") + pathname
                 )
             for entry in sorted(entries, key=lambda e: (
                 e["range"]["start"]["line"],
