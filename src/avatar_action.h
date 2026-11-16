@@ -15,7 +15,6 @@ class item_location;
 class map;
 class monster;
 class turret_data;
-struct walk_move_choices;
 
 namespace avatar_action
 {

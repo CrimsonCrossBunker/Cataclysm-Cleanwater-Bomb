@@ -85,6 +85,7 @@
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_soil.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
@@ -244,6 +245,16 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
         const tripoint_abs_sm p_sm = { p_sm_base.xy(), gridz };
         set_abs_sub( p_sm );
 
+        const bool any_missing = !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::zero, p_sm.z() } ) )
+                                 ||
+                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::east, p_sm.z() } ) ) ||
+                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::south_east, p_sm.z() } ) ) ||
+                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::south, p_sm.z() } ) );
+
+        if( save_results && !any_missing ) {
+            continue;
+        }
+
         const oter_id &terrain_type = overmap_buffer.ter( tripoint_abs_omt( p.xy(), gridz ) );
 
         for( int gridx = 0; gridx <= 1; gridx++ ) {
@@ -270,17 +281,13 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
         }
         density = density / 100;
 
-        // Not sure if we actually have to check all submaps.
-        const bool any_missing = !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::zero, p_sm.z() } ) )
-                                 ||
-                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::east, p_sm.z() } ) ) ||
-                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::south_east, p_sm.z() } ) ) ||
-                                 !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::south, p_sm.z() } ) );
-
         mapgendata dat( { p.xy(), gridz}, *this, density, when, nullptr );
-        if( ( any_missing || !save_results ) &&
-            !terrain_type->has_uniform_terrain() ) {
-            draw_map( dat );
+        if( any_missing || !save_results ) {
+            if( !terrain_type->has_uniform_terrain() ) {
+                draw_map( dat );
+            } else if( gridz == 0 || gridz == -1 ) {
+                north_america::place_native_soil( dat );
+            }
         }
 
         // Merge the overlays generated earlier into the current Z level now we have the base map on it.
@@ -298,7 +305,7 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
         }
 
         if( any_missing || !save_results ) {
-            const region_settings_map_extras settings_mx =
+            const region_settings_map_extras &settings_mx =
                 overmap_buffer.get_settings( p ).get_settings_map_extras();
             auto mx_iter = settings_mx.extras.find( map_extra_collection_id( terrain_type->get_extras() ) );
             if( mx_iter != settings_mx.extras.end() ) {
@@ -6800,21 +6807,25 @@ ret_val<void> jmapgen_objects::has_vehicle_collision( const mapgendata &dat,
 void map::temp_based_phase_change_at( const tripoint_bub_ms &p, const weather_generator &wgen )
 {
     // If we have a recorded original terrain, use its rules to revert or
-    if( has_original_terrain_at( p ) ) {
+    const bool has_original = has_original_terrain_at( p );
+    if( has_original ) {
         const ter_id orig_id = get_original_terrain_at( p );
         ter_set( p, orig_id );
     }
-    const tripoint_abs_ms abs_p = get_abs( p );
-    const ter_str_id cur_id = ter( p ).id();
-    const ter_t &cur_ter = cur_id.obj();
+    const ter_id current = ter( p );
+    const ter_t &cur_ter = current.obj();
     // Bail out early if neither this terrain nor a recorded original
     // terrain declare a phase_method.
-    if( cur_ter.phase_method.empty() && !has_original_terrain_at( p ) ) {
+    if( cur_ter.phase_method.empty() && !has_original ) {
         return;
     }
+    const ter_str_id cur_id = current.id();
     units::temperature standard = 0_K;
     // `phase_method` selects which phase behavior to apply.
     if( cur_ter.phase_method == "water_freeze" ) {
+        // The same regional normals apply to each day in the history window.
+        const tripoint_abs_ms abs_p = get_abs( p );
+        const auto climate = wgen.climate_at( abs_p );
         // 10-day average at 08:00.
         //1103515245u = random
         unsigned seed = static_cast<unsigned>( g->get_seed() ) ^
@@ -6824,7 +6835,7 @@ void map::temp_based_phase_change_at( const tripoint_bub_ms &p, const weather_ge
             time_point base_date = calendar::turn - ( d + 1 ) * 1_days;
             const time_duration time_of_day = ( base_date - calendar::turn_zero ) % 1_days;
             const time_point t = base_date - time_of_day + 8_hours;
-            sum += wgen.get_weather_temperature( abs_p, t, seed );
+            sum += wgen.get_weather_temperature( abs_p, t, seed, &climate );
         }
         standard = sum / 10.0;
     } else {
@@ -6892,7 +6903,8 @@ void map::draw_map( mapgendata &dat )
     const oter_id &terrain_type = dat.terrain_type();
     const std::string function_key = terrain_type->get_mapgen_id();
 
-    if( !run_mapgen_func( function_key, dat ) &&
+    if( !north_america::draw_mapped_road( dat ) &&
+        !run_mapgen_func( function_key, dat ) &&
         !cata::lua_platform::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );

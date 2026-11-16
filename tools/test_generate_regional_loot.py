@@ -1,9 +1,59 @@
 """Checks the shipped boundary coverage and generated game item groups."""
 
 import json
+import os
+import subprocess
 import unittest
 
-from generate_regional_loot import DATA, ITEMS, POLICY, build, magazine_capacity, records
+from generate_regional_loot import DATA, ITEMS, POLICY, build, magazine_capacity, records, render
+
+
+class RegionalJsonFormatTest(unittest.TestCase):
+    def test_existing_repository_layout(self):
+        for name in ("itemgroups/Weapons_Mods_Ammo/conversions/conversion_guns.json",
+                     "itemgroups/Clothing_Gear/military.json"):
+            with self.subTest(path=name):
+                original = (DATA / "json" / name).read_text(encoding="utf-8")
+                self.assertEqual(render(json.loads(original)) + "\n", original)
+
+    def test_nested_collections_and_string_contents(self):
+        value = [{"entries": [{"item": "{ } [ ]\u00a0", "charges": [0, 4]}, {}, []]}]
+        self.assertEqual(render(value),
+                         '[\n  {\n    "entries": [ { "item": "{ } [ ]\\u00a0", '
+                         '"charges": [ 0, 4 ] }, {  }, [  ] ]\n  }\n]')
+        self.assertEqual(render([]), "[\n  \n]")
+        self.assertEqual(render({}), "{\n  \n}")
+
+    def test_top_level_collections_always_wrap(self):
+        self.assertEqual(render([{}]), "[\n  {\n    \n  }\n]")
+        self.assertEqual(render([{"entries": []}]),
+                         '[\n  {\n    "entries": [  ]\n  }\n]')
+
+    def test_collection_limit_counts_bytes_and_separators(self):
+        boundary = {"name": "x" * 106}
+        flat = render(boundary, indent=4)
+        self.assertEqual(len(flat.encode("utf-8")), 120)
+        self.assertNotIn("\n", flat)
+        self.assertIn("\n", render({"name": "x" * 107}, indent=4))
+        self.assertNotIn("\n", render({"name": "é" * 53}, indent=4))
+        self.assertIn("\n", render({"name": "é" * 54}, indent=4))
+        lines = render([[boundary, boundary]]).splitlines()
+        self.assertEqual(lines[2], "    " + flat + ",")
+        self.assertEqual(lines[3], "    {")
+
+    def test_native_formatter_keeps_generated_layout(self):
+        name = "json_formatter.exe" if os.name == "nt" else "json_formatter.cgi"
+        formatter = DATA.parent / "tools/format" / name
+        if not formatter.is_file():
+            self.skipTest("Native JSON formatter is not built")
+        from generate_regional_supplies import build as build_supplies
+        for path in (*build(), *build_supplies()):
+            with self.subTest(path=path):
+                original = path.read_text(encoding="utf-8")
+                result = subprocess.run([str(formatter)], input=original, text=True,
+                                        encoding="utf-8", capture_output=True,
+                                        check=True, timeout=30)
+                self.assertEqual(result.stdout, original)
 
 
 class RegionalLootTest(unittest.TestCase):

@@ -31,6 +31,7 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_id.h"
+#include "climate_seasons.h"
 #include "clzones.h"
 #include "colony.h"
 #include "color.h"
@@ -1744,7 +1745,8 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
         for( const tripoint_abs_ms &p : veh.get_points() ) {
             const tripoint_bub_ms pos = get_bub( p );
             const ter_id &pter = ter( pos );
-            if( pter == ter_t_grass || north_america::canonical_soil( pter ) == ter_t_dirt ) {
+            const ter_id base = north_america::canonical_soil( pter );
+            if( base == ter_t_grass || base == ter_t_dirt ) {
                 ter_set( pos, north_america::tilled_soil( pter ) );
             }
         }
@@ -3569,7 +3571,15 @@ const harvest_id &map::get_harvest( const tripoint_bub_ms &pos ) const
     if( !furn_harvest.is_null() ) {
         return furn_harvest;
     }
-    return ter( pos )->get_harvest();
+    const ter_t &ground = ter( pos ).obj();
+    if( ground.fruit_climate && has_local_fruit_climate( get_abs( pos ) ) ) {
+        if( !ground.has_flag( ter_furn_flag::TFLAG_HARVESTED ) &&
+            local_fruit_is_ripe( *ground.fruit_climate, get_abs( pos ), calendar::turn ) ) {
+            return ground.fruit_climate->harvest;
+        }
+        return harvest_id::NULL_ID();
+    }
+    return ground.get_harvest();
 }
 
 const std::set<std::string> &map::get_harvest_names( const tripoint_bub_ms &pos ) const
@@ -3577,6 +3587,11 @@ const std::set<std::string> &map::get_harvest_names( const tripoint_bub_ms &pos 
     const furn_id &furn_here = furn( pos );
     if( furn_here->can_examine( pos ) ) {
         return furn_here->get_harvest_names();
+    }
+    if( ter( pos )->fruit_climate ) {
+        static const std::set<std::string> unripe;
+        const harvest_id &fruit = get_harvest( pos );
+        return fruit.is_null() ? unripe : fruit->names();
     }
     return ter( pos )->get_harvest_names();
 }
@@ -11417,7 +11432,10 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
     // We simulate day-by-day and switch furniture/growth_multiplier when the plant advances stages.
     time_duration effective_growth_time = 0_seconds;
     const int initial_max_water = iexamine::get_plant_max_water( initial_furn );
-    if( initial_max_water > 0 ) {
+    if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+        effective_growth_time = update_crop_climate( *this, p, *seed, initial_furn, crop_growth_speed,
+                                crop_water_consumption );
+    } else if( initial_max_water > 0 ) {
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
         if( !seed->has_var( "seed_effective_growth_turns" ) ||
             last_check == time_point::from_turn( 0 ) ) {
@@ -11701,6 +11719,20 @@ void map::restock_fruits( const tripoint_bub_ms &p, const time_duration &time_si
     if( !ter.has_flag( ter_furn_flag::TFLAG_HARVESTED ) ) {
         return; // Already harvestable. Do nothing.
     }
+    if( ter.fruit_climate && has_local_fruit_climate( get_abs( p ) ) ) {
+        const auto ripe = local_fruit_ripe_day( *ter.fruit_climate, get_abs( p ) );
+        if( ripe && local_fruit_is_ripe( *ter.fruit_climate, get_abs( p ), calendar::turn ) ) {
+            const time_duration year = calendar::year_length();
+            const double days = regional_climate::model_year_days;
+            const time_duration opening = year * ( *ripe / days );
+            const time_duration since_opening = ( time_past_new_year( calendar::turn ) - opening +
+                                                  2 * year ) % year;
+            if( time_since_last_actualize > since_opening ) {
+                ter_set( p, ter.transforms_into );
+            }
+        }
+        return;
+    }
     // Make it harvestable again if the last actualization was during a different season or year.
     const time_point last_touched = calendar::turn - time_since_last_actualize;
     if( season_of_year( calendar::turn ) != season_of_year( last_touched ) ||
@@ -11898,9 +11930,9 @@ void map::rad_scorch( const tripoint_bub_ms &p, const time_duration &time_since_
             {ter_t_tree_hickory_harvested, ter_t_tree_hickory_dead},
         }};
 
-    const auto iter = dies_into.find( tid );
+    const auto iter = dies_into.find( north_america::canonical_soil( tid ) );
     if( iter != dies_into.end() ) {
-        ter_set( p, iter->second );
+        ter_set( p, north_america::preserve_soil( tid, iter->second.id() ) );
         return;
     }
 

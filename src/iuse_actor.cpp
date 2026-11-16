@@ -78,6 +78,7 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
+#include "north_america.h"
 #include "mp_gamestate.h"
 #include "mp_client_conn.h"
 #include "map_iterator.h"
@@ -1638,6 +1639,7 @@ void reveal_map_actor::load( const JsonObject &obj, const std::string & )
     mandatory( obj, false, "radius", radius );
     optional( obj, false, "message", message );
     optional( obj, false, "terrain", omt_types, omt_reveal_type_reader{} );
+    optional( obj, false, "atlas_jurisdiction", atlas_jurisdiction );
 }
 
 void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
@@ -1665,6 +1667,21 @@ std::optional<int> reveal_map_actor::use( Character *p, item &it, map *,
     } else if( p->fine_detail_vision_mod() > 4 && !it.has_flag( flag_CAN_USE_IN_DARK ) ) {
         p->add_msg_if_player( _( "It's too dark to read." ) );
         return std::nullopt;
+    }
+
+    if( !atlas_jurisdiction.empty() ) {
+        if( !north_america::active() ) {
+            return std::nullopt;
+        }
+        const std::string key = north_america::chart_discovery_key( atlas_jurisdiction );
+        if( p->maybe_get_value( key ) ) {
+            p->add_msg_if_player( _( "You already have this chart in your atlas." ) );
+        } else {
+            p->set_value( key, 1 );
+            p->add_msg_if_player( m_good, _( "You add the chart to your North America atlas." ) );
+        }
+        it.mark_as_used_by_player( *p );
+        return 0;
     }
 
     const tripoint_abs_ms map_pos_ms = it.get_var( "spawn_location", tripoint_abs_ms::invalid );

@@ -544,7 +544,9 @@ const std::unordered_set<std::string> *mapbuffer::zzip_listing( const cata_path 
         return &it->second;
     }
     if( !file_exist( zzip_path ) ) {
-        return nullptr;
+        // Re-probing every missing submap would otherwise stat the same
+        // nonexistent archive for each layer and each tile in the quad.
+        return &zzip_listing_cache.try_emplace( key ).first->second;
     }
     std::optional<zzip> z = zzip::load( zzip_path.get_unrelative_path(),
                                         storage().dictionary().get_unrelative_path() );

@@ -10,11 +10,29 @@
 #include "character_id.h"
 #include "coordinates.h"
 #include "mongroup.h"
+#include "north_america.h"
+#include "north_america_transport.h"
 #include "overmap.h"
 
 class overmap_test_helper
 {
     public:
+        static bool generate_atlas_streets_and_buildings( overmap &om ) {
+            std::vector<north_america::terrain> coast;
+            if( !om.place_north_american_water( coast ) ) {
+                return false;
+            }
+            const auto streets = north_america::road_network( om.global_base_point(), OMAPX, OMAPY );
+            om.place_atlas_roads( streets, coast );
+            om.place_cities();
+            om.build_cities();
+            om.build_atlas_neighborhoods( *overmap_connection_id( "local_road" ), streets );
+            om.flood_fill_city_tiles();
+            return true;
+        }
+        static void place_specials( overmap &om, overmap_special_batch &specials ) {
+            om.place_specials( specials );
+        }
         static void generate_railroads( overmap &om ) {
             om.place_railroads( std::vector<const overmap *>( 4, nullptr ) );
         }

@@ -11,7 +11,7 @@ namespace calendar_ui
 
 enum class granularity : int {
     year,
-    season,
+    month,
     day,
     hour,
     minute,

@@ -169,7 +169,7 @@ class creature_tracker
         reachable_factions *reachable_creatures( const Creature &origin );
         void flood_fill_zone( const Creature &origin,
                               const creature_reachability_filter *occupancy = nullptr );
-        void flood_fill_zone( const Creature &origin, map &terrain, const passability_grid &bitmap,
+        void flood_fill_zone( const Creature &origin, map &here, const passability_grid &bitmap,
                               reachability_zones *regional,
                               const creature_reachability_filter *occupancy );
         reachability_zones &zones_for( map &terrain );

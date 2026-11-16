@@ -160,7 +160,7 @@ class mapbuffer
         // around save() and on clear(), the only places that mutate these archives.
         std::unordered_map<std::string, std::unordered_set<std::string>> zzip_listing_cache;
         // Return the entry-name set for the archive at zzip_path, loading it once and
-        // caching it. Returns nullptr if the archive does not exist / fails to open.
+        // caching it. An absent archive has an empty listing; nullptr means it failed to open.
         const std::unordered_set<std::string> *zzip_listing( const cata_path &zzip_path );
         submap_map_t submaps; // NOLINT(cata-serialize)
         uint64_t content_revision_ = 0; // NOLINT(cata-serialize)

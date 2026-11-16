@@ -16,6 +16,9 @@
     "commercial_bread_specialty",
     "coats_unisex"
   ],
+  "atlas_map_groups": [
+    "roadmap_stock"
+  ],
   "service_groups": [
     "police_armory_any_pistol",
     "police_armory_any_assaultrifle",

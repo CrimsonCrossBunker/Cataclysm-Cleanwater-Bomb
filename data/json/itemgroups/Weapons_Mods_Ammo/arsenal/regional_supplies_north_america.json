@@ -3,73 +3,73 @@
     "type": "item_group",
     "id": "regional_military_reserve_ammo",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_can_300_full", "prob": 100} ]
+    "entries": [ { "group": "ammo_can_300_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_military_surplus_firearms",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common", "prob": 100} ]
+    "entries": [ { "group": "guns_common", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_military_surplus_magazines",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common", "prob": 100} ]
+    "entries": [ { "group": "mags_common", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_sidearm-CA",
     "subtype": "collection",
-    "entries": [ {"item": "m17", "prob": 100}, {"item": "p320mag_17rd_9x19mm", "prob": 100} ]
+    "entries": [ { "item": "m17", "prob": 100 }, { "item": "p320mag_17rd_9x19mm", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_sidearm-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_sidearm-CA", "prob": 100}, {"group": "ammo_can_9mm_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_sidearm-CA", "prob": 100 }, { "group": "ammo_can_9mm_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_rifle-CA",
     "subtype": "collection",
-    "entries": [ {"item": "modular_m16_auto_rifle", "prob": 100}, {"item": "stanag30", "prob": 100} ]
+    "entries": [ { "item": "modular_m16_auto_rifle", "prob": 100 }, { "item": "stanag30", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_rifle-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_rifle-CA", "prob": 100}, {"group": "ammo_can_223_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_rifle-CA", "prob": 100 }, { "group": "ammo_can_223_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_secondary-CA",
     "subtype": "collection",
-    "entries": [ {"group": "modular_m4a1", "prob": 100}, {"item": "stanag30", "prob": 100} ]
+    "entries": [ { "group": "modular_m4a1", "prob": 100 }, { "item": "stanag30", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_secondary-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_secondary-CA", "prob": 100}, {"group": "ammo_can_223_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_secondary-CA", "prob": 100 }, { "group": "ammo_can_223_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_support-CA",
     "subtype": "collection",
-    "entries": [ {"item": "m249", "prob": 100}, {"item": "belt223", "prob": 100} ]
+    "entries": [ { "item": "m249", "prob": 100 }, { "item": "belt223", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_support-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_support-CA", "prob": 100}, {"group": "ammo_can_223_mg_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_support-CA", "prob": 100 }, { "group": "ammo_can_223_mg_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_medium_support-CA",
     "subtype": "collection",
-    "entries": [ {"item": "m240", "prob": 100}, {"item": "belt308", "prob": 100} ]
+    "entries": [ { "item": "m240", "prob": 100 }, { "item": "belt308", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -84,25 +84,25 @@
     "type": "item_group",
     "id": "regional_service_kit_sniper-CA",
     "subtype": "collection",
-    "entries": [ {"item": "steyr_scout", "prob": 100}, {"item": "steyr_scout_mag", "prob": 100} ]
+    "entries": [ { "item": "steyr_scout", "prob": 100 }, { "item": "steyr_scout_mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_sniper-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_sniper-CA", "prob": 100}, {"group": "ammo_can_308_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_sniper-CA", "prob": 100 }, { "group": "ammo_can_308_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_patrol_kit-CA",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_rifle-CA", "prob": 100}, {"group": "ammo_can_223_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_rifle-CA", "prob": 100 }, { "group": "ammo_can_223_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_pistol-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "police_armory_glock_17", "prob": 50}, {"group": "police_armory_glock_19", "prob": 50} ]
+    "entries": [ { "group": "police_armory_glock_17", "prob": 50 }, { "group": "police_armory_glock_19", "prob": 50 } ]
   },
   {
     "type": "item_group",
@@ -118,35 +118,32 @@
     "type": "item_group",
     "id": "police_armory_any_smg-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "police_armory_mp5", "prob": 100} ]
+    "entries": [ { "group": "police_armory_mp5", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_sniperrifle-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_service_case_sniper-CA", "prob": 100} ]
+    "entries": [ { "group": "regional_service_case_sniper-CA", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_shotgun-CA",
     "subtype": "collection",
-    "entries": [
-      { "group": "police_armory_shotgun_pick1", "prob": 100 },
-      { "group": "police_armory_boxes_shotshells", "prob": 100 }
-    ]
+    "entries": [ { "group": "police_armory_shotgun_pick1", "prob": 100 }, { "group": "police_armory_boxes_shotshells", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "sidearms_cop-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "glock_17", "prob": 100, "charges": [0, 8], "damage": [0, 3]} ]
+    "entries": [ { "item": "glock_17", "prob": 100, "charges": [ 0, 8 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "sidearms_cop_in_field-CA",
     "subtype": "collection",
     "entries": [
-      { "item": "glock_17", "prob": 100, "charges": [0, 8], "damage": [0, 3] },
+      { "item": "glock_17", "prob": 100, "charges": [ 0, 8 ], "damage": [ 0, 3 ] },
       { "group": "field_glock_17", "prob": 100 }
     ]
   },
@@ -154,26 +151,26 @@
     "type": "item_group",
     "id": "sidearms_cop_in_field_no_gun-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "field_glock_17", "prob": 100} ]
+    "entries": [ { "group": "field_glock_17", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "modular_m4a1", "prob": 100, "charges": [0, 15], "damage": [0, 3]} ]
+    "entries": [ { "group": "modular_m4a1", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop_loaded-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "modular_m4a1", "prob": 100, "charges": [0, 15], "damage": [0, 3]} ]
+    "entries": [ { "group": "modular_m4a1", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop_in_field-CA",
     "subtype": "collection",
     "entries": [
-      { "group": "modular_m4a1", "prob": 100, "charges": [0, 15], "damage": [0, 3] },
+      { "group": "modular_m4a1", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] },
       { "group": "field_ar15_223", "prob": 100 }
     ]
   },
@@ -181,7 +178,7 @@
     "type": "item_group",
     "id": "longguns_cop_in_field_no_gun-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "field_ar15_223", "prob": 100} ]
+    "entries": [ { "group": "field_ar15_223", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -190,7 +187,7 @@
     "entries": [
       { "group": "longguns_cop_in_field-CA", "prob": 85 },
       {
-        "collection": [ {"item": "hk_mp5", "prob": 100, "charges": [0, 8]}, {"item": "mp5mag", "prob": 100} ],
+        "collection": [ { "item": "hk_mp5", "prob": 100, "charges": [ 0, 8 ] }, { "item": "mp5mag", "prob": 100 } ],
         "prob": 15
       }
     ]
@@ -199,60 +196,60 @@
     "type": "item_group",
     "id": "mags_cop-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "glock17_17", "prob": 100}, {"item": "stanag30", "prob": 100}, {"item": "mp5mag", "prob": 100} ]
+    "entries": [ { "item": "glock17_17", "prob": 100 }, { "item": "stanag30", "prob": 100 }, { "item": "mp5mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_swat-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "glock17_17", "prob": 100}, {"item": "stanag30", "prob": 100}, {"item": "mp5mag", "prob": 100} ]
+    "entries": [ { "item": "glock17_17", "prob": 100 }, { "item": "stanag30", "prob": 100 }, { "item": "mp5mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_pistols-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "m17", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m17", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_assault_rifles-CA",
     "subtype": "distribution",
     "entries": [
-      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [0, 8] },
-      { "group": "modular_m4a1", "prob": 15, "charges": [0, 8] }
+      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [ 0, 8 ] },
+      { "group": "modular_m4a1", "prob": 15, "charges": [ 0, 8 ] }
     ]
   },
   {
     "type": "item_group",
     "id": "military_grenadier_assault_rifles-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "modular_m16_auto_rifle", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "modular_m16_auto_rifle", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_lmgs-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "m249", "prob": 100, "charges": [0, 8]}, {"item": "m240", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m249", "prob": 100, "charges": [ 0, 8 ] }, { "item": "m240", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_sniper_rifles-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "steyr_scout", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "steyr_scout", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_shotguns-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "remington_870", "prob": 100, "charges": [0, 4]} ]
+    "entries": [ { "item": "remington_870", "prob": 100, "charges": [ 0, 4 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_rifle_milspec-CA",
     "subtype": "distribution",
     "entries": [
-      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [0, 8] },
-      { "group": "modular_m4a1", "prob": 15, "charges": [0, 8] },
+      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [ 0, 8 ] },
+      { "group": "modular_m4a1", "prob": 15, "charges": [ 0, 8 ] },
       { "item": "steyr_scout", "prob": 5 }
     ]
   },
@@ -260,13 +257,13 @@
     "type": "item_group",
     "id": "guns_pistol_milspec-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "m17", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m17", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_smg_milspec-CA",
     "subtype": "distribution",
-    "entries": [ {"item": "hk_mp5", "prob": 100} ]
+    "entries": [ { "item": "hk_mp5", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -337,15 +334,15 @@
     "type": "item_group",
     "id": "regional_military_reserve_ammo-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_can_308_any_full", "prob": 100} ]
+    "entries": [ { "group": "ammo_can_308_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_military_surplus_firearms-CA",
     "subtype": "distribution",
     "entries": [
-      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [0, 8] },
-      { "group": "modular_m4a1", "prob": 15, "charges": [0, 8] },
+      { "item": "modular_m16_auto_rifle", "prob": 85, "charges": [ 0, 8 ] },
+      { "group": "modular_m4a1", "prob": 15, "charges": [ 0, 8 ] },
       { "item": "steyr_scout", "prob": 5 },
       { "item": "m17", "prob": 30 }
     ]
@@ -367,73 +364,73 @@
     "type": "item_group",
     "id": "regional_service_kit_sidearm-MX",
     "subtype": "collection",
-    "entries": [ {"item": "m9", "prob": 100}, {"item": "m9mag", "prob": 100} ]
+    "entries": [ { "item": "m9", "prob": 100 }, { "item": "m9mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_sidearm-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_sidearm-MX", "prob": 100}, {"group": "ammo_can_9mm_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_sidearm-MX", "prob": 100 }, { "group": "ammo_can_9mm_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_rifle-MX",
     "subtype": "collection",
-    "entries": [ {"item": "bren2_556", "prob": 100}, {"item": "stanag30", "prob": 100} ]
+    "entries": [ { "item": "bren2_556", "prob": 100 }, { "item": "stanag30", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_rifle-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_rifle-MX", "prob": 100}, {"group": "ammo_can_223_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_rifle-MX", "prob": 100 }, { "group": "ammo_can_223_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_secondary-MX",
     "subtype": "collection",
-    "entries": [ {"item": "hk_g3", "prob": 100}, {"item": "g3mag", "prob": 100} ]
+    "entries": [ { "item": "hk_g3", "prob": 100 }, { "item": "g3mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_secondary-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_secondary-MX", "prob": 100}, {"group": "ammo_can_308_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_secondary-MX", "prob": 100 }, { "group": "ammo_can_308_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_support-MX",
     "subtype": "collection",
-    "entries": [ {"item": "m240", "prob": 100}, {"item": "belt308", "prob": 100} ]
+    "entries": [ { "item": "m240", "prob": 100 }, { "item": "belt308", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_support-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_support-MX", "prob": 100}, {"group": "ammo_can_308_mg_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_support-MX", "prob": 100 }, { "group": "ammo_can_308_mg_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_kit_sniper-MX",
     "subtype": "collection",
-    "entries": [ {"item": "steyr_scout", "prob": 100}, {"item": "steyr_scout_mag", "prob": 100} ]
+    "entries": [ { "item": "steyr_scout", "prob": 100 }, { "item": "steyr_scout_mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_service_case_sniper-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_sniper-MX", "prob": 100}, {"group": "ammo_can_308_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_sniper-MX", "prob": 100 }, { "group": "ammo_can_308_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_patrol_kit-MX",
     "subtype": "collection",
-    "entries": [ {"group": "regional_service_kit_rifle-MX", "prob": 100}, {"group": "ammo_can_223_any_full", "prob": 100} ]
+    "entries": [ { "group": "regional_service_kit_rifle-MX", "prob": 100 }, { "group": "ammo_can_223_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_pistol-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "police_armory_m9", "prob": 50}, {"group": "police_armory_glock_17", "prob": 50} ]
+    "entries": [ { "group": "police_armory_m9", "prob": 50 }, { "group": "police_armory_glock_17", "prob": 50 } ]
   },
   {
     "type": "item_group",
@@ -449,59 +446,56 @@
     "type": "item_group",
     "id": "police_armory_any_smg-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "police_armory_mp5", "prob": 100} ]
+    "entries": [ { "group": "police_armory_mp5", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_sniperrifle-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "regional_service_case_sniper-MX", "prob": 100} ]
+    "entries": [ { "group": "regional_service_case_sniper-MX", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "police_armory_any_shotgun-MX",
     "subtype": "collection",
-    "entries": [
-      { "group": "police_armory_shotgun_pick1", "prob": 100 },
-      { "group": "police_armory_boxes_shotshells", "prob": 100 }
-    ]
+    "entries": [ { "group": "police_armory_shotgun_pick1", "prob": 100 }, { "group": "police_armory_boxes_shotshells", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "sidearms_cop-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m9", "prob": 100, "charges": [0, 8], "damage": [0, 3]} ]
+    "entries": [ { "item": "m9", "prob": 100, "charges": [ 0, 8 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "sidearms_cop_in_field-MX",
     "subtype": "collection",
-    "entries": [ {"item": "m9", "prob": 100, "charges": [0, 8], "damage": [0, 3]}, {"group": "field_m9", "prob": 100} ]
+    "entries": [ { "item": "m9", "prob": 100, "charges": [ 0, 8 ], "damage": [ 0, 3 ] }, { "group": "field_m9", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "sidearms_cop_in_field_no_gun-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "field_m9", "prob": 100} ]
+    "entries": [ { "group": "field_m9", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "bren2_556", "prob": 100, "charges": [0, 15], "damage": [0, 3]} ]
+    "entries": [ { "item": "bren2_556", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop_loaded-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "bren2_556", "prob": 100, "charges": [0, 15], "damage": [0, 3]} ]
+    "entries": [ { "item": "bren2_556", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] } ]
   },
   {
     "type": "item_group",
     "id": "longguns_cop_in_field-MX",
     "subtype": "collection",
     "entries": [
-      { "item": "bren2_556", "prob": 100, "charges": [0, 15], "damage": [0, 3] },
+      { "item": "bren2_556", "prob": 100, "charges": [ 0, 15 ], "damage": [ 0, 3 ] },
       { "group": "field_ar15_223", "prob": 100 }
     ]
   },
@@ -509,7 +503,7 @@
     "type": "item_group",
     "id": "longguns_cop_in_field_no_gun-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "field_ar15_223", "prob": 100} ]
+    "entries": [ { "group": "field_ar15_223", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -518,7 +512,7 @@
     "entries": [
       { "group": "longguns_cop_in_field-MX", "prob": 85 },
       {
-        "collection": [ {"item": "hk_mp5", "prob": 100, "charges": [0, 8]}, {"item": "mp5mag", "prob": 100} ],
+        "collection": [ { "item": "hk_mp5", "prob": 100, "charges": [ 0, 8 ] }, { "item": "mp5mag", "prob": 100 } ],
         "prob": 15
       }
     ]
@@ -527,57 +521,57 @@
     "type": "item_group",
     "id": "mags_cop-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m9mag", "prob": 100}, {"item": "stanag30", "prob": 100}, {"item": "mp5mag", "prob": 100} ]
+    "entries": [ { "item": "m9mag", "prob": 100 }, { "item": "stanag30", "prob": 100 }, { "item": "mp5mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_swat-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m9mag", "prob": 100}, {"item": "stanag30", "prob": 100}, {"item": "mp5mag", "prob": 100} ]
+    "entries": [ { "item": "m9mag", "prob": 100 }, { "item": "stanag30", "prob": 100 }, { "item": "mp5mag", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_pistols-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m9", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m9", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_assault_rifles-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "bren2_556", "prob": 85, "charges": [0, 8]}, {"item": "hk_g3", "prob": 15, "charges": [0, 8]} ]
+    "entries": [ { "item": "bren2_556", "prob": 85, "charges": [ 0, 8 ] }, { "item": "hk_g3", "prob": 15, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_grenadier_assault_rifles-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "bren2_556", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "bren2_556", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_lmgs-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m240", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m240", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_sniper_rifles-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "steyr_scout", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "steyr_scout", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "military_standard_shotguns-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "mossberg_590", "prob": 100, "charges": [0, 4]} ]
+    "entries": [ { "item": "mossberg_590", "prob": 100, "charges": [ 0, 4 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_rifle_milspec-MX",
     "subtype": "distribution",
     "entries": [
-      { "item": "bren2_556", "prob": 85, "charges": [0, 8] },
-      { "item": "hk_g3", "prob": 15, "charges": [0, 8] },
+      { "item": "bren2_556", "prob": 85, "charges": [ 0, 8 ] },
+      { "item": "hk_g3", "prob": 15, "charges": [ 0, 8 ] },
       { "item": "steyr_scout", "prob": 5 }
     ]
   },
@@ -585,13 +579,13 @@
     "type": "item_group",
     "id": "guns_pistol_milspec-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "m9", "prob": 100, "charges": [0, 8]} ]
+    "entries": [ { "item": "m9", "prob": 100, "charges": [ 0, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_smg_milspec-MX",
     "subtype": "distribution",
-    "entries": [ {"item": "hk_mp5", "prob": 100} ]
+    "entries": [ { "item": "hk_mp5", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -657,15 +651,15 @@
     "type": "item_group",
     "id": "regional_military_reserve_ammo-MX",
     "subtype": "distribution",
-    "entries": [ {"group": "ammo_can_308_any_full", "prob": 100} ]
+    "entries": [ { "group": "ammo_can_308_any_full", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_military_surplus_firearms-MX",
     "subtype": "distribution",
     "entries": [
-      { "item": "bren2_556", "prob": 85, "charges": [0, 8] },
-      { "item": "hk_g3", "prob": 15, "charges": [0, 8] },
+      { "item": "bren2_556", "prob": 85, "charges": [ 0, 8 ] },
+      { "item": "hk_g3", "prob": 15, "charges": [ 0, 8 ] },
       { "item": "steyr_scout", "prob": 5 },
       { "item": "m9", "prob": 30 }
     ]

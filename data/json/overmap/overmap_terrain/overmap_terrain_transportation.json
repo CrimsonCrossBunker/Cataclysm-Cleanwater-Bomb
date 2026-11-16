@@ -29,6 +29,26 @@
   },
   {
     "type": "overmap_terrain",
+    "id": "atlas_avenue_flank_ns",
+    "copy-from": "road_abstract",
+    "name": "avenue",
+    "sym": "║",
+    "looks_like": "road_ns",
+    "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
+    "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_avenue_flank_ew",
+    "copy-from": "road_abstract",
+    "name": "avenue",
+    "sym": "═",
+    "looks_like": "road_ew",
+    "flags": [ "NO_ROTATE", "ROAD", "SIDEWALK" ],
+    "mapgen": [ { "object": { "fill_ter": "t_pavement" } } ]
+  },
+  {
+    "type": "overmap_terrain",
     "abstract": "generic_bridge",
     "copy-from": "generic_transportation",
     "name": "bridge",
@@ -44,6 +64,19 @@
     "color": "blue",
     "travel_cost_type": "water",
     "flags": [ "RIVER", "REQUIRES_PREDECESSOR" ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "atlas_road_bridge",
+    "copy-from": "road_abstract",
+    "name": "road bridge",
+    "color": "white",
+    "flags": [ "LINEAR", "BRIDGE", "ROAD", "SIDEWALK", "REQUIRES_PREDECESSOR" ],
+    "mapgen_straight": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_curved": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_end": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_tee": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_four_way": [ { "object": { "fill_ter": "t_water_moving_dp" } } ]
   },
   {
     "type": "overmap_terrain",

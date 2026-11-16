@@ -1588,6 +1588,11 @@ The contents of `use_action` fields can either be a string indicating a built-in
   "message": "You add roads and tourist attractions to your map." // Displayed after the revelation
 },
 "use_action": {
+  "type": "reveal_map",
+  "radius": 0,
+  "atlas_jurisdiction": "CA-ON"      // Unlock Ontario in the North America atlas for the reader.
+},
+"use_action": {
   "type": "heal",               // Heal damage, possibly some statuses
   "limb_power": 10,             // How much hp to restore when healing limbs? Mandatory value
   "head_power": 7,              // How much hp to restore when healing head? If unset, defaults to 0.8 * limb_power

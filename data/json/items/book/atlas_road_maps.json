@@ -1,0 +1,770 @@
+[
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-ab",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Alberta", "str_pl": "road maps of Alberta" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-AB" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-bc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of British Columbia", "str_pl": "road maps of British Columbia" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-BC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-mb",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Manitoba", "str_pl": "road maps of Manitoba" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-MB" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-nb",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of New Brunswick", "str_pl": "road maps of New Brunswick" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-NB" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-nl",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Newfoundland and Labrador", "str_pl": "road maps of Newfoundland and Labrador" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-NL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-ns",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nova Scotia", "str_pl": "road maps of Nova Scotia" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-NS" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-nt",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Northwest Territories", "str_pl": "road maps of Northwest Territories" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-NT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-nu",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nunavut", "str_pl": "road maps of Nunavut" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-NU" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-on",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Ontario", "str_pl": "road maps of Ontario" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-ON" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-pe",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Prince Edward Island", "str_pl": "road maps of Prince Edward Island" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-PE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-qc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Quebec", "str_pl": "road maps of Quebec" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-QC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-sk",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Saskatchewan", "str_pl": "road maps of Saskatchewan" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-SK" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_ca-yt",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Yukon", "str_pl": "road maps of Yukon" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "CA-YT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-agu",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Aguascalientes", "str_pl": "road maps of Aguascalientes" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-AGU" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-bcn",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Baja California", "str_pl": "road maps of Baja California" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-BCN" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-bcs",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Baja California Sur", "str_pl": "road maps of Baja California Sur" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-BCS" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-cam",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Campeche", "str_pl": "road maps of Campeche" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-CAM" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-chh",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Chihuahua", "str_pl": "road maps of Chihuahua" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-CHH" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-chp",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Chiapas", "str_pl": "road maps of Chiapas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-CHP" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-cmx",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Mexico City", "str_pl": "road maps of Mexico City" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-CMX" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-coa",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Coahuila", "str_pl": "road maps of Coahuila" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-COA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-col",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Colima", "str_pl": "road maps of Colima" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-COL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-dur",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Durango", "str_pl": "road maps of Durango" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-DUR" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-gro",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Guerrero", "str_pl": "road maps of Guerrero" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-GRO" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-gua",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Guanajuato", "str_pl": "road maps of Guanajuato" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-GUA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-hid",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Hidalgo", "str_pl": "road maps of Hidalgo" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-HID" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-jal",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Jalisco", "str_pl": "road maps of Jalisco" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-JAL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-mex",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of State of Mexico", "str_pl": "road maps of State of Mexico" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-MEX" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-mic",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Michoacán", "str_pl": "road maps of Michoacán" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-MIC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-mor",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Morelos", "str_pl": "road maps of Morelos" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-MOR" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-nay",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nayarit", "str_pl": "road maps of Nayarit" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-NAY" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-nle",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nuevo León", "str_pl": "road maps of Nuevo León" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-NLE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-oax",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Oaxaca", "str_pl": "road maps of Oaxaca" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-OAX" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-pue",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Puebla", "str_pl": "road maps of Puebla" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-PUE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-que",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Querétaro", "str_pl": "road maps of Querétaro" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-QUE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-roo",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Quintana Roo", "str_pl": "road maps of Quintana Roo" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-ROO" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-sin",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Sinaloa", "str_pl": "road maps of Sinaloa" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-SIN" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-slp",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of San Luis Potosí", "str_pl": "road maps of San Luis Potosí" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-SLP" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-son",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Sonora", "str_pl": "road maps of Sonora" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-SON" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-tab",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Tabasco", "str_pl": "road maps of Tabasco" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-TAB" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-tam",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Tamaulipas", "str_pl": "road maps of Tamaulipas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-TAM" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-tla",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Tlaxcala", "str_pl": "road maps of Tlaxcala" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-TLA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-ver",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Veracruz", "str_pl": "road maps of Veracruz" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-VER" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-yuc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Yucatán", "str_pl": "road maps of Yucatán" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-YUC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_mx-zac",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Zacatecas", "str_pl": "road maps of Zacatecas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "MX-ZAC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ak",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Alaska", "str_pl": "road maps of Alaska" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-AK" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-al",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Alabama", "str_pl": "road maps of Alabama" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-AL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ar",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Arkansas", "str_pl": "road maps of Arkansas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-AR" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-az",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Arizona", "str_pl": "road maps of Arizona" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-AZ" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ca",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of California", "str_pl": "road maps of California" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-CA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-co",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Colorado", "str_pl": "road maps of Colorado" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-CO" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ct",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Connecticut", "str_pl": "road maps of Connecticut" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-CT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-dc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Washington", "str_pl": "road maps of Washington" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-DC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-de",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Delaware", "str_pl": "road maps of Delaware" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-DE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-fl",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Florida", "str_pl": "road maps of Florida" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-FL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ga",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Georgia", "str_pl": "road maps of Georgia" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-GA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-hi",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Hawaii", "str_pl": "road maps of Hawaii" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-HI" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ia",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Iowa", "str_pl": "road maps of Iowa" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-IA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-id",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Idaho", "str_pl": "road maps of Idaho" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-ID" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-il",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Illinois", "str_pl": "road maps of Illinois" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-IL" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-in",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Indiana", "str_pl": "road maps of Indiana" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-IN" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ks",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Kansas", "str_pl": "road maps of Kansas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-KS" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ky",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Kentucky", "str_pl": "road maps of Kentucky" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-KY" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-la",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Louisiana", "str_pl": "road maps of Louisiana" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-LA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ma",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Massachusetts", "str_pl": "road maps of Massachusetts" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-md",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Maryland", "str_pl": "road maps of Maryland" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MD" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-me",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Maine", "str_pl": "road maps of Maine" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-ME" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-mi",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Michigan", "str_pl": "road maps of Michigan" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MI" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-mn",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Minnesota", "str_pl": "road maps of Minnesota" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MN" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-mo",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Missouri", "str_pl": "road maps of Missouri" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MO" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ms",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Mississippi", "str_pl": "road maps of Mississippi" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MS" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-mt",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Montana", "str_pl": "road maps of Montana" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-MT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of North Carolina", "str_pl": "road maps of North Carolina" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nd",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of North Dakota", "str_pl": "road maps of North Dakota" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-ND" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ne",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nebraska", "str_pl": "road maps of Nebraska" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NE" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nh",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of New Hampshire", "str_pl": "road maps of New Hampshire" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NH" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nj",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of New Jersey", "str_pl": "road maps of New Jersey" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NJ" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nm",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of New Mexico", "str_pl": "road maps of New Mexico" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NM" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-nv",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Nevada", "str_pl": "road maps of Nevada" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NV" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ny",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of New York", "str_pl": "road maps of New York" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-NY" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-oh",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Ohio", "str_pl": "road maps of Ohio" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-OH" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ok",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Oklahoma", "str_pl": "road maps of Oklahoma" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-OK" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-or",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Oregon", "str_pl": "road maps of Oregon" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-OR" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-pa",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Pennsylvania", "str_pl": "road maps of Pennsylvania" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-PA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ri",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Rhode Island", "str_pl": "road maps of Rhode Island" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-RI" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-sc",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of South Carolina", "str_pl": "road maps of South Carolina" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-SC" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-sd",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of South Dakota", "str_pl": "road maps of South Dakota" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-SD" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-tn",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Tennessee", "str_pl": "road maps of Tennessee" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-TN" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-tx",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Texas", "str_pl": "road maps of Texas" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-TX" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-ut",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Utah", "str_pl": "road maps of Utah" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-UT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-va",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Virginia", "str_pl": "road maps of Virginia" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-VA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-vt",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Vermont", "str_pl": "road maps of Vermont" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-VT" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-wa",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Washington", "str_pl": "road maps of Washington" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-WA" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-wi",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Wisconsin", "str_pl": "road maps of Wisconsin" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-WI" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-wv",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of West Virginia", "str_pl": "road maps of West Virginia" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-WV" }
+  },
+  {
+    "type": "ITEM",
+    "id": "atlas_map_us-wy",
+    "copy-from": "roadmap",
+    "name": { "str": "road map of Wyoming", "str_pl": "road maps of Wyoming" },
+    "description": "A printed chart of highways, rivers, and major cities.",
+    "use_action": { "type": "reveal_map", "radius": 0, "atlas_jurisdiction": "US-WY" }
+  }
+]

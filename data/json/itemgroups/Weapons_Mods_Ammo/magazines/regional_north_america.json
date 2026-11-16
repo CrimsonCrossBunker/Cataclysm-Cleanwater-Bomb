@@ -105,7 +105,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-open",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-open"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-open" } ]
   },
   {
     "type": "item_group",
@@ -231,7 +231,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-split",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-split"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-split" } ]
   },
   {
     "type": "item_group",
@@ -320,7 +320,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-restricted10",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted10"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted10" } ]
   },
   {
     "type": "item_group",
@@ -354,7 +354,7 @@
     "type": "item_group",
     "id": "mags_rifle_hunting-restricted10",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
@@ -398,7 +398,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-restricted17",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted17"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted17" } ]
   },
   {
     "type": "item_group",
@@ -485,7 +485,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-restricted15",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted15"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted15" } ]
   },
   {
     "type": "item_group",
@@ -568,7 +568,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted_split"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-restricted_split" } ]
   },
   {
     "type": "item_group",
@@ -606,7 +606,7 @@
     "type": "item_group",
     "id": "mags_rifle_hunting-restricted_split",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
@@ -646,7 +646,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-hawaii",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-hawaii"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-hawaii" } ]
   },
   {
     "type": "item_group",
@@ -693,37 +693,37 @@
     "type": "item_group",
     "id": "mags_common-canada",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common_restricted-canada",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common_restricted_packaged-canada",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-canada"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-canada" } ]
   },
   {
     "type": "item_group",
     "id": "mags_hunting-canada",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
     "id": "mags_pistol_hunting-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
     "id": "mags_rifle_hunting-canada",
     "subtype": "distribution",
-    "entries": [ {"item": "ruger1022mag", "prob": 125}, {"item": "steyr_scout_mag", "prob": 25} ]
+    "entries": [ { "item": "ruger1022mag", "prob": 125 }, { "item": "steyr_scout_mag", "prob": 25 } ]
   },
   {
     "type": "item_group",
@@ -755,7 +755,7 @@
     "type": "item_group",
     "id": "mags_common_restricted_packaged-mexico",
     "subtype": "distribution",
-    "entries": [ {"item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-mexico"} ]
+    "entries": [ { "item": "blister_pack", "prob": 100, "contents-group": "mags_common_restricted-mexico" } ]
   },
   {
     "type": "item_group",
@@ -774,7 +774,7 @@
     "type": "item_group",
     "id": "mags_pistol_hunting-mexico",
     "subtype": "distribution",
-    "entries": [ {"item": "rugerlcpmag", "prob": 70}, {"item": "wp22mag", "prob": 60} ]
+    "entries": [ { "item": "rugerlcpmag", "prob": 70 }, { "item": "wp22mag", "prob": 60 } ]
   },
   {
     "type": "item_group",
@@ -791,570 +791,570 @@
     "type": "item_group",
     "id": "mags_common-CA-AB",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-BC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-MB",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-NB",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-NL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-NS",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-NT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-NU",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-ON",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-PE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-QC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-SK",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-CA-YT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-canada", "prob": 100} ]
+    "entries": [ { "group": "mags_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-AGU",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-BCN",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-BCS",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-CAM",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-CHH",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-CHP",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-CMX",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-COA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-COL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-DUR",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-GRO",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-GUA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-HID",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-JAL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-MEX",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-MIC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-MOR",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-NAY",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-NLE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-OAX",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-PUE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-QUE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-ROO",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-SIN",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-SLP",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-SON",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-TAB",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-TAM",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-TLA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-VER",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-YUC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-MX-ZAC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "mags_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-AK",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-AL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-AR",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-AZ",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-CO",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted15", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-CT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-DC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-DE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted17", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted17", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-FL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-GA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-HI",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-hawaii", "prob": 100} ]
+    "entries": [ { "group": "mags_common-hawaii", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-IA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-ID",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-IL",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted_split", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted_split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-IN",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-KS",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-KY",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-LA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MD",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-ME",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MI",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MN",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MO",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MS",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-MT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-ND",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NE",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NH",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NJ",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NM",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NV",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-NY",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-OH",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-OK",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-OR",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-PA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-RI",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-SC",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-SD",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-TN",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-TX",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-UT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-VA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted15", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-VT",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-split", "prob": 100} ]
+    "entries": [ { "group": "mags_common-split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-WA",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "mags_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-WI",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-WV",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "mags_common-US-WY",
     "subtype": "distribution",
-    "entries": [ {"group": "mags_common-open", "prob": 100} ]
+    "entries": [ { "group": "mags_common-open", "prob": 100 } ]
   }
 ]

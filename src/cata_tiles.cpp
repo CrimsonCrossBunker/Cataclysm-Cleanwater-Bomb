@@ -37,6 +37,7 @@
 #include "cata_assert.h"
 #include "cata_small_literal_vector.h"
 #include "cata_scope_helpers.h"
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -92,6 +93,7 @@
 #include "screen_shake.h"
 #include "sdl_renderer_recovery.h"
 #include "sdl_utils.h"
+#include "path_info.h"
 #include "sdl_wrappers.h"
 #include "sdltiles.h"
 #include "shockwave.h"
@@ -648,7 +650,8 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     // reflects the current frame.
     advance_all_transient_effects();
 
-    tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ) );
+    tile_lookup_frame lookup( tileset_ptr, season_of_year( calendar::turn ), true,
+                              foliage_season_of_year( calendar::turn ) );
     restore_on_out_of_scope restore_lookup( lookup_frame_ );
     lookup_frame_ = &lookup;
     sprite_command_frame command_frame( tileset_ptr );
@@ -1003,18 +1006,20 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         if( g->display_overlay_state( ACTION_DISPLAY_SNOW_DEPTH ) && !invisible[0] ) {
                             const double snow_mm = get_weather().get_snow_depth_mm(
                                                        project_to<coords::omt>( here.get_abs( pos ) ) );
-                            short color;
+                            short color = catacurses::dark_gray;
                             const short bold = 8;
-                            if( snow_mm >= 500 ) {
-                                color = catacurses::white + bold;
-                            } else if( snow_mm >= 250 ) {
-                                color = catacurses::cyan + bold;
-                            } else if( snow_mm >= 100 ) {
-                                color = catacurses::blue + bold;
-                            } else if( snow_mm >= 1 ) {
-                                color = catacurses::green + bold;
-                            } else {
-                                color = catacurses::dark_gray;
+                            switch( classify_snow( snow_mm ) ) {
+                                case snow_cover::deep:
+                                    color = catacurses::white + bold;
+                                    break;
+                                case snow_cover::medium:
+                                    color = catacurses::cyan + bold;
+                                    break;
+                                case snow_cover::light:
+                                    color = catacurses::green + bold;
+                                    break;
+                                case snow_cover::none:
+                                    break;
                             }
 
                             std::string snow_str = string_format( "%.0f", snow_mm );
@@ -1583,6 +1588,64 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         layer_vpart :
                         f == &cata_tiles::draw_critter_at ? layer_critter :
                         f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
+                    if( f == &cata_tiles::draw_furniture && cur_zlevel >= 0 ) {
+                        bool began_snow = false;
+                        const int base = ( cur_zlevel - center.z() ) * zlevel_height;
+                        for( const row_sprite_entry &entry : row_sprites ) {
+                            const auto &var = std::get<tile_render_info::sprite>( entry.tile->var );
+                            if( var.invisible[0] ) {
+                                continue;
+                            }
+                            const auto &position = entry.tile->view.pos;
+                            const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
+                            if( cover == snow_cover::none ) {
+                                continue;
+                            }
+                            const auto &texture = get_snow_texture();
+                            if( !texture ) {
+                                break;
+                            }
+                            if( !began_snow ) {
+                                if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
+                                    if( !vp->flush() ) {
+                                        display_buffer_scope_signal_recovery_required();
+                                        throw std::runtime_error( "Snow overlay failed to restore renderer state" );
+                                    }
+                                }
+                                began_snow = true;
+                            }
+                            const point screen = player_to_screen( position.xy() );
+                            const SDL_Rect source = snow_sprite( cover, here.get_abs( position ).xy() );
+                            const uint8_t light = var.ll == lit_level::LOW ? 145 : 255;
+                            if( !iso ) {
+                                const SDL_Rect area{ screen.x, screen.y - base, tile_width, tile_height };
+                                SetTextureColorMod( texture, light, light, light );
+                                RenderCopy( renderer, texture, &source, &area );
+                            } else {
+                                const float x = screen.x;
+                                const float width = tile_width;
+                                const float height = width / 2.0f;
+                                const float y = screen.y - base + tile_height - height;
+                                const float u0 = static_cast<float>( source.x ) / snow_sheet_width;
+                                const float v0 = static_cast<float>( source.y ) / snow_sheet_height;
+                                const float u1 = static_cast<float>( source.x + source.w ) / snow_sheet_width;
+                                const float v1 = static_cast<float>( source.y + source.h ) / snow_sheet_height;
+                                const float tone = light / 255.0f;
+                                const SDL_FColor color{ tone, tone, tone, 1.0f };
+                                const SDL_Vertex vertices[] = {
+                                    { { x + width / 2, y }, color, { u0, v0 } },
+                                    { { x + width, y + height / 2 }, color, { u1, v0 } },
+                                    { { x + width / 2, y + height }, color, { u1, v1 } },
+                                    { { x, y + height / 2 }, color, { u0, v1 } }
+                                };
+                                static constexpr int indices[] = { 0, 1, 2, 0, 2, 3 };
+                                SDL_RenderGeometry( renderer.get(), texture.get(), vertices, 4, indices, 6 );
+                            }
+                        }
+                        if( began_snow && !iso ) {
+                            SetTextureColorMod( get_snow_texture(), 255, 255, 255 );
+                        }
+                    }
                     const bool track_bounds = !iso &&
                                               f != &cata_tiles::draw_zone_mark &&
                                               f != &cata_tiles::draw_zombie_revival_indicators;
@@ -2816,6 +2879,38 @@ effect_handle cata_tiles::start_creature_attack_anim( const tripoint_abs_ms &pos
     return h;
 }
 
+const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
+{
+    if( !tried_snow_texture ) {
+        tried_snow_texture = true;
+        const auto file = ( PATH_INFO::gfxdir() / "weather" / "snow_cover.png" ).get_unrelative_path();
+        try {
+            const SDL_Surface_Ptr surface = load_image( file.u8string().c_str() );
+            if( surface->w == snow_sheet_width && surface->h == snow_sheet_height ) {
+                snow_texture = CreateTextureFromSurface( renderer, surface );
+                if( snow_texture ) {
+                    SetTextureBlendMode( snow_texture, SDL_BLENDMODE_BLEND );
+                    SDL_SetTextureScaleMode( snow_texture.get(), SDL_SCALEMODE_NEAREST );
+                }
+            } else {
+                DebugLog( D_WARNING, D_GAME ) << "Invalid snow texture dimensions in " << file.u8string();
+            }
+        } catch( const std::exception &err ) {
+            DebugLog( D_WARNING, D_GAME ) << err.what();
+        }
+    }
+    return snow_texture;
+}
+
+SDL_Rect cata_tiles::snow_sprite( snow_cover depth, const point_abs_ms &pos )
+{
+    const int row = depth == snow_cover::deep ? 2 : depth == snow_cover::medium ? 1 : 0;
+    // Adjacent map tiles sample adjacent parts of the same snow pattern.
+    return { modulo( pos.x(), 4 ) *snow_tile_pixels,
+             row *snow_sheet_width + modulo( pos.y(), 4 ) *snow_tile_pixels,
+             snow_tile_pixels, snow_tile_pixels };
+}
+
 point cata_tiles::player_to_screen( const point_bub_ms &pos ) const
 {
     const point colrow = player_to_tile( pos );
@@ -3016,7 +3111,8 @@ cata_tiles::find_tile_looks_like( const std::string &id, TILE_CATEGORY category,
     }
     // Bullet, overlay and overmap queries outside a terrain frame observe the
     // current bundle/season and never inherit a previous frame's cached miss.
-    tile_lookup_frame query( tileset_ptr, season_of_year( calendar::turn ), false );
+    tile_lookup_frame query( tileset_ptr, season_of_year( calendar::turn ), false,
+                             foliage_season_of_year( calendar::turn ) );
     return query.find( id, category, variant, looks_like_jumps_limit );
 }
 

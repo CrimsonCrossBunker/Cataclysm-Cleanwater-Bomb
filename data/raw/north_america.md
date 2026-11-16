@@ -41,3 +41,6 @@ python tools/generate_north_america.py /path/to/zips data/raw/north_america.atla
 ```
 
 Use `--check` to compare the file against a regeneration from the same sources.
+
+See [ground and transport](north_america_ground_and_transport.md) for the atlas
+chart, regional road maps, road generation, and the ground and temperature data.

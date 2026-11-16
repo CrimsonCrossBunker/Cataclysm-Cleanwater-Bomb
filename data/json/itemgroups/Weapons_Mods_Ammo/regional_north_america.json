@@ -7,7 +7,7 @@
     "entries": [
       { "item": "glock_17", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "glock17_17", "prob": 100, "count": [1, 2] }
+      { "item": "glock17_17", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -18,7 +18,7 @@
     "entries": [
       { "item": "glock_19", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "glockmag", "prob": 100, "count": [1, 2] }
+      { "item": "glockmag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -29,7 +29,7 @@
     "entries": [
       { "item": "m9", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "m9mag", "prob": 100, "count": [1, 2] }
+      { "item": "m9mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -40,7 +40,7 @@
     "entries": [
       { "item": "m1911", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "m1911mag", "prob": 100, "count": [1, 2] }
+      { "item": "m1911mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -51,7 +51,7 @@
     "entries": [
       { "item": "rugerlcp", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "rugerlcpmag", "prob": 100, "count": [1, 2] }
+      { "item": "rugerlcpmag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -59,7 +59,7 @@
     "id": "regional_boxed_model_10_revolver",
     "subtype": "collection",
     "container-item": "box_pistol",
-    "entries": [ {"item": "model_10_revolver", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "model_10_revolver", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -69,7 +69,7 @@
     "entries": [
       { "item": "walther_p22", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "wp22mag", "prob": 100, "count": [1, 2] }
+      { "item": "wp22mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -77,7 +77,7 @@
     "id": "regional_boxed_ruger_lcr_22",
     "subtype": "collection",
     "container-item": "box_pistol",
-    "entries": [ {"item": "ruger_lcr_22", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "ruger_lcr_22", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -87,7 +87,7 @@
     "entries": [
       { "item": "ruger_1022", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "ruger1022bigmag", "prob": 100, "count": [1, 2] }
+      { "item": "ruger1022bigmag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -95,28 +95,28 @@
     "id": "regional_boxed_henry_golden_boy",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_rifle" },
-    "entries": [ {"item": "henry_golden_boy", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "henry_golden_boy", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_marlin_336_3030",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_rifle" },
-    "entries": [ {"item": "marlin_336_3030", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "marlin_336_3030", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_remington_700",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_rifle" },
-    "entries": [ {"item": "remington_700", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "remington_700", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_remington_700_308",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_rifle" },
-    "entries": [ {"item": "remington_700_308", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "remington_700_308", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -126,7 +126,7 @@
     "entries": [
       { "item": "steyr_scout", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "steyr_scout_mag", "prob": 100, "count": [1, 2] }
+      { "item": "steyr_scout_mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -134,56 +134,56 @@
     "id": "regional_boxed_mossberg_500",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "mossberg_500", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "mossberg_500", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_remington_870",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "remington_870", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "remington_870", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_mossberg_500_20",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "mossberg_500_20", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "mossberg_500_20", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_mossberg_500_410",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "mossberg_500_410", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "mossberg_500_410", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_ithaca37",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "ithaca37", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "ithaca37", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_winchester_1897",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "winchester_1897", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "winchester_1897", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_remington_1100",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "remington_1100", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "remington_1100", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "regional_boxed_benelli_m4",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_shotgun" },
-    "entries": [ {"item": "benelli_m4", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "benelli_m4", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -193,7 +193,7 @@
     "entries": [
       { "item": "mossberg_590m", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "mossberg_590m_mag_20", "prob": 100, "count": [1, 2] }
+      { "item": "mossberg_590m_mag_20", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -204,7 +204,7 @@
     "entries": [
       { "item": "ruger_mini", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "ruger20", "prob": 100, "count": [1, 2] }
+      { "item": "ruger20", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -215,7 +215,7 @@
     "entries": [
       { "item": "mp_15", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "stanag30", "prob": 100, "count": [1, 2] }
+      { "item": "stanag30", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -223,7 +223,7 @@
     "id": "regional_boxed_sks",
     "subtype": "collection",
     "container-item": { "item": "box_longarm", "variant": "box_longarm_rifle" },
-    "entries": [ {"item": "sks", "prob": 100}, {"group": "firearm_box_extras", "prob": 100} ]
+    "entries": [ { "item": "sks", "prob": 100 }, { "group": "firearm_box_extras", "prob": 100 } ]
   },
   {
     "type": "item_group",
@@ -233,7 +233,7 @@
     "entries": [
       { "item": "m1a", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "m14mag", "prob": 100, "count": [1, 2] }
+      { "item": "m14mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -547,23 +547,23 @@
   {
     "type": "item_group",
     "id": "regional_original_guns_rifle_common_worn",
-    "items": [ {"group": "guns_rifle_common_display", "charges": [1, 30]} ]
+    "items": [ { "group": "guns_rifle_common_display", "charges": [ 1, 30 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_rifle_common_worn-open",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] },
-      { "item": "ruger_mini", "prob": 60, "contents-item": "ruger20", "damage": [1, 4] },
-      { "item": "mp_15", "prob": 125, "contents-item": "stanag30", "damage": [1, 4] },
-      { "item": "sks", "prob": 45, "damage": [1, 4] },
-      { "item": "m1a", "prob": 45, "contents-item": "m14mag", "damage": [1, 4] },
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] },
+      { "item": "ruger_mini", "prob": 60, "contents-item": "ruger20", "damage": [ 1, 4 ] },
+      { "item": "mp_15", "prob": 125, "contents-item": "stanag30", "damage": [ 1, 4 ] },
+      { "item": "sks", "prob": 45, "damage": [ 1, 4 ] },
+      { "item": "m1a", "prob": 45, "contents-item": "m14mag", "damage": [ 1, 4 ] },
       { "group": "regional_original_guns_rifle_common_worn", "prob": 720 }
     ]
   },
@@ -689,22 +689,22 @@
   {
     "type": "item_group",
     "id": "regional_original_guns_shotgun_common_worn",
-    "items": [ {"group": "guns_shotgun_common_display", "charges": [1, 8]} ]
+    "items": [ { "group": "guns_shotgun_common_display", "charges": [ 1, 8 ] } ]
   },
   {
     "type": "item_group",
     "id": "guns_shotgun_common_worn-open",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] },
-      { "item": "benelli_m4", "prob": 25, "damage": [1, 4] },
-      { "item": "mossberg_590m", "prob": 25, "contents-item": "mossberg_590m_mag_20", "damage": [1, 4] },
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "benelli_m4", "prob": 25, "damage": [ 1, 4 ] },
+      { "item": "mossberg_590m", "prob": 25, "contents-item": "mossberg_590m_mag_20", "damage": [ 1, 4 ] },
       { "group": "regional_original_guns_shotgun_common_worn", "prob": 430 }
     ]
   },
@@ -716,7 +716,7 @@
     "entries": [
       { "item": "glock_17", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "glock17_10", "prob": 100, "count": [1, 2] }
+      { "item": "glock17_10", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -727,7 +727,7 @@
     "entries": [
       { "item": "ruger_1022", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "ruger1022mag", "prob": 100, "count": [1, 2] }
+      { "item": "ruger1022mag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -738,7 +738,7 @@
     "entries": [
       { "item": "mossberg_590m", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "mossberg_590m_mag_10", "prob": 100, "count": [1, 2] }
+      { "item": "mossberg_590m_mag_10", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -749,7 +749,7 @@
     "entries": [
       { "item": "ruger_mini", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "ruger10", "prob": 100, "count": [1, 2] }
+      { "item": "ruger10", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -760,7 +760,7 @@
     "entries": [
       { "item": "mp_15", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "stanag10", "prob": 100, "count": [1, 2] }
+      { "item": "stanag10", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -771,7 +771,7 @@
     "entries": [
       { "item": "m1a", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "m14smallmag", "prob": 100, "count": [1, 2] }
+      { "item": "m14smallmag", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -935,16 +935,16 @@
     "id": "guns_rifle_common_worn-split",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] },
-      { "item": "ruger_mini", "prob": 60, "contents-item": "ruger10", "damage": [1, 4] },
-      { "item": "mp_15", "prob": 125, "contents-item": "stanag10", "damage": [1, 4] },
-      { "item": "sks", "prob": 45, "damage": [1, 4] },
-      { "item": "m1a", "prob": 45, "contents-item": "m14smallmag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] },
+      { "item": "ruger_mini", "prob": 60, "contents-item": "ruger10", "damage": [ 1, 4 ] },
+      { "item": "mp_15", "prob": 125, "contents-item": "stanag10", "damage": [ 1, 4 ] },
+      { "item": "sks", "prob": 45, "damage": [ 1, 4 ] },
+      { "item": "m1a", "prob": 45, "contents-item": "m14smallmag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1017,15 +1017,15 @@
     "id": "guns_shotgun_common_worn-split",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] },
-      { "item": "benelli_m4", "prob": 25, "damage": [1, 4] },
-      { "item": "mossberg_590m", "prob": 25, "contents-item": "mossberg_590m_mag_10", "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "benelli_m4", "prob": 25, "damage": [ 1, 4 ] },
+      { "item": "mossberg_590m", "prob": 25, "contents-item": "mossberg_590m_mag_10", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1036,7 +1036,7 @@
     "entries": [
       { "item": "glock_19", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "glockmag_10", "prob": 100, "count": [1, 2] }
+      { "item": "glockmag_10", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -1047,7 +1047,7 @@
     "entries": [
       { "item": "m9", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "m9mag_10rd", "prob": 100, "count": [1, 2] }
+      { "item": "m9mag_10rd", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -1199,12 +1199,12 @@
     "id": "guns_rifle_common_worn-restricted10",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1267,13 +1267,13 @@
     "id": "guns_shotgun_common_worn-restricted10",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1284,7 +1284,7 @@
     "entries": [
       { "item": "ruger_1022", "prob": 100 },
       { "group": "firearm_box_extras", "prob": 100 },
-      { "item": "ruger1022mag_15", "prob": 100, "count": [1, 2] }
+      { "item": "ruger1022mag_15", "prob": 100, "count": [ 1, 2 ] }
     ]
   },
   {
@@ -1436,12 +1436,12 @@
     "id": "guns_rifle_common_worn-restricted17",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag_15", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag_15", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1504,13 +1504,13 @@
     "id": "guns_shotgun_common_worn-restricted17",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1662,12 +1662,12 @@
     "id": "guns_rifle_common_worn-restricted15",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag_15", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag_15", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1730,13 +1730,13 @@
     "id": "guns_shotgun_common_worn-restricted15",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1888,12 +1888,12 @@
     "id": "guns_rifle_common_worn-restricted_split",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -1956,13 +1956,13 @@
     "id": "guns_shotgun_common_worn-restricted_split",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -2114,12 +2114,12 @@
     "id": "guns_rifle_common_worn-hawaii",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -2182,20 +2182,20 @@
     "id": "guns_shotgun_common_worn-hawaii",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
     "type": "item_group",
     "id": "guns_common-canada",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_rifle_common-canada", "prob": 30}, {"group": "guns_shotgun_common-canada", "prob": 8} ]
+    "entries": [ { "group": "guns_rifle_common-canada", "prob": 30 }, { "group": "guns_shotgun_common-canada", "prob": 8 } ]
   },
   {
     "type": "item_group",
@@ -2219,31 +2219,31 @@
     "type": "item_group",
     "id": "guns_pistol_common-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
     "id": "guns_pistol_common_display-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
     "id": "guns_pistol_common_boxed-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
     "id": "guns_pistol_common_everyday_carry-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
     "id": "guns_pistol_hunting_display-canada",
     "subtype": "distribution",
-    "entries": []
+    "entries": [  ]
   },
   {
     "type": "item_group",
@@ -2289,12 +2289,12 @@
     "id": "guns_rifle_common_worn-canada",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022mag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -2357,13 +2357,13 @@
     "id": "guns_shotgun_common_worn-canada",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "mossberg_500_410", "prob": 35, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "winchester_1897", "prob": 15, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_410", "prob": 35, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "winchester_1897", "prob": 15, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -2495,12 +2495,12 @@
     "id": "guns_rifle_common_worn-mexico",
     "subtype": "distribution",
     "entries": [
-      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [1, 4] },
-      { "item": "henry_golden_boy", "prob": 65, "damage": [1, 4] },
-      { "item": "marlin_336_3030", "prob": 65, "damage": [1, 4] },
-      { "item": "remington_700", "prob": 85, "damage": [1, 4] },
-      { "item": "remington_700_308", "prob": 80, "damage": [1, 4] },
-      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [1, 4] }
+      { "item": "ruger_1022", "prob": 125, "contents-item": "ruger1022bigmag", "damage": [ 1, 4 ] },
+      { "item": "henry_golden_boy", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "marlin_336_3030", "prob": 65, "damage": [ 1, 4 ] },
+      { "item": "remington_700", "prob": 85, "damage": [ 1, 4 ] },
+      { "item": "remington_700_308", "prob": 80, "damage": [ 1, 4 ] },
+      { "item": "steyr_scout", "prob": 25, "contents-item": "steyr_scout_mag", "damage": [ 1, 4 ] }
     ]
   },
   {
@@ -2557,581 +2557,581 @@
     "id": "guns_shotgun_common_worn-mexico",
     "subtype": "distribution",
     "entries": [
-      { "item": "mossberg_500", "prob": 100, "damage": [1, 4] },
-      { "item": "remington_870", "prob": 100, "damage": [1, 4] },
-      { "item": "mossberg_500_20", "prob": 70, "damage": [1, 4] },
-      { "item": "ithaca37", "prob": 30, "damage": [1, 4] },
-      { "item": "remington_1100", "prob": 30, "damage": [1, 4] }
+      { "item": "mossberg_500", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "remington_870", "prob": 100, "damage": [ 1, 4 ] },
+      { "item": "mossberg_500_20", "prob": 70, "damage": [ 1, 4 ] },
+      { "item": "ithaca37", "prob": 30, "damage": [ 1, 4 ] },
+      { "item": "remington_1100", "prob": 30, "damage": [ 1, 4 ] }
     ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-AB",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-BC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-MB",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-NB",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-NL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-NS",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-NT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-NU",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-ON",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-PE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-QC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-SK",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-CA-YT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-canada", "prob": 100} ]
+    "entries": [ { "group": "guns_common-canada", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-AGU",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-BCN",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-BCS",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-CAM",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-CHH",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-CHP",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-CMX",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-COA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-COL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-DUR",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-GRO",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-GUA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-HID",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-JAL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-MEX",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-MIC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-MOR",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-NAY",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-NLE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-OAX",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-PUE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-QUE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-ROO",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-SIN",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-SLP",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-SON",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-TAB",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-TAM",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-TLA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-VER",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-YUC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-MX-ZAC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-mexico", "prob": 100} ]
+    "entries": [ { "group": "guns_common-mexico", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-AK",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-AL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-AR",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-AZ",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-CA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-CO",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted15", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-CT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-DC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-DE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted17", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted17", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-FL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-GA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-HI",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-hawaii", "prob": 100} ]
+    "entries": [ { "group": "guns_common-hawaii", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-IA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-ID",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-IL",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted_split", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted_split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-IN",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-KS",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-KY",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-LA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MD",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-ME",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MI",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MN",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MO",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MS",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-MT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-ND",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NE",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NH",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NJ",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NM",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NV",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-NY",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-OH",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-OK",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-OR",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-PA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-RI",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-SC",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-SD",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-TN",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-TX",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-UT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-VA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted15", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted15", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-VT",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-split", "prob": 100} ]
+    "entries": [ { "group": "guns_common-split", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-WA",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-restricted10", "prob": 100} ]
+    "entries": [ { "group": "guns_common-restricted10", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-WI",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-WV",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   },
   {
     "type": "item_group",
     "id": "guns_common-US-WY",
     "subtype": "distribution",
-    "entries": [ {"group": "guns_common-open", "prob": 100} ]
+    "entries": [ { "group": "guns_common-open", "prob": 100 } ]
   }
 ]

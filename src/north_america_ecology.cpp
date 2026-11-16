@@ -2,14 +2,19 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "cata_utility.h"
 #include "flexbuffer_json.h"
+#include "line.h"
 #include "map.h"
 #include "mapdata.h"
 #include "mapgendata.h"
@@ -144,6 +149,167 @@ const ecology_atlas &get_ecology()
     return data;
 }
 
+static constexpr std::array<point, 8> district_neighbors{{
+        point::north, point::east, point::south, point::west,
+        point( 1, -1 ), point( 1, 1 ), point( -1, 1 ), point( -1, -1 )
+    }};
+
+struct urban_atlas {
+    int step = 1;
+    std::unordered_set<point> footprints;
+    std::unordered_map<point_abs_om, std::vector<urban_district>> overmaps;
+    std::vector<std::array<city_zone_center, 4>> land_use;
+
+    void add( point grid, std::size_t city_index,
+              std::vector<std::vector<point_abs_omt>> &centers ) {
+        if( !footprints.insert( grid ).second ) {
+            return;
+        }
+        const point_abs_omt first( grid * step );
+        const point_abs_omt center = first + point( step / 2, step / 2 );
+        centers[city_index].push_back( center );
+        const point_abs_om lo = project_to<coords::om>( first );
+        const point_abs_om hi = project_to<coords::om>( first + point( step - 1, step - 1 ) );
+        for( int y = lo.y(); y <= hi.y(); ++y ) {
+            for( int x = lo.x(); x <= hi.x(); ++x ) {
+                overmaps[point_abs_om( x, y )].push_back( { center, city_index } );
+            }
+        }
+    }
+
+    void fill_missing_footprint( const place &city, std::size_t city_index,
+                                 std::vector<std::vector<point_abs_omt>> &centers ) {
+        const point grid = divide_xy_round_to_minus_infinity( city.position.raw(), step );
+        const int radius = std::clamp( static_cast<int>( std::sqrt( city.population ) / 175 ),
+                                       2, 4 );
+        const int diameter = 2 * radius + 1;
+        const point first = grid - point( radius, radius );
+        const point_abs_omt first_center( first * step + point( step / 2, step / 2 ) );
+        const std::vector<terrain> terrain_samples = raster( first_center, diameter, diameter, step );
+        for( int y = -radius; y <= radius; ++y ) {
+            for( int x = -radius; x <= radius; ++x ) {
+                const int sample = ( y + radius ) * diameter + x + radius;
+                if( x * x + y * y <= radius * radius && terrain_samples[sample] == terrain::land ) {
+                    add( grid + point( x, y ), city_index, centers );
+                }
+            }
+        }
+    }
+
+    std::array<city_zone_center, 4> plan_city( const place &city,
+            const std::vector<point_abs_omt> &districts ) const {
+        std::array<city_zone_center, 4> zones{};
+        if( districts.empty() ) {
+            return zones;
+        }
+        const int span = std::clamp( static_cast<int>( std::sqrt( districts.size() ) * step / 2 ),
+                                     step, 220 );
+        const int core_radius = std::clamp( static_cast<int>( std::sqrt( city.population ) / 45 ),
+                                            9, 60 );
+        const point side = ( city.position.x() + city.position.y() ) % 2 ? point::east : point::west;
+        zones = {{
+                { city.position, core_radius, urban_zone::downtown },
+                { city.position + side *( span / 2 ), core_radius / 2 + 5, urban_zone::commercial },
+                { city.position + point::north *( span / 2 ), core_radius / 2 + 4, urban_zone::institutional },
+                {
+                    city.position - side *span + point::south *( span / 3 ), core_radius / 2 + 7,
+                    urban_zone::industrial
+                }
+            }
+        };
+        for( std::size_t z = 0; z < zones.size(); ++z ) {
+            const point_abs_omt target = zones[z].center;
+            int lowest_cost = std::numeric_limits<int>::max();
+            for( const point_abs_omt &district : districts ) {
+                for( int y : {
+                         -1, 0, 1
+                         } ) {
+                    for( int x : {
+                             -1, 0, 1
+                             } ) {
+                        const point_abs_omt candidate = district + point( x, y ) * ( step / 3 );
+                        int cost = square_dist( target, candidate );
+                        for( std::size_t prev = 0; prev < z; ++prev ) {
+                            const int separation = square_dist( zones[prev].center, candidate );
+                            const int required = zones[prev].radius + zones[z].radius;
+                            if( separation == 0 ) {
+                                cost += 100'000;
+                            } else if( separation < required ) {
+                                cost += ( required - separation ) * 4;
+                            }
+                        }
+                        if( cost < lowest_cost ) {
+                            lowest_cost = cost;
+                            zones[z].center = candidate;
+                        }
+                    }
+                }
+            }
+        }
+        for( city_zone_center &zone : zones ) {
+            for( const city_zone_center &other : zones ) {
+                if( zone.zone != other.zone ) {
+                    zone.radius = std::min( zone.radius, square_dist( zone.center, other.center ) / 2 );
+                }
+            }
+        }
+        return zones;
+    }
+
+    urban_atlas() {
+        const auto &places = cities();
+        std::vector<std::vector<point_abs_omt>> centers( places.size() );
+        if( !read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.urban",
+        [&]( const JsonValue & value ) {
+        const JsonObject root = value.get_object();
+            step = root.get_int( "district_size" );
+            if( root.get_int( "version" ) != 1 || step < 3 || step > OMAPX ) {
+                root.throw_error( "Invalid urban footprint atlas" );
+            }
+            for( const JsonValue row : root.get_array( "districts" ) ) {
+                const JsonArray record = row.get_array();
+                const point grid( record.get_int( 0 ), record.get_int( 1 ) );
+                const int index = record.get_int( 2 );
+                if( index < 0 || static_cast<std::size_t>( index ) >= places.size() ) {
+                    record.throw_error( "Invalid urban district city" );
+                }
+                add( grid, static_cast<std::size_t>( index ), centers );
+            }
+        } ) ) {
+            return;
+        }
+        land_use.resize( places.size() );
+        for( std::size_t index = 0; index < places.size(); ++index ) {
+            const place &city = places[index];
+            // The atlas already has the Sinaloa city and its real footprint.
+            // Do not synthesize a second Mazatlan from the erroneous Sonora record.
+            const bool duplicate_mazatlan = city.country == "Mexico" && city.region == "Sonora" &&
+                                            city.name == "Mazatl\u00e1n";
+            if( centers[index].empty() && city.population >= minimum_zoned_population &&
+                !duplicate_mazatlan ) {
+                fill_missing_footprint( city, index, centers );
+            }
+            land_use[index] = plan_city( city, centers[index] );
+        }
+        for( auto &entry : overmaps ) {
+            for( urban_district &district : entry.second ) {
+                const point grid = divide_xy_round_to_minus_infinity( district.center.raw(), step );
+                for( std::size_t i = 0; i < district_neighbors.size(); ++i ) {
+                    if( !footprints.count( grid + district_neighbors[i] ) ) {
+                        district.open_edges |= 1U << i;
+                    }
+                }
+            }
+        }
+    }
+};
+
+const urban_atlas &get_urban_atlas()
+{
+    static const urban_atlas data;
+    return data;
+}
+
 const ecology_profile *profile_at( point_abs_omt pos )
 {
     const ecology_atlas &data = get_ecology();
@@ -189,15 +355,127 @@ float forest_adjustment( point_abs_omt pos )
     return cover == 0 ? biome : biome + ( cover - 3 ) * 0.085f;
 }
 
+const std::vector<urban_district> &urban_districts_in( point_abs_om pos )
+{
+    static const std::vector<urban_district> empty;
+    const auto &overmaps = get_urban_atlas().overmaps;
+    const auto district = overmaps.find( pos );
+    return district == overmaps.end() ? empty : district->second;
+}
+
+int urban_district_size()
+{
+    return get_urban_atlas().step;
+}
+
+const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index )
+{
+    static const std::array<city_zone_center, 4> empty{};
+    const auto &zones = get_urban_atlas().land_use;
+    return city_index < zones.size() ? zones[city_index] : empty;
+}
+
+bool in_urban_footprint( point_abs_omt pos, int margin )
+{
+    const urban_atlas &atlas = get_urban_atlas();
+    const point offset( margin, margin );
+    const point lo = divide_xy_round_to_minus_infinity( pos.raw() - offset, atlas.step );
+    const point hi = divide_xy_round_to_minus_infinity( pos.raw() + offset, atlas.step );
+    for( int y = lo.y; y <= hi.y; ++y ) {
+        for( int x = lo.x; x <= hi.x; ++x ) {
+            if( atlas.footprints.count( point( x, y ) ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int urban_density( const urban_district &district, point_abs_omt pos )
+{
+    if( !district.open_edges ) {
+        return 100;
+    }
+    const int step = urban_district_size();
+    const point p = pos.raw() - district.center.raw() + point( step / 2, step / 2 );
+    const std::array<int, 4> distance{{ p.y, step - 1 - p.x, step - 1 - p.y, p.x }};
+    constexpr int fringe = 20;
+    int depth = fringe + 5;
+    for( int i = 0; i < 4; ++i ) {
+        const int next = ( i + 1 ) % 4;
+        const bool open = district.open_edges & ( 1U << i );
+        if( open ) {
+            depth = std::min( depth, distance[i] );
+        }
+        if( open && ( district.open_edges & ( 1U << next ) ) ) {
+            // Cut back the square corners where two exposed sides meet.
+            depth = std::min( depth, ( distance[i] + distance[next] - 14 ) * 3 / 4 );
+        }
+        if( district.open_edges & ( 1U << ( i + 4 ) ) ) {
+            depth = std::min( depth, ( distance[i] + distance[next] ) * 3 / 4 );
+        }
+    }
+    // A low-frequency edge varies at neighborhood scale and is continuous at district seams.
+    const auto wave = []( int coordinate, int period ) {
+        const int phase = modulo( coordinate, period );
+        return std::min( phase, period - phase );
+    };
+    const int variation = ( wave( pos.x(), 39 ) + wave( pos.y(), 53 ) ) / 4 - 5;
+    return std::clamp( ( depth + variation - 2 ) * 100 / fringe, 0, 100 );
+}
+
+int population_band( point_abs_omt pos )
+{
+    const ecology_atlas &data = get_ecology();
+    const int i = data.index( pos );
+    return i >= 0 ? data.population[i] : 0;
+}
+
+int rural_population_band( point_abs_omt pos )
+{
+    return in_urban_footprint( pos ) ? 0 : population_band( pos );
+}
+
 double rural_city_multiplier( point_abs_om pos )
 {
-    static constexpr std::array<double, 8> population_multipliers{ 0.0, 0.02, 0.08, 0.18,
-            0.38, 0.65, 1.0, 1.35
-                                                                 };
-    const ecology_atlas &data = get_ecology();
-    const point_abs_omt center = project_to<coords::omt>( pos ) + point( OMAPX / 2, OMAPY / 2 );
-    const int i = data.index( center );
-    return i >= 0 ? population_multipliers[data.population[i]] : 1.0;
+    static constexpr std::array<double, 8> town_frequency{
+        0.0, 0.012, 0.05, 0.14, 0.30, 0.55, 0.85, 1.1
+    };
+    const point_abs_omt origin = project_to<coords::omt>( pos );
+    double sum = 0.0;
+    constexpr int samples = 4;
+    for( int y = 0; y < samples; ++y ) {
+        for( int x = 0; x < samples; ++x ) {
+            const point offset( ( 2 * x + 1 ) * OMAPX / ( 2 * samples ),
+                                ( 2 * y + 1 ) * OMAPY / ( 2 * samples ) );
+            sum += town_frequency[rural_population_band( origin + offset )];
+        }
+    }
+    return sum / ( samples * samples );
+}
+
+int named_city_size( int population )
+{
+    return std::clamp( 2 + static_cast<int>( std::sqrt( std::max( 0, population ) / 220.0 ) ), 2, 55 );
+}
+
+int rural_town_size( point_abs_omt pos )
+{
+    static constexpr std::array<int, 8> size_by_density{ 0, 2, 2, 3, 4, 5, 7, 10 };
+    int size = size_by_density[rural_population_band( pos )];
+    if( size <= 2 ) {
+        return size;
+    }
+    // The footprint is incomplete around small remote towns. Keep nearby
+    // procedural settlements below the size of the recorded local centre.
+    constexpr int proximity = 1400; // 33.6 km
+    for( const place &settlement : cities() ) {
+        if( settlement.population < 20000 &&
+            square_dist( settlement.position.raw(), pos.raw() ) <= proximity ) {
+            size = std::min( size, std::max( 2, named_city_size( settlement.population ) - 1 ) );
+        }
+    }
+    return size;
 }
 
 std::string ecoregion_code( point_abs_omt pos )

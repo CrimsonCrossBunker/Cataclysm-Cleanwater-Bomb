@@ -213,10 +213,7 @@ static void mp_log_impl( const std::string &msg, log_role role )
                              std::to_string( delta_ms ) + "ms] " + msg;
 
     // Also append to /tmp/cdda-mp-{server,client}.log so log capture doesn't
-    // require launching via start-mp.sh's stdout-tee.  Opens lazily on the
-    // first call once the mode is known; truncates on first open so each
-    // session's log starts fresh.  Re-opens with truncation if the mode
-    // changes (e.g. SP→host via the in-game menu).
+    // require launching via start-mp.sh's stdout-tee.
     static std::ofstream log_file;
     static std::string current_path;
     // Log directory: /tmp on unix (the stable path our tooling reads). Windows
@@ -243,12 +240,8 @@ static void mp_log_impl( const std::string &msg, log_role role )
         if( log_file.is_open() ) {
             log_file.close();
         }
-        // Append (don't rotate per session — that split a play session across
-        // .log/.log.1 and hid debug data, 2026-06-03).  ONE exception: if the
-        // file has grown past a hard cap, truncate on open so it can't grow
-        // unbounded across dozens of launches.  Only fires at the start of a new
-        // launch, never mid-session, so it never pulls live data out from under
-        // a debugging run.
+        // Append across sessions. If the log exceeds the size cap, truncate it when
+        // opening the file.
         constexpr std::uintmax_t LOG_CAP_BYTES = 10ULL * 1024 *
                 1024;  // 10 MB — keeps logs attachable to Discord (10MB free) / GitHub (25MB)
         std::error_code ec;
@@ -6604,11 +6597,6 @@ void client_process_incoming()
                     std::to_string( post_apply_moves ) );
         }
     }
-    // (Repaint consolidated into the single throttled redraw at the END of this
-    // function. There used to be a second full refresh_display() here too — two
-    // per drain — which on the slower client doubled the per-grant render and,
-    // because divergent two-machine worlds make recv_count>0 every grant, paced
-    // the host's per-turn lockstep wait to ~2x render-speed. 2026-06-03.)
     // Snapshot drain-end state. Deduped so idle/locked do_turn (~60Hz) doesn't flood log.
     {
         const std::string msg = "[cdda-mp] CLI-DRAIN-END: moves=" +
@@ -6622,18 +6610,8 @@ void client_process_incoming()
     }
     // Repaint when we processed incoming messages so calendar/time/messages/
     // tiles reach the screen during long activities (the client stays in tight
-    // do_turn iterations otherwise). THROTTLED to ~12fps: a full refresh_display
-    // is ~100ms on the slower client, and with divergent worlds recv_count>0
-    // every grant, so rendering per grant paced the client's do_turn (and thus
-    // the host's lockstep wait) to render-speed. The grant ack is already sent
-    // in process_mp_events, so throttling only affects visual freshness, not the
-    // round-trip. DIAG: log slow renders so we can see the actual cost.
+    // do_turn iterations otherwise).
     if( recv_count > 0 ) {
-        // One repaint per drained batch (the throttle experiment is reverted —
-        // it froze the client without helping the host, since a single render
-        // is ~236ms on the slow client and exceeds any useful throttle). The
-        // real fix is the client's render speed, not the render frequency.
-        // CLI-RENDER timing kept so we can measure that.
         const std::chrono::steady_clock::time_point r0 = std::chrono::steady_clock::now();
         g->invalidate_main_ui_adaptor();
         const std::chrono::steady_clock::time_point r1 = std::chrono::steady_clock::now();
@@ -6647,8 +6625,6 @@ void client_process_incoming()
         };
         const long rdur = ms( r0, r3 );
         if( rdur > 25 ) {
-            // Sub-timed so we know which call to cut: invalidate (cold cache rebuild)
-            // vs redraw (tile draw) vs present (framebuffer blit, slow w/o accel).
             mp_log( "[cdda-mp] CLI-RENDER: " + std::to_string( rdur ) + "ms (inval=" +
                     std::to_string( ms( r0, r1 ) ) + " redraw=" + std::to_string( ms( r1, r2 ) ) +
                     " present=" + std::to_string( ms( r2, r3 ) ) + ")" );

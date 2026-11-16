@@ -86,10 +86,12 @@
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
 #include "iteminfo_query.h"
 #include "itype.h"
+#include "iuse_actor.h"
 #include "json.h"
 #include "json_loader.h"
 #include "line.h"
@@ -146,18 +148,18 @@
 #include "veh_interact.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_selector.h"
 #include "viewer.h"
 #include "vitamin.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
+#include "vehicle_power_connection.h"
+#include "visitable.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
 
 static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
-
-static const addiction_id addiction_nicotine( "nicotine" );
 
 static const ammotype ammo_battery( "battery" );
 
@@ -174,6 +176,16 @@ static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
+
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_BERRY_CONSUME( "EOC_MARLOSS_BERRY_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_GEL_CONSUME( "EOC_MARLOSS_GEL_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_SEED_CONSUME( "EOC_MARLOSS_SEED_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_WINE_CONSUME( "EOC_MARLOSS_WINE_CONSUME" );
+static const effect_on_condition_id effect_on_condition_EOC_MYCUS_CONSUME( "EOC_MYCUS_CONSUME" );
 
 static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_antibiotic( "antibiotic" );
@@ -266,8 +278,6 @@ static const flag_id json_flag_NO_MANUAL_ACTIVATION( "NO_MANUAL_ACTIVATION" );
 
 static const furn_str_id furn_f_translocator_buoy( "f_translocator_buoy" );
 
-static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
-
 static const itype_id itype_advanced_ecig( "advanced_ecig" );
 static const itype_id itype_afs_atompot( "afs_atompot" );
 static const itype_id itype_apparatus( "apparatus" );
@@ -299,7 +309,6 @@ static const itype_id itype_hygrometer( "hygrometer" );
 static const itype_id itype_joint( "joint" );
 static const itype_id itype_joint_lit( "joint_lit" );
 static const itype_id itype_liquid_soap( "liquid_soap" );
-static const itype_id itype_log( "log" );
 static const itype_id itype_mask_h20survivor_on( "mask_h20survivor_on" );
 static const itype_id itype_mininuke_act( "mininuke_act" );
 static const itype_id itype_multi_cooker( "multi_cooker" );
@@ -333,6 +342,7 @@ static const itype_id itype_water_murky( "water_murky" );
 static const itype_id itype_water_purifying_active( "water_purifying_active" );
 static const itype_id itype_wax( "wax" );
 static const itype_id itype_weather_reader( "weather_reader" );
+static const itype_id itype_wine_marloss( "wine_marloss" );
 
 static const json_character_flag json_flag_CANNOT_USE_COMPUTERS( "CANNOT_USE_COMPUTERS" );
 static const json_character_flag json_flag_ENHANCED_VISION( "ENHANCED_VISION" );
@@ -384,8 +394,6 @@ static const ter_str_id ter_t_pit_glass( "t_pit_glass" );
 static const ter_str_id ter_t_pit_shallow( "t_pit_shallow" );
 static const ter_str_id ter_t_pit_spiked( "t_pit_spiked" );
 static const ter_str_id ter_t_pit_spiked_covered( "t_pit_spiked_covered" );
-static const ter_str_id ter_t_stump( "t_stump" );
-static const ter_str_id ter_t_trunk( "t_trunk" );
 static const ter_str_id ter_t_utility_light( "t_utility_light" );
 
 static const trait_id trait_ACIDBLOOD( "ACIDBLOOD" );
@@ -402,7 +410,6 @@ static const trait_id trait_THRESH_LUPINE( "THRESH_LUPINE" );
 static const trait_id trait_THRESH_PLANT( "THRESH_PLANT" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_VAMPIRE( "VAMPIRE" );
-static const trait_id trait_WAYFARER( "WAYFARER" );
 
 static const trap_str_id tr_goo( "tr_goo" );
 static const trap_str_id tr_portal( "tr_portal" );
@@ -513,26 +520,25 @@ static std::optional<int> activate_legacy_marloss( Character *person, item *food
 
 std::optional<int> iuse::marloss( Character *person, item *food, const tripoint_bub_ms & )
 {
-    const effect_on_condition_id effect( food != nullptr &&
-                                         food->typeId() == itype_id( "wine_marloss" ) ?
-                                         "EOC_MARLOSS_WINE_CONSUME" : "EOC_MARLOSS_BERRY_CONSUME" );
+    const effect_on_condition_id &effect = food != nullptr && food->typeId() == itype_wine_marloss ?
+                                           effect_on_condition_EOC_MARLOSS_WINE_CONSUME : effect_on_condition_EOC_MARLOSS_BERRY_CONSUME;
     return activate_legacy_marloss( person, food, effect );
 }
 
 std::optional<int> iuse::marloss_seed( Character *person, item *food, const tripoint_bub_ms & )
 {
     return activate_legacy_marloss( person, food,
-                                    effect_on_condition_id( "EOC_MARLOSS_SEED_CONSUME" ) );
+                                    effect_on_condition_EOC_MARLOSS_SEED_CONSUME );
 }
 
 std::optional<int> iuse::marloss_gel( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MARLOSS_GEL_CONSUME" ) );
+    return activate_legacy_marloss( person, food, effect_on_condition_EOC_MARLOSS_GEL_CONSUME );
 }
 
 std::optional<int> iuse::mycus( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MYCUS_CONSUME" ) );
+    return activate_legacy_marloss( person, food, effect_on_condition_EOC_MYCUS_CONSUME );
 }
 
 std::optional<int> iuse::sewage( Character *p, item *, const tripoint_bub_ms & )
@@ -4508,7 +4514,8 @@ std::optional<int> iuse::hotplate_atomic( Character *p, item *it, const tripoint
     if( p->cant_do_mounted() ) {
         return std::nullopt;
     }
-    if( it->typeId() == itype_atomic_coffeepot || it->typeId() == itype_afs_atompot || it->typeId() == itype_fcl_atomic_coffeemaker || it->typeId() == itype_fcl_atompot ) {
+    if( it->typeId() == itype_atomic_coffeepot || it->typeId() == itype_afs_atompot ||
+        it->typeId() == itype_fcl_atomic_coffeemaker || it->typeId() == itype_fcl_atompot ) {
         heat_solid_items( p, it, p->pos_bub() );
     }
 
@@ -4828,6 +4835,67 @@ std::optional<int> iuse::gunmod_attach( Character *p, item *it, const tripoint_b
     } while( true );
 }
 
+ret_val<void> iuse::can_attach_toolmod( const item_location &mod, const item *tool )
+{
+    if( !mod || !mod->is_toolmod() ) {
+        return ret_val<void>::make_failure( _( "That tool modification is no longer available." ) );
+    }
+
+    bool installed = false;
+    if( mod.has_parent() ) {
+        const item_pocket *pocket = mod.parent_item()->contained_where( *mod );
+        installed = pocket && pocket->is_type( pocket_type::MOD );
+    }
+    if( !installed ) {
+        const auto find_mod = [&mod]( item * candidate, item * ) {
+            for( const item *attached : candidate->all_items_top( pocket_type::MOD ) ) {
+                if( attached == mod.get_item() ) {
+                    return VisitResponse::ABORT;
+                }
+            }
+            return VisitResponse::NEXT;
+        };
+        if( Character *carrier = mod.carrier() ) {
+            installed = carrier->visit_items( find_mod ) == VisitResponse::ABORT;
+        } else if( const vehicle_cursor *cursor = mod.veh_cursor() ) {
+            installed = cursor->visit_items( find_mod ) == VisitResponse::ABORT;
+        } else if( mod.where_recursive() == item_location::type::map ) {
+            installed = map_cursor( mod.pos_abs() ).visit_items( find_mod ) == VisitResponse::ABORT;
+        }
+    }
+    if( installed ) {
+        return ret_val<void>::make_failure(
+                   _( "You must remove this modification from its tool before installing it elsewhere." ) );
+    }
+    if( !tool ) {
+        return ret_val<void>::make_success();
+    }
+    if( tool == mod.get_item() || !tool->is_tool() ) {
+        return ret_val<void>::make_failure( _( "You can only install this modification on a tool." ) );
+    }
+    if( ( mod->has_flag( flag_USE_UPS ) || mod->has_flag( flag_USES_BIONIC_POWER ) ) &&
+        ( tool->has_flag( flag_IS_UPS ) || tool->has_flag( flag_USE_UPS ) ||
+          tool->has_flag( flag_USES_BIONIC_POWER ) ) ) {
+        return ret_val<void>::make_failure( _( "This tool already uses an external power supply." ) );
+    }
+    if( !tool->toolmods().empty() ) {
+        return ret_val<void>::make_failure( _( "This tool is already modified." ) );
+    }
+    if( tool->magazine_current() ) {
+        return ret_val<void>::make_failure(
+                   _( "Remove the battery before installing a tool modification." ) );
+    }
+    if( tool->has_flag( flag_INTEGRATED ) ) {
+        return ret_val<void>::make_failure( _( "You can't modify an integrated tool." ) );
+    }
+    for( const ammotype &ammo : mod->type->mod->acceptable_ammo ) {
+        if( tool->type->tool->ammo_id.count( ammo ) ) {
+            return ret_val<void>::make_success();
+        }
+    }
+    return ret_val<void>::make_failure( _( "This modification is incompatible with the tool." ) );
+}
+
 std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_bub_ms & )
 {
     if( !it || !it->is_toolmod() ) {
@@ -4839,29 +4907,15 @@ std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_
         return std::nullopt;
     }
 
-    auto filter = [&it]( const item & e ) {
-        // don't allow ups or bionic battery mods on a UPS or UPS-powered/bionic-powered tools
-        if( ( it->has_flag( flag_USE_UPS ) || it->has_flag( flag_USES_BIONIC_POWER ) ) &&
-            ( e.has_flag( flag_IS_UPS ) || e.has_flag( flag_USE_UPS ) ||
-              e.has_flag( flag_USES_BIONIC_POWER ) ) ) {
-            return false;
-        }
-
-        // can't mod non-tool, or a tool with existing mods, or a battery currently installed
-        if( !e.is_tool() || !e.toolmods().empty() || e.magazine_current() ) {
-            return false;
-        }
-
-        // can't mod integrated tools
-        if( e.has_flag( flag_INTEGRATED ) ) {
-            return false;
-        }
-
-        // can only attach to unmodified tools that use compatible ammo
-        return std::any_of( it->type->mod->acceptable_ammo.begin(),
-        it->type->mod->acceptable_ammo.end(), [&]( const ammotype & at ) {
-            return e.type->tool->ammo_id.count( at );
-        } );
+    item_location mod( *p, it );
+    const ret_val<void> source_check = can_attach_toolmod( mod );
+    if( !source_check.success() ) {
+        p->add_msg_if_player( m_info, "%s", source_check.str() );
+        return std::nullopt;
+    }
+    mod = form_loc_recursive( *p, *it );
+    auto filter = [&mod]( const item & candidate ) {
+        return can_attach_toolmod( mod, &candidate ).success();
     };
 
     item_location loc = g->inv_map_splice( filter, _( "Select tool to modify:" ), 1,
@@ -4879,7 +4933,7 @@ std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_
         }
     }
 
-    p->toolmod_add( std::move( loc ), item_location( *p, it ) );
+    p->toolmod_add( std::move( loc ), std::move( mod ) );
     return 0;
 }
 

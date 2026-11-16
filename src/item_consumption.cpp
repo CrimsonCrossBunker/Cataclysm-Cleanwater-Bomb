@@ -12,6 +12,7 @@
 #include "iuse.h"
 #include "json.h"
 #include "map.h"
+#include "north_america_soil.h"
 #include "mapdata.h"
 #include "messages.h"
 #include "mp_client_conn.h"
@@ -59,7 +60,7 @@ ground_food food_underfoot( const Character &who, map &here, const tripoint_bub_
         !here.has_flag( ter_furn_flag::TFLAG_FUNGUS, position ) ) {
         return ground_food::grass;
     }
-    const ter_id terrain = here.ter( position );
+    const ter_id terrain = north_america::canonical_soil( here.ter( position ) );
     if( terrain == ter_t_grass_golf || terrain == ter_t_grass ) {
         return ground_food::short_grass;
     }

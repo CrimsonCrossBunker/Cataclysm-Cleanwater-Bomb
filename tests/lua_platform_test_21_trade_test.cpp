@@ -45,6 +45,7 @@ static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bandages( "bandages" );
+static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_rock( "rock" );
 
 TEST_CASE( "lua_platform_allowance_quote_rejects_nonactive_avatar",
@@ -999,7 +1000,7 @@ TEST_CASE( "lua_platform_trade_commit_preserves_compatible_destination_stacks",
     REQUIRE( commit_envelope["ok"].get<bool>() );
     const sol::table transferred_line =
         commit_envelope["value"].get<sol::table>()["lines"].get<sol::table>()[1];
-    const auto transferred_uid = transferred_line["transferred_item_uid"].get<lua_Integer>();
+    const lua_Integer transferred_uid = transferred_line["transferred_item_uid"].get<lua_Integer>();
     CHECK( transferred_uid != blocker_uid );
     item *received = find_platform_trade_item( *fixture.buyer, transferred_uid );
     REQUIRE( received != nullptr );
@@ -1298,12 +1299,12 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( transferred_charges.front()->is_owned_by( *fixture.buyer ) );
     CHECK( fixture.buyer->op_of_u.owed == debt_before );
 
-    REQUIRE_FALSE( item::count_by_charges( itype_bandages ) );
+    REQUIRE_FALSE( item::count_by_charges( itype_hammer ) );
     fixture.seller.inv->add_item(
-        item( itype_bandages, calendar::turn_zero ), false, false, false );
+        item( itype_hammer, calendar::turn_zero ), false, false, false );
     const sol::protected_function_result item_result = transfer(
                 fixture.seller_handle, fixture.buyer_handle,
-                cata::lua_platform::script_game_id( "item", "bandages" ), 1 );
+                cata::lua_platform::script_game_id( "item", "hammer" ), 1 );
     REQUIRE( item_result.valid() );
     const sol::table item_envelope = item_result.get<sol::table>();
     REQUIRE( item_envelope["ok"].get<bool>() );
@@ -1312,7 +1313,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( item_value["kind"].get<std::string>() == "items" );
     const auto transferred_items = fixture.buyer->items_with(
     []( const item & entry ) {
-        return entry.typeId() == itype_bandages;
+        return entry.typeId() == itype_hammer;
     } );
     REQUIRE( transferred_items.size() == 1 );
     CHECK( transferred_items.front()->is_owned_by( *fixture.buyer ) );
@@ -1322,7 +1323,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     const std::size_t item_count_before_failure = transferred_items.size();
     const sol::protected_function_result missing_result = transfer(
                 fixture.seller_handle, fixture.buyer_handle,
-                cata::lua_platform::script_game_id( "item", "bandages" ), 2 );
+                cata::lua_platform::script_game_id( "item", "hammer" ), 2 );
     REQUIRE( missing_result.valid() );
     const sol::table missing_envelope = missing_result.get<sol::table>();
     REQUIRE( missing_envelope["ok"].get<bool>() );
@@ -1333,7 +1334,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
            std::string::npos );
     CHECK( fixture.live_item->charges == charge_count_before_failure );
     CHECK( fixture.buyer->items_with( []( const item & entry ) {
-        return entry.typeId() == itype_bandages;
+        return entry.typeId() == itype_hammer;
     } ).size() == item_count_before_failure );
 }
 

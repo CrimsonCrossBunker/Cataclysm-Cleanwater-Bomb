@@ -199,7 +199,24 @@ void weather_sound( const translation &sound_message, std::string_view sound_eff
 struct omt_snow_state {
     double depth_mm = 0;
     time_point last_update = calendar::turn;
+    double water_mm = -1;
 };
+
+class map;
+
+enum class snow_cover : uint8_t {
+    none,
+    light,
+    medium,
+    deep
+};
+
+tripoint_abs_omt snow_climate_cell( const tripoint_abs_omt &location );
+snow_cover classify_snow( double depth_mm );
+int snow_move_penalty( snow_cover cover );
+double indoor_heat_retention( double wall_loss, int openings, double wind_mph );
+void advance_snowpack( omt_snow_state &pack, double water_rate, double temperature_c,
+                       double humidity, double wind_mph, double hours );
 
 class weather_manager
 {
@@ -215,6 +232,8 @@ class weather_manager
         void update_snow_depth();
         // Snow depth in mm at a given OMT (0 if no data)
         double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
+        snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
+        snow_cover get_surface_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature
         units::temperature temperature = 0_K;
         bool lightning_active = false;
@@ -241,8 +260,9 @@ class weather_manager
         time_point nextweather;
         /** temperature cache, cleared every turn, sparse map of map tripoints to temperatures */
         std::unordered_map< tripoint_bub_ms, units::temperature > temperature_cache;
+        mutable std::unordered_map<tripoint_abs_omt, units::temperature> ground_temperature_cache;
         // Per-OMT snow depth state, updated incrementally
-        std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
+        mutable std::unordered_map< tripoint_abs_omt, omt_snow_state > snow_depth_map;
         /*
         * Returns current temperature of given tile. Includes temperature modifications from
         * radiative and convective sources, such as fires or hot air from heaters.
@@ -256,6 +276,27 @@ class weather_manager
         void clear_temp_cache();
         static void serialize_all( JsonOut &json );
         static void unserialize_all( const JsonObject &w );
+
+    private:
+        struct room_heat {
+            double excess = 0;
+            double equilibrium = 0;
+            double time_constant = 1;
+        };
+        struct room_heat_layer {
+            tripoint_abs_ms origin;
+            time_point sampled_at;
+            std::unordered_map<tripoint_abs_ms, std::size_t> assignments;
+            std::vector<room_heat> rooms;
+        };
+        std::unordered_map<int, room_heat_layer> heated_rooms;
+        std::optional<dimension_id> heat_dimension;
+        units::temperature_delta get_room_heat( const map &here, const tripoint_bub_ms &location,
+                                                const tripoint_bub_ms &player );
+
+        std::optional<time_point> last_weather_turn;
+        std::optional<time_point> indoor_reference_time;
+        units::temperature indoor_reference_temperature;
 };
 
 weather_manager &get_weather();

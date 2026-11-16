@@ -1905,7 +1905,8 @@ bool lookup_sprite_layers_3d( cata_tiles *tiles, const std::string &id,
     }
     sprite_lookup_key key{ id, variant, static_cast<int>( cat ), subtile, rota,
                            force_rota ? 1 : 0,
-                           static_cast<int>( season_of_year( calendar::turn ) ) };
+                           static_cast<int>( season_of_year( calendar::turn ) ) +
+                           season_type::NUM_SEASONS *static_cast<int>( foliage_season_of_year( calendar::turn ) ) };
     sprite_lookup_cache &cache = sprite_cache();
     if( const auto it = cache.find( key ); it != cache.end() ) {
         const cached_sprite_lookup_3d &cached = *it->second;
@@ -3416,6 +3417,22 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 // level classification 2D uses: bright tiles stay full color,
                 // dim ones darken and drain toward grayscale
                 const tile_tone tone = tone_for( cache, p, ll );
+
+                const snow_cover snow = get_weather_const().get_surface_snow_cover( here, p );
+                if( snow != snow_cover::none && tiles->get_snow_texture() ) {
+                    const SDL_Rect rect = tiles->snow_sprite( snow, here.get_abs( p ).xy() );
+                    sprite_info sprite;
+                    sprite.atlas = tiles->get_snow_texture().get();
+                    sprite.u0 = static_cast<float>( rect.x ) / cata_tiles::snow_sheet_width;
+                    sprite.u1 = static_cast<float>( rect.x + rect.w ) / cata_tiles::snow_sheet_width;
+                    sprite.v0 = static_cast<float>( rect.y ) / cata_tiles::snow_sheet_height;
+                    sprite.v1 = static_cast<float>( rect.y + rect.h ) / cata_tiles::snow_sheet_height;
+                    std::vector<float> &layer = bucket_for( MODE_FLATQUAD_DECAL, sprite.atlas );
+                    push_instance( layer, dx, dy, wz + 0.006f, 1.0f, 1.0f, 1.0f, sprite,
+                                   tone.shade, tone.shade, tone.shade, false, 0, false,
+                                   -1.0f, ghost, tone.sat, false, true );
+                    ++count;
+                }
 
                 const bool is_tree = t->has_flag( "TREE" );
                 const bool is_shrub = t->has_flag( "SHRUB" );

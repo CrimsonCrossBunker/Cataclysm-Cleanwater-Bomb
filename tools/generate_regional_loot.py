@@ -259,19 +259,32 @@ def service_drops(base):
     return groups
 
 
-def render(value, indent=0):
-    """Keep small JSON values on one line, like the repository item groups."""
-    flat = json.dumps(value, ensure_ascii=False)
-    if isinstance(value, (dict, list)) and value:
+def _inline_json(value):
+    if isinstance(value, dict):
+        return "{ " + ", ".join(_inline_json(key) + ": " + _inline_json(part)
+                                for key, part in value.items()) + " }"
+    if isinstance(value, list):
+        return "[ " + ", ".join(_inline_json(part) for part in value) + " ]"
+    return json.dumps(value, ensure_ascii=False).replace("\u00a0", r"\u00a0")
+
+
+def render(value, indent=0, separator=""):
+    """Render item groups with the repository JSON formatter's collection layout."""
+    flat = _inline_json(value)
+    if isinstance(value, (dict, list)):
+        # Native depth starts at -1: root and immediate child collections wrap.
+        # Count the pending separator toward tools/format/format.cpp's byte limit.
+        if indent >= 4 and len((separator + flat).encode("utf-8")) <= 120:
+            return flat
         left, right = ("{", "}") if isinstance(value, dict) else ("[", "]")
-        if indent > 2 and len(flat) + indent + 1 <= 116:
-            return left + " " + flat[1:-1] + " " + right
         if isinstance(value, dict):
-            parts = [json.dumps(key) + ": " + render(part, indent + 2)
+            parts = [_inline_json(key) + ": " + render(part, indent + 2)
                      for key, part in value.items()]
         else:
-            parts = [render(part, indent + 2) for part in value]
-        return left + "\n" + ",\n".join(" " * (indent + 2) + part for part in parts) + (
+            parts = [render(part, indent + 2, ",\n" + " " * (indent + 2) if index else "")
+                     for index, part in enumerate(value)]
+        body = ",\n".join(" " * (indent + 2) + part for part in parts)
+        return left + "\n" + (body if parts else " " * (indent + 2)) + (
             "\n" + " " * indent + right
         )
     return flat
