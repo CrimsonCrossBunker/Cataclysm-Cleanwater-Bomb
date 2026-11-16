@@ -260,7 +260,7 @@ void client_start_mending( const item_location &target, item_repair::mending_sel
 bool client_start_selected_repair( const item_location &tool, const std::string &method,
                                    const item_repair::repair_target &target );
 void client_start_item_move( const item_move_selection &selection );
-void client_start_smash( const tripoint_bub_ms &target );
+void client_start_smash( const tripoint_bub_ms &position );
 void client_start_owned_wear( const std::vector<equipment_intent> &selection );
 bool client_start_read( const item_location &book, const item_location &ereader,
                         bool continuous = false, int learner_id = -1 );

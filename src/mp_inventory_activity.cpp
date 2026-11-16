@@ -11,6 +11,7 @@
 #include "iuse_actor.h"
 
 #include <cstdlib>
+#include <cstdint>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -176,7 +177,6 @@ static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
 static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
 static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
-static const activity_id ACT_WEAR( "ACT_WEAR" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
@@ -189,6 +189,7 @@ static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
+static const activity_id ACT_WEAR( "ACT_WEAR" );
 
 static const bionic_id bio_flashbang( "bio_flashbang" );
 static const bionic_id bio_magnet( "bio_magnet" );
@@ -360,15 +361,6 @@ static npc_wardrobe current_npc_wardrobe( npc &recipient )
     return clothes;
 }
 
-struct owned_npc_item_offer {
-    bool use_item;
-    std::optional<item_source> replacement_source;
-    itype_id offered_type;
-    int offered_count = 0;
-    npc_wardrobe wardrobe;
-    std::string refused_reason;
-};
-
 static void refresh_vehicles_at_changed_tiles( const map &here,
         inventory_activity_host_state &state )
 {
@@ -380,13 +372,22 @@ static void refresh_vehicles_at_changed_tiles( const map &here,
         if( !here.has_loaded_submap( tile ) ) {
             continue;
         }
-        if( const auto target = here.veh_at( tile ) ) {
+        if( const optional_vpart_position target = here.veh_at( tile ) ) {
             state.refresh_vehicle_snapshots.push_back( target->vehicle().uid().get_value() );
         }
     }
 }
 
 struct owned_dialogue_session {
+    struct owned_npc_item_offer {
+        bool use_item;
+        std::optional<item_source> replacement_source;
+        itype_id offered_type;
+        int offered_count = 0;
+        npc_wardrobe wardrobe;
+        std::string refused_reason;
+    };
+
     uint64_t session_id = 0;
     bool radio_contact = false;
     std::string remote_name;
@@ -496,7 +497,7 @@ struct owned_dialogue_session {
     }
 
     void cancel() {
-        modal.emplace<std::monostate>();
+        modal = std::monostate{};
         if( session.conversation_active() ) {
             const restore_on_out_of_scope restore_radio( get_avatar().dialogue_by_radio );
             const restore_on_out_of_scope restore_remote_name( get_avatar().dialogue_remote_name );
@@ -533,8 +534,8 @@ struct owned_dialogue_session {
             if( !provider ) {
                 return false;
             }
-            auto &trade = modal.emplace<npc_trade_session>( who, *provider, here, id,
-                          std::move( *trade_request ) );
+            npc_trade_session &trade = modal.emplace<npc_trade_session>( who, *provider, here, id,
+                                       std::move( *trade_request ) );
             if( !trade.belongs_to( who, *provider, here ) || !participants_alive() ) {
                 modal.emplace<std::monostate>();
                 return false;
@@ -1362,7 +1363,7 @@ bool start_item_use( Character &who, map &here, const JsonObject &request,
                       request.get_bool( "allow_wet", false ), choices );
     if( used && choices.cable_link ) {
         state.refresh_observers = true;
-        const auto &link = *choices.cable_link;
+        const cable_link_selection &link = *choices.cable_link;
         for( const auto *endpoint : {
                  &link.first, &link.destination
              } ) {
@@ -1715,6 +1716,466 @@ static void start_owned_dialogue( Character &who, map &here, const JsonObject &r
     }
 }
 
+static bool start_inventory_activity_request( Character &who, map &here,
+        const JsonObject &request, inventory_activity_host_state &state,
+        const character_action_guard &lifetime, int64_t sequence,
+        bool &zone_editor_requested, std::optional<vertical_move_prompt> &vertical_prompt,
+        bool &zone_action_menu )
+{
+    state.needs_placement = false;
+    const std::string kind = request.get_string( "kind", "reload" );
+    state.tracks_dialogue = kind == "dialogue";
+    state.tracks_walking = kind == "walk" || kind == "vertical_move" || kind == "vertical_query" ||
+                           kind == "ledge_peek" || kind == "peek";
+    state.tracks_crafting = kind == "craft" || kind == "craft_resume";
+    state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry" ||
+                            kind == "bionic_activation" || kind == "bionic_deactivation" ||
+                            kind == "spell" || kind == "spellbook" || kind == "read" || kind == "butcher" ||
+                            kind == "disassemble" || kind == "farming" || kind == "kiln" || kind == "smoking_rack" ||
+                            kind == "fermentation" || kind == "keg" || kind == "furniture_reload" ||
+                            kind == "autoclave" || kind == "mill" ||
+                            kind == "item_move" || kind == "wear" || kind == "smash" ||
+                            kind == "vehicle_work" || kind == "mend_fault" || kind == "repair_selected";
+    if( !who.activity ) {
+        state.automatic_mining_target.reset();
+    }
+    const bool construction_request = kind == "construction" || kind == "construction_auto" ||
+                                      kind == "construction_resume" || kind == "construction_cancel";
+    state.tracks_body = kind == "firstaid" || kind == "consume_ground" || kind == "sleep" ||
+                        kind == "wait" ||
+                        state.tracks_crafting || construction_request ||
+                        state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ||
+                        kind == "martial_style" || kind == "vehicle_control" || kind == "plug_appliance" ||
+                        kind == "radio_car_drive" || kind == "zone_sort" || kind == "grab" || kind == "haul";
+    state.tracks_needs = state.tracks_needs || construction_request || state.tracks_dialogue;
+    state.healing_patient = character_id();
+    if( kind == "sleep" ) {
+        sleep_selection choice;
+        request.read( "sleep", choice, true );
+        state.refresh_observers = start_sleep( who, here, choice, activity_execution::authoritative );
+    } else if( kind == "wait" ) {
+        wait_selection choice;
+        request.read( "wait", choice, true );
+        state.refresh_observers = start_wait( who, here, choice, activity_execution::authoritative );
+    } else if( kind == "zone_query" ) {
+        zone_editor_requested = !who.activity;
+        zone_action_menu = request.get_bool( "zone_actions", false );
+    } else if( kind == "farming" ) {
+        farming_command command;
+        request.read( "farm", command, true );
+        state.refresh_observers = true;
+        if( here.inbounds( command.target.position ) ) {
+            state.changed_tiles.push_back( command.target.position );
+        }
+        state.changed_tiles.push_back( who.pos_abs() );
+        // Selected supplies and sap destinations may be on another
+        // nearby tile. Resolve their real positions before moving them.
+        for( const auto *source : {
+                 &command.tap, &command.container
+             } ) {
+            if( *source ) {
+                const item_location value = ::resolve_item_source( who, here, **source,
+                                            pickup_range );
+                if( value ) {
+                    state.changed_tiles.push_back( value.pos_abs() );
+                }
+            }
+        }
+        if( command.sap_destination && command.container ) {
+            const item_location source = ::resolve_item_source( who, here, *command.container,
+                                         pickup_range );
+            liquid_dest_opt destination;
+            std::optional<int> tank;
+            if( source && resolve_liquid_destination( who, *command.sap_destination, *source,
+                    destination, tank ) ) {
+                const tripoint_abs_ms target = destination.dest_opt == LD_ITEM ?
+                                               destination.item_loc.pos_abs() :
+                                               here.get_abs( destination.dest_opt == LD_VEH ?
+                                                       destination.veh->bub_part_pos( here, *tank ) : destination.pos );
+                if( here.inbounds( target ) ) {
+                    state.changed_tiles.push_back( target );
+                }
+            }
+        }
+        execute_farming_command( who, command );
+    } else if( kind == "kiln" ) {
+        charcoal_kiln::command command;
+        request.read( "kiln", command, true );
+        if( charcoal_kiln::execute( who, here, command ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( command.target.position );
+        }
+    } else if( kind == "smoking_rack" ) {
+        smoking_rack::command command;
+        request.read( "rack", command, true );
+        if( smoking_rack::execute( who, here, command, &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( command.target.position );
+        }
+    } else if( kind == "fermentation" ) {
+        fermentation_vessel::command command;
+        request.read( "vessel", command, true );
+        if( fermentation_vessel::execute( who, here, command ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( command.target.position );
+            state.changed_tiles.push_back( command.origin );
+        }
+    } else if( kind == "keg" ) {
+        keg::command command;
+        request.read( "keg", command, true );
+        if( keg::execute( who, here, command, true, &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( command.target.position );
+        }
+    } else if( kind == "furniture_reload" ) {
+        furniture_reload::command command;
+        request.read( "reload", command, true );
+        if( furniture_reload::execute( who, here, command, &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( command.target.position );
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "item_move" ) {
+        item_move_selection selection;
+        request.read( "move", selection, true );
+        start_owned_item_move( who, here, std::move( selection ) );
+    } else if( kind == "wear" ) {
+        if( request.get_array( "equipment" ).size() <= max_wear_selection ) {
+            std::vector<equipment_intent> selection;
+            request.read( "equipment", selection, true );
+            start_owned_wear( who, here, std::move( selection ) );
+        }
+    } else if( kind == "vehicle_work" ) {
+        vehicle_work_selection selection;
+        request.read( "work", selection, true );
+        if( vehicle_activity_actor::start_owned_work( who, here, selection ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( selection.position );
+            if( selection.allow_theft || selection.allow_flight_loss || selection.owner.is_null() ) {
+                state.refresh_vehicle_snapshots.push_back( selection.vehicle_uid );
+            }
+        } else if( lifetime ) {
+            who.add_msg_if_player( m_info,
+                                   _( "The vehicle work is no longer available or its requirements are unmet." ) );
+        }
+    } else if( kind == "smash" ) {
+        tripoint_abs_ms origin;
+        tripoint_abs_ms target;
+        ter_str_id terrain;
+        furn_str_id furniture;
+        request.read( "origin", origin, true );
+        request.read( "target", target, true );
+        request.read( "terrain", terrain, true );
+        request.read( "furniture", furniture, true );
+        const bool theft = request.get_bool( "allow_vehicle_theft", false );
+        bash_activity_actor continuation( who, target, terrain, furniture,
+                                          request.get_int64( "vehicle" ), theft );
+        if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
+            continuation.can_smash_at( who, here ) ) {
+            tripoint_bub_ms position = here.get_bub( target );
+            if( melee::has_revivable_corpse( here, position ) ||
+                g->warn_character_maybe_anger_local_faction( who, true, false,
+                        request.get_bool( "allow_faction_consequences", false ) ) ) {
+                state.changed_tiles.push_back( target );
+                state.refresh_observers = true;
+                const auto context = here.get_context_reference();
+                const std::uint64_t activity = who.activity.identity_generation();
+                const std::string name = here.has_furn( position ) ? here.furnname( position ) :
+                                         here.tername( position );
+                const Character::smash_result result = who.smash( here, position, theft );
+                if( lifetime && result.did_smash ) {
+                    if( result.success ) {
+                        who.add_msg_player_or_npc( m_good, _( "You smash the %s to pieces!" ),
+                                                   _( "<npcname> smashes the %s to pieces!" ), name );
+                    } else if( !result.can_smash ) {
+                        who.add_msg_player_or_npc( m_info, _( "You can't damage the %s." ),
+                                                   _( "<npcname> can't damage the %s." ), name );
+                    }
+                }
+                if( lifetime && context && who.activity.identity_generation() == activity &&
+                    result.did_smash && result.can_smash && !result.success &&
+                    continuation.can_smash_at( who, here ) ) {
+                    player_activity work{ continuation };
+                    work.set_execution( activity_execution::authoritative );
+                    who.assign_activity( work );
+                }
+            }
+        }
+    } else if( kind == "zone_work" ) {
+        state.tracks_body = state.tracks_needs = state.refresh_observers = true;
+        start_owned_zone_work( who, request.get_string( "zone_action" ) );
+    } else if( kind == "zone_edit" ) {
+        zone_edit_batch batch;
+        request.read( "zones", batch, true );
+        state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
+        if( !state.refresh_observers ) {
+            who.add_msg_if_player( m_warning,
+                                   _( "The zones could not be changed.  "
+                                      "Reopen the zone manager to refresh them." ) );
+        }
+    } else if( kind == "zone_sort" ) {
+        const int scope = request.get_int( "scope", -1 );
+        state.tracks_needs = true;
+        state.refresh_observers = true;
+        if( scope >= 0 && scope <= static_cast<int>( zone_scope::personal_only ) ) {
+            start_owned_zone_sort( who, static_cast<zone_scope>( scope ) );
+        }
+    } else if( kind == "peek" ) {
+        tripoint_abs_ms origin;
+        tripoint_abs_ms target;
+        request.read( "origin", origin, true );
+        request.read( "target", target, true );
+        state.peek = authorize_peek( who, here, origin, target,
+                                     request.get_int( "direction" ), sequence );
+    } else if( kind == "ledge_peek" ) {
+        tripoint_abs_ms origin;
+        tripoint_abs_ms ledge;
+        request.read( "origin", origin, true );
+        request.read( "ledge", ledge, true );
+        state.peek = authorize_ledge_peek( who, here, origin, ledge, sequence );
+    } else if( kind == "vertical_query" ) {
+        tripoint_abs_ms origin;
+        request.read( "origin", origin, true );
+        const int direction = request.get_int( "direction" );
+        if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
+            ( direction == -1 || direction == 1 ) ) {
+            if( request.get_bool( "peeking", false ) ) {
+                vertical_prompt = make_peek_prompt( who, here, direction );
+            } else if( request.has_member( "ledge" ) ) {
+                tripoint_abs_ms ledge;
+                request.read( "ledge", ledge, true );
+                if( direction == -1 && here.inbounds( ledge ) ) {
+                    vertical_prompt = request.get_bool( "ledge_menu", false ) ?
+                                      make_ledge_move_prompt( who, here, here.get_bub( ledge ) ) :
+                                      make_climb_down_prompt( who, here, here.get_bub( ledge ) );
+                }
+            } else {
+                vertical_prompt = make_vertical_move_prompt( who, here, direction );
+            }
+        }
+    } else if( kind == "walk" || kind == "vertical_move" ) {
+        state.refresh_observers = true;
+        start_movement( who, here, request, kind == "vertical_move" );
+    } else if( kind == "take_down_furniture" ) {
+        deployed_furniture_selection choice;
+        request.read( "furniture", choice, true );
+        if( !who.activity && who.get_moves() > 0 ) {
+            state.refresh_observers = take_down_deployed_furniture( who, here, choice,
+                                      &state.changed_tiles );
+        }
+    } else if( kind == "terrain_examine" ) {
+        terrain_examine_selection choice;
+        request.read( "examine", choice, true );
+        state.refresh_observers = execute_terrain_examine( who, here, choice, &state.changed_tiles );
+        if( state.refresh_observers ) {
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "safe_interaction" ) {
+        safe_interaction choice;
+        request.read( "safe", choice, true );
+        if( execute_safe_interaction( who, here, choice, activity_execution::authoritative ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( choice.position );
+        }
+    } else if( kind == "fireplace" ) {
+        fireplace_selection choice;
+        request.read( "fireplace", choice, true );
+        if( execute_fireplace_selection( who, here, choice, activity_execution::authoritative,
+                                         &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( choice.target.position );
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "appliance_conversion" ) {
+        appliance_conversion_selection choice;
+        request.read( "conversion", choice, true );
+        if( appliance_convert_examine_actor::execute( who, here, choice ) ) {
+            state.refresh_observers = true;
+            const tripoint_bub_ms tile = here.get_bub( choice.target.position );
+            for( const tripoint_bub_ms &affected : here.points_in_radius( tile, 1 ) ) {
+                if( here.inbounds( affected ) ) {
+                    state.changed_tiles.push_back( here.get_abs( affected ) );
+                }
+            }
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "finish_arc_furnace" ) {
+        arc_furnace::completion choice;
+        request.read( "furnace", choice, true );
+        if( arc_furnace::finish( who, here, choice ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( choice.target.position );
+        }
+    } else if( kind == "stook" ) {
+        stook::command choice;
+        request.read( "stook", choice, true );
+        if( stook::execute( who, here, choice ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles.push_back( choice.target.position );
+        }
+    } else if( kind == "autoclave" ) {
+        autoclave::command choice;
+        request.read( "autoclave", choice, true );
+        if( autoclave::execute( who, here, choice, &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "mill" ) {
+        mill::command choice;
+        request.read( "mill", choice, true );
+        if( mill::execute( who, here, choice, &state.changed_tiles ) ) {
+            state.refresh_observers = true;
+            refresh_vehicles_at_changed_tiles( here, state );
+        }
+    } else if( kind == "grab" ) {
+        grab_selection choice;
+        request.read( "grab", choice, true );
+        state.refresh_observers = execute_grab( who, here, choice );
+    } else if( kind == "haul" ) {
+        hauling_selection choice;
+        request.read( "haul", choice, true );
+        state.refresh_observers = execute_hauling( who, here, choice );
+    } else if( kind == "radio_car_drive" ) {
+        radio_car_binding expected;
+        point_rel_ms direction;
+        request.read( "car", expected.car, true );
+        request.read( "position", expected.position, true );
+        request.read( "direction", direction, true );
+        state.refresh_observers = true;
+        drive_radio_car( who, here, direction, expected );
+    } else if( kind == "plug_appliance" ) {
+        appliance_connection_selection selection;
+        request.read( "connection", selection, true );
+        if( execute_appliance_connection( who, here, selection ) ) {
+            state.refresh_observers = true;
+            state.changed_tiles = { selection.source.position, selection.destination.position };
+            state.refresh_vehicle_snapshots = { selection.source.vehicle_id, selection.destination.vehicle_id };
+        }
+    } else if( kind == "vehicle_control" ) {
+        vehicle_control_selection selection;
+        request.read( "vehicle_control", selection, true );
+        state.refresh_observers = true;
+        if( !who.activity ) {
+            const activity_execution previous = who.activity.execution();
+            who.activity.set_execution( activity_execution::authoritative );
+            const on_out_of_scope restore_execution( [&]() {
+                if( lifetime ) {
+                    who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+                }
+            } );
+            if( execute_vehicle_control( who, here, selection ) && selection.management ) {
+                state.refresh_vehicle_snapshots.push_back( selection.vehicle_id );
+                state.changed_tiles.push_back( selection.position );
+                state.changed_tiles.push_back( selection.management->origin );
+            }
+        }
+    } else if( kind == "martial_style" ) {
+        martial_style_choice choice;
+        request.read( "martial_style", choice, true );
+        if( !who.activity ) {
+            execute_martial_style_choice( who, choice );
+        }
+    } else if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
+        start_bionic_action( who, request, kind == "bionic_activation" ?
+                             bionic_action::activate : bionic_action::deactivate, state.refresh_observers );
+    } else if( kind == "spellbook" ) {
+        if( !who.activity && who.get_moves() > 0 ) {
+            state.refresh_observers = true;
+            who.magic->clear_opens_spellbook_data();
+            get_event_bus().send<event_type::opens_spellbook>( who.getID() );
+            if( lifetime && !who.activity ) {
+                who.magic->evaluate_opens_spellbook_data( who );
+                state.spellbook_ready = true;
+                state.spellbook_recast = request.get_bool( "recast", false );
+            }
+        }
+    } else if( kind == "spell" ) {
+        start_spell( who, request );
+    } else if( kind == "read" ) {
+        start_read( who, here, request );
+    } else if( kind == "butcher" ) {
+        std::vector<butchery_selection> selected;
+        request.read( "corpses", selected, true );
+        state.refresh_observers = true;
+        const activity_execution previous = who.activity.execution();
+        who.activity.set_execution( activity_execution::authoritative );
+        const on_out_of_scope restore_execution( [&]() {
+            if( lifetime ) {
+                who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+            }
+        } );
+        start_owned_butchery( who, selected );
+    } else if( kind == "disassemble" ) {
+        std::vector<disassembly_selection> selected;
+        request.read( "disassembly", selected, true );
+        state.refresh_observers = true;
+        const activity_execution previous = who.activity.execution();
+        who.activity.set_execution( activity_execution::authoritative );
+        const on_out_of_scope restore_execution( [&]() {
+            if( lifetime ) {
+                who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
+            }
+        } );
+        start_owned_disassembly( who, selected, request.get_bool( "recursive", false ) );
+    } else if( kind == "mend_fault" ) {
+        item_repair::mending_selection selection;
+        request.read( "mend", selection, true );
+        if( item_repair::start_owned_mending( who, here, selection ) && selection.debug_toggle ) {
+            refresh_repaired_item( state, selection.target.source );
+        }
+    } else if( kind == "repair_selected" ) {
+        if( !who.activity && who.get_moves() > 0 ) {
+            item_source tool;
+            item_repair::repair_target target;
+            request.read( "tool", tool, true );
+            request.read( "workpiece", target, true );
+            start_owned_repair( who, resolve_item_source( who, here, tool ),
+                                request.get_string( "method" ), std::move( target ) );
+        }
+    } else if( state.tracks_item_use ) {
+        start_item_use( who, here, request, state, kind );
+    } else if( kind == "reload" ) {
+        start_reload( who, here, request );
+    } else if( kind == "unload" ) {
+        start_owned_unload( who, here, request );
+    } else if( kind == "insert" ) {
+        start_insert( who, here, request );
+    } else if( kind == "consume_ground" ) {
+        if( !who.activity && !who.is_dead_state() && who.get_moves() > 0 ) {
+            ground_food_target target;
+            request.read( "ground", target, true );
+            if( start_ground_food( who, here, &target, request.get_bool( "allow_consequences", false ) ) ) {
+                state.changed_tiles.push_back( target.position );
+                state.refresh_observers = true;
+            }
+        }
+    } else if( kind == "consume" ) {
+        start_consume( who, here, request );
+    } else if( construction_request ) {
+        start_construction( who, here, request, kind );
+    } else if( kind == "craft" ) {
+        start_craft( who, request );
+    } else if( kind == "craft_resume" ) {
+        resume_craft( who, here, request );
+    } else if( kind == "firstaid" ) {
+        start_firstaid( who, here, request );
+        if( const auto *firstaid = native_firstaid( who ) ) {
+            state.healing_patient = firstaid->patient_id();
+        }
+    } else if( kind == "dialogue" ) {
+        state.refresh_observers = true;
+        start_owned_dialogue( who, here, request, state );
+    }
+    if( !lifetime ) {
+        return false;
+    }
+    state.tracks_needs = kind == "consume" || kind == "consume_ground" || kind == "sleep" ||
+                         state.tracks_crafting || state.tracks_dialogue ||
+                         state.tracks_item_use || state.tracks_walking || construction_request || kind == "grab" ||
+                         native_consume( who );
+    return true;
+}
+
 std::string execute_inventory_activity_request( Character &who, map &here,
         const JsonObject &request,
         inventory_activity_host_state &state, pickup_host_state &inventory, bool authorized )
@@ -1833,457 +2294,10 @@ std::string execute_inventory_activity_request( Character &who, map &here,
         state.peek.reset();
         state.spellbook_ready = false;
         if( operation == "start" && !state.dialogue_session ) {
-            state.needs_placement = false;
-            const std::string kind = request.get_string( "kind", "reload" );
-            state.tracks_dialogue = kind == "dialogue";
-            state.tracks_walking = kind == "walk" || kind == "vertical_move" || kind == "vertical_query" ||
-                                   kind == "ledge_peek" || kind == "peek";
-            state.tracks_crafting = kind == "craft" || kind == "craft_resume";
-            state.tracks_item_use = kind == "item_use" || kind == "auto_mine" || kind == "examine_pry" ||
-                                    kind == "bionic_activation" || kind == "bionic_deactivation" ||
-                                    kind == "spell" || kind == "spellbook" || kind == "read" || kind == "butcher" ||
-                                    kind == "disassemble" || kind == "farming" || kind == "kiln" || kind == "smoking_rack" ||
-                                    kind == "fermentation" || kind == "keg" || kind == "furniture_reload" ||
-                                    kind == "autoclave" || kind == "mill" ||
-                                    kind == "item_move" || kind == "wear" || kind == "smash" ||
-                                    kind == "vehicle_work" || kind == "mend_fault" || kind == "repair_selected";
-            if( !who.activity ) {
-                state.automatic_mining_target.reset();
-            }
-            const bool construction_request = kind == "construction" || kind == "construction_auto" ||
-                                              kind == "construction_resume" || kind == "construction_cancel";
-            state.tracks_body = kind == "firstaid" || kind == "consume_ground" || kind == "sleep" ||
-                                kind == "wait" ||
-                                state.tracks_crafting || construction_request ||
-                                state.tracks_dialogue || state.tracks_item_use || state.tracks_walking ||
-                                kind == "martial_style" || kind == "vehicle_control" || kind == "plug_appliance" ||
-                                kind == "radio_car_drive" || kind == "zone_sort" || kind == "grab" || kind == "haul";
-            state.tracks_needs = state.tracks_needs || construction_request || state.tracks_dialogue;
-            state.healing_patient = character_id();
-            if( kind == "sleep" ) {
-                sleep_selection choice;
-                request.read( "sleep", choice, true );
-                state.refresh_observers = start_sleep( who, here, choice, activity_execution::authoritative );
-            } else if( kind == "wait" ) {
-                wait_selection choice;
-                request.read( "wait", choice, true );
-                state.refresh_observers = start_wait( who, here, choice, activity_execution::authoritative );
-            } else if( kind == "zone_query" ) {
-                zone_editor_requested = !who.activity;
-                zone_action_menu = request.get_bool( "zone_actions", false );
-            } else if( kind == "farming" ) {
-                farming_command command;
-                request.read( "farm", command, true );
-                state.refresh_observers = true;
-                if( here.inbounds( command.target.position ) ) {
-                    state.changed_tiles.push_back( command.target.position );
-                }
-                state.changed_tiles.push_back( who.pos_abs() );
-                // Selected supplies and sap destinations may be on another
-                // nearby tile. Resolve their real positions before moving them.
-                for( const auto *source : {
-                         &command.tap, &command.container
-                     } ) {
-                    if( *source ) {
-                        const item_location value = ::resolve_item_source( who, here, **source,
-                                                    pickup_range );
-                        if( value ) {
-                            state.changed_tiles.push_back( value.pos_abs() );
-                        }
-                    }
-                }
-                if( command.sap_destination && command.container ) {
-                    const item_location source = ::resolve_item_source( who, here, *command.container,
-                                                 pickup_range );
-                    liquid_dest_opt destination;
-                    std::optional<int> tank;
-                    if( source && resolve_liquid_destination( who, *command.sap_destination, *source,
-                            destination, tank ) ) {
-                        const tripoint_abs_ms target = destination.dest_opt == LD_ITEM ?
-                                                       destination.item_loc.pos_abs() :
-                                                       here.get_abs( destination.dest_opt == LD_VEH ?
-                                                               destination.veh->bub_part_pos( here, *tank ) : destination.pos );
-                        if( here.inbounds( target ) ) {
-                            state.changed_tiles.push_back( target );
-                        }
-                    }
-                }
-                execute_farming_command( who, command );
-            } else if( kind == "kiln" ) {
-                charcoal_kiln::command command;
-                request.read( "kiln", command, true );
-                if( charcoal_kiln::execute( who, here, command ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( command.target.position );
-                }
-            } else if( kind == "smoking_rack" ) {
-                smoking_rack::command command;
-                request.read( "rack", command, true );
-                if( smoking_rack::execute( who, here, command, &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( command.target.position );
-                }
-            } else if( kind == "fermentation" ) {
-                fermentation_vessel::command command;
-                request.read( "vessel", command, true );
-                if( fermentation_vessel::execute( who, here, command ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( command.target.position );
-                    state.changed_tiles.push_back( command.origin );
-                }
-            } else if( kind == "keg" ) {
-                keg::command command;
-                request.read( "keg", command, true );
-                if( keg::execute( who, here, command, true, &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( command.target.position );
-                }
-            } else if( kind == "furniture_reload" ) {
-                furniture_reload::command command;
-                request.read( "reload", command, true );
-                if( furniture_reload::execute( who, here, command, &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( command.target.position );
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "item_move" ) {
-                item_move_selection selection;
-                request.read( "move", selection, true );
-                start_owned_item_move( who, here, std::move( selection ) );
-            } else if( kind == "wear" ) {
-                if( request.get_array( "equipment" ).size() <= max_wear_selection ) {
-                    std::vector<equipment_intent> selection;
-                    request.read( "equipment", selection, true );
-                    start_owned_wear( who, here, std::move( selection ) );
-                }
-            } else if( kind == "vehicle_work" ) {
-                vehicle_work_selection selection;
-                request.read( "work", selection, true );
-                if( vehicle_activity_actor::start_owned_work( who, here, selection ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( selection.position );
-                    if( selection.allow_theft || selection.allow_flight_loss || selection.owner.is_null() ) {
-                        state.refresh_vehicle_snapshots.push_back( selection.vehicle_uid );
-                    }
-                } else if( lifetime ) {
-                    who.add_msg_if_player( m_info,
-                                           _( "The vehicle work is no longer available or its requirements are unmet." ) );
-                }
-            } else if( kind == "smash" ) {
-                tripoint_abs_ms origin;
-                tripoint_abs_ms target;
-                ter_str_id terrain;
-                furn_str_id furniture;
-                request.read( "origin", origin, true );
-                request.read( "target", target, true );
-                request.read( "terrain", terrain, true );
-                request.read( "furniture", furniture, true );
-                const bool theft = request.get_bool( "allow_vehicle_theft", false );
-                bash_activity_actor continuation( who, target, terrain, furniture,
-                                                  request.get_int64( "vehicle" ), theft );
-                if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
-                    continuation.can_smash_at( who, here ) ) {
-                    tripoint_bub_ms position = here.get_bub( target );
-                    if( melee::has_revivable_corpse( here, position ) ||
-                        g->warn_character_maybe_anger_local_faction( who, true, false,
-                                request.get_bool( "allow_faction_consequences", false ) ) ) {
-                        state.changed_tiles.push_back( target );
-                        state.refresh_observers = true;
-                        const auto context = here.get_context_reference();
-                        const auto activity = who.activity.identity_generation();
-                        const std::string name = here.has_furn( position ) ? here.furnname( position ) :
-                                                 here.tername( position );
-                        const auto result = who.smash( here, position, theft );
-                        if( lifetime && result.did_smash ) {
-                            if( result.success ) {
-                                who.add_msg_player_or_npc( m_good, _( "You smash the %s to pieces!" ),
-                                                           _( "<npcname> smashes the %s to pieces!" ), name );
-                            } else if( !result.can_smash ) {
-                                who.add_msg_player_or_npc( m_info, _( "You can't damage the %s." ),
-                                                           _( "<npcname> can't damage the %s." ), name );
-                            }
-                        }
-                        if( lifetime && context && who.activity.identity_generation() == activity &&
-                            result.did_smash && result.can_smash && !result.success &&
-                            continuation.can_smash_at( who, here ) ) {
-                            player_activity work{ continuation };
-                            work.set_execution( activity_execution::authoritative );
-                            who.assign_activity( work );
-                        }
-                    }
-                }
-            } else if( kind == "zone_work" ) {
-                state.tracks_body = state.tracks_needs = state.refresh_observers = true;
-                start_owned_zone_work( who, request.get_string( "zone_action" ) );
-            } else if( kind == "zone_edit" ) {
-                zone_edit_batch batch;
-                request.read( "zones", batch, true );
-                state.refresh_observers = zone_edit_session::apply( who, zone_manager::get_manager(), batch );
-                if( !state.refresh_observers ) {
-                    who.add_msg_if_player( m_warning,
-                                           _( "The zones could not be changed.  "
-                                              "Reopen the zone manager to refresh them." ) );
-                }
-            } else if( kind == "zone_sort" ) {
-                const int scope = request.get_int( "scope", -1 );
-                state.tracks_needs = true;
-                state.refresh_observers = true;
-                if( scope >= 0 && scope <= static_cast<int>( zone_scope::personal_only ) ) {
-                    start_owned_zone_sort( who, static_cast<zone_scope>( scope ) );
-                }
-            } else if( kind == "peek" ) {
-                tripoint_abs_ms origin;
-                tripoint_abs_ms target;
-                request.read( "origin", origin, true );
-                request.read( "target", target, true );
-                state.peek = authorize_peek( who, here, origin, target,
-                                             request.get_int( "direction" ), sequence );
-            } else if( kind == "ledge_peek" ) {
-                tripoint_abs_ms origin;
-                tripoint_abs_ms ledge;
-                request.read( "origin", origin, true );
-                request.read( "ledge", ledge, true );
-                state.peek = authorize_ledge_peek( who, here, origin, ledge, sequence );
-            } else if( kind == "vertical_query" ) {
-                tripoint_abs_ms origin;
-                request.read( "origin", origin, true );
-                const int direction = request.get_int( "direction" );
-                if( !who.activity && who.get_moves() > 0 && origin == who.pos_abs() &&
-                    ( direction == -1 || direction == 1 ) ) {
-                    if( request.get_bool( "peeking", false ) ) {
-                        vertical_prompt = make_peek_prompt( who, here, direction );
-                    } else if( request.has_member( "ledge" ) ) {
-                        tripoint_abs_ms ledge;
-                        request.read( "ledge", ledge, true );
-                        if( direction == -1 && here.inbounds( ledge ) ) {
-                            vertical_prompt = request.get_bool( "ledge_menu", false ) ?
-                                              make_ledge_move_prompt( who, here, here.get_bub( ledge ) ) :
-                                              make_climb_down_prompt( who, here, here.get_bub( ledge ) );
-                        }
-                    } else {
-                        vertical_prompt = make_vertical_move_prompt( who, here, direction );
-                    }
-                }
-            } else if( kind == "walk" || kind == "vertical_move" ) {
-                state.refresh_observers = true;
-                start_movement( who, here, request, kind == "vertical_move" );
-            } else if( kind == "take_down_furniture" ) {
-                deployed_furniture_selection choice;
-                request.read( "furniture", choice, true );
-                if( !who.activity && who.get_moves() > 0 ) {
-                    state.refresh_observers = take_down_deployed_furniture( who, here, choice,
-                                              &state.changed_tiles );
-                }
-            } else if( kind == "terrain_examine" ) {
-                terrain_examine_selection choice;
-                request.read( "examine", choice, true );
-                state.refresh_observers = execute_terrain_examine( who, here, choice, &state.changed_tiles );
-                if( state.refresh_observers ) {
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "safe_interaction" ) {
-                safe_interaction choice;
-                request.read( "safe", choice, true );
-                if( execute_safe_interaction( who, here, choice, activity_execution::authoritative ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( choice.position );
-                }
-            } else if( kind == "fireplace" ) {
-                fireplace_selection choice;
-                request.read( "fireplace", choice, true );
-                if( execute_fireplace_selection( who, here, choice, activity_execution::authoritative,
-                                                 &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( choice.target.position );
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "appliance_conversion" ) {
-                appliance_conversion_selection choice;
-                request.read( "conversion", choice, true );
-                if( appliance_convert_examine_actor::execute( who, here, choice ) ) {
-                    state.refresh_observers = true;
-                    const tripoint_bub_ms tile = here.get_bub( choice.target.position );
-                    for( const tripoint_bub_ms &affected : here.points_in_radius( tile, 1 ) ) {
-                        if( here.inbounds( affected ) ) {
-                            state.changed_tiles.push_back( here.get_abs( affected ) );
-                        }
-                    }
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "finish_arc_furnace" ) {
-                arc_furnace::completion choice;
-                request.read( "furnace", choice, true );
-                if( arc_furnace::finish( who, here, choice ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( choice.target.position );
-                }
-            } else if( kind == "stook" ) {
-                stook::command choice;
-                request.read( "stook", choice, true );
-                if( stook::execute( who, here, choice ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles.push_back( choice.target.position );
-                }
-            } else if( kind == "autoclave" ) {
-                autoclave::command choice;
-                request.read( "autoclave", choice, true );
-                if( autoclave::execute( who, here, choice, &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "mill" ) {
-                mill::command choice;
-                request.read( "mill", choice, true );
-                if( mill::execute( who, here, choice, &state.changed_tiles ) ) {
-                    state.refresh_observers = true;
-                    refresh_vehicles_at_changed_tiles( here, state );
-                }
-            } else if( kind == "grab" ) {
-                grab_selection choice;
-                request.read( "grab", choice, true );
-                state.refresh_observers = execute_grab( who, here, choice );
-            } else if( kind == "haul" ) {
-                hauling_selection choice;
-                request.read( "haul", choice, true );
-                state.refresh_observers = execute_hauling( who, here, choice );
-            } else if( kind == "radio_car_drive" ) {
-                radio_car_binding expected;
-                point_rel_ms direction;
-                request.read( "car", expected.car, true );
-                request.read( "position", expected.position, true );
-                request.read( "direction", direction, true );
-                state.refresh_observers = true;
-                drive_radio_car( who, here, direction, expected );
-            } else if( kind == "plug_appliance" ) {
-                appliance_connection_selection selection;
-                request.read( "connection", selection, true );
-                if( execute_appliance_connection( who, here, selection ) ) {
-                    state.refresh_observers = true;
-                    state.changed_tiles = { selection.source.position, selection.destination.position };
-                    state.refresh_vehicle_snapshots = { selection.source.vehicle_id, selection.destination.vehicle_id };
-                }
-            } else if( kind == "vehicle_control" ) {
-                vehicle_control_selection selection;
-                request.read( "vehicle_control", selection, true );
-                state.refresh_observers = true;
-                if( !who.activity ) {
-                    const activity_execution previous = who.activity.execution();
-                    who.activity.set_execution( activity_execution::authoritative );
-                    const on_out_of_scope restore_execution( [&]() {
-                        if( lifetime ) {
-                            who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
-                        }
-                    } );
-                    if( execute_vehicle_control( who, here, selection ) && selection.management ) {
-                        state.refresh_vehicle_snapshots.push_back( selection.vehicle_id );
-                        state.changed_tiles.push_back( selection.position );
-                        state.changed_tiles.push_back( selection.management->origin );
-                    }
-                }
-            } else if( kind == "martial_style" ) {
-                martial_style_choice choice;
-                request.read( "martial_style", choice, true );
-                if( !who.activity ) {
-                    execute_martial_style_choice( who, choice );
-                }
-            } else if( kind == "bionic_activation" || kind == "bionic_deactivation" ) {
-                start_bionic_action( who, request, kind == "bionic_activation" ?
-                                     bionic_action::activate : bionic_action::deactivate, state.refresh_observers );
-            } else if( kind == "spellbook" ) {
-                if( !who.activity && who.get_moves() > 0 ) {
-                    state.refresh_observers = true;
-                    who.magic->clear_opens_spellbook_data();
-                    get_event_bus().send<event_type::opens_spellbook>( who.getID() );
-                    if( lifetime && !who.activity ) {
-                        who.magic->evaluate_opens_spellbook_data( who );
-                        state.spellbook_ready = true;
-                        state.spellbook_recast = request.get_bool( "recast", false );
-                    }
-                }
-            } else if( kind == "spell" ) {
-                start_spell( who, request );
-            } else if( kind == "read" ) {
-                start_read( who, here, request );
-            } else if( kind == "butcher" ) {
-                std::vector<butchery_selection> selected;
-                request.read( "corpses", selected, true );
-                state.refresh_observers = true;
-                const activity_execution previous = who.activity.execution();
-                who.activity.set_execution( activity_execution::authoritative );
-                const on_out_of_scope restore_execution( [&]() {
-                    if( lifetime ) {
-                        who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
-                    }
-                } );
-                start_owned_butchery( who, selected );
-            } else if( kind == "disassemble" ) {
-                std::vector<disassembly_selection> selected;
-                request.read( "disassembly", selected, true );
-                state.refresh_observers = true;
-                const activity_execution previous = who.activity.execution();
-                who.activity.set_execution( activity_execution::authoritative );
-                const on_out_of_scope restore_execution( [&]() {
-                    if( lifetime ) {
-                        who.activity.set_execution( who.activity ? activity_execution::authoritative : previous );
-                    }
-                } );
-                start_owned_disassembly( who, selected, request.get_bool( "recursive", false ) );
-            } else if( kind == "mend_fault" ) {
-                item_repair::mending_selection selection;
-                request.read( "mend", selection, true );
-                if( item_repair::start_owned_mending( who, here, selection ) && selection.debug_toggle ) {
-                    refresh_repaired_item( state, selection.target.source );
-                }
-            } else if( kind == "repair_selected" ) {
-                if( !who.activity && who.get_moves() > 0 ) {
-                    item_source tool;
-                    item_repair::repair_target target;
-                    request.read( "tool", tool, true );
-                    request.read( "workpiece", target, true );
-                    start_owned_repair( who, resolve_item_source( who, here, tool ),
-                                        request.get_string( "method" ), std::move( target ) );
-                }
-            } else if( state.tracks_item_use ) {
-                start_item_use( who, here, request, state, kind );
-            } else if( kind == "reload" ) {
-                start_reload( who, here, request );
-            } else if( kind == "unload" ) {
-                start_owned_unload( who, here, request );
-            } else if( kind == "insert" ) {
-                start_insert( who, here, request );
-            } else if( kind == "consume_ground" ) {
-                if( !who.activity && !who.is_dead_state() && who.get_moves() > 0 ) {
-                    ground_food_target target;
-                    request.read( "ground", target, true );
-                    if( start_ground_food( who, here, &target, request.get_bool( "allow_consequences", false ) ) ) {
-                        state.changed_tiles.push_back( target.position );
-                        state.refresh_observers = true;
-                    }
-                }
-            } else if( kind == "consume" ) {
-                start_consume( who, here, request );
-            } else if( construction_request ) {
-                start_construction( who, here, request, kind );
-            } else if( kind == "craft" ) {
-                start_craft( who, request );
-            } else if( kind == "craft_resume" ) {
-                resume_craft( who, here, request );
-            } else if( kind == "firstaid" ) {
-                start_firstaid( who, here, request );
-                if( const auto *firstaid = native_firstaid( who ) ) {
-                    state.healing_patient = firstaid->patient_id();
-                }
-            } else if( kind == "dialogue" ) {
-                state.refresh_observers = true;
-                start_owned_dialogue( who, here, request, state );
-            }
-            if( !lifetime ) {
+            if( !start_inventory_activity_request( who, here, request, state, lifetime, sequence,
+                                                   zone_editor_requested, vertical_prompt, zone_action_menu ) ) {
                 return {};
             }
-            state.tracks_needs = kind == "consume" || kind == "consume_ground" || kind == "sleep" ||
-                                 state.tracks_crafting || state.tracks_dialogue ||
-                                 state.tracks_item_use || state.tracks_walking || construction_request || kind == "grab" ||
-                                 native_consume( who );
         } else if( state.dialogue_session &&
                    request.get_string( "activity" ) == state.dialogue_session->activity_id() ) {
             const auto conversation = state.dialogue_session;
@@ -2343,7 +2357,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                     who.cancel_activity();
                 } else if( operation == "step" && who.get_moves() > 0 ) {
                     const int64_t changed_vehicle = work->changed_vehicle_snapshot();
-                    const auto generation = who.activity.identity_generation();
+                    const std::uint64_t generation = who.activity.identity_generation();
                     who.activity.do_turn( who );
                     if( lifetime && who.activity.identity_generation() != generation ) {
                         state.refresh_vehicle_snapshots.push_back( changed_vehicle );
@@ -2353,7 +2367,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                        mend && mend->owned_selection() ) {
                 if( operation == "step" && who.get_moves() > 0 ) {
                     const item_source target = mend->owned_selection()->target.source;
-                    const auto generation = who.activity.identity_generation();
+                    const std::uint64_t generation = who.activity.identity_generation();
                     who.activity.do_turn( who );
                     if( lifetime && who.activity.identity_generation() != generation ) {
                         refresh_repaired_item( state, target );
@@ -2388,7 +2402,7 @@ std::string execute_inventory_activity_request( Character &who, map &here,
                 } else if( operation == "step" && who.get_moves() > 0 && !repair->waiting ) {
                     const auto target = repair->choice ? std::make_optional( repair->choice->target ) :
                                         std::nullopt;
-                    const auto generation = who.activity.identity_generation();
+                    const std::uint64_t generation = who.activity.identity_generation();
                     const int remaining = who.activity.moves_left;
                     who.activity.do_turn( who );
                     if( target && lifetime &&
@@ -4050,7 +4064,7 @@ void client_start_smash( const tripoint_bub_ms &position )
     const tripoint_abs_ms target = here.get_abs( position );
     const ter_str_id terrain = here.ter( position ).id();
     const furn_str_id furniture = here.furn( position ).id();
-    const auto at = here.veh_at( position );
+    const optional_vpart_position at = here.veh_at( position );
     const int64_t vehicle = at ? at->vehicle().uid().get_value() : 0;
     const bool pulping = melee::has_revivable_corpse( here, position );
     const std::string warning = pulping ? std::string() : g->local_faction_action_warning( who );
