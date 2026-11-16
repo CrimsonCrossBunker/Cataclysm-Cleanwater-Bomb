@@ -28,6 +28,8 @@
 
 static const bionic_id test_bio_ench( "test_bio_ench" );
 
+static const bodypart_str_id body_part_hand_l( "hand_l" );
+
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_debug_no_staggered( "debug_no_staggered" );
 static const efftype_id effect_invisibility( "invisibility" );
@@ -531,7 +533,7 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     const float manip_before = guy.get_limb_score( limb_score_manip );
     REQUIRE( guy.i_add( item( itype_test_LIMB_SCORE_MANIP_BP_ench_item ) ).held_by( guy ) );
     guy.recalculate_enchantment_cache();
-    CHECK( guy.enchantment_cache->get_limb_score_bp_add( bodypart_str_id( "hand_l" ),
+    CHECK( guy.enchantment_cache->get_limb_score_bp_add( body_part_hand_l,
             limb_score_manip ) == Approx( 0.5 ) );
     INFO( "hand_l's +0.5 manip must be fully applied on top of the clamped base score" );
     CHECK( guy.get_limb_score( limb_score_manip ) == Approx( manip_before + 0.5f ) );
