@@ -92,7 +92,7 @@ static bool has_obstruction( const tripoint_bub_ms &from, const tripoint_bub_ms 
 // Planning estimate only; the actual attack retains native armor/weakpoint resolution.
 static double damage_after_armor( const damage_instance &damage, const Creature &target )
 {
-    static const bodypart_id torso( "torso" );
+    const bodypart_id torso = body_part_torso.id();
     double result = 0.0;
     for( const damage_unit &unit : damage.damage_units ) {
         result += npc_autonomy::effective_damage( unit.amount,
