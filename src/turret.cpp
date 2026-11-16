@@ -27,11 +27,14 @@
 #include "string_formatter.h"
 #include "translations.h"
 #include "uilist.h"
+#include "units.h"
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle_selector.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
+
+static const ammo_effect_str_id ammo_effect_BOUNCE( "BOUNCE" );
 
 static const efftype_id effect_on_roof( "on_roof" );
 
@@ -511,7 +514,7 @@ int turret_data::fire( Character &c, map *here, const tripoint_bub_ms &target,
             limit = std::min( limit, mode.shots_available( calendar::turn ) );
         }
         const auto battery = units::from_kilojoule( veh->fuel_left( *here, fuel_type_battery ) );
-        const auto drain = mode->get_gun_energy_drain();
+        const units::energy drain = mode->get_gun_energy_drain();
         while( limit > 0 && drain * limit > battery ) {
             --limit;
         }
@@ -682,7 +685,7 @@ int vehicle::automatic_fire_turret( vehicle_part &pt )
 
     const gun_mode mode = gun.base()->gun_current_mode();
     const auto sweep = automatic_target && mode && mode.full_auto() && area == 0 &&
-                       !gun.ammo_effects().count( ammo_effect_str_id( "BOUNCE" ) )
+                       !gun.ammo_effects().count( ammo_effect_BOUNCE )
                        ? find_firearm_sweep( cpu, here, targ, gun.range(), mode.rpm,
                                mode.shots_available( calendar::turn ) ) : std::nullopt;
     shots = gun.fire( cpu, &here, targ, sweep ? &*sweep : nullptr, true );
