@@ -28,18 +28,5 @@
     "type": "monster_adjustment",
     "species": "ZOMBIE",
     "stat": { "name": "bleed_rate", "modifier": 0 }
-  },
-  {
-    "type": "EXTERNAL_OPTION",
-    "name": "LATITUDE",
-    "//": "Set to Edmonton, Alberta.",
-    "stype": "float",
-    "value": 53.55
-  },
-  {
-    "type": "EXTERNAL_OPTION",
-    "name": "LONGITUDE",
-    "stype": "float",
-    "value": -113.49
   }
 ]

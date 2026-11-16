@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:194d33fb1330ab88a542818b7734ec3ebc7f59e9583e99c62fd613ddb6dbbaa3",
+    "source_fingerprint": "sha256:3ab7818c63ecf37dc838d0de6ee34984a03c6f57731d86f56ebcf92e1fec9f67",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,8 +30,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6866,
-    "top_level_objects": 97767,
+    "tracked_json_files": 6861,
+    "top_level_objects": 97710,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -60,7 +60,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 139,
+        "occurrences": 82,
         "examples": [
           {
             "path": "data/core/damage_indicators.json",
@@ -5342,7 +5342,7 @@
         "examples": [
           {
             "path": "data/mods/XedraWood/external_options_and_monster_adjustments.json",
-            "pointer": "/8"
+            "pointer": "/0"
           }
         ],
         "contract_roots": [

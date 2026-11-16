@@ -21,11 +21,5 @@
       "classic_zombies",
       "no_hope"
     ]
-  },
-  {
-    "type": "EXTERNAL_OPTION",
-    "name": "DEFAULT_REGION",
-    "stype": "string_input",
-    "value": "default_isolation"
   }
 ]

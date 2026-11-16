@@ -7,11 +7,5 @@
     "description": "Want a little crazy in your Cataclysm?  Try this one.",
     "category": "misc_additions",
     "dependencies": [ "ccb" ]
-  },
-  {
-    "type": "EXTERNAL_OPTION",
-    "name": "CRAZY",
-    "stype": "bool",
-    "value": true
   }
 ]
