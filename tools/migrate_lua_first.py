@@ -10940,10 +10940,14 @@ def render_generic_platform_content(
     for identifier in identifiers:
         definition_payload = copy.deepcopy(payload)
         definition_payload["id"] = identifier
+        if len(identifiers) > 1:
+            lines.append("do")
         lines.extend((
             f"local definition = content.{builder}({_lua_literal(definition_payload)})",
             content_submit_expression(),
         ))
+        if len(identifiers) > 1:
+            lines.append("end")
     result.converted.append(f"{source.location}: {label} {object_id}")
     return "\n".join(lines)
 
@@ -17970,7 +17974,9 @@ def render_nested_recipe_category(
         "}",
     ]
     lines.extend(
-        f"definition:recipe({lua_quote(member)})" for member in members
+        # The JSON loader stores these IDs in a set; the Lua builder rejects
+        # a duplicate insertion instead of discarding it.
+        f"definition:recipe({lua_quote(member)})" for member in dict.fromkeys(members)
     )
     return finish_catalog(
         source,
@@ -33212,10 +33218,8 @@ def render_eoc(
         )
     lines = [
         f"-- Extracted from {source.location}; review every TODO before enabling.",
-        # Function declarations are assigned to a predeclared local in the
-        # module prologue.  This lets an outer EOC call a nested function that
-        # appears later in the source corpus without falling through to a
-        # global Lua lookup.
+        # Bindings in the prologue let older EOC code refer to a handler
+        # emitted later without falling through to a global Lua lookup.
         f"{function_name} = function(context, actor_override)",
     ]
     if unbound_mixed_talker_contract:
@@ -38851,9 +38855,9 @@ def render_eoc(
         lines.append("        return false")
         lines.append("    end")
     lines.append("end")
-    lines.append(
-        f"migrated_eoc_functions[{lua_quote(eoc_id)}] = {function_name}"
-    )
+    table_entry = f"migrated_eoc_functions[{lua_quote(eoc_id)}]"
+    if function_name != table_entry:
+        lines.append(f"{table_entry} = {function_name}")
     nested_only = (
         nested_character_override and not required_event and
         not avatar_fatal_hook and not npc_fatal_hook and not avatar_death_hook
@@ -39455,13 +39459,15 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
         if source.value.get("type") in EOC_TYPES and
         source.value.get("type") not in exclude_types
     }
+    # Lua allows 200 locals per function.  Large batches use the existing
+    # dispatch table directly, leaving room for the generated module helpers.
+    use_eoc_table = len(eoc_conditions) >= 128
     eoc_function_names = {
-        stable_id(source.value, f"anonymous_{source.index}"): lua_function_name(
-            stable_id(source.value, f"anonymous_{source.index}")
+        identifier: (
+            f"migrated_eoc_functions[{lua_quote(identifier)}]"
+            if use_eoc_table else lua_function_name(identifier)
         )
-        for source in objects
-        if source.value.get("type") in EOC_TYPES and
-        source.value.get("type") not in exclude_types
+        for identifier in eoc_conditions
     }
     eoc_referenced_ids = _collect_eoc_references(
         objects, set(eoc_function_names)
@@ -40021,26 +40027,36 @@ def _migrate_with_math_namespace(objects: list[SourceObject], mod_id: str,
                 "end",
             )
         )
-    for kind, chunks in catalog_chunks.items():
+    definition_sections = [
+        (CATALOGS[kind].label, chunks)
+        for kind, chunks in catalog_chunks.items()
+    ] + [
+        ("Native item definitions", item_chunks),
+        ("Native recipe definitions", recipe_chunks),
+    ]
+    # A very large module can also exhaust Lua's total debug-local slots
+    # despite disjoint scopes. Register ordered chunks in separate functions.
+    batch_size = 128
+    split_definitions = sum(len(chunks) for _, chunks in definition_sections) > batch_size
+    for title, chunks in definition_sections:
         if chunks:
-            wrapped = []
-            for chunk in chunks:
-                wrapped.extend(("do", chunk.rstrip(), "end"))
-            main.extend(("", f"-- {CATALOGS[kind].label}", *wrapped))
-    if item_chunks:
-        main.extend(("", '-- Native item definitions', *item_chunks))
-    if recipe_chunks:
-        main.extend(("", '-- Native recipe definitions', *recipe_chunks))
+            main.extend(("", f"-- {title}"))
+            for offset in range(0, len(chunks), batch_size):
+                if split_definitions:
+                    main.extend(("do", "local function register_batch()"))
+                for chunk in chunks[offset:offset + batch_size]:
+                    main.extend(("do", chunk.rstrip(), "end"))
+                if split_definitions:
+                    main.extend(("end", "register_batch()", "end"))
     if behaviour_chunks:
         main.extend(("", '-- Native Lua behaviour'))
         if eoc_function_names:
-            main.extend((
-                "local migrated_eoc_functions = {}",
-                "local " + ", ".join(
+            main.append("local migrated_eoc_functions = {}")
+            if not use_eoc_table:
+                main.append("local " + ", ".join(
                     eoc_function_names[name]
                     for name in sorted(eoc_function_names)
-                ),
-            ))
+                ))
         main.extend(behaviour_chunks)
     main.append("")
     result.files[Path("main.lua")] = "\n".join(main)
