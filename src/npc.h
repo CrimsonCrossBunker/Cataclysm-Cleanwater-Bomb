@@ -23,6 +23,7 @@
 #include "compatibility.h"
 #include "coordinates.h"
 #include "dialogue_chatbin.h"
+#include "enum_conversions.h"
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
@@ -57,12 +58,6 @@ class talker;
 class vehicle;
 template<typename E>
 struct enum_traits;
-
-namespace io
-{
-template<typename E>
-std::string enum_to_string( E );
-} // namespace io
 
 namespace npc_factions
 {
