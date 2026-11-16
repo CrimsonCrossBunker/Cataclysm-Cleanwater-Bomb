@@ -3,6 +3,7 @@
 #include "game.h" // IWYU pragma: associated
 
 #include <algorithm>
+#include <cstddef>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -1825,7 +1826,7 @@ void weather_manager::serialize_all( JsonOut &json )
         json.member( "dimension", *weather.heat_dimension );
         json.member( "layers" );
         json.start_array();
-        for( const auto &entry : weather.heated_rooms ) {
+        for( const std::pair<const int, room_heat_layer> &entry : weather.heated_rooms ) {
             const room_heat_layer &layer = entry.second;
             json.start_object();
             json.member( "z", entry.first );
@@ -1910,7 +1911,7 @@ void weather_manager::unserialize_all( const JsonObject &w )
                 }
                 layer.rooms.push_back( room );
             }
-            for( const auto &assignment : layer.assignments ) {
+            for( const std::pair<const tripoint_abs_ms, std::size_t> &assignment : layer.assignments ) {
                 if( assignment.second >= layer.rooms.size() ) {
                     layer_data.throw_error( "Invalid room heat assignment" );
                 }
