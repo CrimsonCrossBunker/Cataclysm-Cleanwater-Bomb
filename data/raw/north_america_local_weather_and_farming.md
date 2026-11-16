@@ -76,12 +76,22 @@ arterials can reserve an adjacent overmap tile for a 34-tile-wide,
 four-lane paved surface and two sidewalks. They taper ahead of junctions,
 on narrow waterfronts and at overmap edges.
 
-Housing, retail, downtown, industrial and institutional neighborhoods
-reuse existing city buildings. New York and Winnipeg have approximate
-anchors for several actual districts. The other districts use settlement
-size and street hierarchy, with shops along major roads and some housing
-mixed into commercial and institutional blocks. This is a procedural model
-using atlas geography and approximate district locations.
+Every atlas settlement of at least 100,000 people gets a deterministic
+downtown, commercial, industrial and institutional center, with housing
+between them. The centers fit the settlement's built-up footprint.
+Larger streets also carry retail frontage where density is high. If the
+source has no built-up cells for a city, the game uses a small,
+population-scaled footprint around its atlas point and uses the land mask
+to exclude water. New York and Winnipeg also have approximate anchors for
+actual districts. The existing Sinaloa record covers Mazatlán. The
+fallback excludes the erroneous duplicate in Sonora, since the city is
+in Sinaloa according to [INEGI](https://www.inegi.org.mx/contenidos/productos/prod_serv/contenidos/espanol/bvinegi/productos/nueva_estruc/889463911173.pdf).
+
+The nine regional houses preserve their individual footprints and roofs.
+Their furnished rooms use the shared domestic furniture and loot
+palettes, including the ordinary variation in locks, damage and
+tidiness. Kitchen, bathroom, bedroom and utility storage use the same
+supply groups as other houses.
 
 Design references include the [NYC Landmarks Preservation Commission's
 description of the Manhattan grid](https://s-media.nyc.gov/agencies/lpc/lp/2097.pdf),

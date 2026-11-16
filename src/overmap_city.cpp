@@ -2,7 +2,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <functional>
 #include <iterator>
 #include <initializer_list>
@@ -217,7 +216,8 @@ void overmap::place_cities()
         }
         for( const size_t index : north_america::cities_in( pos() ) ) {
             const north_america::place &place = north_america::cities()[index];
-            if( !north_america::in_urban_footprint( place.position ) ) {
+            if( place.population < north_america::minimum_zoned_population &&
+                !north_america::in_urban_footprint( place.position ) ) {
                 add_atlas_city( place, place.position, north_america::named_city_size( place.population ),
                                 false );
             }
@@ -343,7 +343,7 @@ void overmap::place_cities()
 
 namespace
 {
-enum class urban_zone { housing, commercial, downtown, industrial, institutional };
+using north_america::urban_zone;
 
 struct urban_buildings {
     std::vector<overmap_special_id> large;
@@ -445,37 +445,23 @@ std::optional<urban_zone> mapped_neighborhood( const north_america::place &place
 }
 
 urban_zone neighborhood_zone( const north_america::place &place, point_abs_omt location,
-                              bool near_arterial )
+                              const std::array<north_america::city_zone_center, 4> &centers,
+                              bool near_arterial, bool dense )
 {
     const point local = location.raw() - place.position.raw();
-    const int center_size = std::clamp( static_cast<int>( std::sqrt( place.population ) / 32 ),
-                                        8, 70 );
     if( const std::optional<urban_zone> mapped = mapped_neighborhood( place, local ) ) {
         return *mapped;
     }
-    if( place.name != "New York" && place.name != "Winnipeg" &&
-        square_dist( local, point::zero ) < center_size ) {
-        return urban_zone::downtown;
+    for( const north_america::city_zone_center &center : centers ) {
+        if( square_dist( location, center.center ) < center.radius ) {
+            return center.zone;
+        }
     }
-    // Pick land uses at block-group scale. Shift band boundaries along streets
-    // so the same use doesn't form straight stripes across an entire city.
-    const point shifted = local + point( local.y / 5, local.x / 6 );
-    const point block = divide_xy_round_to_minus_infinity( shifted, 19 );
-    std::uint32_t mix = static_cast<std::uint32_t>( block.x ) * 0x9e3779b1u ^
-                        static_cast<std::uint32_t>( block.y ) * 0x85ebca77u ^
-                        static_cast<std::uint32_t>( place.population );
-    mix = ( mix ^ ( mix >> 16 ) ) * 0x7feb352du;
-    const unsigned pattern = ( mix ^ ( mix >> 15 ) ) % 24;
-    if( pattern < 3 && square_dist( local, point::zero ) > 2 * center_size ) {
-        return urban_zone::industrial;
-    }
-    if( pattern >= 3 && pattern <= 5 ) {
-        return urban_zone::institutional;
-    }
-    if( near_arterial || pattern <= 8 ) {
-        return urban_zone::commercial;
-    }
-    return urban_zone::housing;
+    // High streets extend the commercial district along major roads. Other
+    // blocks outside the main employment and institutional areas are residential.
+    const north_america::city_zone_center &market = centers[1];
+    return near_arterial && ( dense || square_dist( location, market.center ) < market.radius * 3 ) ?
+           urban_zone::commercial : urban_zone::housing;
 }
 
 struct atlas_lot {
@@ -515,6 +501,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
 
     for( const north_america::urban_district &district : districts ) {
         const north_america::place &owner = north_america::cities()[district.city_index];
+        const auto &zoning = north_america::city_zone_centers( district.city_index );
         const point center = district.center.raw() - origin.raw();
         const point start = center - point( step / 2, step / 2 );
         const point stop = start + point( step, step );
@@ -552,7 +539,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                                          north_america::is_avenue_flank( ter( next ) );
                     }
                 }
-                lot.zone = neighborhood_zone( owner, absolute, near_arterial );
+                lot.zone = neighborhood_zone( owner, absolute, zoning, near_arterial, lot.dense );
                 if( lot.frontage ) {
                     fronts.push_back( lot );
                     continue;

@@ -50,6 +50,39 @@ TEST_CASE( "north_america_uses_footprints_and_limits_remote_town_sizes", "[north
     }
 }
 
+TEST_CASE( "north_america_zones_all_large_atlas_cities", "[north_america][worldgen]" )
+{
+    using north_america::urban_zone;
+    const auto &places = north_america::cities();
+    for( std::size_t index = 0; index < places.size(); ++index ) {
+        const auto &place = places[index];
+        if( place.population < north_america::minimum_zoned_population ) {
+            continue;
+        }
+        CAPTURE( place.name, place.region );
+        const auto &zones = north_america::city_zone_centers( index );
+        if( place.country == "Mexico" && place.region == "Sonora" && place.name == "Mazatl\u00e1n" ) {
+            CHECK( zones[0].radius == 0 );
+            continue;
+        }
+        REQUIRE( zones[0].zone == urban_zone::downtown );
+        CHECK( zones[1].zone == urban_zone::commercial );
+        CHECK( zones[2].zone == urban_zone::institutional );
+        CHECK( zones[3].zone == urban_zone::industrial );
+        for( const auto &zone : zones ) {
+            CHECK( zone.radius > 0 );
+            CHECK( north_america::in_urban_footprint( zone.center ) );
+            const auto &districts = north_america::urban_districts_in(
+                                        project_to<coords::om>( zone.center ) );
+            CHECK( std::any_of( districts.begin(), districts.end(), [&]( const auto & district ) {
+                return district.city_index == index &&
+                       square_dist( district.center, zone.center ) <
+                       north_america::urban_district_size() / 2;
+            } ) );
+        }
+    }
+}
+
 TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
 {
     using north_america::urban_road;
