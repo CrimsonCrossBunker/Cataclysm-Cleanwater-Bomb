@@ -10,10 +10,11 @@ registrations, LuaLS declarations, and relevant tests define current behavior;
   player's risk; do not reintroduce a sandbox or mandatory global quotas.
 - When changing a public API, update declarations and regenerate affected
   references with their generator. Never hand-edit generated files.
-- Implement actual gameplay needs and add focused regression tests for changed
-  behavior. Run relevant checks; a per-selector EOC audit is not a routine gate.
-  Report what was not tested. The historical roadmap and generated ledger do
-  not replace gameplay evidence.
+- Verify Lua gameplay changes by playing the affected flow. Use focused native
+  tests when they help reproduce a regression; they are not an extra stable
+  release gate. Report what was not tested. A per-selector EOC audit is not a
+  routine gate, and the roadmap and generated ledger do not replace gameplay
+  evidence.
 - Keep templates and examples runnable; Mods need neither a `lua/` subdirectory
   nor an author-maintained JSON manifest.
 

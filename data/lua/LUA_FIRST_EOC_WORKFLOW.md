@@ -19,10 +19,10 @@ Updated 2026-09-26. Source, LuaLS declarations, and tests define current behavio
 
 ## 开发与验证 / Development and checks
 
-围绕实际功能写代码。对改变的行为保留一个能发现回归的聚焦测试，并运行受影响的检查；公共接口变化同步声明和生成文件。CI 继续自动执行仓库现有检查。无需为每次改动逐条核对 586 项、反复运行全量语料审计或维护额外的验收表。只有声明某项已全面替代或准备删除旧路径时，才核对该声明涉及的全部合法输入与实际引用；未执行的测试如实标明。
+开发者在游戏里实测改动涉及的 Lua 玩法，记录测试版本、操作和结果。已有自动测试按需用于定位回归，日常改动不要求另编译 Lua 测试程序。公开接口变更仍同步声明和生成文件，仓库现有 CI 照常运行。无需逐条核对 EOC 或反复扫描全量语料；只有声明全面替代或准备删除旧路径时，才核对涉及的合法输入和实际引用。
 
-Implement the needed behavior first. Add a focused regression for changed behavior, run relevant checks, and update declarations/generated references when the public API changes. Per-item audits are not a routine development gate. Broad parity or EOC removal claims need evidence for their exact scope; report checks that were not run.
+Developers verify changed Lua gameplay in the game and record the build, steps, and outcome. Use existing automated tests as needed to diagnose regressions; routine changes do not require a separate Lua test build. Keep public declarations and generated references in sync when interfaces change. Existing CI still runs. Audit the relevant legacy inputs and references only when claiming broad parity or preparing to remove an old path.
 
-稳定版发布前，复用已有测试程序跑两个用例：示例补剂的物品使用、定时任务和存档恢复，以及重载失败后保留原 Mod 和状态。没有可复用的程序时，用 [测试矩阵](../../ai/test-matrix.yml) 的 `lua-playable-mvp`，只选择对应的两个测试源文件和公共测试支撑代码。再用候选发行包实玩一遍示例补剂和致命丧尸病毒，至少载入一份来自受支持旧版本的存档副本，保存退出后确认玩法仍能继续。
+稳定版的 Lua 玩法由开发者用候选发行包手动验收：实玩示例补剂和致命丧尸病毒，再载入一份受支持旧版本的存档副本，保存退出并重进，确认还能继续玩。发版前无需额外运行一套 Lua 自动测试。
 
-Before a stable release, reuse an existing test binary for the tonic lifecycle and failed-reload cases. Use `lua-playable-mvp` in the [test matrix](../../ai/test-matrix.yml) if a focused build is needed. Then play through the tonic example and Deadly Zombie Virus in the release package. Load a copy of at least one save from a supported older version, save and quit, and check that play can continue after reopening it.
+For stable releases, developers verify Lua gameplay manually with the release candidate: play through the tonic example and Deadly Zombie Virus, load a copy of a save from a supported older version, then save, quit, and reopen it to confirm play can continue. There is no separate automated Lua gameplay gate for the release.

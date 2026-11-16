@@ -119,23 +119,9 @@ entries:
       - src/mod_manager.cpp
       - src/mod_manager_ui.cpp
       - data/mods/Lua_First_Example/
-      - tests/lua_platform_tonic_lifecycle_test.cpp
-      - tests/lua_platform_reload_guard_test.cpp
-      - tests/CMakeLists.txt
-      - tests/test_support_sources.txt
-    command: >-
-      cmake -S . -B build/lua-stable-smoke -G Ninja
-      -DCMAKE_BUILD_TYPE=Release '-DCMAKE_CXX_FLAGS_RELEASE=-O0 -DNDEBUG'
-      -DCURSES=ON -DTILES=OFF -DSOUND=OFF -DLOCALIZE=OFF
-      -DUSE_PREFIX_DATA_DIR=OFF -DUSE_HOME_DIR=OFF
-      -DTESTS=ON -DBUILD_TESTING=ON -DCATA_ENABLE_LUA_PLATFORM=ON
-      -DCATA_TEST_SUITE=focused
-      '-DCATA_TEST_FILES=lua_platform_tonic_lifecycle_test.cpp;lua_platform_reload_guard_test.cpp'
-      && cmake --build build/lua-stable-smoke --target cata_test --parallel 1
-      && ./build/lua-stable-smoke/tests/cata_test
-      '[playable_mvp],lua_platform_failed_reload_keeps_the_active_runtime_and_state'
-      --rng-seed 20260812 --warn NoTests
-      --user-dir="$PWD/build/lua-stable-smoke/test-user"
+      - 'tests/lua_platform*.cpp'
+      - tests/mod_manager_test.cpp
+    command: make -j1 BUILD_PREFIX=lua-native- ODIR="$PWD/build/lua-native-obj" CATA_ENABLE_LUA_PLATFORM=1 CATA_TEST_SUITE=lua ASTYLE=0 LINTJSON=0 LOCALIZE=0 DEBUGSYMS= tests && ./tests/lua-native-cata_test '[playable_mvp]' --rng-seed 20260812 --warn NoTests
     workdir: .
     cost: expensive
   - id: lua-disabled-build
