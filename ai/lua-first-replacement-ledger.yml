@@ -77,7 +77,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: compare_string
@@ -91,7 +90,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: compare_string_match_all
@@ -105,7 +103,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: current_dimension
@@ -119,7 +116,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: expects_vars
@@ -133,7 +129,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: follower_present
@@ -147,7 +142,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: get_condition
@@ -161,7 +155,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_alpha
@@ -175,7 +168,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_ammo
@@ -189,7 +181,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_assigned_mission
@@ -203,7 +194,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_available_mission
@@ -217,7 +207,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_beta
@@ -231,7 +220,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_many_assigned_missions
@@ -245,7 +233,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_many_available_missions
@@ -259,7 +246,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_no_assigned_mission
@@ -273,7 +259,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_no_available_mission
@@ -287,7 +272,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_pickup_list
@@ -302,7 +286,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: has_reason
@@ -316,7 +299,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: is_by_radio
@@ -330,7 +312,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: is_day
@@ -344,7 +325,6 @@ entries:
   - src/lua_platform_runtime_services.cpp
   - tests/lua_platform_day_semantic_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: final_semantic_gate
 - inventory: eoc-conditions
   selector: is_outside
@@ -358,7 +338,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: is_rotten
@@ -372,7 +351,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: is_season
@@ -387,7 +365,6 @@ entries:
   - src/lua_platform_snapshots.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: is_weather
@@ -403,7 +380,6 @@ entries:
   - src/lua_platform_weather.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: line_of_sight
@@ -417,7 +393,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_field_id
@@ -431,7 +406,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_furniture_id
@@ -445,7 +419,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_furniture_with_flag
@@ -459,7 +432,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_in_city
@@ -474,7 +446,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_is_outside
@@ -488,7 +459,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_is_passable
@@ -515,7 +485,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: map_terrain_with_flag
@@ -529,7 +498,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: math
@@ -543,7 +511,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mission_complete
@@ -557,7 +524,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mission_failed
@@ -571,7 +537,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mission_goal
@@ -585,7 +550,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mission_has_generic_rewards
@@ -599,7 +563,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mission_incomplete
@@ -613,7 +576,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: mod_is_loaded
@@ -627,7 +589,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: not
@@ -651,7 +612,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_allies
@@ -665,7 +625,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_allies_global
@@ -679,7 +638,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_at_om_location
@@ -693,7 +651,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_at_safe_space
@@ -707,7 +664,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_available
@@ -721,7 +677,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_bodytype
@@ -735,7 +690,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_drop_weapon
@@ -749,7 +703,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_float
@@ -763,7 +716,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_fly
@@ -777,7 +729,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_see
@@ -791,7 +742,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_see_location
@@ -805,7 +755,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_can_stow_weapon
@@ -819,7 +768,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_cbm_recharge_rule
@@ -834,7 +782,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_cbm_reserve_rule
@@ -849,7 +796,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_controlling_vehicle
@@ -863,7 +809,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_driving
@@ -877,7 +822,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_engagement_rule
@@ -892,7 +836,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_exists
@@ -906,7 +849,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_female
@@ -921,7 +863,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_following
@@ -935,7 +876,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_friend
@@ -949,7 +889,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_activity
@@ -963,7 +902,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_any_effect
@@ -979,7 +917,6 @@ entries:
   - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_any_trait
@@ -993,7 +930,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_assigned_camp
@@ -1007,7 +943,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_available_mission
@@ -1021,7 +956,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_bionics
@@ -1035,7 +969,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_class
@@ -1050,7 +983,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_dexterity
@@ -1064,7 +996,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_effect
@@ -1080,7 +1011,6 @@ entries:
   - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_flag
@@ -1095,7 +1025,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_intelligence
@@ -1109,7 +1038,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_item
@@ -1123,7 +1051,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_item_category
@@ -1137,7 +1064,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_item_with_flag
@@ -1151,7 +1077,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_items
@@ -1165,7 +1090,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_items_sum
@@ -1179,7 +1103,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_many_available_missions
@@ -1193,7 +1116,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_martial_art
@@ -1207,7 +1129,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_move_mode
@@ -1221,7 +1142,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_no_available_mission
@@ -1235,7 +1155,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_part_flag
@@ -1249,7 +1168,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_part_temp
@@ -1264,7 +1182,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_perception
@@ -1278,7 +1195,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_pickup_list
@@ -1293,7 +1209,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_profession
@@ -1308,7 +1223,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_proficiency
@@ -1322,7 +1236,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_software
@@ -1336,7 +1249,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_species
@@ -1350,7 +1262,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_stolen_item
@@ -1364,7 +1275,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_strength
@@ -1378,7 +1288,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_trait
@@ -1392,7 +1301,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_visible_trait
@@ -1406,7 +1314,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_weapon
@@ -1420,7 +1327,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_wielded_with_ammotype
@@ -1434,7 +1340,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_wielded_with_flag
@@ -1450,7 +1355,6 @@ entries:
   - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_wielded_with_skill
@@ -1464,7 +1368,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_wielded_with_weapon_category
@@ -1478,7 +1381,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_has_worn_with_flag
@@ -1494,7 +1396,6 @@ entries:
   - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_hostile
@@ -1508,7 +1409,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_alive
@@ -1523,7 +1423,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_avatar
@@ -1537,7 +1436,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_avatar_passenger
@@ -1551,7 +1449,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_character
@@ -1566,7 +1463,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_deaf
@@ -1580,7 +1476,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_driven
@@ -1594,7 +1489,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_falling
@@ -1608,7 +1502,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_floating
@@ -1622,7 +1515,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_flying
@@ -1636,7 +1528,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_furniture
@@ -1650,7 +1541,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_in_field
@@ -1664,7 +1554,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_in_vehicle
@@ -1678,7 +1567,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_item
@@ -1692,7 +1580,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_monster
@@ -1706,7 +1593,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_npc
@@ -1721,7 +1607,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_on_furniture
@@ -1735,7 +1620,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_on_furniture_with_flag
@@ -1749,7 +1633,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_on_rails
@@ -1763,7 +1646,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_on_terrain
@@ -1777,7 +1659,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_on_terrain_with_flag
@@ -1791,7 +1672,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_outside
@@ -1805,7 +1685,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_remote_controlled
@@ -1819,7 +1698,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_riding
@@ -1833,7 +1711,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_sinking
@@ -1847,7 +1724,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_skidding
@@ -1861,7 +1737,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_trait_purifiable
@@ -1876,7 +1751,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_travelling
@@ -1891,7 +1765,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_underwater
@@ -1906,7 +1779,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_vehicle
@@ -1920,7 +1792,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_warm
@@ -1934,7 +1805,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_is_wearing
@@ -1949,7 +1819,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_male
@@ -1964,7 +1833,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_mission_complete
@@ -1978,7 +1846,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_mission_failed
@@ -1992,7 +1859,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_mission_goal
@@ -2006,7 +1872,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_mission_incomplete
@@ -2020,7 +1885,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_near_om_location
@@ -2034,7 +1898,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_need
@@ -2049,7 +1912,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_override
@@ -2063,7 +1925,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_query
@@ -2077,7 +1938,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_role_nearby
@@ -2091,7 +1951,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_rule
@@ -2105,7 +1964,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_see_u
@@ -2119,7 +1977,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_see_u_loc
@@ -2133,7 +1990,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_service
@@ -2147,7 +2003,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_train_skills
@@ -2161,7 +2016,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_train_spells
@@ -2175,7 +2029,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_train_styles
@@ -2189,7 +2042,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_using_martial_art
@@ -2203,7 +2055,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: npc_vehicle_owned_by_avatar
@@ -2217,7 +2068,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: one_in_chance
@@ -2231,7 +2081,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: or
@@ -2254,7 +2103,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: player_see_npc
@@ -2269,7 +2117,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: player_see_u
@@ -2284,7 +2131,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: roll_contested
@@ -2298,7 +2144,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: test_eoc
@@ -2312,7 +2157,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_aim_rule
@@ -2326,7 +2170,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_are_owed
@@ -2342,7 +2185,6 @@ entries:
   - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_at_om_location
@@ -2356,7 +2198,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_at_safe_space
@@ -2372,7 +2213,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_available
@@ -2386,7 +2226,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_bodytype
@@ -2400,7 +2239,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_drop_weapon
@@ -2416,7 +2254,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_float
@@ -2430,7 +2267,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_fly
@@ -2444,7 +2280,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_see
@@ -2458,7 +2293,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_see_location
@@ -2472,7 +2306,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_can_stow_weapon
@@ -2486,7 +2319,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_cbm_recharge_rule
@@ -2500,7 +2332,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_cbm_reserve_rule
@@ -2514,7 +2345,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_controlling_vehicle
@@ -2528,7 +2358,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_driving
@@ -2542,7 +2371,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_engagement_rule
@@ -2556,7 +2384,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_exists
@@ -2570,7 +2397,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_female
@@ -2584,7 +2410,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_following
@@ -2598,7 +2423,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_friend
@@ -2614,7 +2438,6 @@ entries:
   - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_activity
@@ -2628,7 +2451,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_any_effect
@@ -2644,7 +2466,6 @@ entries:
   - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_any_trait
@@ -2659,7 +2480,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_available_mission
@@ -2673,7 +2493,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_bionics
@@ -2688,7 +2507,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_camp
@@ -2703,7 +2521,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_cash
@@ -2718,7 +2535,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_class
@@ -2732,7 +2548,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_dexterity
@@ -2746,7 +2561,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_effect
@@ -2762,7 +2576,6 @@ entries:
   - tests/lua_platform_effects_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_faction_trust
@@ -2778,7 +2591,6 @@ entries:
   - tests/lua_platform_npc_relationship_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_flag
@@ -2793,7 +2605,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_intelligence
@@ -2807,7 +2618,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_item
@@ -2822,7 +2632,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_item_category
@@ -2836,7 +2645,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_item_with_flag
@@ -2850,7 +2658,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_items
@@ -2864,7 +2671,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_items_sum
@@ -2878,7 +2684,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_many_available_missions
@@ -2892,7 +2697,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_martial_art
@@ -2907,7 +2711,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_mission
@@ -2922,7 +2725,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_move_mode
@@ -2937,7 +2739,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_no_available_mission
@@ -2951,7 +2752,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_part_flag
@@ -2965,7 +2765,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_part_temp
@@ -2980,7 +2779,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_perception
@@ -2994,7 +2792,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_pickup_list
@@ -3009,7 +2806,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_profession
@@ -3024,7 +2820,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_proficiency
@@ -3039,7 +2834,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_software
@@ -3053,7 +2847,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_species
@@ -3067,7 +2860,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_stolen_item
@@ -3081,7 +2873,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_strength
@@ -3095,7 +2886,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_trait
@@ -3110,7 +2900,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_visible_trait
@@ -3124,7 +2913,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_weapon
@@ -3140,7 +2928,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_wielded_with_ammotype
@@ -3154,7 +2941,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_wielded_with_flag
@@ -3170,7 +2956,6 @@ entries:
   - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_wielded_with_skill
@@ -3184,7 +2969,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_wielded_with_weapon_category
@@ -3198,7 +2982,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_has_worn_with_flag
@@ -3214,7 +2997,6 @@ entries:
   - tests/lua_platform_knowledge_semantics_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_hostile
@@ -3228,7 +3010,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_alive
@@ -3243,7 +3024,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_avatar
@@ -3257,7 +3037,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_avatar_passenger
@@ -3271,7 +3050,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_character
@@ -3286,7 +3064,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_deaf
@@ -3300,7 +3077,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_driven
@@ -3314,7 +3090,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_falling
@@ -3328,7 +3103,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_floating
@@ -3342,7 +3116,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_flying
@@ -3356,7 +3129,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_furniture
@@ -3370,7 +3142,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_in_field
@@ -3384,7 +3155,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_in_vehicle
@@ -3398,7 +3168,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_item
@@ -3412,7 +3181,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_monster
@@ -3426,7 +3194,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_npc
@@ -3440,7 +3207,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_on_furniture
@@ -3454,7 +3220,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_on_furniture_with_flag
@@ -3468,7 +3233,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_on_rails
@@ -3482,7 +3246,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_on_terrain
@@ -3496,7 +3259,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_on_terrain_with_flag
@@ -3510,7 +3272,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_outside
@@ -3525,7 +3286,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_remote_controlled
@@ -3539,7 +3299,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_riding
@@ -3553,7 +3312,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_sinking
@@ -3567,7 +3325,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_skidding
@@ -3581,7 +3338,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_trait_purifiable
@@ -3596,7 +3352,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_travelling
@@ -3611,7 +3366,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_underwater
@@ -3626,7 +3380,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_vehicle
@@ -3640,7 +3393,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_warm
@@ -3654,7 +3406,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_is_wearing
@@ -3668,7 +3419,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_know_recipe
@@ -3683,7 +3433,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_male
@@ -3698,7 +3447,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_mission_complete
@@ -3712,7 +3460,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_mission_failed
@@ -3726,7 +3473,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_mission_goal
@@ -3740,7 +3486,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_mission_incomplete
@@ -3754,7 +3499,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_monsters_in_direction
@@ -3768,7 +3512,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_near_om_location
@@ -3782,7 +3525,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_need
@@ -3797,7 +3539,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_override
@@ -3811,7 +3552,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_query
@@ -3825,7 +3565,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_rule
@@ -3839,7 +3578,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_safe_mode_trigger
@@ -3853,7 +3591,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_see_npc
@@ -3867,7 +3604,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_see_npc_loc
@@ -3881,7 +3617,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_service
@@ -3895,7 +3630,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_train_skills
@@ -3909,7 +3643,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_train_spells
@@ -3923,7 +3656,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_train_styles
@@ -3937,7 +3669,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_using_martial_art
@@ -3952,7 +3683,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: u_vehicle_owned_by_avatar
@@ -3966,7 +3696,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-conditions
   selector: x_in_y_chance
@@ -3980,7 +3709,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: abandon_camp
@@ -3994,7 +3722,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: add_debt
@@ -4008,7 +3735,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: add_mission
@@ -4022,7 +3748,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: alter_timed_events
@@ -4037,7 +3762,6 @@ entries:
   - src/lua_platform_time.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: assign_camp
@@ -4051,7 +3775,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: assign_guard
@@ -4065,7 +3788,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: assign_mission
@@ -4079,7 +3801,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: barber_beard
@@ -4093,7 +3814,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: barber_hair
@@ -4107,7 +3827,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: basecamp_mission
@@ -4121,7 +3840,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: bionic_install
@@ -4135,7 +3853,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: bionic_install_allies
@@ -4149,7 +3866,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: bionic_remove
@@ -4163,7 +3879,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: bionic_remove_allies
@@ -4177,7 +3892,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: buy_chicken
@@ -4191,7 +3905,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: buy_cow
@@ -4205,7 +3918,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: buy_haircut
@@ -4219,7 +3931,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: buy_horse
@@ -4233,7 +3944,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: buy_shave
@@ -4247,7 +3957,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: clear_dimension
@@ -4261,7 +3970,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: clear_mission
@@ -4275,7 +3983,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: clear_npc_rule
@@ -4289,7 +3996,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: clear_overrides
@@ -4303,7 +4009,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: closest_city
@@ -4318,7 +4023,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: companion_mission
@@ -4332,7 +4036,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: copy_location
@@ -4350,7 +4053,6 @@ entries:
   - tests/lua_platform_test_09_world_content_test.cpp
   - tests/lua_platform_variable_native_key_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: copy_npc_rules
@@ -4364,7 +4066,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: copy_var
@@ -4379,7 +4080,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: custom_light_level
@@ -4393,7 +4093,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: deny_equipment
@@ -4407,7 +4106,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: deny_follow
@@ -4421,7 +4119,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: deny_lead
@@ -4435,7 +4132,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: deny_personal_info
@@ -4449,7 +4145,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: deny_train
@@ -4463,7 +4158,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: dimension_name
@@ -4477,7 +4171,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: dismount
@@ -4491,7 +4184,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: distribute_food_auto
@@ -4505,7 +4197,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_butcher
@@ -4519,7 +4210,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_chop_plank
@@ -4533,7 +4223,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_chop_trees
@@ -4547,7 +4236,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_construction
@@ -4561,7 +4249,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_craft
@@ -4575,7 +4262,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_disassembly
@@ -4589,7 +4275,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_eread
@@ -4603,7 +4288,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_farming
@@ -4617,7 +4301,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_fishing
@@ -4631,7 +4314,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_mining
@@ -4645,7 +4327,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_mopping
@@ -4659,7 +4340,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_read
@@ -4673,7 +4353,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_read_repeatedly
@@ -4687,7 +4366,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_study
@@ -4701,7 +4379,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_vehicle_deconstruct
@@ -4715,7 +4392,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: do_vehicle_repair
@@ -4729,7 +4405,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: drop_items_in_place
@@ -4743,7 +4418,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: drop_stolen_item
@@ -4757,7 +4431,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: drop_weapon
@@ -4771,7 +4444,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: end_conversation
@@ -4785,7 +4457,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: find_mount
@@ -4799,7 +4470,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: finish_mission
@@ -4813,7 +4483,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: flee
@@ -4827,7 +4496,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: follow
@@ -4841,7 +4509,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: follow_only
@@ -4855,7 +4522,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: foreach
@@ -4871,7 +4537,6 @@ entries:
   - src/lua_platform_runtime_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: give_achievement
@@ -4885,7 +4550,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: give_aid
@@ -4899,7 +4563,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: give_all_aid
@@ -4913,7 +4576,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: give_equipment
@@ -4927,7 +4589,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: goto_location
@@ -4942,7 +4603,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: hostile
@@ -4956,7 +4616,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: if
@@ -4979,7 +4638,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: lead_to_safety
@@ -4993,7 +4651,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: leave
@@ -5007,7 +4664,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: lesser_give_aid
@@ -5021,7 +4677,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: lesser_give_all_aid
@@ -5035,7 +4690,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: lightning
@@ -5049,7 +4703,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: location_variable_adjust
@@ -5067,7 +4720,6 @@ entries:
   - tests/lua_platform_test.cpp
   - tests/lua_platform_variable_native_key_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: map_spawn_item
@@ -5081,7 +4733,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: mapgen_update
@@ -5095,7 +4746,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: math
@@ -5110,7 +4760,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: message
@@ -5124,7 +4773,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: mirror_coordinates
@@ -5142,7 +4790,6 @@ entries:
   - tests/lua_platform_variable_native_key_test.cpp
   - tests/point_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: mission_failure
@@ -5156,7 +4803,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: mission_reward
@@ -5170,7 +4816,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: mission_success
@@ -5184,7 +4829,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: morale_chat_activity
@@ -5198,7 +4842,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: next_weather
@@ -5212,7 +4855,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: nothing
@@ -5235,7 +4877,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_activate_trait
@@ -5251,8 +4892,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_addiction
@@ -5279,7 +4918,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_effect
@@ -5293,7 +4931,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_memorial
@@ -5320,7 +4957,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_trait
@@ -5336,8 +4972,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_var
@@ -5352,7 +4986,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_wet
@@ -5367,7 +5000,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_add_wound
@@ -5381,7 +5013,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_assign_activity
@@ -5395,7 +5026,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_attack
@@ -5409,7 +5039,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_bulk_donate
@@ -5423,7 +5052,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_bulk_trade_accept
@@ -5437,7 +5065,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_cancel_activity
@@ -5451,7 +5078,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_cast_spell
@@ -5465,7 +5091,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_change_class
@@ -5479,7 +5104,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_change_faction
@@ -5493,7 +5117,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_choose_adjacent_highlight
@@ -5508,7 +5131,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_consume_item
@@ -5522,7 +5144,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_consume_item_sum
@@ -5536,7 +5157,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_deactivate_trait
@@ -5552,8 +5172,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_deal_damage
@@ -5568,7 +5186,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_die
@@ -5582,7 +5199,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_emit
@@ -5596,7 +5212,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_explosion
@@ -5610,7 +5225,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_fall_asleep
@@ -5650,7 +5264,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_forget_martial_art
@@ -5664,7 +5277,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_forget_recipe
@@ -5678,7 +5290,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_gets_item
@@ -5692,7 +5303,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_gets_item_to_use
@@ -5706,7 +5316,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_heal_all
@@ -5746,7 +5355,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_learn_martial_art
@@ -5760,7 +5368,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_learn_recipe
@@ -5774,7 +5381,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_level_spell_class
@@ -5788,7 +5394,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_location_variable
@@ -5803,7 +5408,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_addiction
@@ -5830,7 +5434,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_category
@@ -5844,7 +5447,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_effect
@@ -5858,7 +5460,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_morale
@@ -5872,7 +5473,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_mutation_type
@@ -5888,7 +5488,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_trait
@@ -5904,8 +5503,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_lose_var
@@ -5920,7 +5517,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_make_radio_representative
@@ -5934,7 +5530,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_make_sound
@@ -5948,7 +5543,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_map_run_eocs
@@ -5962,7 +5556,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_map_run_item_eocs
@@ -5976,7 +5569,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_marlossify
@@ -6003,7 +5595,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_mutate
@@ -6018,7 +5609,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_mutate_category
@@ -6033,7 +5623,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_mutate_towards
@@ -6048,7 +5637,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_pick_bodypart
@@ -6062,7 +5650,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_pickup_items
@@ -6076,7 +5663,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_prevent_death
@@ -6092,7 +5678,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_query_omt
@@ -6107,7 +5692,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_query_tile
@@ -6122,7 +5706,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_ranged_attack
@@ -6136,7 +5719,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_recalculate_enchantment_cache
@@ -6150,7 +5732,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_remove_item_with
@@ -6164,7 +5745,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_remove_wound
@@ -6178,7 +5758,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_roll_remainder
@@ -6192,7 +5771,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_rules_menu
@@ -6206,7 +5784,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_run_fixed_zone_eocs
@@ -6220,7 +5797,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_run_inv_eocs
@@ -6234,7 +5810,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_run_monster_eocs
@@ -6248,7 +5823,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_run_npc_eocs
@@ -6262,7 +5836,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_run_vehicle_eocs
@@ -6276,7 +5849,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_fac_relation
@@ -6291,7 +5863,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_fault
@@ -6305,7 +5876,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_field
@@ -6319,7 +5889,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_flag
@@ -6334,7 +5903,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_goal
@@ -6348,7 +5916,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_guard_pos
@@ -6362,7 +5929,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_random_fault_of_type
@@ -6376,7 +5942,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_talker
@@ -6390,7 +5955,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_set_trait_purifiability
@@ -6404,7 +5968,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_spawn_monster
@@ -6418,7 +5981,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_spawn_npc
@@ -6432,7 +5994,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_teleport
@@ -6447,7 +6008,6 @@ entries:
   - src/lua_platform_world_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_thankful
@@ -6461,7 +6021,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_transform_radius
@@ -6475,7 +6034,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_unset_flag
@@ -6490,7 +6048,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: npc_vomit
@@ -6517,7 +6074,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: offer_mission
@@ -6531,7 +6087,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: open_dialogue
@@ -6545,7 +6100,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: pick_style
@@ -6559,7 +6113,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: place_override
@@ -6573,7 +6126,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: player_leaving
@@ -6587,7 +6139,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: player_weapon_away
@@ -6601,7 +6152,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: player_weapon_drop
@@ -6615,7 +6165,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: quote_npc_trade_item
@@ -6629,7 +6178,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: quote_vehicle_full_repair
@@ -6643,7 +6191,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: remove_active_mission
@@ -6657,7 +6204,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: remove_stolen_status
@@ -6671,7 +6217,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: repair_bionic_limbs
@@ -6685,7 +6230,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: return_to_camp_duties
@@ -6699,7 +6243,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: reveal_map
@@ -6713,7 +6256,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: reveal_route
@@ -6727,7 +6269,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: reveal_stats
@@ -6741,7 +6282,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: revert_activity
@@ -6755,7 +6295,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: revert_location
@@ -6769,7 +6308,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: run_eoc_selector
@@ -6785,7 +6323,6 @@ entries:
   - src/lua_platform_runtime_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: run_eocs
@@ -6801,7 +6338,6 @@ entries:
   - src/lua_platform_runtime_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: sample_range
@@ -6815,7 +6351,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: select_vehicle_part_service
@@ -6829,7 +6364,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_browsed
@@ -6844,7 +6378,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_condition
@@ -6858,7 +6391,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_furniture
@@ -6872,7 +6404,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_item_category_spawn_rates
@@ -6886,7 +6417,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_aim_rule
@@ -6900,7 +6430,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_cbm_recharge_rule
@@ -6914,7 +6443,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_cbm_reserve_rule
@@ -6928,7 +6456,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_engagement_rule
@@ -6942,7 +6469,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_pickup
@@ -6956,7 +6482,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_npc_rule
@@ -6970,7 +6495,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_string_var
@@ -6985,7 +6509,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_terrain
@@ -6999,7 +6522,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: set_trap
@@ -7013,7 +6535,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: signal_hordes
@@ -7027,7 +6548,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: sort_loot
@@ -7041,7 +6561,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: sound_effect
@@ -7055,7 +6574,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_camp
@@ -7069,7 +6587,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_mugging
@@ -7083,7 +6600,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_trade
@@ -7097,7 +6613,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_training
@@ -7111,7 +6626,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_training_npc
@@ -7125,7 +6639,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_training_seminar
@@ -7139,7 +6652,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: start_vehicle_full_repair
@@ -7153,7 +6665,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: stop_following
@@ -7167,7 +6678,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: stop_guard
@@ -7181,7 +6691,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: stranger_neutral
@@ -7195,7 +6704,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: switch
@@ -7218,7 +6726,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: take_control_menu
@@ -7232,7 +6739,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: toggle_npc_rule
@@ -7246,7 +6752,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: transform_item
@@ -7261,7 +6766,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: transform_line
@@ -7276,7 +6780,6 @@ entries:
   - src/lua_platform_world.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: trigger_event
@@ -7290,7 +6793,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: turn_cost
@@ -7304,7 +6806,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_activate
@@ -7318,7 +6819,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_activate_trait
@@ -7334,8 +6834,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_addiction
@@ -7363,7 +6861,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_effect
@@ -7378,7 +6875,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_faction_trust
@@ -7393,7 +6889,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_memorial
@@ -7420,7 +6915,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_trait
@@ -7436,8 +6930,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_var
@@ -7452,7 +6944,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_wet
@@ -7467,7 +6958,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_add_wound
@@ -7481,7 +6971,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_assign_activity
@@ -7495,7 +6984,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_attack
@@ -7509,7 +6997,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_bulk_donate
@@ -7523,7 +7010,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_bulk_trade_accept
@@ -7537,7 +7023,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_buy_item
@@ -7551,7 +7036,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_buy_monster
@@ -7565,7 +7049,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_cancel_activity
@@ -7579,7 +7062,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_cast_spell
@@ -7593,7 +7075,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_choose_adjacent_highlight
@@ -7608,7 +7089,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_consume_item
@@ -7622,7 +7102,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_consume_item_sum
@@ -7636,7 +7115,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_deactivate_trait
@@ -7652,8 +7130,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_deal_damage
@@ -7668,7 +7144,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_die
@@ -7682,7 +7157,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_emit
@@ -7696,7 +7170,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_explosion
@@ -7710,7 +7183,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_faction_rep
@@ -7724,7 +7196,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_fall_asleep
@@ -7765,7 +7236,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_forget_recipe
@@ -7780,7 +7250,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_heal_all
@@ -7820,7 +7289,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_learn_martial_art
@@ -7835,7 +7303,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_learn_recipe
@@ -7850,7 +7317,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_level_spell_class
@@ -7864,7 +7330,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_location_variable
@@ -7879,7 +7344,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_addiction
@@ -7907,7 +7371,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_category
@@ -7921,7 +7384,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_effect
@@ -7936,7 +7398,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_morale
@@ -7950,7 +7411,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_mutation_type
@@ -7966,7 +7426,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_trait
@@ -7982,8 +7441,6 @@ entries:
   - tests/lua_platform_mutations_test.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_lua_mutation_migration.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_lose_var
@@ -7998,7 +7455,6 @@ entries:
   - src/lua_platform_variables.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_make_radio_representative
@@ -8012,7 +7468,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_make_sound
@@ -8026,7 +7481,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_map_run_eocs
@@ -8040,7 +7494,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_map_run_item_eocs
@@ -8054,7 +7507,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_marlossify
@@ -8081,7 +7533,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_mutate
@@ -8096,7 +7547,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_mutate_category
@@ -8111,7 +7561,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_mutate_towards
@@ -8126,7 +7575,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_pick_bodypart
@@ -8140,7 +7588,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_pickup_items
@@ -8154,7 +7601,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_prevent_death
@@ -8170,7 +7616,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_query_omt
@@ -8185,7 +7630,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_query_tile
@@ -8200,7 +7644,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_ranged_attack
@@ -8214,7 +7657,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_recalculate_enchantment_cache
@@ -8228,7 +7670,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_remove_item_with
@@ -8242,7 +7683,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_remove_wound
@@ -8256,7 +7696,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_roll_remainder
@@ -8270,7 +7709,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_run_fixed_zone_eocs
@@ -8284,7 +7722,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_run_inv_eocs
@@ -8298,7 +7735,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_run_monster_eocs
@@ -8312,7 +7748,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_run_npc_eocs
@@ -8326,7 +7761,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_run_vehicle_eocs
@@ -8340,7 +7774,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_sell_item
@@ -8354,7 +7787,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_fac_relation
@@ -8369,7 +7801,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_fault
@@ -8383,7 +7814,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_field
@@ -8397,7 +7827,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_flag
@@ -8412,7 +7841,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_goal
@@ -8426,7 +7854,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_guard_pos
@@ -8440,7 +7867,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_random_fault_of_type
@@ -8454,7 +7880,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_talker
@@ -8468,7 +7893,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_set_trait_purifiability
@@ -8482,7 +7906,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_spawn_item
@@ -8496,7 +7919,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_spawn_monster
@@ -8510,7 +7932,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_spawn_npc
@@ -8524,7 +7945,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_spend_cash
@@ -8538,7 +7958,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_teleport
@@ -8553,7 +7972,6 @@ entries:
   - src/lua_platform_world_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_transform_radius
@@ -8567,7 +7985,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_travel_to_dimension
@@ -8581,7 +7998,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_unset_flag
@@ -8596,7 +8012,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: u_vomit
@@ -8623,7 +8038,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: wake_up
@@ -8637,7 +8051,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: eoc-effects
   selector: weighted_list_eocs
@@ -8653,7 +8066,6 @@ entries:
   - src/lua_platform_runtime_services.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: EXTERNAL_OPTION
@@ -8729,7 +8141,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: MOD_INFO
@@ -8866,7 +8277,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: WORLD_OPTION
@@ -9088,7 +8498,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: character_mod
@@ -9287,7 +8696,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: dimension_region_layout
@@ -9302,7 +8710,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: disease_type
@@ -9357,7 +8764,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: effect_type
@@ -9426,7 +8832,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: event_transformation
@@ -9441,7 +8846,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: explosion_light
@@ -9781,7 +9185,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: martial_art
@@ -9837,7 +9240,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: mod_tileset
@@ -9851,7 +9253,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: monster_adjustment
@@ -10055,7 +9456,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: option_slider
@@ -10070,7 +9470,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: oter_id_migration
@@ -10208,7 +9607,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: pet_slot
@@ -10409,7 +9807,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: region_settings_city
@@ -10822,7 +10219,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: start_location
@@ -10862,7 +10258,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: technique
@@ -11245,7 +10640,6 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
 - inventory: json-object-types
   selector: wound_fix
@@ -11259,5 +10653,4 @@ entries:
   - src/lua_platform_runtime.cpp
   - tests/lua_platform_test.cpp
   - tools/migrate_lua_first.py
-  - tools/test_migrate_lua_first.py
   verification: source_only
