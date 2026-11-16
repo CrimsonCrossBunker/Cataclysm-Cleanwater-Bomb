@@ -8,11 +8,5 @@
     "description": "Makes NPCs not require food, water or rest.",
     "category": "rebalance",
     "dependencies": [ "ccb" ]
-  },
-  {
-    "type": "EXTERNAL_OPTION",
-    "name": "NO_NPC_FOOD",
-    "stype": "bool",
-    "value": true
   }
 ]
