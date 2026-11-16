@@ -10,6 +10,7 @@
 #include <lua_platform_loader.h>
 #include <lua_platform_runtime.h>
 #include <options.h>
+#include <path_info.h>
 #include <worldfactory.h>
 #include <filesystem>
 #include <string>
@@ -70,7 +71,10 @@ return mod
 TEST_CASE( "lua_platform_interaction_options_use_active_companions_in_native_order",
            "[lua][platform][loader][regression]" )
 {
-    const platform_lua_test_directory files;
+    const cata_path user_root = PATH_INFO::user_dir_path();
+    const platform_lua_test_directory files( user_root.get_unrelative_path() );
+    const mod_id lua_companion( "option_test_first" );
+    const mod_id json_companion( "option_test_last" );
     files.write( std::filesystem::u8path( "mod.lua" ), R"lua(
 local ccb = require("ccb")
 local mod = ccb.ModDefinition { interaction_world_options = {
@@ -96,7 +100,7 @@ return mod
     on_out_of_scope cleanup( [&]() {
         options.restore_mod_world_options();
     } );
-    const cata_path path( cata_path::root_path::unknown, files.root / "mod_interactions" );
+    const cata_path path = user_root / files.root.filename() / "mod_interactions";
     const auto load_interactions = [&]() {
         options.apply_mod_world_options( "fixture_defaults", { { key, 1 } } );
         loader.load_mod_interaction_files_from_path( path, "interaction_fixture",
@@ -104,10 +108,15 @@ return mod
     };
     load_interactions();
     CHECK( get_option<int>( key ) == 1 );
-    world.active_mod_order = { mod_id( "option_test_first" ) };
+    world.active_mod_order = { json_companion };
+    load_interactions();
+    CHECK( get_option<int>( key ) == 5 );
+    world.active_mod_order = { lua_companion };
     load_interactions();
     CHECK( get_option<int>( key ) == 3 );
-    world.active_mod_order = { mod_id( "option_test_last" ), mod_id( "option_test_first" ) };
+    // The legacy interaction loader traverses interned mod IDs in ascending order.
+    REQUIRE( lua_companion < json_companion );
+    world.active_mod_order = { json_companion, lua_companion };
     load_interactions();
     CHECK( get_option<int>( key ) == 5 );
 }

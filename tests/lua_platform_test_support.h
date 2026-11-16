@@ -163,8 +163,8 @@ decltype( &Type::buy_quoted_item )>> : std::true_type {
 struct platform_lua_test_directory {
     // TU-local fixture setup stays with its owning test helper.
     // NOLINTNEXTLINE(cata-large-inline-function)
-    platform_lua_test_directory() {
-        const std::filesystem::path temporary_root = std::filesystem::temp_directory_path();
+    explicit platform_lua_test_directory( const std::filesystem::path &temporary_root =
+                std::filesystem::temp_directory_path() ) {
         for( std::size_t attempt = 0; attempt < 100; ++attempt ) {
             const std::filesystem::path candidate = temporary_root /
                                                     std::filesystem::u8path( "cata-lua-platform-loader-" + std::to_string( attempt ) );
