@@ -3,6 +3,7 @@
 #define CATA_SRC_LUA_PLATFORM_LOADER_H
 
 #include <filesystem>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -62,8 +63,10 @@ bool read_mod_definition( const std::filesystem::path &root, mod_definition &res
 /**
  * Execute every entry in fresh per-Mod states.  Successful states remain candidates
  * until commit_prepared_mods() or discard_prepared_mods() is called.
+ * selected_mod_ids includes selected data-only Mods, which have no Lua source.
  */
-bool prepare_mods( const std::vector<mod_source> &sources, std::string &error );
+bool prepare_mods( const std::vector<mod_source> &sources, std::string &error,
+                   const std::set<std::string> &selected_mod_ids = {} );
 
 /** Validate and inject every prepared native definition before global finalization. */
 bool apply_prepared_content( std::string &error );

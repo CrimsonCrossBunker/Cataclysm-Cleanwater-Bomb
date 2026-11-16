@@ -65,6 +65,7 @@ struct runtime_state {
     fs::path entry;
     std::unique_ptr<sol::state> lua;
     std::shared_ptr<runtime> platform;
+    std::shared_ptr<const std::set<std::string>> selected_mod_ids;
 };
 
 std::vector<runtime_state> active_states;
@@ -370,7 +371,8 @@ file_execution_result execute_file( sol::state &lua, const fs::path &path,
 }
 
 void initialize_state( sol::state &lua, const fs::path &requested_root,
-                       const std::shared_ptr<runtime> &platform = nullptr )
+                       const std::shared_ptr<runtime> &platform = nullptr,
+                       const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr )
 {
     // Mods are trusted executable code. State ownership is not a sandbox.
     lua.open_libraries();
@@ -387,6 +389,10 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     install_mod_definition( ccb );
     if( platform ) {
         install_runtime_api( platform, lua, ccb );
+        sol::table content = ccb["content"];
+        content.set_function( "is_mod_active", [selected_mod_ids]( const std::string &id ) {
+            return selected_mod_ids->count( id ) != 0;
+        } );
     }
 
     sol::table package = lua["package"];
@@ -462,7 +468,8 @@ end
     lua["require"] = bound.get<sol::function>();
 }
 
-runtime_state load_source( const mod_source &source )
+runtime_state load_source( const mod_source &source,
+                           const std::shared_ptr<const std::set<std::string>> &selected_mod_ids )
 {
     const mod_source resolved = resolve_source( source );
     DebugLog( D_WARNING, D_MAIN )
@@ -473,10 +480,11 @@ runtime_state load_source( const mod_source &source )
     result.id = resolved.id;
     result.root = resolved.root;
     result.entry = resolved.entry;
+    result.selected_mod_ids = selected_mod_ids;
     result.lua = std::make_unique<sol::state>();
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
-    initialize_state( *result.lua, resolved.root, result.platform );
+    initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids );
     execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
@@ -528,7 +536,8 @@ bool read_mod_definition( const fs::path &root, mod_definition &result, std::str
     }
 }
 
-bool prepare_mods( const std::vector<mod_source> &sources, std::string &error )
+bool prepare_mods( const std::vector<mod_source> &sources, std::string &error,
+                   const std::set<std::string> &selected_mod_ids )
 {
     discard_prepared_mods();
     std::vector<runtime_state> candidate;
@@ -538,11 +547,16 @@ bool prepare_mods( const std::vector<mod_source> &sources, std::string &error )
             throw std::runtime_error( "Lua-first Platform generation space is exhausted" );
         }
         std::set<std::string> seen_ids;
+        std::set<std::string> all_ids = selected_mod_ids;
         for( const mod_source &source : sources ) {
             if( !seen_ids.insert( source.id ).second ) {
                 throw std::runtime_error( "Duplicate Lua-first Mod id '" + source.id + "'" );
             }
-            candidate.push_back( load_source( source ) );
+            all_ids.insert( source.id );
+        }
+        const auto selected = std::make_shared<const std::set<std::string>>( std::move( all_ids ) );
+        for( const mod_source &source : sources ) {
+            candidate.push_back( load_source( source, selected ) );
             if( !validate_runtime( candidate.back().platform, false, error ) ) {
                 throw std::runtime_error( error );
             }
@@ -744,7 +758,7 @@ bool reload_active_mods( std::string &error )
     // sufficient to protect the transaction from a nested reload.
     const restore_on_out_of_scope<bool> restore_reload_flag( script_reload_in_progress );
     script_reload_in_progress = true;
-    if( !prepare_mods( sources, error ) ) {
+    if( !prepare_mods( sources, error, *active_states.front().selected_mod_ids ) ) {
         return false;
     }
     if( prepared_content_fingerprint() != active_fingerprint.str() ) {
@@ -949,7 +963,8 @@ bool read_mod_definition( const std::filesystem::path &, mod_definition &, std::
     return false;
 }
 
-bool prepare_mods( const std::vector<mod_source> &sources, std::string &error )
+bool prepare_mods( const std::vector<mod_source> &sources, std::string &error,
+                   const std::set<std::string> & )
 {
     if( sources.empty() ) {
         error.clear();

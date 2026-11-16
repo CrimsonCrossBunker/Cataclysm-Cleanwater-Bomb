@@ -5702,6 +5702,12 @@ function CcbPlatformTilesetApi.register(descriptor) end
 ---@class CcbPlatformContent
 local CcbPlatformContent = {}
 
+---Check a selected Mod by its stable ID, including data-only Mods. Available during entry loading.
+---A script reload uses the same selection as the loaded world.
+---@param mod_id string
+---@return boolean
+function CcbPlatformContent.is_mod_active(mod_id) end
+
 ---Mark static content text for deferred translation, including after language changes.
 ---@param text string Nonempty source text without NUL.
 ---@param context? string Translation context without NUL.

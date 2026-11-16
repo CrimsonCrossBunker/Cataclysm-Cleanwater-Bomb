@@ -135,6 +135,17 @@ static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
     return result;
 }
 
+static bool prepare_lua_platform_mods( const std::vector<mod_id> &mods, std::string &error )
+{
+    std::set<std::string> selected_ids;
+    for( const mod_id &id : mods ) {
+        if( id.is_valid() ) {
+            selected_ids.insert( id.str() );
+        }
+    }
+    return cata::lua_platform::prepare_mods( lua_platform_sources( mods ), error, selected_ids );
+}
+
 // Load everything that will not depend on any mods
 void game::load_static_data()
 {
@@ -231,8 +242,7 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
             test_world->active_mod_order = platform_order;
             load_packs( _( "Checking files" ), platform_order );
             std::string platform_error;
-            if( !cata::lua_platform::prepare_mods( lua_platform_sources( platform_order ),
-                                                   platform_error ) ) {
+            if( !prepare_lua_platform_mods( platform_order, platform_error ) ) {
                 throw std::runtime_error( "Error loading Lua-first Platform Mods: " +
                                           platform_error );
             }
@@ -620,7 +630,7 @@ void game::load_world_modfiles()
                                         "mod_interactions", "custom" );
 
     std::string platform_error;
-    if( !cata::lua_platform::prepare_mods( lua_platform_sources( mods ), platform_error ) ) {
+    if( !prepare_lua_platform_mods( mods, platform_error ) ) {
         throw std::runtime_error( "Error loading Lua-first Platform Mods: " + platform_error );
     }
     if( !cata::lua_platform::apply_prepared_content( platform_error ) ) {

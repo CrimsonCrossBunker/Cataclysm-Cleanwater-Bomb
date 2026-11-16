@@ -2,8 +2,10 @@
 // NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <cata_scope_helpers.h>
 #include <cstdlib>
 #include <lua_platform_loader.h>
+#include <lua_platform_runtime.h>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -47,6 +49,32 @@ empty_export_loads = (empty_export_loads or 0) + 1
     };
     REQUIRE( cata::lua_platform::validate_mods( { source }, error ) );
     CHECK( error.empty() );
+}
+
+TEST_CASE( "lua_platform_content_can_use_selected_data_only_mods_during_load_and_reload",
+           "[lua][platform][loader]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    const platform_lua_test_directory files;
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+assert(content.is_mod_active("selection_test"))
+assert(content.is_mod_active("json_companion"))
+assert(not content.is_mod_active("inactive"))
+)lua" );
+    const platform::mod_source source { "selection_test", files.root, files.root / "main.lua" };
+    std::string error;
+    CHECK_FALSE( platform::prepare_mods( { source }, error ) );
+    REQUIRE( platform::prepare_mods( { source }, error, { "json_companion" } ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+    platform::commit_prepared_mods();
+    platform::runtime_world_ready( true );
+    REQUIRE( platform::reload_active_mods( error ) );
 }
 
 TEST_CASE( "lua_platform_loader_preserves_file_preambles_and_error_lines",
