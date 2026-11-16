@@ -3358,7 +3358,9 @@ void monster::load( const JsonObject &data )
         }
     }
 
-    data.read( "friendly", friendly );
+    int saved_friendly = friendly;
+    data.read( "friendly", saved_friendly );
+    friendly = saved_friendly;
     if( data.has_member( "mission_ids" ) ) {
         data.read( "mission_ids", mission_ids );
     } else if( data.has_member( "mission_id" ) ) {
@@ -3468,7 +3470,7 @@ void monster::store( JsonOut &json ) const
     }
     json.member( "hp", hp );
     json.member( "special_attacks", special_attacks );
-    json.member( "friendly", friendly );
+    json.member( "friendly", static_cast<int>( friendly ) );
     json.member( "fish_population", fish_population );
     json.member( "faction", faction.id().str() );
     json.member( "mission_ids", mission_ids );

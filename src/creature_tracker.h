@@ -108,7 +108,10 @@ class creature_tracker
          */
         bool add( const shared_ptr_fast<monster> &critter );
         size_t size() const;
-        // Conservative, ordered candidates for friendly-monster target searches.
+        bool faction_has_reachable_characters( const mfaction_id &faction ) const {
+            return reachability_character_factions_.count( faction ) != 0;
+        }
+        // Conservative, ordered non-friendly candidates for friendly-monster searches.
         // False asks the caller to use the original full-list traversal.
         bool nearby_monster_targets( const tripoint_abs_ms &origin,
                                      std::vector<shared_ptr_fast<monster>> &out );
@@ -229,6 +232,8 @@ class creature_tracker
         double reachability_bitmap_cost_ms_ = 0.0; // NOLINT(cata-serialize)
         struct target_candidate_state;
         std::unique_ptr<target_candidate_state> target_candidates_; // NOLINT(cata-serialize)
+        std::uint64_t reachability_faction_revision_ = 0; // NOLINT(cata-serialize)
+        std::unordered_set<mfaction_id> reachability_character_factions_; // NOLINT(cata-serialize)
 
         friend game;
 };

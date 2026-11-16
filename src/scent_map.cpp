@@ -54,6 +54,7 @@ static nc_color sev( const size_t level )
 
 void scent_map::reset()
 {
+    ++revision_;
     for( auto &elem : grscent ) {
         for( int &val : elem ) {
             val = 0;
@@ -64,6 +65,7 @@ void scent_map::reset()
 
 void scent_map::decay()
 {
+    ++revision_;
     for( auto &elem : grscent ) {
         for( int &val : elem ) {
             val = std::max( 0, val - 1 );
@@ -86,6 +88,7 @@ void scent_map::draw( const catacurses::window &win, const int div,
 
 void scent_map::shift( const point_rel_ms &sm_shift )
 {
+    ++revision_;
     // Set up iteration such that we ensure data has been moved before
     // it's overwritten.
     const int x_start = sm_shift.x() >= 0 ? 0 : MAPSIZE_X - 1;
@@ -120,6 +123,7 @@ void scent_map::set( const tripoint_bub_ms &p, int value, const scenttype_id &ty
 
 void scent_map::set_unsafe( const tripoint_bub_ms &p, int value, const scenttype_id &type )
 {
+    ++revision_;
     grscent[p.x()][p.y()] = value;
     if( !type.is_empty() ) {
         typescent = type;
@@ -133,6 +137,16 @@ int scent_map::get_unsafe( const tripoint_bub_ms &p ) const
 scenttype_id scent_map::get_type() const
 {
     return typescent;
+}
+
+std::vector<int> scent_map::snapshot_values() const
+{
+    std::vector<int> result;
+    result.reserve( MAPSIZE_X * MAPSIZE_Y );
+    for( const auto &column : grscent ) {
+        result.insert( result.end(), column.begin(), column.end() );
+    }
+    return result;
 }
 
 scenttype_id scent_map::get_type( const tripoint_bub_ms &p ) const
@@ -184,6 +198,7 @@ void scent_map::update( const tripoint_bub_ms &center, map &m )
         return;
     }
 
+    ++revision_;
     // note: the next four intermediate matrices need to be at least
     // [2*SCENT_RADIUS+3][2*SCENT_RADIUS+1] in size to hold enough data
     // The code I'm modifying used [MAPSIZE_X]. I'm staying with that to avoid new bugs.

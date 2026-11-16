@@ -12,8 +12,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <sstream>
 #include <cstddef>
 #include <functional>
+#include <list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -69,6 +71,9 @@
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
+#include "monster_motion_profile.h"
+#include "monster_path_batch.h"
+#include "monster_scent_batch.h"
 #include "mtype.h"
 #include "music.h"
 #include "npc.h"
@@ -83,6 +88,7 @@
 #include "profiling.h"
 #include "rng.h"
 #include "scent_map.h"
+#include "thread_pool.h"
 #include "sdlsound.h"
 #include "simple_pathfinding.h"
 #include "sounds.h"
@@ -444,6 +450,60 @@ static void monmove()
         cata::lua_platform::has_native_hook( "on_monster_do_turn" );
     const bool has_npc_do_turn =
         cata::lua_platform::has_native_hook( "on_npc_do_turn" );
+    monster_motion_profile::frame detail;
+    const auto motion_started = std::chrono::steady_clock::now();
+    const auto elapsed_ms = []( std::chrono::steady_clock::time_point start ) {
+        return std::chrono::duration<double, std::milli>(
+                   std::chrono::steady_clock::now() - start ).count();
+    };
+    const auto measure = [&]( double &total, auto &&operation ) {
+        const auto start = std::chrono::steady_clock::now();
+        operation();
+        total += elapsed_ms( start );
+    };
+    double plan_ms = 0;
+    double move_ms = 0;
+    double process_turn_ms = 0;
+    double hooks_ms = 0;
+    double field_ms = 0;
+    double triggers_ms = 0;
+    double daily_ms = 0;
+    double slowest_monster_ms = 0;
+    std::string slowest_monster;
+    std::size_t plan_calls = 0;
+    std::size_t move_calls = 0;
+    const auto worker_count = get_thread_pool().num_workers();
+    std::list<monster_path_batch> path_batches;
+    std::list<monster_scent_batch> scent_batches;
+    const auto population = get_creature_tracker().size();
+    const bool collect_paths = monster_path_batch::worth_collecting( population );
+    const bool collect_scent = monster_scent_batch::worth_collecting( population );
+    if( get_creature_tracker().size() >= 32 && worker_count > 1 &&
+        ( collect_paths || collect_scent ) ) {
+        for( const auto &view : session.active_maps( primary ) ) {
+            map &terrain = view.get();
+            const swap_map context( terrain );
+            scent_map &scents = get_scent();
+            auto &paths = path_batches.emplace_back();
+            auto &scent_paths = scent_batches.emplace_back();
+            for( const monster &critter : g->all_monsters() ) {
+                if( critter.is_dead() || !terrain.inbounds( critter.pos_abs() ) ||
+                    ( regional && session.loaded_map_at( primary, critter.pos_abs_sm() ) != &terrain ) ) {
+                    continue;
+                }
+                if( collect_paths ) {
+                    critter.prepare_path_search( paths, terrain );
+                }
+                if( collect_scent && critter.has_flag( mon_flag_SMELLS ) && scents.inbounds( critter.pos_bub( terrain ) ) &&
+                    scents.get_unsafe( critter.pos_bub( terrain ) ) > 0 ) {
+                    scent_paths.add( critter.pos_bub( terrain ) );
+                }
+            }
+            paths.prepare( terrain );
+            scent_paths.prepare( terrain, scents );
+        }
+    }
+    const auto motion_prepared = std::chrono::steady_clock::now();
     for( monster &critter : g->all_monsters() ) {
         map *const owner = regional ? session.loaded_map_at( primary, critter.pos_abs_sm() ) :
                            &primary;
@@ -486,6 +546,7 @@ static void monmove()
 
         if( !critter.is_dead() ) {
             if( has_creature_do_turn || has_monster_do_turn ) {
+                const auto hooks_started = std::chrono::steady_clock::now();
                 cata::lua_platform::native_callback_arguments payload = {
                     {
                         "creature",
@@ -501,19 +562,22 @@ static void monmove()
                     cata::lua_platform::dispatch_native_hook(
                         "on_monster_do_turn", payload );
                 }
+                hooks_ms += elapsed_ms( hooks_started );
             }
             if( !critter.is_dead() ) {
-                critter.process_turn();
+                measure( process_turn_ms, [&]() { critter.process_turn(); } );
             }
         }
 
-        m.creature_in_field( critter );
+        measure( field_ms, [&]() { m.creature_in_field( critter ); } );
         if( calendar::once_every( 1_days ) ) {
+            const auto daily_started = std::chrono::steady_clock::now();
             if( critter.has_flag( mon_flag_MILKABLE ) ) {
                 critter.refill_udders();
             }
             critter.try_biosignature();
             critter.try_reproduce();
+            daily_ms += elapsed_ms( daily_started );
         }
         while( critter.get_moves() > 0 && !critter.is_dead() &&
                get_creature_tracker().is_present( &critter ) && !critter.has_effect( effect_ridden ) ) {
@@ -521,7 +585,8 @@ static void monmove()
             // Controlled critters don't make their own plans
             if( !critter.has_effect( effect_controlled ) ) {
                 // Formulate a path to follow
-                critter.plan();
+                ++plan_calls;
+                measure( plan_ms, [&]() { critter.plan(); } );
             } else {
                 critter.set_moves( 0 );
                 break;
@@ -529,12 +594,13 @@ static void monmove()
             if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
                 break;
             }
-            critter.move(); // Move one square, possibly hit u
+            ++move_calls;
+            measure( move_ms, [&]() { critter.move(); } ); // Includes attacks and pathfinding.
             if( !critter.is_dead() && !get_creature_tracker().is_present( &critter ) ) {
                 break;
             }
-            critter.process_triggers();
-            m.creature_in_field( critter );
+            measure( triggers_ms, [&]() { critter.process_triggers(); } );
+            measure( field_ms, [&]() { m.creature_in_field( critter ); } );
         }
 
         if( !critter.is_dead() && !critter.is_hallucination() &&
@@ -555,16 +621,73 @@ static void monmove()
             }
         }
 
+        const double monster_ms = elapsed_ms( mon_t0 );
+        if( monster_ms > slowest_monster_ms ) {
+            slowest_monster_ms = monster_ms;
+            slowest_monster = critter.type->id.str();
+        }
         if( cata_mp::is_hosting() ) {
-            const int mon_ms = static_cast<int>(
-                                   std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::steady_clock::now() - mon_t0 ).count() );
+            const int mon_ms = static_cast<int>( monster_ms );
             if( mon_ms >= 10 ) {
                 mon_slow_log += " " + critter.type->id.str() + "=" + std::to_string( mon_ms ) + "ms";
             }
         }
     }
 
+    const auto motion_finished = std::chrono::steady_clock::now();
+    const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                              motion_finished - motion_started ).count();
+    if( total_ms >= 250 ) {
+        std::size_t paths_prepared = 0;
+        std::size_t paths_used = 0;
+        std::size_t scent_uses = 0;
+        for( const auto &batch : path_batches ) {
+            paths_prepared += batch.prepared_count();
+            paths_used += batch.used_count();
+        }
+        for( const auto &batch : scent_batches ) {
+            scent_uses += batch.used_count();
+        }
+        const double prepare_ms = std::chrono::duration<double, std::milli>(
+                                      motion_prepared - motion_started ).count();
+        const double measured_ms = prepare_ms + plan_ms + move_ms + process_turn_ms +
+                                   hooks_ms + field_ms + triggers_ms + daily_ms;
+        const double other_ms = std::max( 0.0, std::chrono::duration<double, std::milli>(
+                                             motion_finished - motion_started ).count() - measured_ms );
+        DebugLog( D_WARNING, D_MAIN ) << "monster motion: count=" << mon_count
+                                    << " total_ms=" << total_ms
+                                    << " workers=" << worker_count
+                                    << " prepare_ms=" << prepare_ms
+                                    << " plan_ms=" << plan_ms
+                                    << " move_ms=" << move_ms
+                                    << " process_turn_ms=" << process_turn_ms
+                                    << " hooks_ms=" << hooks_ms
+                                    << " field_ms=" << field_ms
+                                    << " triggers_ms=" << triggers_ms
+                                    << " daily_ms=" << daily_ms
+                                    << " other_ms=" << other_ms
+                                    << " plan_calls=" << plan_calls
+                                    << " move_calls=" << move_calls
+                                    << " slowest_monster=" << slowest_monster
+                                    << " slowest_monster_ms=" << slowest_monster_ms
+                                    << " paths_prepared=" << paths_prepared
+                                    << " paths_used=" << paths_used
+                                    << " scent_uses=" << scent_uses;
+        std::ostringstream breakdown;
+        breakdown << "monster detail: exclusive_ms/calls";
+        for( std::size_t i = 0; i < detail.samples.size(); ++i ) {
+            const auto &sample = detail.samples[i];
+            if( sample.calls != 0 ) {
+                breakdown << " " << monster_motion_profile::names[i] << "="
+                          << std::chrono::duration<double, std::milli>( sample.elapsed ).count()
+                          << "/" << sample.calls;
+            }
+        }
+        for( std::size_t i = 0; i < detail.counters.size(); ++i ) {
+            breakdown << " " << monster_motion_profile::counter_names[i] << "=" << detail.counters[i];
+        }
+        DebugLog( D_WARNING, D_MAIN ) << breakdown.str();
+    }
     if( cata_mp::is_hosting() && !mon_slow_log.empty() ) {
         cata_mp::mp_log( "[cdda-mp] monmove slow monsters (count=" +
                          std::to_string( mon_count ) + "):" + mon_slow_log );

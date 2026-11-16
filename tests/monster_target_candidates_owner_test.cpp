@@ -18,6 +18,7 @@
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "monster.h"
+#include "monfaction.h"
 #include "mtype.h"
 #include "player_helpers.h"
 
@@ -118,5 +119,102 @@ TEST_CASE( "monster_group_bash_matches_uncached_rays", "[monster][group_bash]" )
             }
         }
     }
+    tracker.clear();
+}
+
+TEST_CASE( "monster_candidate_owner_stays_enabled_for_large_populations",
+           "[monster][target_candidates_owner]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    creature_tracker &tracker = get_creature_tracker();
+    std::vector<shared_ptr_fast<monster>> result;
+    const tripoint_abs_ms origin = here.get_abs( tripoint_bub_ms( 2, 2, 0 ) );
+    for( int population : { 255, 256, 4096, 4097, 15903 } ) {
+        while( tracker.size() < population ) {
+            const int i = tracker.size();
+            spawn_test_monster( "mon_zombie", tripoint_bub_ms( 2 + i % 128, 2 + i / 128, 0 ) );
+        }
+        CAPTURE( population );
+        REQUIRE( tracker.nearby_monster_targets( origin, result ) == ( population >= 256 ) );
+        if( population >= 256 ) {
+            REQUIRE_FALSE( result.empty() );
+            CHECK( result.front() == tracker.get_monsters_list().front() );
+        } else {
+            CHECK( result.empty() );
+        }
+    }
+    tracker.clear();
+}
+
+TEST_CASE( "friendly_candidate_membership_changes_immediately", "[monster][target_candidates_owner]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    map &here = get_map();
+    creature_tracker &tracker = get_creature_tracker();
+    for( int i = 0; i < 258; ++i ) {
+        monster &mon = spawn_test_monster( "mon_zombie", tripoint_bub_ms( 2 + i % 16, 2 + i / 16, 0 ) );
+        mon.friendly = -1;
+    }
+    const auto subject = tracker.get_monsters_list().front();
+    std::vector<shared_ptr_fast<monster>> result;
+    REQUIRE( tracker.nearby_monster_targets( subject->pos_abs(), result ) );
+    CHECK( result.empty() );
+    subject->friendly = 1;
+    --subject->friendly;
+    REQUIRE( tracker.nearby_monster_targets( subject->pos_abs(), result ) );
+    REQUIRE( result.size() == 1 );
+    CHECK( result.front() == subject );
+    subject->setpos( here, tripoint_bub_ms( 1, 1, 0 ) );
+    REQUIRE( tracker.nearby_monster_targets( subject->pos_abs(), result ) );
+    REQUIRE( result.size() == 1 );
+    CHECK( result.front() == subject );
+    subject->friendly = -1;
+    REQUIRE( tracker.nearby_monster_targets( subject->pos_abs(), result ) );
+    CHECK( result.empty() );
+    tracker.clear();
+}
+
+TEST_CASE( "danger_candidates_use_actual_factions_and_live_membership", "[monster][target_candidates_owner]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    creature_tracker &tracker = get_creature_tracker();
+    monster &observer = spawn_test_monster( "mon_zombie", tripoint_bub_ms( 60, 60, 0 ) );
+    monster &ally = spawn_test_monster( "mon_zombie", tripoint_bub_ms( 61, 60, 0 ) );
+    monster &other = spawn_test_monster( "mon_zombie", tripoint_bub_ms( 62, 60, 0 ) );
+    observer.friendly = ally.friendly = other.friendly = -1;
+    const auto compare = [&]() {
+        std::vector<Creature *> expected;
+        tracker.for_each_reachable( observer, [&]( Creature *creature ) {
+            const monster *mon = creature->as_monster();
+            if( !mon || mon->faction->attitude( observer.faction ) == MFA_HATE ||
+                mon->faction->attitude( observer.faction ) == MFA_BY_MOOD ) {
+                expected.push_back( creature );
+            }
+        } );
+        std::vector<Creature *> actual;
+        tracker.find_reachable( observer, [&]( const mfaction_id &faction ) {
+            const mf_attitude attitude = faction->attitude( observer.faction );
+            return attitude == MFA_HATE || attitude == MFA_BY_MOOD ||
+                   tracker.faction_has_reachable_characters( faction );
+        }, [&]( Creature *creature ) {
+            actual.push_back( creature );
+            return false;
+        } );
+        REQUIRE( actual.size() == expected.size() );
+        for( std::size_t i = 0; i < actual.size(); ++i ) {
+            CHECK( actual[i] == expected[i] );
+        }
+    };
+    compare();
+    other.faction = mfaction_str_id( "human" );
+    compare();
+    tracker.remove( other );
+    compare();
+    tracker.invalidate_reachability_cache();
+    compare();
     tracker.clear();
 }

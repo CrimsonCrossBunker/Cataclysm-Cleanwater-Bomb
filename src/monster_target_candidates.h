@@ -2,7 +2,9 @@
 #ifndef CATA_SRC_MONSTER_TARGET_CANDIDATES_H
 #define CATA_SRC_MONSTER_TARGET_CANDIDATES_H
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <utility>
 #include <vector>
@@ -29,11 +31,23 @@ class monster_target_candidates
     private:
         struct window {
             bool ready = false;
+            bool prefetch = false;
+            std::uint64_t last_used = 0;
+            std::uint64_t checked_movement = 0;
             indices candidates;
         };
+        struct movement {
+            cell previous;
+            cell next;
+        };
+        static constexpr std::size_t movement_history_size = 256;
         bool overlaps( cell observer, cell target ) const;
-        void prepare( cata_thread_pool &pool );
+        void validate( cell key, window &entry );
+        void prepare( cata_thread_pool &pool, window &requested );
         const int cell_range_;
+        std::uint64_t query_clock_ = 0;
+        std::uint64_t movement_clock_ = 0;
+        std::array<movement, movement_history_size> movements_{};
         std::vector<cell, compute_allocator<cell>> cells_;
         std::map<cell, window> windows_;
 };

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -25,6 +26,7 @@
 #include "game.h"
 #include "line.h"
 #include "map.h"
+#include "monster_path_batch.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
 #include "messages.h"
@@ -104,7 +106,7 @@ struct pathfinder {
         return pt.second;
     }
 
-    void add_point( const int gscore, const int score, const tripoint_bub_ms &from,
+    void add_point( const int gscore, const tripoint_bub_ms &target, const tripoint_bub_ms &from,
                     const tripoint_bub_ms &to ) {
         path_data_layer &layer = get_layer( to.z() );
         const int index = flat_index( to.xy() );
@@ -115,6 +117,8 @@ struct pathfinder {
             return;
         }
 
+        const int score = gscore + ( layer.open[index] ?
+                                    layer.score[index] - layer.gscore[index] : 2 * rl_dist( to, target ) );
         layer.open[index] = true;
         layer.gscore[index] = gscore;
         layer.parent[index] = from;
@@ -460,7 +464,20 @@ int map::extra_cost( const tripoint_bub_ms &cur, const tripoint_bub_ms &p,
 std::vector<tripoint_bub_ms> map::route( const Creature &who,
         const pathfinding_target &target ) const
 {
-    return route( who.pos_bub(), target, who.get_pathfinding_settings(), who.get_path_avoid() );
+    if( auto prepared = monster_path_batch::take( *this, who, target ) ) {
+        return std::move( *prepared );
+    }
+    const bool sample_route = who.is_monster() && target.r == 0 &&
+                              monster_path_batch::should_observe_serial( who.pos_bub(), target.center );
+    const auto start = sample_route ? std::chrono::steady_clock::now() :
+                       std::chrono::steady_clock::time_point{};
+    auto result = route( who.pos_bub(), target, who.get_pathfinding_settings(), who.get_path_avoid() );
+    if( sample_route ) {
+        monster_path_batch::observe_serial( who.pos_bub(), target.center,
+                                           std::chrono::duration<double, std::micro>(
+                                               std::chrono::steady_clock::now() - start ).count() );
+    }
+    return result;
 }
 
 std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
@@ -527,7 +544,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
     pathfinder &pf = search.get().ordinary;
     pf.reset( min.z(), max.z() );
 
-    pf.add_point( 0, 0, f, f );
+    pf.add_point( 0, f, f, f );
 
     bool done = false;
     tripoint_bub_ms found_target;
@@ -610,7 +627,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                             // Use outer layer (cur.z()) for gscore -- the destination
                             // layer may contain stale data at parent_index.
                             int new_g = layer.gscore[parent_index] + 10;
-                            pf.add_point( new_g, new_g + 2 * rl_dist( below, t ),
+                            pf.add_point( new_g, t,
                                           cur, below );
                         }
 
@@ -627,7 +644,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                 if( valid_move( p, below, false, true ) ) {
                     if( !has_flag( ter_furn_flag::TFLAG_NO_FLOOR, below ) ) {
                         int new_g = layer.gscore[parent_index] + 10;
-                        pf.add_point( new_g, new_g + 2 * rl_dist( below, t ),
+                        pf.add_point( new_g, t,
                                       cur, below );
                     }
                 }
@@ -635,7 +652,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                 continue;
             }
 
-            pf.add_point( newg, newg + 2 * rl_dist( p, t ), cur, p );
+            pf.add_point( newg, t, cur, p );
         }
 
         if( settings.allow_climb_stairs ) {
@@ -650,7 +667,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                         continue;
                     }
                     const int new_g = layer.gscore[parent_index] + 2;
-                    pf.add_point( new_g, new_g + 2 * rl_dist( *dest, t ), cur, *dest );
+                    pf.add_point( new_g, t, cur, *dest );
                 }
             }
         }
@@ -680,7 +697,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                 // Use outer layer (cur.z()) for gscore -- the destination
                 // layer may contain stale data at parent_index.
                 int new_g = layer.gscore[parent_index] + 2;
-                pf.add_point( new_g, new_g + 2 * rl_dist( dest, t ),
+                pf.add_point( new_g, t,
                               cur, dest );
             }
         }
@@ -697,7 +714,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                     continue;
                 }
                 int new_g = layer.gscore[parent_index] + 2;
-                pf.add_point( new_g, new_g + 2 * rl_dist( dest, t ),
+                pf.add_point( new_g, t,
                               cur, dest );
             }
         }
@@ -709,7 +726,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                     continue;
                 }
                 int new_g = layer.gscore[parent_index] + 4;
-                pf.add_point( new_g, new_g + 2 * rl_dist( above, t ),
+                pf.add_point( new_g, t,
                               cur, above );
             }
         }
@@ -721,7 +738,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                     continue;
                 }
                 int new_g = layer.gscore[parent_index] + 4;
-                pf.add_point( new_g, new_g + 2 * rl_dist( above, t ),
+                pf.add_point( new_g, t,
                               cur, above );
             }
         }
@@ -733,7 +750,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
                     continue;
                 }
                 int new_g = layer.gscore[parent_index] + 4;
-                pf.add_point( new_g, new_g + 2 * rl_dist( below, t ),
+                pf.add_point( new_g, t,
                               cur, below );
             }
         }
