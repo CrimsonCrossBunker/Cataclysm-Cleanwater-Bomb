@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_WEATHER_H
 #define CATA_SRC_WEATHER_H
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -11,6 +12,7 @@
 #include "color.h"
 #include "coordinates.h"
 #include "pimpl.h"
+#include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
@@ -224,6 +226,7 @@ class weather_manager
         weather_manager();
         // sets weather_override
         void on_game_start();
+        void reset_room_heat();
         const weather_generator &get_cur_weather_gen() const;
         // Updates the temperature and weather patten
         void update_solar_location();
@@ -231,7 +234,7 @@ class weather_manager
         // Incrementally update snow depth at the player's current OMT
         void update_snow_depth();
         // Snow depth in mm at a given OMT (0 if no data)
-        double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
+        double get_snow_depth_mm( const tripoint_abs_omt &location ) const;
         snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         snow_cover get_surface_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature

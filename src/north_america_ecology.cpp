@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <string>
@@ -12,10 +14,13 @@
 #include <utility>
 #include <vector>
 
+#include "cata_path.h"
 #include "cata_utility.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "line.h"
 #include "map.h"
+#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mapgendata.h"
 #include "north_america.h"
@@ -24,6 +29,11 @@
 #include "rng.h"
 #include "type_id.h"
 #include "weighted_list.h"
+
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_grass( "t_grass" );
+static const ter_str_id ter_t_grass_long( "t_grass_long" );
+static const ter_str_id ter_t_grass_tall( "t_grass_tall" );
 
 namespace north_america
 {
@@ -111,15 +121,14 @@ struct ecology_atlas {
             const auto fill_runs = [&]( const JsonArray & runs, auto & dest, int limit ) {
                 for( const JsonValue entry : runs ) {
                     const JsonArray run = entry.get_array();
-                    const int x = run.get_int( 0 );
-                    const int y = run.get_int( 1 );
+                    const point start( run.get_int( 0 ), run.get_int( 1 ) );
                     const int length = run.get_int( 2 );
                     const int index = run.get_int( 3 );
-                    if( x < 0 || y < 0 || x >= width || y >= height ||
-                        length < 1 || length > width - x || index < 1 || index >= limit ) {
+                    if( start.x < 0 || start.y < 0 || start.x >= width || start.y >= height ||
+                        length < 1 || length > width - start.x || index < 1 || index >= limit ) {
                         run.throw_error( "Invalid North America ecology atlas run" );
                     }
-                    std::fill_n( dest.begin() + y * width + x, length, index );
+                    std::fill_n( dest.begin() + start.y * width + start.x, length, index );
                 }
             };
             fill_runs( root.get_array( "runs" ), cells, profiles.size() );
@@ -149,9 +158,9 @@ const ecology_atlas &get_ecology()
     return data;
 }
 
-static constexpr std::array<point, 8> district_neighbors{{
+constexpr std::array<point, 8> district_neighbors{{
         point::north, point::east, point::south, point::west,
-        point( 1, -1 ), point( 1, 1 ), point( -1, 1 ), point( -1, -1 )
+        point::north_east, point::south_east, point::south_west, point::north_west
     }};
 
 struct urban_atlas {
@@ -321,12 +330,11 @@ const ecology_profile *profile_at( point_abs_omt pos )
         return &data.profiles[data.cells[i]];
     }
     // The coarse cell center can be offshore even when a map tile is on land.
-    const int x = i % data.width;
-    const int y = i / data.width;
+    const point origin( i % data.width, i / data.width );
     for( const point &delta : {
-             point( 0, -1 ), point( -1, 0 ), point( 1, 0 ), point( 0, 1 )
+             point::north, point::west, point::east, point::south
          } ) {
-        const point neighbor = point( x, y ) + delta;
+        const point neighbor = origin + delta;
         if( neighbor.x < 0 || neighbor.x >= data.width || neighbor.y < 0 || neighbor.y >= data.height ) {
             continue;
         }
@@ -508,11 +516,9 @@ void place_native_vegetation( mapgendata &dat )
             ( p.shrub ? shrubs : trees ).add( p.terrain.id(), p.weight );
         }
     }
-    static const ter_str_id grass( "t_grass" );
-    static const ter_str_id grass_long( "t_grass_long" );
-    static const ter_str_id grass_tall( "t_grass_tall" );
-    static const ter_str_id dirt( "t_dirt" );
-    const std::array<ter_id, 4> ground{ grass.id(), grass_long.id(), grass_tall.id(), dirt.id() };
+    const std::array<ter_id, 4> ground{
+        ter_t_grass.id(), ter_t_grass_long.id(), ter_t_grass_tall.id(), ter_t_dirt.id()
+    };
     const ter_id groundcover = profile->biome.groundcover.id();
     const ter_id null_terrain = ter_str_id::NULL_ID().id();
     const bool keep_eastern_harvests = profile->ecoregion == "5.3" || profile->ecoregion == "8.1";

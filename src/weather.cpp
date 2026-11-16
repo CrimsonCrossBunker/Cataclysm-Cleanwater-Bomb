@@ -1,14 +1,9 @@
 #include "weather.h"
-#include "climate_seasons.h"
 
-#include <color.h>
-#include <pimpl.h>
-#include <type_id.h>
-#include <weather_type.h>
 #include <algorithm>
 #include <array>
-#include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -22,13 +17,15 @@
 #include "character.h"
 #include "character_attire.h"
 #include "city.h"
+#include "climate_seasons.h"
+#include "color.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "current_map.h"
 #include "debug.h"
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "game.h"
-#include "current_map.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -36,22 +33,26 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
-#include "map_simulation_regions.h"
-#include "mp_world_session.h"
+#include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "math_defines.h"
 #include "messages.h"
+#include "mp_world_session.h"
+#include "north_america.h"
 #include "omdata.h"
 #include "options.h"
 #include "overmap.h"
 #include "overmap_ui.h"
-#include "north_america.h"
 #include "overmapbuffer.h"
-#include "pocket_type.h"
+#include "pimpl.h"
 #include "plant_climate.h"
+#include "player_control.h"
+#include "pocket_type.h"
 #include "point.h"
 #include "profiling.h"
+#include "regional_climate.h"
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -59,10 +60,12 @@
 #include "string_formatter.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "uistate.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "weather_gen.h"
+#include "weather_type.h"
 
 static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
 
@@ -70,9 +73,15 @@ static const efftype_id effect_glare( "glare" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_snow_glare( "snow_glare" );
 
+static const field_type_str_id field_fd_fire( "fd_fire" );
+
 static const flag_id json_flag_RAINPROOF( "RAINPROOF" );
 static const flag_id json_flag_RAIN_PROTECT( "RAIN_PROTECT" );
 static const flag_id json_flag_SUN_GLASSES( "SUN_GLASSES" );
+
+static const furn_str_id furn_f_brazier( "f_brazier" );
+static const furn_str_id furn_f_makeshift_brazier( "f_makeshift_brazier" );
+static const furn_str_id furn_f_woodstove( "f_woodstove" );
 
 static const itype_id itype_water( "water" );
 
@@ -529,7 +538,7 @@ static void apply_weather_to_player( map &terrain, const weather_type_id &w, Cha
 void handle_weather_effects( const weather_type_id &w )
 {
     map &here = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     if( session.has_regions() ) {
         const map_simulation_regions regions = session.simulation_regions( here );
         session.visit_resident_maps( here, [&]( map & terrain ) {
@@ -1092,13 +1101,17 @@ const weather_generator &weather_manager::get_cur_weather_gen() const
     return om.get_settings().get_settings_weather();
 }
 
+void weather_manager::reset_room_heat()
+{
+    heated_rooms.clear();
+    heat_dimension.reset();
+}
+
 void weather_manager::on_game_start()
 {
     clear_plant_climate_cache();
     last_weather_turn.reset();
     indoor_reference_time.reset();
-    heated_rooms.clear();
-    heat_dimension.reset();
     regional_climate::set_calendar_location( std::nullopt );
     if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
         weather_override = static_cast<weather_type_id>
@@ -1113,7 +1126,8 @@ void weather_manager::on_game_start()
 void weather_manager::update_solar_location()
 {
     if( north_america::active() ) {
-        const auto solar_location = north_america::location( get_player_character().pos_abs().xy() );
+        const regional_climate::coordinates solar_location = north_america::location(
+                    get_player_character().pos_abs().xy() );
         calendar::set_location( solar_location.latitude, solar_location.longitude );
     } else if( g && g->north_america_world ) {
         calendar::set_location( get_option<float>( "LATITUDE" ), get_option<float>( "LONGITUDE" ) );
@@ -1493,11 +1507,7 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
         previous.rooms.clear();
     }
 
-    static const field_type_str_id fire_type( "fd_fire" );
-    const field_type_id fire = fire_type.id();
-    static const furn_str_id stove( "f_woodstove" );
-    static const furn_str_id brazier( "f_brazier" );
-    static const furn_str_id makeshift( "f_makeshift_brazier" );
+    const field_type_id fire = field_fd_fire.id();
     static constexpr std::array<point, 4> directions{ point::north, point::east,
             point::south, point::west };
     const auto in_range = [&]( const tripoint_bub_ms & p ) {
@@ -1527,8 +1537,8 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
                 const furn_id fixture = here.furn( p );
                 // Delivered heat in watts per intensity level. A vented open hearth
                 // heats the room less efficiently than a closed wood stove.
-                const double output = fixture == stove.id() ? 2400 :
-                                      fixture == brazier.id() ? 1700 : fixture == makeshift.id() ? 800 :
+                const double output = fixture == furn_f_woodstove.id() ? 2400 :
+                                      fixture == furn_f_brazier.id() ? 1700 : fixture == furn_f_makeshift_brazier.id() ? 800 :
                                       here.has_flag( ter_furn_flag::TFLAG_FIRE_CONTAINER, p ) ? 1100 : 1500;
                 watts += output * intensity;
             }
@@ -1610,7 +1620,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
             ( !here.is_outside( location ) || here.is_roofed( location ) ) ) {
             if( !indoor_reference_time || calendar::turn < *indoor_reference_time ||
                 calendar::turn - *indoor_reference_time >= 30_minutes ) {
-                const auto &generator = get_cur_weather_gen();
+                const weather_generator &generator = get_cur_weather_gen();
                 const tripoint_abs_ms origin = here.get_abs( player );
                 double mean_c = 0;
                 for( int hours = 2; hours < 24; hours += 4 ) {

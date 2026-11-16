@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <functional>
 #include <iterator>
 #include <optional>
@@ -1592,16 +1593,16 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         bool began_snow = false;
                         const int base = ( cur_zlevel - center.z() ) * zlevel_height;
                         for( const row_sprite_entry &entry : row_sprites ) {
-                            const auto &var = std::get<tile_render_info::sprite>( entry.tile->var );
+                            const tile_render_info::sprite &var = std::get<tile_render_info::sprite>( entry.tile->var );
                             if( var.invisible[0] ) {
                                 continue;
                             }
-                            const auto &position = entry.tile->view.pos;
+                            const tripoint_bub_ms &position = entry.tile->view.pos;
                             const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
                             if( cover == snow_cover::none ) {
                                 continue;
                             }
-                            const auto &texture = get_snow_texture();
+                            const SDL_Texture_Ptr &texture = get_snow_texture();
                             if( !texture ) {
                                 break;
                             }
@@ -2210,6 +2211,12 @@ void cata_tiles::reset_tint_mask()
     tint_mask_tex.reset();
     tint_mask_w = 0;
     tint_mask_h = 0;
+}
+
+void cata_tiles::reset_snow_texture()
+{
+    snow_texture.reset();
+    tried_snow_texture = false;
 }
 
 std::optional<smooth_lighting::lit_failure> smooth_lightmap::ensure_texture(
@@ -2883,7 +2890,8 @@ const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
 {
     if( !tried_snow_texture ) {
         tried_snow_texture = true;
-        const auto file = ( PATH_INFO::gfxdir() / "weather" / "snow_cover.png" ).get_unrelative_path();
+        const std::filesystem::path file = ( PATH_INFO::gfxdir() / "weather" /
+                                             "snow_cover.png" ).get_unrelative_path();
         try {
             const SDL_Surface_Ptr surface = load_image( file.u8string().c_str() );
             if( surface->w == snow_sheet_width && surface->h == snow_sheet_height ) {
