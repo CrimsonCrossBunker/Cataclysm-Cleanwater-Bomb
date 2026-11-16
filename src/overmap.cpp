@@ -2314,7 +2314,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
     static const oter_type_str_id road( "road" );
-    static const oter_type_str_id bridge( "bridge" );
+    static const oter_type_str_id bridge( "atlas_road_bridge" );
     const auto can_build_street = [&]( const tripoint_om_omt & p ) {
         return !ter( p )->is_water() && connection->pick_subtype_for( ter( p ) );
     };
@@ -2328,11 +2328,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             const oter_id previous = ter( p );
             std::size_t links = settings->place_roads ? tile.mapped_connections : 0;
             if( previous->is_water() && links ) {
-                const bool crosses_vertically = om_lines::has_segment( links,
-                                                om_direction::type::north ) ||
-                                                om_lines::has_segment( links, om_direction::type::south );
-                ter_set( p, bridge->get_rotated( crosses_vertically ? om_direction::type::north :
-                                                 om_direction::type::east ) );
+                ter_set( p, bridge->get_linear( links ) );
             } else if( can_build_street( p ) ) {
                 for( const auto direction : om_direction::all ) {
                     if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||

@@ -23,10 +23,13 @@ int named_city_size( int population );
 struct urban_district {
     point_abs_omt center;
     std::size_t city_index;
+    unsigned open_edges = 0;
 };
 
 const std::vector<urban_district> &urban_districts_in( point_abs_om pos );
 bool in_urban_footprint( point_abs_omt pos );
+// Development density within a populated atlas district, from 0 to 100.
+int urban_density( const urban_district &district, point_abs_omt pos );
 int urban_district_size();
 
 inline constexpr int minimum_zoned_population = 100'000;

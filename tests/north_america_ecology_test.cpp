@@ -6,6 +6,11 @@
 #include "cata_scope_helpers.h"
 #include "game.h"
 #include "coordinates.h"
+#include "map.h"
+#include "map_scale_constants.h"
+#include "mapgendata.h"
+#include "map_helpers.h"
+#include "mapdata.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_transport.h"
@@ -124,6 +129,43 @@ TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
     }
 }
 
+TEST_CASE( "atlas_city_development_tapers_and_rounds_the_fringe", "[north_america]" )
+{
+    const point_abs_omt center( -76080, -46704 );
+    const int radius = north_america::urban_district_size() / 2;
+    // North, east and northeast border open country.
+    const north_america::urban_district fringe{ center, 0, 0b00010011 };
+    const int near_edge = north_america::urban_density( fringe, center + point( 0, 5 - radius ) );
+    const int inner_fringe = north_america::urban_density( fringe, center + point( 0, 13 - radius ) );
+    CHECK( north_america::urban_density( fringe, center ) == 100 );
+    CHECK( near_edge < inner_fringe );
+    CHECK( inner_fringe < 100 );
+    CHECK( north_america::urban_density( fringe, center + point( radius - 3, 5 - radius ) ) <
+           near_edge );
+}
+
+TEST_CASE( "atlas_curving_bridge_has_one_continuous_deck", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    clear_map();
+    map &here = get_map();
+    const mapgendata base( here, mapgendata::dummy_settings );
+    const oter_type_str_id bridge( "atlas_road_bridge" );
+    const std::size_t links = om_lines::set_segment(
+                                  om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::east );
+    mapgendata corner( base, bridge->get_linear( links ) );
+    REQUIRE( north_america::draw_mapped_road( corner ) );
+
+    const ter_str_id water( "t_water_moving_dp" );
+    for( int i = 0; i < SEEX; ++i ) {
+        CHECK( here.ter( tripoint_bub_ms( SEEX, i, 0 ) ) != water.id() );
+        CHECK( here.ter( tripoint_bub_ms( SEEX + i, SEEY, 0 ) ) != water.id() );
+    }
+    CHECK( here.ter( tripoint_bub_ms( SEEX, 2 * SEEY - 1, 0 ) ) == water.id() );
+    CHECK( here.ter( tripoint_bub_ms( 0, SEEY, 0 ) ) == water.id() );
+}
+
 TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][worldgen]" )
 {
     const restore_on_out_of_scope saved_mode( g->north_america_world );
@@ -135,6 +177,8 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
     const auto om = std::make_unique<overmap>( location );
     REQUIRE( overmap_test_helper::generate_atlas_streets_and_buildings( *om ) );
 
+    const auto &districts = north_america::urban_districts_in( location );
+    const int radius = north_america::urban_district_size() / 2;
     const overmap_location_id land( "land" );
     const point_abs_omt origin = project_to<coords::omt>( location );
     const oter_type_str_id road( "road" );
@@ -143,6 +187,7 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
     REQUIRE( flank_ns );
     REQUIRE( flank_ew );
     int widened = 0;
+    int tested_bands = 0;
     for( int start = 5; start + 20 < OMAPY; start += 20 ) {
         int developed = 0;
         int vacant = 0;
@@ -159,8 +204,17 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                     CHECK( ( om->ter( p + step ) == terrain || om->ter( p - step ) == terrain ) );
                     continue;
                 }
-                if( !north_america::in_urban_footprint( origin + p.xy().raw() ) ||
-                    terrain->is_water() || terrain->type_is( road ) ) {
+                if( terrain->is_water() || terrain->type_is( road ) ) {
+                    continue;
+                }
+                const point_abs_omt absolute = origin + p.xy().raw();
+                const auto district = std::find_if( districts.begin(), districts.end(),
+                [&]( const north_america::urban_district & candidate ) {
+                    const point offset = absolute.raw() - candidate.center.raw();
+                    return offset.x >= -radius && offset.x < radius && offset.y >= -radius &&
+                           offset.y < radius;
+                } );
+                if( district == districts.end() || north_america::urban_density( *district, absolute ) < 75 ) {
                     continue;
                 }
                 if( land->test( terrain ) ) {
@@ -170,10 +224,13 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                 }
             }
         }
-        CAPTURE( start, developed, vacant );
-        REQUIRE( developed + vacant > 100 );
-        CHECK( developed > vacant * 2 );
+        if( developed + vacant > 100 ) {
+            ++tested_bands;
+            CAPTURE( start, developed, vacant );
+            CHECK( developed > vacant * 2 );
+        }
     }
+    CHECK( tested_bands >= 4 );
     CHECK( widened > 0 );
 }
 

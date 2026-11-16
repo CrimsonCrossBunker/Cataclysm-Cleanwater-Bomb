@@ -278,6 +278,22 @@ class weather_manager
         static void unserialize_all( const JsonObject &w );
 
     private:
+        struct room_heat {
+            double excess = 0;
+            double equilibrium = 0;
+            double time_constant = 1;
+        };
+        struct room_heat_layer {
+            tripoint_abs_ms origin;
+            time_point sampled_at;
+            std::unordered_map<tripoint_abs_ms, std::size_t> assignments;
+            std::vector<room_heat> rooms;
+        };
+        std::unordered_map<int, room_heat_layer> heated_rooms;
+        std::optional<dimension_id> heat_dimension;
+        units::temperature_delta get_room_heat( const map &here, const tripoint_bub_ms &location,
+                                                const tripoint_bub_ms &player );
+
         std::optional<time_point> last_weather_turn;
         std::optional<time_point> indoor_reference_time;
         units::temperature indoor_reference_temperature;

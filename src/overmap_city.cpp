@@ -525,10 +525,17 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                     overmap_special_placements.count( p ) ) {
                     continue;
                 }
-                owners[urban_cell( p.xy() )] = &owner;
                 const point_abs_omt absolute = origin + p.xy().raw();
+                const int development = north_america::urban_density( district, absolute );
+                if( development == 0 ) {
+                    continue;
+                }
+                owners[urban_cell( p.xy() )] = &owner;
+                if( development < 100 && rng( 1, 100 ) > development ) {
+                    continue;
+                }
                 atlas_lot lot{ p, &town, regional_house, urban_zone::housing };
-                lot.dense = north_america::population_band( absolute ) >= 5;
+                lot.dense = development >= 75 && north_america::population_band( absolute ) >= 5;
                 bool near_arterial = false;
                 for( om_direction::type dir : om_direction::all ) {
                     const auto delta = om_direction::displace( dir );

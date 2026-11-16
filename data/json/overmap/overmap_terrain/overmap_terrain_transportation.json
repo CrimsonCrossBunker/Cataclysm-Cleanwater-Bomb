@@ -67,6 +67,19 @@
   },
   {
     "type": "overmap_terrain",
+    "id": "atlas_road_bridge",
+    "copy-from": "road_abstract",
+    "name": "road bridge",
+    "color": "white",
+    "flags": [ "LINEAR", "BRIDGE", "ROAD", "SIDEWALK", "REQUIRES_PREDECESSOR" ],
+    "mapgen_straight": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_curved": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_end": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_tee": [ { "object": { "fill_ter": "t_water_moving_dp" } } ],
+    "mapgen_four_way": [ { "object": { "fill_ter": "t_water_moving_dp" } } ]
+  },
+  {
+    "type": "overmap_terrain",
     "id": "bridge_road",
     "copy-from": "generic_bridge",
     "travel_cost_type": "road",
