@@ -1356,7 +1356,7 @@ void game::load_npcs( map *here )
 void game::unload_creatures_outside_resident_maps()
 {
     map &primary = reality_bubble();
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
     for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
         npc &actor = **it;
         if( actor.has_native_player_control() || session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
@@ -4676,7 +4676,7 @@ void game::cleanup_dead()
     // can't use all_npcs as that does not include dead ones
     for( const auto &n : critter_tracker->active_npc ) {
         if( n->is_dead() ) {
-            const auto &session = multiplayer_session();
+            const cata_mp::world_session &session = multiplayer_session();
             if( session.has_regions() ) {
                 map &owner = session.map_for( reality_bubble(), n->pos_abs_sm() );
                 const swap_map context( owner );
@@ -10937,7 +10937,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     }
     // LAST CHANCE TO ABORT! Everything past here assumes the movement is going ahead.
     if( vehicle_stairs ) {
-        const auto source = here.veh_at( pos );
+        const optional_vpart_position source = here.veh_at( pos );
         if( !source || source->vehicle().uid().get_value() != deck_vehicle_uid ||
             source->vehicle().deck_transition( here, pos, movez ) != vehicle_stairs ||
             get_creature_tracker().creature_at( stairs ) ) {
@@ -11134,7 +11134,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     here.invalidate_map_cache( who.posz() );
     here.build_map_cache( who.posz() );
     if( vehicle_stairs && landing_context && !who.in_vehicle && who.pos_abs() == destination ) {
-        const auto landing = here.veh_at( who.pos_bub( here ) );
+        const optional_vpart_position landing = here.veh_at( who.pos_bub( here ) );
         if( landing && landing->vehicle().uid().get_value() == deck_vehicle_uid &&
             landing.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
             here.board_vehicle( who.pos_bub( here ), &who );
@@ -11836,7 +11836,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // this handles loading/unloading submaps that have scrolled on or off the viewport
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     inclusive_rectangle<point_rel_sm> size_1( {-1, -1}, { 1, 1 } );
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
     std::optional<map_simulation_regions> regions;
     if( session.has_regions() && &here == &reality_bubble() ) {
         regions.emplace( session.simulation_regions( here ) );
@@ -11982,7 +11982,7 @@ void game::despawn_monster( monster &critter )
 void game::despawn_nonlocal_monsters()
 {
     map &here = get_map();
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
 
     for( monster &critter : g->all_monsters() ) {
         if( session.has_regions() && session.loaded_map_at( here, critter.pos_abs_sm() ) ) {
@@ -13407,7 +13407,7 @@ void set_scenario( const scenario *new_scenario )
 
 scent_map &get_scent()
 {
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     if( session.has_regions() ) {
         if( scent_map *regional = session.scent_for( get_map() ) ) {
             return *regional;
