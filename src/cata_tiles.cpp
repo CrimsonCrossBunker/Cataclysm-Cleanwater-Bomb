@@ -2212,6 +2212,12 @@ void cata_tiles::reset_tint_mask()
     tint_mask_h = 0;
 }
 
+void cata_tiles::reset_snow_texture()
+{
+    snow_texture.reset();
+    tried_snow_texture = false;
+}
+
 std::optional<smooth_lighting::lit_failure> smooth_lightmap::ensure_texture(
     const SDL_Renderer_Ptr &renderer )
 {
