@@ -47,13 +47,14 @@
 
 class Creature;
 
+static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
+
+static const efftype_id effect_bleed( "bleed" );
+
 static const faction_id faction_your_followers( "your_followers" );
 
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
-
-static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
-static const efftype_id effect_bleed( "bleed" );
 
 static const itype_id itype_adhesive_bandages( "adhesive_bandages" );
 static const itype_id itype_backpack( "backpack" );
@@ -507,7 +508,8 @@ TEST_CASE( "NPC reloads the empty gun in hand when there is time in combat",
     item magazine( gun.magazine_default() );
     magazine.ammo_set( gun.ammo_default(), 10 );
     REQUIRE( magazine.ammo_remaining() == 10 );
-    REQUIRE( follower.i_add( std::move( magazine ) ) );
+    const item_location added_magazine = follower.i_add( std::move( magazine ) );
+    REQUIRE( added_magazine );
     follower.set_wielded_item( gun );
     REQUIRE( follower.get_wielded_item()->ammo_remaining() == 0 );
     const monster *enemy = npc_attack_setup::spawn_zombie_at_range( enemy_distance );
@@ -937,7 +939,7 @@ TEST_CASE( "NPC_fires_the_evaluated_burst_instead_of_the_previous_single_shot_mo
     shooter.recoil = 0;
     shooter.set_moves( 1000 );
     npc_attack_gun attack( *gun, gun_mode_BURST, burst );
-    attack.use( shooter, shooter.pos_bub() + tripoint( 1, 0, 0 ) );
+    attack.use( shooter, shooter.pos_bub() + tripoint::east );
     CHECK( gun->gun_current_mode().qty == burst.qty );
     CHECK( gun->ammo_remaining() == rounds - burst.qty );
 }
