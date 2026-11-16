@@ -11,6 +11,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
 #include "options_helpers.h"

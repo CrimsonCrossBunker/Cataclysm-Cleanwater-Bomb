@@ -1,14 +1,9 @@
 #include "weather.h"
-#include "climate_seasons.h"
 
-#include <color.h>
-#include <pimpl.h>
-#include <type_id.h>
-#include <weather_type.h>
 #include <algorithm>
 #include <array>
-#include <climits>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -22,13 +17,15 @@
 #include "character.h"
 #include "character_attire.h"
 #include "city.h"
+#include "climate_seasons.h"
+#include "color.h"
 #include "coordinates.h"
 #include "creature.h"
+#include "current_map.h"
 #include "debug.h"
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "game.h"
-#include "current_map.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -36,22 +33,26 @@
 #include "line.h"
 #include "lua_platform_hooks.h"
 #include "map.h"
-#include "map_simulation_regions.h"
-#include "mp_world_session.h"
+#include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "math_defines.h"
 #include "messages.h"
+#include "mp_world_session.h"
+#include "north_america.h"
 #include "omdata.h"
 #include "options.h"
 #include "overmap.h"
 #include "overmap_ui.h"
-#include "north_america.h"
 #include "overmapbuffer.h"
-#include "pocket_type.h"
+#include "pimpl.h"
 #include "plant_climate.h"
+#include "player_control.h"
+#include "pocket_type.h"
 #include "point.h"
 #include "profiling.h"
+#include "regional_climate.h"
 #include "regional_settings.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -59,10 +60,12 @@
 #include "string_formatter.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "uistate.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "weather_gen.h"
+#include "weather_type.h"
 
 static const activity_id ACT_WAIT_WEATHER( "ACT_WAIT_WEATHER" );
 

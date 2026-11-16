@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <string>
@@ -12,10 +14,13 @@
 #include <utility>
 #include <vector>
 
+#include "cata_path.h"
 #include "cata_utility.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "line.h"
 #include "map.h"
+#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mapgendata.h"
 #include "north_america.h"

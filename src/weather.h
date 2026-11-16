@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_WEATHER_H
 #define CATA_SRC_WEATHER_H
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -11,6 +12,7 @@
 #include "color.h"
 #include "coordinates.h"
 #include "pimpl.h"
+#include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"

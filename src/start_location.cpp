@@ -1,11 +1,10 @@
 #include "start_location.h"
 
-#include <common_types.h>
-#include <translation.h>
-#include <type_id.h>
 #include <algorithm>
+#include <array>
 #include <climits>
 #include <functional>
+#include <initializer_list>
 #include <optional>
 #include <unordered_map>
 
@@ -16,6 +15,7 @@
 #include "character.h"
 #include "city.h"
 #include "clzones.h"
+#include "common_types.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "current_map.h"
@@ -40,7 +40,9 @@
 #include "overmapbuffer.h"
 #include "point.h"
 #include "rng.h"
+#include "translation.h"
 #include "translations.h"
+#include "type_id.h"
 
 class item;
 
