@@ -521,7 +521,8 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                     city_tiles.insert( p.xy() );
                     continue;
                 }
-                if( !land->test( existing ) || existing->is_water() ) {
+                if( !land->test( existing ) || existing->is_water() ||
+                    overmap_special_placements.count( p ) ) {
                     continue;
                 }
                 owners[urban_cell( p.xy() )] = &owner;
@@ -583,15 +584,14 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
         auto [footprint, first_visit] = footprints.try_emplace( id );
         if( first_visit ) {
             for( const overmap_special_locations &entry : special.required_locations() ) {
-                if( entry.p.z() == 0 ) {
-                    footprint->second.push_back( entry.p );
-                }
+                footprint->second.push_back( entry.p );
             }
         }
         for( const tripoint_rel_omt &offset : footprint->second ) {
             const tripoint_om_omt tile = lot.pos + om_direction::rotate( offset, direction );
-            if( !inbounds( tile, 1 ) || city_tiles.count( tile.xy() ) ||
-                owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) {
+            if( !inbounds( tile, 1 ) || overmap_special_placements.count( tile ) ||
+                ( offset.z() == 0 && ( city_tiles.count( tile.xy() ) ||
+                                       owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) ) ) {
                 return false;
             }
         }
@@ -669,7 +669,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
     }
 }
 
-void overmap::build_cities( const std::vector<north_america::road_cell> &atlas_streets )
+void overmap::build_cities()
 {
 
     const overmap_connection_id &overmap_connection_intra_city_road =
@@ -677,9 +677,6 @@ void overmap::build_cities( const std::vector<north_america::road_cell> &atlas_s
     const overmap_connection &local_road( *overmap_connection_intra_city_road );
     const bool atlas = north_america::active();
     const auto origin = project_to<coords::omt>( pos() );
-    if( atlas ) {
-        build_atlas_neighborhoods( local_road, atlas_streets );
-    }
 
     for( const city &c : cities ) {
         if( atlas && north_america::in_urban_footprint( origin + c.pos.raw() ) ) {
@@ -695,7 +692,9 @@ void overmap::build_cities( const std::vector<north_america::road_cell> &atlas_s
             build_city_street( local_road, c.pos, c.size, cur_dir, c, placed_unique_buildings );
         } while( ( cur_dir = om_direction::turn_right( cur_dir ) ) != start_dir );
     }
-    flood_fill_city_tiles();
+    if( !atlas ) {
+        flood_fill_city_tiles();
+    }
 }
 
 overmap_special_id overmap::pick_random_building_to_place( int town_dist, int town_size,

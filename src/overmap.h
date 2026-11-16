@@ -913,7 +913,7 @@ class overmap
         // place city centers
         void place_cities();
         // build cities using placed centers
-        void build_cities( const std::vector<north_america::road_cell> &atlas_streets );
+        void build_cities();
         void place_building( const tripoint_om_omt &p, om_direction::type dir, const city &town,
                              std::unordered_set<overmap_special_id> &placed_unique_buildings );
 

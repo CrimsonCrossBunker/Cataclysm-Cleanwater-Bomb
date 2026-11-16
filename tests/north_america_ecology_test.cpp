@@ -11,6 +11,7 @@
 #include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_test_helpers.h"
+#include "overmapbuffer.h"
 #include "rng.h"
 
 TEST_CASE( "north_america_geographic_vegetation_and_population", "[north_america]" )
@@ -174,6 +175,47 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
         CHECK( developed > vacant * 2 );
     }
     CHECK( widened > 0 );
+}
+
+TEST_CASE( "atlas_special_placement_does_not_generate_neighbor_overmaps",
+           "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    const restore_on_out_of_scope saved_rng( rng_get_engine() );
+    g->north_america_world = true;
+    rng_set_engine_seed( 1326 );
+
+    const point_abs_om origin( -951, 582 );
+    auto om = std::make_unique<overmap>( origin );
+    const oter_id water( "ocean_surface" );
+    for( int y = 0; y < OMAPY; ++y ) {
+        for( int x = 0; x < OMAPX; ++x ) {
+            om->ter_set( { x, y, 0 }, water );
+        }
+    }
+
+    const overmap_special_id motel( "Motel" );
+    REQUIRE( motel.is_valid() );
+    REQUIRE( motel->get_constraints().occurrences.min > 0 );
+    overmap_special_batch specials( origin, { &motel.obj() } );
+    const auto count_before = overmap_buffer.global_state.overmap_count;
+    overmap_test_helper::place_specials( *om, specials );
+    CHECK( overmap_buffer.global_state.overmap_count == count_before );
+    REQUIRE( !specials.empty() );
+    CHECK( specials.begin()->instances_placed == 0 );
+}
+
+TEST_CASE( "atlas_start_reveals_only_existing_overmaps", "[north_america][worldgen]" )
+{
+    const point_abs_om origin( -953, 580 );
+    const tripoint_abs_omt p( project_to<coords::omt>( origin ), 0 );
+    REQUIRE_FALSE( overmap_buffer.get_existing( origin ) );
+    const auto count_before = overmap_buffer.global_state.overmap_count;
+    CHECK_FALSE( overmap_buffer.reveal_route( p, p + point::east, 3, false, true ) );
+    CHECK_FALSE( overmap_buffer.reveal( p, 3, []( const oter_id & ) {
+        return true;
+    }, true ) );
+    CHECK( overmap_buffer.global_state.overmap_count == count_before );
 }
 
 TEST_CASE( "north_america_coarse_highway_samples_match_full_raster", "[north_america]" )

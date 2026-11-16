@@ -1102,7 +1102,7 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         place_highway_interchanges( highway_paths );
     }
     if( settings->city_spec ) {
-        build_cities( atlas_streets );
+        build_cities();
     }
     if( settings->forest_trail ) {
         place_forest_trails();
@@ -1130,6 +1130,12 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     }
     if( settings->forest_trail ) {
         place_forest_trailheads();
+    }
+    if( atlas && settings->city_spec ) {
+        // Give scenario and mission sites first choice of the space between streets.
+        const overmap_connection &local_road = *settings->overmap_connection.intra_city_road_connection;
+        build_atlas_neighborhoods( local_road, atlas_streets );
+        flood_fill_city_tiles();
     }
     if( settings->overmap_river ) {
         polish_river( neighbor_overmaps ); // Polish again for placed specials
@@ -3727,6 +3733,12 @@ void overmap::place_specials( overmap_special_batch &enabled_specials )
     // First, place the mandatory specials to ensure that all minimum instance
     // counts are met.
     place_specials_pass( enabled_specials, sectors, false, false );
+    if( north_america::active() ) {
+        // Geographic constraints can make a site unsuitable throughout the
+        // surrounding area. Each atlas overmap places its own sites on demand.
+        place_specials_pass( enabled_specials, sectors, true, false );
+        return;
+    }
 
     // Snapshot remaining specials, which will be the optional specials and
     // any unplaced mandatory specials. By passing a copy into the creation of
@@ -3863,16 +3875,15 @@ void overmap::place_mongroups()
 
                         // right now we're only placing city horde spawns on roads, for simplicity.
                         // this can be replaced with an OMT flag for later for better flexibility.
-                        if( overmap_buffer.ter( target_omt )->get_type_id() == oter_type_road ) {
+                        if( ter_unsafe( temp_omt )->type_is( oter_type_road ) ) {
                             tripoint_om_sm this_sm = project_to<coords::sm>( temp_omt );
 
                             // for some reason old style spawns are submap-aligned.
                             // get all four quadrants for better distribution.
-                            std::vector<tripoint_om_sm> local_sm_list;
-                            local_sm_list.push_back( this_sm );
-                            local_sm_list.push_back( this_sm + point::east );
-                            local_sm_list.push_back( this_sm + point::south );
-                            local_sm_list.push_back( this_sm + point::south_east );
+                            std::array<tripoint_om_sm, 4> local_sm_list = {
+                                this_sm, this_sm + point::east, this_sm + point::south,
+                                this_sm + point::south_east
+                            };
 
                             // shuffle, then prune submaps based on distance from city center
                             // this should let us concentrate hordes closer to the center.
@@ -3880,9 +3891,8 @@ void overmap::place_mongroups()
                             int new_size = 4 - ( trig_dist( target_omt, city_center ) / city_distance_increment );
                             if( new_size > 0 ) {
                                 std::shuffle( local_sm_list.begin(), local_sm_list.end(), rng_get_engine() );
-                                local_sm_list.resize( new_size );
-
-                                submap_list.insert( submap_list.end(), local_sm_list.begin(), local_sm_list.end() );
+                                submap_list.insert( submap_list.end(), local_sm_list.begin(),
+                                                    local_sm_list.begin() + new_size );
                             }
 
                         }
