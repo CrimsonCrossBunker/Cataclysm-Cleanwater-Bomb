@@ -22,3 +22,7 @@ Updated 2026-09-26. Source, LuaLS declarations, and tests define current behavio
 围绕实际功能写代码。对改变的行为保留一个能发现回归的聚焦测试，并运行受影响的检查；公共接口变化同步声明和生成文件。CI 继续自动执行仓库现有检查。无需为每次改动逐条核对 586 项、反复运行全量语料审计或维护额外的验收表。只有声明某项已全面替代或准备删除旧路径时，才核对该声明涉及的全部合法输入与实际引用；未执行的测试如实标明。
 
 Implement the needed behavior first. Add a focused regression for changed behavior, run relevant checks, and update declarations/generated references when the public API changes. Per-item audits are not a routine development gate. Broad parity or EOC removal claims need evidence for their exact scope; report checks that were not run.
+
+稳定版发布前，复用已有测试程序跑两个用例：示例补剂的物品使用、定时任务和存档恢复，以及重载失败后保留原 Mod 和状态。没有可复用的程序时，用 [测试矩阵](../../ai/test-matrix.yml) 的 `lua-playable-mvp`，只选择对应的两个测试源文件和公共测试支撑代码。再用候选发行包实玩一遍示例补剂和致命丧尸病毒，至少载入一份来自受支持旧版本的存档副本，保存退出后确认玩法仍能继续。
+
+Before a stable release, reuse an existing test binary for the tonic lifecycle and failed-reload cases. Use `lua-playable-mvp` in the [test matrix](../../ai/test-matrix.yml) if a focused build is needed. Then play through the tonic example and Deadly Zombie Virus in the release package. Load a copy of at least one save from a supported older version, save and quit, and check that play can continue after reopening it.
