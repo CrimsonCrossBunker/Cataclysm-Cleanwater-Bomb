@@ -986,11 +986,14 @@ bool game::start_game()
                 u.starting_city = random_entry( city::get_all() );
                 u.world_origin = u.starting_city->pos_om;
             }
-            auto ret = start_loc.find_player_initial_location( u.starting_city.value() );
+            auto ret = u.start_outskirts ?
+                       start_loc.find_player_initial_location( u.starting_city->pos_om, true ) :
+                       start_loc.find_player_initial_location( *u.starting_city );
             omtstart = ret.first;
             associated_parameters = ret.second;
         } else {
-            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ) );
+            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ),
+                       u.start_outskirts );
             omtstart = ret.first;
             associated_parameters = ret.second;
         }
@@ -8839,12 +8842,12 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
             return false;
         }
         const double crit_speed = who.mount_speed();
-        const double base_moves = who.run_cost( mcost, diag ) * 100.0 / crit_speed;
+        const double base_moves = who.run_cost( mcost, diag, dest_loc ) * 100.0 / crit_speed;
         const double encumb_moves = who.get_weight() / 4800.0_gram;
         who.mod_moves( -static_cast<int>( std::ceil( base_moves + encumb_moves ) ) );
         crit->use_mech_power( who.current_movement_mode()->mech_power_use() );
     } else {
-        who.mod_moves( -who.run_cost( mcost, diag ) );
+        who.mod_moves( -who.run_cost( mcost, diag, dest_loc ) );
         /**
         TODO:
         This should really use the mounted creatures stamina, if mounted.

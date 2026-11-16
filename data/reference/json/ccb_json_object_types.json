@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:fd6a74d0f5d78cf665ee5b28742786c905dc5cfa64f7e5135d293a4a73c23f16",
+    "source_fingerprint": "sha256:6570a592103f4796644f7d328254ce11f2a2bf0efb69eca6abc0932a1da4e1ae",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6871,
-    "top_level_objects": 97491,
+    "tracked_json_files": 6879,
+    "top_level_objects": 97810,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15238,
+        "occurrences": 15336,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -2123,7 +2123,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 484,
+        "occurrences": 493,
         "examples": [
           {
             "path": "data/json/obsoletion_and_migration_0.I/obsolete_city_building.json",
@@ -4273,7 +4273,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 627,
+        "occurrences": 629,
         "examples": [
           {
             "path": "data/json/harvest.json",
@@ -4558,7 +4558,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9679,
+        "occurrences": 9780,
         "examples": [
           {
             "path": "data/json/deconstruction.json",
@@ -4971,7 +4971,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9645,
+        "occurrences": 9663,
         "examples": [
           {
             "path": "data/json/effects_on_condition/npc_eocs/ref_center_exodii_updater.json",
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2724,
+        "occurrences": 2734,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -9923,7 +9923,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1710,
+        "occurrences": 1791,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",

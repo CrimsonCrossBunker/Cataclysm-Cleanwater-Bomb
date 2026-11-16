@@ -1,4 +1,5 @@
 #include "weather_gen.h"
+#include "climate_seasons.h"
 
 #include <calendar.h>
 #include <coordinates.h>
@@ -110,13 +111,15 @@ struct weather_gen_common {
     double days_in_climate_month = 0;
     double normal_mean_c = 0;
     double normal_daily_range_c = 0;
+    double annual_mean_c = 0;
 };
 } // namespace
 
 static weather_gen_common get_common_data( const weather_generator &generator,
         const tripoint_abs_ms &location,
         const time_point &real_t,
-        unsigned seed )
+        unsigned seed, bool ground = false,
+        const std::optional<regional_climate::normals> *known_climate = nullptr )
 {
     season_effective_time t( real_t );
     weather_gen_common result;
@@ -140,30 +143,25 @@ static weather_gen_common get_common_data( const weather_generator &generator,
             ( calendar::season_length() - calendar::turn_zero_offset() ) );
     const double offset = days_year_start_to_midwinter / to_days<double>( calendar::year_length() );
     result.cyf = std::cos( tau * ( year_fraction - offset ) ); // [-1, 1]
-    result.season = season_of_year( t.t );
-    if( const auto climate = generator.climate_at( location ) ) {
+    result.season = fixed_season_of_year( t.t );
+    result.annual_mean_c = generator.base_temperature;
+    const auto climate = known_climate ? *known_climate : generator.climate_at( location );
+    if( climate ) {
+        if( ground ) {
+            result.annual_mean_c = 0;
+            for( const auto &month : climate->months ) {
+                result.annual_mean_c += ( month.high_c + month.low_c ) / 24.0;
+            }
+        }
         // Scale the January-first, 364-day calendar to the configured game year.
-        const double model_day = std::fmod( year_fraction * 364.0 + 364.0, 364.0 );
-        const int quarter = static_cast<int>( model_day / 91.0 );
-        const double quarter_day = model_day - quarter * 91.0;
-        const int month = quarter * 3 + ( quarter_day < 31 ? 0 : quarter_day < 61 ? 1 : 2 );
-        const double month_day = quarter_day - ( month % 3 == 0 ? 0 : month % 3 == 1 ? 31 : 61 );
-        const auto days_in_month = []( int index ) {
-            return index % 3 == 0 ? 31.0 : 30.0;
-        };
-        const double half = days_in_month( month ) / 2.0;
-        const bool before_midpoint = month_day < half;
-        const int neighbour = ( month + ( before_midpoint ? 11 : 1 ) ) % 12;
-        const double weight = std::abs( month_day - half ) / ( half + days_in_month( neighbour ) / 2.0 );
-        const auto &current = climate->months[month];
-        const auto &adjacent = climate->months[neighbour];
-        const double low = current.low_c + ( adjacent.low_c - current.low_c ) * weight;
-        const double high = current.high_c + ( adjacent.high_c - current.high_c ) * weight;
-        result.normal_mean_c = ( high + low ) / 2.0;
-        result.normal_daily_range_c = ( high - low ) / 2.0;
-        result.climate_month = current;
-        result.days_in_climate_month = days_in_month( month ) * to_days<double>
-                                       ( calendar::year_length() ) / 364.0;
+        const double model_day = year_fraction * regional_climate::model_year_days;
+        const auto normal = regional_climate::temperature_for_day( *climate, model_day );
+        result.normal_mean_c = normal.mean_c;
+        result.normal_daily_range_c = normal.daily_range_c;
+        result.climate_month = climate->months[normal.month];
+        result.days_in_climate_month = ( normal.month % 3 == 0 ? 31.0 : 30.0 ) *
+                                       to_days<double>( calendar::year_length() ) /
+                                       regional_climate::model_year_days;
     }
 
     return result;
@@ -172,12 +170,19 @@ static weather_gen_common get_common_data( const weather_generator &generator,
 std::optional<regional_climate::normals> weather_generator::climate_at(
     const tripoint_abs_ms &location ) const
 {
+    const auto coordinates = climate_location( location );
+    return coordinates ? regional_climate::at( *coordinates ) : std::nullopt;
+}
+
+std::optional<regional_climate::coordinates> weather_generator::climate_location(
+    const tripoint_abs_ms &location ) const
+{
     static const dimension_id earth_dimension( "default" );
     if( climate_station.empty() || !g || g->get_dimension_prefix() != earth_dimension ) {
         return std::nullopt;
     }
     if( north_america::active() ) {
-        return regional_climate::at( north_america::location( location.xy() ) );
+        return north_america::location( location.xy() );
     }
     const auto origin = regional_climate::station_location( climate_station );
     if( !origin ) {
@@ -186,7 +191,7 @@ std::optional<regional_climate::normals> weather_generator::climate_at(
     const point_abs_ms anchor = get_weather_const().climate_origin.value_or( point_abs_ms::zero );
     const double east = static_cast<double>( location.x() ) - anchor.x();
     const double north = static_cast<double>( anchor.y() ) - location.y();
-    return regional_climate::at( regional_climate::offset_metres( *origin, east, north ) );
+    return regional_climate::offset_metres( *origin, east, north );
 }
 
 static units::temperature weather_temperature_from_common_data( const weather_generator &wg,
@@ -228,11 +233,29 @@ units::temperature weather_generator::get_weather_temperature(
             seed ),
             season_effective_time( real_t ) );
 }
+units::temperature weather_generator::get_ground_temperature( const tripoint_abs_ms &location,
+        const time_point &real_t, unsigned seed ) const
+{
+    const weather_gen_common climate = get_common_data( *this, location, real_t, seed, true );
+    if( !climate.climate_month || location.z() <= -6 ) {
+        return units::from_celsius( climate.annual_mean_c );
+    }
+    const double depth = -location.z();
+    const double surface = units::to_celsius( weather_temperature_from_common_data( *this, climate,
+                           season_effective_time( real_t ) ) );
+    // Daily variations decay faster than the seasonal cycle.
+    const double seasonal = ( climate.normal_mean_c - climate.annual_mean_c ) * std::exp( -depth );
+    const double daily = ( surface - climate.normal_mean_c ) * std::exp( -3.0 * depth );
+    return units::from_celsius( climate.annual_mean_c + seasonal + daily );
+}
+
 w_point weather_generator::get_weather( const tripoint_abs_ms &location, const time_point &real_t,
-                                        unsigned seed ) const
+                                        unsigned seed, bool randomize_wind,
+                                        const std::optional<regional_climate::normals> *known_climate ) const
 {
     season_effective_time t( real_t );
-    const weather_gen_common common = get_common_data( *this, location, real_t, seed );
+    const weather_gen_common common = get_common_data( *this, location, real_t, seed, false,
+                                      known_climate );
 
     const double x( common.x );
     const double y( common.y );
@@ -273,22 +296,17 @@ w_point weather_generator::get_weather( const tripoint_abs_ms &location, const t
         15 * ( -seasonality + 2 );
 
     // Wind power
-    const double variation = base_wind_season_variation == 0 ? 0 :
-                             cyf * base_wind_season_variation * rng_float( 0, 2 );
-    W = std::max( 0, static_cast<int>( base_wind * rng( 1, 2 ) / std::pow( ( P + W ) / 1014.78, rng( 9,
-                                       base_wind_distrib_peaks ) ) + variation ) );
-
-    // Initial static variable
-    if( current_winddir == 1000 ) {
-        current_winddir = get_wind_direction( season );
-        current_winddir = convert_winddir( current_winddir );
-    } else {
-        // When wind strength is low, wind direction is more variable
-        bool changedir = one_in( W * 2160 );
-        if( changedir ) {
-            current_winddir = get_wind_direction( season );
-            current_winddir = convert_winddir( current_winddir );
+    if( randomize_wind ) {
+        const double variation = base_wind_season_variation == 0 ? 0 :
+                                 cyf * base_wind_season_variation * rng_float( 0, 2 );
+        W = std::max( 0, static_cast<int>( base_wind * rng( 1, 2 ) / std::pow( ( P + W ) / 1014.78, rng( 9,
+                                           base_wind_distrib_peaks ) ) + variation ) );
+        if( current_winddir == 1000 || one_in( W * 2160 ) ) {
+            current_winddir = convert_winddir( get_wind_direction( season ) );
         }
+    } else {
+        // Background queries must not consume the gameplay RNG or steer the wind.
+        W = std::max( 0.0, base_wind * 1.5 + W + cyf * base_wind_season_variation );
     }
     std::optional<double> precipitation;
     if( common.climate_month ) {
@@ -304,7 +322,8 @@ w_point weather_generator::get_weather( const tripoint_abs_ms &location, const t
         }
     }
     std::string wind_desc = get_wind_desc( W );
-    return w_point{ T, H, P, W, wind_desc, current_winddir, t, location, precipitation };
+    return w_point{ T, H, P, W, wind_desc, randomize_wind ? current_winddir : 0, t, location,
+                    precipitation };
 }
 
 weather_type_id weather_generator::get_weather_conditions( const tripoint_abs_ms &location,

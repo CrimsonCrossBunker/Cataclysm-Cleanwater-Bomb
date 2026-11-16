@@ -226,7 +226,23 @@
     "copy-from": "t_north_america_shrub",
     "looks_like": "t_shrub",
     "name": "saguaro",
-    "description": "A North American plant of the species Carnegiea gigantea."
+    "description": "A North American plant of the species Carnegiea gigantea.",
+    "transforms_into": "t_shrub_saguaro_harvested",
+    "examine_action": "harvest_ter_nectar",
+    "fruit_climate": {
+      "harvest": "saguaro_harv",
+      "growth": {
+        "base_c": 12,
+        "optimum_c": 32,
+        "min_c": 0,
+        "max_c": 49,
+        "degree_days": 660,
+        "water_mm": 70,
+        "growing_days": 73,
+        "water_peak": 0.5
+      },
+      "bearing_days": 24
+    }
   },
   {
     "type": "terrain",
@@ -242,7 +258,7 @@
     "copy-from": "t_north_america_shrub",
     "looks_like": "t_shrub",
     "name": "common snowberry",
-    "description": "A North American plant of the species Symphoricarpos albus."
+    "description": "A common snowberry shrub.  Its pale fruit is food for wildlife and is poisonous to people."
   },
   {
     "type": "terrain",
@@ -306,6 +322,40 @@
     "copy-from": "t_north_america_shrub",
     "looks_like": "t_shrub",
     "name": "Engelmann's prickly pear",
-    "description": "A North American plant of the species Opuntia engelmannii."
+    "description": "A North American plant of the species Opuntia engelmannii.",
+    "transforms_into": "t_shrub_prickly_pear_harvested",
+    "examine_action": "harvest_ter_nectar",
+    "fruit_climate": {
+      "harvest": "prickly_pear_harv",
+      "growth": {
+        "base_c": 10,
+        "optimum_c": 31,
+        "min_c": -5,
+        "max_c": 47,
+        "degree_days": 1210,
+        "water_mm": 155,
+        "growing_days": 118,
+        "water_peak": 0.58
+      },
+      "bearing_days": 44
+    }
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_saguaro_harvested",
+    "copy-from": "t_shrub_saguaro",
+    "looks_like": "t_shrub_saguaro",
+    "extend": { "flags": [ "HARVESTED" ] },
+    "transforms_into": "t_shrub_saguaro",
+    "examine_action": "harvested_plant"
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_prickly_pear_harvested",
+    "copy-from": "t_shrub_prickly_pear",
+    "looks_like": "t_shrub_prickly_pear",
+    "extend": { "flags": [ "HARVESTED" ] },
+    "transforms_into": "t_shrub_prickly_pear",
+    "examine_action": "harvested_plant"
   }
 ]

@@ -393,39 +393,41 @@ def service_drops(base):
     return groups
 
 
-def _compact_json(value):
+def _inline_json(value):
     if isinstance(value, dict):
         parts = [
-            json.dumps(key, ensure_ascii=False) + ": " + _compact_json(part)
+            _inline_json(key) + ": " + _inline_json(part)
             for key, part in value.items()
         ]
         return "{ " + ", ".join(parts) + " }"
     if isinstance(value, list):
-        return "[ " + ", ".join(_compact_json(part) for part in value) + " ]"
-    return json.dumps(value, ensure_ascii=False)
+        return "[ " + ", ".join(_inline_json(part) for part in value) + " ]"
+    return json.dumps(value, ensure_ascii=False).replace("\u00a0", r"\u00a0")
 
 
-def render(value, indent=0, separator=0):
-    """Format item groups with the repository formatter's spacing and width."""
-    flat = _compact_json(value)
+def render(value, indent=0, separator=""):
+    """Render item groups with the repository formatter's collection layout."""
+    flat = _inline_json(value)
     if isinstance(value, (dict, list)):
-        left, right = ("{", "}") if isinstance(value, dict) else ("[", "]")
-        if indent > 2 and len(flat.encode("utf-8")) + separator <= 120:
+        # Native depth starts at -1: root and immediate child collections wrap.
+        # Count the pending separator toward the native formatter's byte limit.
+        if indent >= 4 and len((separator + flat).encode("utf-8")) <= 120:
             return flat
+        left, right = ("{", "}") if isinstance(value, dict) else ("[", "]")
         if isinstance(value, dict):
             parts = [
-                json.dumps(key) + ": " + render(part, indent + 2)
+                _inline_json(key) + ": " + render(part, indent + 2)
                 for key, part in value.items()
             ]
         else:
             parts = [
-                render(part, indent + 2, indent + 4 if index else 0)
+                render(part, indent + 2,
+                       ",\n" + " " * (indent + 2) if index else "")
                 for index, part in enumerate(value)
             ]
-        return (
-            left + "\n" +
-            ",\n".join(" " * (indent + 2) + part for part in parts) +
-            ("\n" + " " * indent + right)
+        body = ",\n".join(" " * (indent + 2) + part for part in parts)
+        return left + "\n" + (body if parts else " " * (indent + 2)) + (
+            "\n" + " " * indent + right
         )
     return flat
 

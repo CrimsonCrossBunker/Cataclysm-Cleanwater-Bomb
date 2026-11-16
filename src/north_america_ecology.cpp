@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -144,6 +147,42 @@ const ecology_atlas &get_ecology()
     return data;
 }
 
+struct urban_atlas {
+    int step = 1;
+    std::unordered_set<point> footprints;
+    std::unordered_map<point_abs_om, std::vector<urban_district>> overmaps;
+
+    urban_atlas() {
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.urban",
+        [&]( const JsonValue & value ) {
+            const JsonObject root = value.get_object();
+            step = root.get_int( "district_size" );
+            if( root.get_int( "version" ) != 1 || step < 2 || step > OMAPX ) {
+                root.throw_error( "Invalid urban footprint atlas" );
+            }
+            for( const JsonValue row : root.get_array( "districts" ) ) {
+                const JsonArray record = row.get_array();
+                const point grid( record.get_int( 0 ), record.get_int( 1 ) );
+                const int index = record.get_int( 2 );
+                if( index < 0 || static_cast<std::size_t>( index ) >= cities().size() ) {
+                    record.throw_error( "Invalid urban district city" );
+                }
+                const point_abs_omt center( grid * step + point( step / 2, step / 2 ) );
+                footprints.insert( grid );
+                overmaps[project_to<coords::om>( center )].push_back( {
+                    center, static_cast<std::size_t>( index )
+                } );
+            }
+        } );
+    }
+};
+
+const urban_atlas &get_urban_atlas()
+{
+    static const urban_atlas data;
+    return data;
+}
+
 const ecology_profile *profile_at( point_abs_omt pos )
 {
     const ecology_atlas &data = get_ecology();
@@ -189,15 +228,75 @@ float forest_adjustment( point_abs_omt pos )
     return cover == 0 ? biome : biome + ( cover - 3 ) * 0.085f;
 }
 
+const std::vector<urban_district> &urban_districts_in( point_abs_om pos )
+{
+    static const std::vector<urban_district> empty;
+    const auto &overmaps = get_urban_atlas().overmaps;
+    const auto district = overmaps.find( pos );
+    return district == overmaps.end() ? empty : district->second;
+}
+
+int urban_district_size()
+{
+    return get_urban_atlas().step;
+}
+
+bool in_urban_footprint( point_abs_omt pos )
+{
+    const urban_atlas &atlas = get_urban_atlas();
+    return atlas.footprints.count( divide_xy_round_to_minus_infinity( pos.raw(), atlas.step ) ) != 0;
+}
+
+int rural_population_band( point_abs_omt pos )
+{
+    if( in_urban_footprint( pos ) ) {
+        return 0;
+    }
+    const ecology_atlas &data = get_ecology();
+    const int i = data.index( pos );
+    return i >= 0 ? data.population[i] : 0;
+}
+
 double rural_city_multiplier( point_abs_om pos )
 {
-    static constexpr std::array<double, 8> population_multipliers{ 0.0, 0.02, 0.08, 0.18,
-            0.38, 0.65, 1.0, 1.35
-                                                                 };
-    const ecology_atlas &data = get_ecology();
-    const point_abs_omt center = project_to<coords::omt>( pos ) + point( OMAPX / 2, OMAPY / 2 );
-    const int i = data.index( center );
-    return i >= 0 ? population_multipliers[data.population[i]] : 1.0;
+    static constexpr std::array<double, 8> town_frequency{
+        0.0, 0.012, 0.05, 0.14, 0.30, 0.55, 0.85, 1.1
+    };
+    const point_abs_omt origin = project_to<coords::omt>( pos );
+    double sum = 0.0;
+    constexpr int samples = 4;
+    for( int y = 0; y < samples; ++y ) {
+        for( int x = 0; x < samples; ++x ) {
+            const point offset( ( 2 * x + 1 ) * OMAPX / ( 2 * samples ),
+                                ( 2 * y + 1 ) * OMAPY / ( 2 * samples ) );
+            sum += town_frequency[rural_population_band( origin + offset )];
+        }
+    }
+    return sum / ( samples * samples );
+}
+
+int named_city_size( int population )
+{
+    return std::clamp( 2 + static_cast<int>( std::sqrt( std::max( 0, population ) / 220.0 ) ), 2, 55 );
+}
+
+int rural_town_size( point_abs_omt pos )
+{
+    static constexpr std::array<int, 8> size_by_density{ 0, 2, 2, 3, 4, 5, 7, 10 };
+    int size = size_by_density[rural_population_band( pos )];
+    if( size <= 2 ) {
+        return size;
+    }
+    // The footprint is incomplete around small remote towns. Keep nearby
+    // procedural settlements below the size of the recorded local centre.
+    constexpr int proximity = 1400; // 33.6 km
+    for( const place &settlement : cities() ) {
+        if( settlement.population < 20000 &&
+            square_dist( settlement.position.raw(), pos.raw() ) <= proximity ) {
+            size = std::min( size, std::max( 2, named_city_size( settlement.population ) - 1 ) );
+        }
+    }
+    return size;
 }
 
 std::string ecoregion_code( point_abs_omt pos )

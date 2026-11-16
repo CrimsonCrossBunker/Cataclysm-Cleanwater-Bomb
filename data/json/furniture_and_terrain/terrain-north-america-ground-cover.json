@@ -1,0 +1,585 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_grass",
+    "copy-from": "t_grass",
+    "name": "grass on loam",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_loam_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on loam",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on loam",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_loam_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on loam",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on loam",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on loam",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_loam_moss",
+    "copy-from": "t_moss",
+    "name": "moss on loam",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_grass",
+    "copy-from": "t_grass",
+    "name": "grass on sandy soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_sandy_loam_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on sandy soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_sandy_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on sandy soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_sandy_loam_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on sandy soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on sandy soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_sandy_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on sandy soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_sandy_loam_moss",
+    "copy-from": "t_moss",
+    "name": "moss on sandy soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_grass",
+    "copy-from": "t_grass",
+    "name": "grass on silt-rich soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_silt_loam_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on silt-rich soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_silt_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on silt-rich soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_silt_loam_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on silt-rich soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on silt-rich soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_silt_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on silt-rich soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_silt_loam_moss",
+    "copy-from": "t_moss",
+    "name": "moss on silt-rich soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_grass",
+    "copy-from": "t_grass",
+    "name": "grass on clay loam",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_clay_loam_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on clay loam",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_clay_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on clay loam",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_clay_loam_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on clay loam",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on clay loam",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_clay_loam_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on clay loam",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_clay_loam_moss",
+    "copy-from": "t_moss",
+    "name": "moss on clay loam",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_grass",
+    "copy-from": "t_grass",
+    "name": "grass on heavy clay soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_heavy_clay_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on heavy clay soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_heavy_clay_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on heavy clay soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_heavy_clay_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on heavy clay soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on heavy clay soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_heavy_clay_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on heavy clay soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_heavy_clay_moss",
+    "copy-from": "t_moss",
+    "name": "moss on heavy clay soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_grass",
+    "copy-from": "t_grass",
+    "name": "grass on organic-rich soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_organic_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on organic-rich soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_organic_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on organic-rich soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_organic_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on organic-rich soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on organic-rich soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_organic_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on organic-rich soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_organic_moss",
+    "copy-from": "t_moss",
+    "name": "moss on organic-rich soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_grass",
+    "copy-from": "t_grass",
+    "name": "grass on gravelly soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_gravelly_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on gravelly soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_gravelly_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on gravelly soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_gravelly_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on gravelly soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on gravelly soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_gravelly_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on gravelly soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_gravelly_moss",
+    "copy-from": "t_moss",
+    "name": "moss on gravelly soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_grass",
+    "copy-from": "t_grass",
+    "name": "grass on calcareous soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_calcareous_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on calcareous soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_calcareous_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on calcareous soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_calcareous_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on calcareous soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on calcareous soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_calcareous_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on calcareous soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_calcareous_moss",
+    "copy-from": "t_moss",
+    "name": "moss on calcareous soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_grass",
+    "copy-from": "t_grass",
+    "name": "grass on dark prairie soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_prairie_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on dark prairie soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_prairie_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on dark prairie soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_prairie_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on dark prairie soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on dark prairie soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_prairie_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on dark prairie soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_prairie_moss",
+    "copy-from": "t_moss",
+    "name": "moss on dark prairie soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_grass",
+    "copy-from": "t_grass",
+    "name": "grass on volcanic soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_volcanic_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on volcanic soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_volcanic_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on volcanic soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_volcanic_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on volcanic soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on volcanic soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_volcanic_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on volcanic soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_volcanic_moss",
+    "copy-from": "t_moss",
+    "name": "moss on volcanic soil",
+    "looks_like": "t_moss"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_grass",
+    "copy-from": "t_grass",
+    "name": "grass on leached forest soil",
+    "looks_like": "t_grass",
+    "transforms_into": "t_atlas_soil_podzol_grazed_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_long_grass",
+    "copy-from": "t_grass_long",
+    "name": "long grass on leached forest soil",
+    "looks_like": "t_grass_long",
+    "transforms_into": "t_atlas_soil_podzol_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_tall_grass",
+    "copy-from": "t_grass_tall",
+    "name": "tall grass on leached forest soil",
+    "looks_like": "t_grass_tall",
+    "transforms_into": "t_atlas_soil_podzol_long_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_dead_grass",
+    "copy-from": "t_grass_dead",
+    "name": "dead grass on leached forest soil",
+    "looks_like": "t_grass_dead"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_grazed_grass",
+    "copy-from": "t_grass_grazed",
+    "name": "grazed grass on leached forest soil",
+    "looks_like": "t_grass_grazed",
+    "transforms_into": "t_atlas_soil_podzol_grass"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_forest_floor",
+    "copy-from": "t_forestfloor",
+    "name": "forest floor on leached forest soil",
+    "looks_like": "t_forestfloor"
+  },
+  {
+    "type": "terrain",
+    "id": "t_atlas_soil_podzol_moss",
+    "copy-from": "t_moss",
+    "name": "moss on leached forest soil",
+    "looks_like": "t_moss"
+  }
+]

@@ -2565,5 +2565,15 @@
     "id": "nl_shrub_glowberries_harv",
     "type": "harvest",
     "entries": [ { "drop": "nl_shrub_glowberries", "base_num": [ 2, 5 ], "scale_num": [ 0, 0.5 ] } ]
+  },
+  {
+    "id": "saguaro_harv",
+    "type": "harvest",
+    "entries": [ { "drop": "saguaro_fruit", "base_num": [ 2, 4 ] } ]
+  },
+  {
+    "id": "prickly_pear_harv",
+    "type": "harvest",
+    "entries": [ { "drop": "prickly_pear_fruit", "base_num": [ 2, 4 ] } ]
   }
 ]

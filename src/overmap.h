@@ -476,7 +476,8 @@ class overmap
          * Returns @ref tripoint_om_omt::invalid if no suitable place has been found.
          */
         tripoint_om_omt find_random_omt( const std::pair<std::string, ot_match_type> &target,
-                                         std::optional<city> target_city = std::nullopt ) const;
+                                         std::optional<city> target_city = std::nullopt,
+                                         bool outskirts = false ) const;
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {
@@ -623,6 +624,7 @@ class overmap
         std::unordered_set<point_om_omt> city_tiles;
         // Fill in any gaps in city_tiles that don't connect to the map edge
         void flood_fill_city_tiles();
+        void build_atlas_city_grid( const overmap_connection &road );
         std::multimap<tripoint_om_sm, mongroup> zg; // NOLINT(cata-serialize)
         std::map<point_abs_omt, basecamp> camps;
     public:
@@ -886,7 +888,8 @@ class overmap
 
         // City Building
         overmap_special_id pick_random_building_to_place( int town_dist, int town_size,
-                const std::unordered_set<overmap_special_id> &placed_unique_buildings ) const;
+                const std::unordered_set<overmap_special_id> &placed_unique_buildings,
+                const tripoint_om_omt &building_pos, bool try_regional_house ) const;
 
         // urbanity and forestosity are biome stats that can be used to trigger changes in biome.
         // NOLINTNEXTLINE(cata-serialize)
@@ -918,7 +921,7 @@ class overmap
             const point_om_omt &dest, int z, bool must_be_unexplored ) const;
         pf::directed_path<point_om_omt> lay_out_street(
             const overmap_connection &connection, const point_om_omt &source,
-            om_direction::type dir, size_t len );
+            om_direction::type dir, size_t len, bool bounded_urban );
     public:
         void build_connection(
             const overmap_connection &connection, const pf::directed_path<point_om_omt> &path, int z,
@@ -977,6 +980,7 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
+        void place_atlas_roads();
         /**
          * Walk over the overmap and attempt to place specials.
          * @param enabled_specials vector of objects that track specials being placed.

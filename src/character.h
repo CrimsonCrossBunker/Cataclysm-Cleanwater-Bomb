@@ -629,6 +629,7 @@ class Character : public Creature, public visitable
             return grab_generation_;
         }
 
+        bool start_outskirts = true;
         std::optional<city> starting_city;
         std::optional<point_abs_om> world_origin;
         bool random_start_location = true;
@@ -3695,9 +3696,11 @@ class Character : public Creature, public visitable
         void place_corpse( const tripoint_abs_omt &om_target );
 
         /** Modifies the movement cost and returns a list of effects */
-        std::vector < run_cost_effect > run_cost_effects( float &movecost ) const;
+        std::vector < run_cost_effect > run_cost_effects( float &movecost,
+                const std::optional<tripoint_bub_ms> &destination = std::nullopt ) const;
         /** Returns the player's modified base movement cost */
-        int run_cost( int base_cost, bool diag = false ) const;
+        int run_cost( int base_cost, bool diag = false,
+                      const std::optional<tripoint_bub_ms> &destination = std::nullopt ) const;
 
         const pathfinding_settings &get_pathfinding_settings() const override;
         std::function < bool( const tripoint_bub_ms & ) > get_path_avoid() const override;

@@ -251,7 +251,11 @@
   {
     "type": "item_group",
     "id": "maps",
-    "items": [ { "item": "roadmap", "prob": 33 }, { "item": "touristmap", "prob": 33 }, { "item": "survivormap", "prob": 33 } ]
+    "items": [
+      { "group": "roadmap_stock", "prob": 33 },
+      { "item": "touristmap", "prob": 33 },
+      { "item": "survivormap", "prob": 33 }
+    ]
   },
   {
     "type": "item_group",

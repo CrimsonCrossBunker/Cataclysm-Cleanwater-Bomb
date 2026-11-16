@@ -757,7 +757,20 @@
     "transforms_into": "t_tree_mulberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_tree_apple",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "mulberry_harv" } ],
+    "fruit_climate": {
+      "harvest": "mulberry_harv",
+      "growth": {
+        "base_c": 7,
+        "optimum_c": 25,
+        "min_c": -4,
+        "max_c": 38,
+        "degree_days": 620,
+        "water_mm": 240,
+        "growing_days": 55,
+        "water_peak": 0.6
+      },
+      "bearing_days": 30
+    },
     "bash": {
       "str_min": 80,
       "str_max": 180,
@@ -875,7 +888,20 @@
     "transforms_into": "t_tree_nannyberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_tree_plum",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "nannyberry_harv" } ],
+    "fruit_climate": {
+      "harvest": "nannyberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 23,
+        "min_c": -4,
+        "max_c": 35,
+        "degree_days": 1020,
+        "water_mm": 350,
+        "growing_days": 108,
+        "water_peak": 0.7
+      },
+      "bearing_days": 44
+    },
     "bash": {
       "str_min": 40,
       "str_max": 120,
@@ -934,7 +960,20 @@
     "transforms_into": "t_tree_elderberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_tree_plum",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "elderberry_harv" } ],
+    "fruit_climate": {
+      "harvest": "elderberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 24,
+        "min_c": -4,
+        "max_c": 35,
+        "degree_days": 850,
+        "water_mm": 340,
+        "growing_days": 82,
+        "water_peak": 0.7
+      },
+      "bearing_days": 34
+    },
     "bash": {
       "str_min": 80,
       "str_max": 180,
@@ -1763,7 +1802,20 @@
     "coverage": 60,
     "transforms_into": "t_shrub_autumn_olive_harvested",
     "examine_action": "harvest_ter_nectar",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "shrub_autumn_olive_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_autumn_olive_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 24,
+        "min_c": -5,
+        "max_c": 38,
+        "degree_days": 1410,
+        "water_mm": 300,
+        "growing_days": 116,
+        "water_peak": 0.66
+      },
+      "bearing_days": 45
+    }
   },
   {
     "type": "terrain",
@@ -1786,7 +1838,20 @@
     "move_cost": 9,
     "transforms_into": "t_shrub_hobblebush_harvested",
     "examine_action": "harvest_ter_nectar",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "shrub_hobblebush_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_hobblebush_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 22,
+        "min_c": -6,
+        "max_c": 33,
+        "degree_days": 830,
+        "water_mm": 330,
+        "growing_days": 95,
+        "water_peak": 0.62
+      },
+      "bearing_days": 36
+    }
   },
   {
     "type": "terrain",
@@ -1807,7 +1872,20 @@
     "color": "light_blue_green",
     "transforms_into": "t_shrub_blueberry_harvested",
     "examine_action": "harvest_ter_nectar",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_blueberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_blueberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 22,
+        "min_c": -4,
+        "max_c": 34,
+        "degree_days": 620,
+        "water_mm": 280,
+        "growing_days": 68,
+        "water_peak": 0.65
+      },
+      "bearing_days": 42
+    }
   },
   {
     "type": "terrain",
@@ -1828,7 +1906,20 @@
     "color": "light_red_green",
     "transforms_into": "t_shrub_strawberry_harvested",
     "examine_action": "harvest_ter_nectar",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_strawberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_strawberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 22,
+        "min_c": -3,
+        "max_c": 34,
+        "degree_days": 440,
+        "water_mm": 235,
+        "growing_days": 51,
+        "water_peak": 0.65
+      },
+      "bearing_days": 28
+    }
   },
   {
     "type": "terrain",
@@ -1851,7 +1942,20 @@
     "transforms_into": "t_shrub_blackberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_blueberry",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_blackberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_blackberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 24,
+        "min_c": -3,
+        "max_c": 36,
+        "degree_days": 710,
+        "water_mm": 330,
+        "growing_days": 75,
+        "water_peak": 0.65
+      },
+      "bearing_days": 35
+    }
   },
   {
     "type": "terrain",
@@ -1874,7 +1978,20 @@
     "transforms_into": "t_shrub_huckleberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_blueberry",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_huckleberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_huckleberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 20,
+        "min_c": -5,
+        "max_c": 32,
+        "degree_days": 570,
+        "water_mm": 260,
+        "growing_days": 70,
+        "water_peak": 0.65
+      },
+      "bearing_days": 42
+    }
   },
   {
     "type": "terrain",
@@ -1898,7 +2015,20 @@
     "transforms_into": "t_shrub_raspberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_strawberry",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_raspberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_raspberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 22,
+        "min_c": -4,
+        "max_c": 34,
+        "degree_days": 610,
+        "water_mm": 290,
+        "growing_days": 67,
+        "water_peak": 0.65
+      },
+      "bearing_days": 27
+    }
   },
   {
     "type": "terrain",
@@ -1921,7 +2051,20 @@
     "transforms_into": "t_shrub_grape_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_blueberry",
-    "harvest_by_season": [ { "seasons": [ "summer" ], "id": "shrub_grape_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_grape_harv",
+      "growth": {
+        "base_c": 10,
+        "optimum_c": 26,
+        "min_c": -2,
+        "max_c": 39,
+        "degree_days": 1030,
+        "water_mm": 470,
+        "growing_days": 105,
+        "water_peak": 0.55
+      },
+      "bearing_days": 42
+    }
   },
   {
     "type": "terrain",
@@ -1944,7 +2087,20 @@
     "transforms_into": "t_shrub_spicebush_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_raspberry",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "shrub_spicebush_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_spicebush_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 24,
+        "min_c": -5,
+        "max_c": 37,
+        "degree_days": 1100,
+        "water_mm": 360,
+        "growing_days": 108,
+        "water_peak": 0.66
+      },
+      "bearing_days": 31
+    }
   },
   {
     "type": "terrain",
@@ -1967,7 +2123,20 @@
     "transforms_into": "t_shrub_chokeberry_harvested",
     "examine_action": "harvest_ter_nectar",
     "looks_like": "t_shrub_blueberry",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "shrub_chokeberry_harv" } ]
+    "fruit_climate": {
+      "harvest": "shrub_chokeberry_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 23,
+        "min_c": -4,
+        "max_c": 36,
+        "degree_days": 1020,
+        "water_mm": 350,
+        "growing_days": 104,
+        "water_peak": 0.65
+      },
+      "bearing_days": 45
+    }
   },
   {
     "type": "terrain",
@@ -1990,7 +2159,20 @@
     "extend": { "flags": [ "SHARP" ] },
     "transforms_into": "t_shrub_rose_harvested",
     "examine_action": "harvest_ter_nectar",
-    "harvest_by_season": [ { "seasons": [ "autumn" ], "id": "shrub_rose_harv" } ],
+    "fruit_climate": {
+      "harvest": "shrub_rose_harv",
+      "growth": {
+        "base_c": 5,
+        "optimum_c": 24,
+        "min_c": -5,
+        "max_c": 35,
+        "degree_days": 850,
+        "water_mm": 280,
+        "growing_days": 90,
+        "water_peak": 0.6
+      },
+      "bearing_days": 66
+    },
     "//": "Insert rose (flower) harvest in summer once flowers have a use (same for other generic flowers)."
   },
   {

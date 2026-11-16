@@ -85,6 +85,7 @@
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_soil.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
@@ -278,9 +279,12 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                                  !generated.at( get_nonant( tripoint_rel_sm{ point_rel_sm::south, p_sm.z() } ) );
 
         mapgendata dat( { p.xy(), gridz}, *this, density, when, nullptr );
-        if( ( any_missing || !save_results ) &&
-            !terrain_type->has_uniform_terrain() ) {
-            draw_map( dat );
+        if( any_missing || !save_results ) {
+            if( !terrain_type->has_uniform_terrain() ) {
+                draw_map( dat );
+            } else if( gridz == 0 || gridz == -1 ) {
+                north_america::place_native_soil( dat );
+            }
         }
 
         // Merge the overlays generated earlier into the current Z level now we have the base map on it.
@@ -6892,7 +6896,8 @@ void map::draw_map( mapgendata &dat )
     const oter_id &terrain_type = dat.terrain_type();
     const std::string function_key = terrain_type->get_mapgen_id();
 
-    if( !run_mapgen_func( function_key, dat ) &&
+    if( !north_america::draw_mapped_road( dat ) &&
+        !run_mapgen_func( function_key, dat ) &&
         !cata::lua_platform::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",
                   terrain_type.id().c_str(), terrain_type->get_name( om_vision_level::full ), function_key.c_str() );

@@ -1,4 +1,5 @@
 #include "calendar.h"
+#include "climate_seasons.h"
 
 #include <algorithm>
 #include <array>
@@ -811,7 +812,67 @@ constexpr const std::array<std::pair<std::string_view, time_duration>, 15> time_
     }
 };
 
-season_type season_of_year( const time_point &p, bool ignore_eternal_season )
+namespace
+{
+std::optional<regional_climate::coordinates> season_location;
+std::optional<regional_climate::seasonal_cycle> local_season_cycle;
+
+int regional_model_day( const time_point &p )
+{
+    const double fraction = time_past_new_year( p ) / calendar::year_length();
+    return std::clamp( static_cast<int>( fraction * regional_climate::model_year_days ),
+                       0, regional_climate::model_year_days - 1 );
+}
+
+std::pair<int, int> season_day_and_length( const time_point &p, bool ignore_eternal = false )
+{
+    const int quarter_length = to_days<int>( calendar::season_length() );
+    if( !local_season_cycle || ( !ignore_eternal && calendar::eternal_season() ) ) {
+        return { day_of_season<int>( p ) + 1, quarter_length };
+    }
+    const auto &seasons = local_season_cycle->air;
+    const int day = regional_model_day( p );
+    constexpr int year_days = regional_climate::model_year_days;
+    int elapsed = 0;
+    while( elapsed < year_days - 1 && seasons[( day - elapsed - 1 + year_days ) % year_days] ==
+           seasons[day] ) {
+        ++elapsed;
+    }
+    int length = elapsed + 1;
+    if( length == year_days ) {
+        return { to_days<int>( time_past_new_year( p ) ) + 1, quarter_length * 4 };
+    }
+    while( length < year_days && seasons[( day + length - elapsed ) % year_days] == seasons[day] ) {
+        ++length;
+    }
+    const double scale = static_cast<double>( quarter_length * 4 ) / year_days;
+    return { static_cast<int>( elapsed * scale ) + 1,
+             std::max( 1, static_cast<int>( std::ceil( length * scale ) ) ) };
+}
+} // namespace
+
+void regional_climate::set_calendar_location( std::optional<coordinates> location )
+{
+    if( !location ) {
+        local_season_cycle.reset();
+        season_location.reset();
+        return;
+    }
+    // Daily normals are smooth across several kilometres. Quantize the lookup
+    // so crossing one map square does not rebuild the annual cycle.
+    location->latitude = std::round( location->latitude * 16 ) / 16;
+    location->longitude = std::round( location->longitude * 16 ) / 16;
+    if( season_location && season_location->latitude == location->latitude &&
+        season_location->longitude == location->longitude ) {
+        return;
+    }
+    season_location = location;
+    const auto climate = at( *location );
+    local_season_cycle = climate ? std::optional<seasonal_cycle>( seasonal_calendar( *climate ) ) :
+                         std::nullopt;
+}
+
+season_type fixed_season_of_year( const time_point &p, bool ignore_eternal_season )
 {
     if( calendar::eternal_season() && !ignore_eternal_season ) {
         // Keep the opening season even if the season length changes during play.
@@ -819,6 +880,22 @@ season_type season_of_year( const time_point &p, bool ignore_eternal_season )
     }
     return static_cast<season_type>(
                to_turn<int>( p ) / to_turns<int>( calendar::season_length() ) % 4 );
+}
+
+season_type season_of_year( const time_point &p, bool ignore_eternal_season )
+{
+    if( local_season_cycle && ( ignore_eternal_season || !calendar::eternal_season() ) ) {
+        return local_season_cycle->air[regional_model_day( p )];
+    }
+    return fixed_season_of_year( p, ignore_eternal_season );
+}
+
+season_type foliage_season_of_year( const time_point &p )
+{
+    if( local_season_cycle && !calendar::eternal_season() ) {
+        return local_season_cycle->foliage[regional_model_day( p )];
+    }
+    return fixed_season_of_year( p );
 }
 
 std::string to_string( const time_point &p, bool ignore_eternal_season )
@@ -836,7 +913,7 @@ std::string to_string( const time_point &p, bool ignore_eternal_season )
         //~ 1 is the year, 2 is the day (of the *year*), 3 is the time of the day in its usual format
         return string_format( _( "Year %1$d, day %2$d %3$s" ), year, day, time );
     }
-    const int day = day_of_season<int>( p ) + 1;
+    const int day = season_day_and_length( p, ignore_eternal_season ).first;
     //~ 1 is the year, 2 is the season name, 3 is the day (of the season), 4 is the time of the day in its usual format
     return string_format( _( "Year %1$d, %2$s, day %3$d %4$s" ), year,
                           calendar::name_season( season_of_year( p, ignore_eternal_season ) ), day, time );
@@ -992,7 +1069,7 @@ std::string get_diary_time_str( const time_point &turn, time_accuracy acc )
                 //~ $4 = approximate time of day
                 return string_format( _( "Year %1$d, %2$s day %3$d, %4$s" ), year,
                                       calendar::name_season( season_of_year( turn ) ),
-                                      day_of_season<int>( turn ) + 1, display::time_approx( turn ) );
+                                      season_day_and_length( turn ).first, display::time_approx( turn ) );
             }
         default:
             DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME )
@@ -1001,7 +1078,8 @@ std::string get_diary_time_str( const time_point &turn, time_accuracy acc )
         case time_accuracy::NUM_TIME_ACCURACY:
         case time_accuracy::NONE: {
             // normalized to 100 day seasons
-            const int day_norm = ( month_day.second * 100 ) / to_days<int>( calendar::season_length() );
+            const auto [day, length] = season_day_and_length( turn );
+            const int day_norm = ( day - 1 ) * 100 / length;
             std::string seas_point;
             if( day_norm < 33 ) {
                 //~ Estimated point in the current season

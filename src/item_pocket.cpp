@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -285,40 +286,46 @@ void item_pocket::restack()
 
 item *restack_charge_items( std::list<item> &contents, item *tracked )
 {
-    // Only count_by_charges items can combine (item::can_combine rejects everything else
-    // without side effects), so pair up those alone instead of scanning all of `contents`
-    // for each of them.  The pairs are visited in the same order as before, including the
-    // restart of the outer scan at contents.begin() after every merge.
-    std::vector<std::list<item>::iterator> stackable;
+    struct candidate {
+        std::list<item>::iterator iter;
+        size_t next;
+    };
+    std::vector<candidate> stackable;
     for( auto iter = contents.begin(); iter != contents.end(); ++iter ) {
         if( iter->count_by_charges() ) {
-            stackable.push_back( iter );
+            stackable.push_back( { iter, stackable.size() + 1 } );
         }
     }
-    size_t outer = 0;
-    while( outer < stackable.size() ) {
+    const size_t end = stackable.size();
+    size_t head = 0;
+    size_t outer = head;
+    while( outer != end ) {
         bool rescan = false;
-        for( size_t inner = 0; inner < stackable.size(); ) {
-            if( inner == outer || !stackable[outer]->combine( *stackable[inner] ) ) {
-                ++inner;
+        size_t previous = end;
+        for( size_t inner = head; inner != end; ) {
+            if( inner == outer || !stackable[outer].iter->combine( *stackable[inner].iter ) ) {
+                previous = inner;
+                inner = stackable[inner].next;
                 continue;
             }
-            // inner was placed in outer, check if inner was the item that we track
-            if( &*stackable[inner] == tracked ) {
-                tracked = &*stackable[outer];
+            if( &*stackable[inner].iter == tracked ) {
+                tracked = &*stackable[outer].iter;
             }
-            contents.erase( stackable[inner] );
-            stackable.erase( stackable.begin() + inner );
-            // The outer scan restarts at contents.begin().  If that item cannot combine,
-            // the rest of this inner pass is a no-op and the scan resumes at the first
-            // stackable item; otherwise it keeps merging into the first item.
-            if( stackable.front() != contents.begin() ) {
+            contents.erase( stackable[inner].iter );
+            const size_t next = stackable[inner].next;
+            if( previous == end ) {
+                head = next;
+            } else {
+                stackable[previous].next = next;
+            }
+            inner = next;
+            if( stackable[head].iter != contents.begin() ) {
                 rescan = true;
                 break;
             }
-            outer = 0;
+            outer = head;
         }
-        outer = rescan ? 0 : outer + 1;
+        outer = rescan ? head : stackable[outer].next;
     }
     return tracked;
 }

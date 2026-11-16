@@ -394,7 +394,7 @@ int islot_seed::get_overgrown_stage_idx() const
 
 units::temperature islot_seed::get_growth_temp() const
 {
-    return growth_temp;
+    return climate ? units::from_celsius( climate->base_c ) : growth_temp;
 }
 
 void islot_seed::finalize()
