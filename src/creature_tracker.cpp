@@ -7,6 +7,7 @@
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <monster_uid.h>
+#include <safe_reference.h>
 #include <algorithm>
 #include <chrono>
 #include <limits>
