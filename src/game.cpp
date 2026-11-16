@@ -382,6 +382,7 @@ static const quality_id qual_CUT_FINE( "CUT_FINE" );
 static const quality_id qual_PRY( "PRY" );
 
 static const skill_id skill_dodge( "dodge" );
+static const skill_id skill_driving( "driving" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_survival( "survival" );
@@ -3765,7 +3766,7 @@ void game::draw_vehicle_guidance()
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
                                   vehicles::vmiph_per_tile ) ), 0, 60 );
-    const double skill = u.get_skill_level( skill_id( "driving" ) );
+    const double skill = u.get_skill_level( skill_driving );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
                                         ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
