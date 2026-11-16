@@ -525,7 +525,7 @@ TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
     }
     SECTION( "old saves do not retain heat from the previous game" ) {
         weather_manager::unserialize_all( json_loader::from_string(
-                R"({"temperature":50,"winddirection":0,"windspeed":0})" ) );
+                                              R"({"temperature":50,"winddirection":0,"windspeed":0})" ) );
         const JsonObject legacy = json_loader::from_string( saved_weather_state() );
         CHECK_FALSE( legacy.has_object( "room_heat" ) );
     }
