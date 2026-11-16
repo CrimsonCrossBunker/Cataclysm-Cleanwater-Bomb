@@ -50,6 +50,8 @@
 #include "temp_crafting_inventory.h"
 #include "type_id.h"
 
+static const ammo_effect_str_id ammo_effect_BOUNCE( "BOUNCE" );
+
 static const bionic_id bio_hydraulics( "bio_hydraulics" );
 
 static const json_character_flag json_flag_CANNOT_MOVE( "CANNOT_MOVE" );
@@ -560,7 +562,7 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     const auto sweep = mode.full_auto() && !source.is_hallucination() &&
                        ( !source.is_player_ally() || source.rules.allow_sweep ) &&
                        max_aoe_size( mode->ammo_effects() ) == 0 &&
-                       !mode->ammo_effects().count( ammo_effect_str_id( "BOUNCE" ) )
+                       !mode->ammo_effects().count( ammo_effect_BOUNCE )
                        ? find_firearm_sweep( source, here, location, mode->gun_range( &source ), mode.rpm,
                                mode->shots_remaining( here, &source ) )
                        : std::nullopt;
