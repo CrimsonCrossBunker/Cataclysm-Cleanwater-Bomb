@@ -39,6 +39,8 @@ static const oter_str_id oter_road_nesw_manhole( "road_nesw_manhole" );
 
 static const oter_type_str_id oter_type_road( "road" );
 
+static const overmap_location_id overmap_location_land( "land" );
+
 static const overmap_special_id overmap_special_abandonedwarehouse_1( "abandonedwarehouse_1" );
 static const overmap_special_id overmap_special_apartments_con_new( "apartments_con_new" );
 static const overmap_special_id overmap_special_apartments_mod_new( "apartments_mod_new" );
@@ -48,12 +50,18 @@ static const overmap_special_id overmap_special_house_01( "house_01" );
 static const overmap_special_id overmap_special_house_02( "house_02" );
 static const overmap_special_id overmap_special_house_03( "house_03" );
 static const overmap_special_id overmap_special_house_gardener( "house_gardener" );
+static const overmap_special_id
+overmap_special_house_regional_mexican_patio( "house_regional_mexican_patio" );
+static const overmap_special_id overmap_special_house_regional_ranch( "house_regional_ranch" );
 static const overmap_special_id overmap_special_museum( "museum" );
 static const overmap_special_id overmap_special_office_cubical( "office_cubical" );
 static const overmap_special_id overmap_special_office_doctor( "office_doctor" );
 static const overmap_special_id overmap_special_office_skyscraper( "office_skyscraper" );
 static const overmap_special_id overmap_special_office_tower( "office_tower" );
 static const overmap_special_id overmap_special_office_tower_large( "office_tower_large" );
+static const overmap_special_id overmap_special_park( "park" );
+static const overmap_special_id overmap_special_park_5( "park_5" );
+static const overmap_special_id overmap_special_park_7( "park_7" );
 static const overmap_special_id overmap_special_parking_lot_2x2( "parking_lot_2x2" );
 static const overmap_special_id overmap_special_playground( "playground" );
 static const overmap_special_id overmap_special_public_works( "public_works" );
@@ -130,12 +138,10 @@ overmap_special_id north_america::regional_house_for( std::string_view jurisdict
     }
     const std::string_view country = jurisdiction.substr( 0, 3 );
     if( country == "MX-" ) {
-        static const overmap_special_id patio( "house_regional_mexican_patio" );
-        return patio;
+        return overmap_special_house_regional_mexican_patio;
     }
     if( country == "US-" ) {
-        static const overmap_special_id ranch( "house_regional_ranch" );
-        return ranch;
+        return overmap_special_house_regional_ranch;
     }
     return overmap_special_id::NULL_ID();
 }
@@ -524,13 +530,12 @@ int urban_cell( const point_om_omt &p )
 void overmap::build_atlas_neighborhoods( const overmap_connection &road,
         const std::vector<north_america::road_cell> &streets )
 {
-    const auto origin = global_base_point();
+    const point_abs_omt origin = global_base_point();
     const auto &districts = north_america::urban_districts_in( pos() );
     if( districts.empty() || cities.empty() ) {
         return;
     }
 
-    static const overmap_location_id land( "land" );
     std::vector<const north_america::place *> owners( OMAPX * OMAPY );
     std::vector<atlas_lot> fronts;
     constexpr int max_infill_depth = 4;
@@ -562,7 +567,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                     city_tiles.insert( p.xy() );
                     continue;
                 }
-                if( !land->test( existing ) || existing->is_water() ||
+                if( !overmap_location_land->test( existing ) || existing->is_water() ||
                     overmap_special_placements.count( p ) ) {
                     continue;
                 }
@@ -572,7 +577,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 lot.dense = north_america::population_band( absolute ) >= 5;
                 bool near_arterial = false;
                 for( om_direction::type dir : om_direction::all ) {
-                    const auto delta = om_direction::displace( dir );
+                    const point_rel_omt delta = om_direction::displace( dir );
                     const tripoint_om_omt next = p + delta;
                     if( near_street( next ) ) {
                         lot.entrances[lot.frontage++] = dir;
@@ -588,7 +593,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 }
                 int depth = max_infill_depth + 1;
                 for( const om_direction::type dir : om_direction::all ) {
-                    const auto delta = om_direction::displace( dir );
+                    const point_rel_omt delta = om_direction::displace( dir );
                     tripoint_om_omt next = p + delta;
                     for( int distance = 2; distance < depth; ++distance ) {
                         next = next + delta;
@@ -696,7 +701,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
     }
 
     static const std::array<overmap_special_id, 3> green_space = {
-        overmap_special_id( "park" ), overmap_special_id( "park_5" ), overmap_special_id( "park_7" )
+        overmap_special_park, overmap_special_park_5, overmap_special_park_7
     };
     // Work from the front toward the backs of developed blocks. Do not turn
     // large gaps between streets or unserved shoreline into planned grounds.
