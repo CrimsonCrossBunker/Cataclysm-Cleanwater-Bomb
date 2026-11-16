@@ -14,6 +14,7 @@ namespace north_america
 {
 float forest_adjustment( point_abs_omt pos );
 double rural_city_multiplier( point_abs_om pos );
+int population_band( point_abs_omt pos );
 int rural_population_band( point_abs_omt pos );
 int rural_town_size( point_abs_omt pos );
 int named_city_size( int population );

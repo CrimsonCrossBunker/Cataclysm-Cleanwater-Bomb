@@ -61,6 +61,11 @@ struct horde_entity;
 struct pp_resolved_generator;
 struct map_data_summary;
 struct region_settings;
+namespace north_america
+{
+enum class terrain;
+struct road_cell;
+} // namespace north_america
 template <typename T> struct enum_traits;
 
 struct om_note {
@@ -624,7 +629,8 @@ class overmap
         std::unordered_set<point_om_omt> city_tiles;
         // Fill in any gaps in city_tiles that don't connect to the map edge
         void flood_fill_city_tiles();
-        void build_atlas_city_grid( const overmap_connection &road );
+        void build_atlas_neighborhoods( const overmap_connection &road,
+                                        const std::vector<north_america::road_cell> &streets );
         std::multimap<tripoint_om_sm, mongroup> zg; // NOLINT(cata-serialize)
         std::map<point_abs_omt, basecamp> camps;
     public:
@@ -783,7 +789,7 @@ class overmap
         void place_river( const std::vector<const overmap *> &neighbor_overmaps,
                           const overmap_river_node &initial_points, int river_scale = 1.0, bool major_river = false );
         void place_forests();
-        bool place_north_american_water();
+        bool place_north_american_water( std::vector<north_america::terrain> &tiles );
         void place_lakes( const std::vector<const overmap *> &neighbor_overmaps );
         void place_oceans( const std::vector<const overmap *> &neighbor_overmaps );
         void place_rivers( const std::vector<const overmap *> &neighbor_overmaps );
@@ -792,7 +798,8 @@ class overmap
         void place_forest_trails();
         void place_forest_trailheads();
 
-        void place_roads( const std::vector<const overmap *> &neighbor_overmaps );
+        void place_roads( const std::vector<const overmap *> &neighbor_overmaps,
+                          const std::vector<north_america::road_cell> &atlas_streets );
         /**
         * Draws paths for highways, placing reserved highway terrain and non-highway-segment specials
         * @return all highway paths from edges of overmaps to intersections or other overmap edges (up to 4 paths)
@@ -906,7 +913,7 @@ class overmap
         // place city centers
         void place_cities();
         // build cities using placed centers
-        void build_cities();
+        void build_cities( const std::vector<north_america::road_cell> &atlas_streets );
         void place_building( const tripoint_om_omt &p, om_direction::type dir, const city &town,
                              std::unordered_set<overmap_special_id> &placed_unique_buildings );
 
@@ -980,7 +987,8 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
-        void place_atlas_roads();
+        void place_atlas_roads( const std::vector<north_america::road_cell> &network,
+                                const std::vector<north_america::terrain> &coast );
         /**
          * Walk over the overmap and attempt to place specials.
          * @param enabled_specials vector of objects that track specials being placed.

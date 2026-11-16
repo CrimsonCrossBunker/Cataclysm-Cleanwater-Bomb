@@ -58,10 +58,43 @@ convection system. The model is inspired by
 Buildings outside the local radius do not get an enclosure calculation
 or independent thermal state.
 
-Atlas cities lay out major four-lane streets within mapped built-up
-districts. Local roads and building fronts use a bounded grid pass, and
-intercity highway geometry continues to come from the transport atlas.
-These changes affect newly generated overmaps.
+## Atlas city streets and neighborhoods
+
+Atlas cities use the built-up footprint and population bands to place
+buildings on available street frontage. Larger buildings get first choice
+of contiguous lots. Houses, shops and civic buildings fill remaining
+frontage, and developed block interiors can contain courtyards and small
+parks. The water mask and the existing intercity transport atlas still
+determine shorelines and mapped crossings.
+
+Street patterns vary with the municipality's region. New York uses a
+slanted grid with unequal block lengths and a diagonal avenue. Winnipeg
+uses intersecting grids with bends and a diagonal across its core. Several
+regional layouts also use staggered blocks and short local streets.
+Collectors and arterials carry traffic between neighborhoods. Straight
+arterials can reserve an adjacent overmap tile for a 34-tile-wide,
+four-lane paved surface and two sidewalks. They taper ahead of junctions,
+on narrow waterfronts and at overmap edges.
+
+Housing, retail, downtown, industrial and institutional neighborhoods
+reuse existing city buildings. New York and Winnipeg have approximate
+anchors for several actual districts. The other districts use settlement
+size and street hierarchy, with shops along major roads and some housing
+mixed into commercial and institutional blocks. This is a procedural model
+using atlas geography and approximate district locations.
+
+Design references include the [NYC Landmarks Preservation Commission's
+description of the Manhattan grid](https://s-media.nyc.gov/agencies/lpc/lp/2097.pdf),
+[New York's CBD zoning definition](https://zr.planning.nyc.gov/article-i/chapter-2/12-10),
+[Winnipeg's downtown urban design guidelines](https://www.winnipeg.ca/ppd/Documents/CityPlanning/Downtown/UrbanDesignReview/Urban-Design-Guidelines.pdf),
+[Winnipeg's industrial park information](https://www.winnipeg.ca/building-development/doing-business-city/city-property/property-sale),
+[Boston's historic street network](https://content.boston.gov/departments/streets-cabinet/neighborhood-street-plazas),
+[Mexico City's historic centre plan](https://jefaturadegobierno.cdmx.gob.mx/comunicacion/nota/tenemos-la-obligacion-de-cuidar-el-centro-historico-para-disfrutarlo-en-todas-sus-dimensiones-marti-batres-durante-presentacion-del-plan-integral-de-manejo-2023-2028)
+and the [EPA's street network design guide](https://www.epa.gov/sites/default/files/2014-04/documents/best-development-practices.pdf).
+
+The layout applies when a North American overmap is generated. Use a fresh
+world to see a complete city with the new layout.
+
 
 ## Soil and recipes
 

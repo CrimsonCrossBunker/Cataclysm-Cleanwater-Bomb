@@ -168,10 +168,16 @@ struct urban_atlas {
                     record.throw_error( "Invalid urban district city" );
                 }
                 const point_abs_omt center( grid * step + point( step / 2, step / 2 ) );
+                const point_abs_omt first( grid * step );
+                const point_abs_om lo = project_to<coords::om>( first );
+                const point_abs_om hi = project_to<coords::om>( first + point( step - 1, step - 1 ) );
+                const std::size_t city_index = static_cast<std::size_t>( index );
                 footprints.insert( grid );
-                overmaps[project_to<coords::om>( center )].push_back( {
-                    center, static_cast<std::size_t>( index )
-                } );
+                for( int y = lo.y(); y <= hi.y(); ++y ) {
+                    for( int x = lo.x(); x <= hi.x(); ++x ) {
+                        overmaps[point_abs_om( x, y )].push_back( { center, city_index } );
+                    }
+                }
             }
         } );
     }
@@ -247,14 +253,16 @@ bool in_urban_footprint( point_abs_omt pos )
     return atlas.footprints.count( divide_xy_round_to_minus_infinity( pos.raw(), atlas.step ) ) != 0;
 }
 
-int rural_population_band( point_abs_omt pos )
+int population_band( point_abs_omt pos )
 {
-    if( in_urban_footprint( pos ) ) {
-        return 0;
-    }
     const ecology_atlas &data = get_ecology();
     const int i = data.index( pos );
     return i >= 0 ? data.population[i] : 0;
+}
+
+int rural_population_band( point_abs_omt pos )
+{
+    return in_urban_footprint( pos ) ? 0 : population_band( pos );
 }
 
 double rural_city_multiplier( point_abs_om pos )
