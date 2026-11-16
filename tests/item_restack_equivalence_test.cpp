@@ -11,6 +11,9 @@
 #include "type_id.h"
 #include "units.h"
 
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_your_followers( "your_followers" );
+
 static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_milk( "milk" );
 static const itype_id itype_nail( "nail" );
@@ -168,8 +171,8 @@ TEST_CASE( "restack_charge_items_preserves_liquid_state", "[item][stacking][char
         liquid.set_relative_rot( 0.1 * i );
         liquid.item_counter = 10 * i;
         if( i == ( owned_first ? 0 : 2 ) ) {
-            liquid.set_owner( faction_id( "your_followers" ) );
-            liquid.set_old_owner( faction_id( "free_merchants" ) );
+            liquid.set_owner( faction_your_followers );
+            liquid.set_old_owner( faction_free_merchants );
         }
         actual.push_back( liquid );
     }
