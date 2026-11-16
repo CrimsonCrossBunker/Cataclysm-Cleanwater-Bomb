@@ -17,14 +17,19 @@ thread_local monster_batch_policy scent_policy;
 constexpr std::size_t max_sources = 16384;
 } // namespace
 
+bool monster_scent_batch::should_observe_serial()
+{
+    return scent_policy.should_observe( 0 );
+}
+
 void monster_scent_batch::observe_serial( double microseconds )
 {
     scent_policy.observe( 0, microseconds );
 }
 
-bool monster_scent_batch::worth_collecting()
+bool monster_scent_batch::worth_collecting( std::size_t population )
 {
-    return scent_policy.estimate( 0 ) >= 20.0;
+    return scent_policy.worth_collecting( 0, std::min( population, max_sources ), 512, 20.0 );
 }
 
 monster_scent_batch::~monster_scent_batch()

@@ -25,8 +25,9 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
     const std::size_t size = snapshot.cells.size();
     result.checked_avoid.resize( size );
     result.checked_cost.resize( size );
-    std::vector<uint8_t, compute_allocator<uint8_t>> closed( size );
-    std::vector<uint8_t, compute_allocator<uint8_t>> open( size );
+    enum class node_state : uint8_t { unseen, open, closed };
+    std::vector<node_state, compute_allocator<node_state>> states( size );
+    result.checked_cells.reserve( std::min<std::size_t>( size, 64 ) );
     std::vector<int, compute_allocator<int>> score( size );
     std::vector<tripoint_bub_ms, compute_allocator<tripoint_bub_ms>> parent( size );
     std::priority_queue<std::pair<int, tripoint_bub_ms>,
@@ -38,23 +39,26 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
                    std::sqrt( static_cast<double>( dx * dx ) + dy * dy ) ) ) :
                std::max( std::abs( dx ), std::abs( dy ) );
     };
-    const auto add = [&]( int cost, int estimate, const tripoint_bub_ms &from,
-    const tripoint_bub_ms &to ) {
-        const std::size_t index = snapshot.index( to );
-        if( closed[index] || ( open[index] && cost >= score[index] ) ) {
+    const auto add = [&]( int cost, const tripoint_bub_ms &from,
+    const tripoint_bub_ms &to, std::size_t index ) {
+        if( states[index] == node_state::closed ||
+            ( states[index] == node_state::open && cost >= score[index] ) ) {
             return;
         }
-        open[index] = true;
+        states[index] = node_state::open;
         score[index] = cost;
         parent[index] = from;
-        pending.emplace( estimate, to );
+        pending.emplace( cost + 2 * distance( to ), to );
     };
-    add( 0, 0, snapshot.start, snapshot.start );
+    const std::size_t start_index = snapshot.index( snapshot.start );
+    states[start_index] = node_state::open;
+    parent[start_index] = snapshot.start;
+    pending.emplace( 0, snapshot.start );
     while( !pending.empty() ) {
         const tripoint_bub_ms cur = pending.top().second;
         pending.pop();
         const std::size_t current = snapshot.index( cur );
-        if( closed[current] ) {
+        if( states[current] == node_state::closed ) {
             continue;
         }
         if( score[current] > snapshot.max_length ) {
@@ -72,7 +76,7 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
             std::reverse( result.path.begin(), result.path.end() );
             return result;
         }
-        closed[current] = true;
+        states[current] = node_state::closed;
         for( std::size_t direction = 0; direction < 8; ++direction ) {
             const tripoint_bub_ms p( cur.x() + route_x_offset[direction],
                                      cur.y() + route_y_offset[direction], cur.z() );
@@ -87,11 +91,11 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
                 }
                 result.checked_avoid[next] = true;
                 if( snapshot.cells[next].avoid ) {
-                    closed[next] = true;
+                    states[next] = node_state::closed;
                     continue;
                 }
             }
-            if( closed[next] ) {
+            if( states[next] == node_state::closed ) {
                 continue;
             }
             if( !result.checked_avoid[next] && result.checked_cost[next] == 0 ) {
@@ -101,12 +105,12 @@ route_snapshot_result search_route_snapshot( const route_snapshot &snapshot )
             const int cost = snapshot.cells[next].entering_cost[direction];
             if( cost < 0 ) {
                 if( cost == -1 ) {
-                    closed[next] = true;
+                    states[next] = node_state::closed;
                 }
                 continue;
             }
             const int next_score = score[current] + ( direction >= 4 ? 1 : 0 ) + cost;
-            add( next_score, next_score + 2 * distance( p ), cur, p );
+            add( next_score, cur, p, next );
         }
     }
     return result;

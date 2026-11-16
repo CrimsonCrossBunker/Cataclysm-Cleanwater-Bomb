@@ -475,8 +475,9 @@ static void monmove()
     const auto worker_count = get_thread_pool().num_workers();
     std::list<monster_path_batch> path_batches;
     std::list<monster_scent_batch> scent_batches;
-    const bool collect_paths = monster_path_batch::worth_collecting();
-    const bool collect_scent = monster_scent_batch::worth_collecting();
+    const auto population = get_creature_tracker().size();
+    const bool collect_paths = monster_path_batch::worth_collecting( population );
+    const bool collect_scent = monster_scent_batch::worth_collecting( population );
     if( get_creature_tracker().size() >= 32 && worker_count > 1 &&
         ( collect_paths || collect_scent ) ) {
         for( const auto &view : session.active_maps( primary ) ) {

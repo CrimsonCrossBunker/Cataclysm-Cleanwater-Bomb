@@ -43,14 +43,20 @@ bool same_settings( const pathfinding_settings &a, const pathfinding_settings &b
 }
 }
 
-bool monster_path_batch::worth_collecting()
+bool monster_path_batch::worth_collecting( std::size_t population )
 {
     for( std::size_t kind = 0; kind < 4; ++kind ) {
-        if( path_policy.estimate( kind ) >= 50.0 ) {
+        if( path_policy.worth_collecting( kind, population, 16, 50.0 ) ) {
             return true;
         }
     }
     return false;
+}
+
+bool monster_path_batch::should_observe_serial( const tripoint_bub_ms &start,
+        const tripoint_bub_ms &target )
+{
+    return start.z() == target.z() && path_policy.should_observe( path_kind( start, target ) );
 }
 
 void monster_path_batch::observe_serial( const tripoint_bub_ms &start,

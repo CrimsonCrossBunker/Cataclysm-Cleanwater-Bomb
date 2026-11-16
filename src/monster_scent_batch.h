@@ -21,8 +21,9 @@ class monster_scent_batch
         monster_scent_batch &operator=( const monster_scent_batch & ) = delete;
         ~monster_scent_batch();
 
+        static bool should_observe_serial();
         static void observe_serial( double microseconds );
-        static bool worth_collecting();
+        static bool worth_collecting( std::size_t population );
         void add( const tripoint_bub_ms &position );
         void prepare( const map &here, const scent_map &scents );
         std::size_t used_count() const {

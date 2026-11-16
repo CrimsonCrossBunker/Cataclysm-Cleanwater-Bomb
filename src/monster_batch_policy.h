@@ -11,6 +11,18 @@
 class monster_batch_policy
 {
     public:
+        bool should_observe( std::size_t kind ) {
+            auto &sample = serial_[kind];
+            if( sample.count < 8 ) {
+                return true;
+            }
+            if( ++sample.skipped < 16 ) {
+                return false;
+            }
+            sample.skipped = 0;
+            return true;
+        }
+
         void observe( std::size_t kind, double microseconds ) {
             auto &sample = serial_[kind];
             sample.cost = sample.count == 0 ? microseconds :
@@ -22,10 +34,16 @@ class monster_batch_policy
             return serial_[kind].count >= 8 ? serial_[kind].cost : 0.0;
         }
 
+        bool worth_collecting( std::size_t kind, std::size_t tasks,
+                               std::size_t minimum_tasks, double minimum_cost ) const {
+            // Cheap individual tasks can still amortize dispatch as a batch.
+            return tasks >= minimum_tasks && estimate( kind ) > 0 &&
+                   estimate( kind ) * tasks >= std::max( 2000.0, minimum_cost * minimum_tasks );
+        }
+
         bool begin( std::size_t kind, std::size_t tasks, std::size_t minimum_tasks,
                     double minimum_cost ) {
-            if( tasks < minimum_tasks || estimate( kind ) < minimum_cost ||
-                estimate( kind ) * tasks < 2000.0 ) {
+            if( !worth_collecting( kind, tasks, minimum_tasks, minimum_cost ) ) {
                 return false;
             }
             auto &state = batches_[kind][size_class( tasks )];
@@ -68,6 +86,7 @@ class monster_batch_policy
         struct observation {
             double cost = 0;
             unsigned count = 0;
+            unsigned skipped = 0;
         };
         struct batch_state {
             unsigned failures = 0;

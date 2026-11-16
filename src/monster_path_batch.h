@@ -30,7 +30,9 @@ class monster_path_batch
         std::size_t used_count() const {
             return used_count_;
         }
-        static bool worth_collecting();
+        static bool worth_collecting( std::size_t population );
+        static bool should_observe_serial( const tripoint_bub_ms &start,
+                                           const tripoint_bub_ms &target );
         static void observe_serial( const tripoint_bub_ms &start,
                                     const tripoint_bub_ms &target, double microseconds );
         static std::optional<std::vector<tripoint_bub_ms>> take(
