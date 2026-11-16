@@ -149,6 +149,11 @@ const ecology_atlas &get_ecology()
     return data;
 }
 
+static constexpr std::array<point, 8> district_neighbors{{
+        point::north, point::east, point::south, point::west,
+        point( 1, -1 ), point( 1, 1 ), point( -1, 1 ), point( -1, -1 )
+    }};
+
 struct urban_atlas {
     int step = 1;
     std::unordered_set<point> footprints;
@@ -286,6 +291,16 @@ struct urban_atlas {
             }
             land_use[index] = plan_city( city, centers[index] );
         }
+        for( auto &entry : overmaps ) {
+            for( urban_district &district : entry.second ) {
+                const point grid = divide_xy_round_to_minus_infinity( district.center.raw(), step );
+                for( std::size_t i = 0; i < district_neighbors.size(); ++i ) {
+                    if( !footprints.count( grid + district_neighbors[i] ) ) {
+                        district.open_edges |= 1U << i;
+                    }
+                }
+            }
+        }
     }
 };
 
@@ -360,10 +375,53 @@ const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index
     return city_index < zones.size() ? zones[city_index] : empty;
 }
 
-bool in_urban_footprint( point_abs_omt pos )
+bool in_urban_footprint( point_abs_omt pos, int margin )
 {
     const urban_atlas &atlas = get_urban_atlas();
-    return atlas.footprints.count( divide_xy_round_to_minus_infinity( pos.raw(), atlas.step ) ) != 0;
+    const point offset( margin, margin );
+    const point lo = divide_xy_round_to_minus_infinity( pos.raw() - offset, atlas.step );
+    const point hi = divide_xy_round_to_minus_infinity( pos.raw() + offset, atlas.step );
+    for( int y = lo.y; y <= hi.y; ++y ) {
+        for( int x = lo.x; x <= hi.x; ++x ) {
+            if( atlas.footprints.count( point( x, y ) ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int urban_density( const urban_district &district, point_abs_omt pos )
+{
+    if( !district.open_edges ) {
+        return 100;
+    }
+    const int step = urban_district_size();
+    const point p = pos.raw() - district.center.raw() + point( step / 2, step / 2 );
+    const std::array<int, 4> distance{{ p.y, step - 1 - p.x, step - 1 - p.y, p.x }};
+    constexpr int fringe = 20;
+    int depth = fringe + 5;
+    for( int i = 0; i < 4; ++i ) {
+        const int next = ( i + 1 ) % 4;
+        const bool open = district.open_edges & ( 1U << i );
+        if( open ) {
+            depth = std::min( depth, distance[i] );
+        }
+        if( open && ( district.open_edges & ( 1U << next ) ) ) {
+            // Cut back the square corners where two exposed sides meet.
+            depth = std::min( depth, ( distance[i] + distance[next] - 14 ) * 3 / 4 );
+        }
+        if( district.open_edges & ( 1U << ( i + 4 ) ) ) {
+            depth = std::min( depth, ( distance[i] + distance[next] ) * 3 / 4 );
+        }
+    }
+    // A low-frequency edge varies at neighborhood scale and is continuous at district seams.
+    const auto wave = []( int coordinate, int period ) {
+        const int phase = modulo( coordinate, period );
+        return std::min( phase, period - phase );
+    };
+    const int variation = ( wave( pos.x(), 39 ) + wave( pos.y(), 53 ) ) / 4 - 5;
+    return std::clamp( ( depth + variation - 2 ) * 100 / fringe, 0, 100 );
 }
 
 int population_band( point_abs_omt pos )

@@ -37,6 +37,7 @@
 #include "cata_assert.h"
 #include "cata_small_literal_vector.h"
 #include "cata_scope_helpers.h"
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
@@ -92,6 +93,7 @@
 #include "screen_shake.h"
 #include "sdl_renderer_recovery.h"
 #include "sdl_utils.h"
+#include "path_info.h"
 #include "sdl_wrappers.h"
 #include "sdltiles.h"
 #include "shockwave.h"
@@ -1586,7 +1588,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         layer_vpart :
                         f == &cata_tiles::draw_critter_at ? layer_critter :
                         f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
-                    if( f == &cata_tiles::draw_critter_at && cur_zlevel >= 0 ) {
+                    if( f == &cata_tiles::draw_furniture && cur_zlevel >= 0 ) {
                         bool began_snow = false;
                         const int base = ( cur_zlevel - center.z() ) * zlevel_height;
                         for( const row_sprite_entry &entry : row_sprites ) {
@@ -1599,6 +1601,10 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             if( cover == snow_cover::none ) {
                                 continue;
                             }
+                            const auto &texture = get_snow_texture();
+                            if( !texture ) {
+                                break;
+                            }
                             if( !began_snow ) {
                                 if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
                                     if( !vp->flush() ) {
@@ -1606,21 +1612,38 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                         throw std::runtime_error( "Snow overlay failed to restore renderer state" );
                                     }
                                 }
-                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
                                 began_snow = true;
                             }
                             const point screen = player_to_screen( position.xy() );
-                            const int alpha = cover == snow_cover::deep ? 180 :
-                                              cover == snow_cover::medium ? 125 : 72;
-                            const uint8_t light = var.ll == lit_level::LOW ? 145 : 242;
-                            const SDL_Rect area{ screen.x, screen.y - base, tile_width,
-                                                 iso ? std::max( 1, tile_height / 2 ) : tile_height };
-                            geometry->rect( renderer, area,
-                                            SDL_Color{ light, light, static_cast<uint8_t>( light + 10 ),
-                                                       static_cast<uint8_t>( alpha ) } );
+                            const SDL_Rect source = snow_sprite( cover, here.get_abs( position ).xy() );
+                            const uint8_t light = var.ll == lit_level::LOW ? 145 : 255;
+                            if( !iso ) {
+                                const SDL_Rect area{ screen.x, screen.y - base, tile_width, tile_height };
+                                SetTextureColorMod( texture, light, light, light );
+                                RenderCopy( renderer, texture, &source, &area );
+                            } else {
+                                const float x = screen.x;
+                                const float width = tile_width;
+                                const float height = width / 2.0f;
+                                const float y = screen.y - base + tile_height - height;
+                                const float u0 = static_cast<float>( source.x ) / snow_sheet_width;
+                                const float v0 = static_cast<float>( source.y ) / snow_sheet_height;
+                                const float u1 = static_cast<float>( source.x + source.w ) / snow_sheet_width;
+                                const float v1 = static_cast<float>( source.y + source.h ) / snow_sheet_height;
+                                const float tone = light / 255.0f;
+                                const SDL_FColor color{ tone, tone, tone, 1.0f };
+                                const SDL_Vertex vertices[] = {
+                                    { { x + width / 2, y }, color, { u0, v0 } },
+                                    { { x + width, y + height / 2 }, color, { u1, v0 } },
+                                    { { x + width / 2, y + height }, color, { u1, v1 } },
+                                    { { x, y + height / 2 }, color, { u0, v1 } }
+                                };
+                                static constexpr int indices[] = { 0, 1, 2, 0, 2, 3 };
+                                SDL_RenderGeometry( renderer.get(), texture.get(), vertices, 4, indices, 6 );
+                            }
                         }
-                        if( began_snow ) {
-                            SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+                        if( began_snow && !iso ) {
+                            SetTextureColorMod( get_snow_texture(), 255, 255, 255 );
                         }
                     }
                     const bool track_bounds = !iso &&
@@ -2854,6 +2877,38 @@ effect_handle cata_tiles::start_creature_attack_anim( const tripoint_abs_ms &pos
     const effect_handle h = alloc_handle( effect_kind::creature_attack );
     m_creature_attack_anims[pos_abs].handle = h;
     return h;
+}
+
+const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
+{
+    if( !tried_snow_texture ) {
+        tried_snow_texture = true;
+        const auto file = ( PATH_INFO::gfxdir() / "weather" / "snow_cover.png" ).get_unrelative_path();
+        try {
+            const SDL_Surface_Ptr surface = load_image( file.u8string().c_str() );
+            if( surface->w == snow_sheet_width && surface->h == snow_sheet_height ) {
+                snow_texture = CreateTextureFromSurface( renderer, surface );
+                if( snow_texture ) {
+                    SetTextureBlendMode( snow_texture, SDL_BLENDMODE_BLEND );
+                    SDL_SetTextureScaleMode( snow_texture.get(), SDL_SCALEMODE_NEAREST );
+                }
+            } else {
+                DebugLog( D_WARNING, D_GAME ) << "Invalid snow texture dimensions in " << file.u8string();
+            }
+        } catch( const std::exception &err ) {
+            DebugLog( D_WARNING, D_GAME ) << err.what();
+        }
+    }
+    return snow_texture;
+}
+
+SDL_Rect cata_tiles::snow_sprite( snow_cover depth, const point_abs_ms &pos )
+{
+    const int row = depth == snow_cover::deep ? 2 : depth == snow_cover::medium ? 1 : 0;
+    // Adjacent map tiles sample adjacent parts of the same snow pattern.
+    return { modulo( pos.x(), 4 ) *snow_tile_pixels,
+             row *snow_sheet_width + modulo( pos.y(), 4 ) *snow_tile_pixels,
+             snow_tile_pixels, snow_tile_pixels };
 }
 
 point cata_tiles::player_to_screen( const point_bub_ms &pos ) const

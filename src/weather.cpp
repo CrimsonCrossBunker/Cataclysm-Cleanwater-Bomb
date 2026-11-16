@@ -1097,6 +1097,8 @@ void weather_manager::on_game_start()
     clear_plant_climate_cache();
     last_weather_turn.reset();
     indoor_reference_time.reset();
+    heated_rooms.clear();
+    heat_dimension.reset();
     regional_climate::set_calendar_location( std::nullopt );
     if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
         weather_override = static_cast<weather_type_id>
@@ -1130,6 +1132,7 @@ void weather_manager::update_weather()
         clear_plant_climate_cache();
         clear_temp_cache();
         indoor_reference_time.reset();
+        heated_rooms.clear();
         nextweather = calendar::turn;
     }
     last_weather_turn = calendar::turn;
@@ -1439,6 +1442,150 @@ double room_heat_retention( const map &here, const tripoint_bub_ms &location, do
 }
 } // namespace
 
+units::temperature_delta weather_manager::get_room_heat( const map &here,
+        const tripoint_bub_ms &location, const tripoint_bub_ms &player )
+{
+    constexpr int radius = 18;
+    const auto indoors = [&]( const tripoint_bub_ms & p ) {
+        return here.inbounds( p ) && ( !here.is_outside( p ) || here.is_roofed( p ) );
+    };
+    if( std::abs( location.z() - player.z() ) > 1 ||
+        square_dist( location.xy(), player.xy() ) > radius || !indoors( location ) ) {
+        return units::from_kelvin_delta( 0 );
+    }
+    const dimension_id dimension = g->get_dimension_prefix();
+    if( heat_dimension != dimension ) {
+        heated_rooms.clear();
+        heat_dimension = dimension;
+    }
+    const tripoint_abs_ms observer = here.get_abs( player );
+    const tripoint_abs_ms requested = here.get_abs( location );
+    auto found = heated_rooms.find( location.z() );
+    if( found != heated_rooms.end() && calendar::turn >= found->second.sampled_at &&
+        calendar::turn - found->second.sampled_at < 1_minutes &&
+        square_dist( observer.xy(), found->second.origin.xy() ) < 5 ) {
+        const room_heat_layer &layer = found->second;
+        const auto assignment = layer.assignments.find( requested );
+        return units::from_kelvin_delta( assignment == layer.assignments.end() ? 0.0 :
+                                         layer.rooms[assignment->second].excess );
+    }
+    for( auto it = heated_rooms.begin(); it != heated_rooms.end(); ) {
+        if( std::abs( it->first - player.z() ) > 1 ) {
+            it = heated_rooms.erase( it );
+        } else {
+            ++it;
+        }
+    }
+    room_heat_layer &layer = heated_rooms[location.z()];
+    room_heat_layer previous = std::move( layer );
+    layer = { observer, calendar::turn, {}, {} };
+    if( previous.sampled_at <= calendar::turn ) {
+        const double elapsed = to_seconds<double>( calendar::turn - previous.sampled_at );
+        for( room_heat &room : previous.rooms ) {
+            // On a time skip, only credit one sampling interval of unattended burning.
+            const double heated_for = std::min( elapsed, 60.0 );
+            room.excess = room.equilibrium + ( room.excess - room.equilibrium ) *
+                          std::exp( -heated_for / room.time_constant );
+            room.excess *= std::exp( -( elapsed - heated_for ) / room.time_constant );
+        }
+    } else {
+        previous.assignments.clear();
+        previous.rooms.clear();
+    }
+
+    static const field_type_str_id fire_type( "fd_fire" );
+    const field_type_id fire = fire_type.id();
+    static const furn_str_id stove( "f_woodstove" );
+    static const furn_str_id brazier( "f_brazier" );
+    static const furn_str_id makeshift( "f_makeshift_brazier" );
+    static constexpr std::array<point, 4> directions{ point::north, point::east,
+            point::south, point::west };
+    const auto in_range = [&]( const tripoint_bub_ms & p ) {
+        return square_dist( p.xy(), player.xy() ) <= radius;
+    };
+    const auto add_room = [&]( const tripoint_bub_ms & start ) {
+        if( !in_range( start ) || !indoors( start ) || here.ter( start )->movecost == 0 ) {
+            return;
+        }
+        const std::size_t room_id = layer.rooms.size();
+        const tripoint_abs_ms anchor = here.get_abs( start );
+        if( !layer.assignments.emplace( anchor, room_id ).second ) {
+            return;
+        }
+        std::vector<tripoint_bub_ms> tiles{ start };
+        double retained = 0;
+        double losses = 0;
+        double watts = 0;
+        for( std::size_t i = 0; i < tiles.size(); ++i ) {
+            const tripoint_bub_ms p = tiles[i];
+            const auto old = previous.assignments.find( here.get_abs( p ) );
+            if( old != previous.assignments.end() ) {
+                retained += previous.rooms[old->second].excess;
+            }
+            const int intensity = here.get_field_intensity( p, fire );
+            if( intensity > 0 ) {
+                const furn_id fixture = here.furn( p );
+                // Delivered heat in watts per intensity level. A vented open hearth
+                // heats the room less efficiently than a closed wood stove.
+                const double output = fixture == stove.id() ? 2400 :
+                                      fixture == brazier.id() ? 1700 : fixture == makeshift.id() ? 800 :
+                                      here.has_flag( ter_furn_flag::TFLAG_FIRE_CONTAINER, p ) ? 1100 : 1500;
+                watts += output * intensity;
+            }
+            for( const point &step : directions ) {
+                const tripoint_bub_ms next = p + step;
+                if( !here.inbounds( next ) || !in_range( next ) ) {
+                    losses += 20;
+                    continue;
+                }
+                const ter_t &terrain = here.ter( next ).obj();
+                if( terrain.movecost == 0 ) {
+                    const bool exterior = here.is_outside( next + step );
+                    losses += terrain.has_flag( ter_furn_flag::TFLAG_WINDOW ) ? 7 :
+                              terrain.has_flag( ter_furn_flag::TFLAG_DOOR ) ? 4 : exterior ? 3 : 1;
+                    continue;
+                }
+                if( !indoors( next ) ) {
+                    losses += 35 + 3 * windspeed;
+                    continue;
+                }
+                if( layer.assignments.emplace( here.get_abs( next ), room_id ).second ) {
+                    tiles.push_back( next );
+                }
+            }
+        }
+        // Single-zone energy balance. Floor area estimates both background heat
+        // leakage (W/K) and the participating mass of the room contents (J/K).
+        const double area = tiles.size();
+        const double conductance = 3.5 * area + losses;
+        layer.rooms.push_back( { retained / area, std::min( 65.0, watts / conductance ),
+                                 12'000 * area / conductance } );
+    };
+
+    const bool has_residual = std::any_of( previous.rooms.begin(), previous.rooms.end(),
+    []( const room_heat & room ) {
+        return room.excess >= 0.05;
+    } );
+    const tripoint_bub_ms center( player.xy(), location.z() );
+    for( const tripoint_bub_ms &p : here.points_in_radius( center, radius ) ) {
+        if( !here.inbounds( p ) ) {
+            continue;
+        }
+        const tripoint_abs_ms absolute = here.get_abs( p );
+        if( layer.assignments.count( absolute ) ) {
+            continue;
+        }
+        const auto old = has_residual ? previous.assignments.find( absolute ) : previous.assignments.end();
+        if( ( old != previous.assignments.end() && previous.rooms[old->second].excess >= 0.05 ) ||
+            here.get_field_intensity( p, fire ) > 0 ) {
+            add_room( p );
+        }
+    }
+    const auto assignment = layer.assignments.find( requested );
+    return units::from_kelvin_delta( assignment == layer.assignments.end() ? 0.0 :
+                                     layer.rooms[assignment->second].excess );
+}
+
 units::temperature weather_manager::get_temperature( const tripoint_bub_ms &location )
 {
     if( forced_temperature ) {
@@ -1481,6 +1628,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
         units::temperature_delta temp_mod;
         temp_mod = get_heat_radiation( location );
         temp_mod += get_convection_temperature( location );
+        temp_mod += get_room_heat( here, location, player );
         temp_mod += get_map().get_temperature_mod( location );
         if( location.z() >= 0 || !north_america::active() ) {
             temp_mod += weather_id->temperature_modifier;
