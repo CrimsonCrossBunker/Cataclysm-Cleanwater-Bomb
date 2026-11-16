@@ -135,6 +135,7 @@ static const trait_id trait_PROF_SWAT( "PROF_SWAT" );
 static const trait_id trait_PSYCHOPATH( "PSYCHOPATH" );
 static const trait_id trait_SAPIOVORE( "SAPIOVORE" );
 static const trait_id trait_WEB_WEAVER( "WEB_WEAVER" );
+static const trait_id trait_eye_color( "eye_color" );
 static const trait_id trait_test_trait( "test_trait" );
 
 static npc &create_test_talker( bool shopkeep = false )
@@ -1118,29 +1119,28 @@ TEST_CASE( "trait_description_tags_resolve_character_context", "[npc_talk][regre
     dialogue d;
     npc &partner = prep_test( d );
     avatar &you = get_avatar();
-    const trait_id eyes( "eye_color" );
-    you.set_mutation( eyes, &eyes->variants.at( "blue" ) );
-    you.set_mut_variant( eyes, &eyes->variants.at( "blue" ) );
-    partner.set_mutation( eyes, &eyes->variants.at( "brown" ) );
+    you.set_mutation( trait_eye_color, &trait_eye_color->variants.at( "blue" ) );
+    you.set_mut_variant( trait_eye_color, &trait_eye_color->variants.at( "blue" ) );
+    partner.set_mutation( trait_eye_color, &trait_eye_color->variants.at( "brown" ) );
     monster target( mon_zombie );
     std::string expected;
 
     SECTION( "character beta keeps its own variant" ) {
-        expected = eyes->desc( "brown" );
+        expected = trait_eye_color->desc( "brown" );
     }
     SECTION( "topic-only beta uses the speaker variant" ) {
         d = dialogue( get_talker_for( you ),
                       get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
-        expected = eyes->desc( "blue" );
+        expected = trait_eye_color->desc( "blue" );
     }
     SECTION( "monster beta uses the speaker variant" ) {
         d = dialogue( get_talker_for( you ), get_talker_for( target ) );
-        expected = eyes->desc( "blue" );
+        expected = trait_eye_color->desc( "blue" );
     }
     SECTION( "non-character participants use the base description" ) {
         d = dialogue( get_talker_for( target ),
                       get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
-        expected = eyes->desc();
+        expected = trait_eye_color->desc();
     }
 
     std::string text = "<trait_description:eye_color>";
