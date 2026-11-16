@@ -39,6 +39,47 @@ static const oter_str_id oter_road_nesw_manhole( "road_nesw_manhole" );
 
 static const oter_type_str_id oter_type_road( "road" );
 
+static const overmap_special_id overmap_special_abandonedwarehouse_1( "abandonedwarehouse_1" );
+static const overmap_special_id overmap_special_apartments_con_new( "apartments_con_new" );
+static const overmap_special_id overmap_special_apartments_mod_new( "apartments_mod_new" );
+static const overmap_special_id overmap_special_bank( "bank" );
+static const overmap_special_id overmap_special_bank_1( "bank_1" );
+static const overmap_special_id overmap_special_house_01( "house_01" );
+static const overmap_special_id overmap_special_house_02( "house_02" );
+static const overmap_special_id overmap_special_house_03( "house_03" );
+static const overmap_special_id overmap_special_house_gardener( "house_gardener" );
+static const overmap_special_id overmap_special_museum( "museum" );
+static const overmap_special_id overmap_special_office_cubical( "office_cubical" );
+static const overmap_special_id overmap_special_office_doctor( "office_doctor" );
+static const overmap_special_id overmap_special_office_skyscraper( "office_skyscraper" );
+static const overmap_special_id overmap_special_office_tower( "office_tower" );
+static const overmap_special_id overmap_special_office_tower_large( "office_tower_large" );
+static const overmap_special_id overmap_special_parking_lot_2x2( "parking_lot_2x2" );
+static const overmap_special_id overmap_special_playground( "playground" );
+static const overmap_special_id overmap_special_public_works( "public_works" );
+static const overmap_special_id overmap_special_recyclecenter( "recyclecenter" );
+static const overmap_special_id overmap_special_s_bookstore( "s_bookstore" );
+static const overmap_special_id overmap_special_s_clothes( "s_clothes" );
+static const overmap_special_id overmap_special_s_garage( "s_garage" );
+static const overmap_special_id overmap_special_s_garage_1( "s_garage_1" );
+static const overmap_special_id overmap_special_s_grocery( "s_grocery" );
+static const overmap_special_id overmap_special_s_hardware( "s_hardware" );
+static const overmap_special_id overmap_special_s_library( "s_library" );
+static const overmap_special_id overmap_special_s_library_2( "s_library_2" );
+static const overmap_special_id overmap_special_s_pharm( "s_pharm" );
+static const overmap_special_id overmap_special_s_restaurant( "s_restaurant" );
+static const overmap_special_id overmap_special_s_restaurant_fast( "s_restaurant_fast" );
+static const overmap_special_id overmap_special_school( "school" );
+static const overmap_special_id overmap_special_shopping_plaza( "shopping_plaza" );
+static const overmap_special_id overmap_special_small_office( "small_office" );
+static const overmap_special_id overmap_special_small_storage_units( "small_storage_units" );
+static const overmap_special_id overmap_special_storage_units_medium( "storage_units_medium" );
+static const overmap_special_id overmap_special_urban_35_hospital( "urban_35_hospital" );
+static const overmap_special_id
+overmap_special_urban_9_house_garage_loft( "urban_9_house_garage_loft" );
+static const overmap_special_id overmap_special_urban_library( "urban_library" );
+static const overmap_special_id overmap_special_warehouse( "warehouse" );
+
 static constexpr int BUILDINGCHANCE = 4;
 
 static pf::directed_path<point_om_omt> straight_path( const point_om_omt &source,
@@ -354,46 +395,46 @@ const urban_buildings &buildings_for( urban_zone zone )
 {
     static const std::array<urban_buildings, 5> buildings = { {
             {   {
-                    overmap_special_id( "apartments_mod_new" ), overmap_special_id( "apartments_con_new" ),
-                    overmap_special_id( "urban_9_house_garage_loft" )
+                    overmap_special_apartments_mod_new, overmap_special_apartments_con_new,
+                    overmap_special_urban_9_house_garage_loft
                 },
                 {
-                    overmap_special_id( "house_01" ), overmap_special_id( "house_02" ),
-                    overmap_special_id( "house_03" ), overmap_special_id( "house_gardener" )
+                    overmap_special_house_01, overmap_special_house_02,
+                    overmap_special_house_03, overmap_special_house_gardener
                 }
             },
-            {   { overmap_special_id( "parking_lot_2x2" ), overmap_special_id( "shopping_plaza" ) },
+            {   { overmap_special_parking_lot_2x2, overmap_special_shopping_plaza },
                 {
-                    overmap_special_id( "s_grocery" ), overmap_special_id( "s_restaurant" ),
-                    overmap_special_id( "s_bookstore" ), overmap_special_id( "s_clothes" ),
-                    overmap_special_id( "s_pharm" ), overmap_special_id( "s_hardware" )
+                    overmap_special_s_grocery, overmap_special_s_restaurant,
+                    overmap_special_s_bookstore, overmap_special_s_clothes,
+                    overmap_special_s_pharm, overmap_special_s_hardware
                 }
             },
             {   {
-                    overmap_special_id( "office_tower" ), overmap_special_id( "office_skyscraper" ),
-                    overmap_special_id( "office_tower_large" ), overmap_special_id( "apartments_mod_new" )
+                    overmap_special_office_tower, overmap_special_office_skyscraper,
+                    overmap_special_office_tower_large, overmap_special_apartments_mod_new
                 },
                 {
-                    overmap_special_id( "small_office" ), overmap_special_id( "office_cubical" ),
-                    overmap_special_id( "bank" ), overmap_special_id( "bank_1" ),
-                    overmap_special_id( "s_restaurant_fast" )
+                    overmap_special_small_office, overmap_special_office_cubical,
+                    overmap_special_bank, overmap_special_bank_1,
+                    overmap_special_s_restaurant_fast
                 }
             },
-            {   { overmap_special_id( "public_works" ), overmap_special_id( "storage_units_medium" ) },
+            {   { overmap_special_public_works, overmap_special_storage_units_medium },
                 {
-                    overmap_special_id( "warehouse" ), overmap_special_id( "abandonedwarehouse_1" ),
-                    overmap_special_id( "s_garage" ), overmap_special_id( "s_garage_1" ),
-                    overmap_special_id( "recyclecenter" ), overmap_special_id( "small_storage_units" )
+                    overmap_special_warehouse, overmap_special_abandonedwarehouse_1,
+                    overmap_special_s_garage, overmap_special_s_garage_1,
+                    overmap_special_recyclecenter, overmap_special_small_storage_units
                 }
             },
             {   {
-                    overmap_special_id( "school" ), overmap_special_id( "urban_library" ),
-                    overmap_special_id( "urban_35_hospital" )
+                    overmap_special_school, overmap_special_urban_library,
+                    overmap_special_urban_35_hospital
                 },
                 {
-                    overmap_special_id( "s_library" ), overmap_special_id( "s_library_2" ),
-                    overmap_special_id( "museum" ), overmap_special_id( "office_doctor" ),
-                    overmap_special_id( "playground" )
+                    overmap_special_s_library, overmap_special_s_library_2,
+                    overmap_special_museum, overmap_special_office_doctor,
+                    overmap_special_playground
                 }
             },
         }
