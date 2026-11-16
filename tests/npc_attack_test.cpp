@@ -375,7 +375,7 @@ TEST_CASE( "NPC_fixed_bursts_keep_the_configured_count_under_full_auto_orders",
     npc &shooter = npc_attack_setup::respawn_main_npc();
     arm_shooter( shooter, itype_modular_m16a4 );
     item &rifle = *shooter.get_wielded_item();
-    rifle.set_flag( flag_id( "NEVER_JAMS" ) );
+    rifle.set_flag( flag_NEVER_JAMS );
     REQUIRE( rifle.gun_set_mode( gun_mode_BURST ) );
     const gun_mode mode = rifle.gun_current_mode();
     REQUIRE( mode.fixed_burst() );
