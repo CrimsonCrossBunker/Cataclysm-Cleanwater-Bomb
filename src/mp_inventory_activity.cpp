@@ -3647,7 +3647,10 @@ std::optional<bool> client_bionic_action( const bionic &bio, bionic_action actio
     const auto selected = action == bionic_action::deactivate ?
                           std::make_optional( bionic_activation_choices{} ) :
                           choices ? std::make_optional( *choices ) : query_bionic_activation_choices( who, bio );
-    const auto current = lifetime ? who.find_bionic_by_uid( uid ) : std::nullopt;
+    if( !lifetime ) {
+        return false;
+    }
+    const auto current = who.find_bionic_by_uid( uid );
     if( !selected || !current || ( *current )->id != type ||
         !supports_owned_bionic_action( **current, action ) ||
         ( action == bionic_action::activate &&
