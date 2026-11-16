@@ -145,6 +145,8 @@ static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
 static const activity_id ACT_VEHICLE_DECONSTRUCTION( "ACT_VEHICLE_DECONSTRUCTION" );
 static const activity_id ACT_VEHICLE_REPAIR( "ACT_VEHICLE_REPAIR" );
 
+static const ammo_effect_str_id ammo_effect_BOUNCE( "BOUNCE" );
+
 static const bionic_id bio_ads( "bio_ads" );
 static const bionic_id bio_blade( "bio_blade" );
 static const bionic_id bio_chain_lightning( "bio_chain_lightning" );
@@ -2348,7 +2350,7 @@ void npc::execute_action( npc_action action )
             if( !is_hallucination() && rules.has_flag( ally_rule::use_guns ) &&
                 ( !is_player_ally() || rules.allow_sweep ) &&
                 ai_cache.current_attack_evaluation.value() ) {
-                const auto mount = here.veh_at( pos_bub( here ) );
+                const optional_vpart_position mount = here.veh_at( pos_bub( here ) );
                 if( mount && ( !mount->vehicle().has_owner() || mount->vehicle().is_owned_by( *this ) ) ) {
                     turret_data turret = mount->vehicle().turret_query( pos_abs() );
                     if( turret && turret.query() == turret_data::status::ready ) {
@@ -2356,7 +2358,7 @@ void npc::execute_action( npc_action action )
                         const auto effects = turret.ammo_effects();
                         if( mode && mode.full_auto() && !mode.flags.count( "NPC_AVOID" ) &&
                             can_use( *mode ) && max_aoe_size( effects ) == 0 &&
-                            !effects.count( ammo_effect_str_id( "BOUNCE" ) ) &&
+                            !effects.count( ammo_effect_BOUNCE ) &&
                             ( !is_player_ally() || !rules.has_flag( ally_rule::use_silent ) ||
                               mode->is_silent() ) ) {
                             const auto sweep = find_firearm_sweep( *this, here,
