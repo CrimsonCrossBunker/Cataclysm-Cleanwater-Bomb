@@ -84,6 +84,49 @@ TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][f
            ter_str_id( "t_atlas_soil_prairie_dead_grass" ) );
 }
 
+TEST_CASE( "atlas_soils_affect_the_crop_root_zone_after_tilling", "[north_america][farming]" )
+{
+    const ter_str_id loam( "t_atlas_soil_loam" );
+    const ter_str_id sand( "t_atlas_soil_sandy_loam" );
+    const ter_str_id clay( "t_atlas_soil_heavy_clay" );
+    const ter_str_id prairie( "t_atlas_soil_prairie" );
+    const auto baseline = north_america::crop_soil_at( loam.id() );
+    const auto loose = north_america::crop_soil_at( north_america::tilled_soil( sand.id() ) );
+    const auto dense = north_america::crop_soil_at( clay.id() );
+    const auto black_soil = north_america::crop_soil_at( prairie.id() );
+
+    CHECK( loose.water_capacity < baseline.water_capacity );
+    CHECK( loose.drainage > dense.drainage );
+    CHECK( dense.infiltration < baseline.infiltration );
+    CHECK( black_soil.water_capacity > baseline.water_capacity );
+    CHECK( black_soil.root_growth > dense.root_growth );
+
+    const ter_id planted = north_america::planted_soil( north_america::tilled_soil( prairie.id() ) );
+    CHECK( north_america::crop_soil_at( planted ).water_capacity == black_soil.water_capacity );
+    CHECK( north_america::crop_soil_at( ter_str_id( "t_dirt" ).id() ).root_growth ==
+           baseline.root_growth );
+}
+
+TEST_CASE( "atlas_housing_resolves_by_jurisdiction", "[north_america][worldgen]" )
+{
+    const auto check = []( std::string_view code, const char *expected ) {
+        const overmap_special_id home = north_america::regional_house_for( code );
+        CHECK( home == overmap_special_id( expected ) );
+        CHECK( home.is_valid() );
+    };
+
+    check( "US-MA", "house_regional_cape_cod" );
+    check( "US-WA", "house_regional_craftsman" );
+    check( "US-LA", "house_regional_shotgun" );
+    check( "US-IL", "house_regional_brick_bungalow" );
+    check( "US-TX", "house_regional_ranch" );
+    check( "CA-MB", "house_regional_prairie" );
+    check( "CA-QC", "house_regional_quebec" );
+    check( "MX-CHH", "house_regional_adobe" );
+    check( "MX-JAL", "house_regional_mexican_patio" );
+    CHECK( north_america::regional_house_for( "" ).is_null() );
+}
+
 TEST_CASE( "atlas_roads_agree_across_chunk_edges", "[north_america][worldgen]" )
 {
     // Highway 401 west of Toronto, including an observed twelve-lane section.
@@ -99,6 +142,23 @@ TEST_CASE( "atlas_roads_agree_across_chunk_edges", "[north_america][worldgen]" )
             CHECK( left[y * 32 + x].connections == all[y * 64 + x].connections );
             CHECK( right[y * 32 + x].connections == all[y * 64 + x + 32].connections );
         }
+    }
+}
+
+TEST_CASE( "reusing_climate_normals_preserves_water_freeze_temperature_samples",
+           "[north_america][weather]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    const auto &generator = get_weather().get_cur_weather_gen();
+    const tripoint_abs_ms water( -1825851, -1120910, 0 );
+    const auto climate = generator.climate_at( water );
+    REQUIRE( climate );
+    const time_point start = calendar::turn_zero + calendar::year_length() + 8_hours;
+    for( int day = 1; day <= 10; ++day ) {
+        const time_point sample = start - day * 1_days;
+        CHECK( generator.get_weather_temperature( water, sample, 1326, &climate ) ==
+               generator.get_weather_temperature( water, sample, 1326 ) );
     }
 }
 

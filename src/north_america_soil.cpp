@@ -177,6 +177,40 @@ void place_native_soil( mapgendata &dat )
     }
 }
 
+crop_soil_properties crop_soil_at( ter_id terrain )
+{
+    const std::string_view id = terrain.id().str();
+    const auto *form = soil_form( id );
+    if( !form ) {
+        return {};
+    }
+
+    // Relative to loam. Storage is plant-available water, not all water
+    // retained in the soil. Drainage acts on the wetter half of the reserve.
+    static constexpr std::array<std::pair<std::string_view, crop_soil_properties>, 11> profiles = {{
+            { "loam", {} },
+            { "sandy_loam", { 0.68, 1.0, 0.20, 0.98 } },
+            { "silt_loam", { 1.22, 0.89, 0.03, 1.04 } },
+            { "clay_loam", { 1.15, 0.82, 0.02, 0.97 } },
+            { "heavy_clay", { 0.96, 0.62, 0.01, 0.88 } },
+            { "organic", { 1.40, 0.91, 0.03, 0.94 } },
+            { "gravelly", { 0.51, 1.0, 0.28, 0.90 } },
+            { "calcareous", { 0.91, 0.88, 0.06, 0.94 } },
+            { "prairie", { 1.33, 1.0, 0.02, 1.09 } },
+            { "volcanic", { 1.20, 0.96, 0.06, 1.03 } },
+            { "podzol", { 0.75, 0.94, 0.11, 0.89 } }
+        }
+    };
+    const std::string_view texture = id.substr( soil_prefix.size(),
+                                     id.size() - soil_prefix.size() - form->first.size() );
+    for( const auto &[name, properties] : profiles ) {
+        if( texture == name ) {
+            return properties;
+        }
+    }
+    return {};
+}
+
 ter_id canonical_soil( ter_id terrain )
 {
     const std::string_view id = terrain.id().str();

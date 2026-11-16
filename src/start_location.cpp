@@ -33,6 +33,8 @@
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
 #include "mdarray.h"
+#include "north_america.h"
+#include "north_america_ecology.h"
 #include "omdata.h"
 #include "output.h"
 #include "overmap.h"
@@ -333,12 +335,32 @@ void start_location::prepare_map( tinymap &m ) const
 }
 
 std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
-        start_location::find_player_initial_location( const point_abs_om &origin ) const
+        start_location::find_player_initial_location( const point_abs_om &origin, bool outskirts ) const
 {
     // Spiral out from the world origin scanning for a compatible starting location,
     // creating overmaps as necessary.
     const int radius = 3;
     const omt_types_parameters chosen_target = random_target();
+    if( outskirts ) {
+        // Some scenarios require a specific city building. Limit the preference
+        // to the immediate area, then allow their normal starting location.
+        auto candidates = closest_points_first( origin, 1 );
+        if( north_america::active() ) {
+            std::stable_sort( candidates.begin(), candidates.end(), []( const point_abs_om & a,
+            const point_abs_om & b ) {
+                return north_america::urban_districts_in( a ).size() <
+                       north_america::urban_districts_in( b ).size();
+            } );
+        }
+        for( const point_abs_om &omp : candidates ) {
+            const overmap &omap = overmap_buffer.get( omp );
+            const tripoint_om_omt rural = omap.find_random_omt( { chosen_target.omt,
+                                          chosen_target.omt_type }, std::nullopt, true );
+            if( !rural.is_invalid() ) {
+                return { project_combine( omp, rural ), chosen_target.parameters };
+            }
+        }
+    }
     for( const point_abs_om &omp : closest_points_first( origin, radius ) ) {
         overmap &omap = overmap_buffer.get( omp );
         const tripoint_om_omt omtstart = omap.find_random_omt( std::make_pair( chosen_target.omt,

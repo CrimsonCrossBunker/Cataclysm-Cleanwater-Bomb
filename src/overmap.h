@@ -61,6 +61,11 @@ struct horde_entity;
 struct pp_resolved_generator;
 struct map_data_summary;
 struct region_settings;
+namespace north_america
+{
+enum class terrain;
+struct road_cell;
+} // namespace north_america
 template <typename T> struct enum_traits;
 
 struct om_note {
@@ -476,7 +481,8 @@ class overmap
          * Returns @ref tripoint_om_omt::invalid if no suitable place has been found.
          */
         tripoint_om_omt find_random_omt( const std::pair<std::string, ot_match_type> &target,
-                                         std::optional<city> target_city = std::nullopt ) const;
+                                         std::optional<city> target_city = std::nullopt,
+                                         bool outskirts = false ) const;
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {
@@ -623,6 +629,8 @@ class overmap
         std::unordered_set<point_om_omt> city_tiles;
         // Fill in any gaps in city_tiles that don't connect to the map edge
         void flood_fill_city_tiles();
+        void build_atlas_neighborhoods( const overmap_connection &road,
+                                        const std::vector<north_america::road_cell> &streets );
         std::multimap<tripoint_om_sm, mongroup> zg; // NOLINT(cata-serialize)
         std::map<point_abs_omt, basecamp> camps;
     public:
@@ -781,7 +789,7 @@ class overmap
         void place_river( const std::vector<const overmap *> &neighbor_overmaps,
                           const overmap_river_node &initial_points, int river_scale = 1.0, bool major_river = false );
         void place_forests();
-        bool place_north_american_water();
+        bool place_north_american_water( std::vector<north_america::terrain> &tiles );
         void place_lakes( const std::vector<const overmap *> &neighbor_overmaps );
         void place_oceans( const std::vector<const overmap *> &neighbor_overmaps );
         void place_rivers( const std::vector<const overmap *> &neighbor_overmaps );
@@ -790,7 +798,8 @@ class overmap
         void place_forest_trails();
         void place_forest_trailheads();
 
-        void place_roads( const std::vector<const overmap *> &neighbor_overmaps );
+        void place_roads( const std::vector<const overmap *> &neighbor_overmaps,
+                          const std::vector<north_america::road_cell> &atlas_streets );
         /**
         * Draws paths for highways, placing reserved highway terrain and non-highway-segment specials
         * @return all highway paths from edges of overmaps to intersections or other overmap edges (up to 4 paths)
@@ -886,7 +895,8 @@ class overmap
 
         // City Building
         overmap_special_id pick_random_building_to_place( int town_dist, int town_size,
-                const std::unordered_set<overmap_special_id> &placed_unique_buildings ) const;
+                const std::unordered_set<overmap_special_id> &placed_unique_buildings,
+                const tripoint_om_omt &building_pos, bool try_regional_house ) const;
 
         // urbanity and forestosity are biome stats that can be used to trigger changes in biome.
         // NOLINTNEXTLINE(cata-serialize)
@@ -977,7 +987,8 @@ class overmap
          * @param enabled_specials specifies what specials to place, and tracks how many have been placed.
          **/
         void place_specials( overmap_special_batch &enabled_specials );
-        void place_atlas_roads();
+        void place_atlas_roads( const std::vector<north_america::road_cell> &network,
+                                const std::vector<north_america::terrain> &coast );
         /**
          * Walk over the overmap and attempt to place specials.
          * @param enabled_specials vector of objects that track specials being placed.

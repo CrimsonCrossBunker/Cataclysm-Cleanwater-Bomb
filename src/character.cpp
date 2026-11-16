@@ -324,6 +324,7 @@ static const json_character_flag json_flag_PRED4( "PRED4" );
 static const json_character_flag json_flag_PSYCHOPATH( "PSYCHOPATH" );
 static const json_character_flag json_flag_SAPIOVORE( "SAPIOVORE" );
 static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
+static const json_character_flag json_flag_SNOWWALKING( "SNOWWALKING" );
 static const json_character_flag json_flag_STEADY( "STEADY" );
 static const json_character_flag json_flag_SUPER_CLAIRVOYANCE( "SUPER_CLAIRVOYANCE" );
 static const json_character_flag json_flag_TOUGH_FEET( "TOUGH_FEET" );
@@ -6920,7 +6921,7 @@ std::vector < run_cost_effect > Character::run_cost_effects( float &movecost,
         run_cost_effect_add( 10, _( "Roots" ) );
     }
 
-    if( !has_flag( json_flag_LEVITATION ) &&
+    if( !has_flag( json_flag_LEVITATION ) && !has_flag( json_flag_SNOWWALKING ) &&
         !( is_mounted() && mounted_creature && mounted_creature->flies() ) ) {
         const int penalty = snow_move_penalty(
                                 get_weather().get_snow_cover( here, destination.value_or( pos_bub() ) ) );

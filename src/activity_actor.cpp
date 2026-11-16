@@ -13,10 +13,12 @@
 #include <item_unload.h>
 #include <monster_uid.h>
 #include <mounted_charge.h>
+#include <mp_equipment.h>
 #include <mp_firearm.h>
 #include <spell_casting_choice.h>
 #include <tool_activity_target.h>
 #include <vehicle_tool_use.h>
+#include <vehicle_turret_control.h>
 #include <vehicle_uid.h>
 #include <walking.h>
 
@@ -350,9 +352,6 @@ static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_incorporeal( "incorporeal" );
-static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
-static const trait_id trait_SHELL2( "SHELL2" );
-static const trait_id trait_SHELL3( "SHELL3" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_magic_channeling( "magic_channeling" );
 static const efftype_id effect_narcosis( "narcosis" );
@@ -412,6 +411,7 @@ static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 static const json_character_flag json_flag_ASOCIAL1( "ASOCIAL1" );
 static const json_character_flag json_flag_ASOCIAL2( "ASOCIAL2" );
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
 static const json_character_flag json_flag_DEAF( "DEAF" );
 static const json_character_flag json_flag_IMMUNE_HEARING_DAMAGE( "IMMUNE_HEARING_DAMAGE" );
 static const json_character_flag json_flag_NUMB( "NUMB" );
@@ -468,6 +468,8 @@ static const ter_str_id ter_t_greenhouse( "t_greenhouse" );
 static const ter_str_id ter_t_greenhouse_tilled( "t_greenhouse_tilled" );
 static const ter_str_id ter_t_tree( "t_tree" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
+static const trait_id trait_SHELL2( "SHELL2" );
+static const trait_id trait_SHELL3( "SHELL3" );
 static const trait_id trait_SPIRITUAL( "SPIRITUAL" );
 static const trait_id trait_STOCKY_TROGLO( "STOCKY_TROGLO" );
 static const trap_str_id tr_target_spinner( "tr_target_spinner" );
@@ -1015,7 +1017,7 @@ bool bash_activity_actor::can_smash_at( const Character &who, map &here ) const
         return false;
     }
     const tripoint_bub_ms position = here.get_bub( *owned_target );
-    const auto at = here.veh_at( position );
+    const optional_vpart_position at = here.veh_at( position );
     return here.ter( position ).id() == terrain && here.furn( position ).id() == furniture &&
            vehicle == ( at ? at->vehicle().uid().get_value() : 0 );
 }
@@ -1034,7 +1036,7 @@ void bash_activity_actor::do_turn( player_activity &act, Character &who )
 
     const character_action_guard actor( who );
     const auto context = here.get_context_reference();
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const auto theft = owned ? std::optional<bool>( allow_vehicle_theft ) : std::nullopt;
     while( who.get_moves() > 0 ) {
         tripoint_bub_ms position = owned ? here.get_bub( *owned_target ) : target;
@@ -7364,7 +7366,7 @@ void try_sleep_activity_actor::start( player_activity &act, Character &who )
     act.moves_total = to_moves<int>( duration );
     act.moves_left = act.moves_total;
     const character_action_guard lifetime( who );
-    const auto identity = act.identity_generation();
+    const std::uint64_t identity = act.identity_generation();
     get_event_bus().send<event_type::character_attempt_to_fall_asleep>( who.getID() );
     if( !lifetime || act.identity_generation() != identity ) {
         return;
@@ -7522,7 +7524,8 @@ bool safecracking_activity_actor::valid_work( const Character &who, map &here )
 bool safecracking_activity_actor::can_resume_with_internal( const activity_actor &other,
         const Character &who ) const
 {
-    const auto &proposed = static_cast<const safecracking_activity_actor &>( other );
+    const safecracking_activity_actor &proposed = static_cast<const safecracking_activity_actor &>
+            ( other );
     if( !proposed.target_ || proposed.target_->action != safe_action::crack ||
         proposed.operator_id_ != who.getID() ) {
         return false;
@@ -7539,7 +7542,8 @@ void safecracking_activity_actor::set_resume_values_internal( const activity_act
         const Character &who )
 {
     if( !target_ ) {
-        const auto &proposed = static_cast<const safecracking_activity_actor &>( other );
+        const safecracking_activity_actor &proposed = static_cast<const safecracking_activity_actor &>
+                ( other );
         target_ = proposed.target_;
         operator_id_ = who.getID();
         legacy_safe_.reset();
@@ -7564,7 +7568,7 @@ void safecracking_activity_actor::do_turn( player_activity &act, Character &who 
     const int difference = current_step - exp_step ;
     if( difference > 0 ) {
         const character_action_guard lifetime( who );
-        const auto identity = act.identity_generation();
+        const std::uint64_t identity = act.identity_generation();
         exp_step += difference;
         if( !who.has_proficiency( proficiency_prof_safecracking ) ) {
             who.practice_proficiency( proficiency_prof_safecracking, 3_minutes * difference );
@@ -13683,7 +13687,7 @@ void mend_item_activity_actor::finish( player_activity &act, Character &who )
     const character_action_guard lifetime( who );
     const auto context = get_map().get_context_reference();
     const auto retained_target = target.get_safe_reference();
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const auto can_finish = [&]() {
         return lifetime && context && retained_target && act.identity_generation() == generation;
     };

@@ -1507,10 +1507,7 @@
     "id": "NORTH_AMERICA_ATLAS",
     "category": "OVERMAP",
     "name": "North America atlas",
-    "bindings": [
-      { "input_method": "keyboard_char", "key": "Y" },
-      { "input_method": "keyboard_code", "key": "y", "mod": [ "shift" ] }
-    ]
+    "bindings": [ { "input_method": "keyboard_char", "key": "Y" }, { "input_method": "keyboard_code", "key": "y", "mod": [ "shift" ] } ]
   },
   {
     "type": "keybinding",

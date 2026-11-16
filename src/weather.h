@@ -214,6 +214,7 @@ enum class snow_cover : uint8_t {
 tripoint_abs_omt snow_climate_cell( const tripoint_abs_omt &location );
 snow_cover classify_snow( double depth_mm );
 int snow_move_penalty( snow_cover cover );
+double indoor_heat_retention( double wall_loss, int openings, double wind_mph );
 void advance_snowpack( omt_snow_state &pack, double water_rate, double temperature_c,
                        double humidity, double wind_mph, double hours );
 
@@ -232,6 +233,7 @@ class weather_manager
         // Snow depth in mm at a given OMT (0 if no data)
         double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
         snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
+        snow_cover get_surface_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature
         units::temperature temperature = 0_K;
         bool lightning_active = false;
@@ -274,6 +276,11 @@ class weather_manager
         void clear_temp_cache();
         static void serialize_all( JsonOut &json );
         static void unserialize_all( const JsonObject &w );
+
+    private:
+        std::optional<time_point> last_weather_turn;
+        std::optional<time_point> indoor_reference_time;
+        units::temperature indoor_reference_temperature;
 };
 
 weather_manager &get_weather();

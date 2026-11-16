@@ -1051,7 +1051,8 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     }
 
     const bool atlas = north_america::active();
-    if( atlas && !place_north_american_water() ) {
+    std::vector<north_america::terrain> atlas_water;
+    if( atlas && !place_north_american_water( atlas_water ) ) {
         return;
     }
     std::vector<Highway_path> highway_paths;
@@ -1087,8 +1088,12 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     if( settings->overmap_highway && !atlas ) {
         highway_paths = place_highways( neighbor_overmaps );
     }
-    if( atlas && settings->place_roads ) {
-        place_atlas_roads();
+    const std::vector<north_america::road_cell> atlas_streets = atlas &&
+            ( settings->place_roads || settings->city_spec ) ?
+            north_america::road_network( global_base_point(), OMAPX, OMAPY ) :
+            std::vector<north_america::road_cell> {};
+    if( !atlas_streets.empty() ) {
+        place_atlas_roads( atlas_streets, atlas_water );
     }
     if( settings->city_spec ) {
         place_cities();
@@ -1107,11 +1112,11 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
             place_railroads( neighbor_overmaps );
         }
         if( settings->place_roads ) {
-            place_roads( neighbor_overmaps );
+            place_roads( neighbor_overmaps, atlas_streets );
         }
     } else {
         if( settings->place_roads ) {
-            place_roads( neighbor_overmaps );
+            place_roads( neighbor_overmaps, atlas_streets );
         }
         if( settings->place_railroads ) {
             place_railroads( neighbor_overmaps );
@@ -1125,6 +1130,12 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
     }
     if( settings->forest_trail ) {
         place_forest_trailheads();
+    }
+    if( atlas && settings->city_spec ) {
+        // Give scenario and mission sites first choice of the space between streets.
+        const overmap_connection &local_road = *settings->overmap_connection.intra_city_road_connection;
+        build_atlas_neighborhoods( local_road, atlas_streets );
+        flood_fill_city_tiles();
     }
     if( settings->overmap_river ) {
         polish_river( neighbor_overmaps ); // Polish again for placed specials
@@ -1380,18 +1391,26 @@ const city &overmap::get_invalid_city() const
 }
 
 tripoint_om_omt overmap::find_random_omt( const std::pair<std::string, ot_match_type> &target,
-        std::optional<city> target_city ) const
+        std::optional<city> target_city, bool outskirts ) const
 {
+    const auto abs_origin = project_to<coords::omt>( pos() );
+    const bool atlas = outskirts && north_america::active();
     const bool check_nearest_city = target_city.has_value();
     std::vector<tripoint_om_omt> valid;
     for( int i = 0; i < OMAPX; i++ ) {
         for( int j = 0; j < OMAPY; j++ ) {
+            const point raw( i, j );
+            if( ( atlas && north_america::in_urban_footprint( abs_origin + raw ) ) ||
+            ( outskirts && std::any_of( cities.begin(), cities.end(), [&]( const city & c ) {
+            return square_dist( c.pos.raw(), raw ) < c.size + 12;
+            } ) ) ) {
+                continue;
+            }
             for( int k = -OVERMAP_DEPTH; k <= OVERMAP_HEIGHT; k++ ) {
-                tripoint_om_omt p( i, j, k );
-                if( is_ot_match( target.first, ter( p ), target.second ) ) {
-                    if( !check_nearest_city || get_nearest_city( p ) == target_city.value() ) {
-                        valid.push_back( p );
-                    }
+                const tripoint_om_omt p( i, j, k );
+                if( is_ot_match( target.first, ter( p ), target.second ) &&
+                    ( !check_nearest_city || get_nearest_city( p ) == *target_city ) ) {
+                    valid.push_back( p );
                 }
             }
         }
@@ -2286,14 +2305,19 @@ void overmap::place_swamps()
     }
 }
 
-void overmap::place_atlas_roads()
+void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &network,
+                                 const std::vector<north_america::terrain> &coast )
 {
     const point_abs_omt origin = project_to<coords::omt>( pos() );
-    const auto network = north_america::road_network( origin, OMAPX, OMAPY );
     const overmap_connection_id &connection = settings->overmap_connection.inter_city_road_connection;
     auto &out = connections_out[connection];
+    const bool generate_city_streets = settings->city_spec &&
+                                       settings->get_settings_city().city_size > 0;
     static const oter_type_str_id road( "road" );
     static const oter_type_str_id bridge( "bridge" );
+    const auto can_build_street = [&]( const tripoint_om_omt & p ) {
+        return !ter( p )->is_water() && connection->pick_subtype_for( ter( p ) );
+    };
     for( int y = 0; y < OMAPY; ++y ) {
         for( int x = 0; x < OMAPX; ++x ) {
             const auto &tile = network[y * OMAPX + x];
@@ -2302,19 +2326,41 @@ void overmap::place_atlas_roads()
             }
             const tripoint_om_omt p( x, y, 0 );
             const oter_id previous = ter( p );
-            if( previous->is_water() ) {
-                const bool crosses_vertically = om_lines::has_segment( tile.connections,
+            std::size_t links = settings->place_roads ? tile.mapped_connections : 0;
+            if( previous->is_water() && links ) {
+                const bool crosses_vertically = om_lines::has_segment( links,
                                                 om_direction::type::north ) ||
-                                                om_lines::has_segment( tile.connections, om_direction::type::south );
+                                                om_lines::has_segment( links, om_direction::type::south );
                 ter_set( p, bridge->get_rotated( crosses_vertically ? om_direction::type::north :
                                                  om_direction::type::east ) );
-            } else if( connection->pick_subtype_for( previous ) ) {
-                ter_set( p, road->get_linear( tile.connections ) );
+            } else if( can_build_street( p ) ) {
+                for( const auto direction : om_direction::all ) {
+                    if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
+                        om_lines::has_segment( links, direction ) ||
+                        om_lines::has_segment( tile.mapped_connections, direction ) ) {
+                        continue;
+                    }
+                    const tripoint_om_omt next = p + om_direction::displace( direction );
+                    bool land = false;
+                    if( inbounds( next ) ) {
+                        land = can_build_street( next );
+                    } else {
+                        const int index = ( next.y() + 1 ) * ( OMAPX + 2 ) + next.x() + 1;
+                        land = coast[index] == north_america::terrain::land;
+                    }
+                    if( land ) {
+                        links = om_lines::set_segment( links, direction );
+                    }
+                }
+                if( !links ) {
+                    continue;
+                }
+                ter_set( p, road->get_linear( links ) );
             } else {
                 continue;
             }
             for( const auto direction : om_direction::all ) {
-                if( om_lines::has_segment( tile.connections, direction ) &&
+                if( om_lines::has_segment( links, direction ) &&
                     !inbounds( p + om_direction::displace( direction ) ) &&
                     std::find( out.begin(), out.end(), p ) == out.end() ) {
                     out.push_back( p );
@@ -2322,9 +2368,59 @@ void overmap::place_atlas_roads()
             }
         }
     }
+
+    if( !generate_city_streets || north_america::urban_districts_in( pos() ).empty() ) {
+        return;
+    }
+    // The road tile keeps its original connections. Reserve extra width on
+    // the east or south for stretches with at least two clear shoulder tiles.
+    enum class flank_plan { none, north_south, east_west, conflict };
+    std::vector<flank_plan> flanks( OMAPX * OMAPY );
+    const auto at = [&]( const point_om_omt & p ) -> flank_plan & {
+        return flanks[p.y() * OMAPX + p.x()];
+    };
+    const oter_id road_ns( "road_ns" );
+    const oter_id road_ew( "road_ew" );
+    for( int y = 1; y < OMAPY - 1; ++y ) {
+        for( int x = 1; x < OMAPX - 1; ++x ) {
+            const auto &tile = network[y * OMAPX + x];
+            if( tile.street != north_america::urban_road::arterial || tile.lanes > 4 ) {
+                continue;
+            }
+            const tripoint_om_omt spine( x, y, 0 );
+            const oter_id existing = ter( spine );
+            if( existing != road_ns && existing != road_ew ) {
+                continue;
+            }
+            const bool north_south = existing == road_ns;
+            const tripoint_om_omt side = spine + ( north_south ? point::east : point::south );
+            if( inbounds( side, 1 ) && !network[side.y() * OMAPX + side.x()].connections &&
+                can_build_street( side ) && north_america::in_urban_footprint( origin + side.xy().raw() ) ) {
+                flank_plan &planned = at( side.xy() );
+                // If both orientations want this space, keep the intersection clear.
+                planned = planned != flank_plan::none ? flank_plan::conflict :
+                          north_south ? flank_plan::north_south : flank_plan::east_west;
+            }
+        }
+    }
+    for( int y = 1; y < OMAPY - 1; ++y ) {
+        for( int x = 1; x < OMAPX - 1; ++x ) {
+            const point_om_omt p( x, y );
+            const flank_plan flank = at( p );
+            if( flank == flank_plan::none || flank == flank_plan::conflict ) {
+                continue;
+            }
+            const bool north_south = flank == flank_plan::north_south;
+            const point step = north_south ? point::south : point::east;
+            if( at( p + step ) == flank || at( p - step ) == flank ) {
+                ter_set( tripoint_om_omt( p, 0 ), north_america::avenue_flank( north_south ) );
+            }
+        }
+    }
 }
 
-void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps )
+void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps,
+                           const std::vector<north_america::road_cell> &atlas_streets )
 {
     int op_city_size = settings->get_settings_city().city_size;
     if( op_city_size <= 0 ) {
@@ -2336,12 +2432,11 @@ void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps
 
     if( north_america::active() ) {
         const overmap_connection &network = *overmap_connection_inter_city_road;
-        const auto mapped = north_america::road_network( project_to<coords::omt>( pos() ), OMAPX, OMAPY );
         std::vector<point_om_omt> roads;
         for( int y = 0; y < OMAPY; ++y ) {
             for( int x = 0; x < OMAPX; ++x ) {
                 const oter_id terrain = ter( { x, y, 0 } );
-                if( mapped[y * OMAPX + x].connections && network.has( terrain ) && !terrain->is_water() ) {
+                if( atlas_streets[y * OMAPX + x].connections && network.has( terrain ) && !terrain->is_water() ) {
                     roads.emplace_back( x, y );
                 }
             }
@@ -2355,6 +2450,10 @@ void overmap::place_roads( const std::vector<const overmap *> &neighbor_overmaps
             };
             fallback_road_connection_point = nearest_road( point_om_omt( OMAPX / 2, OMAPY / 2 ) );
             for( const city &settlement : cities ) {
+                if( north_america::in_urban_footprint( project_to<coords::omt>( pos() ) +
+                                                       settlement.pos.raw() ) ) {
+                    continue;
+                }
                 const point_om_omt target = nearest_road( settlement.pos );
                 if( target != settlement.pos ) {
                     build_connection( network, lay_out_connection( network, settlement.pos, target, 0,
@@ -3634,6 +3733,12 @@ void overmap::place_specials( overmap_special_batch &enabled_specials )
     // First, place the mandatory specials to ensure that all minimum instance
     // counts are met.
     place_specials_pass( enabled_specials, sectors, false, false );
+    if( north_america::active() ) {
+        // Geographic constraints can make a site unsuitable throughout the
+        // surrounding area. Each atlas overmap places its own sites on demand.
+        place_specials_pass( enabled_specials, sectors, true, false );
+        return;
+    }
 
     // Snapshot remaining specials, which will be the optional specials and
     // any unplaced mandatory specials. By passing a copy into the creation of
@@ -3770,16 +3875,15 @@ void overmap::place_mongroups()
 
                         // right now we're only placing city horde spawns on roads, for simplicity.
                         // this can be replaced with an OMT flag for later for better flexibility.
-                        if( overmap_buffer.ter( target_omt )->get_type_id() == oter_type_road ) {
+                        if( ter_unsafe( temp_omt )->type_is( oter_type_road ) ) {
                             tripoint_om_sm this_sm = project_to<coords::sm>( temp_omt );
 
                             // for some reason old style spawns are submap-aligned.
                             // get all four quadrants for better distribution.
-                            std::vector<tripoint_om_sm> local_sm_list;
-                            local_sm_list.push_back( this_sm );
-                            local_sm_list.push_back( this_sm + point::east );
-                            local_sm_list.push_back( this_sm + point::south );
-                            local_sm_list.push_back( this_sm + point::south_east );
+                            std::array<tripoint_om_sm, 4> local_sm_list = {
+                                this_sm, this_sm + point::east, this_sm + point::south,
+                                this_sm + point::south_east
+                            };
 
                             // shuffle, then prune submaps based on distance from city center
                             // this should let us concentrate hordes closer to the center.
@@ -3787,9 +3891,8 @@ void overmap::place_mongroups()
                             int new_size = 4 - ( trig_dist( target_omt, city_center ) / city_distance_increment );
                             if( new_size > 0 ) {
                                 std::shuffle( local_sm_list.begin(), local_sm_list.end(), rng_get_engine() );
-                                local_sm_list.resize( new_size );
-
-                                submap_list.insert( submap_list.end(), local_sm_list.begin(), local_sm_list.end() );
+                                submap_list.insert( submap_list.end(), local_sm_list.begin(),
+                                                    local_sm_list.begin() + new_size );
                             }
 
                         }

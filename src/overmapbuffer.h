@@ -474,11 +474,11 @@ class overmapbuffer
         bool reveal( const point_abs_omt &center, int radius, int z );
         bool reveal( const tripoint_abs_omt &center, int radius );
         bool reveal( const tripoint_abs_omt &center, int radius,
-                     const std::function<bool( const oter_id & )> &filter );
+                     const std::function<bool( const oter_id & )> &filter, bool existing_only = false );
         pf::simple_path<tripoint_abs_omt> get_travel_path(
             const tripoint_abs_omt &src, const tripoint_abs_omt &dest, const overmap_path_params &params );
         bool reveal_route( const tripoint_abs_omt &source, const tripoint_abs_omt &dest,
-                           int radius = 0, bool road_only = false );
+                           int radius = 0, bool road_only = false, bool existing_only = false );
         /**
          * Returns the closest point of terrain type.
          * @param origin Location of search

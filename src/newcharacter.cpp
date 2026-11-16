@@ -724,6 +724,7 @@ void Character::randomize( const bool random_scenario, bool play_now )
     }
 
 
+    start_outskirts = true;
     starting_city = std::nullopt;
     world_origin = std::nullopt;
     random_start_location = true;
@@ -2325,7 +2326,7 @@ void draw_time_game_start()
     cataimgui::draw_colored_text( to_string( get_scenario()->start_of_game(), true ), c_light_gray );
 }
 
-void draw_location( const avatar &you )
+void draw_location( avatar &you )
 {
     std::string random_start_location_text = string_format( n_gettext(
                 "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
@@ -2337,6 +2338,8 @@ void draw_location( const avatar &you )
     }
 
     char_creation::draw_action_button( _( "Starting location:" ), "CHOOSE_LOCATION" );
+    ImGui::SameLine();
+    ImGui::Checkbox( _( "Start on the far outskirts" ), &you.start_outskirts );
 
     if( you.random_start_location ) {
         cataimgui::draw_colored_text( random_start_location_text, c_red );
@@ -2636,6 +2639,7 @@ void avatar::save_template( const std::string &name, pool_type pool )
         jsout.start_object();
         jsout.member( "limit", pool );
         jsout.member( "random_start_location", random_start_location );
+        jsout.member( "start_outskirts", start_outskirts );
         if( !random_start_location ) {
             jsout.member( "start_location", start_location );
         }
@@ -2652,6 +2656,7 @@ bool avatar::load_template( const std::string &template_name, pool_type &pool )
 {
     return read_from_file_json( PATH_INFO::templatedir_path() / ( template_name + ".template" ), [&](
     const JsonValue & jv ) {
+        start_outskirts = true;
         // Legacy templates are an object. Current templates are an array of 0, 1, or 2 objects.
         JsonObject legacy_template;
         if( jv.test_array() ) {
@@ -2670,6 +2675,7 @@ bool avatar::load_template( const std::string &template_name, pool_type &pool )
             pool = static_cast<pool_type>( jobj.get_int( "limit" ) );
 
             random_start_location = jobj.get_bool( "random_start_location", true );
+            start_outskirts = jobj.get_bool( "start_outskirts", true );
             const std::string jobj_start_location = jobj.get_string( "start_location", "" );
 
             outfit = jobj.get_bool( "outfit_gender", true );
@@ -3900,7 +3906,7 @@ void character_creator_ui_impl::draw_skills()
 
 void character_creator_ui_impl::draw_summary()
 {
-    const avatar &u = get_avatar();
+    avatar &u = get_avatar();
     const Character &who = get_player_character();
     ImGui::PushStyleVar( ImGuiStyleVar_CellPadding, { 20.0f, 0.0f } );
     // One extra content-sized column holds the character preview when it is enabled, matching the

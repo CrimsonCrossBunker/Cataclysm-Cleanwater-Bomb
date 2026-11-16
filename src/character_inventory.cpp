@@ -42,6 +42,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
 #include "gun_mode.h"
@@ -82,7 +83,6 @@
 #include "rng.h"
 #include "string_formatter.h"
 #include "subbodypart.h"
-#include "translation.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -921,8 +921,8 @@ void append_disposition( std::vector<native_disposition> &options,
     options.push_back( { std::move( choice ), std::move( option ) } );
 }
 
-static void append_holster_dispositions( std::vector<native_disposition> &opts,
-        const std::vector<item *> &worn_items, item_location obj, Character &guy )
+void append_holster_dispositions( std::vector<native_disposition> &opts,
+                                  const std::vector<item *> &worn_items, item_location obj, Character &guy )
 {
 
     for( item *entry : worn_items ) {
@@ -1045,7 +1045,7 @@ void outfit::holster_opts( std::vector<dispose_option> &opts, item_location obj,
         worn_items.push_back( &entry );
     }
     std::vector<native_disposition> choices;
-    append_holster_dispositions( choices, worn_items, obj, guy );
+    append_holster_dispositions( choices, worn_items, std::move( obj ), guy );
     for( auto &choice : choices ) {
         opts.push_back( std::move( choice.option ) );
     }
@@ -1101,7 +1101,7 @@ std::optional<item_disposition> query_item_disposition( Character &who, item_loc
 bool valid_item_disposition( Character &who, item_location object,
                              const item_disposition &choice )
 {
-    for( const native_disposition &candidate : item_disposition_options( who, object ) ) {
+    for( const native_disposition &candidate : item_disposition_options( who, std::move( object ) ) ) {
         if( candidate.choice == choice && candidate.option.enabled ) {
             return true;
         }
@@ -1112,7 +1112,7 @@ bool valid_item_disposition( Character &who, item_location object,
 bool execute_item_disposition( Character &who, item_location object,
                                const item_disposition &choice )
 {
-    for( const native_disposition &candidate : item_disposition_options( who, object ) ) {
+    for( const native_disposition &candidate : item_disposition_options( who, std::move( object ) ) ) {
         if( candidate.choice == choice && candidate.option.enabled ) {
             return candidate.option.action();
         }
