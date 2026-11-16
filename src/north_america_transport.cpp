@@ -252,7 +252,8 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
         }
     };
     const point first = origin.raw();
-    visit_roads( first - point::south_east, first + point( width, height ), [&]( const road_segment & s ) {
+    visit_roads( first - point::south_east, first + point( width,
+    height ), [&]( const road_segment & s ) {
         point previous = s.begin - first;
         for( const point &next_absolute : line_to( s.begin, s.end ) ) {
             const point next = next_absolute - first;
