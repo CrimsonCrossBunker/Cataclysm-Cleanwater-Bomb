@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_conditions",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:3ab7818c63ecf37dc838d0de6ee34984a03c6f57731d86f56ebcf92e1fec9f67",
+    "source_fingerprint": "sha256:3ad7de58d1769fc5c7a3235569012375d14ed7dab5e3b1764f05f65a72985546",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -3259,7 +3259,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22456,
+        "occurrences": 22455,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -3919,7 +3919,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 6746,
+        "occurrences": 6745,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
@@ -20022,7 +20022,7 @@
       "contract_kind": "condition",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 4137,
+        "occurrences": 4136,
         "examples": [
           {
             "path": "data/json/effects_on_condition/addictions_eocs.json",
