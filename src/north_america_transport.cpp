@@ -1,5 +1,6 @@
 #include "north_america_transport.h"
 
+#include <weighted_list.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -7,6 +8,8 @@
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>
+#include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
