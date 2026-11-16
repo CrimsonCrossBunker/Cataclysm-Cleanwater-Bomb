@@ -3799,12 +3799,13 @@ void game::draw_vehicle_guidance()
                 for( const double side : {
                          left, right
                      } ) {
-                    const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
-                    const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
-                    min_x = std::min( min_x, x - uncertainty );
-                    max_x = std::max( max_x, x + uncertainty );
-                    min_y = std::min( min_y, y - uncertainty );
-                    max_y = std::max( max_y, y + uncertainty );
+                    const point corner(
+                        std::lround( along * std::cos( angle ) - side * std::sin( angle ) ),
+                        std::lround( along * std::sin( angle ) + side * std::cos( angle ) ) );
+                    min_x = std::min( min_x, corner.x - uncertainty );
+                    max_x = std::max( max_x, corner.x + uncertainty );
+                    min_y = std::min( min_y, corner.y - uncertainty );
+                    max_y = std::max( max_y, corner.y + uncertainty );
                 }
             }
             for( int x = min_x; x <= max_x; ++x ) {
