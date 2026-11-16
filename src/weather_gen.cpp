@@ -227,10 +227,11 @@ static units::temperature weather_temperature_from_common_data( const weather_ge
 }
 
 units::temperature weather_generator::get_weather_temperature(
-    const tripoint_abs_ms &location, const time_point &real_t, unsigned seed ) const
+    const tripoint_abs_ms &location, const time_point &real_t, unsigned seed,
+    const std::optional<regional_climate::normals> *known_climate ) const
 {
     return weather_temperature_from_common_data( *this, get_common_data( *this, location, real_t,
-            seed ),
+            seed, false, known_climate ),
             season_effective_time( real_t ) );
 }
 units::temperature weather_generator::get_ground_temperature( const tripoint_abs_ms &location,

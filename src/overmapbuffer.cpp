@@ -1029,24 +1029,24 @@ bool overmapbuffer::reveal( const tripoint_abs_omt &center, int radius )
 }
 
 bool overmapbuffer::reveal( const tripoint_abs_omt &center, int radius,
-                            const std::function<bool( const oter_id & )> &filter )
+                            const std::function<bool( const oter_id & )> &filter, bool existing_only )
 {
     int radius_squared = radius * radius;
     bool result = false;
     for( int i = -radius; i <= radius; i++ ) {
         for( int j = -radius; j <= radius; j++ ) {
             const tripoint_abs_omt p = center + point( i, j );
-            if( seen( p ) == om_vision_level::full ) {
-                continue;
-            }
             if( trigdist && i * i + j * j > radius_squared ) {
                 continue;
             }
-            if( !filter( ter( p ) ) ) {
+            const overmap_with_local_coords loc = existing_only ? get_existing_om_global( p ) :
+                                                  get_om_global( p );
+            if( !loc || loc.om->seen( loc.local ) == om_vision_level::full ||
+                !filter( loc.om->ter( loc.local ) ) ) {
                 continue;
             }
             result = true;
-            set_seen( p, om_vision_level::full );
+            loc.om->set_seen( loc.local, om_vision_level::full );
         }
     }
     return result;
@@ -1195,7 +1195,7 @@ pf::simple_path<tripoint_abs_omt> overmapbuffer::get_travel_path(
 }
 
 bool overmapbuffer::reveal_route( const tripoint_abs_omt &source, const tripoint_abs_omt &dest,
-                                  int radius, bool road_only )
+                                  int radius, bool road_only, bool existing_only )
 {
     static const int RADIUS = 4;            // Maximal radius of search (in overmaps)
     static const point_rel_omt O( RADIUS * OMAPX,
@@ -1212,11 +1212,23 @@ bool overmapbuffer::reveal_route( const tripoint_abs_omt &source, const tripoint
     // Local destination - relative to base
     const point_rel_omt finish = ( dest - base ).xy();
 
-    const auto get_ter_at = [&]( const point_rel_omt & p ) {
-        return ter( base + p );
+    const auto get_ter_at = [&]( const point_rel_omt & p ) -> oter_id {
+        const tripoint_abs_omt at = base + p;
+        if( !existing_only )
+        {
+            return ter( at );
+        }
+        const overmap_with_local_coords loc = get_existing_om_global( at );
+        return loc ? loc.om->ter( loc.local ) : oter_id{};
     };
+    if( existing_only && !get_existing_om_global( dest ) ) {
+        return false;
+    }
 
     const oter_id oter = get_ter_at( start );
+    if( !oter ) {
+        return false;
+    }
     const auto connection = overmap_connections::guess_for( oter );
 
     if( !connection ) {
@@ -1228,6 +1240,9 @@ bool overmapbuffer::reveal_route( const tripoint_abs_omt &source, const tripoint
     const std::optional<pf::directed_node<point_rel_omt>> & ) {
         int cost = 0;
         const oter_id oter = get_ter_at( cur.pos );
+        if( !oter ) {
+            return pf::node_score::rejected;
+        }
         if( !connection->has( oter ) ) {
             if( road_only ) {
                 return pf::node_score::rejected;
@@ -1246,7 +1261,9 @@ bool overmapbuffer::reveal_route( const tripoint_abs_omt &source, const tripoint
     const auto path = pf::greedy_path( start, finish, 2 * O, estimate );
 
     for( const auto &node : path.nodes ) {
-        reveal( base + node.pos, radius );
+        reveal( base + node.pos, radius, []( const oter_id & ) {
+            return true;
+        }, existing_only );
     }
     return !path.nodes.empty();
 }

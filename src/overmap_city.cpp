@@ -21,9 +21,11 @@
 #include "map_scale_constants.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_transport.h"
 #include "omdata.h"
 #include "overmap.h"
 #include "overmap_connection.h"
+#include "overmap_location.h"
 #include "overmapbuffer.h"
 #include "point.h"
 #include "regional_settings.h"
@@ -155,33 +157,67 @@ void overmap::place_cities()
     if( atlas_world ) {
         const auto add_atlas_city = [&]( const north_america::place & place, point_abs_omt origin,
         int size, bool bounded ) {
-            const point_om_omt center = project_remain<coords::om>( origin ).remainder;
-            for( const point_om_omt &candidate : closest_points_first( center, 12 ) ) {
+            const point local = origin.raw() - atlas_origin.raw();
+            const point_om_omt center( std::clamp( local.x, 1, OMAPX - 2 ),
+                                       std::clamp( local.y, 1, OMAPY - 2 ) );
+            const int step = north_america::urban_district_size();
+            const int half = step / 2;
+            std::optional<point_om_omt> location;
+            for( const point_om_omt &candidate : closest_points_first( center, bounded ? half : 12 ) ) {
                 const tripoint_om_omt p( candidate, 0 );
-                if( !inbounds( p ) || ter( p )->is_water() || city_tiles.count( candidate ) ) {
+                if( !inbounds( p, 1 ) || ter( p )->is_water() || city_tiles.count( candidate ) ) {
                     continue;
                 }
-                if( bounded && !north_america::in_urban_footprint( atlas_origin + candidate.raw() ) ) {
-                    continue;
+                if( bounded ) {
+                    const point offset = candidate.raw() - local;
+                    if( offset.x < -half || offset.x >= step - half ||
+                        offset.y < -half || offset.y >= step - half ) {
+                        continue;
+                    }
                 }
-                city seed( place.name );
+                if( !location || ter( p )->type_is( oter_type_road ) ) {
+                    location = candidate;
+                }
+                if( !bounded || ter( p )->type_is( oter_type_road ) ) {
+                    break;
+                }
+            }
+            if( location ) {
+                city seed( place.name, *location, size );
                 seed.pos_om = pos();
-                seed.pos = candidate;
                 seed.population = place.population;
-                seed.size = size;
-                ter_set( p, oter_road_nesw );
-                city_tiles.insert( candidate );
+                if( !bounded ) {
+                    ter_set( tripoint_om_omt( *location, 0 ), oter_road_nesw );
+                    city_tiles.insert( *location );
+                }
                 cities.push_back( seed );
-                break;
             }
         };
-        for( const north_america::urban_district &district : north_america::urban_districts_in( pos() ) ) {
+        const auto &districts = north_america::urban_districts_in( pos() );
+        const int district_size = north_america::urban_district_size() / 2 - 1;
+        for( const north_america::urban_district &district : districts ) {
+            if( project_to<coords::om>( district.center ) == pos() ) {
+                add_atlas_city( north_america::cities()[district.city_index], district.center,
+                                district_size, true );
+            }
+        }
+        // An overmap can contain the edge of a built-up area without containing
+        // any district centre. Give that settlement a local anchor only if needed.
+        for( const north_america::urban_district &district : districts ) {
+            if( project_to<coords::om>( district.center ) == pos() ) {
+                continue;
+            }
             const north_america::place &place = north_america::cities()[district.city_index];
-            add_atlas_city( place, district.center, 23, true );
+            if( std::none_of( cities.begin(), cities.end(), [&]( const city & c ) {
+            return c.name == place.name;
+        } ) ) {
+                add_atlas_city( place, district.center, district_size, true );
+            }
         }
         for( const size_t index : north_america::cities_in( pos() ) ) {
             const north_america::place &place = north_america::cities()[index];
-            if( !north_america::in_urban_footprint( place.position ) ) {
+            if( place.population < north_america::minimum_zoned_population &&
+                !north_america::in_urban_footprint( place.position ) ) {
                 add_atlas_city( place, place.position, north_america::named_city_size( place.population ),
                                 false );
             }
@@ -305,99 +341,329 @@ void overmap::place_cities()
     }
 }
 
-void overmap::build_atlas_city_grid( const overmap_connection &road )
+namespace
 {
-    const auto origin = project_to<coords::omt>( pos() );
-    if( north_america::urban_districts_in( pos() ).empty() ) {
+using north_america::urban_zone;
+
+struct urban_buildings {
+    std::vector<overmap_special_id> large;
+    std::vector<overmap_special_id> small;
+};
+
+const urban_buildings &buildings_for( urban_zone zone )
+{
+    static const std::array<urban_buildings, 5> buildings = { {
+            {   {
+                    overmap_special_id( "apartments_mod_new" ), overmap_special_id( "apartments_con_new" ),
+                    overmap_special_id( "urban_9_house_garage_loft" )
+                },
+                {
+                    overmap_special_id( "house_01" ), overmap_special_id( "house_02" ),
+                    overmap_special_id( "house_03" ), overmap_special_id( "house_gardener" )
+                }
+            },
+            {   { overmap_special_id( "parking_lot_2x2" ), overmap_special_id( "shopping_plaza" ) },
+                {
+                    overmap_special_id( "s_grocery" ), overmap_special_id( "s_restaurant" ),
+                    overmap_special_id( "s_bookstore" ), overmap_special_id( "s_clothes" ),
+                    overmap_special_id( "s_pharm" ), overmap_special_id( "s_hardware" )
+                }
+            },
+            {   {
+                    overmap_special_id( "office_tower" ), overmap_special_id( "office_skyscraper" ),
+                    overmap_special_id( "office_tower_large" ), overmap_special_id( "apartments_mod_new" )
+                },
+                {
+                    overmap_special_id( "small_office" ), overmap_special_id( "office_cubical" ),
+                    overmap_special_id( "bank" ), overmap_special_id( "bank_1" ),
+                    overmap_special_id( "s_restaurant_fast" )
+                }
+            },
+            {   { overmap_special_id( "public_works" ), overmap_special_id( "storage_units_medium" ) },
+                {
+                    overmap_special_id( "warehouse" ), overmap_special_id( "abandonedwarehouse_1" ),
+                    overmap_special_id( "s_garage" ), overmap_special_id( "s_garage_1" ),
+                    overmap_special_id( "recyclecenter" ), overmap_special_id( "small_storage_units" )
+                }
+            },
+            {   {
+                    overmap_special_id( "school" ), overmap_special_id( "urban_library" ),
+                    overmap_special_id( "urban_35_hospital" )
+                },
+                {
+                    overmap_special_id( "s_library" ), overmap_special_id( "s_library_2" ),
+                    overmap_special_id( "museum" ), overmap_special_id( "office_doctor" ),
+                    overmap_special_id( "playground" )
+                }
+            },
+        }
+    };
+    return buildings[static_cast<std::size_t>( zone )];
+}
+
+struct urban_center {
+    point offset;
+    int radius;
+    urban_zone zone;
+};
+
+std::optional<urban_zone> mapped_neighborhood( const north_america::place &place, point local )
+{
+    // Offsets are approximate OMTs from the atlas city point.
+    static constexpr std::array<urban_center, 7> new_york = { {
+            { { -8, -10 }, 44, urban_zone::downtown }, // Midtown
+            { { -100, 205 }, 38, urban_zone::downtown }, // Lower Manhattan
+            { { -20, 282 }, 32, urban_zone::downtown }, // Downtown Brooklyn
+            { { 132, 36 }, 28, urban_zone::downtown }, // Long Island City
+            { { -57, 96 }, 18, urban_zone::institutional }, // Washington Square
+            { { 74, -253 }, 23, urban_zone::institutional }, // Morningside Heights
+            { { 35, 242 }, 27, urban_zone::industrial }, // Brooklyn Navy Yard
+        }
+    };
+    static constexpr std::array<urban_center, 3> winnipeg = { {
+            { { 93, -23 }, 29, urban_zone::downtown },
+            { { 48, -19 }, 21, urban_zone::institutional }, // University of Winnipeg
+            { { 363, 177 }, 55, urban_zone::industrial }, // St. Boniface Industrial Park
+        }
+    };
+    const auto match = [&]( const auto & centers ) -> std::optional<urban_zone> {
+        for( const urban_center &center : centers )
+        {
+            if( square_dist( local, center.offset ) < center.radius ) {
+                return center.zone;
+            }
+        }
+        return std::nullopt;
+    };
+    if( place.name == "New York" ) {
+        return match( new_york );
+    }
+    if( place.name == "Winnipeg" ) {
+        return match( winnipeg );
+    }
+    return std::nullopt;
+}
+
+urban_zone neighborhood_zone( const north_america::place &place, point_abs_omt location,
+                              const std::array<north_america::city_zone_center, 4> &centers,
+                              bool near_arterial, bool dense )
+{
+    const point local = location.raw() - place.position.raw();
+    if( const std::optional<urban_zone> mapped = mapped_neighborhood( place, local ) ) {
+        return *mapped;
+    }
+    for( const north_america::city_zone_center &center : centers ) {
+        if( square_dist( location, center.center ) < center.radius ) {
+            return center.zone;
+        }
+    }
+    // High streets extend the commercial district along major roads. Other
+    // blocks outside the main employment and institutional areas are residential.
+    const north_america::city_zone_center &market = centers[1];
+    return near_arterial && ( dense || square_dist( location, market.center ) < market.radius * 3 ) ?
+           urban_zone::commercial : urban_zone::housing;
+}
+
+struct atlas_lot {
+    tripoint_om_omt pos;
+    const city *town;
+    overmap_special_id regional_house;
+    urban_zone zone;
+    std::array<om_direction::type, 4> entrances = {};
+    unsigned frontage = 0;
+    bool dense = false;
+};
+
+int urban_cell( const point_om_omt &p )
+{
+    return p.y() * OMAPX + p.x();
+}
+} // namespace
+
+void overmap::build_atlas_neighborhoods( const overmap_connection &road,
+        const std::vector<north_america::road_cell> &streets )
+{
+    const auto origin = global_base_point();
+    const auto &districts = north_america::urban_districts_in( pos() );
+    if( districts.empty() || cities.empty() ) {
         return;
     }
 
-    static const oter_type_str_id city_road( "road" );
-    constexpr int block = 8;
-    auto on_grid = []( point p ) {
-        return p.x % block == 0 || p.y % block == 0;
+    static const overmap_location_id land( "land" );
+    std::vector<const north_america::place *> owners( OMAPX * OMAPY );
+    std::vector<atlas_lot> fronts;
+    constexpr int max_infill_depth = 4;
+    std::array < std::vector<atlas_lot>, max_infill_depth - 1 > interiors;
+    const int step = north_america::urban_district_size();
+    const auto near_street = [&]( const tripoint_om_omt & p ) {
+        return inbounds( p ) && ( road.has( ter( p ) ) || north_america::is_avenue_flank( ter( p ) ) );
     };
-    auto tile_index = []( const point_om_omt & p ) {
-        return p.y() * OMAPX + p.x();
-    };
-    std::vector<bool> planned( OMAPX * OMAPY );
-    std::vector<int> district( OMAPX * OMAPY, -1 );
-    const int radius = north_america::urban_district_size() / 2;
-    for( int index = 0; index < static_cast<int>( cities.size() ); ++index ) {
-        const city &town = cities[index];
-        if( !north_america::in_urban_footprint( origin + town.pos.raw() ) ) {
+
+    for( const north_america::urban_district &district : districts ) {
+        const north_america::place &owner = north_america::cities()[district.city_index];
+        const auto &zoning = north_america::city_zone_centers( district.city_index );
+        const point center = district.center.raw() - origin.raw();
+        const point start = center - point( step / 2, step / 2 );
+        const point stop = start + point( step, step );
+        const tripoint_om_omt local_center( std::clamp( center.x, 1, OMAPX - 2 ),
+                                            std::clamp( center.y, 1, OMAPY - 2 ), 0 );
+        const city &town = get_nearest_city( local_center );
+        if( !town ) {
             continue;
         }
-        for( int y = std::max( 0, town.pos.y() - radius ); y < std::min( OMAPY, town.pos.y() + radius );
-             ++y ) {
-            for( int x = std::max( 0, town.pos.x() - radius ); x < std::min( OMAPX, town.pos.x() + radius );
-                 ++x ) {
-                const point_om_omt p( x, y );
-                const int cell = tile_index( p );
-                if( !north_america::in_urban_footprint( origin + p.raw() ) ) {
+        const overmap_special_id regional_house = north_america::regional_house_for(
+                    north_america::jurisdiction_at( project_to<coords::ms>( origin + local_center.xy().raw() ) ) );
+        for( int y = std::max( start.y, 1 ); y < std::min( stop.y, OMAPY - 1 ); ++y ) {
+            for( int x = std::max( start.x, 1 ); x < std::min( stop.x, OMAPX - 1 ); ++x ) {
+                const tripoint_om_omt p( x, y, 0 );
+                const oter_id existing = ter( p );
+                if( road.has( existing ) || north_america::is_avenue_flank( existing ) ) {
+                    city_tiles.insert( p.xy() );
                     continue;
                 }
-                district[cell] = index;
-                if( on_grid( origin.raw() + p.raw() ) ) {
-                    const oter_id previous = ter( tripoint_om_omt( p, 0 ) );
-                    planned[cell] = !previous->is_water() && road.pick_subtype_for( previous );
-                }
-            }
-        }
-    }
-
-    for( int y = 0; y < OMAPY; ++y ) {
-        for( int x = 0; x < OMAPX; ++x ) {
-            const tripoint_om_omt p( x, y, 0 );
-            if( !planned[tile_index( p.xy() )] ) {
-                continue;
-            }
-            const oter_id previous = ter( p );
-            std::size_t links = previous->type_is( oter_type_road ) ? previous->get_line() : 0;
-            for( const auto direction : om_direction::all ) {
-                const tripoint_om_omt next = p + om_direction::displace( direction );
-                if( !inbounds( next ) ) {
+                if( !land->test( existing ) || existing->is_water() ||
+                    overmap_special_placements.count( p ) ) {
                     continue;
                 }
-                const oter_id neighbour = ter( next );
-                if( planned[tile_index( next.xy() )] ) {
-                    links = om_lines::set_segment( links, direction );
-                } else if( neighbour->type_is( oter_type_road ) ) {
-                    links = om_lines::set_segment( links, direction );
-                    const auto reverse = om_lines::set_segment( neighbour->get_line(),
-                                         om_direction::opposite( direction ) );
-                    ter_set( next, city_road->get_linear( reverse ) );
-                }
-            }
-            if( links != 0 ) {
-                ter_set( p, city_road->get_linear( links ) );
-                city_tiles.insert( p.xy() );
-            }
-        }
-    }
-
-    std::vector<std::unordered_set<overmap_special_id>> unique( cities.size() );
-    std::vector<int> remaining( cities.size(), 150 );
-    // Visit each frontage once. Reserve a bounded number of special placement
-    // attempts per district; overlapping grids must not repeatedly reroll it.
-    for( int y = 1; y < OMAPY - 1; ++y ) {
-        for( int x = 1; x < OMAPX - 1; ++x ) {
-            const tripoint_om_omt p( x, y, 0 );
-            const int owner = district[tile_index( p.xy() )];
-            if( owner < 0 || remaining[owner] <= 0 || city_tiles.count( p.xy() ) ||
-                road.has( ter( p ) ) || ter( p )->is_water() ) {
-                continue;
-            }
-            for( const auto direction : om_direction::all ) {
-                const tripoint_om_omt street = p + om_direction::displace( direction );
-                if( road.has( ter( street ) ) ) {
-                    if( !one_in( 4 ) ) {
-                        --remaining[owner];
-                        place_building( street, om_direction::opposite( direction ), cities[owner],
-                                        unique[owner] );
+                owners[urban_cell( p.xy() )] = &owner;
+                const point_abs_omt absolute = origin + p.xy().raw();
+                atlas_lot lot{ p, &town, regional_house, urban_zone::housing };
+                lot.dense = north_america::population_band( absolute ) >= 5;
+                bool near_arterial = false;
+                for( om_direction::type dir : om_direction::all ) {
+                    const auto delta = om_direction::displace( dir );
+                    const tripoint_om_omt next = p + delta;
+                    if( near_street( next ) ) {
+                        lot.entrances[lot.frontage++] = dir;
+                        near_arterial |= streets[urban_cell( next.xy() )].street ==
+                                         north_america::urban_road::arterial ||
+                                         north_america::is_avenue_flank( ter( next ) );
                     }
-                    break;
                 }
+                lot.zone = neighborhood_zone( owner, absolute, zoning, near_arterial, lot.dense );
+                if( lot.frontage ) {
+                    fronts.push_back( lot );
+                    continue;
+                }
+                int depth = max_infill_depth + 1;
+                for( const om_direction::type dir : om_direction::all ) {
+                    const auto delta = om_direction::displace( dir );
+                    tripoint_om_omt next = p + delta;
+                    for( int distance = 2; distance < depth; ++distance ) {
+                        next = next + delta;
+                        if( !inbounds( next ) || ter( next )->is_water() ) {
+                            break;
+                        }
+                        if( near_street( next ) ) {
+                            depth = distance;
+                            lot.entrances[0] = dir;
+                            break;
+                        }
+                    }
+                }
+                if( depth <= max_infill_depth ) {
+                    interiors[depth - 2].push_back( lot );
+                }
+            }
+        }
+    }
+
+    std::unordered_map<const city *, std::unordered_set<overmap_special_id>> placed_unique;
+    std::unordered_map<overmap_special_id, std::vector<tripoint_rel_omt>> footprints;
+    const auto try_place = [&]( const atlas_lot & lot, const overmap_special_id & id,
+    om_direction::type direction ) {
+        if( id.is_null() || !id.is_valid() || city_tiles.count( lot.pos.xy() ) ) {
+            return false;
+        }
+        const overmap_special &special = *id;
+        const bool city_unique = special.has_flag( "CITY_UNIQUE" );
+        if( ( city_unique && placed_unique[lot.town].count( id ) ) ||
+            !special.get_constraints().city_size.contains( lot.town->size ) ) {
+            return false;
+        }
+        auto [footprint, first_visit] = footprints.try_emplace( id );
+        if( first_visit ) {
+            for( const overmap_special_locations &entry : special.required_locations() ) {
+                footprint->second.push_back( entry.p );
+            }
+        }
+        for( const tripoint_rel_omt &offset : footprint->second ) {
+            const tripoint_om_omt tile = lot.pos + om_direction::rotate( offset, direction );
+            if( !inbounds( tile, 1 ) || overmap_special_placements.count( tile ) ||
+                ( offset.z() == 0 && ( city_tiles.count( tile.xy() ) ||
+                                       owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) ) ) {
+                return false;
+            }
+        }
+        if( !can_place_special( special, lot.pos, direction, false ) ) {
+            return false;
+        }
+        for( const tripoint_om_omt &used : place_special( special, lot.pos, direction,
+                *lot.town, false, false ) ) {
+            city_tiles.insert( used.xy() );
+        }
+        if( city_unique ) {
+            placed_unique[lot.town].insert( id );
+        }
+        return true;
+    };
+
+    std::shuffle( fronts.begin(), fronts.end(), rng_get_engine() );
+    for( const atlas_lot &lot : fronts ) {
+        // Buildings with a larger footprint get first choice of contiguous lots.
+        const int frequency = lot.zone == urban_zone::downtown ? 4 : lot.dense ? 8 : 14;
+        if( !one_in( frequency ) ||
+            city_tiles.count( lot.pos.xy() ) ) {
+            continue;
+        }
+        const auto &large = buildings_for( lot.zone ).large;
+        const overmap_special_id &building = random_entry( large );
+        for( unsigned i = 0; i < lot.frontage; ++i ) {
+            if( try_place( lot, building, lot.entrances[i] ) ) {
+                break;
+            }
+        }
+    }
+
+    const region_settings_city &city_spec = settings->get_settings_city();
+    for( const atlas_lot &lot : fronts ) {
+        if( city_tiles.count( lot.pos.xy() ) ) {
+            continue;
+        }
+        const om_direction::type dir = lot.entrances[rng( 0, lot.frontage - 1 )];
+        const bool mixed_housing = ( lot.zone == urban_zone::commercial ||
+                                     lot.zone == urban_zone::institutional ) && one_in( 5 );
+        const urban_zone use = mixed_housing ? urban_zone::housing : lot.zone;
+        const bool housing = use == urban_zone::housing;
+        if( one_in( 26 ) && try_place( lot, city_spec.pick_park(), dir ) ) {
+            continue;
+        }
+        if( housing && one_in( 3 ) && try_place( lot, lot.regional_house, dir ) ) {
+            continue;
+        }
+        if( one_in( 3 ) && ( housing || use == urban_zone::commercial ) &&
+            try_place( lot, housing ? city_spec.pick_house() : city_spec.pick_shop(), dir ) ) {
+            continue;
+        }
+        const auto &small = buildings_for( use ).small;
+        const int first = rng( 0, static_cast<int>( small.size() ) - 1 );
+        for( std::size_t i = 0; i < small.size(); ++i ) {
+            if( try_place( lot, small[( first + i ) % small.size()], dir ) ) {
+                break;
+            }
+        }
+    }
+
+    static const std::array<overmap_special_id, 3> green_space = {
+        overmap_special_id( "park" ), overmap_special_id( "park_5" ), overmap_special_id( "park_7" )
+    };
+    // Work from the front toward the backs of developed blocks. Do not turn
+    // large gaps between streets or unserved shoreline into planned grounds.
+    for( const auto &lots : interiors ) {
+        for( const atlas_lot &lot : lots ) {
+            const auto facing = lot.entrances[0];
+            if( city_tiles.count( ( lot.pos + om_direction::displace( facing ) ).xy() ) ) {
+                try_place( lot, random_entry( green_space ), facing );
             }
         }
     }
@@ -411,9 +677,6 @@ void overmap::build_cities()
     const overmap_connection &local_road( *overmap_connection_intra_city_road );
     const bool atlas = north_america::active();
     const auto origin = project_to<coords::omt>( pos() );
-    if( atlas ) {
-        build_atlas_city_grid( local_road );
-    }
 
     for( const city &c : cities ) {
         if( atlas && north_america::in_urban_footprint( origin + c.pos.raw() ) ) {
@@ -429,7 +692,9 @@ void overmap::build_cities()
             build_city_street( local_road, c.pos, c.size, cur_dir, c, placed_unique_buildings );
         } while( ( cur_dir = om_direction::turn_right( cur_dir ) ) != start_dir );
     }
-    flood_fill_city_tiles();
+    if( !atlas ) {
+        flood_fill_city_tiles();
+    }
 }
 
 overmap_special_id overmap::pick_random_building_to_place( int town_dist, int town_size,

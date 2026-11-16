@@ -58,10 +58,53 @@ convection system. The model is inspired by
 Buildings outside the local radius do not get an enclosure calculation
 or independent thermal state.
 
-Atlas cities lay out major four-lane streets within mapped built-up
-districts. Local roads and building fronts use a bounded grid pass, and
-intercity highway geometry continues to come from the transport atlas.
-These changes affect newly generated overmaps.
+## Atlas city streets and neighborhoods
+
+Atlas cities use the built-up footprint and population bands to place
+buildings on available street frontage. Larger buildings get first choice
+of contiguous lots. Houses, shops and civic buildings fill remaining
+frontage, and developed block interiors can contain courtyards and small
+parks. The water mask and the existing intercity transport atlas still
+determine shorelines and mapped crossings.
+
+Street patterns vary with the municipality's region. New York uses a
+slanted grid with unequal block lengths and a diagonal avenue. Winnipeg
+uses intersecting grids with bends and a diagonal across its core. Several
+regional layouts also use staggered blocks and short local streets.
+Collectors and arterials carry traffic between neighborhoods. Straight
+arterials can reserve an adjacent overmap tile for a 34-tile-wide,
+four-lane paved surface and two sidewalks. They taper ahead of junctions,
+on narrow waterfronts and at overmap edges.
+
+Every atlas settlement of at least 100,000 people gets a deterministic
+downtown, commercial, industrial and institutional center, with housing
+between them. The centers fit the settlement's built-up footprint.
+Larger streets also carry retail frontage where density is high. If the
+source has no built-up cells for a city, the game uses a small,
+population-scaled footprint around its atlas point and uses the land mask
+to exclude water. New York and Winnipeg also have approximate anchors for
+actual districts. The existing Sinaloa record covers Mazatlán. The
+fallback excludes the erroneous duplicate in Sonora, since the city is
+in Sinaloa according to [INEGI](https://www.inegi.org.mx/contenidos/productos/prod_serv/contenidos/espanol/bvinegi/productos/nueva_estruc/889463911173.pdf).
+
+The nine regional houses preserve their individual footprints and roofs.
+Their furnished rooms use the shared domestic furniture and loot
+palettes, including the ordinary variation in locks, damage and
+tidiness. Kitchen, bathroom, bedroom and utility storage use the same
+supply groups as other houses.
+
+Design references include the [NYC Landmarks Preservation Commission's
+description of the Manhattan grid](https://s-media.nyc.gov/agencies/lpc/lp/2097.pdf),
+[New York's CBD zoning definition](https://zr.planning.nyc.gov/article-i/chapter-2/12-10),
+[Winnipeg's downtown urban design guidelines](https://www.winnipeg.ca/ppd/Documents/CityPlanning/Downtown/UrbanDesignReview/Urban-Design-Guidelines.pdf),
+[Winnipeg's industrial park information](https://www.winnipeg.ca/building-development/doing-business-city/city-property/property-sale),
+[Boston's historic street network](https://content.boston.gov/departments/streets-cabinet/neighborhood-street-plazas),
+[Mexico City's historic centre plan](https://jefaturadegobierno.cdmx.gob.mx/comunicacion/nota/tenemos-la-obligacion-de-cuidar-el-centro-historico-para-disfrutarlo-en-todas-sus-dimensiones-marti-batres-durante-presentacion-del-plan-integral-de-manejo-2023-2028)
+and the [EPA's street network design guide](https://www.epa.gov/sites/default/files/2014-04/documents/best-development-practices.pdf).
+
+The layout applies when a North American overmap is generated. Use a fresh
+world to see a complete city with the new layout.
+
 
 ## Soil and recipes
 

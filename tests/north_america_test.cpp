@@ -145,6 +145,23 @@ TEST_CASE( "atlas_roads_agree_across_chunk_edges", "[north_america][worldgen]" )
     }
 }
 
+TEST_CASE( "reusing_climate_normals_preserves_water_freeze_temperature_samples",
+           "[north_america][weather]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    const auto &generator = get_weather().get_cur_weather_gen();
+    const tripoint_abs_ms water( -1825851, -1120910, 0 );
+    const auto climate = generator.climate_at( water );
+    REQUIRE( climate );
+    const time_point start = calendar::turn_zero + calendar::year_length() + 8_hours;
+    for( int day = 1; day <= 10; ++day ) {
+        const time_point sample = start - day * 1_days;
+        CHECK( generator.get_weather_temperature( water, sample, 1326, &climate ) ==
+               generator.get_weather_temperature( water, sample, 1326 ) );
+    }
+}
+
 TEST_CASE( "atlas_subsoil_uses_permafrost_and_annual_normals", "[north_america][weather]" )
 {
     CHECK( north_america::permafrost_coverage_at( point_abs_ms( -2306833, -4917212 ) ) == 95 );
