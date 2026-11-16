@@ -13,10 +13,10 @@
 
 static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_milk( "milk" );
-static const itype_id itype_water_clean( "water_clean" );
 static const itype_id itype_nail( "nail" );
 static const itype_id itype_string_6( "string_6" );
 static const itype_id itype_test_screwdriver( "test_screwdriver" );
+static const itype_id itype_water_clean( "water_clean" );
 
 namespace
 {
