@@ -24,19 +24,20 @@
 #include "units.h"
 
 class Character;
-struct item_comp;
-template<typename T> struct comp_selection;
 class JsonObject;
 class item;
 class item_location;
 class map;
-class vpart_position;
 class npc;
 class npc_template;
-struct furn_t;
-
+class vpart_position;
 enum class link_state : int;
 enum class ot_match_type : int;
+struct furn_t;
+struct item_activation_choices;
+struct item_comp;
+template<typename T> struct comp_selection;
+
 namespace sounds
 {
 enum class sound_t : int;
