@@ -770,6 +770,11 @@ void recipe_dictionary::find_items_on_loops()
     }
 }
 
+void recipe_dictionary::resolve_deferred()
+{
+    DynamicDataLoader::get_instance().load_deferred( deferred, false );
+}
+
 void recipe_dictionary::finalize()
 {
     DynamicDataLoader::get_instance().load_deferred( deferred );

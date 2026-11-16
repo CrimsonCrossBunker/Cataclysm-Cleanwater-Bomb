@@ -68,6 +68,7 @@ class recipe_dictionary
         static void load_practice( const JsonObject &jo, const std::string &src );
         static void load_nested_category( const JsonObject &jo, const std::string &src );
 
+        static void resolve_deferred();
         static void finalize();
         static void check_consistency();
         static void reset();

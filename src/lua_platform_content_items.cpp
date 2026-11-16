@@ -5538,6 +5538,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.category = crafting_category_id( entry.definition->category );
                         native.subcategory = entry.definition->subcategory;
                         native.exertion = static_cast<float>( entry.definition->activity_level );
+                        native.skill_used = skill_id::NULL_ID();
+                        native.never_learn = true;
                         for( const std::string &member : entry.definition->nested_recipes ) {
                             native.nested_category_data.emplace( member );
                         }
