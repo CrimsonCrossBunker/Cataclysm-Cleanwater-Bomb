@@ -24,12 +24,5 @@
         ]
       }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "status_enhancement",
-    "eoc_type": "EVENT",
-    "required_event": "game_start",
-    "effect": { "u_add_effect": "skill_status_buff", "duration": "PERMANENT" }
   }
 ]
