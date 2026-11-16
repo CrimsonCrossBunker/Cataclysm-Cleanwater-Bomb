@@ -197,6 +197,8 @@ static const skill_id skill_launcher( "launcher" );
 static const skill_id skill_swimming( "swimming" );
 static const skill_id skill_throw( "throw" );
 
+static const species_id species_ZOMBIE( "ZOMBIE" );
+
 static const trait_id trait_BRAWLER( "BRAWLER" );
 static const trait_id trait_GUNSHY( "GUNSHY" );
 
@@ -682,7 +684,7 @@ target_handler::trajectory target_handler::mode_turret_manual( avatar &you, turr
     ui.ammo = turret.ammo_data();
 
     restore_on_out_of_scope view_offset_prev( you.view_offset );
-    auto trajectory = ui.run();
+    target_handler::trajectory trajectory = ui.run();
     if( sweep ) {
         *sweep = ui.selected_sweep;
     }
@@ -1433,7 +1435,6 @@ std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &
         rl_dist( origin, primary ) > limit ) {
         return std::nullopt;
     }
-    static const species_id zombie_species( "ZOMBIE" );
     std::vector<tripoint_bub_ms> zombies;
     std::vector<tripoint_bub_ms> protected_positions;
     for( const Creature &critter : g->all_creatures() ) {
@@ -1445,7 +1446,7 @@ std::optional<firearm_sweep> find_firearm_sweep( const Character &shooter, map &
         if( shooter.attitude_to( critter ) != Creature::Attitude::HOSTILE ||
             critter.attitude_to( shooter ) == Creature::Attitude::FRIENDLY ) {
             protected_positions.push_back( pos );
-        } else if( rl_dist( origin, pos ) <= limit && critter.in_species( zombie_species ) &&
+        } else if( rl_dist( origin, pos ) <= limit && critter.in_species( species_ZOMBIE ) &&
                    shooter.sees( here, critter ) && here.clear_path( origin, pos, limit, 1, 100 ) ) {
             zombies.push_back( pos );
         }

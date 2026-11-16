@@ -1,12 +1,13 @@
 #include <algorithm>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <functional>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
 #include <random>
+#include <set>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -19,10 +20,10 @@
 #include "character.h"
 #include "character_attire.h"
 #include "character_id.h"
+#include "condition.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "dialogue.h"
-#include "condition.h"
 #include "dialogue_chatbin.h"
 #include "dialogue_helpers.h"
 #include "dialogue_win.h"
@@ -40,11 +41,13 @@
 #include "item.h"
 #include "item_category.h"
 #include "item_location.h"
-#include "talker_npc.h"
 #include "json.h"
 #include "json_loader.h"
 #include "kill_statistics.h"
 #include "lua_platform_handle.h"
+#include "player_identity.h"
+#include "talker_npc.h"
+#include "translation.h"
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     #include "lua_platform_dialogue.h"
     #include "lua_platform_runtime.h"
@@ -71,8 +74,8 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "rng.h"
-#include "string_formatter.h"
 #include "sounds.h"
+#include "string_formatter.h"
 #include "talker.h"
 #include "talker_topic.h"
 #include "translations.h"
@@ -88,6 +91,8 @@ static std::string gameplay_rng_state()
     state << rng_get_engine();
     return state.str();
 }
+
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
 
 static const bionic_id bio_ads( "bio_ads" );
 static const bionic_id bio_power_storage( "bio_power_storage" );
@@ -106,9 +111,12 @@ static const itype_id itype_badge_marshal( "badge_marshal" );
 static const itype_id itype_beer( "beer" );
 static const itype_id itype_bottle_glass( "bottle_glass" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_dnd_handbook( "dnd_handbook" );
 static const itype_id itype_knife_huge( "knife_huge" );
 static const itype_id itype_manual_speech( "manual_speech" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_test_apple( "test_apple" );
 static const itype_id itype_test_rock( "test_rock" );
 
 static const mission_type_id mission_TEST_MISSION_FIND_ITEM( "TEST_MISSION_FIND_ITEM" );
@@ -124,6 +132,7 @@ static const npc_class_id NC_TEST_CLASS( "NC_TEST_CLASS" );
 static const proficiency_id proficiency_prof_test( "prof_test" );
 
 static const skill_id skill_driving( "driving" );
+static const skill_id skill_speech( "speech" );
 
 static const spell_id spell_test_spell_json( "test_spell_json" );
 static const spell_id spell_test_spell_lava( "test_spell_lava" );
@@ -135,6 +144,7 @@ static const trait_id trait_PROF_SWAT( "PROF_SWAT" );
 static const trait_id trait_PSYCHOPATH( "PSYCHOPATH" );
 static const trait_id trait_SAPIOVORE( "SAPIOVORE" );
 static const trait_id trait_WEB_WEAVER( "WEB_WEAVER" );
+static const trait_id trait_eye_color( "eye_color" );
 static const trait_id trait_test_trait( "test_trait" );
 
 static npc &create_test_talker( bool shopkeep = false )
@@ -1118,29 +1128,28 @@ TEST_CASE( "trait_description_tags_resolve_character_context", "[npc_talk][regre
     dialogue d;
     npc &partner = prep_test( d );
     avatar &you = get_avatar();
-    const trait_id eyes( "eye_color" );
-    you.set_mutation( eyes, &eyes->variants.at( "blue" ) );
-    you.set_mut_variant( eyes, &eyes->variants.at( "blue" ) );
-    partner.set_mutation( eyes, &eyes->variants.at( "brown" ) );
+    you.set_mutation( trait_eye_color, &trait_eye_color->variants.at( "blue" ) );
+    you.set_mut_variant( trait_eye_color, &trait_eye_color->variants.at( "blue" ) );
+    partner.set_mutation( trait_eye_color, &trait_eye_color->variants.at( "brown" ) );
     monster target( mon_zombie );
     std::string expected;
 
     SECTION( "character beta keeps its own variant" ) {
-        expected = eyes->desc( "brown" );
+        expected = trait_eye_color->desc( "brown" );
     }
     SECTION( "topic-only beta uses the speaker variant" ) {
         d = dialogue( get_talker_for( you ),
                       get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
-        expected = eyes->desc( "blue" );
+        expected = trait_eye_color->desc( "blue" );
     }
     SECTION( "monster beta uses the speaker variant" ) {
         d = dialogue( get_talker_for( you ), get_talker_for( target ) );
-        expected = eyes->desc( "blue" );
+        expected = trait_eye_color->desc( "blue" );
     }
     SECTION( "non-character participants use the base description" ) {
         d = dialogue( get_talker_for( target ),
                       get_talker_for( std::vector<std::string> { "TALK_TEST_TAGS" } ) );
-        expected = eyes->desc();
+        expected = trait_eye_color->desc();
     }
 
     std::string text = "<trait_description:eye_color>";
@@ -2454,8 +2463,8 @@ TEST_CASE( "dialogue_total_kills_belongs_to_its_speaker", "[npc_talk][multiplaye
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
-    host.get_kill_statistics().reset( { { mtype_id( "mon_zombie" ), 9 } }, {} );
-    speaker.get_kill_statistics().reset( { { mtype_id( "mon_zombie" ), 2 } }, {} );
+    host.get_kill_statistics().reset( { { mon_zombie, 9 } }, {} );
+    speaker.get_kill_statistics().reset( { { mon_zombie, 2 } }, {} );
     std::string local_text = "<total_kills>";
     std::string remote_text = "<total_kills>";
     parse_tags( local_text, host, speaker );
@@ -2760,7 +2769,6 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
     }
 
     SECTION( "session_training_selection_and_remote_paid_or_reward_training" ) {
-        const skill_id skill_speech( "speech" );
         provider.set_skill_level( skill_driving, 5 );
         provider.set_skill_level( skill_speech, 5 );
         host.set_skill_level( skill_driving, 0 );
@@ -2788,20 +2796,20 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
 
         CHECK( provider.op_of_u.owed == host_owed_before );
         CHECK( provider.opinion_of( remote.getID() ).owed < remote_owed_before );
-        CHECK( remote.activity.id() == activity_id( "ACT_TRAIN" ) );
-        CHECK_FALSE( host.activity.id() == activity_id( "ACT_TRAIN" ) );
+        CHECK( remote.activity.id() == ACT_TRAIN );
+        CHECK_FALSE( host.activity.id() == ACT_TRAIN );
 
         remote.cancel_activity();
         provider.cancel_activity();
 
         mission *reward_miss = mission::reserve_new(
-                                   mission_type_id( "TEST_MISSION_GENERIC_REWARD" ),
+                                   mission_TEST_MISSION_GENERIC_REWARD,
                                    provider.getID() );
         REQUIRE( reward_miss != nullptr );
         provider.chatbin.missions.push_back( reward_miss );
         remote_d.actor( true )->select_mission( reward_miss );
         mission_dialogue::assign_selected_mission( remote_d );
-        remote.i_add( item( itype_id( "test_rock" ) ) );
+        remote.i_add( item( itype_test_rock ) );
         REQUIRE( reward_miss->is_complete( provider.getID(), remote ) );
 
         const int remote_owed_after_paid = provider.opinion_of( remote.getID() ).owed;
@@ -2811,12 +2819,12 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
 
         CHECK( provider.opinion_of( remote.getID() ).owed == remote_owed_after_paid );
         CHECK( provider.chatbin.missions_assigned.empty() );
-        CHECK( remote.activity.id() == activity_id( "ACT_TRAIN" ) );
+        CHECK( remote.activity.id() == ACT_TRAIN );
     }
 
     SECTION( "remote_mission_reward_credits_remote_debt_without_host_ui" ) {
         mission *miss = mission::reserve_new(
-                            mission_type_id( "TEST_MISSION_GENERIC_REWARD" ),
+                            mission_TEST_MISSION_GENERIC_REWARD,
                             provider.getID() );
         REQUIRE( miss != nullptr );
         provider.chatbin.missions.push_back( miss );
@@ -2838,12 +2846,12 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
     }
 
     SECTION( "remote_offer_can_take_only_the_speakers_item" ) {
-        const auto control = g->player_controls().claim(
-                                 player_id( std::string( 32, 'c' ) ), remote );
+        const player_control control = g->player_controls().claim(
+                                           player_id( std::string( 32, 'c' ) ), remote );
         REQUIRE( control.get() == &remote );
         provider.setpos( get_map(), remote.pos_bub() + tripoint::west );
         provider.clear_worn();
-        REQUIRE( provider.wear_item( item( itype_id( "debug_backpack" ) ), false ) );
+        REQUIRE( provider.wear_item( item( itype_debug_backpack ), false ) );
         host.set_wielded_item( item( itype_knife_huge ) );
         item_location offered = host.get_wielded_item();
         REQUIRE( offered );
@@ -2854,20 +2862,19 @@ TEST_CASE( "dialogue_npc_services_use_session_character_ownership",
         CHECK( offered.held_by( host ) );
         CHECK( host.is_wielding( *offered ) );
 
-        const itype_id gift( "rock" );
-        remote.set_wielded_item( item( gift ) );
+        remote.set_wielded_item( item( itype_rock ) );
         const item_location remote_offer = remote.get_wielded_item();
-        const int before = provider.amount_of( gift );
+        const int before = provider.amount_of( itype_rock );
         CHECK( receiver.give_item_to( remote_offer, false ) ==
                provider.chat_snippets().snip_give_carry.translated() );
         CHECK_FALSE( remote_offer );
-        CHECK( provider.amount_of( gift ) == before + 1 );
+        CHECK( provider.amount_of( itype_rock ) == before + 1 );
         CHECK( offered.held_by( host ) );
 
         provider.set_hunger( 100 );
         const int host_trust = provider.op_of_u.trust;
         const int remote_trust = provider.opinion_of( remote.getID() ).trust;
-        remote.set_wielded_item( item( itype_id( "test_apple" ) ) );
+        remote.set_wielded_item( item( itype_test_apple ) );
         const item_location food = remote.get_wielded_item();
         CHECK( receiver.give_item_to( food, true ) ==
                provider.chat_snippets().snip_consume_eat.translated() );
