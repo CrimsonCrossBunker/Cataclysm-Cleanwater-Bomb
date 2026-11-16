@@ -1,5 +1,6 @@
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include "avatar.h"
@@ -20,6 +21,7 @@
 #include "map_helpers_tests.h"
 #include "messages.h"
 #include "monster.h"
+#include "pimpl.h"
 #include "player_helpers.h"
 #include "point.h"
 #include "talker.h"
