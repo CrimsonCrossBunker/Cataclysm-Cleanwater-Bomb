@@ -20,6 +20,7 @@
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
 static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
+static const gun_mode_id gun_mode_EXPLICIT( "EXPLICIT" );
 static const gun_mode_id gun_mode_REACH( "REACH" );
 static const gun_mode_id gun_mode_VOLLEY( "VOLLEY" );
 static const itype_id itype_223( "223" );
@@ -189,7 +190,7 @@ TEST_CASE( "gun_modes_load_legacy_quantities_and_rpm_strings", "[ranged][gun_rpm
     CHECK( gun.modes.at( gun_mode_DEFAULT ).rpm() == 0 );
     CHECK( gun.modes.at( gun_mode_AUTO ).qty() == 0 );
     CHECK( gun.modes.at( gun_mode_AUTO ).rpm() == 600 );
-    CHECK( gun.modes.at( gun_mode_id( "EXPLICIT" ) ).rpm() == 750 );
+    CHECK( gun.modes.at( gun_mode_EXPLICIT ).rpm() == 750 );
     CHECK( gun.modes.at( gun_mode_VOLLEY ).qty() == 2 );
     CHECK( gun.modes.at( gun_mode_VOLLEY ).rpm() == 0 );
     CHECK( gun.modes.at( gun_mode_REACH ).qty() == 2 );
