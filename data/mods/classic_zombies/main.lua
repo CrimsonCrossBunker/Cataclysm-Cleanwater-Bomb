@@ -1,5 +1,6 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
 
 local definition = content.Blacklist {
     kind = "monster",
@@ -9,3 +10,20 @@ local definition = content.Blacklist {
 definition:category("CLASSIC")
 definition:category("WILDLIFE")
 content.add(definition)
+
+-- The native dialogue still reads this key from the character's save.
+ccb.runtime.handler("initialize_dialogue_flag", function()
+    local character = services.characters.avatar()
+    local current = services.variables.get_string(character, "flag_modded")
+    if not current.ok or current.value.value == "ddotd" then
+        return
+    end
+
+    -- The old variable action always drew from the shared RNG, even for one value.
+    services.random.native_int(0, 0)
+    local write = services.variables.set(character, "flag_modded", "ddotd", { include_before = false })
+    if write.ok then
+        services.native_events.emit("u_var_changed", { "flag_modded", "ddotd" })
+    end
+end, 1)
+ccb.runtime.on("game:game_begin", "initialize_dialogue_flag")
