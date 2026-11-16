@@ -1964,7 +1964,7 @@ bool firestarter_actor::query_fire_choices( Character &who, const item &tool, ma
     choices = {};
     const character_action_guard lifetime( who );
     const auto context = here.get_context_reference();
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const bool needs_tinder = tool.has_flag( flag_REQUIRES_TINDER );
     if( !can_use( who, tool, &here, position ).success() ||
         prep_firestarter_use( who, &here, position, true ) == start_type::NONE ||
@@ -2597,7 +2597,7 @@ bool salvage_actor::cut_up( Character &p, item &cutter, item_location &cut ) con
     const auto context = here.get_context_reference();
     const auto tool = cutter.get_safe_reference();
     const itype_id cutter_type = cutter.typeId();
-    const auto origin = p.pos_abs();
+    const tripoint_abs_ms origin = p.pos_abs();
     const uint64_t generation = p.activity.identity_generation();
     const item_source source = capture_item_source( p, cut );
     if( resolve_item_source( p, here, source ) != cut ) {
@@ -6152,7 +6152,7 @@ std::optional<prepared_cable_extension> prepare_cable_extension( Character &who,
 bool link_up_actor::confirm_cable_extension( Character &who, item_location cable,
         item_location selected, bool &allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work ) {
         return false;
     }
@@ -6166,7 +6166,7 @@ bool link_up_actor::confirm_cable_extension( Character &who, item_location cable
 std::optional<int> link_up_actor::extend_cable( Character &who, map &here, item_location cable,
         item_location selected, bool allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work || ( work->needs_spill && !allow_spill ) ) {
         return std::nullopt;
     }

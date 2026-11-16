@@ -42,7 +42,7 @@ static const itype_id itype_weldtank( "weldtank" );
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_mechanics( "mechanics" );
 
-static const vproto_id vproto_shopping_cart( "shopping_cart" );
+static const vproto_id vehicle_prototype_shopping_cart( "shopping_cart" );
 
 TEST_CASE( "crafting_inventory_filters_nested_map_ownership", "[crafting][inventory][ownership]" )
 {
@@ -76,7 +76,7 @@ TEST_CASE( "crafting_inventory_filters_nested_map_ownership", "[crafting][invent
     map &here = get_map();
     if( cargo ) {
         const tripoint_bub_ms position = crafter.pos_bub() + point::east;
-        vehicle *cart = here.add_vehicle( vproto_shopping_cart, position, 0_degrees, 100,
+        vehicle *cart = here.add_vehicle( vehicle_prototype_shopping_cart, position, 0_degrees, 100,
                                           veh_spawn_status::UNDAMAGED );
         REQUIRE( cart );
         const auto storage = here.veh_at( position ).cargo();
