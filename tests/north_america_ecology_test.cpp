@@ -156,6 +156,29 @@ TEST_CASE( "atlas_start_clearance_measures_from_the_city_edge", "[north_america]
     CHECK_FALSE( north_america::in_urban_footprint( beyond_buffer, 11 ) );
 }
 
+TEST_CASE( "outskirts_shelter_can_be_added_beyond_the_existing_city", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = false;
+    const auto om = std::make_unique<overmap>( point_abs_om( 200, 200 ) );
+    const point_om_omt town( OMAPX / 2, OMAPY / 2 );
+    om->cities.emplace_back( "Start test", town, 6 );
+    const oter_id field( "field" );
+    for( int y = 0; y < OMAPY; ++y ) {
+        for( int x = 0; x < OMAPX; ++x ) {
+            om->ter_set( tripoint_om_omt( x, y, 0 ), field );
+        }
+    }
+
+    const tripoint_om_omt shelter = om->place_outskirts_shelter();
+    REQUIRE_FALSE( shelter.is_invalid() );
+    CHECK( square_dist( town.raw(), shelter.xy().raw() ) >= 18 );
+    CHECK( om->is_far_from_city( shelter ) );
+    CHECK( om->ter( shelter )->get_type_id() == oter_type_str_id( "shelter" ) );
+    CHECK( om->ter( shelter + tripoint::below )->get_type_id() == oter_type_str_id( "shelter_under" ) );
+    CHECK( om->ter( shelter + tripoint::above )->get_type_id() == oter_type_str_id( "shelter_roof" ) );
+}
+
 TEST_CASE( "atlas_city_development_tapers_and_rounds_the_fringe", "[north_america]" )
 {
     const point_abs_omt center( -76080, -46704 );

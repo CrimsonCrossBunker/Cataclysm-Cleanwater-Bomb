@@ -20,6 +20,7 @@
 #include "line.h"
 #include "map.h"
 #include "map_scale_constants.h"
+#include "mapgen.h"
 #include "mapgen_functions.h"
 #include "mapgendata.h"
 #include "north_america.h"
@@ -428,6 +429,24 @@ static int taper_width( int edge, int interior, int distance, int length )
     return static_cast<int>( std::lround( edge + ( interior - edge ) * t * t * ( 3 - 2 * t ) ) );
 }
 
+static void spawn_atlas_street_vehicles( mapgendata &dat, bool north_south, bool east_west )
+{
+    if( !( north_south || east_west ) || !x_in_y( 67, 100 ) ) {
+        return;
+    }
+    static const nested_mapgen_id straight_ns( "24x24_road_straight_vehicles_city" );
+    static const nested_mapgen_id straight_ew( "24x24_road_straight_vehicles_city_ew" );
+    static const nested_mapgen_id crossroads( "24x24_road_four_way_crossroad_vehicles_city" );
+    const nested_mapgen_id &pattern =
+        north_south && east_west ? crossroads : north_south ? straight_ns : straight_ew;
+    const auto it = nested_mapgens.find( pattern );
+    if( it != nested_mapgens.end() ) {
+        if( const auto *recipe = it->second.funcs().pick() ) {
+            ( *recipe )->nest( dat, tripoint_rel_ms::zero, "atlas street vehicles" );
+        }
+    }
+}
+
 static bool draw_wide_avenue( mapgendata &dat )
 {
     const oter_id terrain = dat.terrain_type();
@@ -476,6 +495,10 @@ static bool draw_wide_avenue( mapgendata &dat )
             dat.m.ter_set( vertical ? point_bub_ms( across, along ) : point_bub_ms( along, across ),
                            ground );
         }
+    }
+    // The second tile shares the carriageway but generates separately.
+    if( !flank ) {
+        spawn_atlas_street_vehicles( dat, vertical, !vertical );
     }
     return true;
 }
@@ -599,9 +622,10 @@ bool draw_mapped_road( mapgendata &dat )
             }
         }
     }
-    if( !on_bridge && !boulevard && !collector && one_in( 10 ) && ( ( north && south && !east &&
-            !west ) ||
-            ( east && west && !north && !south ) ) ) {
+    if( !on_bridge && ( boulevard || collector ) ) {
+        spawn_atlas_street_vehicles( dat, north && south, east && west );
+    } else if( !on_bridge && one_in( 10 ) && ( ( north && south && !east &&
+               !west ) || ( east && west && !north && !south ) ) ) {
         const bool heading_positive = one_in( 2 );
         const int side = heading_positive ? -lane_width : lane_width;
         const tripoint_bub_ms where( north ? center + side : center,

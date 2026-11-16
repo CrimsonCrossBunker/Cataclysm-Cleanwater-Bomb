@@ -1402,6 +1402,51 @@ bool overmap::is_far_from_city( const tripoint_om_omt &p ) const
     } );
 }
 
+tripoint_om_omt overmap::place_outskirts_shelter()
+{
+    static const overmap_special_id shelter_id( "Evac Shelter" );
+    static const overmap_location_id wilderness( "wilderness" );
+    if( !shelter_id.is_valid() ) {
+        return tripoint_om_omt::invalid;
+    }
+    const overmap_special &shelter = shelter_id.obj();
+    const auto footprint = shelter.required_locations();
+    const tripoint_om_omt midpoint( OMAPX / 2, OMAPY / 2, 0 );
+    const city &nearest = get_nearest_city( midpoint );
+    const point_om_omt center = nearest ? nearest.pos : midpoint.xy();
+    for( int radius = 0; radius < std::max( OMAPX, OMAPY ); ++radius ) {
+        for( const point_om_omt &site : closest_points_first( center, radius, radius ) ) {
+            const tripoint_om_omt p( site, 0 );
+            if( !inbounds( p, 2 ) || !wilderness->test( ter( p ) ) || !is_far_from_city( p ) ) {
+                continue;
+            }
+            const auto available = [&]( om_direction::type dir ) {
+                return std::none_of( footprint.begin(), footprint.end(),
+                [&]( const overmap_special_locations & tile ) {
+                    return overmap_special_placements.count( p + om_direction::rotate( tile.p, dir ) );
+                } ) &&can_place_special( shelter, p, dir, true );
+            };
+            om_direction::type best = om_direction::type::invalid;
+            int best_score = -1;
+            for( const auto dir : om_direction::all ) {
+                const int score = shelter.score_rotation_at( *this, p, dir );
+                if( score > best_score && available( dir ) ) {
+                    best = dir;
+                    best_score = score;
+                }
+                if( !shelter.is_rotatable() ) {
+                    break;
+                }
+            }
+            if( best != om_direction::type::invalid &&
+                !place_special( shelter, p, best, get_nearest_city( p ), true, false ).empty() ) {
+                return p;
+            }
+        }
+    }
+    return tripoint_om_omt::invalid;
+}
+
 tripoint_om_omt overmap::find_random_omt( const std::pair<std::string, ot_match_type> &target,
         std::optional<city> target_city ) const
 {

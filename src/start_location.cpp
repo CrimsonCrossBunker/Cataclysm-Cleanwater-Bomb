@@ -340,33 +340,63 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
     const bool check_city_constraints = requires_city();
     // Match all variants of this start location, sharing the terrain lookup across overmaps.
     std::unordered_map<oter_id, const omt_types_parameters *> targets;
+    const auto find_target = [&]( const oter_id & terrain ) -> const omt_types_parameters * {
+        auto [target, inserted] = targets.try_emplace( terrain, nullptr );
+        if( inserted )
+        {
+            const auto it = std::find_if( _locations.begin(), _locations.end(),
+            [&]( const omt_types_parameters & variant ) {
+                return is_ot_match( variant.omt, terrain, variant.omt_type );
+            } );
+            if( it != _locations.end() ) {
+                target->second = &*it;
+            }
+        }
+        return target->second;
+    };
+    static const oter_type_str_id shelter( "shelter" );
+    static const oter_type_str_id basement( "shelter_under" );
+    const auto shelter_start = [&]() -> std::optional<int> {
+        if( check_city_constraints )
+        {
+            return std::nullopt;
+        }
+        for( const int z : { 0, -1 } )
+        {
+            if( !constraints_.allowed_z_levels.contains( z ) ) {
+                continue;
+            }
+            const oter_type_str_id &type = z == 0 ? shelter : basement;
+            if( !type.is_valid() ) {
+                continue;
+            }
+            // A modded exact-rotation start must match the shelter whichever way it faces.
+            if( std::all_of( om_direction::all.begin(), om_direction::all.end(),
+            [&]( om_direction::type dir ) {
+            return find_target( type->get_rotated( dir ) ) != nullptr;
+            } ) ) {
+                return z;
+            }
+        }
+        return std::nullopt;
+    }();
     for( const point_abs_om &omp : closest_points_first( origin, radius ) ) {
-        const overmap &omap = overmap_buffer.get( omp );
+        overmap &omap = overmap_buffer.get( omp );
         std::vector<std::pair<tripoint_om_omt, const omt_types_parameters *>> candidates;
         for( int z = std::max( -OVERMAP_DEPTH, constraints_.allowed_z_levels.min );
              z <= std::min( OVERMAP_HEIGHT, constraints_.allowed_z_levels.max ); ++z ) {
             for( int y = 0; y < OMAPY; ++y ) {
                 for( int x = 0; x < OMAPX; ++x ) {
                     const tripoint_om_omt p( x, y, z );
-                    const oter_id terrain = omap.ter( p );
-                    auto [target, inserted] = targets.try_emplace( terrain, nullptr );
-                    if( inserted ) {
-                        const auto it = std::find_if( _locations.begin(), _locations.end(),
-                        [&]( const omt_types_parameters & variant ) {
-                            return is_ot_match( variant.omt, terrain, variant.omt_type );
-                        } );
-                        if( it != _locations.end() ) {
-                            target->second = &*it;
-                        }
-                    }
-                    if( !target->second || !omap.is_far_from_city( p ) ) {
+                    const omt_types_parameters *target = find_target( omap.ter( p ) );
+                    if( !target || !omap.is_far_from_city( p ) ) {
                         continue;
                     }
                     if( !check_city_constraints || std::any_of( omap.cities.begin(), omap.cities.end(),
                     [&]( const city & candidate ) {
                     return can_belong_to_city( p, candidate );
                     } ) ) {
-                        candidates.emplace_back( p, target->second );
+                        candidates.emplace_back( p, target );
                     }
                 }
             }
@@ -374,6 +404,17 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         if( !candidates.empty() ) {
             const auto &chosen = random_entry( candidates );
             return { project_combine( omp, chosen.first ), chosen.second->parameters };
+        }
+        // Ordinary shelters spawn close to towns. Create the same shelter and
+        // preserve the selected scenario parameters when one is needed farther out.
+        if( shelter_start ) {
+            const tripoint_om_omt site = omap.place_outskirts_shelter();
+            if( !site.is_invalid() ) {
+                const tripoint_om_omt p( site.xy(), *shelter_start );
+                if( const auto *target = find_target( omap.ter( p ) ) ) {
+                    return { project_combine( omp, p ), target->parameters };
+                }
+            }
         }
     }
     return { tripoint_abs_omt::invalid, {} };
