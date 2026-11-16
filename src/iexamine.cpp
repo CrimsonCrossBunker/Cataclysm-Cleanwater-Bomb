@@ -2379,12 +2379,13 @@ void iexamine::fswitch( Character &you, const tripoint_bub_ms &examp )
 
 namespace
 {
-void submit_farming_choice( Character &who, const farming_command &command )
+void submit_farming_choice( Character &who, const farming_command &command,
+                            bool auto_forage = false )
 {
     if( who.is_avatar() && cata_mp::client_farming_command( command ) ) {
         return;
     }
-    execute_farming_command( who, command );
+    execute_farming_command( who, command, auto_forage );
 }
 } // namespace
 
@@ -2621,7 +2622,7 @@ void query_gathering( Character &who, const tripoint_bub_ms &position, bool auto
         return;
     }
     if( lifetime && context ) {
-        submit_farming_choice( who, choice );
+        submit_farming_choice( who, choice, automatic );
     }
 }
 } // namespace

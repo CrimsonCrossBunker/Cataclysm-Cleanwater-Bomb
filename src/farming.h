@@ -42,7 +42,8 @@ struct farming_command {
 
 farming_command capture_farming_command( Character &who, map &here,
         const tripoint_abs_ms &position, farming_action action );
-bool execute_farming_command( Character &who, const farming_command &command );
+bool execute_farming_command( Character &who, const farming_command &command,
+                              bool auto_forage = false );
 
 // Resolve the seed stored directly in a plot, including sealed crop furniture.
 item *resolve_planted_seed( map &here, const item_source &source );
