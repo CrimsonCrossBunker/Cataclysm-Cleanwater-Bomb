@@ -1479,6 +1479,54 @@ ccb.content.add(allowed)
     CHECK_FALSE( platform::detail::capture_platform_monster_filter().exclusive );
 }
 
+TEST_CASE( "lua_platform_monster_groups_wait_for_later_lua_whitelists",
+           "[lua][platform][content]" )
+{
+    namespace platform = cata::lua_platform;
+    const mtype_id zombie( "mon_zombie" );
+    REQUIRE( zombie.is_valid() );
+    auto &groups = MonsterGroupManager::Get_all_Groups();
+    auto previous_groups = std::exchange( groups, {} );
+    auto previous_filter = platform::detail::capture_platform_monster_filter();
+    platform::detail::restore_platform_monster_filter( {} );
+    const on_out_of_scope restore( [&]() {
+        platform::discard_prepared_mods();
+        groups = std::move( previous_groups );
+        platform::detail::restore_platform_monster_filter( std::move( previous_filter ) );
+    } );
+    MonsterGroupManager::LoadMonsterBlacklist( json_loader::from_string(
+                R"json({"monsters":["mon_zombie"]})json" ).get_object() );
+    REQUIRE( MonsterGroupManager::monster_is_blacklisted( zombie ) );
+
+    const platform_lua_test_directory group_mod;
+    group_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+local group = ccb.content.MonsterGroup {
+    id = "GROUP_LUA_WHITELIST_ORDER", default_monster = "mon_zombie",
+}
+group:monster("mon_zombie", 100, 1, 1, 1)
+ccb.content.add(group)
+)lua" );
+    const platform_lua_test_directory list_mod;
+    list_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+local allowed = ccb.content.Blacklist { kind = "monster", whitelist = true }
+allowed:entry("mon_zombie")
+ccb.content.add(allowed)
+)lua" );
+    std::string error;
+    REQUIRE( platform::prepare_mods( {
+        { "lua_group_first", group_mod.root, group_mod.root / "main.lua" },
+        { "lua_whitelist_later", list_mod.root, list_mod.root / "main.lua" },
+    }, error ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    MonsterGroupManager::FinalizeMonsterGroups();
+    const MonsterGroup &group = groups.at( mongroup_id( "GROUP_LUA_WHITELIST_ORDER" ) );
+    CHECK( group.defaultMonster == zombie );
+    REQUIRE( group.monsters.size() == 1 );
+    CHECK( group.monsters.front().mtype == zombie );
+}
+
 TEST_CASE( "lua_platform_content_finalization_is_single_use_and_rollback_is_terminal",
            "[lua][platform][content]" )
 {

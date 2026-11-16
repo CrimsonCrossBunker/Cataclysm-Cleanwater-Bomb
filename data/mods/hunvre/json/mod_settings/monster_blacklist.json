@@ -1,7 +1,0 @@
-[
-  {
-    "type": "MONSTER_WHITELIST",
-    "mode": "EXCLUSIVE",
-    "species": [ "EUZHVIL" ]
-  }
-]

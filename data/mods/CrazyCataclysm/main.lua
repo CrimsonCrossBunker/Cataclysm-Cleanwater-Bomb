@@ -1,0 +1,14 @@
+local ccb = require("ccb")
+local content = ccb.content
+
+local definition = content.Blacklist {
+    kind = "monster",
+    whitelist = true,
+}
+definition:entry("mon_zombie_dancer")
+definition:entry("mon_zombie_jackson")
+definition:entry("mon_shia")
+definition:entry("mon_bear_smoky")
+definition:entry("mon_zombie_skeltal")
+definition:entry("mon_zombie_skeltal_minion")
+content.add(definition)

@@ -9126,9 +9126,9 @@ bool content_transaction::apply( std::string &error )
             }
             groups[id] = std::move( native );
         }
-        if( !pimpl_->monster_groups.empty() ) {
-            MonsterGroupManager::FinalizeMonsterGroups();
-        }
+        // The global data finalizer filters groups after all Mods have
+        // registered their monster lists. Filtering here could erase a
+        // monster before a later Lua Mod's whitelist is installed.
 
         for( const overmap_connection_registration &entry :
              pimpl_->overmap_connections ) {
@@ -10038,9 +10038,6 @@ void content_transaction::rollback()
         } else {
             groups.erase( it->first );
         }
-    }
-    if( !pimpl_->monster_group_undo.empty() ) {
-        MonsterGroupManager::FinalizeMonsterGroups();
     }
     pimpl_->monster_group_undo.clear();
 

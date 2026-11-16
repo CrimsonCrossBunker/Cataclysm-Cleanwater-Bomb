@@ -1,10 +1,5 @@
 [
   {
-    "type": "MONSTER_WHITELIST",
-    "mode": "EXCLUSIVE",
-    "categories": [ "CLASSIC", "WILDLIFE" ]
-  },
-  {
     "type": "SCENARIO_BLACKLIST",
     "subtype": "blacklist",
     "scenarios": [

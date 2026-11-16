@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:e197a89ebfff96d011eb79fc766fe8018386b0c6501ce396e57b93c2100309a5",
+    "source_fingerprint": "sha256:091f1881e8f6e5afd0be8d1ff9c5e3a1828c297f3710aba4a1a90a39e8269ce0",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6879,
-    "top_level_objects": 97811,
+    "tracked_json_files": 6872,
+    "top_level_objects": 97802,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -516,7 +516,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 9,
+        "occurrences": 4,
         "examples": [
           {
             "path": "data/json/default_blacklist.json",
@@ -629,11 +629,11 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 5,
+        "occurrences": 1,
         "examples": [
           {
-            "path": "data/mods/CrazyCataclysm/modinfo.json",
-            "pointer": "/1"
+            "path": "data/mods/Xedra_Evolved/mod_interactions/classic_zombies/monster_whitelists.json",
+            "pointer": "/0"
           }
         ],
         "contract_roots": [
