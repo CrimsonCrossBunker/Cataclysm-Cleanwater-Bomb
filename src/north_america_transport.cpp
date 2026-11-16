@@ -34,10 +34,20 @@
 #include "units.h"
 #include "vehicle_group.h"
 
+static const nested_mapgen_id
+nested_mapgen_24x24_road_four_way_crossroad_vehicles_city( "24x24_road_four_way_crossroad_vehicles_city" );
+static const nested_mapgen_id
+nested_mapgen_24x24_road_straight_vehicles_city( "24x24_road_straight_vehicles_city" );
+static const nested_mapgen_id
+nested_mapgen_24x24_road_straight_vehicles_city_ew( "24x24_road_straight_vehicles_city_ew" );
+
 static const oter_str_id oter_atlas_avenue_flank_ew( "atlas_avenue_flank_ew" );
 static const oter_str_id oter_atlas_avenue_flank_ns( "atlas_avenue_flank_ns" );
 static const oter_str_id oter_road_ew( "road_ew" );
 static const oter_str_id oter_road_ns( "road_ns" );
+
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
+static const oter_type_str_id oter_type_road( "road" );
 
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
 static const ter_str_id ter_t_grass( "t_grass" );
@@ -434,11 +444,10 @@ static void spawn_atlas_street_vehicles( mapgendata &dat, bool north_south, bool
     if( !( north_south || east_west ) || !x_in_y( 67, 100 ) ) {
         return;
     }
-    static const nested_mapgen_id straight_ns( "24x24_road_straight_vehicles_city" );
-    static const nested_mapgen_id straight_ew( "24x24_road_straight_vehicles_city_ew" );
-    static const nested_mapgen_id crossroads( "24x24_road_four_way_crossroad_vehicles_city" );
-    const nested_mapgen_id &pattern =
-        north_south && east_west ? crossroads : north_south ? straight_ns : straight_ew;
+    const nested_mapgen_id &pattern = north_south && east_west ?
+                                      nested_mapgen_24x24_road_four_way_crossroad_vehicles_city :
+                                      north_south ? nested_mapgen_24x24_road_straight_vehicles_city :
+                                      nested_mapgen_24x24_road_straight_vehicles_city_ew;
     const auto it = nested_mapgens.find( pattern );
     if( it != nested_mapgens.end() ) {
         if( const auto *recipe = it->second.funcs().pick() ) {
@@ -511,11 +520,9 @@ bool draw_mapped_road( mapgendata &dat )
     if( draw_wide_avenue( dat ) ) {
         return true;
     }
-    static const oter_type_str_id road( "road" );
-    static const oter_type_str_id bridge( "atlas_road_bridge" );
     const oter_type_str_id type = dat.terrain_type()->get_type_id();
-    const bool on_bridge = type == bridge;
-    if( type != road && !on_bridge ) {
+    const bool on_bridge = type == oter_type_atlas_road_bridge;
+    if( type != oter_type_road && !on_bridge ) {
         return false;
     }
     const auto neighbors = road_network( dat.pos().xy() - point::south_east, 3, 3 );
