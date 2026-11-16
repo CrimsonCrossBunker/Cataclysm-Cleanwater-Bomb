@@ -4,7 +4,7 @@
   "inventory_kind": "eoc_effects",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:eb3ff768f6b5ae37f62304301fd436a9bd7952c9aff7262d2835ef092a2ea5fa",
+    "source_fingerprint": "sha256:d1b4b68a990f5474d7cd2e2dab16393a4e960667152addde6469005b7d50cc94",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -7356,7 +7356,7 @@
       "contract_kind": "effect",
       "example_evidence": {
         "status": "lexical_candidate",
-        "occurrences": 22462,
+        "occurrences": 22456,
         "examples": [
           {
             "path": "data/json/artifact/altered_object_active.json",
