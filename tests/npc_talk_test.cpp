@@ -49,7 +49,9 @@
 #include "talker_npc.h"
 #include "translation.h"
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-
+    #include "lua_platform_dialogue.h"
+    #include "lua_platform_runtime.h"
+    #include "lua_platform_sol.h"
 #endif
 #include "magic.h"
 #include "map.h"
