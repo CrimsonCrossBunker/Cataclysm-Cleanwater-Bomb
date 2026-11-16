@@ -46,6 +46,9 @@ class item;
 
 static const efftype_id effect_bleed( "bleed" );
 
+static const oter_type_str_id oter_type_shelter( "shelter" );
+static const oter_type_str_id oter_type_shelter_under( "shelter_under" );
+
 static const ter_str_id ter_t_curtains( "t_curtains" );
 static const ter_str_id ter_t_door_boarded( "t_door_boarded" );
 static const ter_str_id ter_t_door_c( "t_door_c" );
@@ -354,8 +357,6 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
         }
         return target->second;
     };
-    static const oter_type_str_id shelter( "shelter" );
-    static const oter_type_str_id basement( "shelter_under" );
     const auto shelter_start = [&]() -> std::optional<int> {
         if( check_city_constraints )
         {
@@ -366,7 +367,7 @@ std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
             if( !constraints_.allowed_z_levels.contains( z ) ) {
                 continue;
             }
-            const oter_type_str_id &type = z == 0 ? shelter : basement;
+            const oter_type_str_id &type = z == 0 ? oter_type_shelter : oter_type_shelter_under;
             if( !type.is_valid() ) {
                 continue;
             }
