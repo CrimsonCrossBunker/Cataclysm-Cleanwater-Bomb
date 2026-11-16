@@ -573,9 +573,9 @@ bool draw_mapped_road( mapgendata &dat )
         int width = 8;
         // Match the original 16-tile street and the narrow end of an avenue.
         // Keep the wider cross-section across uninterrupted highway or bridge spans.
-        if( on_bridge && adjacent->get_type_id() == bridge ) {
+        if( on_bridge && adjacent->get_type_id() == oter_type_atlas_road_bridge ) {
             width = std::min( { half_width, width_for( other ), center - 3 } );
-        } else if( !on_bridge && adjacent->get_type_id() == road &&
+        } else if( !on_bridge && adjacent->get_type_id() == oter_type_road &&
                    cell.street == urban_road::none && other.street == urban_road::none &&
                    cell.lanes >= 4 && other.lanes >= 4 ) {
             width = std::min( half_width, width_for( other ) );
