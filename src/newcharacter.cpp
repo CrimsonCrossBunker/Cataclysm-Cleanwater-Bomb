@@ -16,6 +16,7 @@
 #include <string_view>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -42,6 +43,7 @@
 #include "color.h"
 #include "coordinates.h"
 #include "debug.h"
+#include "enum_conversions.h"
 #include "enum_traits.h"
 #include "enums.h"
 #include "flexbuffer_json.h"
@@ -63,8 +65,8 @@
 #include "mod_manager.h"
 #include "monster.h"
 #include "mutation.h"
-#include "npc.h"
 #include "north_america.h"
+#include "npc.h"
 #include "options.h"
 #include "output.h"
 #include "overmap_ui.h"
@@ -99,6 +101,7 @@
     // For the character paper-doll preview: tilecontext / cata_tiles::render_character_preview,
     // the USE_CHARACTER_PREVIEW option, and the use_tiles cache.
     #include <sstream>
+
     #include "cached_options.h"
     #include "cata_scope_helpers.h"
     #include "cata_tiles.h"
@@ -2326,7 +2329,7 @@ void draw_time_game_start()
     cataimgui::draw_colored_text( to_string( get_scenario()->start_of_game(), true ), c_light_gray );
 }
 
-void draw_location( avatar &you )
+static void draw_location( avatar &you )
 {
     std::string random_start_location_text = string_format( n_gettext(
                 "<color_red>* Random location *</color> (<color_white>%d</color> variant)",

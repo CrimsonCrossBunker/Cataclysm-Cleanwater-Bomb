@@ -7,6 +7,7 @@
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/ExprCXX.h>
+#include <clang/AST/Stmt.h>
 #include <clang/AST/Type.h>
 #include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchers.h>
@@ -115,6 +116,16 @@ static void CheckExpr( RedundantParenthesesCheck &Check, const MatchFinder::Matc
     const Expr *InnerExpr = Result.Nodes.getNodeAs<Expr>( "child_expr" );
     if( !OuterExpr || !InnerExpr ) {
         return;
+    }
+
+    if( getParent<ReturnStmt>( Result, OuterExpr ) &&
+        ( isa<DeclRefExpr>( InnerExpr ) || isa<MemberExpr>( InnerExpr ) ) ) {
+        const FunctionDecl *Function = getContainingFunction( Result, OuterExpr );
+        const AutoType *ReturnType = Function ?
+                                     Function->getReturnType()->getContainedAutoType() : nullptr;
+        if( ReturnType && ReturnType->isDecltypeAuto() ) {
+            return;
+        }
     }
 
     SourceRange OuterRange = OuterExpr->getSourceRange();

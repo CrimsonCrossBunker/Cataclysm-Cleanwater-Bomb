@@ -1,10 +1,9 @@
-#include <vehicle_uid.h>
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -41,6 +40,7 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_turning.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -104,7 +104,9 @@ TEST_CASE( "turning_control_point_defines_a_tangent_arc", "[vehicle][turning_ass
 
 TEST_CASE( "assisted_turn_preserves_subtile_progress", "[vehicle][turning_assist]" )
 {
-    for( const int side : { -1, 1 } ) {
+    for( const int side : {
+             -1, 1
+             } ) {
         std::optional<vehicle_turning_arc> arc = vehicle_turning_arc::through( 40.0, side * 10.0 );
         REQUIRE( arc );
         tileray ray( 0_degrees );
