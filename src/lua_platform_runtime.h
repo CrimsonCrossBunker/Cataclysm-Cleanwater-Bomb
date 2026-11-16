@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -219,7 +220,8 @@ std::optional<int> invoke_use_handler( std::string_view mod_id,
                                        map *here,
                                        const tripoint_bub_ms &position );
 
-void runtime_world_ready( bool new_game );
+void runtime_world_load_started();
+void runtime_world_ready( bool new_game, const std::function<void()> &finish_native_load = {} );
 void runtime_before_save();
 bool runtime_save( std::string &error );
 void runtime_after_save( bool success, std::string_view error );

@@ -411,6 +411,7 @@ bool game::load( const save_t &name )
     const cata_path save_file_path = PATH_INFO::world_base_save_path() /
                                      ( name.base_path() + SAVE_EXTENSION );
 
+    cata::lua_platform::on_world_load_started();
     bool abort = false;
 
     using named_entry = std::pair<std::string, std::function<void()>>;
@@ -551,11 +552,10 @@ bool game::load( const save_t &name )
                         ::get_option<std::string>( "ETERNAL_TIME_OF_DAY" ) == "day" );
 
                     u.reset();
-                    u.recalculate_enchantment_cache();
-                    u.enchantment_cache->activate_passive( u );
-                    if constexpr( cata::lua_platform::is_enabled() ) {
-                        cata::lua_platform::on_world_ready( false );
-                    }
+                    cata::lua_platform::on_world_ready( false, [this]() {
+                        u.recalculate_enchantment_cache();
+                        u.enchantment_cache->activate_passive( u );
+                    } );
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
                     time_played_at_last_load = std::chrono::seconds( 0 );

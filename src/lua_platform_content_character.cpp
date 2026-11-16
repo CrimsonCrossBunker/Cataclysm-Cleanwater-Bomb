@@ -398,6 +398,7 @@ struct enchantment_modifier_definition_data {
     std::optional<double> multiply;
     std::string add_handler;
     std::string multiply_handler;
+    std::optional<std::vector<std::string>> load_skills;
 };
 
 struct enchantment_fake_spell_definition_data {
@@ -1212,6 +1213,14 @@ struct enchantment_definition_handle {
         }
         value.add_handler = options.get_or( "add_handler", std::string() );
         value.multiply_handler = options.get_or( "multiply_handler", std::string() );
+        if( const sol::optional<sol::table> skills =
+                options.get<sol::optional<sol::table>>( "load_skills" ) ) {
+            const std::size_t count = require_dense_array( *skills, "enchantment load_skills", 0, 256 );
+            value.load_skills.emplace();
+            for( std::size_t index = 1; index <= count; ++index ) {
+                value.load_skills->push_back( skills->raw_get<std::string>( index ) );
+            }
+        }
         definition->modifiers.push_back( std::move( value ) );
         return *this;
     }
@@ -4184,6 +4193,18 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
                 validate_enchantment_handler( definition.id, modifier.add_handler );
                 validate_enchantment_handler( definition.id, modifier.multiply_handler );
+                if( modifier.load_skills ) {
+                    if( modifier.add_handler.empty() && modifier.multiply_handler.empty() ) {
+                        throw std::runtime_error( "enchantment load_skills requires a numeric handler" );
+                    }
+                    std::set<std::string> skills;
+                    for( const std::string &skill : *modifier.load_skills ) {
+                        if( !skill_id( skill ).is_valid() || !skills.insert( skill ).second ) {
+                            throw std::runtime_error( "enchantment '" + definition.id +
+                                                      "' has an unknown or duplicate load skill '" + skill + "'" );
+                        }
+                    }
+                }
                 if( modifier.kind == "value" &&
                     !io::string_to_enum_optional < enchant_vals::mod > ( modifier.target ) ) {
                     throw std::runtime_error( "enchantment '" + definition.id +
@@ -6072,11 +6093,12 @@ void character_content_transaction::impl::apply_enchantment()
                     const std::string kind = modifier.kind;
                     const std::string target = modifier.target;
                     const std::string part = modifier.part;
-                    value.add = [owner, enchantment_name, kind, target, part, handler](
+                    value.add = [owner, enchantment_name, kind, target, part, handler,
+                                 load_skills = modifier.load_skills](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_number_handler(
                                    owner, enchantment_name, kind + ":add", target, part,
-                                   handler, dialogue ).value_or( 0.0 );
+                                   handler, dialogue, load_skills ).value_or( 0.0 );
                     };
                 }
                 if( !modifier.multiply_handler.empty() ) {
@@ -6084,11 +6106,12 @@ void character_content_transaction::impl::apply_enchantment()
                     const std::string kind = modifier.kind;
                     const std::string target = modifier.target;
                     const std::string part = modifier.part;
-                    value.multiply = [owner, enchantment_name, kind, target, part, handler](
+                    value.multiply = [owner, enchantment_name, kind, target, part, handler,
+                                      load_skills = modifier.load_skills](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_number_handler(
                                    owner, enchantment_name, kind + ":multiply", target, part,
-                                   handler, dialogue ).value_or( 0.0 );
+                                   handler, dialogue, load_skills ).value_or( 0.0 );
                     };
                 }
                 native.platform_modifiers.push_back( std::move( value ) );
@@ -7348,6 +7371,13 @@ void character_content_transaction::append_fingerprint(
                                std::to_string( *modifier.multiply ) : "no_multiply" );
                     hash_part( state, modifier.add_handler );
                     hash_part( state, modifier.multiply_handler );
+                    if( modifier.load_skills ) {
+                        hash_part( state, "load_skills" );
+                        hash_part( state, std::to_string( modifier.load_skills->size() ) );
+                        for( const std::string &skill : *modifier.load_skills ) {
+                            hash_part( state, skill );
+                        }
+                    }
                 }
                 const auto hash_fake_spell = [&state]( const char *kind,
                 const enchantment_fake_spell_definition_data & spell ) {

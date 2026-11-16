@@ -719,10 +719,12 @@ static sol::table enchantment_handler_payload( runtime &owner,
         const std::string_view enchantment,
         const std::string_view scope,
         const std::string_view target,
-        const std::string_view part )
+        const std::string_view part, const bool include_handles = true )
 {
-    const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
-    const const_talker *interlocutor = dialogue.has_beta ? dialogue.const_actor( true ) : nullptr;
+    const const_talker *speaker = include_handles && dialogue.has_alpha ?
+                                 dialogue.const_actor( false ) : nullptr;
+    const const_talker *interlocutor = include_handles && dialogue.has_beta ?
+                                      dialogue.const_actor( true ) : nullptr;
     return platform_callback_payload( owner, {
         { "speaker", speaker },
         { "interlocutor", interlocutor },
@@ -772,10 +774,11 @@ std::optional<double> invoke_enchantment_number_handler(
     const std::string_view mod_id, const std::string_view enchantment,
     const std::string_view scope, const std::string_view target,
     const std::string_view part, const std::string_view handler_id,
-    const const_dialogue &dialogue )
+    const const_dialogue &dialogue,
+    const std::optional<std::vector<std::string>> &load_skills )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || !owner->world_is_ready ) {
+    if( !owner || ( !owner->world_is_ready && !load_skills ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -784,8 +787,19 @@ std::optional<double> invoke_enchantment_number_handler(
                                     << mod_id << ':' << handler_id << "'";
         return std::nullopt;
     }
-    sol::table payload = enchantment_handler_payload(
-                             *owner, dialogue, enchantment, scope, target, part );
+    sol::table payload = enchantment_handler_payload( *owner, dialogue, enchantment, scope,
+                         target, part, owner->world_is_ready );
+    if( load_skills && dialogue.has_alpha ) {
+        const const_talker &speaker = *dialogue.const_actor( false );
+        payload["stats"] = owner->lua->create_table_with(
+                               "strength", speaker.str_cur(), "dexterity", speaker.dex_cur(),
+                               "intelligence", speaker.int_cur(), "perception", speaker.per_cur() );
+        sol::table skills = owner->lua->create_table( 0, static_cast<int>( load_skills->size() ) );
+        for( const std::string &skill : *load_skills ) {
+            skills[skill] = speaker.get_skill_level( skill_id( skill ) );
+        }
+        payload["skills"] = std::move( skills );
+    }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
     const sol::protected_function_result result = callback( payload );

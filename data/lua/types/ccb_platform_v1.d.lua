@@ -5177,6 +5177,17 @@ function ComputerAccessContext:remove_value(key) end
 ---@param key string
 ---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
 function ComputerAccessContext:set_value(key, value) end
+---@class CcbEnchantmentNumericInputs
+---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer } Detached current stats of the native speaker, when present.
+---@field skills? table<string, integer> Detached effective skill levels requested via load_skills, truncated as in native dialogue.
+
+---@class CcbEnchantmentValueModifierOptions
+---@field add? number
+---@field multiply? number
+---@field add_handler? string Named callback returning a finite additive modifier.
+---@field multiply_handler? string Named callback returning a finite multiplicative modifier.
+---@field load_skills? string[] Enables numeric evaluation during save reconstruction. Use an empty array for stats only. Before world_ready the callback uses detached stats and skills and world services are unavailable.
+
 ---@class EnchantmentDefinition
 ---@field active_when any
 ---@field bodypart_change any
@@ -5194,7 +5205,7 @@ function ComputerAccessContext:set_value(key, value) end
 ---@field mutation any
 ---@field post_armor_damage any
 ---@field skill any
----@field value any
+---@field value fun(self:EnchantmentDefinition, value:string, options:CcbEnchantmentValueModifierOptions):EnchantmentDefinition
 ---@field vision fun(self:EnchantmentDefinition, options:CcbEnchantmentVisionOptions):EnchantmentDefinition
 local EnchantmentDefinition = {}
 ---@class EventStatisticDefinition

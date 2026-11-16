@@ -3,6 +3,7 @@
 #define CATA_SRC_LUA_PLATFORM_LOADER_H
 
 #include <filesystem>
+#include <functional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -114,7 +115,8 @@ bool execute_console( const std::string &mod_id, const std::string &source,
                       std::string &output, std::string &error );
 
 /** Activate world-bound services and load engine-owned Platform sidecars. */
-void on_world_ready( bool new_game );
+void on_world_load_started();
+void on_world_ready( bool new_game, const std::function<void()> &finish_native_load = {} );
 
 /** Dispatch the synchronous pre-save lifecycle hook. */
 void before_save();

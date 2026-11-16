@@ -1540,13 +1540,26 @@ using detail::platform_item_handle;
 using detail::platform_vehicle_handle;
 using detail::report_callback_error;
 
-void runtime_world_ready( bool new_game )
+void runtime_world_load_started()
+{
+    detail::stop_runtime_event_bridge();
+    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
+        if( owner ) {
+            owner->world_is_ready = false;
+        }
+    }
+}
+
+void runtime_world_ready( bool new_game, const std::function<void()> &finish_native_load )
 {
     cata::lua_platform::reset_map_tile_tokens();
     cata::lua_platform::reset_overmap_tile_tokens();
     cata::lua_platform::reset_horde_tokens();
     cata::lua_platform::retire_trade_quote_registry();
     if( detail::active_runtime_values().empty() ) {
+        if( finish_native_load ) {
+            finish_native_load();
+        }
         return;
     }
     const std::size_t previous_world_generation = detail::runtime_world_generation_storage();
@@ -1561,7 +1574,6 @@ void runtime_world_ready( bool new_game )
     if( const std::optional<cata_path> path = world_state_path() ) {
         load_scope( *path, "world", world_error );
     }
-    detail::start_runtime_event_bridge();
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( owner ) {
             get_avatar().lua_character_state.migrate_legacy( owner->mod_id,
@@ -1570,6 +1582,10 @@ void runtime_world_ready( bool new_game )
             owner->world_is_ready = true;
         }
     }
+    if( finish_native_load ) {
+        finish_native_load();
+    }
+    detail::start_runtime_event_bridge();
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner ) {
             continue;

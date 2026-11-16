@@ -340,6 +340,60 @@ ccb.content.add(effect)
     CHECK_FALSE( enchantment_key.is_valid() );
 }
 
+TEST_CASE( "lua_first_enchantment_values_work_during_save_reconstruction",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_load_enchantment" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+local enchantment = ccb.content.Enchantment { id = "ccb_platform_load_enchantment" }
+ccb.runtime.handler("loaded_strength", function(ctx)
+    assert(ctx.stats and ctx.skills)
+    assert(ctx.skills.cooking == 4)
+    return ctx.stats.strength + ctx.skills.cooking
+end)
+ccb.runtime.handler("ready_speed", function()
+    assert(ccb.services.characters.avatar())
+    return 6
+end)
+enchantment:value("STRENGTH", { add_handler = "loaded_strength", load_skills = { "cooking" } })
+enchantment:value("SPEED", { add_handler = "ready_speed" })
+ccb.content.add(enchantment)
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_load_enchantment" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    npc restoring_npc;
+    restoring_npc.set_skill_level( skill_id( "cooking" ), 4 );
+    const enchantment_id id( "ccb_platform_load_enchantment" );
+    REQUIRE( id.is_valid() );
+    const auto check_load_values = [&]() {
+        enchant_cache cache;
+        cache.force_add( id.obj(), restoring_npc );
+        CHECK( cache.get_value_add( enchant_vals::mod::STRENGTH ) == restoring_npc.get_str() + 4 );
+        CHECK( cache.get_value_add( enchant_vals::mod::SPEED ) == 0 );
+    };
+    check_load_values();
+    bool finished_native_load = false;
+    cata::lua_platform::on_world_ready( false, [&]() {
+        enchant_cache cache;
+        cache.force_add( id.obj(), restoring_npc );
+        CHECK( cache.get_value_add( enchant_vals::mod::SPEED ) == 6 );
+        finished_native_load = true;
+    } );
+    CHECK( finished_native_load );
+    cata::lua_platform::on_world_load_started();
+    check_load_values();
+}
+
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",
            "[lua][platform][content][shopkeeper]" )
 {

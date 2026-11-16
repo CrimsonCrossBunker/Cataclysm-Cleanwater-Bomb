@@ -918,9 +918,14 @@ bool execute_console( const std::string &mod_id, const std::string &source,
     }
 }
 
-void on_world_ready( bool new_game )
+void on_world_load_started()
 {
-    runtime_world_ready( new_game );
+    runtime_world_load_started();
+}
+
+void on_world_ready( bool new_game, const std::function<void()> &finish_native_load )
+{
+    runtime_world_ready( new_game, finish_native_load );
 }
 
 void before_save()
@@ -1032,8 +1037,15 @@ bool execute_console( const std::string &, const std::string &,
     return false;
 }
 
-void on_world_ready( bool )
+void on_world_load_started()
 {
+}
+
+void on_world_ready( bool, const std::function<void()> &finish_native_load )
+{
+    if( finish_native_load ) {
+        finish_native_load();
+    }
 }
 
 void before_save()
