@@ -16,7 +16,7 @@ class LuaBatchTest(unittest.TestCase):
             {"type": "overmap_terrain", "id": ids, "name": "Batch terrain"},
             {"type": "effect_on_condition", "id": "caller",
              "eoc_type": "EVENT", "required_event": "character_melee_attacks_character",
-             "effect": {"run_eocs": "callee"}},
+             "effect": [{"run_eocs": "callee"} for _ in range(50)]},
         ]
         for i in ids:
             records.extend((
@@ -54,7 +54,8 @@ for _, kind in ipairs({"Item", "Recipe", "OvermapTerrain"}) do
     assert(counts[kind] == 230, kind .. ": " .. tostring(counts[kind]))
 end
 handlers["migrated.caller"]({actors = {attacker = {}, interlocutor = {}}, data = {}})
-assert(#messages == 1 and messages[1] == "reached later handler", table.concat(messages, ", "))
+assert(#messages == 50, #messages)
+for _, message in ipairs(messages) do assert(message == "reached later handler") end
 '''
         run = subprocess.run(["lua", "-"], input=script, text=True,
                              capture_output=True, timeout=10)

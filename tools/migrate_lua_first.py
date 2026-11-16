@@ -4834,7 +4834,9 @@ def render_static_run_eocs(
 
     def wrap_talker_context(lines: list[str]) -> list[str]:
         if not has_talker_override:
-            return lines
+            # Each call owns its temporary context. Long sequences in one
+            # callback must not keep earlier calls' locals live.
+            return ["    do", *("    " + line for line in lines), "    end"]
         wrapped = [
             "    do",
             *talker_setup,
@@ -5767,7 +5769,7 @@ def render_static_false_effect(
         if options:
             lines.append("        { " + ", ".join(options) + " })")
         else:
-            lines[-1] += ")"
+            lines[-1] = lines[-1][:-1] + ")"
         return [line.replace("    ", "        ", 1) for line in lines]
     if isinstance(effect, dict) and (
         "u_make_sound" in effect or "npc_make_sound" in effect
@@ -6291,7 +6293,7 @@ def render_dynamic_combat_damage(
     if options:
         lines.append("        { " + ", ".join(options) + " })")
     else:
-        lines[-1] += ")"
+        lines[-1] = lines[-1][:-1] + ")"
     return lines
 
 
@@ -36950,7 +36952,7 @@ def render_eoc(
                         if option_lines:
                             lines.append("        { " + ", ".join(option_lines) + " })")
                         else:
-                            lines[-1] += ")"
+                            lines[-1] = lines[-1][:-1] + ")"
                         damage_converted = True
                         converted_effect = True
                 dynamic_shape = (
