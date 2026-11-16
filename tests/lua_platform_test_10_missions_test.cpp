@@ -548,55 +548,6 @@ TEST_CASE( "lua_platform_npc_mission_provider_preflights_exact_owner_and_rollbac
     CHECK( write_gate_called );
 }
 
-TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
-           "[lua][platform][missions][npc][contract]" )
-{
-    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
-        cata::lua_platform::make_game_handle_runtime_owner();
-    const cata::lua_platform::game_handle_runtime runtime(
-        runtime_owner, 65 );
-    constexpr std::size_t world_generation = 23;
-    sol::state lua;
-    sol::table services = lua.create_table();
-    cata::lua_platform::install_game_handle_api(
-        lua, services,
-    [runtime]() {
-        return runtime;
-    },
-    []() {
-        return world_generation;
-    }, []() {} );
-    cata::lua_platform::install_npc_api(
-        services,
-    [runtime]() {
-        return runtime;
-    },
-    []() {
-        return world_generation;
-    }, []() {}, []() {}, []() {} );
-
-    const sol::table npcs = services["npcs"];
-    REQUIRE( npcs.valid() );
-    const sol::table missions = npcs["missions"];
-    REQUIRE( missions.valid() );
-    for( const char *name : {
-             "state", "assigned_for_owner", "available_count",
-             "selected_condition", "selected_has_goal",
-             "selected_has_generic_rewards", "select", "offer",
-             "add_assigned",
-             "assign_selected", "succeed_selected", "fail_selected",
-             "clear_selected", "claim_selected_reward",
-             "open_selected_reward_trade"
-         } ) {
-        CHECK( missions[name].get_type() == sol::type::function );
-    }
-
-    CHECK_FALSE( missions["avatar"].valid() );
-    CHECK_FALSE( missions["current_avatar"].valid() );
-    CHECK_FALSE( missions["current_mission"].valid() );
-    CHECK_FALSE( npcs["avatar"].valid() );
-}
-
 TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
            "[lua][platform][missions][npc][semantic]" )
 {

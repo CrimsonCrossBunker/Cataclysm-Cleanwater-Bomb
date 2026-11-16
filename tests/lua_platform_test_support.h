@@ -51,7 +51,6 @@ extern "C" {
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -139,24 +138,6 @@ const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
 struct registrar_graph_entry {
     std::string id;
     std::string copy_from;
-};
-
-template<typename Type, typename = void>
-struct has_legacy_dialogue_quote_trade_item : std::false_type {
-};
-
-template<typename Type>
-struct has_legacy_dialogue_quote_trade_item<Type, std::void_t<
-decltype( &Type::quote_trade_item )>> : std::true_type {
-};
-
-template<typename Type, typename = void>
-struct has_legacy_dialogue_buy_quoted_item : std::false_type {
-};
-
-template<typename Type>
-struct has_legacy_dialogue_buy_quoted_item<Type, std::void_t<
-decltype( &Type::buy_quoted_item )>> : std::true_type {
 };
 
 

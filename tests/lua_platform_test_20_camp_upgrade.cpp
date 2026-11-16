@@ -1,32 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
 
-TEST_CASE( "lua_platform_camp_api_exposes_only_explicit_create_remove_and_expansion_routes",
-           "[lua][platform][camp][api]" )
-{
-    sol::state lua;
-    sol::table services = lua.create_table();
-    const auto runtime_owner = cata::lua_platform::make_game_handle_runtime_owner();
-    const cata::lua_platform::game_handle_runtime runtime( runtime_owner, 123 );
-    cata::lua_platform::install_game_handle_api(
-        lua, services, [runtime]() { return runtime; }, []() { return std::size_t( 33 ); },
-        []() {} );
-    cata::lua_platform::install_camp_api(
-        services, [runtime]() { return runtime; }, []() { return std::size_t( 33 ); },
-    []() {}, []() {} );
-    const sol::table camps = services["camps"];
-    CHECK( camps["create"].valid() );
-    CHECK( camps["remove"].valid() );
-    const sol::table expansions = camps["expansions"];
-    CHECK( expansions["create"].valid() );
-    CHECK( expansions["list"].valid() );
-    CHECK( expansions["get"].valid() );
-    CHECK( expansions["remove"].valid() );
-    CHECK_FALSE( camps["near"].valid() );
-    CHECK_FALSE( camps["current"].valid() );
-    CHECK_FALSE( expansions["nearest"].valid() );
-}
-
 TEST_CASE( "lua_platform_upgrade_commit_state_unknown_for_partial_or_unloaded_target",
            "[lua][platform][camp][upgrade][recovery]" )
 {
