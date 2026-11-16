@@ -5,6 +5,7 @@
 #include <cata_scope_helpers.h>
 #include <cstdlib>
 #include <flexbuffer_json.h>
+#include <init.h>
 #include <json_loader.h>
 #include <lua_platform_loader.h>
 #include <lua_platform_runtime.h>
@@ -64,6 +65,51 @@ return mod
     options.restore_mod_world_options();
     CHECK_FALSE( options.has_option( option ) );
     CHECK_FALSE( options.has_option( "LUA_TEST_PRIVATE_OPTION" ) );
+}
+
+TEST_CASE( "lua_platform_interaction_options_use_active_companions_in_native_order",
+           "[lua][platform][loader][regression]" )
+{
+    const platform_lua_test_directory files;
+    files.write( std::filesystem::u8path( "mod.lua" ), R"lua(
+local ccb = require("ccb")
+local mod = ccb.ModDefinition { interaction_world_options = {
+    option_test_first = { LUA_TEST_INTERACTION = 3 },
+} }
+assert(mod.interaction_world_options.option_test_first.LUA_TEST_INTERACTION == 3)
+return mod
+)lua" );
+    files.write( std::filesystem::u8path( "mod_interactions/option_test_last/options.json" ),
+                 R"([{"type":"EXTERNAL_OPTION","name":"LUA_TEST_INTERACTION","stype":"int","value":5}])" );
+
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    // Only this fixture's data loader should be unfinalized.
+    struct interaction_loader : DynamicDataLoader {} loader;
+    WORLD world;
+    restore_on_out_of_scope restore_world( world_generator->active_world );
+    world_generator->active_world = &world;
+    options_manager &options = get_options();
+    const std::string key = "LUA_TEST_INTERACTION";
+    REQUIRE_FALSE( options.has_option( key ) );
+    on_out_of_scope cleanup( [&]() {
+        options.restore_mod_world_options();
+    } );
+    const cata_path path( cata_path::root_path::unknown, files.root / "mod_interactions" );
+    const auto load_interactions = [&]() {
+        options.apply_mod_world_options( "fixture_defaults", { { key, 1 } } );
+        loader.load_mod_interaction_files_from_path( path, "interaction_fixture",
+                metadata.interaction_world_options );
+    };
+    load_interactions();
+    CHECK( get_option<int>( key ) == 1 );
+    world.active_mod_order = { mod_id( "option_test_first" ) };
+    load_interactions();
+    CHECK( get_option<int>( key ) == 3 );
+    world.active_mod_order = { mod_id( "option_test_last" ), mod_id( "option_test_first" ) };
+    load_interactions();
+    CHECK( get_option<int>( key ) == 5 );
 }
 
 TEST_CASE( "lua_platform_loader_uses_trusted_environment_for_metadata_and_runtime",

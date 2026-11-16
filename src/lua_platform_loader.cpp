@@ -242,6 +242,34 @@ mod_world_options read_world_options( const sol::table &values )
     return result;
 }
 
+mod_interaction_world_options read_interaction_world_options( const sol::table &values )
+{
+    mod_interaction_world_options result;
+    for( const auto &[key, value] : values ) {
+        if( key.get_type() != sol::type::string || value.get_type() != sol::type::table ) {
+            throw std::runtime_error( "ModDefinition interaction_world_options expects Mod ids and option tables" );
+        }
+        const std::string companion = key.as<std::string>();
+        if( companion.empty() || companion.size() > 256 ||
+            companion.find( '\0' ) != std::string::npos || companion.find( '#' ) != std::string::npos ) {
+            throw std::runtime_error( "ModDefinition interaction_world_options requires valid Mod ids" );
+        }
+        result.emplace( companion, read_world_options( value.as<sol::table>() ) );
+    }
+    return result;
+}
+
+sol::table write_world_options( sol::state_view lua, const mod_world_options &options )
+{
+    sol::table result = lua.create_table();
+    for( const auto &option : options ) {
+        std::visit( [&]( const auto & value ) {
+            result[option.first] = value;
+        }, option.second );
+    }
+    return result;
+}
+
 mod_definition make_mod_definition( const sol::table &values )
 {
     mod_definition result;
@@ -259,6 +287,14 @@ mod_definition make_mod_definition( const sol::table &values )
             throw std::runtime_error( "ModDefinition world_options must be a table" );
         }
         result.world_options = read_world_options( world_options.as<sol::table>() );
+    }
+    const sol::object interactions = values.raw_get<sol::object>( "interaction_world_options" );
+    if( interactions.valid() && interactions.get_type() != sol::type::nil ) {
+        if( interactions.get_type() != sol::type::table ) {
+            throw std::runtime_error( "ModDefinition interaction_world_options must be a table" );
+        }
+        result.interaction_world_options =
+            read_interaction_world_options( interactions.as<sol::table>() );
     }
     const sol::object dependencies = values.raw_get<sol::object>( "dependencies" );
     if( dependencies.valid() && dependencies.get_type() != sol::type::nil ) {
@@ -361,16 +397,22 @@ void install_mod_definition( sol::table &ccb )
     } ),
     "world_options", sol::property(
     []( const mod_definition & definition, sol::this_state state ) {
-        sol::table result = sol::state_view( state ).create_table();
-        for( const auto &option : definition.world_options ) {
-            std::visit( [&]( const auto & value ) {
-                result[option.first] = value;
-            }, option.second );
-        }
-        return result;
+        return write_world_options( sol::state_view( state ), definition.world_options );
     },
     []( mod_definition & definition, const sol::table & value ) {
         definition.world_options = read_world_options( value );
+    } ),
+    "interaction_world_options", sol::property(
+    []( const mod_definition & definition, sol::this_state state ) {
+        sol::state_view lua( state );
+        sol::table result = lua.create_table();
+        for( const auto &[companion, options] : definition.interaction_world_options ) {
+            result[companion] = write_world_options( lua, options );
+        }
+        return result;
+    },
+    []( mod_definition & definition, const sol::table &value ) {
+        definition.interaction_world_options = read_interaction_world_options( value );
     } ) );
     ccb["_ModDefinitionNative"] = sol::lua_nil;
     ccb.set_function( "ModDefinition", []( const sol::table & values ) {

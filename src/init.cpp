@@ -610,13 +610,13 @@ void DynamicDataLoader::load_mod_data_from_path( const cata_path &path, const st
 }
 
 void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &path,
-        const std::string &src )
+        const std::string &src, const mod_interaction_world_options &options )
 {
     cata_assert( !finalized &&
                  "Can't load additional data after finalization.  Must be unloaded first." );
 
     std::vector<mod_id> &loaded_mods = world_generator->active_world->active_mod_order;
-    std::multimap<mod_id, cata_path> files;
+    std::multimap<mod_id, std::variant<cata_path, const mod_world_options *>> entries;
 
     if( dir_exist( path.get_unrelative_path() ) ) {
 
@@ -632,19 +632,29 @@ void DynamicDataLoader::load_mod_interaction_files_from_path( const cata_path &p
             if( is_mod_loaded ) {
                 const std::vector<cata_path> interaction_files = get_files_from_path( ".json", f, true, true );
                 for( const cata_path &path : interaction_files ) {
-                    files.emplace( associated_mod, path );
+                    entries.emplace( associated_mod, path );
                 }
             }
         }
     }
-    // iterate over each file
-    for( const std::pair<const mod_id, cata_path> &file : files ) {
-        const std::string interaction_src = string_format( "%s#%s", src, file.first.str() );
+    for( const auto &[companion, overrides] : options ) {
+        const mod_id associated_mod = canonical_mod_id( mod_id( companion ) );
+        if( std::find( loaded_mods.begin(), loaded_mods.end(), associated_mod ) != loaded_mods.end() ) {
+            entries.emplace( associated_mod, &overrides );
+        }
+    }
+    // Lua options follow the JSON for the same companion, before the next one.
+    for( const auto &[companion, entry] : entries ) {
+        const std::string interaction_src = string_format( "%s#%s", src, companion.str() );
         scoped_debug_error_source error_source( get_mod_error_source( interaction_src ) );
         try {
-            // parse it
-            JsonValue jsin = json_loader::from_path( file.second );
-            load_all_from_json( jsin, interaction_src, path, file.second );
+            if( const cata_path *file = std::get_if<cata_path>( &entry ) ) {
+                JsonValue jsin = json_loader::from_path( *file );
+                load_all_from_json( jsin, interaction_src, path, *file );
+            } else {
+                get_options().apply_mod_world_options( interaction_src,
+                                                       *std::get<const mod_world_options *>( entry ) );
+            }
         } catch( const JsonError &err ) {
             throw std::runtime_error( add_debug_error_source( err.what() ) );
         } catch( const std::exception &err ) {

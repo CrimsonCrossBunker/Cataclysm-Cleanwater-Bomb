@@ -13,6 +13,7 @@
 
 #include "cata_path.h"
 #include "memory_fast.h"
+#include "mod_world_option.h"
 
 class JsonObject;
 class JsonValue;
@@ -157,7 +158,8 @@ class DynamicDataLoader
          * @throws std::exception on all kind of errors.
          */
         /*@{*/
-        void load_mod_interaction_files_from_path( const cata_path &path, const std::string &src );
+        void load_mod_interaction_files_from_path( const cata_path &path, const std::string &src,
+                const mod_interaction_world_options &options = {} );
         /*@}*/
         /**
          * Deletes and unloads all the data previously loaded with

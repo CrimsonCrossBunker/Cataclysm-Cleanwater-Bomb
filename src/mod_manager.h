@@ -59,6 +59,7 @@ struct MOD_INFORMATION {
 
         /** World options registered from Lua metadata at this Mod's load position. */
         mod_world_options lua_world_options;
+        mod_interaction_world_options lua_interaction_world_options;
 
         /** All authors who have added content to the mod (excluding maintenance changes) */
         std::set<std::string> authors;

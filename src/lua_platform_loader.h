@@ -36,6 +36,7 @@ struct mod_definition {
     std::string description;
     std::string category;
     mod_world_options world_options;
+    mod_interaction_world_options interaction_world_options;
     bool core = false;
 
     bool id_set = false;

@@ -629,13 +629,14 @@ function CcbHandlesApi.avatar() end
 ---@field id? string Stable 1-256-byte Mod id without `#`; defaults to the root directory name when omitted.
 ---@field name? string 1-512-byte display name; defaults to the resolved Mod id.
 ---@field version? string 1-128-byte author-defined Mod version.
----@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua. A Mod declaring world_options can omit main.lua.
+---@field entry? string Root-relative entry path of at most 4096 bytes; defaults to main.lua. A Mod declaring world or interaction options can omit main.lua.
 ---@field dependencies? string[] Dense one-based array of at most 256 unique stable Mod ids loaded before this Mod.
 ---@field authors? string[] Dense one-based array of unique author names.
 ---@field description? string Player-facing Mod description of at most 4096 bytes.
 ---@field category? string Existing Mod-list category id.
 ---@field core? boolean Whether this is a core Mod.
 ---@field world_options? table<string, boolean|number|string> World or external options applied after this Mod's JSON and before the next Mod. Later Mod and interaction overrides retain priority.
+---@field interaction_world_options? table<string, table<string, boolean|number|string>> Options keyed by active companion Mod id; applied after the JSON for that companion in native interaction order.
 
 ---@class ModDefinition
 ---@field id string
@@ -648,6 +649,7 @@ function CcbHandlesApi.avatar() end
 ---@field category string
 ---@field core boolean
 ---@field world_options table<string, boolean|number|string>
+---@field interaction_world_options table<string, table<string, boolean|number|string>>
 local ModDefinition = {}
 
 ---@class CcbPlatformBubbleMapSquarePayload

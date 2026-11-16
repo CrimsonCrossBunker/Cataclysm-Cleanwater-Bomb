@@ -687,7 +687,8 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
             continue;
         }
         loading_ui::show( msg, mod->name() );
-        load_mod_interaction_data_from_dir( mod->path / "mod_interactions", mod.str() );
+        DynamicDataLoader::get_instance().load_mod_interaction_files_from_path(
+            mod->path / "mod_interactions", mod.str(), mod->lua_interaction_world_options );
     }
 }
 
