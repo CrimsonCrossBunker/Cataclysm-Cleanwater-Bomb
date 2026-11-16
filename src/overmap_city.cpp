@@ -3,12 +3,14 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <iterator>
 #include <initializer_list>
+#include <iterator>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "city.h"
@@ -17,6 +19,7 @@
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "flood_fill.h"
+#include "line.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "north_america.h"

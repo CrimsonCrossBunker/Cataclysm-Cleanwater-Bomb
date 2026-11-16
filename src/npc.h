@@ -19,11 +19,12 @@
 #include "auto_pickup.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_id.h"
 #include "color.h"
 #include "compatibility.h"
 #include "coordinates.h"
 #include "dialogue_chatbin.h"
-#include "enum_conversions.h"
+#include "enum_conversions.h" // IWYU pragma: keep
 #include "inventory.h"
 #include "item.h"
 #include "item_location.h"
@@ -42,13 +43,13 @@
 #include "string_formatter.h"
 #include "translation.h"
 #include "type_id.h"
+#include "units_fwd.h"
 
 class Creature;
 class JsonObject;
 class JsonOut;
 class JsonValue;
 class cata_path;
-class character_id;
 class const_talker;
 class faction;
 class map;

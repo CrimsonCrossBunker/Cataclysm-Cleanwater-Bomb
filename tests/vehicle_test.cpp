@@ -1,10 +1,9 @@
-#include <vehicle_uid.h>
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <map>
 #include <memory>
 #include <optional>
@@ -41,6 +40,7 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_turning.h"
+#include "vehicle_uid.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 

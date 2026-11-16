@@ -2,10 +2,17 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <functional>
+#include <initializer_list>
+#include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
+#include "cata_path.h"
 #include "cata_utility.h"
+#include "coordinates.h"
+#include "enums.h"
 #include "flexbuffer_json.h"
 #include "line.h"
 #include "map.h"
@@ -16,7 +23,9 @@
 #include "omdata.h"
 #include "overmap.h"
 #include "path_info.h"
+#include "point.h"
 #include "rng.h"
+#include "type_id.h"
 #include "units.h"
 #include "vehicle_group.h"
 

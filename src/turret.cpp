@@ -1,8 +1,6 @@
 #include "vehicle.h" // IWYU pragma: associated
-#include "vehicle_turret_control.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -11,26 +9,31 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "character.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "debug.h"
 #include "enums.h"
 #include "gun_mode.h"
 #include "item.h"
 #include "item_contents.h"
+#include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
+#include "map.h"
 #include "messages.h"
 #include "npc.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "projectile.h"
 #include "ranged.h"
 #include "string_formatter.h"
 #include "translations.h"
-#include "uilist.h"
+#include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle_selector.h"
+#include "vehicle_turret_control.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 

@@ -2,15 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 
+#include "bodypart.h"
 #include "calendar.h"
-#include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "coordinates.h"
@@ -24,8 +23,6 @@
 #include "game.h"
 #include "game_constants.h"
 #include "gun_mode.h"
-#include "inventory.h"
-#include "iuse_actor.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic.h"
@@ -38,6 +35,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "npc.h"
+#include "npc_autonomy.h"
 #include "pimpl.h"
 #include "point.h"
 #include "projectile.h"
@@ -48,6 +46,7 @@
 #include "safe_reference.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
+#include "translations.h"
 #include "type_id.h"
 
 static const ammo_effect_str_id ammo_effect_BOUNCE( "BOUNCE" );

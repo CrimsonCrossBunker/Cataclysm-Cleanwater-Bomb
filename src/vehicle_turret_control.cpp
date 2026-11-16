@@ -1,6 +1,10 @@
 #include "vehicle_turret_control.h"
 
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <utility>
@@ -10,29 +14,34 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
+#include "enums.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "gun_mode.h"
 #include "item.h"
-#include "item_location.h"
+#include "item_uid.h"
 #include "json.h"
-#include "line.h"
 #include "map.h"
-#include "messages.h"
+#include "memory_fast.h"
 #include "mp_client_conn.h"
 #include "mp_inventory_activity.h"
 #include "npc.h"
 #include "options.h"
-#include "output.h"
+#include "player_activity.h"
 #include "ranged.h"
 #include "ranged_actions.h"
 #include "rng.h"
-#include "string_formatter.h"
 #include "translations.h"
+#include "type_id.h"
 #include "uilist.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_uid.h"
+#include "vpart_position.h"
 #include "vpart_range.h"
 
 static const efftype_id effect_incorporeal( "incorporeal" );
@@ -361,11 +370,11 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
         };
         uilist menu;
         menu.title = _( "Turret controls" );
-        for( size_t i = 0; i < options.size(); ++i ) {
+        for( std::size_t i = 0; i < options.size(); ++i ) {
             menu.addentry( i, true, MENU_AUTOASSIGN, options[i].second );
         }
         menu.query();
-        if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= options.size() ) {
+        if( menu.ret < 0 || static_cast<std::size_t>( menu.ret ) >= options.size() ) {
             return std::nullopt;
         }
         selected_operation = options[menu.ret].first;
@@ -397,7 +406,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
             menu.callback = &callback;
             menu.selected = current;
             menu.fselected = current;
-            for( size_t i = 0; i < desired.size(); ++i ) {
+            for( std::size_t i = 0; i < desired.size(); ++i ) {
                 vehicle_part *part = find_turret( target, desired[i] );
                 if( !part ) {
                     return std::nullopt;
@@ -416,7 +425,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
                 }
             }
             menu.query();
-            if( menu.ret < 0 || static_cast<size_t>( menu.ret ) >= desired.size() ) {
+            if( menu.ret < 0 || static_cast<std::size_t>( menu.ret ) >= desired.size() ) {
                 break;
             }
             current = menu.ret;
@@ -430,7 +439,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
                 desired[current].mode = gun.gun_get_mode_id();
             }
         }
-        for( size_t i = 0; i < desired.size(); ++i ) {
+        for( std::size_t i = 0; i < desired.size(); ++i ) {
             if( desired[i].automatic != original[i].automatic || desired[i].mode != original[i].mode ) {
                 choice.turrets.push_back( desired[i] );
             }
@@ -452,7 +461,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
                 names.push_back( part->name() );
             }
             const int index = uilist( _( "Aim which turret?" ), names );
-            if( index < 0 || static_cast<size_t>( index ) >= options.size() ) {
+            if( index < 0 || static_cast<std::size_t>( index ) >= options.size() ) {
                 return std::nullopt;
             }
             options = { options[index] };

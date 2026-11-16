@@ -1,5 +1,6 @@
-#include <algorithm>
+#include <cstddef>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -9,9 +10,9 @@
 #include <vector>
 
 #include "bodypart.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "calendar.h"
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
@@ -973,7 +974,7 @@ TEST_CASE( "NPC_sparse_gun_candidates_preserve_occupied_tile_order_and_best_atta
     const auto evaluations = attack.all_evaluations( shooter, enemy );
     REQUIRE( evaluations.size() == expected.size() );
     npc_attack_rating best( std::nullopt, shooter.pos_bub() );
-    for( size_t i = 0; i < evaluations.size(); ++i ) {
+    for( std::size_t i = 0; i < evaluations.size(); ++i ) {
         if( evaluations[i].value() ) {
             CHECK( evaluations[i].target() == expected[i] );
         }

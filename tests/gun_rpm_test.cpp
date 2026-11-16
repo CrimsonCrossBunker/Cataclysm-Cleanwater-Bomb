@@ -1,19 +1,24 @@
+#include <map>
+#include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "coordinates.h"
+#include "creature.h"
 #include "dispersion.h"
-#include "enums.h"
 #include "flexbuffer_json.h"
 #include "gun_mode.h"
 #include "item.h"
 #include "itype.h"
-#include "json_error.h"
 #include "json_loader.h"
 #include "line.h"
+#include "point.h"
 #include "ranged.h"
-#include "translations.h"
+#include "translation.h"
 #include "type_id.h"
 #include "units.h"
 
