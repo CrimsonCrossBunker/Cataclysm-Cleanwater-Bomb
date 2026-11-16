@@ -257,11 +257,11 @@ void overmap::river_meander( const point_om_omt &river_end, tripoint_om_omt &cur
 }
 
 
-bool overmap::place_north_american_water()
+bool overmap::place_north_american_water( std::vector<north_america::terrain> &tiles )
 {
     using north_america::terrain;
     constexpr int width = OMAPX + 2;
-    const auto tiles = north_america::raster( global_base_point() - point( 1, 1 ), width, OMAPY + 2 );
+    tiles = north_america::raster( global_base_point() - point( 1, 1 ), width, OMAPY + 2 );
     const auto at = [&]( int x, int y ) {
         return tiles[( y + 1 ) * width + x + 1];
     };

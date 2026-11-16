@@ -81,7 +81,7 @@ class weather_generator
         void test_weather( unsigned seed ) const;
         void sort_weather();
         units::temperature get_weather_temperature( const tripoint_abs_ms &, const time_point &,
-                unsigned ) const;
+                unsigned, const std::optional<regional_climate::normals> *known_climate = nullptr ) const;
         units::temperature get_ground_temperature( const tripoint_abs_ms &, const time_point &,
                 unsigned ) const;
         std::optional<regional_climate::normals> climate_at( const tripoint_abs_ms & ) const;

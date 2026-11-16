@@ -1043,19 +1043,26 @@ bool game::start_game()
     here.invalidate_map_cache( level );
     here.build_map_cache( level );
     // Start the overmap with out immediate neighborhood visible, this needs to be after place_player
-    overmap_buffer.reveal( u.pos_abs_omt().xy(),
-                           get_scenario()->get_distance_initial_visibility(), 0 );
+    const bool atlas_start = north_america::active();
+    const auto reveal_start = [atlas_start]( const tripoint_abs_omt & center, int radius ) {
+        overmap_buffer.reveal( center, radius, []( const oter_id & ) {
+            return true;
+        }, atlas_start );
+    };
+    reveal_start( tripoint_abs_omt( u.pos_abs_omt().xy(), 0 ),
+                  get_scenario()->get_distance_initial_visibility() );
 
     const int city_size = overmap_buffer.get_settings( u.pos_abs_omt() ).get_settings_city().city_size;
     if( get_scenario()->get_reveal_locale() && city_size > 0 ) {
         city_reference nearest_city = overmap_buffer.closest_city( here.get_abs_sub() );
         const tripoint_abs_omt city_center_omt = project_to<coords::omt>( nearest_city.abs_sm_pos );
         // Very necessary little hack: We look for roads around our start, and path from the closest. Because the most common start(evac shelter) cannot be pathed through...
-        const tripoint_abs_omt nearest_road = overmap_buffer.find_closest( omtstart, "road", 3, false );
+        const tripoint_abs_omt nearest_road = overmap_buffer.find_closest( omtstart, "road", 3, false,
+                                              ot_match_type::type, atlas_start );
         // Reveal route to closest city and a 3 tile radius around the route
-        overmap_buffer.reveal_route( nearest_road, city_center_omt, 3 );
+        overmap_buffer.reveal_route( nearest_road, city_center_omt, 3, false, atlas_start );
         // Reveal destination city (scaling with city size setting)
-        overmap_buffer.reveal( city_center_omt, city_size );
+        reveal_start( city_center_omt, city_size );
     }
 
     u.set_moves( 0 );
