@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 
 #include "cata_scope_helpers.h"
 #include "game.h"
@@ -11,6 +12,7 @@
 #include "mapgendata.h"
 #include "map_helpers.h"
 #include "mapdata.h"
+#include "line.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_transport.h"
@@ -127,6 +129,31 @@ TEST_CASE( "north_america_plans_connected_street_classes", "[north_america]" )
         CHECK( single.connections == at( 20, offset ).connections );
         CHECK( single.street == at( 20, offset ).street );
     }
+}
+
+TEST_CASE( "atlas_start_clearance_measures_from_the_city_edge", "[north_america][worldgen]" )
+{
+    const point_abs_om winnipeg = project_to<coords::om>( point_abs_omt( -76078, -46705 ) );
+    const int district_width = north_america::urban_district_size();
+    std::optional<point_abs_omt> city_edge;
+    for( const point_abs_om &om : closest_points_first( winnipeg, 2 ) ) {
+        for( const auto &district : north_america::urban_districts_in( om ) ) {
+            const point_abs_omt east = district.center + point( district_width - district_width / 2, 0 );
+            if( !north_america::in_urban_footprint( east ) ) {
+                city_edge = east - point::east;
+                break;
+            }
+        }
+        if( city_edge ) {
+            break;
+        }
+    }
+    REQUIRE( city_edge );
+    const point_abs_omt just_outside = *city_edge + point::east;
+    CHECK_FALSE( north_america::in_urban_footprint( just_outside ) );
+    CHECK( north_america::in_urban_footprint( just_outside, 11 ) );
+    const point_abs_omt beyond_buffer = *city_edge + point::east * 12;
+    CHECK_FALSE( north_america::in_urban_footprint( beyond_buffer, 11 ) );
 }
 
 TEST_CASE( "atlas_city_development_tapers_and_rounds_the_fringe", "[north_america]" )

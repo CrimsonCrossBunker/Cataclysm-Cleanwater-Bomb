@@ -7,6 +7,7 @@
 #include <climits>
 #include <functional>
 #include <optional>
+#include <unordered_map>
 
 #include "avatar.h"
 #include "bodypart.h"
@@ -33,8 +34,6 @@
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
 #include "mdarray.h"
-#include "north_america.h"
-#include "north_america_ecology.h"
 #include "omdata.h"
 #include "output.h"
 #include "overmap.h"
@@ -335,32 +334,57 @@ void start_location::prepare_map( tinymap &m ) const
 }
 
 std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
-        start_location::find_player_initial_location( const point_abs_om &origin, bool outskirts ) const
+        start_location::find_player_initial_location_on_outskirts( const point_abs_om &origin ) const
 {
-    // Spiral out from the world origin scanning for a compatible starting location,
-    // creating overmaps as necessary.
-    const int radius = 3;
-    const omt_types_parameters chosen_target = random_target();
-    if( outskirts ) {
-        // Some scenarios require a specific city building. Limit the preference
-        // to the immediate area, then allow their normal starting location.
-        auto candidates = closest_points_first( origin, 1 );
-        if( north_america::active() ) {
-            std::stable_sort( candidates.begin(), candidates.end(), []( const point_abs_om & a,
-            const point_abs_om & b ) {
-                return north_america::urban_districts_in( a ).size() <
-                       north_america::urban_districts_in( b ).size();
-            } );
-        }
-        for( const point_abs_om &omp : candidates ) {
-            const overmap &omap = overmap_buffer.get( omp );
-            const tripoint_om_omt rural = omap.find_random_omt( { chosen_target.omt,
-                                          chosen_target.omt_type }, std::nullopt, true );
-            if( !rural.is_invalid() ) {
-                return { project_combine( omp, rural ), chosen_target.parameters };
+    constexpr int radius = 2;
+    const bool check_city_constraints = requires_city();
+    // Match all variants of this start location, sharing the terrain lookup across overmaps.
+    std::unordered_map<oter_id, const omt_types_parameters *> targets;
+    for( const point_abs_om &omp : closest_points_first( origin, radius ) ) {
+        const overmap &omap = overmap_buffer.get( omp );
+        std::vector<std::pair<tripoint_om_omt, const omt_types_parameters *>> candidates;
+        for( int z = std::max( -OVERMAP_DEPTH, constraints_.allowed_z_levels.min );
+             z <= std::min( OVERMAP_HEIGHT, constraints_.allowed_z_levels.max ); ++z ) {
+            for( int y = 0; y < OMAPY; ++y ) {
+                for( int x = 0; x < OMAPX; ++x ) {
+                    const tripoint_om_omt p( x, y, z );
+                    const oter_id terrain = omap.ter( p );
+                    auto [target, inserted] = targets.try_emplace( terrain, nullptr );
+                    if( inserted ) {
+                        const auto it = std::find_if( _locations.begin(), _locations.end(),
+                        [&]( const omt_types_parameters & variant ) {
+                            return is_ot_match( variant.omt, terrain, variant.omt_type );
+                        } );
+                        if( it != _locations.end() ) {
+                            target->second = &*it;
+                        }
+                    }
+                    if( !target->second || !omap.is_far_from_city( p ) ) {
+                        continue;
+                    }
+                    if( !check_city_constraints || std::any_of( omap.cities.begin(), omap.cities.end(),
+                    [&]( const city & candidate ) {
+                    return can_belong_to_city( p, candidate );
+                    } ) ) {
+                        candidates.emplace_back( p, target->second );
+                    }
+                }
             }
         }
+        if( !candidates.empty() ) {
+            const auto &chosen = random_entry( candidates );
+            return { project_combine( omp, chosen.first ), chosen.second->parameters };
+        }
     }
+    return { tripoint_abs_omt::invalid, {} };
+}
+
+std::pair<tripoint_abs_omt, std::unordered_map<std::string, std::string>>
+        start_location::find_player_initial_location( const point_abs_om &origin ) const
+{
+    // Spiral out from the world origin, creating overmaps as necessary.
+    constexpr int radius = 3;
+    const omt_types_parameters chosen_target = random_target();
     for( const point_abs_om &omp : closest_points_first( origin, radius ) ) {
         overmap &omap = overmap_buffer.get( omp );
         const tripoint_om_omt omtstart = omap.find_random_omt( std::make_pair( chosen_target.omt,

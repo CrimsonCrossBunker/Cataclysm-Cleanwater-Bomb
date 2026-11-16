@@ -375,10 +375,20 @@ const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index
     return city_index < zones.size() ? zones[city_index] : empty;
 }
 
-bool in_urban_footprint( point_abs_omt pos )
+bool in_urban_footprint( point_abs_omt pos, int margin )
 {
     const urban_atlas &atlas = get_urban_atlas();
-    return atlas.footprints.count( divide_xy_round_to_minus_infinity( pos.raw(), atlas.step ) ) != 0;
+    const point offset( margin, margin );
+    const point lo = divide_xy_round_to_minus_infinity( pos.raw() - offset, atlas.step );
+    const point hi = divide_xy_round_to_minus_infinity( pos.raw() + offset, atlas.step );
+    for( int y = lo.y; y <= hi.y; ++y ) {
+        for( int x = lo.x; x <= hi.x; ++x ) {
+            if( atlas.footprints.count( point( x, y ) ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 int urban_density( const urban_district &district, point_abs_omt pos )

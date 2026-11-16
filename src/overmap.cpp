@@ -1390,22 +1390,25 @@ const city &overmap::get_invalid_city() const
     return invalid_city;
 }
 
-tripoint_om_omt overmap::find_random_omt( const std::pair<std::string, ot_match_type> &target,
-        std::optional<city> target_city, bool outskirts ) const
+bool overmap::is_far_from_city( const tripoint_om_omt &p ) const
 {
-    const auto abs_origin = project_to<coords::omt>( pos() );
-    const bool atlas = outskirts && north_america::active();
+    constexpr int clearance = 12;
+    const point_abs_omt absolute = project_combine( pos(), p.xy() );
+    if( north_america::active() && north_america::in_urban_footprint( absolute, clearance - 1 ) ) {
+        return false;
+    }
+    return !is_in_city( p ) && std::none_of( cities.begin(), cities.end(), [&]( const city & c ) {
+        return square_dist( c.pos.raw(), p.xy().raw() ) < c.size + clearance;
+    } );
+}
+
+tripoint_om_omt overmap::find_random_omt( const std::pair<std::string, ot_match_type> &target,
+        std::optional<city> target_city ) const
+{
     const bool check_nearest_city = target_city.has_value();
     std::vector<tripoint_om_omt> valid;
     for( int i = 0; i < OMAPX; i++ ) {
         for( int j = 0; j < OMAPY; j++ ) {
-            const point raw( i, j );
-            if( ( atlas && north_america::in_urban_footprint( abs_origin + raw ) ) ||
-            ( outskirts && std::any_of( cities.begin(), cities.end(), [&]( const city & c ) {
-            return square_dist( c.pos.raw(), raw ) < c.size + 12;
-            } ) ) ) {
-                continue;
-            }
             for( int k = -OVERMAP_DEPTH; k <= OVERMAP_HEIGHT; k++ ) {
                 const tripoint_om_omt p( i, j, k );
                 if( is_ot_match( target.first, ter( p ), target.second ) &&

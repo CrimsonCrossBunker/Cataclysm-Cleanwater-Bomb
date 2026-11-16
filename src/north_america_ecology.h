@@ -27,7 +27,7 @@ struct urban_district {
 };
 
 const std::vector<urban_district> &urban_districts_in( point_abs_om pos );
-bool in_urban_footprint( point_abs_omt pos );
+bool in_urban_footprint( point_abs_omt pos, int margin = 0 );
 // Development density within a populated atlas district, from 0 to 100.
 int urban_density( const urban_district &district, point_abs_omt pos );
 int urban_district_size();

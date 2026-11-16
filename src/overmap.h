@@ -481,8 +481,8 @@ class overmap
          * Returns @ref tripoint_om_omt::invalid if no suitable place has been found.
          */
         tripoint_om_omt find_random_omt( const std::pair<std::string, ot_match_type> &target,
-                                         std::optional<city> target_city = std::nullopt,
-                                         bool outskirts = false ) const;
+                                         std::optional<city> target_city = std::nullopt ) const;
+        bool is_far_from_city( const tripoint_om_omt &p ) const;
         tripoint_om_omt find_random_omt( const std::string &omt_base_type,
                                          ot_match_type match_type = ot_match_type::type,
                                          std::optional<city> target_city = std::nullopt ) const {
