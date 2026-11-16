@@ -474,11 +474,16 @@ npc_attack_rating npc_attack_melee::evaluate_critter( const npc &source,
                               static_cast<int>( std::round( damage * hit ) ) );
 }
 
+namespace
+{
+
 enum class npc_gun_range : int {
     CLOSE = 1,
     MEDIUM,
     LONG
 };
+
+} // namespace
 
 static npc_gun_range npc_gun_distance( const npc &source, const item &weapon, int distance )
 {
