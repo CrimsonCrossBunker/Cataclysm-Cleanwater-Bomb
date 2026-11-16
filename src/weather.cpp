@@ -1095,6 +1095,8 @@ const weather_generator &weather_manager::get_cur_weather_gen() const
 void weather_manager::on_game_start()
 {
     clear_plant_climate_cache();
+    historical_weather.clear();
+    historical_weather_dimension.reset();
     last_weather_turn.reset();
     indoor_reference_time.reset();
     heated_rooms.clear();
@@ -1128,6 +1130,7 @@ void weather_manager::update_weather()
                                calendar::turn - *last_weather_turn > 1_hours ) ) {
         if( calendar::turn < *last_weather_turn ) {
             snow_depth_map.clear();
+            historical_weather.clear();
         }
         clear_plant_climate_cache();
         clear_temp_cache();
@@ -1639,6 +1642,41 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
 
     temperature_cache.emplace( location, temp );
     return temp;
+}
+
+units::temperature weather_manager::get_historical_temperature( const tripoint_abs_ms &location,
+        time_point when )
+{
+    const auto dimension = g->get_dimension_prefix();
+    if( historical_weather_dimension != dimension ) {
+        historical_weather.clear();
+        historical_weather_dimension = dimension;
+    }
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( location ) );
+    const tripoint_abs_ms center = project_to<coords::ms>( cell + point( snow_cell_width / 2,
+                                   snow_cell_width / 2 ) );
+    const weather_generator &generator = get_cur_weather_gen();
+    auto found = historical_weather.find( cell );
+    if( found == historical_weather.end() ) {
+        if( historical_weather.size() >= 16 ) {
+            historical_weather.clear();
+        }
+        found = historical_weather.try_emplace( cell ).first;
+        found->second.normals = generator.climate_at( center );
+    }
+    auto &history = found->second;
+    const int sample_time = to_turn<int>( when );
+    const auto existing = history.samples.find( sample_time );
+    if( existing != history.samples.end() ) {
+        return existing->second;
+    }
+    const units::temperature sample = generator.get_weather_temperature( center, when, g->get_seed(),
+                                      &history.normals );
+    if( history.samples.size() >= 4096 ) {
+        history.samples.clear();
+    }
+    history.samples.emplace( sample_time, sample );
+    return sample;
 }
 
 units::temperature weather_manager::get_area_temperature( const tripoint_abs_omt &location ) const

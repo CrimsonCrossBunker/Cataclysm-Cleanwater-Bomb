@@ -3,8 +3,11 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
+#include "cata_path.h"
 #include "climate_seasons.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -15,6 +18,7 @@
 #include "mapdata.h"
 #include "north_america_soil.h"
 #include "options.h"
+#include "path_info.h"
 #include "units.h"
 #include "weather.h"
 #include "weather_gen.h"
@@ -46,6 +50,94 @@ double crop_climate_profile::heat_units( double low, double high ) const
     const double mean = std::min( ( low + high ) / 2, optimum_c );
     const double heat_stress = 1 - std::max( 0.0, high - optimum_c ) / ( max_c - optimum_c );
     return std::max( 0.0, mean - base_c ) * heat_stress;
+}
+
+std::optional<time_point> field_crop::sowing_date( time_point when ) const
+{
+    constexpr double days_in_calendar = 365;
+    const time_duration year = calendar::year_length();
+    const time_duration date = ( time_past_new_year( when ) + year ) % year;
+    time_point planted = when - date + year * ( planting_day / days_in_calendar );
+    if( planted > when ) {
+        planted -= year;
+    }
+    const int field_season = ( harvest_day - planting_day + 365 ) % 365 + 1;
+    return when - planted < year * ( field_season / days_in_calendar ) ?
+           std::optional<time_point>( planted ) : std::nullopt;
+}
+
+namespace
+{
+struct weighted_crop {
+    field_crop crop;
+    unsigned weight;
+};
+
+int crop_calendar_day( const JsonValue &value )
+{
+    static constexpr std::array<int, 12> month_lengths{{
+            31, 28, 31, 30, 31, 30,
+            31, 31, 30, 31, 30, 31
+        }};
+    const int encoded = value.get_int();
+    const int month = encoded / 100;
+    const int day = encoded % 100;
+    if( month < 1 || month > 12 || day < 1 || day > month_lengths[month - 1] ) {
+        value.throw_error( "Expected a planting or harvest date in MMDD form" );
+    }
+    int result = day - 1;
+    for( int i = 0; i < month - 1; ++i ) {
+        result += month_lengths[i];
+    }
+    return result;
+}
+} // namespace
+
+std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll )
+{
+    static const auto profiles = [] {
+        std::unordered_map<std::string, std::vector<weighted_crop>> result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_field_crops.json",
+                             [&]( const JsonValue & data )
+        {
+            const JsonObject root = data.get_object();
+            root.allow_omitted_members();
+            for( const JsonMember entry : root.get_object( "regions" ) ) {
+                std::vector<weighted_crop> &options = result[entry.name()];
+                for( const JsonValue row : entry.get_array() ) {
+                    const JsonArray values = row.get_array();
+                    const int weight = values.get_int( 1 );
+                    if( weight <= 0 || weight > 100 ) {
+                        row.throw_error( "Field crop weights must be between 1 and 100" );
+                    }
+                    options.push_back( {
+                        {
+                            itype_id( values.get_string( 0 ) ), crop_calendar_day( values[2] ),
+                            crop_calendar_day( values[3] )
+                        },
+                        static_cast<unsigned>( weight )
+                    } );
+                }
+            }
+        } );
+        return result;
+    }();
+    const auto options = profiles.find( std::string( region ) );
+    if( options == profiles.end() || options->second.empty() ) {
+        return std::nullopt;
+    }
+    unsigned total = 0;
+    for( const weighted_crop &choice : options->second ) {
+        total += choice.weight;
+    }
+    unsigned roll = field_roll % total;
+    for( const weighted_crop &choice : options->second ) {
+        if( roll < choice.weight ) {
+            return choice.crop;
+        }
+        roll -= choice.weight;
+    }
+    return std::nullopt;
 }
 
 fruit_climate_profile fruit_climate_profile::load( const JsonObject &jo )

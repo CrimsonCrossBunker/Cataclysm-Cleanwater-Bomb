@@ -3,6 +3,7 @@
 #define CATA_SRC_PLANT_CLIMATE_H
 
 #include <optional>
+#include <string_view>
 
 #include "calendar.h"
 #include "coordinates.h"
@@ -26,6 +27,17 @@ struct crop_climate_profile {
     static crop_climate_profile load( const JsonObject &jo );
     double heat_units( double low, double high ) const;
 };
+
+struct field_crop {
+    itype_id seed;
+    int planting_day;
+    int harvest_day;
+
+    // Year fractions use a non-leap Gregorian calendar and scale with the world year.
+    std::optional<time_point> sowing_date( time_point when ) const;
+};
+
+std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll );
 
 struct fruit_climate_profile {
     crop_climate_profile growth;

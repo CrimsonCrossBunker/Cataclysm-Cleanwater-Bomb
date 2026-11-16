@@ -53,6 +53,7 @@
 #include "global_vars.h"
 #include "input.h"
 #include "input_enums.h"
+#include "iexamine.h"
 #include "item.h"
 #include "item_category.h"
 #include "item_factory.h"
@@ -86,6 +87,7 @@
 #include "north_america_ecology.h"
 #include "north_america_soil.h"
 #include "north_america_transport.h"
+#include "plant_climate.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
@@ -3527,9 +3529,11 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
         jmapgen_int chance;
         std::optional<jmapgen_spawn_item> item_spawner;
         std::optional<jmapgen_item_group> item_group_spawner;
+        bool regional_crop;
         jmapgen_sealed_item( const JsonObject &jsi, const std::string &context )
             : furniture( jsi.get_member( "furniture" ) )
-            , chance( jsi, "chance", 100, 100 ) {
+            , chance( jsi, "chance", 100, 100 )
+            , regional_crop( jsi.get_bool( "regional_crop", false ) ) {
             if( jsi.has_object( "item" ) ) {
                 JsonObject item_obj = jsi.get_object( "item" );
                 item_spawner = jmapgen_spawn_item( item_obj, "item for " + context );
@@ -3641,6 +3645,34 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             const tripoint_bub_ms pos( px.get(), py.get(), dat.zlevel() + pz.get() );
             const furn_id chosen_furn = furniture.get( dat );
             dat.m.furn_set( pos, furn_str_id::NULL_ID() );
+            if( regional_crop && pos.z() == 0 && north_america::active() &&
+                chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
+                const point_abs_omt field = dat.pos().xy();
+                const auto abs_field = project_to<coords::ms>( field ) + point( SEEX, SEEY );
+                // A field is planted as a unit. Hash its absolute position with the world seed.
+                const unsigned roll = static_cast<unsigned>( std::hash<point_abs_omt> {}( field ) ) ^
+                                      g->get_seed();
+                const std::optional<field_crop> crop = regional_field_crop(
+                        north_america::jurisdiction_at( abs_field ), roll );
+                if( crop && crop->seed.is_valid() ) {
+                    const auto sown = crop->sowing_date( std::min( dat.when(),
+                                                         calendar::start_of_cataclysm ) );
+                    if( !sown ) {
+                        return;
+                    }
+                    item seed( crop->seed, std::max( *sown, calendar::turn_zero ) );
+                    if( seed.is_seed() ) {
+                        if( seed.count_by_charges() ) {
+                            seed.charges = 1;
+                        }
+                        // The historical simulation can start before the game's turn zero.
+                        iexamine::set_plant_last_water_check( seed, *sown );
+                        dat.m.add_item( pos, std::move( seed ) );
+                        dat.m.furn_set( pos, chosen_furn );
+                        return;
+                    }
+                }
+            }
             if( item_spawner ) {
                 item_spawner->apply( dat, px, py, pz, context );
             }
