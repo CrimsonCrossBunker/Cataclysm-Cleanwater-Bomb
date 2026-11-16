@@ -28,8 +28,6 @@
 
 static const bionic_id test_bio_ench( "test_bio_ench" );
 
-static const bodypart_str_id body_part_hand_l( "hand_l" );
-
 static const efftype_id effect_blind( "blind" );
 static const efftype_id effect_debug_no_staggered( "debug_no_staggered" );
 static const efftype_id effect_invisibility( "invisibility" );
