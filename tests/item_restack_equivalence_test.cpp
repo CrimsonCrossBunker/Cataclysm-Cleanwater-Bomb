@@ -1,5 +1,6 @@
 #include <iterator>
 #include <list>
+#include <string>
 #include <vector>
 
 #include "calendar.h"
