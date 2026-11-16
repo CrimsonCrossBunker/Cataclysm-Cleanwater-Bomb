@@ -5,6 +5,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "cata_catch.h"
@@ -469,6 +470,101 @@ TEST_CASE( "item_location_deserialize_without_uid_falls_back_to_index",
     item_location loaded = deserialize_item_location( json_str );
     REQUIRE( loaded );
     CHECK( loaded->typeId() == itype_tshirt );
+}
+
+TEST_CASE( "unresolved_map_item_location_survives_resaving_before_item_load",
+           "[item][item_location][item_uid][save]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms position( 60, 60, 0 );
+    here.i_clear( position );
+    item &target = here.add_item( position, item( itype_tshirt ) );
+    const int64_t target_uid = target.uid().get_value();
+    std::ostringstream saved_item;
+    JsonOut item_out( saved_item );
+    target.serialize( item_out );
+    std::string saved_location = serialize_item_location( item_location( map_cursor( position ),
+                                 &target ) );
+    const bool legacy = GENERATE( false, true );
+    CAPTURE( legacy );
+    if( legacy ) {
+        std::ostringstream legacy_location;
+        JsonOut location_out( legacy_location );
+        location_out.start_object();
+        location_out.member( "type", "map" );
+        location_out.member( "position", here.get_abs( position ) );
+        location_out.member( "idx", 0 );
+        location_out.end_object();
+        saved_location = legacy_location.str();
+    }
+
+    here.i_clear( position );
+    item_location pending = deserialize_item_location( saved_location );
+    std::string resaved_location;
+    const std::string errors = capture_debugmsg_during( [&]() {
+        resaved_location = serialize_item_location( pending );
+    } );
+    INFO( errors );
+    CHECK( errors.empty() );
+    JsonObject resaved = json_loader::from_string( resaved_location ).get_object();
+    resaved.allow_omitted_members();
+    CHECK( resaved.get_string( "type" ) == "map" );
+
+    item restored;
+    restored.deserialize( json_loader::from_string( saved_item.str() ).get_object() );
+    here.add_item( position, std::move( restored ) );
+    item_location round_trip = deserialize_item_location( resaved_location );
+    REQUIRE( pending );
+    REQUIRE( round_trip );
+    CHECK( pending->uid().get_value() == target_uid );
+    CHECK( round_trip->uid().get_value() == target_uid );
+}
+
+TEST_CASE( "resaved_unresolved_map_item_location_does_not_bind_to_replacement",
+           "[item][item_location][item_uid][save]" )
+{
+    clear_map_without_vision();
+    map &here = get_map();
+    const tripoint_bub_ms position( 60, 60, 0 );
+    here.i_clear( position );
+    item &target = here.add_item( position, item( itype_tshirt ) );
+    const std::string saved_location = serialize_item_location( item_location( map_cursor( position ),
+                                       &target ) );
+    here.i_clear( position );
+    here.add_item( position, item( itype_jeans ) );
+    const bool invalid_uid = GENERATE( false, true );
+    CAPTURE( invalid_uid );
+    std::string input_location = saved_location;
+    if( invalid_uid ) {
+        std::ostringstream invalid_location;
+        JsonOut location_out( invalid_location );
+        location_out.start_object();
+        location_out.member( "type", "map" );
+        location_out.member( "position", here.get_abs( position ) );
+        location_out.member( "idx", 0 );
+        location_out.member( "uid", -1 );
+        location_out.end_object();
+        input_location = invalid_location.str();
+    }
+    item_location pending = deserialize_item_location( input_location );
+    std::string resaved_location;
+    const std::string save_errors = capture_debugmsg_during( [&]() {
+        resaved_location = serialize_item_location( pending );
+    } );
+    INFO( save_errors );
+    CHECK( save_errors.empty() );
+    JsonObject resaved = json_loader::from_string( resaved_location ).get_object();
+    resaved.allow_omitted_members();
+    CHECK( resaved.get_string( "type" ) == "map" );
+
+    item_location round_trip = deserialize_item_location( resaved_location );
+    const std::string resolution_errors = capture_debugmsg_during( [&]() {
+        CHECK_FALSE( round_trip );
+    } );
+    CHECK( resolution_errors.find( "item_location lost its target item" ) != std::string::npos );
+    const std::string expired_location = serialize_item_location( round_trip );
+    CHECK( json_loader::from_string( expired_location ).get_object().get_string( "type" ) == "null" );
 }
 
 TEST_CASE( "item_location_on_person_survives_restack", "[item][item_location][item_uid]" )
