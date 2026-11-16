@@ -35,6 +35,13 @@
 #include "vehicle_control.h"
 #include "vpart_range.h"
 
+static const efftype_id effect_incorporeal( "incorporeal" );
+
+static const json_character_flag json_flag_CANNOT_ATTACK( "CANNOT_ATTACK" );
+
+static const trait_id trait_BRAWLER( "BRAWLER" );
+static const trait_id trait_GUNSHY( "GUNSHY" );
+
 namespace
 {
 bool aiming( const std::string &operation )
@@ -84,7 +91,7 @@ bool set_preview_choice( vehicle &target, vehicle_part &preview,
         return false;
     }
     gun.gun_set_mode( choice.mode );
-    auto data = target.turret_query( preview );
+    turret_data data = target.turret_query( preview );
     if( !data ) {
         return false;
     }
@@ -93,9 +100,9 @@ bool set_preview_choice( vehicle &target, vehicle_part &preview,
 
 bool can_aim( const Character &who, bool direct )
 {
-    return !who.has_trait( trait_id( "BRAWLER" ) ) &&
-           ( direct || !who.has_trait( trait_id( "GUNSHY" ) ) ) &&
-           !who.has_flag( json_character_flag( "CANNOT_ATTACK" ) );
+    return !who.has_trait( trait_BRAWLER ) &&
+           ( direct || !who.has_trait( trait_GUNSHY ) ) &&
+           !who.has_flag( json_flag_CANNOT_ATTACK );
 }
 
 std::vector<vehicle_part *> aim_options( vehicle &target, const std::string &operation,
@@ -166,7 +173,7 @@ void vehicle_turret_selection::deserialize( const JsonObject &data )
 vehicle_turret_choice capture_vehicle_turret( vehicle &target, vehicle_part &part )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
-    const auto data = target.turret_query( part );
+    const turret_data data = target.turret_query( part );
     return { part.get_base().uid().get_value(), target.abs_part_pos( part ),
              part.get_base().gun_get_mode_id(), data ? data.ammo_current() : itype_id::NULL_ID(), part.enabled };
 }
@@ -177,7 +184,7 @@ bool valid_vehicle_turret_control( Character &who, map &here, vehicle &target,
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const bool aim = aiming( choice.operation );
     const bool direct = choice.operation == "fire_direct";
-    if( who.is_dead_state() || who.has_effect( efftype_id( "incorporeal" ) ) ||
+    if( who.is_dead_state() || who.has_effect( effect_incorporeal ) ||
         who.pos_abs() != choice.operator_position || choice.turrets.empty() ||
         ( !aim && choice.operation != "targeting" && choice.operation != "mode" ) ||
         ( aim != choice.target.has_value() ) ||
@@ -190,7 +197,7 @@ bool valid_vehicle_turret_control( Character &who, map &here, vehicle &target,
     }
     std::set<int64_t> identities;
     bool in_range = false;
-    for( const auto &selected : choice.turrets ) {
+    for( const vehicle_turret_choice &selected : choice.turrets ) {
         vehicle_part *part = find_turret( target, selected );
         if( !part || !identities.insert( selected.part ).second ) {
             return false;
@@ -208,14 +215,14 @@ bool valid_vehicle_turret_control( Character &who, map &here, vehicle &target,
             }
             continue;
         }
-        auto preview = preview_part( *part );
+        vehicle_part preview = preview_part( *part );
         if( !set_preview_choice( target, preview, selected ) ) {
             return false;
         }
         if( !aim ) {
             continue;
         }
-        auto data = target.turret_query( preview );
+        turret_data data = target.turret_query( preview );
         if( !data || data.query() != turret_data::status::ready ||
             ( direct && selected.position != who.pos_abs() ) ||
             ( choice.operation == "aim_manual" && part->enabled ) ||
@@ -265,7 +272,7 @@ bool execute_vehicle_turret_control( Character &who, map &here, vehicle &target,
             who.set_moves( std::min( 0, who.get_moves() - 100 + 5 * who.get_int() ) );
         }
     }
-    for( const auto &selected : choice.turrets ) {
+    for( const vehicle_turret_choice &selected : choice.turrets ) {
         vehicle *live = vehicle::find_vehicle_by_uid( here, vehicle_id );
         if( !lifetime || !live ) {
             break;
@@ -289,7 +296,7 @@ bool execute_vehicle_turret_control( Character &who, map &here, vehicle &target,
         if( !aim ) {
             continue;
         }
-        auto data = live->turret_query( *part );
+        turret_data data = live->turret_query( *part );
         if( !data ) {
             continue;
         }
@@ -402,7 +409,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
                                    controls ? _( "manual -> auto" ) :
                                    _( "manual (turret control unit required for auto mode)" ) );
                 } else {
-                    auto preview = preview_part( *part );
+                    vehicle_part preview = preview_part( *part );
                     preview_gun( preview ).gun_set_mode( desired[i].mode );
                     menu.addentry( i, true, MENU_AUTOASSIGN, "%s [%s]", part->name(),
                                    preview.get_base().gun_current_mode().tname() );
@@ -416,7 +423,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
             if( selected_operation == "targeting" ) {
                 desired[current].automatic = !desired[current].automatic;
             } else {
-                auto preview = preview_part( *find_turret( target, desired[current] ) );
+                vehicle_part preview = preview_part( *find_turret( target, desired[current] ) );
                 item &gun = preview_gun( preview );
                 gun.gun_set_mode( desired[current].mode );
                 gun.gun_cycle_mode();
@@ -440,6 +447,7 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
         }
         if( selected_operation == "aim_single" ) {
             std::vector<std::string> names;
+            names.reserve( options.size() );
             for( const vehicle_part *part : options ) {
                 names.push_back( part->name() );
             }
@@ -458,12 +466,12 @@ std::optional<vehicle_control_selection> query_vehicle_turrets( Character &who, 
         const restore_on_out_of_scope recoil( who.recoil );
         target_handler::trajectory trajectory;
         if( selected_operation == "fire_direct" ) {
-            auto preview = preview_part( *options.front() );
+            vehicle_part preview = preview_part( *options.front() );
             if( sweeping && !select_full_auto_mode( preview_gun( preview ) ) ) {
                 who.add_msg_if_player( _( "This turret has no full-auto mode." ) );
                 return std::nullopt;
             }
-            auto data = target.turret_query( preview );
+            turret_data data = target.turret_query( preview );
             data.ammo_select( choice.turrets.front().ammo );
             std::optional<firearm_sweep> sweep;
             g->temp_exit_fullscreen();
