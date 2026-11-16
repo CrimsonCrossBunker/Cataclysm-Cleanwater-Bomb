@@ -469,7 +469,7 @@ bool draw_mapped_road( mapgendata &dat )
         }
         return paving.id();
     };
-    const auto in_arm = [center]( int across, int along, int width, bool negative, bool positive ) {
+    const auto in_arm = []( int across, int along, int width, bool negative, bool positive ) {
         return across >= center - width && across < center + width &&
                ( ( negative && along < center + width ) || ( positive && along >= center - width ) );
     };
