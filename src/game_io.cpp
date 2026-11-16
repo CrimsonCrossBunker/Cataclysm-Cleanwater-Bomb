@@ -127,6 +127,9 @@ static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
             throw std::runtime_error( "Lua-first Mod '" + mod.ident.str() +
                                       "' is unavailable: " + mod.lua_platform_error );
         }
+        if( mod.lua_platform_entry.empty() ) {
+            continue;
+        }
         result.push_back( {
             mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
             mod.lua_platform_entry.get_unrelative_path()
@@ -233,6 +236,9 @@ bool game::check_mod_data( const std::vector<mod_id> &opts )
         bool mod_valid = true;
         try {
             load_core_data();
+            on_out_of_scope restore_options( []() {
+                get_options().restore_mod_world_options();
+            } );
 
             // Match normal world loading: dependencies first, then only the
             // interactions whose companion Mods are actually enabled.
@@ -286,6 +292,7 @@ void game::load_core_data()
     // core data can be loaded only once and must be first
     // anyway.
     DynamicDataLoader::get_instance().unload_data();
+    get_options().restore_mod_world_options();
 
     load_data_from_dir( PATH_INFO::jsondir(), "core" );
 }
@@ -607,6 +614,9 @@ bool game::load( const save_t &name )
 void game::load_world_modfiles()
 {
     auto &mods = world_generator->active_world->active_mod_order;
+    on_out_of_scope restore_options( []() {
+        get_options().restore_mod_world_options();
+    } );
 
     canonicalize_mod_list( mods );
 
@@ -649,6 +659,7 @@ void game::load_world_modfiles()
                                   platform_error );
     }
     cata::lua_platform::commit_prepared_mods();
+    restore_options.cancel();
 }
 
 void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs )
@@ -667,6 +678,7 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
         }
         cata_timer pack_timer( string_format( "%s pack load time:", mod->name() ) );
         load_mod_data_from_dir( mod->path, mod.str() );
+        get_options().apply_mod_world_options( mod.str(), mod->lua_world_options );
     }
     cata_timer::print_stats();
 

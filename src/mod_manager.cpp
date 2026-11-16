@@ -402,6 +402,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             hybrid.lua_platform_version = 0;
             hybrid.lua_platform_error = reason;
             hybrid.lua_platform_entry = cata_path();
+            hybrid.lua_world_options.clear();
             hybrid.mod_root_path = root;
             return;
         }
@@ -556,7 +557,10 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     const std::string entry_string = definition.entry_set ? definition.entry : "main.lua";
     const fs::path relative_entry = fs::u8path( entry_string );
     cata_path entry = root / relative_entry;
-    if( platform_error.empty() ) {
+    if( !definition.world_options.empty() && !definition.entry_set && !file_exist( entry ) ) {
+        // An options-only Mod can use its metadata without allocating a world runtime.
+        entry = cata_path();
+    } else if( platform_error.empty() ) {
         if( entry_string.empty() || entry_string.size() > 4096 ||
             entry_string.find( '\0' ) != std::string::npos || relative_entry.is_absolute() ) {
             record_rejection( "entry must be a non-empty relative path" );
@@ -613,6 +617,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
             hybrid.core = definition.core;
         }
         hybrid.lua_platform_entry = std::move( entry );
+        hybrid.lua_world_options = std::move( definition.world_options );
         hybrid.mod_root_path = root;
         hybrid.lua_platform_version = cata::lua_platform::platform_version;
         hybrid.lua_platform_error = std::move( platform_error );
@@ -640,6 +645,7 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
     mod.path = root;
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );
+    mod.lua_world_options = std::move( definition.world_options );
     mod.lua_platform_version = cata::lua_platform::platform_version;
     mod.lua_platform_error = std::move( platform_error );
     mod_map.emplace( ident, std::move( mod ) );

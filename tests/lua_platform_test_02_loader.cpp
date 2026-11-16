@@ -4,8 +4,12 @@
 #include "lua_platform_test_support.h"
 #include <cata_scope_helpers.h>
 #include <cstdlib>
+#include <flexbuffer_json.h>
+#include <json_loader.h>
 #include <lua_platform_loader.h>
 #include <lua_platform_runtime.h>
+#include <options.h>
+#include <worldfactory.h>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -13,6 +17,54 @@
 
 namespace
 {
+
+TEST_CASE( "lua_platform_mod_world_options_keep_native_override_order",
+           "[lua][platform][loader][regression]" )
+{
+    const platform_lua_test_directory files;
+    files.write( std::filesystem::u8path( "mod.lua" ), R"lua(
+local ccb = require("ccb")
+local mod = ccb.ModDefinition { world_options = {
+    LUA_TEST_PACK_OPTION = 7,
+    LUA_TEST_PRIVATE_OPTION = true,
+    LUA_TEST_PACK_FLOAT = 1.25,
+    LUA_TEST_PACK_STRING = "custom",
+} }
+assert(mod.world_options.LUA_TEST_PACK_OPTION == 7)
+assert(mod.world_options.LUA_TEST_PRIVATE_OPTION == true)
+return mod
+)lua" );
+    const std::string option = "LUA_TEST_PACK_OPTION";
+    options_manager &options = get_options();
+    REQUIRE_FALSE( options.has_option( option ) );
+    // Register the first value via Lua so the isolated test can remove all
+    // temporary options when it exits.
+    on_out_of_scope cleanup( [&]() {
+        options.restore_mod_world_options();
+    } );
+    options.apply_mod_world_options( "fixture_defaults", { { option, 2 } } );
+    const auto load_json_override = []( const char *json ) {
+        const JsonValue data = json_loader::from_string( json );
+        load_external_option( data.get_object() );
+    };
+    load_json_override( R"({"name":"LUA_TEST_PACK_OPTION","stype":"int","value":5})" );
+    REQUIRE( get_option<int>( option ) == 5 );
+
+    cata::lua_platform::mod_definition metadata;
+    std::string error;
+    REQUIRE( cata::lua_platform::read_mod_definition( files.root, metadata, error ) );
+    options.apply_mod_world_options( "lua_pack", metadata.world_options );
+    CHECK( get_option<int>( option ) == 7 );
+    CHECK( get_option<bool>( "LUA_TEST_PRIVATE_OPTION" ) );
+    CHECK( get_option<float>( "LUA_TEST_PACK_FLOAT" ) == 1.25f );
+    CHECK( get_option<std::string>( "LUA_TEST_PACK_STRING" ) == "custom" );
+    load_json_override( R"({"name":"LUA_TEST_PACK_OPTION","stype":"int","value":9})" );
+    CHECK( get_option<int>( option ) == 9 );
+
+    options.restore_mod_world_options();
+    CHECK_FALSE( options.has_option( option ) );
+    CHECK_FALSE( options.has_option( "LUA_TEST_PRIVATE_OPTION" ) );
+}
 
 TEST_CASE( "lua_platform_loader_uses_trusted_environment_for_metadata_and_runtime",
            "[lua][platform][loader]" )

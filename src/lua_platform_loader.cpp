@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -202,6 +203,45 @@ std::vector<std::string> bounded_string_array( const sol::table &values,
     return result;
 }
 
+mod_world_options read_world_options( const sol::table &values )
+{
+    mod_world_options result;
+    for( const auto &[key, value] : values ) {
+        if( key.get_type() != sol::type::string ) {
+            throw std::runtime_error( "ModDefinition world_options keys must be strings" );
+        }
+        const std::string name = key.as<std::string>();
+        if( name.empty() || name.find( '\0' ) != std::string::npos ) {
+            throw std::runtime_error( "ModDefinition world_options requires valid option names" );
+        }
+        if( value.get_type() == sol::type::boolean ) {
+            result.emplace( name, value.as<bool>() );
+        } else if( value.get_type() == sol::type::string ) {
+            result.emplace( name, value.as<std::string>() );
+        } else if( value.get_type() == sol::type::number ) {
+            lua_State *state = value.lua_state();
+            value.push();
+            const bool integer = lua_isinteger( state, -1 );
+            lua_pop( state, 1 );
+            const double number = value.as<double>();
+            if( integer && number >= std::numeric_limits<int>::min() &&
+                number <= std::numeric_limits<int>::max() ) {
+                result.emplace( name, static_cast<int>( number ) );
+            } else if( !integer && std::isfinite( number ) &&
+                       std::abs( number ) <= std::numeric_limits<float>::max() ) {
+                result.emplace( name, static_cast<float>( number ) );
+            } else {
+                throw std::runtime_error( "ModDefinition world option '" + name +
+                                          "' is outside the native numeric range" );
+            }
+        } else {
+            throw std::runtime_error( "ModDefinition world option '" + name +
+                                      "' must be a boolean, number or string" );
+        }
+    }
+    return result;
+}
+
 mod_definition make_mod_definition( const sol::table &values )
 {
     mod_definition result;
@@ -213,6 +253,13 @@ mod_definition make_mod_definition( const sol::table &values )
                         result.description_set );
     set_optional_field( values, "category", result.category, result.category_set );
     set_optional_field( values, "core", result.core, result.core_set );
+    const sol::object world_options = values.raw_get<sol::object>( "world_options" );
+    if( world_options.valid() && world_options.get_type() != sol::type::nil ) {
+        if( world_options.get_type() != sol::type::table ) {
+            throw std::runtime_error( "ModDefinition world_options must be a table" );
+        }
+        result.world_options = read_world_options( world_options.as<sol::table>() );
+    }
     const sol::object dependencies = values.raw_get<sol::object>( "dependencies" );
     if( dependencies.valid() && dependencies.get_type() != sol::type::nil ) {
         if( dependencies.get_type() != sol::type::table ) {
@@ -311,6 +358,19 @@ void install_mod_definition( sol::table &ccb )
     []( mod_definition & definition, bool value ) {
         definition.core = value;
         definition.core_set = true;
+    } ),
+    "world_options", sol::property(
+    []( const mod_definition & definition, sol::this_state state ) {
+        sol::table result = sol::state_view( state ).create_table();
+        for( const auto &option : definition.world_options ) {
+            std::visit( [&]( const auto & value ) {
+                result[option.first] = value;
+            }, option.second );
+        }
+        return result;
+    },
+    []( mod_definition & definition, const sol::table & value ) {
+        definition.world_options = read_world_options( value );
     } ) );
     ccb["_ModDefinitionNative"] = sol::lua_nil;
     ccb.set_function( "ModDefinition", []( const sol::table & values ) {

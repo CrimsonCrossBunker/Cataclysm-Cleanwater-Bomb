@@ -1153,6 +1153,9 @@ WORLD *worldfactory::make_new_world( special_game_type special_type )
 
 void worldfactory::set_active_world( WORLD *world )
 {
+    if( world_generator->active_world != world ) {
+        get_options().restore_mod_world_options();
+    }
     world_generator->active_world = world;
     if( world ) {
         get_options().set_world_options( &world->WORLD_OPTIONS );

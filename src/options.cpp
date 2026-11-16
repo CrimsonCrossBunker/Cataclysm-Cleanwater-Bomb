@@ -10,6 +10,7 @@
 #include <limits>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 
 #include "android_ui_mode.h"
 #include "cached_options.h"
@@ -5299,6 +5300,75 @@ void options_manager::set_world_options( options_container *options )
     } else {
         world_options = options;
     }
+}
+
+void options_manager::apply_mod_world_options( const std::string_view mod,
+        const mod_world_options &overrides )
+{
+    for( const auto &[name, value] : overrides ) {
+        const auto existing = options.find( name );
+        const char *inferred_type = std::visit( []( const auto &input ) {
+            using value_type = std::decay_t<decltype( input )>;
+            if constexpr( std::is_same_v<value_type, bool> ) {
+                return "bool";
+            } else if constexpr( std::is_same_v<value_type, int> ) {
+                return "int";
+            } else if constexpr( std::is_same_v<value_type, float> ) {
+                return "float";
+            } else {
+                return "string_input";
+            }
+        }, value );
+        if( existing == options.end() ) {
+            mod_world_option_undo.try_emplace( name, std::nullopt );
+            add_external( name, "external_options", inferred_type );
+        } else if( existing->second.getPage() == "external_options" ) {
+            mod_world_option_undo.try_emplace( name, existing->second );
+        } else if( existing->second.getPage() != "world_default" ) {
+            throw std::runtime_error( "Mod '" + std::string( mod ) + "' cannot override non-world option '" +
+                                      name + "'" );
+        }
+
+        cOpt &option = get_option( name );
+        const std::string type = option.getType();
+        if( const bool *enabled = std::get_if<bool>( &value ); enabled && type == "bool" ) {
+            option.setValue( std::string( *enabled ? "true" : "false" ) );
+        } else if( const int *integer = std::get_if<int>( &value );
+                   integer && ( type == "int" || type == "float" ) ) {
+            if( type == "int" ) {
+                option.setValue( *integer );
+            } else {
+                option.setValue( static_cast<float>( *integer ) );
+            }
+        } else if( const float *decimal = std::get_if<float>( &value ); decimal && type == "float" ) {
+            option.setValue( *decimal );
+        } else if( const std::string *str = std::get_if<std::string>( &value );
+                   str && ( type == "string_input" || type == "string_select" ) ) {
+            option.setValue( *str );
+        } else {
+            throw std::runtime_error( "Mod '" + std::string( mod ) + "' gave world option '" + name +
+                                      "' a value incompatible with " + type );
+        }
+    }
+    if( !overrides.empty() ) {
+        update_options_cache();
+    }
+}
+
+void options_manager::restore_mod_world_options()
+{
+    if( mod_world_option_undo.empty() ) {
+        return;
+    }
+    for( auto &[name, original] : mod_world_option_undo ) {
+        if( original ) {
+            options.insert_or_assign( name, std::move( *original ) );
+        } else {
+            options.erase( name );
+        }
+    }
+    mod_world_option_undo.clear();
+    update_options_cache();
 }
 
 void options_manager::update_global_locale()

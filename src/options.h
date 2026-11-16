@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "mod_world_option.h"
 #include "translation.h"
 #include "type_id.h"
 
@@ -256,6 +257,9 @@ class options_manager
         void add_external( const std::string &sNameIn, const std::string &sPageIn,
                            const std::string &sType );
 
+        void apply_mod_world_options( std::string_view mod, const mod_world_options &overrides );
+        void restore_mod_world_options();
+
         //add string select option
         void add( const std::string &sNameIn, const std::string &sPageIn,
                   const translation &sMenuTextIn, const translation &sTooltipIn,
@@ -298,6 +302,7 @@ class options_manager
 
     private:
         options_container options;
+        std::map<std::string, std::optional<cOpt>> mod_world_option_undo;
         std::optional<options_container *> world_options; // NOLINT(cata-serialize)
 
         /** Option group. */

@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "cata_path.h"
+#include "mod_world_option.h"
 #include "output.h"
 #include "pimpl.h"
 #include "string_formatter.h"
@@ -55,6 +56,9 @@ struct MOD_INFORMATION {
 
         /** Discovery-time reason the Platform entry cannot run in this build. */
         std::string lua_platform_error;
+
+        /** World options registered from Lua metadata at this Mod's load position. */
+        mod_world_options lua_world_options;
 
         /** All authors who have added content to the mod (excluding maintenance changes) */
         std::set<std::string> authors;
