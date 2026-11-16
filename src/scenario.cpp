@@ -259,7 +259,7 @@ void scenario::load( const JsonObject &jo, std::string_view )
 
 const scenario *scenario::generic()
 {
-    static const string_id<scenario> generic_scenario_id(
+    const string_id<scenario> generic_scenario_id(
         get_option<std::string>( "GENERIC_SCENARIO_ID" ) );
 
     std::vector<const scenario *> all;
@@ -269,7 +269,7 @@ const scenario *scenario::generic()
         }
         all.push_back( &scen );
     }
-    if( find_if( all.begin(), all.end(), []( const scenario * s ) {
+    if( find_if( all.begin(), all.end(), [&generic_scenario_id]( const scenario * s ) {
     return s->ident() == generic_scenario_id;
     } ) != all.end() ) {
         // if the default scenario exists return it

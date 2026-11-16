@@ -6,6 +6,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "game.h"
+#include "options_helpers.h"
 #include "scenario.h"
 #include "string_id.h"
 
@@ -13,6 +14,21 @@ static const string_id<scenario> scenario_test_custom_both( "test_custom_both" )
 static const string_id<scenario> scenario_test_custom_cataclysm( "test_custom_cataclysm" );
 static const string_id<scenario> scenario_test_custom_game( "test_custom_game" );
 static const string_id<scenario> scenario_test_custom_game_invalid( "test_custom_game_invalid" );
+
+TEST_CASE( "generic_scenario_follows_the_current_world_option" )
+{
+    const std::string key = "GENERIC_SCENARIO_ID";
+    REQUIRE_FALSE( scenario_test_custom_game->scen_is_blacklisted() );
+    REQUIRE_FALSE( scenario_test_custom_both->scen_is_blacklisted() );
+    {
+        const override_option override( key, scenario_test_custom_game.str() );
+        CHECK( scenario::generic()->ident() == scenario_test_custom_game );
+    }
+    {
+        const override_option override( key, scenario_test_custom_both.str() );
+        CHECK( scenario::generic()->ident() == scenario_test_custom_both );
+    }
+}
 
 TEST_CASE( "Test_start_dates" )
 {
