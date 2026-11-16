@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,8 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
+#include "json.h"
+#include "json_loader.h"
 #include "options_helpers.h"
 #include "pimpl.h"
 #include "type_id.h"
@@ -483,6 +486,53 @@ TEST_CASE( "local_wind_chill_calculation", "[weather][wind_chill]" )
                 }
             }
         }
+    }
+}
+
+static std::string saved_weather_state()
+{
+    std::ostringstream output;
+    JsonOut json( output );
+    weather_manager::serialize_all( json );
+    return output.str();
+}
+
+TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
+{
+    weather_manager &weather = get_weather();
+    restore_on_out_of_scope<weather_manager> restore_weather( weather );
+    const std::string input = R"json({
+        "lightning": false, "weather_id": "sunny", "next_weather": 0,
+        "temperature": 50, "winddirection": 0, "windspeed": 0,
+        "room_heat": { "dimension": "default", "layers": [{
+            "z": 0, "origin": [10, 20, 0], "sampled_at": 0,
+            "assignments": { "(10,20,0)": 0 },
+            "rooms": [{ "excess": 12.5, "equilibrium": 0, "time_constant": 600 }]
+        }] }
+    })json";
+    weather_manager::unserialize_all( json_loader::from_string( input ) );
+    const std::string saved = saved_weather_state();
+    const JsonObject snapshot = json_loader::from_string( saved );
+    REQUIRE( snapshot.has_object( "room_heat" ) );
+    const JsonObject layer = snapshot.get_object( "room_heat" ).get_array( "layers" ).get_object( 0 );
+    const JsonObject room = layer.get_array( "rooms" ).get_object( 0 );
+    CHECK( room.get_float( "excess" ) == Approx( 12.5 ) );
+
+    SECTION( "saved heat is restored after clearing runtime state" ) {
+        weather.reset_room_heat();
+        weather_manager::unserialize_all( snapshot );
+        CHECK( saved_weather_state() == saved );
+    }
+    SECTION( "old saves do not retain heat from the previous game" ) {
+        weather_manager::unserialize_all( json_loader::from_string(
+                R"({"temperature":50,"winddirection":0,"windspeed":0})" ) );
+        const JsonObject legacy = json_loader::from_string( saved_weather_state() );
+        CHECK_FALSE( legacy.has_object( "room_heat" ) );
+    }
+    SECTION( "new games clear the room heat state" ) {
+        weather.reset_room_heat();
+        const JsonObject fresh = json_loader::from_string( saved_weather_state() );
+        CHECK_FALSE( fresh.has_object( "room_heat" ) );
     }
 }
 

@@ -1819,11 +1819,40 @@ void weather_manager::serialize_all( JsonOut &json )
         }
         json.end_array();
     }
+    if( weather.heat_dimension && !weather.heated_rooms.empty() ) {
+        json.member( "room_heat" );
+        json.start_object();
+        json.member( "dimension", *weather.heat_dimension );
+        json.member( "layers" );
+        json.start_array();
+        for( const auto &entry : weather.heated_rooms ) {
+            const room_heat_layer &layer = entry.second;
+            json.start_object();
+            json.member( "z", entry.first );
+            json.member( "origin", layer.origin );
+            json.member( "sampled_at", layer.sampled_at );
+            json.member( "assignments", layer.assignments );
+            json.member( "rooms" );
+            json.start_array();
+            for( const room_heat &room : layer.rooms ) {
+                json.start_object();
+                json.member( "excess", room.excess );
+                json.member( "equilibrium", room.equilibrium );
+                json.member( "time_constant", room.time_constant );
+                json.end_object();
+            }
+            json.end_array();
+            json.end_object();
+        }
+        json.end_array();
+        json.end_object();
+    }
     json.end_object();
 }
 
 void weather_manager::unserialize_all( const JsonObject &w )
 {
+    get_weather().reset_room_heat();
     w.read( "lightning", get_weather().lightning_active );
     w.read( "weather_id", get_weather().weather_id );
     w.read( "next_weather", get_weather().nextweather );
@@ -1860,6 +1889,33 @@ void weather_manager::unserialize_all( const JsonObject &w )
             if( it == get_weather().snow_depth_map.end() || state.depth_mm > it->second.depth_mm ) {
                 get_weather().snow_depth_map[pos] = state;
             }
+        }
+    }
+    if( w.has_object( "room_heat" ) ) {
+        weather_manager &weather = get_weather();
+        const JsonObject heat = w.get_object( "room_heat" );
+        weather.heat_dimension = dimension_id( heat.get_string( "dimension" ) );
+        for( JsonObject layer_data : heat.get_array( "layers" ) ) {
+            room_heat_layer layer;
+            layer_data.read( "origin", layer.origin );
+            layer_data.read( "sampled_at", layer.sampled_at );
+            layer_data.read( "assignments", layer.assignments );
+            for( JsonObject room_data : layer_data.get_array( "rooms" ) ) {
+                room_heat room;
+                room.excess = room_data.get_float( "excess" );
+                room.equilibrium = room_data.get_float( "equilibrium" );
+                room.time_constant = room_data.get_float( "time_constant" );
+                if( room.excess < 0 || room.equilibrium < 0 || room.time_constant <= 0 ) {
+                    room_data.throw_error( "Invalid room heat state" );
+                }
+                layer.rooms.push_back( room );
+            }
+            for( const auto &assignment : layer.assignments ) {
+                if( assignment.second >= layer.rooms.size() ) {
+                    layer_data.throw_error( "Invalid room heat assignment" );
+                }
+            }
+            weather.heated_rooms.emplace( layer_data.get_int( "z" ), std::move( layer ) );
         }
     }
 }

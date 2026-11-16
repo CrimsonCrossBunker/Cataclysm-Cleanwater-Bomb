@@ -810,6 +810,7 @@ void game::reset_game_state()
     weather.weather_id = WEATHER_CLEAR;
     weather.climate_origin.reset();
     weather.climate_precipitation_mm_per_hour.reset();
+    weather.reset_room_heat();
     // Weather shift in 30
     weather.nextweather = calendar::start_of_game + 30_minutes;
 
