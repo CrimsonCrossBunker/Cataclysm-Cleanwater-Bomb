@@ -3098,7 +3098,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
                 const snow_cover snow = get_weather_const().get_surface_snow_cover( here, p );
                 if( snow != snow_cover::none && tiles->get_snow_texture() ) {
-                    const SDL_Rect rect = tiles->snow_sprite( snow, here.get_abs( p ).xy() );
+                    const SDL_Rect rect = cata_tiles::snow_sprite( snow, here.get_abs( p ).xy() );
                     sprite_info sprite;
                     sprite.atlas = tiles->get_snow_texture().get();
                     sprite.u0 = static_cast<float>( rect.x ) / cata_tiles::snow_sheet_width;
