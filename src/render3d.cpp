@@ -2766,8 +2766,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
             const point xy( observer_pos.x() + static_cast<int>( std::lround(
                                 static_cast<double>( d.x ) * i / steps ) ),
                             observer_pos.y() + static_cast<int>( std::lround(
-                                    static_cast<double>( d.y ) * i / steps ) ) );
-            const point relative( xy.x - observer_pos.x(), xy.y - observer_pos.y() );
+                                        static_cast<double>( d.y ) * i / steps ) ) );
+            const point relative = xy - point( observer_pos.x(), observer_pos.y() );
             if( relative.x * relative.x + relative.y * relative.y > VIEW_RADIUS * VIEW_RADIUS ) {
                 break;
             }
