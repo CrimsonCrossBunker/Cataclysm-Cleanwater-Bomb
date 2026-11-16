@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <initializer_list>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -14,10 +16,12 @@
 #include "character.h"
 #include "clone_ptr.h"
 #include "coordinates.h"
+#include "craft_command.h"
 #include "fault.h"
 #include "item.h"
 #include "item_location.h"
 #include "item_repair.h"
+#include "item_source.h"
 #include "itype.h"
 #include "iuse_actor.h"
 #include "flexbuffer_json.h"
@@ -34,6 +38,7 @@
 #include "player_helpers.h"
 #include "pocket_type.h"
 #include "repair_activity.h"
+#include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "type_id.h"

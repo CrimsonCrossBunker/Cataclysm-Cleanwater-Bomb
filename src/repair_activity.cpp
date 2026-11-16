@@ -2,9 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <functional>
+#include <map>
 #include <set>
 #include <utility>
+#include <vector>
 
+#include "activity_actor.h"
 #include "activity_handlers.h"
 #include "cached_options.h"
 #include "calendar.h"
@@ -13,13 +18,17 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "craft_command.h"
 #include "flag.h"
-#include "game.h"
-#include "game_constants.h"
+#include "flexbuffer_json.h"
 #include "game_inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_repair.h"
+#include "item_source.h"
+#include "item_uid.h"
 #include "itype.h"
+#include "iuse.h"
 #include "iuse_actor.h"
 #include "json.h"
 #include "map.h"
@@ -27,13 +36,14 @@
 #include "mp_client_conn.h"
 #include "player_activity.h"
 #include "rng.h"
-#include "skill.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "uilist.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_uid.h"
 #include "veh_type.h"
 #include "vpart_range.h"
 #include "vpart_position.h"
