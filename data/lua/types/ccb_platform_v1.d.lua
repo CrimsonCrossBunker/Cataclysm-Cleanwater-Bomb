@@ -3208,8 +3208,9 @@ function AchievementDefinition:hidden_by(achievement_id) end
 ---@field description? string Conduct description.
 
 ---@class BlacklistDefinitionOptions
----@field kind 'trait'|'monster' Native blacklist target kind.
+---@field kind 'item'|'trait'|'monster'|'scenario'|'profession'|'charge_removal'|'temperature_removal' Native blacklist target kind.
 ---@field whitelist? boolean Whether entries are whitelisted instead.
+---@field exclusive? boolean Only for monster whitelists. A populated exclusive whitelist blocks monsters not matched by an entry, category, or species.
 
 ---@class BlacklistDefinition
 local BlacklistDefinition = {}
@@ -3217,6 +3218,16 @@ local BlacklistDefinition = {}
 ---@param entry_id string Native id added to the blacklist or whitelist.
 ---@return BlacklistDefinition self
 function BlacklistDefinition:entry(entry_id) end
+
+---Add a native category to a monster blacklist or whitelist.
+---@param category_id string
+---@return BlacklistDefinition self
+function BlacklistDefinition:category(category_id) end
+
+---Add a native species to a monster blacklist or whitelist.
+---@param species_id string
+---@return BlacklistDefinition self
+function BlacklistDefinition:species(species_id) end
 
 ---@class MapExtraDefinitionOptions
 ---@field id string Stable map-extra id.

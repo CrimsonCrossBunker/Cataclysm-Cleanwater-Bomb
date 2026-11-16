@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:d7dd53dc9f56f63cd93bd710c5e490edd1ebb74ebcf3ee581bdbff9b2c73da23",
+    "source_fingerprint": "sha256:e197a89ebfff96d011eb79fc766fe8018386b0c6501ce396e57b93c2100309a5",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6879,
-    "top_level_objects": 97812,
+    "top_level_objects": 97811,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -629,7 +629,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 6,
+        "occurrences": 5,
         "examples": [
           {
             "path": "data/mods/CrazyCataclysm/modinfo.json",

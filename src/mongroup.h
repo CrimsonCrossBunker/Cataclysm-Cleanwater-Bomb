@@ -27,10 +27,19 @@ class JsonOut;
 
 namespace cata::lua_platform::detail
 {
-void insert_platform_monster_blacklist( const std::vector<std::string> &,
-                                        bool );
-void erase_platform_monster_blacklist( const std::vector<std::string> &,
-                                       bool );
+struct platform_blacklist_data;
+struct monster_filter_state {
+    std::set<std::string> blocked_monsters;
+    std::set<std::string> allowed_monsters;
+    std::set<std::string> blocked_categories;
+    std::set<std::string> allowed_categories;
+    std::set<std::string> blocked_species;
+    std::set<std::string> allowed_species;
+    bool exclusive = false;
+};
+void insert_platform_monster_blacklist( const platform_blacklist_data & );
+monster_filter_state capture_platform_monster_filter();
+void restore_platform_monster_filter( monster_filter_state && );
 std::vector<std::string> monster_blacklist_snapshot();
 std::vector<std::string> monster_whitelist_snapshot();
 } // namespace cata::lua_platform::detail
@@ -269,9 +278,11 @@ class MonsterGroupManager
 {
     public:
         friend void cata::lua_platform::detail::insert_platform_monster_blacklist(
-            const std::vector<std::string> &, bool );
-        friend void cata::lua_platform::detail::erase_platform_monster_blacklist(
-            const std::vector<std::string> &, bool );
+            const cata::lua_platform::detail::platform_blacklist_data & );
+        friend cata::lua_platform::detail::monster_filter_state
+        cata::lua_platform::detail::capture_platform_monster_filter();
+        friend void cata::lua_platform::detail::restore_platform_monster_filter(
+            cata::lua_platform::detail::monster_filter_state && );
         friend std::vector<std::string>
         cata::lua_platform::detail::monster_blacklist_snapshot();
         friend std::vector<std::string>

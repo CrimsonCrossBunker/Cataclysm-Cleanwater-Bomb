@@ -18,6 +18,7 @@
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "lua_platform_content.h"
 #include "mtype.h"
 #include "options.h"
 #include "rng.h"
@@ -389,25 +390,43 @@ void MonsterGroupManager::LoadMonsterWhitelist( const JsonObject &jo )
 }
 
 void cata::lua_platform::detail::insert_platform_monster_blacklist(
-    const std::vector<std::string> &entries, const bool whitelist )
+    const platform_blacklist_data &value )
 {
-    auto &target = whitelist ?
-                   MonsterGroupManager::monster_whitelist :
-                   MonsterGroupManager::monster_blacklist;
-    for( const std::string &entry : entries ) {
-        target.insert( entry );
-    }
+    auto &monsters = value.whitelist ? MonsterGroupManager::monster_whitelist :
+                     MonsterGroupManager::monster_blacklist;
+    auto &categories = value.whitelist ? MonsterGroupManager::monster_categories_whitelist :
+                       MonsterGroupManager::monster_categories_blacklist;
+    auto &species = value.whitelist ? MonsterGroupManager::monster_species_whitelist :
+                    MonsterGroupManager::monster_species_blacklist;
+    monsters.insert( value.entries.begin(), value.entries.end() );
+    categories.insert( value.categories.begin(), value.categories.end() );
+    species.insert( value.species.begin(), value.species.end() );
+    monster_whitelist_is_exclusive = monster_whitelist_is_exclusive || value.exclusive;
 }
 
-void cata::lua_platform::detail::erase_platform_monster_blacklist(
-    const std::vector<std::string> &entries, const bool whitelist )
+cata::lua_platform::detail::monster_filter_state
+cata::lua_platform::detail::capture_platform_monster_filter()
 {
-    auto &target = whitelist ?
-                   MonsterGroupManager::monster_whitelist :
-                   MonsterGroupManager::monster_blacklist;
-    for( const std::string &entry : entries ) {
-        target.erase( entry );
-    }
+    return {
+        MonsterGroupManager::monster_blacklist,
+        MonsterGroupManager::monster_whitelist,
+        MonsterGroupManager::monster_categories_blacklist,
+        MonsterGroupManager::monster_categories_whitelist,
+        MonsterGroupManager::monster_species_blacklist,
+        MonsterGroupManager::monster_species_whitelist,
+        monster_whitelist_is_exclusive
+    };
+}
+
+void cata::lua_platform::detail::restore_platform_monster_filter( monster_filter_state &&state )
+{
+    MonsterGroupManager::monster_blacklist = std::move( state.blocked_monsters );
+    MonsterGroupManager::monster_whitelist = std::move( state.allowed_monsters );
+    MonsterGroupManager::monster_categories_blacklist = std::move( state.blocked_categories );
+    MonsterGroupManager::monster_categories_whitelist = std::move( state.allowed_categories );
+    MonsterGroupManager::monster_species_blacklist = std::move( state.blocked_species );
+    MonsterGroupManager::monster_species_whitelist = std::move( state.allowed_species );
+    monster_whitelist_is_exclusive = state.exclusive;
 }
 
 std::vector<std::string> cata::lua_platform::detail::monster_blacklist_snapshot()

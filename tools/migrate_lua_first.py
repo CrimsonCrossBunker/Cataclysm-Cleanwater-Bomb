@@ -10986,17 +10986,6 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
             f"{source.location}: blacklist type needs review"
         )
         return None
-    if kind == "monster":
-        # The native Lua registrar only accepts exact monster IDs.
-        unsupported = sorted({"categories", "species", "mode"} & value.keys())
-        if unsupported:
-            result.partial.append(f"{source.location}: blacklist {kind}")
-            result.add_todo(
-                "platform_gap",
-                f"{source.location}: monster list fields need native Lua "
-                f"support: {', '.join(unsupported)}",
-            )
-            return None
     if kind not in ("item", "trait", "monster", "scenario", "profession",
                     "charge_removal", "temperature_removal"):
         result.partial.append(
@@ -11014,9 +11003,8 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
     # edit/replace operations, so these definitions always submit through
     # content.add even in --replace mode.
     blacklist_submit = "content.add(definition)"
-    whitelist = value.get("type") == "MONSTER_WHITELIST" or bool(
-        value.get("whitelist")
-    )
+    whitelist = (value.get("type") == "MONSTER_WHITELIST" if kind == "monster"
+                 else bool(value.get("whitelist")))
     if kind == "trait":
         entries_key = "traits"
     elif kind == "monster":
@@ -11029,7 +11017,21 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
         entries_key = "scenarios"
     else:
         entries_key = "items"
-    entries = value.get(entries_key, value.get("items", []))
+    entries = value.get(entries_key, [] if kind == "monster" else value.get("items", []))
+    monster_selectors = {
+        "category": value.get("categories", []),
+        "species": value.get("species", []),
+    } if kind == "monster" else {}
+    for selector, values in monster_selectors.items():
+        if not isinstance(values, list) or not all(
+            isinstance(item, str) and item for item in values
+        ):
+            result.partial.append(f"{source.location}: blacklist {kind}")
+            result.add_todo(
+                "manual_rewrite",
+                f"{source.location}: monster list {selector} entries need review",
+            )
+            return None
     # An empty blacklist is a deliberate legacy value (e.g. the core
     # MONSTER_BLACKLIST starts with no entries) and must render as a
     # zero-entry definition, not as a review TODO.
@@ -11043,8 +11045,10 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
         "local definition = content.Blacklist {",
         f"    kind = {lua_quote(kind)},",
         f"    whitelist = {lua_boolean(whitelist)},",
-        "}",
     ]
+    if kind == "monster" and whitelist and value.get("mode") == "EXCLUSIVE":
+        lines.append("    exclusive = true,")
+    lines.append("}")
     for entry in entries:
         if isinstance(entry, str) and entry:
             lines.append(f"definition:entry({lua_quote(entry)})")
@@ -11054,6 +11058,10 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
                 f"{source.location}: blacklist entry needs review"
             )
             break
+    for selector, values in monster_selectors.items():
+        lines.extend(
+            f"definition:{selector}({lua_quote(item)})" for item in values
+        )
     status = (
         result.partial if len(result.todos) != todo_count else result.converted
     )

@@ -2777,6 +2777,24 @@ struct blacklist_definition_handle {
         definition->entries.push_back( value );
         return *this;
     }
+
+    blacklist_definition_handle &category( const std::string &value ) {
+        require_building_handle( token, *definition, "blacklist" );
+        if( definition->kind != "monster" || value.empty() ) {
+            throw std::runtime_error( "category requires a monster list and a non-empty id" );
+        }
+        definition->categories.push_back( value );
+        return *this;
+    }
+
+    blacklist_definition_handle &species( const std::string &value ) {
+        require_building_handle( token, *definition, "blacklist" );
+        if( definition->kind != "monster" || value.empty() ) {
+            throw std::runtime_error( "species requires a monster list and a non-empty id" );
+        }
+        definition->species.push_back( value );
+        return *this;
+    }
 };
 
 struct map_extra_definition_data {
@@ -3484,6 +3502,7 @@ struct content_transaction::impl {
     std::size_t dream_undo = 0;
     std::vector<achievement_id> achievement_undo;
     std::vector<detail::platform_blacklist_data> blacklist_undo;
+    std::optional<detail::monster_filter_state> monster_filter_undo;
     std::size_t item_blacklist_undo = 0;
     std::vector<std::pair<map_extra_id, std::optional<map_extra>>> map_extra_undo;
     std::vector<std::pair<weather_generator_id, std::optional<weather_generator>>>
@@ -3786,7 +3805,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "hidden_by", &achievement_definition_handle::hidden_by );
     ccb.new_usertype<blacklist_definition_handle>(
         "BlacklistDefinition", sol::no_constructor,
-        "entry", &blacklist_definition_handle::entry );
+        "entry", &blacklist_definition_handle::entry,
+        "category", &blacklist_definition_handle::category,
+        "species", &blacklist_definition_handle::species );
     ccb.new_usertype<map_extra_definition_handle>(
         "MapExtraDefinition", sol::no_constructor,
         "id", sol::property( &map_extra_definition_handle::id ),
@@ -4576,6 +4597,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         auto definition = std::make_shared<detail::platform_blacklist_data>();
         definition->kind = options.get_or( "kind", std::string() );
         definition->whitelist = options.get_or( "whitelist", false );
+        definition->exclusive = options.get_or( "exclusive", false );
+        if( definition->exclusive && ( definition->kind != "monster" || !definition->whitelist ) ) {
+            throw std::runtime_error( "exclusive mode requires a monster whitelist" );
+        }
         return blacklist_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -8763,13 +8788,15 @@ bool content_transaction::apply( std::string &error )
                         detail::platform_item_blacklist_count();
                 }
                 detail::insert_platform_item_blacklist( source );
+            } else if( source.kind == "monster" ) {
+                if( !pimpl_->monster_filter_undo ) {
+                    pimpl_->monster_filter_undo = detail::capture_platform_monster_filter();
+                }
+                detail::insert_platform_monster_blacklist( source );
             } else {
                 pimpl_->blacklist_undo.push_back( source );
                 if( source.kind == "trait" ) {
                     detail::insert_platform_trait_blacklist( source.entries );
-                } else if( source.kind == "monster" ) {
-                    detail::insert_platform_monster_blacklist(
-                        source.entries, source.whitelist );
                 } else if( source.kind == "scenario" ) {
                     detail::insert_platform_scenario_blacklist( source );
                 } else if( source.kind == "profession" ) {
@@ -10157,9 +10184,6 @@ void content_transaction::rollback()
          it != pimpl_->blacklist_undo.rend(); ++it ) {
         if( it->kind == "trait" ) {
             detail::erase_platform_trait_blacklist( it->entries );
-        } else if( it->kind == "monster" ) {
-            detail::erase_platform_monster_blacklist(
-                it->entries, it->whitelist );
         } else if( it->kind == "scenario" ) {
             detail::erase_platform_scenario_blacklist( *it );
         } else if( it->kind == "profession" ) {
@@ -10169,6 +10193,11 @@ void content_transaction::rollback()
         }
     }
     pimpl_->blacklist_undo.clear();
+
+    if( pimpl_->monster_filter_undo ) {
+        detail::restore_platform_monster_filter( std::move( *pimpl_->monster_filter_undo ) );
+        pimpl_->monster_filter_undo.reset();
+    }
 
     if( pimpl_->item_blacklist_undo != 0 ) {
         detail::truncate_platform_item_blacklist( pimpl_->item_blacklist_undo );
@@ -10668,6 +10697,7 @@ void content_transaction::commit()
     pimpl_->dream_undo = 0;
     pimpl_->achievement_undo.clear();
     pimpl_->blacklist_undo.clear();
+    pimpl_->monster_filter_undo.reset();
     pimpl_->item_blacklist_undo = 0;
     pimpl_->map_extra_undo.clear();
     pimpl_->weather_generator_undo.clear();
@@ -10712,6 +10742,27 @@ std::string content_transaction::fingerprint() const
     std::uint64_t state = 1469598103934665603ULL;
     hash_part( state, pimpl_->owner );
     pimpl_->world.append_fingerprint( state );
+    for( const blacklist_registration &entry : pimpl_->blacklists ) {
+        const detail::platform_blacklist_data &value = *entry.definition;
+        if( value.kind != "monster" ) {
+            continue;
+        }
+        hash_part( state, "monster_filter" );
+        hash_part( state, value.whitelist ? "allow" : "block" );
+        hash_part( state, value.exclusive ? "exclusive" : "inclusive" );
+        for( const std::string &id : value.entries ) {
+            hash_part( state, "id" );
+            hash_part( state, id );
+        }
+        for( const std::string &category : value.categories ) {
+            hash_part( state, "category" );
+            hash_part( state, category );
+        }
+        for( const std::string &species : value.species ) {
+            hash_part( state, "species" );
+            hash_part( state, species );
+        }
+    }
     pimpl_->character.append_fingerprint(
         character_content_fingerprint_phase::technique, state );
     pimpl_->character.append_fingerprint(

@@ -303,6 +303,9 @@ struct platform_blacklist_data {
     bool whitelist = false;
     std::vector<std::string> entries;
     bool registered = false;
+    bool exclusive = false;
+    std::vector<std::string> categories;
+    std::vector<std::string> species;
 };
 struct platform_migration_data {
     std::string kind;

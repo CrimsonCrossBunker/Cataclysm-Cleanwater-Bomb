@@ -20,6 +20,7 @@
 #include <map.h>
 #include <mapbuffer.h>
 #include <math_parser_diag_value.h>
+#include <mongroup.h>
 #include <overmap_ui.h>
 #include <pimpl.h>
 #include <point.h>
@@ -31,6 +32,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <initializer_list>
 #include <limits>
@@ -1427,6 +1429,54 @@ TEST_CASE( "lua_platform_weather_write_controls_apply_valid_overrides",
     REQUIRE( temperature_override.is<cata::lua_platform::script_unit_value>() );
     CHECK( temperature_override.as<cata::lua_platform::script_unit_value>()
            .value_as( "kelvin" ) == Approx( 273.15 ).margin( 0.01 ) );
+}
+
+TEST_CASE( "lua_platform_monster_filters_apply_and_restore_legacy_rules",
+           "[lua][platform][content]" )
+{
+    namespace platform = cata::lua_platform;
+    const mtype_id rabbit( "mon_wild_rabbit" );
+    const mtype_id zombie( "mon_zombie" );
+    REQUIRE( rabbit.is_valid() );
+    REQUIRE( zombie.is_valid() );
+
+    auto previous_filter = platform::detail::capture_platform_monster_filter();
+    platform::detail::restore_platform_monster_filter( {} );
+    const on_out_of_scope restore_filter( [&previous_filter]() {
+        platform::detail::restore_platform_monster_filter( std::move( previous_filter ) );
+    } );
+    MonsterGroupManager::LoadMonsterBlacklist( json_loader::from_string(
+                R"json({"monsters":["mon_wild_rabbit"]})json" ).get_object() );
+    REQUIRE( MonsterGroupManager::monster_is_blacklisted( rabbit ) );
+    REQUIRE_FALSE( MonsterGroupManager::monster_is_blacklisted( zombie ) );
+
+    const platform_lua_test_directory files;
+    files.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+local blocked = ccb.content.Blacklist { kind = "monster" }
+blocked:entry("mon_wild_rabbit"):species("ZOMBIE")
+ccb.content.add(blocked)
+local allowed = ccb.content.Blacklist { kind = "monster", whitelist = true, exclusive = true }
+allowed:category("WILDLIFE")
+ccb.content.add(allowed)
+)lua" );
+    const on_out_of_scope discard( []() {
+        platform::discard_prepared_mods();
+    } );
+    const platform::mod_source source { "lua_monster_filters", files.root,
+                                        files.root / "main.lua" };
+    std::string error;
+    REQUIRE( platform::prepare_mods( { source }, error ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    CHECK_FALSE( MonsterGroupManager::monster_is_blacklisted( rabbit ) );
+    CHECK( MonsterGroupManager::monster_is_blacklisted( zombie ) );
+    CHECK( platform::detail::capture_platform_monster_filter().exclusive );
+    CHECK( platform::detail::capture_platform_monster_filter().blocked_species.count( "ZOMBIE" ) );
+
+    platform::discard_prepared_mods();
+    CHECK( MonsterGroupManager::monster_is_blacklisted( rabbit ) );
+    CHECK_FALSE( MonsterGroupManager::monster_is_blacklisted( zombie ) );
+    CHECK_FALSE( platform::detail::capture_platform_monster_filter().exclusive );
 }
 
 TEST_CASE( "lua_platform_content_finalization_is_single_use_and_rollback_is_terminal",
