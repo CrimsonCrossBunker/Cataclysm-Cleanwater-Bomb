@@ -372,9 +372,6 @@ TEST_CASE( "active_grappling_rejects_ungraspable_and_attached_targets",
     SECTION( "amorphous" ) {
         target_type.bodytype = "blob";
     }
-    SECTION( "flying" ) {
-        target_type.set_flag( mon_flag_FLIES );
-    }
     SECTION( "immobile" ) {
         target_type.set_flag( mon_flag_IMMOBILE );
     }
@@ -394,6 +391,23 @@ TEST_CASE( "active_grappling_rejects_ungraspable_and_attached_targets",
     CHECK_FALSE( dude.use_active_technique( target, tec_grapple_hold ) );
     CHECK( dude.get_stamina() == stamina );
     CHECK( dude.get_moves() == 1000 );
+}
+
+TEST_CASE( "active_grappling_accepts_flying_targets",
+           "[martial_arts][active_technique][grappling]" )
+{
+    avatar &dude = prepare_grappler();
+    monster &target = spawn_test_monster( "mon_zombie", dude_pos + tripoint::east );
+    mtype target_type = *target.type;
+    restore_on_out_of_scope restore_type( target.type );
+    target.type = &target_type;
+    target_type.set_flag( mon_flag_FLIES );
+
+    const int stamina = dude.get_stamina();
+    REQUIRE( dude.use_active_technique( target, tec_grapple_hold ) );
+    CHECK( target.has_effect( effect_martial_grapple ) );
+    CHECK( dude.get_stamina() <= stamina - tec_grapple_hold->grapple_stamina );
+    CHECK( dude.get_moves() < 1000 );
 }
 
 TEST_CASE( "active_grappling_rejects_blocked_retreats_without_charging",

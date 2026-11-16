@@ -2,15 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
 #include <cstdlib>
 #include <memory>
 #include <set>
 #include <string>
 #include <utility>
 
+#include "bodypart.h"
 #include "calendar.h"
-#include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "coordinates.h"
@@ -24,8 +23,6 @@
 #include "game.h"
 #include "game_constants.h"
 #include "gun_mode.h"
-#include "inventory.h"
-#include "iuse_actor.h"
 #include "item.h"
 #include "item_location.h"
 #include "magic.h"
@@ -38,6 +35,7 @@
 #include "messages.h"
 #include "monster.h"
 #include "npc.h"
+#include "npc_autonomy.h"
 #include "pimpl.h"
 #include "point.h"
 #include "projectile.h"
@@ -48,7 +46,10 @@
 #include "safe_reference.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
+#include "translations.h"
 #include "type_id.h"
+
+static const ammo_effect_str_id ammo_effect_BOUNCE( "BOUNCE" );
 
 static const bionic_id bio_hydraulics( "bio_hydraulics" );
 
@@ -90,7 +91,7 @@ static bool has_obstruction( const tripoint_bub_ms &from, const tripoint_bub_ms 
 // Planning estimate only; the actual attack retains native armor/weakpoint resolution.
 static double damage_after_armor( const damage_instance &damage, const Creature &target )
 {
-    static const bodypart_id torso( "torso" );
+    const bodypart_id torso = body_part_torso.id();
     double result = 0.0;
     for( const damage_unit &unit : damage.damage_units ) {
         result += npc_autonomy::effective_damage( unit.amount,
@@ -474,11 +475,16 @@ npc_attack_rating npc_attack_melee::evaluate_critter( const npc &source,
                               static_cast<int>( std::round( damage * hit ) ) );
 }
 
+namespace
+{
+
 enum class npc_gun_range : int {
     CLOSE = 1,
     MEDIUM,
     LONG
 };
+
+} // namespace
 
 static npc_gun_range npc_gun_distance( const npc &source, const item &weapon, int distance )
 {
@@ -555,7 +561,7 @@ void npc_attack_gun::use( npc &source, const tripoint_bub_ms &location ) const
     const auto sweep = mode.full_auto() && !source.is_hallucination() &&
                        ( !source.is_player_ally() || source.rules.allow_sweep ) &&
                        max_aoe_size( mode->ammo_effects() ) == 0 &&
-                       !mode->ammo_effects().count( ammo_effect_str_id( "BOUNCE" ) )
+                       !mode->ammo_effects().count( ammo_effect_BOUNCE )
                        ? find_firearm_sweep( source, here, location, mode->gun_range( &source ), mode.rpm,
                                mode->shots_remaining( here, &source ) )
                        : std::nullopt;

@@ -55,9 +55,9 @@ static const efftype_id effect_grabbing( "grabbing" );
 static const efftype_id effect_martial_grapple( "martial_grapple" );
 static const efftype_id effect_stunned( "stunned" );
 
-static const faction_id faction_your_followers( "your_followers" );
-
 static const enchantment_id enchantment_ENCH_TEST_BIRD_PARTS( "ENCH_TEST_BIRD_PARTS" );
+
+static const faction_id faction_your_followers( "your_followers" );
 
 static const itype_id itype_club_wooden( "club_wooden" );
 static const itype_id itype_spear_steel( "spear_steel" );

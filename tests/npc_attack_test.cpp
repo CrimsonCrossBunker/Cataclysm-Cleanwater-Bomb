@@ -1,5 +1,6 @@
-#include <algorithm>
+#include <cstddef>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -9,9 +10,9 @@
 #include <vector>
 
 #include "bodypart.h"
+#include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "calendar.h"
 #include "character.h"
 #include "character_id.h"
 #include "coordinates.h"
@@ -47,29 +48,40 @@
 
 class Creature;
 
+static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
+
+static const efftype_id effect_bleed( "bleed" );
+
+static const faction_id faction_free_merchants( "free_merchants" );
 static const faction_id faction_your_followers( "your_followers" );
 
 static const gun_mode_id gun_mode_AUTO( "AUTO" );
 static const gun_mode_id gun_mode_BURST( "BURST" );
+static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
 
-static const activity_id ACT_FIRSTAID( "ACT_FIRSTAID" );
-static const efftype_id effect_bleed( "bleed" );
-
+static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_adhesive_bandages( "adhesive_bandages" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_combat_exoskeleton_medium( "combat_exoskeleton_medium" );
 static const itype_id itype_combat_exoskeleton_medium_on( "combat_exoskeleton_medium_on" );
+static const itype_id itype_debug_backpack( "debug_backpack" );
+static const itype_id itype_glock_19( "glock_19" );
+static const itype_id itype_glockmag( "glockmag" );
 static const itype_id itype_grenade_act( "grenade_act" );
 static const itype_id itype_heavy_battery_cell( "heavy_battery_cell" );
 static const itype_id itype_knife_large( "knife_large" );
 static const itype_id itype_modular_m16_auto_rifle( "modular_m16_auto_rifle" );
 static const itype_id itype_modular_m16a4( "modular_m16a4" );
+static const itype_id itype_remington_700( "remington_700" );
+static const itype_id itype_rifle_scope( "rifle_scope" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_wearable_light( "wearable_light" );
 
 static const mtype_id mon_zombie( "mon_zombie" );
 
 static const skill_id skill_firstaid( "firstaid" );
+static const skill_id skill_gun( "gun" );
+static const skill_id skill_rifle( "rifle" );
 static const skill_id skill_throw( "throw" );
 
 static const string_id<npc_template> npc_template_test_talker( "test_talker" );
@@ -375,7 +387,7 @@ TEST_CASE( "NPC_fixed_bursts_keep_the_configured_count_under_full_auto_orders",
     npc &shooter = npc_attack_setup::respawn_main_npc();
     arm_shooter( shooter, itype_modular_m16a4 );
     item &rifle = *shooter.get_wielded_item();
-    rifle.set_flag( flag_id( "NEVER_JAMS" ) );
+    rifle.set_flag( flag_NEVER_JAMS );
     REQUIRE( rifle.gun_set_mode( gun_mode_BURST ) );
     const gun_mode mode = rifle.gun_current_mode();
     REQUIRE( mode.fixed_burst() );
@@ -507,7 +519,8 @@ TEST_CASE( "NPC reloads the empty gun in hand when there is time in combat",
     item magazine( gun.magazine_default() );
     magazine.ammo_set( gun.ammo_default(), 10 );
     REQUIRE( magazine.ammo_remaining() == 10 );
-    REQUIRE( follower.i_add( std::move( magazine ) ) );
+    const item_location added_magazine = follower.i_add( std::move( magazine ) );
+    REQUIRE( added_magazine );
     follower.set_wielded_item( gun );
     REQUIRE( follower.get_wielded_item()->ammo_remaining() == 0 );
     const monster *enemy = npc_attack_setup::spawn_zombie_at_range( enemy_distance );
@@ -793,9 +806,9 @@ TEST_CASE( "NPC_sniper_acquires_a_visible_distant_enemy_without_advancing",
     shooter.set_fac( faction_your_followers );
     shooter.set_attitude( NPCATT_FOLLOW );
     shooter.rules = npc_follower_rules();
-    shooter.set_skill_level( skill_id( "gun" ), 10 );
-    shooter.set_skill_level( skill_id( "rifle" ), 10 );
-    arm_shooter( shooter, itype_id( "remington_700" ), { itype_id( "rifle_scope" ) } );
+    shooter.set_skill_level( skill_gun, 10 );
+    shooter.set_skill_level( skill_rifle, 10 );
+    arm_shooter( shooter, itype_remington_700, { itype_rifle_scope } );
     get_player_character().setpos( get_map(), main_npc_start_tripoint + tripoint( 0, 2, 0 ) );
     monster *enemy = npc_attack_setup::spawn_zombie_at_range( 24 );
     REQUIRE( enemy != nullptr );
@@ -826,10 +839,10 @@ TEST_CASE( "NPC_prepares_an_empty_firearm_with_a_loaded_spare_magazine",
     shooter.set_fac( faction_your_followers );
     shooter.set_attitude( NPCATT_FOLLOW );
     shooter.rules = npc_follower_rules();
-    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
-    shooter.set_wielded_item( item( itype_id( "glock_19" ) ) );
-    item magazine( itype_id( "glockmag" ) );
-    magazine.ammo_set( itype_id( "9mm" ), 15 );
+    REQUIRE( shooter.wear_item( item( itype_debug_backpack ), false ).has_value() );
+    shooter.set_wielded_item( item( itype_glock_19 ) );
+    item magazine( itype_glockmag );
+    magazine.ammo_set( itype_9mm, 15 );
     const item_location spare = shooter.i_add( magazine );
     REQUIRE( spare );
     monster *enemy = npc_attack_setup::spawn_zombie_at_range( 9 );
@@ -854,17 +867,17 @@ TEST_CASE( "NPC_reload_prefers_a_ready_magazine_over_loose_rounds_and_inferior_m
     clear_map_and_put_player_underground();
     npc &shooter = npc_attack_setup::respawn_main_npc();
     shooter.set_fac( faction_your_followers );
-    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
-    item weapon( itype_id( "glock_19" ) );
-    weapon.ammo_set( itype_id( "9mm" ), 5 );
+    REQUIRE( shooter.wear_item( item( itype_debug_backpack ), false ).has_value() );
+    item weapon( itype_glock_19 );
+    weapon.ammo_set( itype_9mm, 5 );
     shooter.set_wielded_item( weapon );
-    item magazine( itype_id( "glockmag" ) );
-    magazine.ammo_set( itype_id( "9mm" ), 2 );
+    item magazine( itype_glockmag );
+    magazine.ammo_set( itype_9mm, 2 );
     REQUIRE( shooter.i_add( magazine ) );
-    magazine.ammo_set( itype_id( "9mm" ), 15 );
+    magazine.ammo_set( itype_9mm, 15 );
     item_location full_magazine = shooter.i_add( magazine );
     REQUIRE( full_magazine );
-    REQUIRE( shooter.i_add( item( itype_id( "9mm" ), calendar::turn, 100 ) ) );
+    REQUIRE( shooter.i_add( item( itype_9mm, calendar::turn, 100 ) ) );
     const item_location gun = shooter.get_wielded_item();
     REQUIRE( gun );
     SECTION( "a full magazine wins over filling the inserted one" ) {
@@ -879,7 +892,7 @@ TEST_CASE( "NPC_reload_prefers_a_ready_magazine_over_loose_rounds_and_inferior_m
         CHECK( shooter.get_moves() == 100 - cost );
     }
     SECTION( "private magazines are not used" ) {
-        full_magazine->set_owner( faction_id( "free_merchants" ) );
+        full_magazine->set_owner( faction_free_merchants );
         const item::reload_option reload = shooter.select_ammo( gun );
         REQUIRE( reload );
         CHECK( reload.ammo != full_magazine );
@@ -896,13 +909,13 @@ TEST_CASE( "NPC_can_load_a_first_shot_without_filling_a_magazine_during_combat",
     npc &shooter = npc_attack_setup::respawn_main_npc();
     shooter.set_fac( faction_your_followers );
     shooter.set_attitude( NPCATT_FOLLOW );
-    REQUIRE( shooter.wear_item( item( itype_id( "debug_backpack" ) ), false ).has_value() );
-    item weapon( itype_id( "glock_19" ) );
-    weapon.ammo_set( itype_id( "9mm" ), 15 );
+    REQUIRE( shooter.wear_item( item( itype_debug_backpack ), false ).has_value() );
+    item weapon( itype_glock_19 );
+    weapon.ammo_set( itype_9mm, 15 );
     REQUIRE( weapon.magazine_current() != nullptr );
     weapon.magazine_current()->ammo_unset();
     shooter.set_wielded_item( weapon );
-    REQUIRE( shooter.i_add( item( itype_id( "9mm" ), calendar::turn, 100 ) ) );
+    REQUIRE( shooter.i_add( item( itype_9mm, calendar::turn, 100 ) ) );
     const item_location gun = shooter.get_wielded_item();
     REQUIRE( gun );
     REQUIRE( shooter.select_ammo( gun ).qty() == 15 );
@@ -929,15 +942,15 @@ TEST_CASE( "NPC_fires_the_evaluated_burst_instead_of_the_previous_single_shot_mo
     item_location gun = shooter.get_wielded_item();
     REQUIRE( gun );
     gun->set_flag( flag_NEVER_JAMS );
-    REQUIRE( gun->gun_set_mode( gun_mode_id( "DEFAULT" ) ) );
-    const gun_mode burst = gun->gun_all_modes().at( gun_mode_id( "BURST" ) );
+    REQUIRE( gun->gun_set_mode( gun_mode_DEFAULT ) );
+    const gun_mode burst = gun->gun_all_modes().at( gun_mode_BURST );
     REQUIRE( burst.qty == 3 );
     const int rounds = gun->ammo_remaining();
     REQUIRE( rounds >= burst.qty );
     shooter.recoil = 0;
     shooter.set_moves( 1000 );
     npc_attack_gun attack( *gun, gun_mode_BURST, burst );
-    attack.use( shooter, shooter.pos_bub() + tripoint( 1, 0, 0 ) );
+    attack.use( shooter, shooter.pos_bub() + tripoint::east );
     CHECK( gun->gun_current_mode().qty == burst.qty );
     CHECK( gun->ammo_remaining() == rounds - burst.qty );
 }
@@ -950,8 +963,8 @@ TEST_CASE( "NPC_sparse_gun_candidates_preserve_occupied_tile_order_and_best_atta
     npc &shooter = npc_attack_setup::respawn_main_npc();
     shooter.set_fac( faction_your_followers );
     shooter.rules = npc_follower_rules();
-    item weapon( itype_id( "glock_19" ) );
-    weapon.ammo_set( itype_id( "9mm" ), 15 );
+    item weapon( itype_glock_19 );
+    weapon.ammo_set( itype_9mm, 15 );
     shooter.set_wielded_item( weapon );
     get_player_character().setpos( get_map(), main_npc_start_tripoint + tripoint( 0, 2, 0 ) );
     monster *enemy = npc_attack_setup::spawn_zombie_at_range( 5 );
@@ -971,7 +984,7 @@ TEST_CASE( "NPC_sparse_gun_candidates_preserve_occupied_tile_order_and_best_atta
     const auto evaluations = attack.all_evaluations( shooter, enemy );
     REQUIRE( evaluations.size() == expected.size() );
     npc_attack_rating best( std::nullopt, shooter.pos_bub() );
-    for( size_t i = 0; i < evaluations.size(); ++i ) {
+    for( std::size_t i = 0; i < evaluations.size(); ++i ) {
         if( evaluations[i].value() ) {
             CHECK( evaluations[i].target() == expected[i] );
         }
