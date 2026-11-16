@@ -70,9 +70,15 @@ static const efftype_id effect_glare( "glare" );
 static const efftype_id effect_sleep( "sleep" );
 static const efftype_id effect_snow_glare( "snow_glare" );
 
+static const field_type_str_id field_fd_fire( "fd_fire" );
+
 static const flag_id json_flag_RAINPROOF( "RAINPROOF" );
 static const flag_id json_flag_RAIN_PROTECT( "RAIN_PROTECT" );
 static const flag_id json_flag_SUN_GLASSES( "SUN_GLASSES" );
+
+static const furn_str_id furn_f_brazier( "f_brazier" );
+static const furn_str_id furn_f_makeshift_brazier( "f_makeshift_brazier" );
+static const furn_str_id furn_f_woodstove( "f_woodstove" );
 
 static const itype_id itype_water( "water" );
 
@@ -1497,11 +1503,7 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
         previous.rooms.clear();
     }
 
-    static const field_type_str_id fire_type( "fd_fire" );
-    const field_type_id fire = fire_type.id();
-    static const furn_str_id stove( "f_woodstove" );
-    static const furn_str_id brazier( "f_brazier" );
-    static const furn_str_id makeshift( "f_makeshift_brazier" );
+    const field_type_id fire = field_fd_fire.id();
     static constexpr std::array<point, 4> directions{ point::north, point::east,
             point::south, point::west };
     const auto in_range = [&]( const tripoint_bub_ms & p ) {
@@ -1531,8 +1533,8 @@ units::temperature_delta weather_manager::get_room_heat( const map &here,
                 const furn_id fixture = here.furn( p );
                 // Delivered heat in watts per intensity level. A vented open hearth
                 // heats the room less efficiently than a closed wood stove.
-                const double output = fixture == stove.id() ? 2400 :
-                                      fixture == brazier.id() ? 1700 : fixture == makeshift.id() ? 800 :
+                const double output = fixture == furn_f_woodstove.id() ? 2400 :
+                                      fixture == furn_f_brazier.id() ? 1700 : fixture == furn_f_makeshift_brazier.id() ? 800 :
                                       here.has_flag( ter_furn_flag::TFLAG_FIRE_CONTAINER, p ) ? 1100 : 1500;
                 watts += output * intensity;
             }
