@@ -260,7 +260,8 @@ def check_mod(mod: Path, language_server: str) -> list[str]:
                 parsed = urlparse(uri)
                 host = parsed.netloc if parsed.netloc != "localhost" else ""
                 path = url2pathname(
-                    ("//" + host if host else "") + parsed.path
+                    ("//" + host if host else "") + re.sub(
+                        r"^/([A-Za-z])%3[aA]/", r"/\1:/", parsed.path)
                 )
             for entry in sorted(entries, key=lambda e: (
                 e["range"]["start"]["line"],
