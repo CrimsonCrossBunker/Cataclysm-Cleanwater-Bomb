@@ -284,7 +284,7 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
     }
 
     if( g->multiplayer_session().has_regions() ) {
-        const auto &session = g->multiplayer_session();
+        const cata_mp::world_session &session = g->multiplayer_session();
         if( square_dist( old_pos, new_pos ) > 1 ||
             session.loaded_map_at( reality_bubble(), project_to<coords::sm>( old_pos ) ) !=
             session.loaded_map_at( reality_bubble(), project_to<coords::sm>( new_pos ) ) ) {
@@ -450,7 +450,7 @@ void creature_tracker::swap_positions( monster &first, monster &second )
 bool creature_tracker::kill_marked_for_death()
 {
     map &here = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     const bool regional = session.has_regions();
     // Important: `Creature::die` must not be called after creature objects (NPCs, monsters) have
     // been removed, the dying creature could still have a pointer (the killer) to another creature.
@@ -675,7 +675,7 @@ creature_tracker::reachable_factions *creature_tracker::reachable_creatures(
             reset_reachability_zones();
             dirty_ = false;
         }
-        auto &zones = zones_for( terrain );
+        reachability_zones &zones = zones_for( terrain );
         flood_fill_zone( origin, terrain, zones.passable, &zones, nullptr );
         const auto assigned = zones.assignments.find( &origin );
         return assigned == zones.assignments.end() ? nullptr : &zones.members.at( assigned->second );
