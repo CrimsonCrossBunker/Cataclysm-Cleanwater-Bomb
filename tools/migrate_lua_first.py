@@ -10982,6 +10982,17 @@ def render_blacklist(source: SourceObject, result: MigrationResult) -> str | Non
             f"{source.location}: blacklist type needs review"
         )
         return None
+    if kind == "monster":
+        # The native Lua registrar only accepts exact monster IDs.
+        unsupported = sorted({"categories", "species", "mode"} & value.keys())
+        if unsupported:
+            result.partial.append(f"{source.location}: blacklist {kind}")
+            result.add_todo(
+                "platform_gap",
+                f"{source.location}: monster list fields need native Lua "
+                f"support: {', '.join(unsupported)}",
+            )
+            return None
     if kind not in ("item", "trait", "monster", "scenario", "profession",
                     "charge_removal", "temperature_removal"):
         result.partial.append(
