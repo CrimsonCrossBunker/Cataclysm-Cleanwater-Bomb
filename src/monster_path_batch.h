@@ -3,6 +3,7 @@
 #define CATA_SRC_MONSTER_PATH_BATCH_H
 
 #include <array>
+#include <chrono>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -29,6 +30,9 @@ class monster_path_batch
         std::size_t used_count() const {
             return used_count_;
         }
+        static bool worth_collecting();
+        static void observe_serial( const tripoint_bub_ms &start,
+                                    const tripoint_bub_ms &target, double microseconds );
         static std::optional<std::vector<tripoint_bub_ms>> take(
             const map &here, const Creature &who, const pathfinding_target &target );
 
@@ -54,7 +58,8 @@ class monster_path_batch
                                   const tripoint_bub_ms &target );
         static std::optional<route_snapshot> capture( const map &here, const Creature &who,
                 const tripoint_bub_ms &target, std::vector<cost_group> &costs,
-                std::size_t &cached_cells, std::size_t remaining_cells );
+                std::size_t &cached_cells, std::size_t remaining_cells,
+                std::chrono::steady_clock::time_point deadline );
         std::vector<candidate> candidates_;
         std::vector<entry> entries_;
         std::unordered_map<const Creature *, std::size_t> indices_;
@@ -62,6 +67,11 @@ class monster_path_batch
         const map *map_ = nullptr;
         monster_path_batch *previous_ = nullptr;
         bool published_ = false;
+        bool attempted_ = false;
+        std::size_t kind_ = 0;
+        std::size_t task_count_ = 0;
+        double serial_cost_ = 0;
+        double overhead_ = 0;
         std::size_t used_count_ = 0;
 };
 

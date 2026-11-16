@@ -1,6 +1,7 @@
 #include "monster_path_batch.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <iterator>
 #include <new>
 #include <system_error>
@@ -11,11 +12,20 @@
 #include "line.h"
 #include "map.h"
 #include "mapdata.h"
+#include "monster_batch_policy.h"
 #include "thread_pool.h"
 
 namespace
 {
 thread_local monster_path_batch *current_paths = nullptr;
+thread_local monster_batch_policy path_policy;
+
+std::size_t path_kind( const tripoint_bub_ms &start, const tripoint_bub_ms &target )
+{
+    const auto cells = static_cast<std::size_t>( std::abs( start.x() - target.x() ) + 33 ) *
+                       ( std::abs( start.y() - target.y() ) + 33 );
+    return cells < 2048 ? 0 : cells < 4096 ? 1 : cells < 8192 ? 2 : 3;
+}
 
 // Bound retained snapshots independently of creature count. Cost sharing is
 // temporary: it is discarded before workers start and never spans world changes.
@@ -33,8 +43,29 @@ bool same_settings( const pathfinding_settings &a, const pathfinding_settings &b
 }
 }
 
+bool monster_path_batch::worth_collecting()
+{
+    for( std::size_t kind = 0; kind < 4; ++kind ) {
+        if( path_policy.estimate( kind ) >= 50.0 ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void monster_path_batch::observe_serial( const tripoint_bub_ms &start,
+                                        const tripoint_bub_ms &target, double microseconds )
+{
+    if( start.z() == target.z() ) {
+        path_policy.observe( path_kind( start, target ), microseconds );
+    }
+}
+
 monster_path_batch::~monster_path_batch()
 {
+    if( attempted_ ) {
+        path_policy.finish( kind_, task_count_, overhead_, used_count_ * serial_cost_ );
+    }
     for( auto **link = &current_paths; *link; link = &( *link )->previous_ ) {
         if( *link == this ) {
             *link = previous_;
@@ -68,7 +99,8 @@ bool monster_path_batch::simple_route( const map &here, const Creature &who,
 
 std::optional<route_snapshot> monster_path_batch::capture( const map &here,
         const Creature &who, const tripoint_bub_ms &target, std::vector<cost_group> &costs,
-        std::size_t &cached_cells, std::size_t remaining_cells )
+        std::size_t &cached_cells, std::size_t remaining_cells,
+        std::chrono::steady_clock::time_point deadline )
 {
     const tripoint_bub_ms start = who.pos_bub();
     const pathfinding_settings &settings = who.get_pathfinding_settings();
@@ -105,6 +137,10 @@ std::optional<route_snapshot> monster_path_batch::capture( const map &here,
     const auto avoid = who.get_path_avoid();
     for( int x = snapshot.min.x(); x <= snapshot.max.x(); ++x ) {
         for( int y = snapshot.min.y(); y <= snapshot.max.y(); ++y ) {
+            if( ( ( y - snapshot.min.y() ) % 16 == 0 ) &&
+                std::chrono::steady_clock::now() >= deadline ) {
+                return std::nullopt;
+            }
             const tripoint_bub_ms p( x, y, start.z() );
             const PathfindingFlags special = cache.special[p.xy()];
             // Ledge descent can create an extra z-level search node. It stays
@@ -147,10 +183,33 @@ std::optional<route_snapshot> monster_path_batch::capture( const map &here,
 
 void monster_path_batch::prepare( const map &here )
 try {
-    if( published_ || candidates_.size() < 4 || is_pool_worker_thread() ||
-        get_thread_pool().num_workers() == 0 ) {
+    if( published_ || attempted_ || candidates_.size() < 16 || is_pool_worker_thread() ||
+        get_thread_pool().num_workers() < 2 ) {
         return;
     }
+    std::array<std::size_t, 4> counts{};
+    for( const candidate &pending : candidates_ ) {
+        if( pending.owner->pos_bub().z() == pending.target.z() ) {
+            ++counts[path_kind( pending.owner->pos_bub(), pending.target )];
+        }
+    }
+    double largest_work = 0;
+    for( std::size_t kind = 0; kind < counts.size(); ++kind ) {
+        const double work = counts[kind] >= 16 ? counts[kind] * path_policy.estimate( kind ) : 0;
+        if( work > largest_work ) {
+            largest_work = work;
+            kind_ = kind;
+        }
+    }
+    task_count_ = counts[kind_];
+    if( !path_policy.begin( kind_, task_count_, 16, 50.0 ) ) {
+        return;
+    }
+    serial_cost_ = path_policy.estimate( kind_ );
+    attempted_ = true;
+    monster_batch_timer preparation( overhead_ );
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::microseconds(
+                              static_cast<long long>( std::min( 2000.0, serial_cost_ * task_count_ / 4 ) ) );
     origin_ = here.get_abs_sub();
     map_ = &here;
     std::size_t cells = 0;
@@ -158,11 +217,17 @@ try {
         std::vector<cost_group> costs;
         std::size_t cached_cells = 0;
         for( const candidate &pending : candidates_ ) {
+            if( std::chrono::steady_clock::now() >= deadline || cells >= max_snapshot_cells ) {
+                break;
+            }
+            if( path_kind( pending.owner->pos_bub(), pending.target ) != kind_ ) {
+                continue;
+            }
             if( indices_.count( pending.owner ) != 0 ) {
                 continue;
             }
             auto snapshot = capture( here, *pending.owner, pending.target, costs, cached_cells,
-                                     max_snapshot_cells - cells );
+                                     max_snapshot_cells - cells, deadline );
             if( !snapshot ) {
                 continue;
             }
@@ -172,13 +237,18 @@ try {
                                  std::move( *snapshot ), {}, false } );
         }
     }
-    if( entries_.size() < 4 ) {
+    const std::size_t chunks = monster_batch_policy::chunks( entries_.size(),
+                               get_thread_pool().num_workers(), 8, serial_cost_ );
+    if( chunks < 2 ) {
         entries_.clear();
         indices_.clear();
         return;
     }
-    parallel_for( 0, static_cast<int>( entries_.size() ), [this]( int i ) {
-        entries_[i].result = search_route_snapshot( entries_[i].snapshot );
+    parallel_for( 0, static_cast<int>( chunks ), [this, chunks]( int chunk ) {
+        const std::size_t end = entries_.size() * ( chunk + 1 ) / chunks;
+        for( std::size_t i = entries_.size() * chunk / chunks; i < end; ++i ) {
+            entries_[i].result = search_route_snapshot( entries_[i].snapshot );
+        }
     } );
     previous_ = current_paths;
     current_paths = this;
@@ -208,6 +278,7 @@ std::optional<std::vector<tripoint_bub_ms>> monster_path_batch::take(
     if( found == batch->indices_.end() ) {
         return std::nullopt;
     }
+    monster_batch_timer validation( batch->overhead_ );
     entry &prepared = batch->entries_[found->second];
     const auto &snapshot = prepared.snapshot;
     const auto &settings = who.get_pathfinding_settings();

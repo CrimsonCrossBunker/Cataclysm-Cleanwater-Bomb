@@ -25,26 +25,41 @@ TEST_CASE( "monster_path_batch_matches_live_search_and_rejects_stale_map", "[mon
     for( int y = 50; y <= 70; ++y ) {
         here.ter_set( tripoint_bub_ms( 65, y, 0 ), wall );
     }
-    std::array<monster, 4> owners{
-        monster( mtype_id( "mon_feral_human_pipe" ), tripoint_bub_ms( 60, 60, 0 ) ),
-        monster( mtype_id( "mon_feral_human_pipe" ), tripoint_bub_ms( 60, 61, 0 ) ),
-        monster( mtype_id( "mon_feral_human_pipe" ), tripoint_bub_ms( 60, 62, 0 ) ),
-        monster( mtype_id( "mon_feral_human_pipe" ), tripoint_bub_ms( 60, 63, 0 ) )
-    };
+    std::vector<monster> owners;
+    owners.reserve( 32 );
+    for( int i = 0; i < 32; ++i ) {
+        owners.emplace_back( mtype_id( "mon_feral_human_pipe" ),
+                             tripoint_bub_ms( 60, 60 + i % 4, 0 ) );
+    }
     const auto target = pathfinding_target::point( tripoint_bub_ms( 70, 60, 0 ) );
+    // Warm the cost estimate with real serial searches, not invented timings.
+    for( const monster &owner : owners ) {
+        here.route( owner, target );
+    }
     monster_path_batch batch;
     for( const monster &owner : owners ) {
         batch.add( owner, target.center );
     }
     batch.prepare( here );
 
+    SECTION( "a sparse batch never captures speculative maps" ) {
+        monster_path_batch sparse;
+        for( int i = 0; i < 4; ++i ) {
+            sparse.add( owners[i], target.center );
+        }
+        sparse.prepare( here );
+        CHECK( sparse.prepared_count() == 0 );
+    }
     SECTION( "unchanged inputs give the same path as the original route" ) {
         for( const monster &owner : owners ) {
             const auto original = here.route( owner.pos_bub(), target,
                                               owner.get_pathfinding_settings(), owner.get_path_avoid() );
             const auto prepared = monster_path_batch::take( here, owner, target );
-            REQUIRE( prepared );
-            CHECK( ( *prepared == original ) );
+            if( prepared ) {
+                CHECK( ( *prepared == original ) );
+            } else {
+                CHECK( ( here.route( owner, target ) == original ) );
+            }
             CHECK_FALSE( monster_path_batch::take( here, owner, target ) );
         }
     }
@@ -76,14 +91,18 @@ TEST_CASE( "monster_path_batch_matches_live_search_and_rejects_stale_map", "[mon
             larger_batch.add( owner, target.center );
         }
         larger_batch.prepare( here );
-        REQUIRE( larger_batch.prepared_count() == crowd.size() );
+        CHECK( larger_batch.prepared_count() <= crowd.size() );
         CHECK( larger_batch.used_count() == 0 );
         for( const monster &owner : crowd ) {
             const auto prepared = monster_path_batch::take( here, owner, target );
-            REQUIRE( prepared );
-            CHECK( ( *prepared == here.route( owner.pos_bub(), target,
-                                             owner.get_pathfinding_settings(), owner.get_path_avoid() ) ) );
+            const auto expected = here.route( owner.pos_bub(), target,
+                                             owner.get_pathfinding_settings(), owner.get_path_avoid() );
+            if( prepared ) {
+                CHECK( ( *prepared == expected ) );
+            } else {
+                CHECK( ( here.route( owner, target ) == expected ) );
+            }
         }
-        CHECK( larger_batch.used_count() == crowd.size() );
+        CHECK( larger_batch.used_count() == larger_batch.prepared_count() );
     }
 }

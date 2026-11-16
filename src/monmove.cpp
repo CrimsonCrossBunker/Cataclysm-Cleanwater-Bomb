@@ -12,6 +12,7 @@
 #include <safe_reference.h>
 #include <algorithm>
 #include <cfloat>
+#include <chrono>
 #include <climits>
 #include <cmath>
 #include <cstdlib>
@@ -1716,6 +1717,7 @@ tripoint_bub_ms monster::scent_move()
                monster_scent_batch::directions( here, scents, pos_bub(), bestsmell ) ) {
         sdirection = *prepared;
     } else {
+        const auto scent_started = std::chrono::steady_clock::now();
         // Get direction of scent
         for( const tripoint_bub_ms &dest : here.points_in_radius( pos_bub(), 1, SCENT_MAP_Z_REACH ) ) {
             int smell = scents.get( dest );
@@ -1731,6 +1733,8 @@ tripoint_bub_ms monster::scent_move()
                 sdirection.push_back( dest );
             }
         }
+        monster_scent_batch::observe_serial( std::chrono::duration<double, std::micro>(
+                                                std::chrono::steady_clock::now() - scent_started ).count() );
     }
 
     monster_local_cache<bool, 2, SCENT_MAP_Z_REACH> movement_cache;

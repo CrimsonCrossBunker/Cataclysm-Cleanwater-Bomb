@@ -53,6 +53,7 @@ endif()
 add_executable(monster_motion_kernel_test
     monster_motion_test.cpp
     "${CCB_ROOT}/tests/monster_motion_profile_test.cpp"
+    "${CCB_ROOT}/tests/monster_batch_policy_test.cpp"
     "${CCB_ROOT}/tests/monster_disposition_test.cpp"
     "${CCB_ROOT}/tests/route_snapshot_test.cpp"
     "${CCB_ROOT}/tests/monster_scent_search_test.cpp"

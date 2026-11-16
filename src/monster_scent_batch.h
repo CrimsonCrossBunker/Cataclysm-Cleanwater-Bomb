@@ -21,6 +21,8 @@ class monster_scent_batch
         monster_scent_batch &operator=( const monster_scent_batch & ) = delete;
         ~monster_scent_batch();
 
+        static void observe_serial( double microseconds );
+        static bool worth_collecting();
         void add( const tripoint_bub_ms &position );
         void prepare( const map &here, const scent_map &scents );
         std::size_t used_count() const {
@@ -43,6 +45,10 @@ class monster_scent_batch
         std::uint64_t revision_ = 0;
         monster_scent_batch *previous_ = nullptr;
         bool published_ = false;
+        bool attempted_ = false;
+        std::size_t task_count_ = 0;
+        double overhead_ = 0;
+        double serial_cost_ = 0;
         std::size_t used_count_ = 0;
 };
 

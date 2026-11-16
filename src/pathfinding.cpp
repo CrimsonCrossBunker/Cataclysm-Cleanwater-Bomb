@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <chrono>
 #include <cstdlib>
 #include <functional>
 #include <memory>
@@ -464,7 +465,14 @@ std::vector<tripoint_bub_ms> map::route( const Creature &who,
     if( auto prepared = monster_path_batch::take( *this, who, target ) ) {
         return std::move( *prepared );
     }
-    return route( who.pos_bub(), target, who.get_pathfinding_settings(), who.get_path_avoid() );
+    const auto start = std::chrono::steady_clock::now();
+    auto result = route( who.pos_bub(), target, who.get_pathfinding_settings(), who.get_path_avoid() );
+    if( who.is_monster() && target.r == 0 ) {
+        monster_path_batch::observe_serial( who.pos_bub(), target.center,
+                                           std::chrono::duration<double, std::micro>(
+                                               std::chrono::steady_clock::now() - start ).count() );
+    }
+    return result;
 }
 
 std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,

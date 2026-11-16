@@ -5,6 +5,8 @@
 
 #include "cata_catch.h"
 #include "route_snapshot.h"
+#include "monster_batch_policy.h"
+#include "thread_pool.h"
 
 static route_snapshot open_snapshot()
 {
@@ -133,4 +135,55 @@ TEST_CASE( "snapshot_astar_parallel_results_match_serial", "[pathfinding][thread
         CHECK( ( actual.checked_cells == expected.checked_cells ) );
     }
     CHECK( worker_tasks.load() > 0 );
+}
+
+TEST_CASE( "snapshot_batches_preserve_complex_terrain_at_different_sizes", "[pathfinding][threading]" )
+{
+    for( int terrain = 0; terrain < 4; ++terrain ) {
+        route_snapshot snapshot;
+        snapshot.min = tripoint_bub_ms( 0, 0, 0 );
+        snapshot.max = tripoint_bub_ms( 25, 25, 0 );
+        snapshot.start = tripoint_bub_ms( 1, 1, 0 );
+        snapshot.target = tripoint_bub_ms( 23, 23, 0 );
+        snapshot.max_length = 1000;
+        snapshot.cells.resize( 26 * 26 );
+        for( int x = 0; x <= 25; ++x ) {
+            for( int y = 0; y <= 25; ++y ) {
+                auto &cell = snapshot.cells[snapshot.index( tripoint_bub_ms( x, y, 0 ) )];
+                cell.entering_cost.fill( 2 );
+                if( terrain == 1 && x % 5 == 0 && y != ( x % 10 == 0 ? 3 : 21 ) ) {
+                    cell.entering_cost.fill( -1 );
+                } else if( terrain == 2 ) {
+                    cell.entering_cost.fill( 2 + ( x * 7 + y * 3 ) % 13 );
+                } else if( terrain == 3 && x == 12 ) {
+                    cell.entering_cost.fill( -1 );
+                }
+            }
+        }
+        const auto expected = search_route_snapshot( snapshot );
+        CHECK( expected.path.empty() == ( terrain == 3 ) );
+        for( const std::size_t count : { 16, 128, 512 } ) {
+            for( const std::size_t workers : { 1, 4 } ) {
+                cata_thread_pool pool( workers );
+                const auto chunks = monster_batch_policy::chunks( count, workers, 8, 200 );
+                std::vector<route_snapshot_result> results( count );
+                std::vector<std::future<void>> tasks;
+                for( std::size_t chunk = 0; chunk < chunks; ++chunk ) {
+                    tasks.push_back( pool.submit_returning( [&, chunk]() {
+                        for( std::size_t i = count * chunk / chunks; i < count * ( chunk + 1 ) / chunks; ++i ) {
+                            results[i] = search_route_snapshot( snapshot );
+                        }
+                    } ) );
+                }
+                for( auto &task : tasks ) {
+                    task.get();
+                }
+                for( const auto &actual : results ) {
+                    CHECK( ( actual.path == expected.path ) );
+                    CHECK( ( actual.checked_cost == expected.checked_cost ) );
+                    CHECK( ( actual.checked_avoid == expected.checked_avoid ) );
+                }
+            }
+        }
+    }
 }
