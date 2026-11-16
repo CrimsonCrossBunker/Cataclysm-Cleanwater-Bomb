@@ -2326,7 +2326,7 @@ void draw_time_game_start()
     cataimgui::draw_colored_text( to_string( get_scenario()->start_of_game(), true ), c_light_gray );
 }
 
-void draw_location( avatar &you )
+static void draw_location( avatar &you )
 {
     std::string random_start_location_text = string_format( n_gettext(
                 "<color_red>* Random location *</color> (<color_white>%d</color> variant)",
