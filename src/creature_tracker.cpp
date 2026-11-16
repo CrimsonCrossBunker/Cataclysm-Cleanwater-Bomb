@@ -282,6 +282,15 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
         }
     }
 
+    if( g->multiplayer_session().has_regions() ) {
+        const auto &session = g->multiplayer_session();
+        if( square_dist( old_pos, new_pos ) > 1 ||
+            session.loaded_map_at( reality_bubble(), project_to<coords::sm>( old_pos ) ) !=
+            session.loaded_map_at( reality_bubble(), project_to<coords::sm>( new_pos ) ) ) {
+            invalidate_reachability_cache();
+        }
+    }
+
     // The location index already owns the tracked pointer. Keep the list scan
     // below for missing/mismatched old entries, not for every normal step.
     const auto old = monsters_by_location.find( old_pos );
@@ -297,14 +306,6 @@ bool creature_tracker::update_pos( const monster &critter, const tripoint_abs_ms
         return ptr.get() == &critter;
     } );
     if( iter != monsters_list.end() ) {
-        if( g->multiplayer_session().has_regions() ) {
-            const auto &session = g->multiplayer_session();
-            if( square_dist( old_pos, new_pos ) > 1 ||
-                session.loaded_map_at( reality_bubble(), project_to<coords::sm>( old_pos ) ) !=
-                session.loaded_map_at( reality_bubble(), project_to<coords::sm>( new_pos ) ) ) {
-                invalidate_reachability_cache();
-            }
-        }
         monsters_by_location.erase( old_pos );
         cache_location( new_pos, *iter );
         return true;
