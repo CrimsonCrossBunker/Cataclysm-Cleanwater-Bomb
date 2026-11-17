@@ -63,3 +63,5 @@ require("progression_enchantments")
 require("thermal_overlay_enchantments")
 
 require("bionic_enchantments")
+
+require("item_enchantments")

@@ -60,6 +60,6 @@
     "weapon_category": [ "POLEARMS", "SPEARS" ],
     "price": "1 cent",
     "qualities": [ [ "COOK", 1 ] ],
-    "passive_effects": [ { "has": "WIELD", "hit_you_effect": [ { "id": "bramble_spear_slow", "hit_self": false } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_XedraWood_druid_bramble_spear_item_0" } ]
   }
 ]
