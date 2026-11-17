@@ -1714,6 +1714,31 @@ void item_blacklist_t::clear()
     sub_blacklist.clear();
 }
 
+static const migration *item_template_migration( const std::vector<migration> &entries )
+{
+    const migration *result = nullptr;
+    for( const migration &entry : entries ) {
+        if( entry.from_variant ) {
+            continue;
+        }
+        if( result != nullptr ) {
+            return nullptr;
+        }
+        result = &entry;
+    }
+    return result;
+}
+
+bool Item_factory::has_template_migration( const itype_id &id ) const
+{
+    const auto found = migrations.find( id );
+    if( found == migrations.end() ) {
+        return false;
+    }
+    const migration *entry = item_template_migration( found->second );
+    return entry != nullptr && template_list_contains( entry->replace );
+}
+
 void Item_factory::finalize_item_blacklist()
 {
     // Populate a whitelist, and a blacklist with items on whitelists and items on blacklists
@@ -1785,23 +1810,7 @@ void Item_factory::finalize_item_blacklist()
     // Construct a map for batch item replace
     std::unordered_map<itype_id, itype_id> replacements;
     for( const std::pair<const itype_id, std::vector<migration>> &migrate : migrations ) {
-        // The valid migration entry
-        const migration *valid = nullptr;
-        for( const migration &cand : migrate.second ) {
-            // This can only be applied to items, not itypes
-            if( cand.from_variant ) {
-                continue;
-            }
-            // There can only be one migration entry
-            if( valid == nullptr ) {
-                valid = &cand;
-            } else {
-                valid = nullptr;
-                break;
-            }
-        }
-        // Either there are no migrations, or too many migrations
-        // Errors are reported below
+        const migration *valid = item_template_migration( migrate.second );
         if( valid == nullptr ) {
             continue;
         }

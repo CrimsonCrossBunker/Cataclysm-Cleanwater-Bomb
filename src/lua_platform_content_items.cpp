@@ -3904,11 +3904,12 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     if( !check_engine_state ) {
                         continue;
                     }
+                    const itype_id item_id( component.id );
                     const bool valid = component.requirement ?
                                        requirement_ids.count( component.id ) != 0 ||
                                        requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                        declared_item_ids.count( component.id ) != 0 ||
-                                       item::type_is_defined( itype_id( component.id ) );
+                                       item::type_is_defined( item_id ) || item_controller->has_template_migration( item_id );
                     if( !valid ) {
                         throw std::runtime_error( "requirement '" + id + "' references unknown " +
                                                   ( component.requirement ? std::string( "requirement" ) : kind ) +

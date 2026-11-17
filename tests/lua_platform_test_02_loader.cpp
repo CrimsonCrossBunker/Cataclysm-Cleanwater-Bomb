@@ -373,6 +373,7 @@ for count = 1, 151 do
     choices[count] = { id = "rock", count = count }
 end
 content.add(content.Requirement { id = "lua_test_large_requirement_group" }:component_any(choices))
+content.add(content.Requirement { id = "lua_test_migrated_item_requirement" }:component("8mm_hvp", 1))
 content.merge_requirement(content.Requirement { id = key, name = "Mixed crafting" }
     :component("rock", 1):component("test_rag", 1):tool("hammer", 1),
     content.Requirement {}:component("nail", 2))
@@ -408,11 +409,18 @@ content.merge_requirement(content.Requirement { id = key },
     REQUIRE( large_groups.front().size() == 151 );
     CHECK( large_groups.front().back().count == 151 );
 
+    const requirement_id migrated_item_id( "lua_test_migrated_item_requirement" );
+    REQUIRE( migrated_item_id.is_valid() );
+    // A late registration still carries its authored ID. Normal world startup
+    // rewrites it in Item_factory::finalize_item_blacklist().
+    CHECK( migrated_item_id->get_components().front().front().type == itype_id( "8mm_hvp" ) );
+
     platform::discard_prepared_mods();
     CHECK( id.obj().get_components().empty() );
     CHECK( id.obj().get_tools().front().front().count == 2 );
     CHECK_FALSE( id.obj().has_display_name() );
     CHECK_FALSE( large_group_id.is_valid() );
+    CHECK_FALSE( migrated_item_id.is_valid() );
 }
 
 TEST_CASE( "lua_platform_requirements_resolve_references_at_content_application",

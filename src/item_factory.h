@@ -243,6 +243,9 @@ class Item_factory
          */
         bool has_template( const itype_id &id ) const;
 
+        /** Whether finalization can replace this ID in item groups and requirements. */
+        bool has_template_migration( const itype_id &id ) const;
+
         /**
          * Returns the itype with the given id.
          * This function never returns null, if the item type is unknown, a new item type is
