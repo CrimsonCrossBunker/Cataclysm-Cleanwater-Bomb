@@ -5465,6 +5465,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field radius? integer Maximum distance from the actor in map tiles. Defaults to 1000.
 ---@field attitude? "hostile"|"friendly"|"both" Defaults to native non-friendly monsters.
 ---@field species? string[] Restrict the count to monsters in any listed species.
+---@field types? string[] Restrict the count to any listed monster type ID; intersects the species selection.
 
 ---@class CcbEnchantmentCharacterCountQuery
 ---@field radius? integer Native signed maximum distance from a character speaker in map tiles; defaults to 1000.
@@ -5472,6 +5473,15 @@ function CcbPlatformContent.Bionic(options) end
 ---@field allow_hallucinations? boolean Defaults to false. A non-character speaker only applies this filter.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field species? string[] Native species membership to query on the speaker.
+---@field wielded_skills? string[] Skills tested against the speaker's wielded weapon.
+---@field wielded_categories? string[] Weapon categories tested against the speaker's wielded weapon.
+---@field wielded_ammunition? string[] Ammunition types tested against the speaker's wielded weapon.
+---@field encumbrance? string[] Body part IDs whose native encumbrance is requested.
+---@field identity? boolean Request whether the speaker is an avatar, NPC, character or monster.
+---@field stat_bonuses? boolean Request native strength, dexterity, intelligence and perception bonuses.
+---@field artifact_resonance? boolean Request the speaker's native artifact resonance.
+---@field body_part_effect_intensities? table<string, string[]> Body parts mapped to effects whose intensity is requested.
 ---@field nearby_characters? table<string, CcbEnchantmentCharacterCountQuery> Counts keyed by name.
 ---@field hit_points? string[] Body part IDs, or ALL, ALL_MAJOR and ALL_MINOR for native current-HP totals.
 ---@field max_hit_points? string[] Body part IDs whose maximum HP is requested.
@@ -5511,6 +5521,15 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field species table<string, boolean>
+---@field wielded_skills table<string, boolean>
+---@field wielded_categories table<string, boolean>
+---@field wielded_ammunition table<string, boolean>
+---@field encumbrance table<string, integer>
+---@field identity? { avatar: boolean, npc: boolean, character: boolean, monster: boolean }
+---@field stat_bonuses? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
+---@field artifact_resonance? integer
+---@field body_part_effect_intensities? table<string, table<string, integer>> Missing effects have intensity -1.
 ---@field nearby_characters? table<string, integer>
 ---@field hit_points table<string, integer>
 ---@field max_hit_points table<string, integer>

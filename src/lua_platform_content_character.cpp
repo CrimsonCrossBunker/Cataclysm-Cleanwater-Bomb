@@ -2545,7 +2545,11 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 ids( *activation, "skills" ), activation->get_or( "base_stats", false ),
                 activation->get_or( "climate_heat", false ), ids( *activation, "category_counts" ),
                 {}, ids( *activation, "hit_points" ), ids( *activation, "max_hit_points" ),
-                ids( *activation, "known_proficiencies" ), activation->get_or( "calorie_reserves", false )
+                ids( *activation, "known_proficiencies" ), activation->get_or( "calorie_reserves", false ),
+                ids( *activation, "species" ), ids( *activation, "wielded_skills" ),
+                ids( *activation, "wielded_categories" ), ids( *activation, "wielded_ammunition" ),
+                ids( *activation, "encumbrance" ), activation->get_or( "identity", false ),
+                activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}
             };
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_characters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
@@ -2578,18 +2582,22 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                     }
                     definition->load_character_inputs->nearby_monsters.emplace( key.as<std::string>(),
                             detail::enchantment_monster_count_query{
-                                static_cast<int>( radius ), attitude, ids( query, "species" )
+                                static_cast<int>( radius ), attitude, ids( query, "species" ), ids( query, "types" )
                             } );
                 }
             }
-            if( const auto parts = activation->get<sol::optional<sol::table>>( "body_part_effects" ) ) {
-                for( const auto &[part, raw] : *parts ) {
-                    if( part.get_type() != sol::type::string || !raw.is<sol::table>() ) {
-                        throw std::runtime_error( "body_part_effects requires body part IDs and effect arrays" );
+            for( const char *field : { "body_part_effects", "body_part_effect_intensities" } ) {
+                if( const auto parts = activation->get<sol::optional<sol::table>>( field ) ) {
+                    auto &requests = std::string_view( field ) == "body_part_effects" ?
+                                     definition->load_character_inputs->body_part_effects :
+                                     definition->load_character_inputs->body_part_effect_intensities;
+                    for( const auto &[part, raw] : *parts ) {
+                        if( part.get_type() != sol::type::string || !raw.is<sol::table>() ) {
+                            throw std::runtime_error( std::string( field ) + " requires body part IDs and effect arrays" );
+                        }
+                        requests.emplace( part.as<std::string>(),
+                                          read_enchantment_id_array( raw.as<sol::table>(), field ) );
                     }
-                    const std::string id = part.as<std::string>();
-                    definition->load_character_inputs->body_part_effects.emplace( id,
-                            read_enchantment_id_array( raw.as<sol::table>(), "body_part_effects" ) );
                 }
             }
             if( const auto environment = activation->get<sol::optional<sol::table>>( "environment" ) ) {
@@ -4343,7 +4351,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums,
                                         &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills,
                                         &inputs.category_counts, &inputs.hit_points, &inputs.max_hit_points,
-                                        &inputs.known_proficiencies } ) {
+                                        &inputs.known_proficiencies, &inputs.species, &inputs.wielded_skills,
+                                        &inputs.wielded_categories, &inputs.wielded_ammunition, &inputs.encumbrance } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -4351,7 +4360,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 for( const auto &request : inputs.nearby_characters ) {
                     require_valid_id( request.first, "enchantment nearby character request" );
                 }
-                for( const auto *parts : { &inputs.hit_points, &inputs.max_hit_points } ) {
+                for( const auto *parts : { &inputs.hit_points, &inputs.max_hit_points, &inputs.encumbrance } ) {
                     for( const std::string &part : *parts ) {
                         const bool aggregate = parts == &inputs.hit_points &&
                                                ( part == "ALL" || part == "ALL_MAJOR" || part == "ALL_MINOR" );
@@ -4367,16 +4376,21 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                     for( const std::string &species : query.species ) {
                         require_valid_id( species, "enchantment monster species" );
                     }
-                }
-                for( const auto &[part, effects] : inputs.body_part_effects ) {
-                    require_valid_id( part, "enchantment effect body part" );
-                    if( check_engine_state && !staged_body_part( part ) &&
-                        !bodypart_str_id( part ).is_valid() ) {
-                        throw std::runtime_error( "enchantment '" + definition.id +
-                                                  "' references unknown body part '" + part + "'" );
+                    for( const std::string &type : query.types ) {
+                        require_valid_id( type, "enchantment monster type" );
                     }
-                    for( const std::string &effect : effects ) {
-                        require_valid_id( effect, "enchantment body part effect" );
+                }
+                for( const auto *requests : { &inputs.body_part_effects, &inputs.body_part_effect_intensities } ) {
+                    for( const auto &[part, effects] : *requests ) {
+                        require_valid_id( part, "enchantment effect body part" );
+                        if( check_engine_state && !staged_body_part( part ) &&
+                            !bodypart_str_id( part ).is_valid() ) {
+                            throw std::runtime_error( "enchantment '" + definition.id +
+                                                      "' references unknown body part '" + part + "'" );
+                        }
+                        for( const std::string &effect : effects ) {
+                            require_valid_id( effect, "enchantment body part effect" );
+                        }
                     }
                 }
                 if( inputs.environment ) {
@@ -7664,6 +7678,18 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "hit_points", value.load_character_inputs->hit_points );
                     hash_ids( "max_hit_points", value.load_character_inputs->max_hit_points );
                     hash_ids( "known_proficiencies", value.load_character_inputs->known_proficiencies );
+                    hash_ids( "species", value.load_character_inputs->species );
+                    hash_ids( "wielded_skills", value.load_character_inputs->wielded_skills );
+                    hash_ids( "wielded_categories", value.load_character_inputs->wielded_categories );
+                    hash_ids( "wielded_ammunition", value.load_character_inputs->wielded_ammunition );
+                    hash_ids( "encumbrance", value.load_character_inputs->encumbrance );
+                    hash_part( state, value.load_character_inputs->identity ? "identity" : "no_identity" );
+                    hash_part( state, value.load_character_inputs->stat_bonuses ? "stat_bonuses" : "no_stat_bonuses" );
+                    hash_part( state, value.load_character_inputs->artifact_resonance ? "artifact_resonance" : "no_artifact_resonance" );
+                    hash_part( state, std::to_string( value.load_character_inputs->body_part_effect_intensities.size() ) );
+                    for( const auto &[part, effects] : value.load_character_inputs->body_part_effect_intensities ) {
+                        hash_ids( part.c_str(), effects );
+                    }
                     hash_part( state, value.load_character_inputs->calorie_reserves ? "calorie_reserves" : "no_calorie_reserves" );
                     hash_part( state, std::to_string( value.load_character_inputs->nearby_characters.size() ) );
                     for( const auto &[name, query] : value.load_character_inputs->nearby_characters ) {
@@ -7684,6 +7710,7 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, std::to_string( value.load_character_inputs->nearby_monsters.size() ) );
                     for( const auto &[name, query] : value.load_character_inputs->nearby_monsters ) {
                         hash_ids( name.c_str(), query.species );
+                        hash_ids( "types", query.types );
                         hash_part( state, query.attitude );
                         hash_part( state, std::to_string( query.radius ) );
                     }
