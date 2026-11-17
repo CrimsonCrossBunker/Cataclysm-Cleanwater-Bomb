@@ -21,7 +21,7 @@ template<typename T> class generic_factory;
 namespace cata::lua_platform
 {
 class content_transaction;
-}
+} // namespace cata::lua_platform
 
 // Sub-generator type enum: each value corresponds to a C++ executor function.
 enum class sub_generator_type : int {
