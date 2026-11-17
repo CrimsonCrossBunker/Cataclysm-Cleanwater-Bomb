@@ -15,6 +15,7 @@
 #include "event_bus.h"
 #include "flag.h"
 #include "game.h"
+#include "global_vars.h"
 #include "item.h"
 #include "flexbuffer_json.h"
 #include "json.h"
@@ -831,6 +832,128 @@ TEST_CASE( "xedra_anathema_catalyst_and_progression_preserve_native_outcomes",
         CAPTURE( *progression.due( player ) - due );
         CHECK( *progression.due( player ) >= due + 3_hours );
         CHECK( *progression.due( player ) <= due + 4_hours );
+    }
+}
+
+TEST_CASE( "xedra_vampire_infection_preserves_progression_and_saved_timers",
+           "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const restore_on_out_of_scope restore_globals( get_globals().get_global_values() );
+    const on_out_of_scope cleanup( [] {
+        effect_on_conditions::clear( get_avatar() );
+        Messages::clear_messages();
+        clear_avatar();
+    } );
+    clear_avatar();
+    avatar &player = get_avatar();
+    effect_on_conditions::clear( player );
+    cata::lua_platform::runtime_world_ready( true );
+
+    const efftype_id sickness( "vampire_virus" );
+    const trait_id stage_three( "VAMPIRE3" );
+    const xedra_timer infection{ effect_on_condition_id( "EOC_vampire_virus_escalation" ),
+                                 "vampire_infection_due" };
+    const xedra_timer change_intensity{ effect_on_condition_id( "EOC_ADD_VAMPIRUS_INTENSITY1" ),
+                                        "vampire_intensity_two_due" };
+    const xedra_timer avatar_infection{ effect_on_condition_id( "EOC_VAMPIRES" ),
+                                        "avatar_vampire_infection_due" };
+    const xedra_timer hunger{ effect_on_condition_id( "EOC_vampire_virus_blood_needs" ),
+                              "vampire_hunger_due" };
+    const time_point due = calendar::turn + 5_turns;
+
+    SECTION( "a restored infection grants third tier and a weakness only without treatment" ) {
+        const bool treated = GENERATE( false, true );
+        player.set_mutation( trait_id( "VAMPIRE2" ) );
+        player.add_effect( sickness, 1_turns, true, 3 );
+        if( treated ) {
+            player.add_effect( efftype_id( "blood_treatment" ), 1_hours );
+        }
+        player.queued_effect_on_conditions.push( { infection.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( infection.due( player ) == due );
+        infection.isolate( player );
+
+        calendar::turn = due;
+        rng_set_engine_seed( 70731 );
+        effect_on_conditions::process_effect_on_conditions( player );
+        std::vector<std::string> granted;
+        for( const trait_id &mutation : player.get_mutations() ) {
+            if( mutation.str().find( "VAMPIRE_WEAKNESS_" ) == 0 ) {
+                granted.push_back( mutation.str() );
+            }
+        }
+        const int next_draw = rng( 0, 1000000 );
+        CAPTURE( granted, next_draw );
+        CHECK( player.has_trait( stage_three ) == !treated );
+        CHECK( granted.size() == ( treated ? 0 : 1 ) );
+        REQUIRE( infection.due( player ).has_value() );
+        CHECK( *infection.due( player ) >= due + 48_hours );
+        CHECK( *infection.due( player ) <= due + 72_hours + 15_minutes );
+    }
+
+    SECTION( "a restored delayed intensity change counts the original extra trait" ) {
+        for( const char *trait : { "EYEGLEAM", "BLOOD_FUN", "COMMUNE_NIGHT", "DHAMPIR_REDUCED_COLD_TEMPS" } ) {
+            player.set_mutation( trait_id( trait ) );
+        }
+        player.add_effect( sickness, 1_turns, true, 1 );
+        player.queued_effect_on_conditions.push( { change_intensity.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( change_intensity.due( player ) == due );
+        change_intensity.isolate( player );
+        calendar::turn = due;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( player.get_effect_int( sickness ) == 2 );
+        CHECK_FALSE( change_intensity.due( player ).has_value() );
+    }
+
+    SECTION( "an existing global task keeps its deadline and uses the world interval on recurrence" ) {
+        get_globals().set_global_value( "ps_min_woc", diag_value( 600.0 ) );
+        get_globals().set_global_value( "ps_max_woc", diag_value( 900.0 ) );
+        player.add_effect( sickness, 1_turns, true, 3 );
+        queued_eocs &global = g->queued_global_effect_on_conditions;
+        global.push( { avatar_infection.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( avatar_infection.due( global ) == due );
+        rng_set_engine_seed( 70731 );
+        const int expected = rng( 0, 1000000 );
+        rng_set_engine_seed( 70731 );
+        effect_on_conditions::load_existing_character( player );
+        CHECK( rng( 0, 1000000 ) == expected );
+        CHECK( avatar_infection.due( global ) == due );
+        avatar_infection.isolate( global );
+        player.queued_effect_on_conditions = queued_eocs();
+
+        calendar::turn = due;
+        rng_set_engine_seed( 70731 );
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( player.has_trait( stage_three ) );
+        REQUIRE( avatar_infection.due( global ).has_value() );
+        CHECK( *avatar_infection.due( global ) >= due + 10_minutes );
+        CHECK( *avatar_infection.due( global ) <= due + 15_minutes );
+    }
+
+    SECTION( "a restored hunger timer warns only at the original blood threshold" ) {
+        const int blood = GENERATE( -450, -449 );
+        player.set_mutation( trait_VAMPIRE );
+        player.add_effect( sickness, 1_turns, true, 1 );
+        player.vitamin_set( vitamin_human_blood_vitamin, blood );
+        player.queued_effect_on_conditions.push( { hunger.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( hunger.due( player ) == due );
+        hunger.isolate( player );
+        Messages::clear_messages();
+        calendar::turn = due;
+        rng_set_engine_seed( 70731 );
+        effect_on_conditions::process_effect_on_conditions( player );
+        const auto recent = Messages::recent_messages( 5 );
+        const bool warned = std::any_of( recent.begin(), recent.end(), []( const auto &entry ) {
+            return entry.second == "You need to consume human blood to stay alive.";
+        } );
+        CHECK( warned == ( blood == -450 ) );
+        REQUIRE( hunger.due( player ).has_value() );
+        CHECK( *hunger.due( player ) >= due + 8_hours );
+        CHECK( *hunger.due( player ) <= due + 14_hours + 15_minutes );
     }
 }
 

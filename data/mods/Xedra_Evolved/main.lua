@@ -61,6 +61,7 @@ require("vampire_weakness_messages")
 require("vampire_weakness_reshuffle")
 require("anathema_sunlight")
 require("anathema_progression")
+require("vampire_infection")
 
 require("nested_recipes")
 

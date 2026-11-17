@@ -7248,10 +7248,15 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 function CcbPlatformTasks.after_character_turn(character, turns, handler_id) end
 
 ---Keep one saved callback per Mod and handler on the avatar turn, after their local tasks.
----An existing callback keeps its deadline. Zero delay allows the next global queue pass.
----@param turns integer Non-negative delay in turns, within the game calendar.
+---An existing callback keeps its deadline. An already-due callback runs on the next global queue pass.
+---@param turns integer Signed delay in turns, within the game calendar.
 ---@param handler_id string Registered handler receiving the current avatar as character and the absolute due_turn.
 function CcbPlatformTasks.ensure_avatar_turn(turns, handler_id) end
+
+---Check whether this Mod already has the named callback on the avatar turn queue.
+---@param handler_id string
+---@return boolean
+function CcbPlatformTasks.has_avatar_turn(handler_id) end
 
 ---Cancels a pending task, including one due this turn whose callback has not started.
 ---@param task_id integer

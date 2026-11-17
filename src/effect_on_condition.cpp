@@ -208,17 +208,16 @@ namespace
 // Lua callbacks share the saved character-turn queue with EOCs to keep their
 // due turn and ordering across an upgrade.
 const effect_on_condition_id lua_task_record( "ccb:character_task" );
-const effect_on_condition_id xedra_sunrise_eoc(
-    "EOC_XE_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_AT_SUNRISE" );
 thread_local std::vector<queued_eocs::storage_iter> *avatar_tasks_to_queue = nullptr;
 struct character_task_migration {
     effect_on_condition_id eoc;
     const char *handler;
     const char *timer_key;
+    bool global = false;
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 6> xedra_character_tasks = {{
+const std::array<character_task_migration, 12> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -230,15 +229,27 @@ const std::array<character_task_migration, 6> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_XE_VAMPIRE_WEAKNESS_RESHUFFLE_SWITCHER" ),
           "vampire_weakness_reshuffle_due", nullptr },
         { effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_GAIN_POWERS" ),
-          "anathema_progression_due", "anathema_progression_timer" }
+          "anathema_progression_due", "anathema_progression_timer" },
+        { effect_on_condition_id( "EOC_vampire_virus_escalation" ),
+          "vampire_infection_due", "vampire_infection_timer" },
+        { effect_on_condition_id( "EOC_vampire_virus_blood_needs" ),
+          "vampire_hunger_due", "vampire_hunger_timer" },
+        { effect_on_condition_id( "EOC_ADD_VAMPIRUS_INTENSITY1" ),
+          "vampire_intensity_two_due", nullptr },
+        { effect_on_condition_id( "EOC_ADD_VAMPIRUS_INTENSITY2" ),
+          "vampire_intensity_three_due", nullptr },
+        { effect_on_condition_id( "EOC_XE_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_AT_SUNRISE" ),
+          "anathema_sunrise_due", nullptr, true },
+        { effect_on_condition_id( "EOC_VAMPIRES" ),
+          "avatar_vampire_infection_due", nullptr, true }
     }
 };
 
-const character_task_migration *find_xedra_task( const effect_on_condition_id &id )
+const character_task_migration *find_xedra_task( const effect_on_condition_id &id, bool global )
 {
     const auto found = std::find_if( xedra_character_tasks.begin(), xedra_character_tasks.end(),
-    [&id]( const character_task_migration & entry ) {
-        return entry.eoc == id;
+    [&]( const character_task_migration & entry ) {
+        return entry.global == global && entry.eoc == id;
     } );
     return found != xedra_character_tasks.end() && !id.is_valid() ? &*found : nullptr;
 }
@@ -259,11 +270,10 @@ void cata::lua_platform::queue_character_task( Character &actor, time_point due,
     actor.queued_effect_on_conditions.push( character_task_record( due, mod, handler ) );
 }
 
-void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
-        std::string_view handler )
+bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string_view handler )
 {
-    queued_eocs &queue = g->queued_global_effect_on_conditions;
-    const auto pending = std::find_if( queue.list.begin(), queue.list.end(), [&]( const queued_eoc & entry ) {
+    const auto &entries = g->queued_global_effect_on_conditions.list;
+    return std::any_of( entries.begin(), entries.end(), [&]( const queued_eoc & entry ) {
         if( entry.eoc != lua_task_record ) {
             return false;
         }
@@ -272,9 +282,15 @@ void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_vi
         return owner != entry.context.end() && owner->second.to_string() == mod &&
                callback != entry.context.end() && callback->second.to_string() == handler;
     } );
-    if( pending != queue.list.end() ) {
+}
+
+void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
+        std::string_view handler )
+{
+    if( has_avatar_turn_task( mod, handler ) ) {
         return;
     }
+    queued_eocs &queue = g->queued_global_effect_on_conditions;
     const queued_eoc entry = character_task_record( due, mod, handler );
     if( avatar_tasks_to_queue ) {
         // A zero-delay repeat is due on the next pass, just like a native recurrence.
@@ -299,23 +315,16 @@ static void process_new_eocs( queued_eocs &eoc_queue,
             eoc_queue.pop();
             continue;
         }
-        if( global_queue && entry.eoc == xedra_sunrise_eoc && !entry.eoc.is_valid() ) {
-            temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved", "anathema_sunrise_due" ) );
+        if( const character_task_migration *migration = find_xedra_task( entry.eoc, global_queue ) ) {
+            temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved",
+                                   migration->handler ) );
+            if( actor && migration->timer_key ) {
+                cata::lua_platform::assign_persistent_value(
+                    actor->lua_character_state.for_mod( "xedra_evolved" ), migration->timer_key,
+                    std::string( "scheduled" ) );
+            }
             eoc_queue.pop();
             continue;
-        }
-        if( actor ) {
-            if( const character_task_migration *migration = find_xedra_task( entry.eoc ) ) {
-                temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved",
-                                       migration->handler ) );
-                if( migration->timer_key ) {
-                    cata::lua_platform::assign_persistent_value(
-                        actor->lua_character_state.for_mod( "xedra_evolved" ), migration->timer_key,
-                        std::string( "scheduled" ) );
-                }
-                eoc_queue.pop();
-                continue;
-            }
         }
 #endif
         // Check if EoC is moved from global to local, or vice versa
@@ -330,7 +339,7 @@ static void process_new_eocs( queued_eocs &eoc_queue,
          eoc != eoc_vector.end(); ) {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         if( actor ) {
-            if( const character_task_migration *migration = find_xedra_task( *eoc );
+            if( const character_task_migration *migration = find_xedra_task( *eoc, false );
                 migration && migration->timer_key ) {
                 auto &state = actor->lua_character_state.for_mod( "xedra_evolved" );
                 if( state.count( migration->timer_key ) == 0 ) {
