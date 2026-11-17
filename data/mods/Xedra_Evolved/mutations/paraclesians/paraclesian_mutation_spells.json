@@ -186,12 +186,6 @@
     "base_casting_time": 360000
   },
   {
-    "id": "spell_components_paraclesian_spell_make_gossamer",
-    "type": "requirement",
-    "//": "Cotton for the Weave Gossamer spell",
-    "components": [ [ [ "cotton_patchwork", 8 ], [ "sheet_cotton", 1 ], [ "sheet_cotton_patchwork", 1 ] ] ]
-  },
-  {
     "id": "homullus_spell_wish_to_converse",
     "type": "SPELL",
     "name": { "str": "Wish to Converse" },
