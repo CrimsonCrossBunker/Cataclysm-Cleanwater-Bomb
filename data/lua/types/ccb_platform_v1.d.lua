@@ -5532,19 +5532,19 @@ function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field calorie_history? table<string, integer>
----@field species table<string, boolean>
----@field wielded_skills table<string, boolean>
----@field wielded_categories table<string, boolean>
----@field wielded_ammunition table<string, boolean>
----@field encumbrance table<string, integer>
+---@field species? table<string, boolean>
+---@field wielded_skills? table<string, boolean>
+---@field wielded_categories? table<string, boolean>
+---@field wielded_ammunition? table<string, boolean>
+---@field encumbrance? table<string, integer>
 ---@field identity? { avatar: boolean, npc: boolean, character: boolean, monster: boolean }
 ---@field stat_bonuses? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
 ---@field artifact_resonance? integer
 ---@field body_part_effect_intensities? table<string, table<string, integer>> Missing effects have intensity -1.
 ---@field nearby_characters? table<string, integer>
----@field hit_points table<string, integer>
----@field max_hit_points table<string, integer>
----@field known_proficiencies table<string, boolean>
+---@field hit_points? table<string, integer>
+---@field max_hit_points? table<string, integer>
+---@field known_proficiencies? table<string, boolean>
 ---@field calorie_reserves? { stored: integer, healthy: integer } Values in kcal, before percentage conversion.
 ---@field base_stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
 ---@field climate_heat? integer
