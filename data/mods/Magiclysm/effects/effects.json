@@ -361,7 +361,7 @@
     "rating": "good",
     "max_duration": 480,
     "removes_effects": [ "magic_slowed" ],
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": -0.7 }, { "value": "ATTACK_SPEED", "multiply": -0.7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_haste_0" ]
   },
   {
     "type": "effect_type",
@@ -1544,7 +1544,7 @@
     "show_in_info": true,
     "blocks_effects": [ "blisters" ],
     "removes_effects": [ "onfire" ],
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_flame_immunity_0" ],
     "flags": [ "HEAT_IMMUME" ]
   },
   {

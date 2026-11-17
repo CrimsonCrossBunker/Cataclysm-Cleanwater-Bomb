@@ -58,3 +58,5 @@ require("inline_enchantment_values")
 require("inherited_enchantments")
 
 require("environment_enchantments")
+
+require("overlay_enchantments")
