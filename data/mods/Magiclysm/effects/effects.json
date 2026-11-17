@@ -1818,9 +1818,7 @@
     "name": [ "Eldritch Glow" ],
     "desc": [ "The air around you shimmers in a multitude of colors." ],
     "enchantments": [
-      {
-        "values": [ { "value": "LUMINATION", "add": { "math": [ "min( (u_sum_traits_of_category_char_has('MANATOUCHED') * 3), 50)" ] } } ]
-      }
+      "INLINE_ENCH_effect_manatouched_external_mana_luminance_0"
     ]
   },
   {
