@@ -35,6 +35,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "field.h"
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
@@ -42,6 +43,7 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_missions.h"
 #include "map.h"
+#include "map_iterator.h"
 #include "mapdata.h"
 #include "math_parser_diag_value.h"
 #include "math_parser_type.h"
@@ -52,6 +54,8 @@
 #include "mtype.h"
 #include "move_mode.h"
 #include "npc.h"
+#include "overmap.h"
+#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "profession.h"
 #include "proficiency.h"
@@ -59,6 +63,7 @@
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
+#include "weather.h"
 #include "weakpoint.h"
 #include <character_id.h>
 #include <coordinates.h>
@@ -786,6 +791,99 @@ static sol::table capture_enchantment_numbers( sol::state &lua, const const_dial
     return values;
 }
 
+static sol::table collect_enchantment_environment( sol::state &lua, const const_talker &speaker,
+        const enchantment_environment_inputs &requested )
+{
+    sol::table environment = lua.create_table();
+    if( requested.position_z ) {
+        environment["position_z"] = speaker.posz();
+    }
+    if( requested.daylight ) {
+        environment["daylight"] = !is_night( calendar::turn );
+    }
+    if( requested.temperature_kelvin ) {
+        environment["temperature_kelvin"] = units::to_kelvin( get_weather().weather_precise->temperature );
+    }
+    if( requested.outside ) {
+        const Creature *creature = speaker.get_const_creature();
+        environment["outside"] = creature && is_creature_outside( *creature );
+    }
+    if( requested.divable || requested.terrain || !requested.terrain_flags.empty() ||
+        !requested.fields.empty() ) {
+        const map &here = get_map();
+        const tripoint_bub_ms local_pos = speaker.pos_bub( here );
+        if( requested.divable ) {
+            environment["divable"] = here.is_divable( local_pos );
+        }
+        if( requested.terrain || !requested.terrain_flags.empty() ) {
+            const ter_id tile = here.ter( local_pos );
+            if( requested.terrain ) {
+                environment["terrain"] = tile.id().str();
+            }
+            sol::table flags = lua.create_table( 0, static_cast<int>( requested.terrain_flags.size() ) );
+            for( const std::string &flag : requested.terrain_flags ) {
+                flags[flag] = tile->has_flag( flag );
+            }
+            environment["terrain_flags"] = std::move( flags );
+        }
+        if( !requested.fields.empty() ) {
+            const field &tile = here.field_at( local_pos );
+            sol::table fields = lua.create_table( 0, static_cast<int>( requested.fields.size() ) );
+            for( const std::string &id : requested.fields ) {
+                fields[id] = tile.find_field( field_type_id( id ), false ) != nullptr;
+            }
+            environment["fields"] = std::move( fields );
+        }
+    }
+    if( !requested.overmap_terrain && requested.nearby_overmap_terrain.empty() ) {
+        return environment;
+    }
+    const tripoint_abs_omt overmap_pos = speaker.pos_abs_omt();
+    const std::size_t world = runtime_world_generation_storage();
+    // A lookup can generate an overmap. Do it only when the Lua condition
+    // actually reads the operand, and keep the original actor position.
+    if( requested.overmap_terrain ) {
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [overmap_pos, world]( sol::this_state state, const sol::table &,
+        const std::string & key ) -> sol::object {
+            if( key != "overmap_terrain" || runtime_world_generation_storage() != world ) {
+                return sol::make_object( state, sol::nil );
+            }
+            return sol::make_object( state, std::string( oter_no_dir_or_connections(
+                                         overmap_buffer.ter( overmap_pos ) ) ) );
+        } );
+        environment[sol::metatable_key] = meta;
+    }
+    if( !requested.nearby_overmap_terrain.empty() ) {
+        sol::table nearby = lua.create_table();
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [overmap_pos, world, queries = requested.nearby_overmap_terrain](
+        sol::this_state state, const sol::table &, const std::string & key ) -> sol::object {
+            const auto found = queries.find( key );
+            if( found == queries.end() || runtime_world_generation_storage() != world ) {
+                return sol::make_object( state, sol::nil );
+            }
+            const int radius = found->second;
+            const auto axis_fits = [radius]( const int coordinate ) {
+                return static_cast<std::int64_t>( coordinate ) - radius >= std::numeric_limits<int>::min() &&
+                       static_cast<std::int64_t>( coordinate ) + radius < std::numeric_limits<int>::max();
+            };
+            if( !axis_fits( overmap_pos.x() ) || !axis_fits( overmap_pos.y() ) ) {
+                throw std::runtime_error( "enchantment overmap search radius exceeds coordinate range" );
+            }
+            for( const tripoint_abs_omt &position : points_in_radius( overmap_pos, radius ) ) {
+                if( oter_no_dir_or_connections( overmap_buffer.ter( position ) ) == key ) {
+                    return sol::make_object( state, true );
+                }
+            }
+            return sol::make_object( state, false );
+        } );
+        nearby[sol::metatable_key] = meta;
+        environment["nearby_overmap_terrain"] = std::move( nearby );
+    }
+    return environment;
+}
+
 static sol::table collect_enchantment_character_inputs( runtime &owner,
         const const_dialogue &dialogue, const enchantment_character_inputs &requested )
 {
@@ -851,6 +949,10 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.environment ) {
+            inputs["environment"] = collect_enchantment_environment( *owner.lua, *speaker,
+                                    *requested.environment );
+        }
         if( requested.move_mode ) {
             inputs["move_mode"] = speaker->get_move_mode().str();
         }

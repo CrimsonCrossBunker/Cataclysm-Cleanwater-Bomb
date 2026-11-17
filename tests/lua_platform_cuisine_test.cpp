@@ -52,6 +52,8 @@
 #include "mtype.h"
 #include "npc_class.h"
 #include "options_helpers.h"
+#include "overmap.h"
+#include "overmapbuffer.h"
 #include "scenario.h"
 #include "shop_cons_rate.h"
 #include "trap.h"
@@ -522,6 +524,69 @@ ccb.content.add(ccb.content.Enchantment {
     restoring_npc.remove_effect( efftype_id( "sleep" ) );
     CHECK_FALSE( id->is_active( restoring_npc, false ) );
     CHECK( strength_bonus() == 28.5 );
+}
+
+TEST_CASE( "lua_first_enchantment_reads_tile_and_overmap_during_character_load",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+        clear_map();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_environment_enchantment" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("local_water_and_road", function(ctx)
+    assert(ctx.speaker == nil)
+    local environment = ctx.character_inputs.environment
+    return environment.position_z == 0 and environment.divable
+        and environment.terrain == "t_water_dp" and environment.terrain_flags.SWIMMABLE
+        and environment.fields.fd_smoke and environment.overmap_terrain == "forest"
+        and environment.nearby_overmap_terrain.road
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "lua_test_enchantment_environment",
+    condition_handler = "local_water_and_road",
+    load_character_inputs = { environment = {
+        position_z = true, divable = true, terrain = true, terrain_flags = { "SWIMMABLE" },
+        fields = { "fd_smoke" }, overmap_terrain = true, nearby_overmap_terrain = { road = 1 },
+    } },
+})
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_environment_enchantment" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const enchantment_id id( "lua_test_enchantment_environment" );
+    REQUIRE( id.is_valid() );
+    npc restoring_npc;
+    map &here = get_map();
+    const tripoint_bub_ms where( 60, 60, 0 );
+    restoring_npc.setpos( here, where, false );
+    const tripoint_abs_omt center = restoring_npc.pos_abs_omt();
+    const tripoint_abs_omt diagonal = center + tripoint( 1, 1, 0 );
+    const oter_id saved_center = overmap_buffer.ter( center );
+    const oter_id saved_diagonal = overmap_buffer.ter( diagonal );
+    const on_out_of_scope restore_overmap( [&]() {
+        overmap_buffer.ter_set( center, saved_center );
+        overmap_buffer.ter_set( diagonal, saved_diagonal );
+    } );
+    overmap_buffer.ter_set( center, oter_id( "forest" ) );
+    const oter_id road( "road_nesw" );
+    REQUIRE( oter_no_dir_or_connections( road ) == "road" );
+    overmap_buffer.ter_set( diagonal, road );
+    here.ter_set( where, ter_str_id( "t_floor" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    here.ter_set( where, ter_str_id( "t_water_dp" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    REQUIRE( here.add_field( where, field_type_id( "fd_smoke" ), 1 ) );
+    CHECK_FALSE( restoring_npc.is_underwater() );
+    CHECK( id->is_active( restoring_npc, false ) );
 }
 
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",

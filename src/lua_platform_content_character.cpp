@@ -2458,9 +2458,9 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                                             "condition_handler", std::string() );
         if( const sol::optional<sol::table> activation = options.get<sol::optional<sol::table>>(
                     "load_character_inputs" ) ) {
-            const auto ids = [&]( const char *field ) {
+            const auto ids = []( const sol::table & table, const char *field ) {
                 std::vector<std::string> result;
-                if( const auto list = activation->get<sol::optional<sol::table>>( field ) ) {
+                if( const auto list = table.get<sol::optional<sol::table>>( field ) ) {
                     const std::size_t count = require_dense_array( *list, field, 0, 256 );
                     for( std::size_t i = 1; i <= count; ++i ) {
                         result.push_back( list->raw_get<std::string>( i ) );
@@ -2469,16 +2469,43 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 return result;
             };
             definition->load_character_inputs = enchantment_character_inputs{
-                ids( "effects" ), ids( "traits" ), ids( "worn_items" ), ids( "worn_flags" ),
-                ids( "wielded_flags" ), ids( "effect_intensities" ),
-                ids( "character_variables" ), ids( "global_variables" ),
-                ids( "character_flags" ), ids( "proficiency_percentages" ), ids( "spell_levels" ),
-                ids( "spell_school_levels" ), ids( "spell_school_level_sums" ),
+                ids( *activation, "effects" ), ids( *activation, "traits" ),
+                ids( *activation, "worn_items" ), ids( *activation, "worn_flags" ),
+                ids( *activation, "wielded_flags" ), ids( *activation, "effect_intensities" ),
+                ids( *activation, "character_variables" ), ids( *activation, "global_variables" ),
+                ids( *activation, "character_flags" ), ids( *activation, "proficiency_percentages" ),
+                ids( *activation, "spell_levels" ), ids( *activation, "spell_school_levels" ),
+                ids( *activation, "spell_school_level_sums" ),
                 activation->get_or( "move_mode", false ),
                 activation->get_or( "armed", false ), activation->get_or( "pain", false ),
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
-                activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false )
+                activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false ),
+                std::nullopt
             };
+            if( const auto environment = activation->get<sol::optional<sol::table>>( "environment" ) ) {
+                auto &inputs = definition->load_character_inputs->environment.emplace();
+                inputs.terrain_flags = ids( *environment, "terrain_flags" );
+                inputs.fields = ids( *environment, "fields" );
+                inputs.position_z = environment->get_or( "position_z", false );
+                inputs.daylight = environment->get_or( "daylight", false );
+                inputs.outside = environment->get_or( "outside", false );
+                inputs.terrain = environment->get_or( "terrain", false );
+                inputs.divable = environment->get_or( "divable", false );
+                inputs.overmap_terrain = environment->get_or( "overmap_terrain", false );
+                inputs.temperature_kelvin = environment->get_or( "temperature_kelvin", false );
+                if( const auto nearby = environment->get<sol::optional<sol::table>>( "nearby_overmap_terrain" ) ) {
+                    for( const auto &[key, value] : *nearby ) {
+                        if( key.get_type() != sol::type::string || !value.is<lua_Integer>() ) {
+                            throw std::runtime_error( "nearby_overmap_terrain requires terrain IDs and integer radii" );
+                        }
+                        const lua_Integer radius = value.as<lua_Integer>();
+                        if( radius < 0 || !fits_native_int( radius ) ) {
+                            throw std::runtime_error( "nearby_overmap_terrain radius is out of range" );
+                        }
+                        inputs.nearby_overmap_terrain.emplace( key.as<std::string>(), static_cast<int>( radius ) );
+                    }
+                }
+            }
         }
         definition->emitter = options.get_or( "emitter", std::string() );
         enchantment_definition_handle handle{ definition, this->token };
@@ -4191,6 +4218,17 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
+                    }
+                }
+                if( inputs.environment ) {
+                    for( const std::string &flag : inputs.environment->terrain_flags ) {
+                        require_valid_id( flag, "enchantment terrain flag" );
+                    }
+                    for( const std::string &field : inputs.environment->fields ) {
+                        require_valid_id( field, "enchantment field" );
+                    }
+                    for( const auto & query : inputs.environment->nearby_overmap_terrain ) {
+                        require_valid_id( query.first, "enchantment overmap terrain" );
                     }
                 }
                 for( const std::string &id : inputs.proficiency_percentages ) {
@@ -7470,6 +7508,23 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, value.load_character_inputs->max_mana ? "max_mana" : "no_max_mana" );
                     hash_part( state, value.load_character_inputs->radiation ? "radiation" : "no_radiation" );
                     hash_part( state, value.load_character_inputs->kill_xp ? "kill_xp" : "no_kill_xp" );
+                    if( const auto &environment = value.load_character_inputs->environment ) {
+                        hash_part( state, "environment" );
+                        hash_ids( "terrain_flags", environment->terrain_flags );
+                        hash_ids( "fields", environment->fields );
+                        hash_part( state, std::to_string( environment->nearby_overmap_terrain.size() ) );
+                        for( const auto &[terrain, radius] : environment->nearby_overmap_terrain ) {
+                            hash_part( state, terrain );
+                            hash_part( state, std::to_string( radius ) );
+                        }
+                        hash_part( state, environment->position_z ? "position_z" : "no_position_z" );
+                        hash_part( state, environment->daylight ? "daylight" : "no_daylight" );
+                        hash_part( state, environment->outside ? "outside" : "no_outside" );
+                        hash_part( state, environment->terrain ? "terrain" : "no_terrain" );
+                        hash_part( state, environment->divable ? "divable" : "no_divable" );
+                        hash_part( state, environment->overmap_terrain ? "overmap_terrain" : "no_overmap_terrain" );
+                        hash_part( state, environment->temperature_kelvin ? "temperature_kelvin" : "no_temperature_kelvin" );
+                    }
                 }
                 hash_part( state, value.emitter );
                 for( const auto &[effect, intensity] : value.effects ) {

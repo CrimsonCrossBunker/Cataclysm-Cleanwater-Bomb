@@ -5425,6 +5425,30 @@ local WidgetDefinition = {}
 ---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
 
+---@class CcbEnchantmentEnvironmentInputs
+---@field position_z? boolean Request the actor's world z level.
+---@field daylight? boolean Request whether the current game time is outside night hours.
+---@field outside? boolean Request whether the actor is outdoors.
+---@field terrain? boolean Request the actor's local terrain ID.
+---@field terrain_flags? string[] Flags to test on the actor's local terrain only.
+---@field fields? string[] Field IDs to test on the actor's tile.
+---@field divable? boolean Request whether the actor's tile has swimmable deep water.
+---@field overmap_terrain? boolean Request the actor's overmap terrain ID without direction or connections.
+---@field nearby_overmap_terrain? table<string, integer> Overmap terrain IDs without direction or connections, mapped to a nonnegative radius in overmap tiles.
+---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
+
+---@class CcbEnchantmentEnvironmentSnapshot
+---@field position_z? integer
+---@field daylight? boolean
+---@field outside? boolean
+---@field terrain? string
+---@field terrain_flags? table<string, boolean>
+---@field fields? table<string, boolean>
+---@field divable? boolean
+---@field overmap_terrain? string Read from the actor's captured overmap position on access.
+---@field nearby_overmap_terrain? table<string, boolean> Each requested search runs on access, including the actor's tile.
+---@field temperature_kelvin? number
+
 ---@class CcbEnchantmentCharacterInputs
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
 ---@field traits? string[] Trait IDs queried on the condition's speaker.
@@ -5446,6 +5470,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field max_mana? boolean Request current maximum mana.
 ---@field radiation? boolean Request current radiation.
 ---@field kill_xp? boolean Request current experience from kills.
+---@field environment? CcbEnchantmentEnvironmentInputs
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field effects table<string, boolean>
@@ -5468,6 +5493,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field max_mana? integer
 ---@field radiation? integer
 ---@field kill_xp? integer
+---@field environment? CcbEnchantmentEnvironmentSnapshot
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.

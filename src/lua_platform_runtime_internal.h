@@ -302,6 +302,18 @@ std::optional<bool> invoke_widget_condition_handler(
 std::optional<widget_custom_handler_result> invoke_widget_custom_handler(
     std::string_view mod_id, std::string_view widget_id_value,
     std::string_view handler_id, const avatar &subject );
+struct enchantment_environment_inputs {
+    std::vector<std::string> terrain_flags;
+    std::vector<std::string> fields;
+    std::map<std::string, int> nearby_overmap_terrain;
+    bool position_z = false;
+    bool daylight = false;
+    bool outside = false;
+    bool terrain = false;
+    bool divable = false;
+    bool overmap_terrain = false;
+    bool temperature_kelvin = false;
+};
 struct enchantment_character_inputs {
     std::vector<std::string> effects;
     std::vector<std::string> traits;
@@ -323,6 +335,7 @@ struct enchantment_character_inputs {
     bool max_mana = false;
     bool radiation = false;
     bool kill_xp = false;
+    std::optional<enchantment_environment_inputs> environment;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
