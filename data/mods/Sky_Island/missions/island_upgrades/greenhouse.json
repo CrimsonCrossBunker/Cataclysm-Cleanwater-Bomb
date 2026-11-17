@@ -45,33 +45,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_south_greenhouse_1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "DIG", "level": 1 },
-      { "id": "SAW_M", "level": 2 },
-      { "id": "WELD", "level": 1 },
-      { "id": "GLARE", "level": 1 },
-      { "id": "SCREW", "level": 1 }
-    ],
-    "components": [
-      [ [ "2x4", 4 ] ],
-      [ [ "hinge", 6 ] ],
-      [ [ "box_medium", 4 ], [ "box_large", 1 ], [ "box_oversize", 2 ] ],
-      [ [ "material_soil", 40 ] ],
-      [ [ "sheet_metal", 3 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_south_greenhouse2",
     "type": "mission_definition",
     "name": "Construct: South Greenhouse 2",
@@ -115,33 +88,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_south_greenhouse_2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "DIG", "level": 1 },
-      { "id": "SAW_M", "level": 2 },
-      { "id": "WELD", "level": 1 },
-      { "id": "GLARE", "level": 1 },
-      { "id": "SCREW", "level": 1 }
-    ],
-    "components": [
-      [ [ "2x4", 4 ] ],
-      [ [ "hinge", 6 ] ],
-      [ [ "box_medium", 4 ], [ "box_large", 1 ], [ "box_oversize", 2 ] ],
-      [ [ "material_soil", 40 ] ],
-      [ [ "sheet_metal", 3 ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_south_greenhouse3",
@@ -189,34 +135,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_south_greenhouse_3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "SAW_M_FINE", "level": 1 },
-      { "id": "SAW_M", "level": 2 },
-      { "id": "HAMMER", "level": 2 },
-      { "id": "SCREW", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "2x4", 10 ] ],
-      [ [ "nail", 20 ] ],
-      [ [ "chunk_rubber", 30 ] ],
-      [ [ "clay_pot_flower", 30 ], [ "plastic_pot_flower", 30 ] ],
-      [ [ "tempered_glass_sheet", 8 ] ],
-      [ [ "cable", 10 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_south_greenhouse4",
     "type": "mission_definition",
     "name": "Construct: South Greenhouse 4",
@@ -262,34 +180,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_south_greenhouse_4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "SAW_M_FINE", "level": 1 },
-      { "id": "SAW_M", "level": 2 },
-      { "id": "HAMMER", "level": 2 },
-      { "id": "SCREW", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "2x4", 10 ] ],
-      [ [ "nail", 20 ] ],
-      [ [ "chunk_rubber", 30 ] ],
-      [ [ "clay_pot_flower", 30 ], [ "plastic_pot_flower", 30 ] ],
-      [ [ "tempered_glass_sheet", 8 ] ],
-      [ [ "cable", 10 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_south_greenhouse_skylight1",
     "type": "mission_definition",
     "name": "Construct: South Greenhouse Skylight 1",
@@ -332,28 +222,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_south_greenhouse_skylight_1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "glass_sheet", 4 ] ],
-      [ [ "tempered_glass_sheet", 4 ] ],
-      [ [ "glue_strong", 80 ] ],
-      [ [ "nuts_bolts", 80 ] ],
-      [ [ "frame_wood", 8 ] ],
-      [ [ "cordage", 2, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_south_greenhouse_skylight2",
     "type": "mission_definition",
     "name": "Construct: South Greenhouse Skylight 2",
@@ -394,27 +262,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_south_greenhouse_skylight_2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "glass_sheet", 4 ] ],
-      [ [ "tempered_glass_sheet", 4 ] ],
-      [ [ "glue_strong", 80 ] ],
-      [ [ "nuts_bolts", 80 ] ],
-      [ [ "frame_wood", 8 ] ],
-      [ [ "cordage", 2, "LIST" ] ]
-    ]
   }
 ]

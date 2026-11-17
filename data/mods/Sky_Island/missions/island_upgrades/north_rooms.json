@@ -45,33 +45,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_northroom1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "DIG", "level": 1 },
-      { "id": "HAMMER", "level": 2 },
-      { "id": "SCREW", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "2x4", 1 ] ],
-      [ [ "hinge", 3 ] ],
-      [ [ "nail", 20 ] ],
-      [ [ "chunk_rubber", 15 ] ],
-      [ [ "glass_shard", 250 ] ],
-      [ [ "cordage", 5, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_northroom2",
     "type": "mission_definition",
     "name": "Construct: North Room 2",
@@ -112,32 +85,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_northroom2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "shovel", 1 ], [ "shovel_snow", 1 ] ],
-      [ [ "glass_sheet", 4 ] ],
-      [ [ "glue_weak", 4 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_northroom3",
@@ -182,33 +129,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_northroom3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "wood_beam", 4 ] ],
-      [ [ "tempered_glass_sheet", 4 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "rubber_tire_strip", 4 ] ],
-      [ [ "battery_car", 1 ], [ "battery_motorbike", 1 ], [ "medium_storage_battery", 1 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_northroom4",
     "type": "mission_definition",
     "name": "Construct: North Room Gallery",
@@ -249,34 +169,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_northroom4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "reinforced_glass_sheet", 4 ] ],
-      [ [ "sheet_metal", 4 ] ],
-      [ [ "hdframe", 2 ] ],
-      [ [ "432gal_drum_rubber", 3 ] ],
-      [ [ "wood_beam", 8 ] ],
-      [ [ "block_and_tackle", 1 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_north_side_rooms",
@@ -322,41 +214,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_north_side_rooms",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "block_and_tackle", 1 ], [ "block_and_tackle_wood", 1 ] ],
-      [ [ "wood_beam", 8 ] ],
-      [ [ "sheet_metal", 24 ] ],
-      [ [ "box_medium_wood", 3 ], [ "box_medium_metal", 2 ] ],
-      [
-        [ "backpack", 3 ],
-        [ "net_backpack", 5 ],
-        [ "backpack_denim", 3 ],
-        [ "backpack_hiking", 3 ],
-        [ "backpack_leather", 3 ]
-      ],
-      [ [ "golf_bag", 1 ] ],
-      [ [ "bag_body_bag", 2 ] ],
-      [ [ "bag_canvas", 2 ] ],
-      [ [ "bag_garbage_reinforced", 1 ] ]
-    ]
   }
 ]

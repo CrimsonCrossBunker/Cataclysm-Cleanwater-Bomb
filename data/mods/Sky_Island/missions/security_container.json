@@ -32,20 +32,6 @@
     }
   },
   {
-    "result": "secure_container_1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [ [ [ "warptoken", 5 ] ] ]
-  },
-  {
     "id": "SKYISLAND_UPGRADE_security2",
     "type": "mission_definition",
     "name": "Upgrade: Security Beta",
@@ -77,20 +63,6 @@
         }
       ]
     }
-  },
-  {
-    "result": "secure_container_2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [ [ [ "warptoken", 5 ] ] ]
   },
   {
     "id": "SKYISLAND_UPGRADE_security3",
@@ -126,20 +98,6 @@
     }
   },
   {
-    "result": "secure_container_3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [ [ [ "warptoken", 5 ] ] ]
-  },
-  {
     "id": "SKYISLAND_UPGRADE_security4",
     "type": "mission_definition",
     "name": "Upgrade: Security Epsilon",
@@ -173,20 +131,6 @@
     }
   },
   {
-    "result": "secure_container_4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [ [ [ "warptoken", 5 ] ] ]
-  },
-  {
     "id": "SKYISLAND_UPGRADE_security5",
     "type": "mission_definition",
     "name": "Upgrade: Security Kappa",
@@ -218,19 +162,5 @@
         }
       ]
     }
-  },
-  {
-    "result": "secure_container_5",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [ [ [ "warptoken", 5 ] ] ]
   }
 ]

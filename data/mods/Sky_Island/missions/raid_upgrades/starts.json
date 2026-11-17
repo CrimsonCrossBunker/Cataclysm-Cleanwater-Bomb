@@ -44,28 +44,6 @@
     "color": "white"
   },
   {
-    "result": "upgradekey_basementsunlock",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "fursuit", 1 ] ],
-      [ [ "bodypillow", 2 ] ],
-      [ [ "catan", 1 ] ],
-      [ [ "dnd", 1 ] ],
-      [ [ "snakesnladders", 1 ] ],
-      [ [ "chess", 1 ] ],
-      [ [ "RPG_die", 4 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_UPGRADE_roofsunlock",
     "type": "mission_definition",
     "name": "Unlock Start Location: Roofs",
@@ -108,29 +86,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "upgradekey_roofsunlock",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "survivor_scope", 1 ] ],
-      [ [ "golf_tee", 1 ] ],
-      [ [ "feather", 40 ], [ "down_feather", 40 ] ],
-      [ [ "eggs_any_shape", 6, "LIST" ] ],
-      [ [ "golf_ball", 1 ] ],
-      [ [ "camp_chair", 1 ] ],
-      [ [ "tourist_table", 1 ] ],
-      [ [ "stepladder", 1 ], [ "aluminum_stepladder", 1 ] ]
-    ]
   },
   {
     "id": "SKYISLAND_UPGRADE_labsunlock",
@@ -176,26 +131,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "upgradekey_labsunlock",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "id_science", 1 ] ],
-      [ [ "plut_cell", 5 ] ],
-      [ [ "oxy_torch", 1 ] ],
-      [ [ "tinyweldtank", 1 ], [ "weldtank", 1 ] ],
-      [ [ "mutagen", 2 ], [ "iv_mutagen", 1 ] ],
-      [ [ "jackhammer", 1 ], [ "elec_jackhammer", 1 ] ]
-    ]
   }
 ]

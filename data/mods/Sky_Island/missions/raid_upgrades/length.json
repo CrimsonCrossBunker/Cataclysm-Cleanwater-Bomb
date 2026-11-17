@@ -44,26 +44,6 @@
     "color": "white"
   },
   {
-    "result": "upgradekey_raidlength1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "mask_gas", 1 ], [ "mask_gas_half", 1 ] ],
-      [ [ "warptoken", 1 ] ],
-      [ [ "backpack", 4 ], [ "backpack_leather", 4 ] ],
-      [ [ "granola", 6 ] ],
-      [ [ "water_mineral", 5 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_UPGRADE_raidlength2",
     "type": "mission_definition",
     "name": "Unlock: Extended Expeditions",
@@ -106,25 +86,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "upgradekey_raidlength2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "boots_hiking", 2 ] ],
-      [ [ "backpack_hiking", 2 ] ],
-      [ [ "pants_hiking", 1 ] ],
-      [ [ "rehydration_drink", 5 ] ],
-      [ [ "protein_bar_evac", 10 ], [ "protein_smoothie", 4 ] ]
-    ]
   }
 ]

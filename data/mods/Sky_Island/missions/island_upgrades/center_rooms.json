@@ -45,27 +45,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_base1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "stick", 4 ], [ "stick_long", 2 ], [ "twig", 16 ] ],
-      [ [ "rock", 10 ] ],
-      [ [ "pebble", 10 ] ],
-      [ [ "sharp_rock", 1 ] ],
-      [ [ "scrap", 4 ] ],
-      [ [ "withered", 4 ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_bigroom1",
     "type": "mission_definition",
     "name": "Construct: Main Room 1",
@@ -111,28 +90,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_bigroom1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "DIG", "level": 1 }, { "id": "HAMMER", "level": 2 }, { "id": "SCREW", "level": 1 } ],
-    "components": [
-      [ [ "2x4", 1 ] ],
-      [ [ "hinge", 5 ] ],
-      [ [ "nail", 20 ] ],
-      [ [ "nuts_bolts", 15 ] ],
-      [ [ "box_medium", 4 ], [ "box_large", 1 ], [ "box_oversize", 2 ] ],
-      [ [ "cordage", 5, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_bigroom2",
     "type": "mission_definition",
     "name": "Construct: Main Room 2",
@@ -173,26 +130,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_bigroom2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "shovel", 1 ], [ "shovel_snow", 1 ] ],
-      [ [ "sheet_metal", 8 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_bigroom3",
@@ -237,29 +174,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_bigroom3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "wood_beam", 4 ] ],
-      [ [ "sheet_metal", 8 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "wearable_light", 2 ] ],
-      [ [ "hard_plate", 4 ], [ "steel_plate", 8 ] ],
-      [ [ "battery_car", 1 ], [ "battery_motorbike", 1 ], [ "medium_storage_battery", 1 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_bigroom4",
     "type": "mission_definition",
     "name": "Construct: Main Room 4",
@@ -300,35 +214,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_bigroom4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "SAW_M_FINE", "level": 1 },
-      { "id": "SAW_M", "level": 2 },
-      { "id": "WELD", "level": 1 },
-      { "id": "GLARE", "level": 1 }
-    ],
-    "components": [
-      [ [ "storage_battery", 1 ] ],
-      [ [ "mil_plate", 2 ] ],
-      [ [ "acidchitin_plate", 2 ], [ "chitin_plate", 4 ] ],
-      [ [ "hdframe", 2 ] ],
-      [ [ "block_and_tackle", 1 ] ],
-      [ [ "mannequin", 1 ] ],
-      [ [ "hd_pipe", 4 ] ],
-      [ [ "hd_pipe_fittings", 4 ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_centralskylight2",
@@ -373,27 +258,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_centralskylight2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "DIG", "level": 1 }, { "id": "HAMMER", "level": 2 }, { "id": "SCREW", "level": 1 } ],
-    "components": [
-      [ [ "2x4", 4 ] ],
-      [ [ "glass_shard", 150 ] ],
-      [ [ "chunk_rubber", 5 ] ],
-      [ [ "glue_strong", 20 ] ],
-      [ [ "cordage", 5, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_centralskylight3",
     "type": "mission_definition",
     "name": "Construct: Central Skylight 3",
@@ -436,28 +300,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_centralskylight3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "aquamarine", 4 ], [ "citrine", 4 ], [ "garnet", 4 ], [ "peridot", 4 ], [ "tourmaline", 4 ], [ "blue_topaz", 4 ] ],
-      [ [ "glass_sheet", 3 ] ],
-      [ [ "mirror", 1 ] ],
-      [ [ "glue_strong", 40 ] ],
-      [ [ "frame_wood", 2 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_centralskylight4",
     "type": "mission_definition",
     "name": "Construct: Central Skylight 4",
@@ -498,27 +340,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_centralskylight4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "bigmirror", 1 ] ],
-      [ [ "tempered_glass_sheet", 4 ] ],
-      [ [ "frame", 4 ] ],
-      [ [ "glue_weak", 8 ] ],
-      [ [ "diamond", 8 ], [ "ruby", 8 ], [ "emerald", 8 ], [ "sapphire", 8 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   }
 ]

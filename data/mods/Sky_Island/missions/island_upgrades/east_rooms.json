@@ -45,28 +45,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_eastroom1",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "DIG", "level": 1 }, { "id": "HAMMER", "level": 2 }, { "id": "SCREW", "level": 1 } ],
-    "components": [
-      [ [ "2x4", 1 ] ],
-      [ [ "hinge", 5 ] ],
-      [ [ "nail", 20 ] ],
-      [ [ "nuts_bolts", 15 ] ],
-      [ [ "box_medium", 4 ], [ "box_large", 1 ], [ "box_oversize", 2 ] ],
-      [ [ "cordage", 5, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_eastroom2",
     "type": "mission_definition",
     "name": "Construct: East Room 2",
@@ -107,26 +85,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_eastroom2",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "shovel", 1 ], [ "shovel_snow", 1 ] ],
-      [ [ "sheet_metal", 8 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_eastroom3",
@@ -171,29 +129,6 @@
     "color": "white"
   },
   {
-    "result": "buildkey_eastroom3",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [ { "id": "WRENCH", "level": 2 }, { "id": "SCREW_FINE", "level": 1 }, { "id": "DRILL", "level": 1 } ],
-    "components": [
-      [ [ "wood_beam", 4 ] ],
-      [ [ "sheet_metal", 8 ] ],
-      [ [ "frame", 2 ] ],
-      [ [ "wearable_light", 2 ] ],
-      [ [ "hard_plate", 4 ], [ "steel_plate", 8 ] ],
-      [ [ "battery_car", 1 ], [ "battery_motorbike", 1 ], [ "medium_storage_battery", 1 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
-  },
-  {
     "id": "SKYISLAND_BUILD_eastroom4",
     "type": "mission_definition",
     "name": "Construct: East Room Gallery",
@@ -234,32 +169,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_eastroom4",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "glass_sheet", 4 ] ],
-      [ [ "sheet_metal", 4 ] ],
-      [ [ "glass_shard", 100 ] ],
-      [ [ "battery_car", 1 ], [ "battery_motorbike", 1 ], [ "medium_storage_battery", 1 ] ],
-      [ [ "cordage", 1, "LIST" ] ]
-    ]
   },
   {
     "id": "SKYISLAND_BUILD_east_side_rooms",
@@ -305,41 +214,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "buildkey_east_side_rooms",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "qualities": [
-      { "id": "WRENCH", "level": 2 },
-      { "id": "SCREW_FINE", "level": 1 },
-      { "id": "DRILL", "level": 1 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "components": [
-      [ [ "block_and_tackle", 1 ], [ "block_and_tackle_wood", 1 ] ],
-      [ [ "wood_beam", 8 ] ],
-      [ [ "sheet_metal", 24 ] ],
-      [ [ "box_medium_wood", 3 ], [ "box_medium_metal", 2 ] ],
-      [
-        [ "backpack", 3 ],
-        [ "net_backpack", 5 ],
-        [ "backpack_denim", 3 ],
-        [ "backpack_hiking", 3 ],
-        [ "backpack_leather", 3 ]
-      ],
-      [ [ "golf_bag", 1 ] ],
-      [ [ "bag_body_bag", 2 ] ],
-      [ [ "bag_canvas", 2 ] ],
-      [ [ "bag_garbage_reinforced", 1 ] ]
-    ]
   }
 ]

@@ -42,38 +42,5 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "result": "upgradekey_challenge_mode",
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "category": "CC_WARP",
-    "subcategory": "CSC_WARP_UPGRADES",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "15 m",
-    "flags": [ "SECRET", "BLIND_EASY" ],
-    "reversible": false,
-    "tools": [ [ [ "fakeitem_statue", -1 ] ] ],
-    "components": [
-      [ [ "warptoken", 50 ] ],
-      [ [ "m107a1", 1 ], [ "m2browning", 1 ], [ "as50", 1 ] ],
-      [ [ "xedra_enviro_suit", 1 ], [ "xedra_enviro_suit_casual", 1 ] ],
-      [
-        [ "lc_chainmail_vest", 1 ],
-        [ "hc_chainmail_vest", 1 ],
-        [ "mc_chainmail_vest", 1 ],
-        [ "ch_chainmail_vest", 1 ],
-        [ "qt_chainmail_vest", 1 ]
-      ],
-      [
-        [ "lab_postit_bio", 2 ],
-        [ "lab_postit_blob", 2 ],
-        [ "lab_postit_migo", 2 ],
-        [ "lab_postit_portal", 2 ],
-        [ "lab_postit_tech", 2 ]
-      ],
-      [ [ "lab_file_bio", 2 ], [ "lab_file_portal", 2 ], [ "lab_file_psych", 2 ], [ "lab_file_sec", 2 ] ]
-    ]
   }
 ]
