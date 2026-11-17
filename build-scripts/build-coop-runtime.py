@@ -2,10 +2,32 @@
 """Build the pinned co-op C ABI library beside the game."""
 import argparse
 import filecmp
+import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+
+
+def resolve_cargo(requested):
+    executable = shutil.which(requested)
+    if executable:
+        return executable
+    if requested == 'cargo':
+        homes = [os.environ.get('CARGO_HOME')]
+        for home in (os.environ.get('USERPROFILE'), os.environ.get('HOME')):
+            if home:
+                homes.append(str(Path(home) / '.cargo'))
+        homes.append(str(Path.home() / '.cargo'))
+        for home in homes:
+            if home:
+                executable = shutil.which(str(Path(home) / 'bin' / 'cargo'))
+                if executable:
+                    return executable
+    raise SystemExit(
+        f'Cargo executable not found: {requested}. Install Rust with rustup, '
+        'add its bin directory to PATH, or set CARGO to the full cargo executable path.'
+    )
 
 
 def main():
@@ -21,7 +43,7 @@ def main():
     parser.add_argument('--cargo-config', action='append', default=[])
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    command = [args.cargo,
+    command = [resolve_cargo(args.cargo),
                'build',
                '--locked',
                '--manifest-path',

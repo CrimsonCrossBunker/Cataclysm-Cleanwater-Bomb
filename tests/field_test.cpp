@@ -21,6 +21,7 @@
 #include "player_helpers.h"
 #include "point.h"
 #include "string_formatter.h"
+#include "submap.h"
 #include "type_id.h"
 #include "weather_type.h"
 
@@ -695,4 +696,38 @@ TEST_CASE( "acid_warnings_do_not_control_damage", "[field][player][acid]" )
     here.creature_in_field( you );
     CHECK( you.get_hp() < hp_before );
     clear_avatar();
+}
+
+TEST_CASE( "sparse_field_index_observes_retained_references_and_transforms", "[field][cache]" )
+{
+    submap sm;
+    sm.set_all_ter( ter_str_id( "t_dirt" ), true );
+    sm.ensure_nonuniform();
+    const point_sm_ms position( 2, 3 );
+    field &retained = sm.get_field( position );
+    sm.prepare_field_index();
+    REQUIRE( sm.field_may_be_present( position ) );
+    REQUIRE( retained.add_field( field_fd_test.id(), 1, 1_turns ) );
+    ++sm.field_count;
+    sm.prepare_field_index();
+    CHECK( sm.field_may_be_present( position ) );
+    sm.clear_fields( position );
+    sm.refresh_field_index( position );
+    CHECK( sm.field_may_be_present( position ) );
+    REQUIRE( retained.add_field( field_fd_test.id(), 1, 1_turns ) );
+    ++sm.field_count;
+    sm.prepare_field_index();
+    CHECK( sm.field_may_be_present( position ) );
+    sm.rotate( 1 );
+    sm.mirror( true );
+    sm.prepare_field_index();
+    const submap &view = sm;
+    for( int x = 0; x < SEEX; ++x ) {
+        for( int y = 0; y < SEEY; ++y ) {
+            const point_sm_ms p( x, y );
+            if( view.get_field( p ).field_count() != 0 ) {
+                CHECK( sm.field_may_be_present( p ) );
+            }
+        }
+    }
 }

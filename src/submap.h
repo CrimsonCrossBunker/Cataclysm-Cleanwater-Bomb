@@ -2,6 +2,8 @@
 #ifndef CATA_SRC_SUBMAP_H
 #define CATA_SRC_SUBMAP_H
 
+#include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -81,6 +83,10 @@ class submap
         // Keep the hot tile storage and its uniform fallback in the same cache line.
         std::unique_ptr<maptile_soa> m;
         ter_id uniform_ter = t_null;
+        std::array<std::bitset<SEEY>, SEEX> field_rows_; // NOLINT(cata-serialize)
+        bool field_index_valid_ = false; // NOLINT(cata-serialize)
+        // A borrowed field reference may add entries after the tile becomes empty.
+        std::bitset<SEEX * SEEY> exposed_fields_; // NOLINT(cata-serialize)
 
     public:
         submap() = default;
@@ -264,6 +270,8 @@ class submap
                 field static nofield;
                 return nofield;
             }
+            exposed_fields_.set( p.x() * SEEY + p.y() );
+            field_rows_[p.x()].set( p.y() );
             return m->fld[p.x()][p.y()];
         }
 
@@ -276,6 +284,23 @@ class submap
         }
 
         void clear_fields( const point_sm_ms &p );
+        void prepare_field_index();
+        void invalidate_field_index() {
+            field_index_valid_ = false;
+        }
+        bool field_row_empty( int x ) const {
+            return field_rows_[x].none();
+        }
+        bool field_may_be_present( const point_sm_ms &p ) const {
+            return field_rows_[p.x()].test( p.y() );
+        }
+        void refresh_field_index( const point_sm_ms &p ) {
+            field_rows_[p.x()].set( p.y(), exposed_fields_.test( p.x() * SEEY + p.y() ) ||
+                                   get_field_count( p ) != 0 );
+        }
+        int get_field_count( const point_sm_ms &p ) const {
+            return get_field( p ).field_count();
+        }
 
         struct cosmetic_t {
             point_sm_ms pos;

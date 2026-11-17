@@ -306,3 +306,23 @@ TEST_CASE( "overflow_test_into_parent_item", "[item]" )
     }
     CHECK( contents_count == 2 );
 }
+
+TEST_CASE( "item_processing_work_tracks_live_state_without_stale_membership", "[item][process]" )
+{
+    item hammer( itype_hammer_pocket_test );
+    REQUIRE_FALSE( hammer.has_processing_work() );
+    hammer.wetness = 2;
+    CHECK( hammer.has_processing_work() );
+    hammer.wetness = 0;
+    CHECK_FALSE( hammer.has_processing_work() );
+    hammer.active = true;
+    CHECK( hammer.has_processing_work() );
+    hammer.active = false;
+    hammer.set_var( "gun_heat", 20.0 );
+    CHECK( hammer.has_processing_work() );
+    hammer.erase_var( "gun_heat" );
+    CHECK_FALSE( hammer.has_processing_work() );
+    item belt( itype_test_tool_belt );
+    REQUIRE( belt.put_in( hammer, pocket_type::CONTAINER ).success() );
+    CHECK( belt.has_processing_work() );
+}

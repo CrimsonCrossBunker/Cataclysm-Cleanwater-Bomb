@@ -1,11 +1,13 @@
 #include "mapbuffer.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <functional>
+#include <fstream>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -381,6 +383,37 @@ void mapbuffer::save_quad(
     bool reverted_to_uniform = false;
     bool file_exists = false;
 
+    for( point_rel_sm &offsets_offset : offsets ) {
+        tripoint_abs_sm submap_addr = project_to<coords::sm>( om_addr );
+        submap_addr += offsets_offset.raw(); // TODO: Make += etc. available to relative parameters as well.
+        submap_addrs.push_back( submap_addr );
+        const auto existing = submaps.find( submap_addr );
+        submap *sm = existing == submaps.end() ? nullptr : existing->second.get();
+        if( sm != nullptr ) {
+            if( !sm->is_uniform() ) {
+                all_uniform = false;
+            } else if( sm->reverted ) {
+                reverted_to_uniform = true;
+            }
+        }
+    }
+
+    // An explicit storage owner may have no overmap terrain resolver. In that
+    // case even uniform submaps must be persisted, because they cannot be
+    // reconstructed after eviction or reload.
+    const bool regenerable_uniform = all_uniform && static_cast<bool>( uniform_terrain_ );
+    if( regenerable_uniform && !reverted_to_uniform ) {
+        if( delete_after_save ) {
+            for( const tripoint_abs_sm &addr : submap_addrs ) {
+                const auto existing = submaps.find( addr );
+                if( existing != submaps.end() && existing->second ) {
+                    submaps_to_delete.push_back( addr );
+                }
+            }
+        }
+        return;
+    }
+
     std::optional<zzip> z;
     cata_path zzip_name = dirname;
     zzip_name += zzip_suffix;
@@ -399,25 +432,7 @@ void mapbuffer::save_quad(
         file_exists = std::filesystem::exists( filename.get_unrelative_path() );
     }
 
-    for( point_rel_sm &offsets_offset : offsets ) {
-        tripoint_abs_sm submap_addr = project_to<coords::sm>( om_addr );
-        submap_addr += offsets_offset.raw(); // TODO: Make += etc. available to relative parameters as well.
-        submap_addrs.push_back( submap_addr );
-        const auto existing = submaps.find( submap_addr );
-        submap *sm = existing == submaps.end() ? nullptr : existing->second.get();
-        if( sm != nullptr ) {
-            if( !sm->is_uniform() ) {
-                all_uniform = false;
-            } else if( sm->reverted ) {
-                reverted_to_uniform = file_exists;
-            }
-        }
-    }
-
-    // An explicit storage owner may have no overmap terrain resolver. In that
-    // case even uniform submaps must be persisted, because they cannot be
-    // reconstructed after eviction or reload.
-    const bool regenerable_uniform = all_uniform && static_cast<bool>( uniform_terrain_ );
+    reverted_to_uniform = reverted_to_uniform && file_exists;
     if( regenerable_uniform ) {
         // Nothing to save - this quad will be regenerated faster than it would be re-read
         if( delete_after_save ) {
@@ -473,6 +488,26 @@ void mapbuffer::save_quad(
 
     std::string s = std::move( stringout ).str();
 
+    if( !z && file_exists && !( regenerable_uniform && reverted_to_uniform ) ) {
+        std::error_code error;
+        if( std::filesystem::file_size( filename.get_unrelative_path(), error ) == s.size() && !error ) {
+            std::ifstream previous( filename.get_unrelative_path(), std::ios::binary );
+            std::array<char, 16 * 1024> chunk;
+            std::size_t offset = 0;
+            while( previous && offset < s.size() ) {
+                const std::size_t count = std::min( chunk.size(), s.size() - offset );
+                previous.read( chunk.data(), count );
+                if( previous.gcount() != static_cast<std::streamsize>( count ) ||
+                    !std::equal( chunk.data(), chunk.data() + count, s.data() + offset ) ) {
+                    break;
+                }
+                offset += count;
+            }
+            if( previous && offset == s.size() ) {
+                return;
+            }
+        }
+    }
     if( z ) {
         if( !z->add_file( filename.get_relative_path().filename(), s ) ) {
             throw std::runtime_error( "Failed writing map archive " + zzip_name.generic_u8string() );

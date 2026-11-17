@@ -362,10 +362,11 @@ enchantment_id enchantment::load_inline_enchantment( const JsonValue &jv,
 
 bool enchantment::is_active( const Character &guy, const item &parent ) const
 {
-    if( !guy.has_item( parent ) ) {
-        return false;
-    }
+    return guy.has_item( parent ) && is_active_for_owned_item( guy, parent );
+}
 
+bool enchantment::is_active_for_owned_item( const Character &guy, const item &parent ) const
+{
     if( active_conditions.first == has::HELD &&
         active_conditions.second == condition::ALWAYS ) {
         return true;

@@ -2456,6 +2456,7 @@ class map
 
         // The observer belongs to this map's seen cache, not to the process.
         std::optional < std::pair < tripoint_abs_ms, int>> previous_visibility_observer;
+        std::vector<std::pair<const vehicle *, std::uint64_t>> vehicle_overlay_versions_; // NOLINT(cata-serialize)
         friend class scoped_map_viewpoint;
         std::optional < map_viewpoint > viewpoint_;
         const map_viewpoint *viewpoint_for( const Creature &observer ) const;

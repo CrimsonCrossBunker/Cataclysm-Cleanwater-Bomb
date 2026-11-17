@@ -189,6 +189,9 @@ class spell_events : public event_subscriber
 {
     public:
         using event_subscriber::notify;
+        bool needs_talker() const override {
+            return false;
+        }
         void notify( const cata::event & ) override;
 };
 

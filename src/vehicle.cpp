@@ -119,6 +119,35 @@
 
 class Skill;
 
+namespace
+{
+struct scoped_power_graph;
+thread_local scoped_power_graph *current_power_graph = nullptr;
+
+struct scoped_power_graph {
+    const map *terrain;
+    const vehicle *root;
+    std::map<const vehicle *, float> distances;
+    bool ready = false;
+    scoped_power_graph *previous;
+
+    scoped_power_graph( const map &here, const vehicle &veh ) :
+        terrain( &here ), root( &veh ), previous( current_power_graph ) {
+        current_power_graph = this;
+    }
+    ~scoped_power_graph() {
+        current_power_graph = previous;
+    }
+};
+
+void invalidate_power_graphs()
+{
+    for( scoped_power_graph *scope = current_power_graph; scope; scope = scope->previous ) {
+        scope->ready = false;
+    }
+}
+} // namespace
+
 static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 
 static const ammotype ammo_battery( "battery" );
@@ -332,7 +361,10 @@ void vehicle::apply_color_palette( const vehicle_prototype &proto )
     }
 }
 
-vehicle::~vehicle() = default;
+vehicle::~vehicle()
+{
+    invalidate_power_graphs();
+}
 
 turret_cpu::~turret_cpu() = default;
 
@@ -6157,6 +6189,7 @@ void vehicle::update_alternator_load( map &here )
 
 void vehicle::power_parts( map &here )
 {
+    scoped_power_graph graph( here, *this );
     update_alternator_load( here );
     // Things that drain energy: engines and accessories.
     units::power engine_epower = total_engine_epower();
@@ -6340,6 +6373,15 @@ vehicle *vehicle::find_vehicle_using_parts( const map &here,  const tripoint_abs
 template < typename Vehicle > // Templated to support const and non-const vehicle*
 std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &here, Vehicle *start )
 {
+    scoped_power_graph *scope = current_power_graph;
+    const bool cacheable = scope && scope->terrain == &here && scope->root == start;
+    if( cacheable && scope->ready ) {
+        std::map<Vehicle *, float> result;
+        for( const auto &entry : scope->distances ) {
+            result.emplace( const_cast<Vehicle *>( entry.first ), entry.second );
+        }
+        return result;
+    }
     std::map < Vehicle *, float > distances; // distance represents sum of cable losses
     std::vector < Vehicle * > queue;
 
@@ -6376,11 +6418,17 @@ std::map < Vehicle *, float > vehicle::search_connected_vehicles( const map &her
             }
         }
     }
+    if( cacheable && distances.size() > 1 ) {
+        scope->distances.clear();
+        scope->distances.insert( distances.begin(), distances.end() );
+        scope->ready = true;
+    }
     return distances;
 }
 
 void vehicle::translate_cables( const tripoint_rel_ms &offset )
 {
+    invalidate_power_graphs();
     for( const int part_idx : loose_parts ) {
         vehicle_part &vp = part( part_idx );
         const vpart_info &vpi = vp.info();
@@ -7267,6 +7315,10 @@ void vehicle::refresh( const bool remove_fakes )
         return;
     }
 
+    invalidate_power_graphs();
+    if( map_cache_revision != UINT64_MAX ) {
+        ++map_cache_revision;
+    }
     alternators.clear();
     engines.clear();
     reactors.clear();

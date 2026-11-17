@@ -478,9 +478,18 @@ void map::process_fields_in_submap( submap *const current_submap,
         &( *fd_null )
     };
 
-    // Loop through all tiles in this submap indicated by current_submap
+    const bool sparse = current_submap->field_count < SEEX * SEEY / 4;
+    if( sparse ) {
+        current_submap->prepare_field_index();
+    }
     for( locx = 0; locx < SEEX; locx++ ) {
+        if( sparse && current_submap->field_row_empty( locx ) ) {
+            continue;
+        }
         for( locy = 0; locy < SEEY; locy++ ) {
+            if( sparse && !current_submap->field_may_be_present( map_tile.pos() ) ) {
+                continue;
+            }
             // Get a reference to the field variable from the submap;
             // contains all the pointers to the real field effects.
             field &curfield = current_submap->get_field( { static_cast<int>( locx ), static_cast<int>( locy ) } );
@@ -488,6 +497,7 @@ void map::process_fields_in_submap( submap *const current_submap,
             // when displayed_field_type == fd_null it means that `curfield` has no fields inside
             // avoids instantiating (relatively) expensive map iterator
             if( !curfield.displayed_field_type() ) {
+                current_submap->refresh_field_index( map_tile.pos() );
                 continue;
             }
 
@@ -530,6 +540,7 @@ void map::process_fields_in_submap( submap *const current_submap,
                 }
                 ++it;
             }
+            current_submap->refresh_field_index( map_tile.pos() );
         }
     }
     sblk.commit_modifications();

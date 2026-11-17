@@ -173,6 +173,7 @@ bool map::build_transparency_cache( const int zlev )
         return false;
     }
 
+    map_cache.vehicle_overlay_dirty = true;
     // if true, all submaps are invalid (can use batch init)
     bool rebuild_all = map_cache.transparency_cache_dirty.all();
 

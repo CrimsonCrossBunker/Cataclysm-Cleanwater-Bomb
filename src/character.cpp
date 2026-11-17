@@ -5459,16 +5459,26 @@ void Character::recalculate_bodyparts()
 void Character::recalculate_enchantment_cache( bool update_body )
 {
     enchantment_cache->clear();
+    std::optional<const_dialogue> context;
+    const auto add_enchantment = [this, &context]( const enchantment &ench ) {
+        if( !context ) {
+            context.emplace( get_const_talker_for( *this ), nullptr );
+        }
+        enchantment_cache->force_add_with_dialogue( ench, *context );
+    };
 
-    cache_visit_items_with( "is_relic", &item::is_relic, [this]( const item_location & it ) {
+    cache_visit_items_with( "is_relic", &item::is_relic, [this, &add_enchantment]( const item_location & it ) {
+        if( !has_item( *it ) ) {
+            return;
+        }
         for( const enchant_cache &ench : it->get_proc_enchantments() ) {
-            if( ench.is_active( *this, *it ) ) {
+            if( ench.is_active_for_owned_item( *this, *it ) ) {
                 enchantment_cache->force_add( ench );
             }
         }
         for( const enchantment &ench : it->get_defined_enchantments() ) {
-            if( ench.is_active( *this, *it ) ) {
-                enchantment_cache->force_add( ench, *this );
+            if( ench.is_active_for_owned_item( *this, *it ) ) {
+                add_enchantment( ench );
             }
         }
     } );
@@ -5481,7 +5491,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
             const enchantment &ench = ench_id.obj();
             if( ench.is_active( *this, bio.powered &&
                                 bid->has_flag( json_flag_BIONIC_TOGGLED ) ) ) {
-                enchantment_cache->force_add( ench, *this );
+                add_enchantment( ench );
             }
         }
     }
@@ -5490,7 +5500,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
         for( const enchantment_id &ench_id : elem.first->enchantments ) {
             const enchantment &ench = ench_id.obj();
             if( ench.is_active( *this, true ) ) {
-                enchantment_cache->force_add( ench, *this );
+                add_enchantment( ench );
             }
         }
     }
@@ -5516,7 +5526,7 @@ void Character::recalculate_enchantment_cache( bool update_body )
             for( const enchantment_id &ench_id : mut.enchantments ) {
                 const enchantment &ench = ench_id.obj();
                 if( ench.is_active( *this, mut.activated && mut_map.second.powered ) ) {
-                    enchantment_cache->force_add( ench, *this );
+                    add_enchantment( ench );
                 }
             }
         }
