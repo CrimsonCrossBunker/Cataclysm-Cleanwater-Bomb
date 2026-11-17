@@ -6980,9 +6980,18 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 local CcbPlatformRuntime = {}
 
 ---@param id string
----@param callback fun(payload: any): any
+---@param callback fun(...: any): any
 ---@param payload_version? integer
 function CcbPlatformRuntime.handler(id, callback, payload_version) end
+
+---Calls the last active Mod's named handler with copied numeric arguments.
+---Available inside runtime callbacks, including detached save reconstruction.
+---Provider lookup follows active Mod order on every call and follows hot reload.
+---Errors, missing handlers and nonnumeric or nonfinite results raise an error.
+---@param id string Handler registered with runtime.handler.
+---@param ... number Finite numeric arguments.
+---@return number value Exactly one finite numeric result.
+function CcbPlatformRuntime.call_number(id, ...) end
 
 ---Register one per-Character recurring policy. The effect handler runs only
 ---when the Character-local due turn is reached; the interval handler runs on
