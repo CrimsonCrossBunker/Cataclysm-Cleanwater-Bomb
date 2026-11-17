@@ -26,6 +26,7 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "safe_reference.h"
 #include "creature_tracker.h"
 #include "debug.h"
 #include "filesystem.h"
@@ -88,6 +89,15 @@ constexpr std::uintmax_t maximum_platform_state_file_bytes =
 
 std::map<std::string, persistent_scope_record> orphan_character_records;
 std::map<std::string, persistent_scope_record> orphan_world_records;
+
+struct pending_character_ready {
+    std::weak_ptr<runtime> owner;
+    safe_reference<Creature> actor;
+    character_id id;
+    bool new_character;
+};
+
+std::vector<pending_character_ready> pending_character_ready_events;
 
 std::map<std::string, persistent_scope_record> &orphan_records(
     const std::string &scope )
@@ -1563,9 +1573,57 @@ using detail::platform_item_handle;
 using detail::platform_vehicle_handle;
 using detail::report_callback_error;
 
+static void dispatch_character_lifecycle( runtime &owner, const std::string &event,
+        Character &actor, std::optional<bool> new_character = std::nullopt )
+{
+    sol::table payload = owner.lua->create_table();
+    sol::table actors = owner.lua->create_table();
+    actors["character"] = platform_creature_handle( owner, actor );
+    payload["actors"] = std::move( actors );
+    if( new_character.has_value() ) {
+        payload["new_character"] = *new_character;
+    }
+    dispatch_lifecycle( owner, event, payload );
+}
+
+void notify_character_ready( Character &actor, bool new_character )
+{
+    const character_action_guard lifetime( actor );
+    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
+        if( !owner || owner->subscriptions.count( "character_ready" ) == 0 ) {
+            continue;
+        }
+        if( owner->world_is_ready ) {
+            dispatch_character_lifecycle( *owner, "character_ready", actor, new_character );
+            if( !lifetime ) {
+                return;
+            }
+        } else {
+            pending_character_ready_events.push_back(
+            { owner, actor.get_safe_reference(), actor.getID(), new_character } );
+        }
+    }
+}
+
+void notify_character_conditions_changed( Character &actor )
+{
+    for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
+        if( !owner || !owner->world_is_ready ||
+            owner->subscriptions.count( "character_conditions_changed" ) == 0 ) {
+            continue;
+        }
+        const character_action_guard lifetime( actor );
+        dispatch_character_lifecycle( *owner, "character_conditions_changed", actor );
+        if( !lifetime ) {
+            return;
+        }
+    }
+}
+
 void runtime_world_load_started()
 {
     detail::stop_runtime_event_bridge();
+    pending_character_ready_events.clear();
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( owner ) {
             owner->world_is_ready = false;
@@ -1609,6 +1667,16 @@ void runtime_world_ready( bool new_game, const std::function<void()> &finish_nat
         finish_native_load();
     }
     detail::start_runtime_event_bridge();
+    const auto pending = std::exchange( pending_character_ready_events, {} );
+    for( const pending_character_ready &entry : pending ) {
+        const std::shared_ptr<runtime> owner = entry.owner.lock();
+        Creature *creature = entry.actor.get();
+        Character *actor = creature ? creature->as_character() : nullptr;
+        if( owner && owner->world_is_ready && actor && actor->getID() == entry.id &&
+            !actor->is_dead_state() ) {
+            dispatch_character_lifecycle( *owner, "character_ready", *actor, entry.new_character );
+        }
+    }
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner ) {
             continue;

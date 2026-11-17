@@ -4,6 +4,7 @@
 #include <dialogue_helpers.h>
 #include <global_vars.h>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstddef>
 #include <iterator>
@@ -31,6 +32,7 @@
 #include "generic_factory.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_character_tasks.h"
+#include "lua_platform_state.h"
 #include "math_parser_diag_value.h"
 #include "mod_tracker.h"
 #include "npc.h"
@@ -190,6 +192,13 @@ void effect_on_conditions::load_new_character( Character &you )
         }
     }
 
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    const character_action_guard lifetime( you );
+    cata::lua_platform::notify_character_ready( you, true );
+    if( !lifetime ) {
+        return;
+    }
+#endif
     process_effect_on_conditions( you );
 }
 
@@ -199,7 +208,31 @@ namespace
 // Lua callbacks share the saved character-turn queue with EOCs to keep their
 // due turn and ordering across an upgrade.
 const effect_on_condition_id lua_task_record( "ccb:character_task" );
-const effect_on_condition_id legacy_xedra_blood_reward( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" );
+struct character_task_migration {
+    effect_on_condition_id eoc;
+    const char *handler;
+    const char *timer_key;
+};
+
+// These IDs are read from saves. The authored callbacks use their Lua names.
+const std::array<character_task_migration, 3> xedra_character_tasks = {{
+        { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
+          "finish_combat_blood_feeding", nullptr },
+        { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
+          "inventor_recipe_due", "inventor_recipe_timer" },
+        { effect_on_condition_id( "EOC_VAMPIRE_BLOOD_NUMBER_UI" ),
+          "vampire_blood_display_due", "vampire_blood_display_timer" }
+    }
+};
+
+const character_task_migration *find_xedra_task( const effect_on_condition_id &id )
+{
+    const auto found = std::find_if( xedra_character_tasks.begin(), xedra_character_tasks.end(),
+    [&id]( const character_task_migration & entry ) {
+        return entry.eoc == id;
+    } );
+    return found != xedra_character_tasks.end() && !id.is_valid() ? &*found : nullptr;
+}
 
 queued_eoc character_task_record( time_point due, std::string_view mod, std::string_view handler )
 {
@@ -220,8 +253,9 @@ void cata::lua_platform::queue_character_task( Character &actor, time_point due,
 
 static void process_new_eocs( queued_eocs &eoc_queue,
                               std::vector<effect_on_condition_id> &eoc_vector,
-                              std::map<effect_on_condition_id, bool> &new_eocs, bool global_queue )
+                              std::map<effect_on_condition_id, bool> &new_eocs, Character *actor )
 {
+    const bool global_queue = actor == nullptr;
     queued_eocs temp_queued_eocs;
     while( !eoc_queue.empty() ) {
         const queued_eoc &entry = eoc_queue.top();
@@ -231,11 +265,18 @@ static void process_new_eocs( queued_eocs &eoc_queue,
             eoc_queue.pop();
             continue;
         }
-        if( !global_queue && entry.eoc == legacy_xedra_blood_reward && !entry.eoc.is_valid() ) {
-            temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved",
-                                   "finish_combat_blood_feeding" ) );
-            eoc_queue.pop();
-            continue;
+        if( actor ) {
+            if( const character_task_migration *migration = find_xedra_task( entry.eoc ) ) {
+                temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved",
+                                       migration->handler ) );
+                if( migration->timer_key ) {
+                    cata::lua_platform::assign_persistent_value(
+                        actor->lua_character_state.for_mod( "xedra_evolved" ), migration->timer_key,
+                        std::string( "scheduled" ) );
+                }
+                eoc_queue.pop();
+                continue;
+            }
         }
 #endif
         // Check if EoC is moved from global to local, or vice versa
@@ -248,6 +289,18 @@ static void process_new_eocs( queued_eocs &eoc_queue,
     eoc_queue = std::move( temp_queued_eocs );
     for( auto eoc = eoc_vector.begin();
          eoc != eoc_vector.end(); ) {
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+        if( actor ) {
+            if( const character_task_migration *migration = find_xedra_task( *eoc );
+                migration && migration->timer_key ) {
+                auto &state = actor->lua_character_state.for_mod( "xedra_evolved" );
+                if( state.count( migration->timer_key ) == 0 ) {
+                    cata::lua_platform::assign_persistent_value(
+                        state, migration->timer_key, std::string( "dormant" ) );
+                }
+            }
+        }
+#endif
         // Check if EoC is moved from global to local, or vice versa
         if( !eoc->is_valid() || global_queue != ( *eoc )->global ) {
             eoc = eoc_vector.erase( eoc );
@@ -268,10 +321,10 @@ void effect_on_conditions::load_existing_character( Character &you )
         }
     }
     process_new_eocs( you.queued_effect_on_conditions, you.inactive_effect_on_condition_vector,
-                      new_eocs, false );
+                      new_eocs, &you );
     if( is_avatar ) {
         process_new_eocs( g->queued_global_effect_on_conditions,
-                          g->inactive_global_effect_on_condition_vector, new_eocs, true );
+                          g->inactive_global_effect_on_condition_vector, new_eocs, nullptr );
     }
 
     for( const std::pair<const effect_on_condition_id, bool> &eoc_pair : new_eocs ) {
@@ -281,6 +334,9 @@ void effect_on_conditions::load_existing_character( Character &you )
                                        eoc_pair.first, you, {} );
         }
     }
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::notify_character_ready( you, false );
+#endif
 }
 
 void effect_on_conditions::queue_effect_on_condition( time_duration duration,
@@ -412,6 +468,9 @@ void effect_on_conditions::process_reactivate( Character &you )
 {
     dialogue d( get_talker_for( you ), nullptr );
     process_reactivation( you.inactive_effect_on_condition_vector, you.queued_effect_on_conditions, d );
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    cata::lua_platform::notify_character_conditions_changed( you );
+#endif
 }
 
 void effect_on_conditions::process_reactivate()

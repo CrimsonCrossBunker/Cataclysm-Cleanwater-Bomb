@@ -14,6 +14,8 @@ void queue_character_task( Character &actor, time_point due, std::string_view mo
                            std::string_view handler );
 void invoke_character_task( Character &actor, time_point due, const std::string &mod,
                             const std::string &handler );
+void notify_character_ready( Character &actor, bool new_character );
+void notify_character_conditions_changed( Character &actor );
 } // namespace cata::lua_platform
 
 #endif // CATA_SRC_LUA_PLATFORM_CHARACTER_TASKS_H

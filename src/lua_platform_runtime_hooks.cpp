@@ -1537,7 +1537,8 @@ void install_runtime_callback_api(
             throw std::runtime_error( "event and handler ids cannot be empty" );
         }
         const bool lifecycle = event_name == "world_ready" || event_name == "before_save" ||
-                               event_name == "after_save" || event_name == "shutdown";
+                               event_name == "after_save" || event_name == "shutdown" ||
+                               event_name == "character_ready" || event_name == "character_conditions_changed";
         if( !lifecycle && ( event_name.size() <= 5 || event_name.compare( 0, 5, "game:" ) != 0 ) ) {
             throw std::runtime_error( "event must be a lifecycle name or game:<event>" );
         }

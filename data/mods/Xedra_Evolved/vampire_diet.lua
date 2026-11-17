@@ -368,6 +368,27 @@ ccb.runtime.handler("interrupt_blood_feeding", function(event)
 end, 1)
 ccb.runtime.on("game:character_finished_activity", "interrupt_blood_feeding")
 
+local timers = require("character_timers")
+timers.register("vampire_blood_display_timer", "vampire_blood_display_due",
+    function() return 1 end,
+    function(character)
+        return has_trait(character, "DHAMPIR_TRAIT") or has_trait(character, "VAMPIRE") or
+            has_effect(character, "vampire_virus")
+    end,
+    function(character)
+        local blood = id("vitamin", "human_blood_vitamin")
+        local amount = value(services.needs.get_vitamin(character, blood))
+        local extra_storage = has_trait(character, "VAMPIRE_STORE_MORE_BLOOD")
+        local upgraded_storage = has_trait(character, "VAMPIRE_STORE_MORE_BLOOD_UPGRADE")
+        local limit = 5600 + (extra_storage and 2300 or 0) + (upgraded_storage and 5600 or 0)
+        set_number(character, "blood_amount_for_graph", amount)
+        set_number(character, "max_blood_amount_for_graph", limit)
+        if amount >= limit then
+            value(services.needs.set_vitamin(character, blood,
+                upgraded_storage and 13500 or extra_storage and 7900 or 5600))
+        end
+    end)
+
 local function add_effect(character, effect, turns)
     value(services.effects.add(character, id("effect", effect), duration(turns, "turn")))
 end

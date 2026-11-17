@@ -1,49 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_BLOOD_NUMBER_UI",
-    "//": "Until the day UI widgets can directly access vitamin levels, this will have to be.",
-    "recurrence": 1,
-    "condition": { "or": [ { "u_has_any_trait": [ "DHAMPIR_TRAIT", "VAMPIRE" ] }, { "u_has_effect": "vampire_virus" } ] },
-    "deactivate_condition": {
-      "and": [ { "not": { "u_has_any_trait": [ "DHAMPIR_TRAIT", "VAMPIRE" ] } }, { "not": { "u_has_effect": "vampire_virus" } } ]
-    },
-    "effect": [
-      { "math": [ "u_blood_amount_for_graph = u_vitamin('human_blood_vitamin')" ] },
-      {
-        "math": [
-          "u_max_blood_amount_for_graph",
-          "=",
-          "5600 + (u_has_trait('VAMPIRE_STORE_MORE_BLOOD') * 2300) + (u_has_trait('VAMPIRE_STORE_MORE_BLOOD_UPGRADE') * 5600)"
-        ]
-      },
-      { "run_eocs": "EOC_VAMPIRE_BLOOD_MAX_LIMIT" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_BLOOD_MAX_LIMIT",
-    "condition": {
-      "math": [
-        "u_vitamin('human_blood_vitamin')",
-        ">=",
-        "5600 + (u_has_trait('VAMPIRE_STORE_MORE_BLOOD') * 2300) + (u_has_trait('VAMPIRE_STORE_MORE_BLOOD_UPGRADE') * 5600)"
-      ]
-    },
-    "effect": [
-      {
-        "if": { "u_has_trait": "VAMPIRE_STORE_MORE_BLOOD_UPGRADE" },
-        "then": { "math": [ "u_vitamin('human_blood_vitamin') = 13500" ] },
-        "else": {
-          "if": { "u_has_trait": "VAMPIRE_STORE_MORE_BLOOD" },
-          "then": { "math": [ "u_vitamin('human_blood_vitamin') = 7900" ] },
-          "else": { "math": [ "u_vitamin('human_blood_vitamin') = 5600" ] }
-        }
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_ADD_WEAKNESSES",
     "//": "This EOC checks how many weaknesses the player should gain when reshuffling.  Gaining the traits run the weakness-giving EOC directly.",
     "//2": "Tier 3 grants one weakness, Tier 4 grants one more, Tier 5 grants two more, becoming an Anathema gives two more, reaching the Anathema threshold gives three more.",

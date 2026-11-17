@@ -6821,7 +6821,11 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@field due_turn? integer Absolute due turn when an effect is running.
 ---@field overdue_turns integer Non-negative lateness at invocation.
 
----@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, or `game:<event>`.
+---Character lifecycle events supply the live actor in `payload.actors.character`.
+---`character_ready` also sets `payload.new_character` and runs once per native
+---initialization or load. Early load notifications are delivered at world readiness.
+---`character_conditions_changed` runs after native trait or bionic changes.
+---@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, `character_ready`, `character_conditions_changed`, or `game:<event>`.
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
 
@@ -9947,6 +9951,12 @@ function CcbNeedsApi.modify_vitamin(character, id, delta) end
 ---@param id GameId GameId<vitamin>.
 ---@return CcbResult result `value` is the current vitamin amount.
 function CcbNeedsApi.get_vitamin(character, id) end
+
+---@param character GameHandle Exact live Character handle.
+---@param id GameId GameId<vitamin>.
+---@param amount integer Requested vitamin level before native clamping.
+---@return CcbResult result `value` contains before and after vitamin levels.
+function CcbNeedsApi.set_vitamin(character, id, amount) end
 
 ---Adjust raw pain through the native setter, ignoring pain resistance.
 ---@param character GameHandle Exact live Character handle.

@@ -61,3 +61,21 @@ ccb.runtime.handler("grant_starting_recipes", function(event)
     end
 end, 1)
 ccb.runtime.on("game:game_avatar_new", "grant_starting_recipes")
+
+local timers = require("character_timers")
+timers.register("inventor_recipe_timer", "inventor_recipe_due",
+    function() return services.random.native_int(20 * 3600, 28 * 3600) end,
+    function(character)
+        local result = services.mutations.has_id_text(character, "INVENTOR")
+        if not result.ok then
+            error(result.error.message)
+        end
+        return result.value
+    end,
+    function(character)
+        local recipe = services.types.id("recipe", "inventor_research_base_1")
+        local result = services.progression.grant_random_missing(character, "recipe", { recipe })
+        if not result.ok then
+            error(result.error.message)
+        end
+    end)

@@ -1,4 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <algorithm>
+#include <optional>
 #include <sstream>
 #include "avatar.h"
 #include "calendar.h"
@@ -8,6 +10,7 @@
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "game.h"
 #include "item.h"
 #include "flexbuffer_json.h"
 #include "json.h"
@@ -96,6 +99,17 @@ static const vitamin_id vitamin_drank_fae_blood( "drank_fae_blood" );
 static const vitamin_id vitamin_blood( "blood" );
 static const vitamin_id vitamin_redcells( "redcells" );
 static const vitamin_id vitamin_vampire_blood_vitamin( "vampire_blood_vitamin" );
+
+static void reload_xedra_avatar( avatar &player )
+{
+    std::ostringstream buffer;
+    JsonOut json( buffer );
+    player.serialize( json );
+    player.queued_effect_on_conditions = queued_eocs();
+    player.setID( character_id(), true );
+    player.deserialize( json_loader::from_string( buffer.str() ).get_object() );
+    effect_on_conditions::load_existing_character( player );
+}
 
 TEST_CASE( "xedra_lua_vampire_diet_preserves_blood_effects", "[.][mods][xedra_evolved]" )
 {
@@ -303,13 +317,7 @@ TEST_CASE( "xedra_lua_restores_a_saved_combat_blood_reward", "[.][mods][xedra_ev
         effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ), due, {}
     } );
 
-    std::ostringstream buffer;
-    JsonOut json( buffer );
-    player.serialize( json );
-    player.queued_effect_on_conditions = queued_eocs();
-    player.setID( character_id(), true );
-    player.deserialize( json_loader::from_string( buffer.str() ).get_object() );
-    effect_on_conditions::load_existing_character( player );
+    reload_xedra_avatar( player );
 
     calendar::turn = due - 1_turns;
     effect_on_conditions::process_effect_on_conditions( player );
@@ -321,5 +329,166 @@ TEST_CASE( "xedra_lua_restores_a_saved_combat_blood_reward", "[.][mods][xedra_ev
     CHECK( reward <= 500 );
     effect_on_conditions::process_effect_on_conditions( player );
     CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == reward );
+}
+
+namespace
+{
+struct xedra_timer {
+    effect_on_condition_id legacy_id;
+    std::string handler;
+
+    bool matches( const queued_eoc &entry ) const {
+        const auto name = entry.context.find( "handler" );
+        return entry.eoc == legacy_id ||
+               ( name != entry.context.end() && name->second.to_string() == handler );
+    }
+
+    std::optional<time_point> due( const Character &character ) const {
+        const auto &queue = character.queued_effect_on_conditions.list;
+        const auto found = std::find_if( queue.begin(), queue.end(), [this]( const queued_eoc & entry ) {
+            return matches( entry );
+        } );
+        if( found == queue.end() ) {
+            return std::nullopt;
+        }
+        CHECK( std::count_if( queue.begin(), queue.end(), [this]( const queued_eoc & entry ) {
+            return matches( entry );
+        } ) == 1 );
+        return found->time;
+    }
+
+    void isolate( Character &character ) const {
+        queued_eocs selected;
+        for( const queued_eoc &entry : character.queued_effect_on_conditions.list ) {
+            if( matches( entry ) ) {
+                selected.push( entry );
+            }
+        }
+        character.queued_effect_on_conditions = std::move( selected );
+        if( character.is_avatar() ) {
+            g->queued_global_effect_on_conditions = queued_eocs();
+        }
+    }
+};
+} // namespace
+
+TEST_CASE( "xedra_recurring_timers_keep_saved_deadlines_and_reactivate", "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [] {
+        effect_on_conditions::clear( get_avatar() );
+        clear_npcs();
+        clear_avatar();
+    } );
+    clear_avatar();
+    avatar &player = get_avatar();
+    effect_on_conditions::clear( player );
+    cata::lua_platform::runtime_world_ready( true );
+
+    const xedra_timer inventor{ effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
+                                "inventor_recipe_due" };
+    const xedra_timer blood{ effect_on_condition_id( "EOC_VAMPIRE_BLOOD_NUMBER_UI" ),
+                             "vampire_blood_display_due" };
+    const recipe_id research( "inventor_research_base_1" );
+    const trait_id inventor_trait( "INVENTOR" );
+
+    SECTION( "fresh characters enroll without an inventor trait" ) {
+        effect_on_conditions::load_new_character( player );
+        const std::optional<time_point> due = inventor.due( player );
+        REQUIRE( due.has_value() );
+        CHECK( *due >= calendar::turn + 20_hours );
+        CHECK( *due <= calendar::turn + 28_hours );
+        player.set_mutation( inventor_trait );
+        CHECK( inventor.due( player ) == due );
+    }
+
+    SECTION( "a queued legacy deadline survives a save round trip and grants the recipe once due" ) {
+        player.set_mutation( inventor_trait );
+        player.forget_recipe( &research.obj() );
+        REQUIRE_FALSE( player.knows_recipe( &research.obj() ) );
+        const time_point due = calendar::turn + 2_hours;
+        player.queued_effect_on_conditions.push( { inventor.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( inventor.due( player ) == due );
+        reload_xedra_avatar( player );
+        CHECK( inventor.due( player ) == due );
+        inventor.isolate( player );
+        calendar::turn = due - 1_turns;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK_FALSE( player.knows_recipe( &research.obj() ) );
+        calendar::turn = due;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( player.knows_recipe( &research.obj() ) );
+        const auto next = inventor.due( player );
+        REQUIRE( next.has_value() );
+        CHECK( *next >= due + 20_hours );
+        CHECK( *next <= due + 28_hours );
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( inventor.due( player ) == next );
+    }
+
+    SECTION( "legacy and new dormant timers stay stopped until an inventor trait returns" ) {
+        player.inactive_effect_on_condition_vector.push_back( inventor.legacy_id );
+        reload_xedra_avatar( player );
+        CHECK_FALSE( inventor.due( player ).has_value() );
+        player.set_mutation( inventor_trait );
+        const auto resumed = inventor.due( player );
+        REQUIRE( resumed.has_value() );
+        CHECK( *resumed >= calendar::turn + 20_hours );
+        CHECK( *resumed <= calendar::turn + 28_hours );
+
+        player.unset_mutation( inventor_trait );
+        CHECK( inventor.due( player ) == resumed );
+        inventor.isolate( player );
+        calendar::turn = *resumed;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK_FALSE( inventor.due( player ).has_value() );
+        reload_xedra_avatar( player );
+        CHECK_FALSE( inventor.due( player ).has_value() );
+        player.set_mutation( inventor_trait );
+        const auto second = inventor.due( player );
+        REQUIRE( second.has_value() );
+        CHECK( *second >= calendar::turn + 20_hours );
+        CHECK( *second <= calendar::turn + 28_hours );
+    }
+
+    SECTION( "the saved blood display tick records unclamped blood before enforcing capacity" ) {
+        const int storage = GENERATE( 0, 1, 2 );
+        player.set_mutation( trait_VAMPIRE );
+        if( storage >= 1 ) {
+            player.set_mutation( trait_id( "VAMPIRE_STORE_MORE_BLOOD" ) );
+        }
+        if( storage == 2 ) {
+            player.set_mutation( trait_id( "VAMPIRE_STORE_MORE_BLOOD_UPGRADE" ) );
+        }
+        player.vitamin_set( vitamin_human_blood_vitamin, 14000 );
+        const int capacity = storage == 2 ? 13500 : storage == 1 ? 7900 : 5600;
+        const time_point due = calendar::turn + 1_turns;
+        player.queued_effect_on_conditions.push( { blood.legacy_id, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( blood.due( player ) == due );
+        blood.isolate( player );
+        calendar::turn = due;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( player.get_value( "blood_amount_for_graph" ).dbl() == 14000.0 );
+        CHECK( player.get_value( "max_blood_amount_for_graph" ).dbl() == capacity );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == capacity );
+        CHECK( blood.due( player ) == due + 1_turns );
+    }
+
+    SECTION( "an NPC initialized during world loading gets its own timers" ) {
+        clear_map();
+        cata::lua_platform::runtime_world_load_started();
+        npc &actor = spawn_npc( player.pos_bub().xy() + point::east, "test_talker" );
+        effect_on_conditions::load_existing_character( actor );
+        cata::lua_platform::runtime_world_ready( false );
+        const auto due = inventor.due( actor );
+        REQUIRE( due.has_value() );
+        CHECK( *due >= calendar::turn + 20_hours );
+        CHECK( *due <= calendar::turn + 28_hours );
+        CHECK_FALSE( inventor.due( player ).has_value() );
+        effect_on_conditions::load_existing_character( actor );
+        CHECK( inventor.due( actor ) == due );
+    }
 }
 #endif
