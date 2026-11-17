@@ -109,10 +109,5 @@
     "type": "mapgen",
     "nested_mapgen_id": "magic_door_graffiti_snippet",
     "object": { "mapgensize": [ 1, 1 ], "place_graffiti": [ { "snippet": "magic_door_graffiti", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "snippet",
-    "category": "magic_door_graffiti",
-    "text": [ "A circle of esoteric symbols etched into the metal wall, they draw your eye with their otherworldly shapes." ]
   }
 ]

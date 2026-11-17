@@ -38,3 +38,5 @@ require("ammunition_types")
 require("tool_qualities")
 
 require("vitamins")
+
+require("snippets")
