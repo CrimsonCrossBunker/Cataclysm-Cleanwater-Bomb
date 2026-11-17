@@ -46,6 +46,7 @@ class script_point_coord
             const script_point_coord &rhs, std::int64_t max_points ) const;
         std::int64_t manhattan_distance( const script_point_coord &rhs ) const;
         std::int64_t square_distance( const script_point_coord &rhs ) const;
+        std::int64_t game_distance( const script_point_coord &rhs ) const;
         double euclidean_distance( const script_point_coord &rhs ) const;
         int compare( const script_point_coord &rhs ) const;
         std::string to_string() const;
@@ -103,6 +104,7 @@ class script_tripoint_coord
             const script_tripoint_coord &rhs, std::int64_t max_points ) const;
         std::int64_t manhattan_distance( const script_tripoint_coord &rhs ) const;
         std::int64_t square_distance( const script_tripoint_coord &rhs ) const;
+        std::int64_t game_distance( const script_tripoint_coord &rhs ) const;
         double euclidean_distance( const script_tripoint_coord &rhs ) const;
         int compare( const script_tripoint_coord &rhs ) const;
         std::string to_string() const;

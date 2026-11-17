@@ -1013,7 +1013,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_bindings_coords.cpp",
-          "line": 922
+          "line": 943
         },
         "direct_roots": [
           "PointCoord",
@@ -18528,7 +18528,7 @@
       "registration_name": "PointCoord",
       "registration": {
         "path": "src/lua_platform_bindings_coords.cpp",
-        "line": 925,
+        "line": 946,
         "installer": "shared.install_coordinate_value_api",
         "namespace": "global"
       },
@@ -18567,7 +18567,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 956
+                "line": 978
               }
             ]
           },
@@ -18582,7 +18582,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 944
+                "line": 966
               }
             ]
           },
@@ -18597,7 +18597,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 952
+                "line": 974
               }
             ]
           },
@@ -18612,7 +18612,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 948
+                "line": 970
               }
             ]
           },
@@ -18629,7 +18629,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 958
+                "line": 980
               }
             ]
           },
@@ -18646,7 +18646,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 957
+                "line": 979
               }
             ]
           },
@@ -18663,7 +18663,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 943
+                "line": 965
               }
             ]
           },
@@ -18680,7 +18680,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 959
+                "line": 981
               }
             ]
           },
@@ -18697,7 +18697,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 932
+                "line": 953
               }
             ]
           },
@@ -18714,7 +18714,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 942
+                "line": 964
               }
             ]
           },
@@ -18731,7 +18731,24 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 941
+                "line": 963
+              }
+            ]
+          },
+          {
+            "id": "game_distance",
+            "cpp_members": [
+              "game_distance"
+            ],
+            "cpp_kind": "member",
+            "lua_access": [
+              "PointCoord.game_distance"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_bindings_coords.cpp",
+                "line": 962
               }
             ]
           },
@@ -18748,7 +18765,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 939
+                "line": 960
               }
             ]
           },
@@ -18784,7 +18801,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 53
+                "line": 54
               }
             ]
           },
@@ -18801,7 +18818,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 54
+                "line": 55
               }
             ]
           },
@@ -18835,7 +18852,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 929
+                "line": 950
               }
             ]
           },
@@ -18852,7 +18869,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 938
+                "line": 959
               }
             ]
           },
@@ -18869,7 +18886,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 937
+                "line": 958
               }
             ]
           },
@@ -18886,7 +18903,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 936
+                "line": 957
               }
             ]
           },
@@ -18903,7 +18920,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 930
+                "line": 951
               }
             ]
           },
@@ -18920,7 +18937,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 934
+                "line": 955
               }
             ]
           },
@@ -18937,7 +18954,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 940
+                "line": 961
               }
             ]
           },
@@ -18954,7 +18971,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 933
+                "line": 954
               }
             ]
           },
@@ -18971,7 +18988,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 935
+                "line": 956
               }
             ]
           },
@@ -18988,7 +19005,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 931
+                "line": 952
               }
             ]
           },
@@ -19005,7 +19022,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 927
+                "line": 948
               }
             ]
           },
@@ -19022,7 +19039,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 928
+                "line": 949
               }
             ]
           }
@@ -29579,7 +29596,7 @@
       "registration_name": "TripointCoord",
       "registration": {
         "path": "src/lua_platform_bindings_coords.cpp",
-        "line": 961,
+        "line": 983,
         "installer": "shared.install_coordinate_value_api",
         "namespace": "global"
       },
@@ -29619,7 +29636,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 999
+                "line": 1022
               }
             ]
           },
@@ -29634,7 +29651,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 987
+                "line": 1010
               }
             ]
           },
@@ -29649,7 +29666,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 995
+                "line": 1018
               }
             ]
           },
@@ -29664,7 +29681,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 991
+                "line": 1014
               }
             ]
           },
@@ -29681,7 +29698,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 1007
+                "line": 1030
               }
             ]
           },
@@ -29699,7 +29716,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 1003
+                "line": 1026
               }
             ]
           },
@@ -29716,7 +29733,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 986
+                "line": 1009
               }
             ]
           },
@@ -29733,7 +29750,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 1008
+                "line": 1031
               }
             ]
           },
@@ -29751,7 +29768,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 970
+                "line": 992
               }
             ]
           },
@@ -29768,7 +29785,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 985
+                "line": 1008
               }
             ]
           },
@@ -29785,7 +29802,24 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 984
+                "line": 1007
+              }
+            ]
+          },
+          {
+            "id": "game_distance",
+            "cpp_members": [
+              "game_distance"
+            ],
+            "cpp_kind": "member",
+            "lua_access": [
+              "TripointCoord.game_distance"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_bindings_coords.cpp",
+                "line": 1006
               }
             ]
           },
@@ -29802,7 +29836,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 982
+                "line": 1004
               }
             ]
           },
@@ -29819,7 +29853,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 976
+                "line": 998
               }
             ]
           },
@@ -29838,7 +29872,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 102
+                "line": 103
               }
             ]
           },
@@ -29855,7 +29889,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 110
+                "line": 112
               }
             ]
           },
@@ -29872,7 +29906,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 111
+                "line": 113
               }
             ]
           },
@@ -29889,7 +29923,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.h",
-                "line": 88
+                "line": 89
               }
             ]
           },
@@ -29906,7 +29940,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 966
+                "line": 988
               }
             ]
           },
@@ -29923,7 +29957,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 981
+                "line": 1003
               }
             ]
           },
@@ -29940,7 +29974,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 980
+                "line": 1002
               }
             ]
           },
@@ -29957,7 +29991,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 979
+                "line": 1001
               }
             ]
           },
@@ -29974,7 +30008,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 967
+                "line": 989
               }
             ]
           },
@@ -29991,7 +30025,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 977
+                "line": 999
               }
             ]
           },
@@ -30008,7 +30042,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 983
+                "line": 1005
               }
             ]
           },
@@ -30026,7 +30060,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 973
+                "line": 995
               }
             ]
           },
@@ -30043,7 +30077,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 978
+                "line": 1000
               }
             ]
           },
@@ -30060,7 +30094,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 968
+                "line": 990
               }
             ]
           },
@@ -30077,7 +30111,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 963
+                "line": 985
               }
             ]
           },
@@ -30094,7 +30128,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 969
+                "line": 991
               }
             ]
           },
@@ -30111,7 +30145,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 964
+                "line": 986
               }
             ]
           },
@@ -30128,7 +30162,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_bindings_coords.cpp",
-                "line": 965
+                "line": 987
               }
             ]
           }

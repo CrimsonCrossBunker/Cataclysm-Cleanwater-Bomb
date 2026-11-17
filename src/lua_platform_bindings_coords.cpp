@@ -564,6 +564,13 @@ std::int64_t script_point_coord::square_distance(
     return std::max( axis_distance( value_.x, rhs.value_.x ), axis_distance( value_.y, rhs.value_.y ) );
 }
 
+std::int64_t script_point_coord::game_distance( const script_point_coord &rhs ) const
+{
+    return script_tripoint_coord::from_native( origin_, scale_, tripoint( value_, 0 ) )
+           .game_distance( script_tripoint_coord::from_native( rhs.origin_, rhs.scale_,
+                           tripoint( rhs.value_, 0 ) ) );
+}
+
 double script_point_coord::euclidean_distance(
     const script_point_coord &rhs ) const
 {
@@ -813,6 +820,20 @@ std::int64_t script_tripoint_coord::square_distance(
     } );
 }
 
+std::int64_t script_tripoint_coord::game_distance( const script_tripoint_coord &rhs ) const
+{
+    require_matching_kind( origin_, scale_, rhs.origin_, rhs.scale_, "measure" );
+    if( !trigdist ) {
+        return square_distance( rhs );
+    }
+    const double dx = axis_distance( value_.x, rhs.value_.x );
+    const double dy = axis_distance( value_.y, rhs.value_.y );
+    const double dz = axis_distance( value_.z, rhs.value_.z );
+    // Retain rl_dist's float rounding and integer truncation, without squaring
+    // native ints or overflowing the result for distant absolute coordinates.
+    return static_cast<std::int64_t>( static_cast<float>( std::sqrt( dx * dx + dy * dy + dz * dz ) ) );
+}
+
 double script_tripoint_coord::euclidean_distance(
     const script_tripoint_coord &rhs ) const
 {
@@ -938,6 +959,7 @@ void install_coordinate_value_api(
         "project_combine", &script_point_coord::project_combine,
         "manhattan_distance", &script_point_coord::manhattan_distance,
         "square_distance", &script_point_coord::square_distance,
+        "game_distance", &script_point_coord::game_distance,
         "euclidean_distance", &script_point_coord::euclidean_distance,
         "compare", &script_point_coord::compare,
         sol::meta_function::to_string, &script_point_coord::to_string,
@@ -981,6 +1003,7 @@ void install_coordinate_value_api(
         "project_combine", &script_tripoint_coord::project_combine,
         "manhattan_distance", &script_tripoint_coord::manhattan_distance,
         "square_distance", &script_tripoint_coord::square_distance,
+        "game_distance", &script_tripoint_coord::game_distance,
         "euclidean_distance", &script_tripoint_coord::euclidean_distance,
         "compare", &script_tripoint_coord::compare,
         sol::meta_function::to_string, &script_tripoint_coord::to_string,

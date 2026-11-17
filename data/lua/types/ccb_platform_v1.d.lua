@@ -37,6 +37,8 @@
 ---@field scale_by fun(self: PointCoord, factor: integer): PointCoord
 ---@field compare fun(self: PointCoord, other: PointCoord): integer
 ---@field square_distance fun(self: PointCoord, other: PointCoord): integer
+---Uses the game's square/trigonometric distance setting, retaining native float rounding and integer truncation; wide axes do not overflow native ints.
+---@field game_distance fun(self: PointCoord, other: PointCoord): integer
 ---@field manhattan_distance fun(self: PointCoord, other: PointCoord): integer
 ---@field euclidean_distance fun(self: PointCoord, other: PointCoord): number
 ---@field project_to fun(self: PointCoord, scale: string): PointCoord
@@ -50,6 +52,7 @@
 ---@operator eq(PointCoord): boolean
 
 ---@class TripointCoord: PointCoord
+---@field game_distance fun(self: TripointCoord, other: TripointCoord): integer
 ---@field z integer
 ---@field xy fun(self: TripointCoord): PointCoord
 ---@field add fun(self: TripointCoord, other: TripointCoord): TripointCoord
