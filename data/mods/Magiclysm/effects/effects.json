@@ -157,15 +157,7 @@
       "INLINE_ENCH_effect_ethereal_grasp_1",
       "INLINE_ENCH_effect_ethereal_grasp_2",
       "INLINE_ENCH_effect_ethereal_grasp_3",
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')>= 5" ] }, { "math": [ "u_ethereal_grasp_affected_level >= 15" ] } ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-5 + clamp( (u_ethereal_grasp_affected_level - 15), 0, -5) )* u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_ethereal_grasp_4"
     ]
   },
   {
