@@ -7,12 +7,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_warpextender",
-    "//": "Triggers when you eat a warp extender.  Reduces your warp buildup.",
-    "effect": [ { "math": [ "timeawayfromhome -= 5" ] }, { "run_eocs": [ "EOC_constantticking" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_WARPED_WATERWALKING",
     "effect": [
       { "u_consume_item": "warp_waterwalking_stone", "count": 1 },
