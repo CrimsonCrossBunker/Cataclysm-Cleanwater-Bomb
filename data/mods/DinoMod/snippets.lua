@@ -182,3 +182,15 @@ do
     }
     ccb.content.add(category)
 end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_notes" }
+    category:text(ccb.content.text("Research on our visitors is proceeding nicely.  The raptor DNA is of special interest, with some novel protein chains that may lead to medical breakthroughs."))
+    category:text(ccb.content.text("Research proceeds apace on our visitors.  While Operation Major Laser did not receive enough funding as hoped, our more humble bio-operator protocols were already prepared and are proceeding ahead of schedule.  The hosts are most receptive to improvement."))
+    category:text(ccb.content.text("Dr. Yoshimi has been reprimanded for unauthorized contact with the procompsignathids.  Disgusting behavior, and a terrible example to the junior researchers."))
+    category:text(ccb.content.text("Dr. Yoshimi has escaped, along with an unknown number of dinosaurs.  Unfortunately, we have bigger problems with XE037."))
+    category:text(ccb.content.text("Strange sounds have been reported from the swamp nearby.  An enhanced security team was dispatched, but has not returned in 48 hours.  The facility is on lockdown.  We can't let them get back in."))
+    category:text(ccb.content.text("Tingle lab situation normal.  Dr. Tingle believes the Acrocanthosaurus is the best fit for hybridization and the lab is working on safe methods to provide Dr. Tingle the needed material.  Velociraptor is another possibility given prior research.  Testing with chickens and the velociraptor specimens suggests some subject resistance."))
+    category:text(ccb.content.text("Tingle lab situation critical.  Dr. Tingle violated safety protocols last night and attempted to secure genetic material directly - possibly under the influence of some drug or toxin, given the anatomical impossibility and danger of the procedure.  The Acrocanthosaurus specimen has escaped into the facility."))
+    ccb.content.add(category)
+end

@@ -170,3 +170,16 @@ do
     category:text(ccb.content.text("A circle of esoteric symbols etched into the metal wall, they draw your eye with their otherworldly shapes."))
     ccb.content.add(category)
 end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_notes" }
+    category:entry {
+        id = "magiclysm_lab_1",
+        text = ccb.content.text("So I just got a message from our lead wizard liaison Jacob.  He's pretty out of it and has been blubbering for hours, but it seems like all of the central labs have been overrun.  Have the necromancers finally banded together to take us out?  What's their plan?"),
+    }
+    category:entry {
+        id = "magiclysm_lab_2",
+        text = ccb.content.text("Our increased ability to obtain novel elements via dimensional extraction techniques has allowed researchers to prototype teleporters that allow teleportation without requiring advanced spellcraft knowledge.  Our current projections also indicate that we may be able to harness this technology to offer alternative methods of establishing translocation gateways and portals that do not require the combined efforts of several archmages.  Such gateways will likely retain a vulnerability to active sabotage due to the relatively tight concentration of infrastructure, but at least would no longer run the risk of damaging priceless artifice.  Of course, we will need further testing to fully establish construction techniques and discover any potential side effects."),
+    }
+    ccb.content.add(category)
+end

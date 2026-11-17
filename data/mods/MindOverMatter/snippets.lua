@@ -1024,3 +1024,183 @@ do
     category:text(ccb.content.text("«If I were injured on a run, would they come back for me?»"))
     ccb.content.add(category)
 end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_notes" }
+    category:text(ccb.content.text("The probe brought in some crystalline samples from subplane 039XE and they've already created quite a stir.  Dr. Liu and Dr. Richardson swore that it was glowing and the other researchers that they called in to look said the same, but when they ran it through a spectrometer it didn't pick anything up.  And then when they looked at footage taken in the lab, it was just a rock.  Dr. Liu has been up all night trying to figure out what's going on."))
+    category:text(ccb.content.text("The 039XE samples are even weirder than we thought.  Dr. Richardson was running an XRF on the sample and when moving it, she picked it up and had, quote, \"a vision\".  We can verify based on security camera records that she placed the sample down and told Dr. Miller that an experiment was in progress and he would need to wait a moment before Dr. Miller even touched the intercom to request entry to the room.  When she realized what had happened, Dr. Richardson cancelled the experiment.  There's quite a buzz around here."))
+    category:text(ccb.content.text("Further testing with the 039XE samples has revealed one seems to counteract gravity to a minor extent (hard to tell how much without dropping it off a skyscraper) and one heats the air around anyone holding it an average of 3.87° C.  Based on testing it only seems to work when actually in proximity to someone; we tried putting that last one in the refrigerator and it did nothing.  We submitted a report for another dive to get more samples."))
+    category:text(ccb.content.text("The dive is still on the schedule but a probe from subplane 083XE brought back similar samples.  That's enough for Dr. Liu to take action.  He's submitted a proposal to assign a specific XEDRA division to studying these."))
+    category:text(ccb.content.text("The crystals have been dubbed XE323 in accordance with standard material naming protocols but everyone is taking after Dr. Liu and calling them \"matrix crystals\"."))
+    category:text(ccb.content.text("We got another batch of XE323 from a completely different subplane.  These things are more common than we expected."))
+    category:text(ccb.content.text("Review of probe footage shows that matrix crystals tend to be found among larger crystalline formations.  Once manned dives resume we'll need to check those crystals out in person."))
+    category:text(ccb.content.text("I feel crazy even writing this but we had a major discovery today.  One of our technicians was conducting an experiment with XE323 when she suddenly grabbed her head and yelled, alerting both the supervising researcher and nearby security.  She waved them off and then the security guard fell to the ground; later review of the footage indicated that the guard fell at the exact moment the technician waved.  We put it all in the report but the upshot is that she's a telekinetic now.\n\nShe has psychic powers.  This is not a joke.  What is happening."))
+    category:text(ccb.content.text("Obviously we've been running experiments with L61, as we've designated her, and her abilities aren't as strong as they seem to have been in those moments after the incident.  She can't knock full-grown humans off their feet anymore but she can pick up a pencil and hold it steady, in the air, in complete defiance of gravity and everything we thought we understood about physics and, frankly, how the universe works at all.  Portals at least have rules they follow, but what is this?"))
+    category:text(ccb.content.text("Dr. Liu told us that following recent developments they've authorized the formation of XEDRA-23 to study XE323 and turned over all samples of XE323 to it."))
+    category:text(ccb.content.text("In order to make our reports sound less like we're just staring at goats, we've been instructed to designate all phenomena resulting from the matrix crystals with the label \"Netherum mathematics.\"  That makes L61 our first \"mathematician.\"  Maybe they won't suddenly cut our funding if we obfuscate things that way."))
+    category:text(ccb.content.text("We have a second mathematician, this time as a result of deliberate experimentation.  We went through two dozen possible volunteers with no results other than severe headaches and time in the infirmary (apparently that first anomaly was very lucky) before we found someone who could make the matrix crystal work.  Now M81 demonstrates control over heat and fire; under controlled lab conditions he was able to increase the heat of a fire by 27.3° C simply by looking at it.  What else can these crystals do?"))
+    category:text(ccb.content.text("We're running L61 and M81 ragged with all the experiments we've been doing with them but attempts to increase the pool of candidates mostly end in failure and head pain.  We need some more systematic way of growing our number of mathematicians that's not just throwing people at the crystals and seeing if it works."))
+    category:text(ccb.content.text("Finally after dozens of failures, we have a third mathematician.  Y51 seems capable of sensing and generating electrical signals; he's been able to tell if a circuit is complete or not despite being in a pitch-black room with no external clues to the circuit's state.  I don't need to explain how consequential this ability is if he can develop it in some way; Y51 is definitely our golden boy right now."))
+    category:text(ccb.content.text("For some reason Dr. Liu has taken to referring to XEDRA-23 as \"Project PHAVIAN\".  I don't think it's an acronym but I have no idea what it means, and by this point, everyone is using it and I'm too afraid to ask about it."))
+    category:text(ccb.content.text("XEDRA-40 is planning to resume manned immersion dives in the next month and we've seconded L61 to the dive team.  We need to see what effects being in a subprime plane have on the mathematics."))
+    ccb.content.add(category)
+end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_file_photokinesis" }
+    category:entry {
+        id = "lab_file_photokinesis_01",
+        text = ccb.content.text("At 1405 during a routine CRYPTIC FORGE test, mathematician A34 reported feeling \"strange, I don't know what\" and immediately afterwards all monitoring and testing equipment ceased transmitting.  Security responded immediately and found A34 uninjured inside the testing room, though they were forced to cut through the door since the electronic lock had failed.  Subsequent investigation of network footage revealed that when attempting to radiation-sterilize various vegetables, A34 had somehow triggered an electromagnetic pulse.  When interviewed after the incident, A34 stated that, \"the energy just kept building and building and I guess it had to go somewhere.\"\n\nUnfortunately, due to the lockdowns and the prohibitive cost, as well as the disruptions it would cause other experiments and daily operations in general, any form of electromagnetic hardening is impractical.  Dr. Al-Masri has floated the possibility of attempting to train other CRYPTIC FORGE mathematicians to provide a control in case of an EMP, but at the moment, this is only theoretical as no mathematician has demonstrated the conscious abilty to produce one.  I'm sorry to say that for the moment, all we can do is hope it doesn't happen again."),
+        name = ccb.content.text("incident report: 884001"),
+        weight = 1000,
+    }
+    category:entry {
+        id = "lab_file_photokinesis_02",
+        text = ccb.content.text("How does CRYPTIC FORGE control darkness?  Darkness is not a thing, there are no \"skotons\" that they could emit to cancel out existing light, but that seems to the casual observer what is happening.\n\nB81 was instructed to cancel the light within a one-meter area in the center of the testing chamber.  The lights were extinguished and blackout curtains hung over all observation windows.  The area was first exposed to candlelight (12 lumens), showing a distinct border of the area.  A flashlight (350 lumens) was trained on the area as well, with a similar effect, though the directional light from the flashlight was sufficient to demonstrate that light did not penetrate the area.  A high-powered flashlight (6000 lumens) shown from the corner illuminated most of the testing area and clearly delineated the borders of the area, as well as casting a shadow on the wall opposite of the light source.  Finally, the blackout curtains were removed and, after instructing B81 to close their eyes, a floodlight (118K lumens) was shone on the area, again to no effect.\n\nThe initial hypothesis, that CRYPTIC FORGE is somehow suppressing or allowing photons to \"jump\" through the area, is incorrect.  Assuming that conservation of energy is still in effect (since, without assuming that we have no basis to determine anything), it is instead possible that the photons are somehow absorbed by the affected area in a way that does not inhibit movement, in the same way that space seems mostly empty but large amounts of radiation are absorbed by cosmic dust.  Unfortunate that we don't have access to a particle accelerator to test various particles' interactions with the effect.\n\nI have already submitted a proposal to test CRYPTIC FORGE's ability to block microwaves, radio waves, X-rays, and other elements of the electromagnetic spectrum, and am waiting on successful procurement of the necessary equipment.\nAdam Brenner\nResearcher"),
+        name = ccb.content.text("testing report C8-3434"),
+        weight = 1000,
+    }
+    category:entry {
+        id = "lab_file_photokinesis_03",
+        text = ccb.content.text("I'm not sure I should be writing this down but I'm definitely not putting it on the network.  Ever since the quarantine I've been able to pick up the occasional radio signal, mostly music, some news, some hobbyists.\n\nThings are a lot worse than we're being told.  I keep hearing reports from preppers on the radio talking about rioters fighting police and the military with no regard for their safety, running screaming straight into gunfire.  And the reanimations are so widespread that they're happening basically everywhere.  Neither the police nor the military can keep up.\n\nThe brass have to know about this, so why aren't they telling us?  They're trying to maintain morale?  I have to keep practicing until I can send a signal to one of those preppers, tell them what I know.  Maybe something good can come from being stuck down here."),
+        name = ccb.content.text("Note scribbled on the back of an HR memo"),
+        weight = 500,
+    }
+    category:entry {
+        id = "lab_file_photokinesis_04",
+        text = ccb.content.text("W20 entered the testing chamber with instructions to don the protective gear inside, and stand in front of the X-ray screen.  The X-ray technician performed the scan of W20's arms and when the film was processed, it showed nothing, exactly as it though it had hit a protective barrier.\n\nOur subsequent proposal to use a radium sample was immediately denied by W20, who stated they would never participate in such an experiment and left the room."),
+        name = ccb.content.text("testing report C2-8850"),
+        weight = 900,
+    }
+    ccb.content.add(category)
+end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_file_telepathy" }
+    category:entry {
+        id = "lab_file_telepathy_01",
+        text = ccb.content.text("Subject is female, of East Asian descent, age 35 years.  In good health.\n\nInitial test using standard deck of playing cards.  Subject and experimenter facing away from each other, with opaque curtain blocking line of sight.  Prompt was triggered by a light on subject's desk to prevent drawing any information from experimenter's tone of voice or word choice.  Experimenter drew ten cards and asked subject to state number and suit.  Cards are shuffled back into the deck after each guess to prevent already-drawn cards from affecting future guesses.\n\nResults: Subject guessed two of ten correct on the first test and three of ten correct on the second test, versus control who guessed a single card correct on the first test and zero correct on the second test.  Very promising initial results."),
+        name = ccb.content.text("testing report G3-6204"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_02",
+        text = ccb.content.text("During a routine visit by Dr. Davies, at 1134 a COLD BELOW mathematician diverted from their standard schedule and entered the room where Dr. Davies was being briefed about Netherum mathematics developments.  The mathematician stared at Dr. Davies for approximately three seconds and then, before security could intervene, physically attacked the doctor with their bare hands.  Witnesses report the mathematician incoherently screaming, mixed with statements such as \"You'll kill us all\" and \"Stop, stop stop\".  The mathematician continued to scream until restrained and sedated.\n\nFollow-up: COLD BELOW overseers received official reprimand and required to attend additional training.  Mathematician diverted to project SUBSTRATE."),
+        name = ccb.content.text("incident report: 897237"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_03",
+        text = ccb.content.text("I don't know if an AAR is the best way to write this but I couldn't find anything else in the procedures that fit.  I want to be reassigned.  I went through GRAY DAWN two weeks ago and back home I can occasionally pick up a sentence or two but when we went through to T38-11 it was like everyone's brain was projected onto their forehead.  Mostly fine, I went through the exercises and managed to block it out, but it didn't work for Gallagher.  I don't know how he functions with what's going through his brain.  And not just the sex stuff, fine, whatever, but that he would get enraged whenever something would go wrong.  Carvalho came back from scouting and said he didn't find anything and Gallagher literally immediately thought about just shooting him and leaving him there!  \"Fucking worthless\" was the least-offensive thing Gallagher thought about him.  I know he's calm and professional on the surface but there's something wrong with him and one day he's going to snap.  I don't want to be there when he does."),
+        name = ccb.content.text("AAR ID# T38-11"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_04",
+        text = ccb.content.text("We've been trying to find the medium that telepathy works by and have come up empty.  It works, it's replicable, that means it's amenable to the scientific method, right?  Okay.  It's not affected by gravity.  It's not affected by the atmosphere, since people in sealed rooms or environment suits can still communicate with others.  It's not affected by physical barriers, neither lead not steel nor a tinfoil hat.  It's not affected by light lag, either, so we finally have proof that FTL is possible at least for some things.  We've tried to send messages into the past but so far no luck--maybe we don't have a large enough distance between receivers?  Without an amplifier the range is still very short, so we can't do a two-way test.  We put the data into Melchior and didn't get any conclusive reply.\n\nI'll report back in two weeks as scheduled.  I refuse to throw up my hands and say \"It's magic, who knows how it works?\"  If it affects the physical world it must obey some set of physical laws."),
+        name = ccb.content.text("Project DRIVING MIST (update)"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_05",
+        text = ccb.content.text("1) Subject native Arabic speaker.  Asked to think of word sequence in English.  Mathematician successfully determined sequence word.  Asked to think of word sequence in Arabic, mathematician unable to determine word boundaries and isolate words.\n2) Subject native English speaker.  Asked to attempt to think of Chinese poem (phonetic transcription provided).  Mathematician able to isolate word on second attempt.\n3) Subject native English speaker.  Asked to think of word randomly-generated using English phonemes.  Mathematician able to isolate word on second attempt.\n4) Subject native French speaker; also fluent in German, English, and Italian with some ability in Romanian, Latin, and Russian.  Asked to think of a word sequence in Russian.  Mathematician unable to isolate sequence word despite six attempts.\n6) Subject native Yiddish speaker.  Asked to think of word in German, which the subject did not speak.  Mathematician able to isolate word on third attempt.\n7) Subject native English speaker.  Asked to think of word sequence in Sindarian, the invented language from \"The Lord of the Rings\".  Mathematician unable to isolate word despite six attempts.\n\nUnfortunately, a deficit of mathematicians who lack English fluency limits the range of our experiments.  Nonetheless, the results are consistent with there being no universal language of thought."),
+        name = ccb.content.text("testing report G2-7394"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_06",
+        text = ccb.content.text("One of the major problems with GRAY DAWN study so far is the need for either line-of-sight or extreme proximity (generally within 2 meters, though certain mathematicians have a range of up to 4 meters), limiting its value in most real-world applications.  We can hardly use GRAY DAWN for long-term communications if 4 meters is the maximum range of effective communication.  However, I am pleased to report that OS812 is successful far beyond our initial expectations.  While the construction requirements are extremely expensive, including, among other things, three active matrix crystals, it increases the range for GRAY DAWN communication up to several kilometers.  While this is still obviously too short to use for most practical purposes, it represents a very promising breakthrough over previous range limitations."),
+        name = ccb.content.text("OS812 Report"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_07",
+        text = ccb.content.text("I know this isn't part of my report but I have to write it down somewhere.  People are getting weird.  They teach us to block out stray thoughts and I used to have no trouble with it, but even since the lockdown and the news about the outbreak it's gotten so hard that I can't always do it.  Sometimes it leaks through, and lately it's all bad.  I came around a corner into a group of researchers yesterday and accidentally knocked into one.  She didn't even drop the coffee she was carrying, but just for a moment I caught her thinking about ripping my throat out with her bare hands!  She snapped out a \"Watch it!\" and kept going without even giving me time to apologize, but her mind…  And when Dr. Chen was arguing with his assistant earlier this morning, both of them thought about shooting each other.  The assistant even thought about going on a mass shooting afterwards!  I'm no therapist but I don't think this is just us being cooped up in here.  Something is really wrong."),
+        name = ccb.content.text("Handwritten notes on lined paper"),
+    }
+    category:entry {
+        id = "lab_file_telepathy_08",
+        text = ccb.content.text("At 1545 yesterday, GRAY DAWN mathematician Sylvia Ho was eating a snack in one of the break areas when Dr. Sanchez-Perez approached her and asked her if he could sit with her.  According to Sanchez-Perez, she nodded and he sat and engaged her in conversation about her day and the course of her training and participation in experiments.  Though seeming slightly distracted, Ho answered Sanchez-Perez's questions and continued as the conversation shifted toward the next Superbowl when she suddenly grabbed her lunch tray in both hands and hit Sanchez-Perez in the head with it with full force, fracturing his cheekbone.  Ho showed no reaction to Sanchez-Perez's signs of distress, continuing to eat her snack without attempting to offer first aid, and made no attempt to flee the scene.\n\nWhen questioned later, Ho said that Sanchez-Perez was \"annoying me\" and that she \"just wanted him to go away.\"  When asked why she didn't attempt to disengage from the conversation verbally, she had no response other than a shrug.\n\nDr. Sanchez-Perez, is convinced that this is a side effect of the PATIENT MOSAIC process and has suggested that Ho be examined by a member of GLASS ANVIL to determine any further undesirable effects."),
+        name = ccb.content.text("incident report: 598108"),
+        weight = 500,
+    }
+    ccb.content.add(category)
+end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_file_vitakinesis" }
+    category:entry {
+        id = "lab_file_vitakinesis_01",
+        text = ccb.content.text("Initial estimates of successful SMOKE USHER mathematicians showed increased vitality and vigor.  Testing post-awakening showed the oldest mathematician--Doreen McHugh, age 62--underwent a complete secession of her previously-diagnosed (at age 35) rheumatoid arthritis.  She is now capable of running a mile with a time of 7:12 despite minimal training, well below the average for a trained woman in her age group.  She expresses increased well-being and vitality, going for walks in the facility exercise area when before recruitment she was mostly homebound.  Furthermore, her grip strength, blood oxygen level, skin appearance, calcium levels, and muscle mass are more consistent with a woman decades younger, and most convincingly to me, the roots of her hair are coming in black instead of gray and just last week, she sent an urgent request for menstruation products for personal use.\n\nWe'll have to revise our estimates way up.  I originally thought that SMOKE USHER would provide health and vigor but the benefits would be modest, maybe 20% increased lifespan with a corresponding increase in healthy years.  Hey, living to 100 regularly would still be great, right?  But SMOKE USHER mathematicians literally getting younger means I have to throw all the initial estimates out the window.  Is SMOKE USHER the fountain of youth?  I know that sounds ridiculous but you can read the test data for yourself."),
+        name = ccb.content.text("SMOKE USHER anti-agapic properties (revised estimate)"),
+        weight = 1000,
+    }
+    -- This is a reference to Panaceus testing
+    category:entry {
+        id = "lab_file_vitakinesis_02",
+        text = ccb.content.text("Application of matrix technology and XE037 samples together with cutting-edge medical advances blah blah you know the drill.  Anyway, we sourced the samples, we synthesized the compound, we did the tests.  It's magic.  I know that sounds dumb but it's literally magic.  Animal testing showed complete remission of every cancer they developed.  \"Alright, Eric,\" you say, \"that's fine but cancer testing in animals is b̵u̵l̵l̵s̵h̵i̵t̵\"clinically irrelevant due to high real-world failure rates in humans\".  Sure, yes, you're right.  But we sourced some enthusiastic voluntolds from XEDRA-12's stock and a couple of them had cancer they were planning on testing XE037 interactions with.  Well they aren't going to anymore because XV471 cleaned them right up.  Totally healthy.  Zero cancer.\n\nSubject B84 had cystic fibrosis and it's gone.  GONE.  Perfectly normal lungs.  Now what's that other than magic?\n\nYou want to get more funding for this, just authorize selling XV471 to some sick Russian oligarch for like $10 billion.  He gets cured and the money keeps flowing.  And honestly it needs to be that expensive with how much this stuff costs to produce.  We get the materials and process them and nine times out of ten it's just a sugar pill for no damn reason I can find.  But that tenth time, wow.\n\nShred this after you read it.  I don't need the director lecturing me about professionalism again."),
+        name = ccb.content.text("Compound XV471 update"),
+        weight = 1000,
+    }
+    category:entry {
+        id = "lab_file_vitakinesis_03",
+        text = ccb.content.text("Common cold: 34 hours\n\nInfluenza: 27 hours\n\nMononucleosis: 85 hours\n\nNorovirus: 26 hours\n\nGonorrhea: 43 hours\n\nHepatitis C: 71 hours\n\nHIV: 148 hours\n\nMalaria: 112 hours\n\nSmallpox: 76 hours\n\nEbola: 93 hours"),
+        name = ccb.content.text("Treatment time until complete recovery"),
+        weight = 800,
+    }
+    category:entry {
+        id = "lab_file_vitakinesis_04",
+        text = ccb.content.text("Gentlemen, can we cure death?\n\nSorry, I had to.  Anyway, the answer is no.  We had multiple SMOKE USHER mathematicians try everything they could against a properly-restrained zombie and no luck.  The furthest we got was D93 managed to discover some way to kill zombies faster; her attempt to restart the normal biological processes caused accelerated decay and resulted in the zombie returning to an inert state after approximately thirty minutes from initial contact.  Subsequent revivification was delayed for an additional six hours.\n\nFurther testing on lab rats indicate that this ability functions on living subject as well.  I plan to start human testing once the lockdown ends and I can acquire suitable volunteers."),
+        name = ccb.content.text("Zombie Revivification"),
+        weight = 1000,
+    }
+    category:entry {
+        id = "lab_file_vitakinesis_05",
+        text = ccb.content.text("At 1804 this evening during a SMOKE USHER experiment into immune system function, mathematician N85 suddenly went into anaphylaxis.  Despite the attending physician administering epinephrine and immediate transport to the medical facility, N85 was pronounced dead of cardiac arrest at 2042 that same evening.  While investigation is ongoing, Dr. Walsh suggests some unknown stress mechanism caused by a full day of SMOKE USHER testing might have exacerbated a previously-unknown allergic sensitivity.  However, the physical before induction turned up no such sensitivity.  Further conclusions await the autopsy report."),
+        name = ccb.content.text("incident report: 667493"),
+        weight = 1000,
+    }
+    category:entry {
+        id = "lab_file_vitakinesis_06",
+        text = ccb.content.text("Dr. Richardson,\nKeeping this on the DL for obvious reasons, but my hypothesis was correct--SMOKE USHER isn't all smiles and light.  Following the experiments with revivification, I conducted some trials using D93 and M33.  D93 was able to repeat her previous performance on a mouse.  I've attached some photos, but I suggest not looking at them if you're eating lunch.  It wasn't pretty.  M33 was able to replicate the process after some coaching and demonstration by D93, so it's not unique to one mathematician.  This should probably be classified unless all our mathematicians start being able to do it.  I can just imagine the immersion teams saying that they don't want some weirdo melting them when they're referred here for treatment after a dive goes wrong.\nAgarwal Manwani\nSenior Researcher"),
+        name = ccb.content.text("SMOKE USHER offensive capabilities"),
+        weight = 500,
+    }
+    ccb.content.add(category)
+end
+
+do
+    local category = ccb.content.SnippetCategory { id = "lab_file_phavian_private" }
+    -- Hank here is Dr. Harold Liu, the director of Project PHAVIAN
+    category:entry {
+        id = "lab_file_phavian_private_01",
+        text = ccb.content.text("Dammit, Hank, what the hell is wrong with these researchers?  Matrix-powered lamp, matrix-powered car, matrix-powered oven, next they'll want a matrix-powered vibrator.  Do they even understand how expensive a single matrix crystal is?  I keep trying to get them to work on something new and they bring me this.  We need force fields, jetpacks, laser guns, lightsabers, starships, I don't know, something!  It's all I can do to stop them from trying to make us the Amazon of XEDRA.  Do the XE037 researchers have this problem?"),
+        name = ccb.content.text("Hastily-scribbled note on XEDRA stationary"),
+    }
+    -- Hank here is Dr. Harold Liu, the director of Project PHAVIAN
+    category:entry {
+        id = "lab_file_phavian_private_02",
+        text = ccb.content.text("Mo,\nI know you're worried about maintaining secrecy what with the NOBLE HORIZON/GRAY DAWN research locations, but I assure you that it's fine.  We need them higher-up to test for line-of-sight-based range anyway, and we don't have all the problems that XEDRA-12 has with maintaining secrecy.  If some normie somehow gets past security and wanders in, they're just going to see an ordinary office with maybe a few weird room layouts, there aren't going to be wolfmen wandering the halls.  The mathematicians are just people, and if some of them are creepy, we've ALL worked with the creepy guy before.  If it were really that serious of a concern, we'd be underground like the LOST RAIN guys.  And with a bunch of clears here, we'll get warning hours or days before anything goes wrong.\n\nAnd besides, look at the advantages!  There's a gym and a bar on the ground floor.  Drinks with Priya and Ishaan on Friday?  I've already checked the menu and I know there'll be something there for you.\nSridhar"),
+        name = ccb.content.text("OSHA violations"),
+    }
+    category:entry {
+        id = "lab_file_phavian_private_03",
+        text = ccb.content.text("Jen\nI know we're in lockdown but it's obvious we're doomed.  Word gets out, right?  You heard about Dr. Greene and Dr. Summers?  It's only going to get worse.  I talked to K̶3̶4̶  Erica about it and she's positive she can take someone else with her on one of her little trips.  It's not that far to the surface, right?  You with me?\nAlex"),
+        name = ccb.content.text("We're getting out of here"),
+    }
+    category:entry {
+        id = "lab_file_phavian_private_04",
+        text = ccb.content.text("A,\nI did it.  The records are all garbage now and it'll take them a week to source more, maybe longer with this lockdown.  You're free until then.  I love you.\n-C"),
+        name = ccb.content.text("Note on a post-it"),
+    }
+    category:entry {
+        id = "lab_file_phavian_private_05",
+        text = ccb.content.text("They say there's nothing to worry about, that our powers follow natural laws that can be tested and measured, but it's obvious they're lying.  I heard what happened to Amelia when she was doing some experiment and had that asthma attack.  A tragic accident, they said?  Yeah, not after I saw the aftermath of that lab test with the telekinetic.  What happens if they lose control in a crowded hallway, or if a telepath does in the lunchroom?  Are we all going to end up vegetables?\n\nI haven't used any psi since I heard, but it's so hard.  I went from getting sick 4-5 times a year to feeling like a million bucks every single day and I'm just supposed to give it up?  But what if my heart just stops?  What if someone else's heart stops because of me?  The scientists spent a year testing and measuring and now apparently none of it matters because who knows what will happen.\n\nI never should have gone through with the treatment."),
+        name = ccb.content.text("Notes on the back of a presentation printout"),
+    }
+    category:entry {
+        id = "lab_file_phavian_private_06",
+        text = ccb.content.text("C,\nJust talked to ███████ on our lunch break and he confirmed what I heard--Gaspar is real.  We all know people who have just disappeared, right?  They say they're transferred to other sites, to keep up the variety in experiments or whatever, but do they ever get transferred back?  You heard of Project Empty Mother?  Sapphire Horizon?  You know about the magi, right?  There's always three and where's the third?  They can't turn us all into meat but they're going to do it to some of us and I don't want to be one of them.  We have to get out of here.\n-A"),
+        name = ccb.content.text("You've heard the rumor, right?"),
+    }
+    category:entry {
+        id = "lab_file_phavian_private_07",
+        text = ccb.content.text("I keep feeling like something is watching me while I'm working on the engines.  Like there are shadows behind me even in a perfectly-lit room.  I've set up my phone to record and of course, nothing shows up.  But there's something.  I run the footage through frame-by-frame and there are occasional frames of pure static when I'm tinkering and I can't place exactly which part of the engine is causing it, even when I try the same thing multiple times.  The static isn't always there, but it's there often enough.  I know they put Mitchell on administrative leave after his breakdown but maybe he was on to something."),
+        name = ccb.content.text("Shadows"),
+    }
+    ccb.content.add(category)
+end
