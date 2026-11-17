@@ -3604,9 +3604,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     // Platform owns an isolated gameplay random stream backed by the runtime's
     // deterministic generator.
     sol::table random = services["random"];
-    const auto require_random_runtime = [weak]() {
+    const auto require_random_runtime = [weak]( const bool native_enchantment = false ) {
         const std::shared_ptr<runtime> owner = weak.lock();
-        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+        if( !owner || owner->callback_depth <= 0 ||
+            ( !owner->world_is_ready && !( native_enchantment && owner->native_enchantment_random ) ) ) {
             throw std::runtime_error(
                 "Platform gameplay randomness is only available inside a runtime callback" );
         }
@@ -3633,12 +3634,12 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
             throw std::invalid_argument(
                 "services.random.native_int requires an ordered range within native integer bounds" );
         }
-        static_cast<void>( require_random_runtime() );
+        static_cast<void>( require_random_runtime( true ) );
         return rng( static_cast<int>( minimum ), static_cast<int>( maximum ) );
     } );
     random.set_function( "native_float", [require_random_runtime]( const double minimum,
     const double maximum ) {
-        static_cast<void>( require_random_runtime() );
+        static_cast<void>( require_random_runtime( true ) );
         // Reuse the native distribution, reversed-range handling, diagnostics
         // and draw count instead of advancing the Mod's isolated stream.
         return rng_float( minimum, maximum );

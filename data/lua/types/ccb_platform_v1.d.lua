@@ -5449,6 +5449,11 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_overmap_terrain? table<string, boolean> Each requested search runs on access, including the actor's tile.
 ---@field temperature_kelvin? number
 
+---@class CcbEnchantmentMonsterCountQuery
+---@field radius? integer Maximum distance from the actor in map tiles. Defaults to 1000.
+---@field attitude? "hostile"|"friendly"|"both" Defaults to native non-friendly monsters.
+---@field species? string[] Restrict the count to monsters in any listed species.
+
 ---@class CcbEnchantmentCharacterInputs
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
 ---@field traits? string[] Trait IDs queried on the condition's speaker.
@@ -5473,6 +5478,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field environment? CcbEnchantmentEnvironmentInputs
 ---@field body_part_effects? table<string, string[]> Body part IDs mapped to the effect IDs to test on each part.
 ---@field spell_school_counts? string[] School IDs whose number of known spells is requested.
+---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field effects table<string, boolean>
@@ -5498,6 +5504,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field environment? CcbEnchantmentEnvironmentSnapshot
 ---@field body_part_effects? table<string, table<string, boolean>>
 ---@field spell_school_counts table<string, integer>
+---@field nearby_monsters? table<string, integer>
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
@@ -5508,6 +5515,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
 ---@field load_character_inputs? CcbEnchantmentCharacterInputs Enables activation, modifier and vision distance callbacks during save reconstruction.
+---@field native_modifier_order? boolean Invoke modifier handlers in the engine’s normal stat and damage slot order.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription
@@ -5565,6 +5573,10 @@ function CcbPlatformContent.Bionic(options) end
 ---@param options EnchantmentDefinitionOptions
 ---@return EnchantmentDefinition
 function CcbPlatformContent.Enchantment(options) end
+
+---Add or replace an enchantment in active Mod load order.
+---@param definition EnchantmentDefinition
+function CcbPlatformContent.upsert_enchantment(definition) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.EventStatistic(options) end
@@ -12495,13 +12507,13 @@ function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) en
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
----Draw through the native global game RNG. This advances the shared game random sequence.
+---Draw through the native global game RNG during a runtime or save-reconstruction enchantment modifier callback.
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
----Draw through native rng_float on the shared game RNG during an active world callback.
+---Draw through native rng_float during a runtime or save-reconstruction enchantment modifier callback.
 ---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
 ---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
 ---@param minimum number Native floating-point range endpoint.

@@ -90,6 +90,24 @@ static const json_character_flag json_flag_SEESLEEP( "SEESLEEP" );
 namespace cata::lua_platform
 {
 
+std::size_t detail::count_native_nearby_monsters( const tripoint_abs_ms &origin, const int radius,
+        const std::string_view attitude, const std::function<bool( const monster & )> &matches )
+{
+    std::size_t count = 0;
+    if( g == nullptr ) {
+        return count;
+    }
+    for( const Creature &creature : g->all_creatures() ) {
+        const monster *candidate = creature.as_monster();
+        if( candidate != nullptr && rl_dist( candidate->pos_abs(), origin ) <= radius &&
+            ( attitude == "both" || ( candidate->friendly != 0 ) == ( attitude == "friendly" ) ) &&
+            matches( *candidate ) ) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 namespace
 {
 
@@ -1025,25 +1043,12 @@ sol::table count_nearby_monsters(
         return make_game_error_result(
                    state, { "unavailable", "No active game is available" } );
     }
-    const std::vector<Creature *> matches = g->get_creatures_if(
-    [&]( const Creature & creature ) {
-        const monster *candidate = creature.as_monster();
-        if( candidate == nullptr ||
-            rl_dist( candidate->pos_abs(), native_origin ) >
-            options.radius ||
-            !nearby_monster_id_matches( *candidate, ids, kind ) ) {
-            return false;
-        }
-        if( options.attitude == "both" ) {
-            return true;
-        }
-        return options.attitude == "friendly" ?
-               candidate->friendly != 0 :
-               candidate->friendly == 0;
+    const std::size_t count = detail::count_native_nearby_monsters(
+                                  native_origin, options.radius, options.attitude,
+    [&]( const monster &candidate ) {
+        return nearby_monster_id_matches( candidate, ids, kind );
     } );
-    return make_game_value_result(
-               state, sol::make_object(
-                   state, static_cast<std::int64_t>( matches.size() ) ) );
+    return make_game_value_result( state, sol::make_object( state, static_cast<std::int64_t>( count ) ) );
 }
 
 // Mirrors conditional_t::f_has_profession (src/condition.cpp): true when the

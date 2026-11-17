@@ -41,6 +41,7 @@
 #include "item.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_creatures.h"
 #include "lua_platform_missions.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -961,6 +962,25 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         inputs["body_part_effects"] = std::move( body_part_effects );
     }
+    if( !requested.nearby_monsters.empty() ) {
+        sol::table counts = owner.lua->create_table(
+                                0, static_cast<int>( requested.nearby_monsters.size() ) );
+        for( const auto &[key, query] : requested.nearby_monsters ) {
+            std::vector<species_id> species;
+            species.reserve( query.species.size() );
+            for( const std::string &id : query.species ) {
+                species.emplace_back( id );
+            }
+            counts[key] = speaker ? count_native_nearby_monsters(
+            speaker->pos_abs(), query.radius, query.attitude, [&]( const monster &candidate ) {
+                return species.empty() || std::any_of( species.begin(), species.end(),
+                [&]( const species_id & id ) {
+                    return candidate.in_species( id );
+                } );
+            } ) : 0;
+        }
+        inputs["nearby_monsters"] = std::move( counts );
+    }
     inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
                                     requested.character_variables );
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
@@ -1146,7 +1166,7 @@ std::optional<double> invoke_enchantment_number_handler(
                                       *load_character_inputs );
     }
     sol::protected_function callback = handler->second.callback;
-    callback_scope callback_guard( *owner );
+    callback_scope callback_guard( *owner, load_inputs );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );

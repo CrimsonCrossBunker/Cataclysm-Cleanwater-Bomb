@@ -22,10 +22,12 @@
 #include "lua_platform_loader.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "npc.h"
 #include "point.h"
 #include "recipe.h"
 #include "ret_val.h"
+#include "rng.h"
 #include "stomach.h"
 #include "talker.h"
 #include "type_id.h"
@@ -50,6 +52,7 @@
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "mapdata.h"
+#include "monster.h"
 #include "mtype.h"
 #include "npc_class.h"
 #include "options_helpers.h"
@@ -667,6 +670,156 @@ ccb.content.add(ccb.content.Enchantment {
     REQUIRE( learned.get_vision_can_see( vision ) );
     CHECK( vision.range == 3 );
     CHECK( learned.get_vision_description_struct( vision, dialogue ).id == "medium" );
+}
+
+TEST_CASE( "lua_first_enchantment_native_modifier_order_matches_the_game_rng",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_native_random_enchantment" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+local random = ccb.services.random
+ccb.runtime.handler("roll_resistance", function(ctx)
+    assert(ctx.speaker == nil)
+    return -random.native_int(0, 3)
+end)
+ccb.runtime.handler("roll_evasion", function()
+    return random.native_int(0, 5) * 0.01
+end)
+ccb.runtime.handler("roll_regeneration", function()
+    return random.native_float(-2, -5)
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "lua_test_enchantment_native_order",
+    native_modifier_order = true,
+    load_character_inputs = {},
+}
+    :incoming_damage("cut", { add_handler = "roll_resistance" })
+    :value("EVASION", { add_handler = "roll_evasion" })
+    :value("REGEN_HP", { multiply_handler = "roll_regeneration" })
+    :incoming_damage("bash", { add_handler = "roll_resistance" })
+    :value("PAIN", { add_handler = "roll_resistance" }))
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_native_random_enchantment" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const enchantment_id id( "lua_test_enchantment_native_order" );
+    REQUIRE( id.is_valid() );
+    npc subject;
+    const restore_on_out_of_scope restore_rng( rng_get_engine() );
+    rng_set_engine_seed( 70731 );
+    const cata_default_random_engine start = rng_get_engine();
+    const int expected_pain = -rng( 0, 3 );
+    const double expected_evasion = rng( 0, 5 ) * 0.01;
+    const double expected_regeneration = rng_float( -2, -5 );
+    std::map<damage_type_id, int> armor{ { damage_bash, 0 }, { damage_cut, 0 } };
+    for( auto &[type, value] : armor ) {
+        value = -rng( 0, 3 );
+    }
+    const cata_default_random_engine after = rng_get_engine();
+
+    rng_get_engine() = start;
+    enchant_cache cache;
+    cache.force_add( id.obj(), subject );
+    CHECK( cache.get_value_add( enchant_vals::mod::PAIN ) == expected_pain );
+    CHECK( cache.get_value_add( enchant_vals::mod::EVASION ) == expected_evasion );
+    CHECK( cache.get_value_multiply( enchant_vals::mod::REGEN_HP ) == expected_regeneration );
+    for( const auto &[type, value] : armor ) {
+        CHECK( cache.get_armor_add( type ) == value );
+    }
+    CHECK( rng_get_engine() == after );
+}
+
+TEST_CASE( "lua_first_enchantment_counts_nearby_monsters_while_loading",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+        clear_map();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_enchantment_nearby" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("count_nearby", function(ctx)
+    assert(ctx.speaker == nil)
+    local counts = ctx.character_inputs.nearby_monsters
+    return 10 * counts.hostiles + counts.zombies
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "lua_test_enchantment_nearby",
+    load_character_inputs = { nearby_monsters = {
+        hostiles = { radius = 2 },
+        zombies = { radius = 2, attitude = "both", species = { "ZOMBIE" } },
+    } },
+}:value("SPEED", { add_handler = "count_nearby" }))
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_enchantment_nearby" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    npc subject;
+    const tripoint_bub_ms origin( 60, 60, 0 );
+    subject.setpos( get_map(), origin, false );
+    spawn_test_monster( "mon_zombie", origin + tripoint::east ).friendly = 0;
+    spawn_test_monster( "mon_zombie", origin + tripoint( 2, 0, 0 ) ).friendly = 1;
+    spawn_test_monster( "mon_zombie", origin + tripoint( 3, 0, 0 ) ).friendly = 0;
+    spawn_test_monster( "mon_dog", origin + tripoint::north ).friendly = 1;
+    const enchantment_id id( "lua_test_enchantment_nearby" );
+    REQUIRE( id.is_valid() );
+    enchant_cache cache;
+    cache.force_add( id.obj(), subject );
+    CHECK( cache.get_value_add( enchant_vals::mod::SPEED ) == 12 );
+}
+
+TEST_CASE( "lua_first_enchantment_upsert_uses_active_mod_order",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cuisine_test_mod first( "ccb_platform_enchantment_order_first" );
+    cuisine_test_mod second( "ccb_platform_enchantment_order_second" );
+    const auto write = []( const cuisine_test_mod &mod, const int amount ) {
+        mod.write( std::filesystem::u8path( "main.lua" ),
+                   "local c = require('ccb').content\n"
+                   "c.upsert_enchantment(c.Enchantment { id = 'lua_test_enchantment_upsert' }"
+                   ":value('STRENGTH', { add = " + std::to_string( amount ) + " }))\n" );
+    };
+    write( first, 1 );
+    write( second, 2 );
+    const bool reversed = GENERATE( false, true );
+    auto sources = std::vector<cata::lua_platform::mod_source>{
+        first.source( "ccb_platform_enchantment_order_first" ),
+        second.source( "ccb_platform_enchantment_order_second" ),
+    };
+    if( reversed ) {
+        std::swap( sources[0], sources[1] );
+    }
+    const enchantment_id id( "lua_test_enchantment_upsert" );
+    REQUIRE_FALSE( id.is_valid() );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods( sources, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    REQUIRE( id.is_valid() );
+    npc subject;
+    CHECK( id->get_value_add( enchant_vals::mod::STRENGTH, subject ) == ( reversed ? 1 : 2 ) );
+    cata::lua_platform::discard_prepared_mods();
+    CHECK_FALSE( id.is_valid() );
 }
 
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",
