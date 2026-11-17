@@ -147,38 +147,6 @@
     ]
   },
   {
-    "id": "ench_quadruped_movement_full",
-    "//": "For quadrupeds with all four of their animal limbs.  We should avoid giving this to every animal mutant, as it helps keep lines distinct.",
-    "type": "enchantment",
-    "condition": {
-      "and": [
-        { "u_has_flag": "QUADRUPED_CROUCH" },
-        { "u_has_flag": "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" },
-        { "u_has_flag": "QUADRUPED_RUN" },
-        { "or": [ { "u_has_move_mode": "crouch" }, { "u_has_move_mode": "run" } ] },
-        { "not": "u_can_drop_weapon" }
-      ]
-    },
-    "values": [ { "value": "MOVE_COST", "multiply": -0.15 }, { "value": "CARRY_WEIGHT", "multiply": 0.35 } ],
-    "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-  },
-  {
-    "id": "ench_quadruped_movement_half",
-    "//": "For quadrupeds who only have their front paws.  Makes crouch-walking a bit faster, but that's all.",
-    "type": "enchantment",
-    "condition": {
-      "and": [
-        { "u_has_flag": "QUADRUPED_CROUCH" },
-        { "u_has_flag": "THRESH_ALLOWS_QUADRUPEDAL_MOVEMENT" },
-        { "not": { "u_has_flag": "QUADRUPED_RUN" } },
-        { "u_has_move_mode": "crouch" },
-        { "not": "u_can_drop_weapon" }
-      ]
-    },
-    "values": [ { "value": "MOVE_COST", "multiply": -0.5 } ],
-    "ench_effects": [ { "effect": "quadruped_half", "intensity": 1 } ]
-  },
-  {
     "//": "This is overwritten in MoM",
     "id": "ench_mom_incense_nether_attunement",
     "type": "enchantment",
