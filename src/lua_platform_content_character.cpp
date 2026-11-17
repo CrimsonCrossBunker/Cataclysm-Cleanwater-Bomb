@@ -2549,8 +2549,37 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 ids( *activation, "species" ), ids( *activation, "wielded_skills" ),
                 ids( *activation, "wielded_categories" ), ids( *activation, "wielded_ammunition" ),
                 ids( *activation, "encumbrance" ), activation->get_or( "identity", false ),
-                activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}
+                activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}, {}, {}
             };
+            if( const auto defaults = activation->get<sol::optional<sol::table>>( "global_variable_defaults" ) ) {
+                auto &inputs = *definition->load_character_inputs;
+                for( const auto &[key, raw] : *defaults ) {
+                    if( key.get_type() != sol::type::string || !raw.is<double>() || !std::isfinite( raw.as<double>() ) ) {
+                        throw std::runtime_error( "global_variable_defaults requires variable names and finite numbers" );
+                    }
+                    const std::string name = key.as<std::string>();
+                    inputs.global_variable_defaults.emplace( name, raw.as<double>() );
+                    if( std::find( inputs.global_variables.begin(), inputs.global_variables.end(), name ) == inputs.global_variables.end() ) {
+                        inputs.global_variables.push_back( name );
+                    }
+                }
+            }
+            if( const auto queries = activation->get<sol::optional<sol::table>>( "calorie_history" ) ) {
+                for( const auto &[key, raw] : *queries ) {
+                    if( key.get_type() != sol::type::string || !raw.is<sol::table>() ) {
+                        throw std::runtime_error( "calorie_history requires names and query tables" );
+                    }
+                    const sol::table query = raw.as<sol::table>();
+                    const std::int64_t day = query.get_or<std::int64_t>( "day", 0 );
+                    const std::string kind = query.get_or( "kind", std::string( "total" ) );
+                    if( day < 0 || !fits_native_int( day ) || ( kind != "total" && kind != "spent" &&
+                            kind != "gained" && kind != "ingested" ) ) {
+                        throw std::runtime_error( "calorie_history has an invalid day or kind" );
+                    }
+                    definition->load_character_inputs->calorie_history.emplace( key.as<std::string>(),
+                            detail::enchantment_calorie_query{ static_cast<int>( day ), kind } );
+                }
+            }
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_characters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
                     if( key.get_type() != sol::type::string || !raw.is<sol::table>() ) {
@@ -2617,6 +2646,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 inputs.moon_phase = environment->get_or( "moon_phase", false );
                 inputs.turns_since_midnight = environment->get_or( "turns_since_midnight", false );
                 inputs.temperature_fahrenheit = environment->get_or( "temperature_fahrenheit", false );
+                inputs.furniture = environment->get_or( "furniture", false );
+                inputs.faction_camp = environment->get_or( "faction_camp", false );
                 if( const auto nearby = environment->get<sol::optional<sol::table>>( "nearby_overmap_terrain" ) ) {
                     for( const auto &[key, value] : *nearby ) {
                         if( key.get_type() != sol::type::string || !value.is<lua_Integer>() ) {
@@ -4356,6 +4387,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
+                }
+                for( const auto &request : inputs.calorie_history ) {
+                    require_valid_id( request.first, "enchantment calorie history request" );
                 }
                 for( const auto &request : inputs.nearby_characters ) {
                     require_valid_id( request.first, "enchantment nearby character request" );
@@ -7678,6 +7712,19 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "hit_points", value.load_character_inputs->hit_points );
                     hash_ids( "max_hit_points", value.load_character_inputs->max_hit_points );
                     hash_ids( "known_proficiencies", value.load_character_inputs->known_proficiencies );
+                    hash_part( state, std::to_string( value.load_character_inputs->global_variable_defaults.size() ) );
+                    for( const auto &[key, fallback] : value.load_character_inputs->global_variable_defaults ) {
+                        hash_part( state, key );
+                        std::ostringstream number;
+                        number << std::hexfloat << fallback;
+                        hash_part( state, number.str() );
+                    }
+                    hash_part( state, std::to_string( value.load_character_inputs->calorie_history.size() ) );
+                    for( const auto &[name, query] : value.load_character_inputs->calorie_history ) {
+                        hash_part( state, name );
+                        hash_part( state, std::to_string( query.day ) );
+                        hash_part( state, query.kind );
+                    }
                     hash_ids( "species", value.load_character_inputs->species );
                     hash_ids( "wielded_skills", value.load_character_inputs->wielded_skills );
                     hash_ids( "wielded_categories", value.load_character_inputs->wielded_categories );
@@ -7752,6 +7799,8 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, environment->moon_phase ? "moon_phase" : "no_moon_phase" );
                         hash_part( state, environment->turns_since_midnight ? "turns_since_midnight" : "no_turns_since_midnight" );
                         hash_part( state, environment->temperature_fahrenheit ? "temperature_fahrenheit" : "no_temperature_fahrenheit" );
+                        hash_part( state, environment->furniture ? "furniture" : "no_furniture" );
+                        hash_part( state, environment->faction_camp ? "faction_camp" : "no_faction_camp" );
                     }
                 }
                 hash_part( state, value.emitter );

@@ -5426,6 +5426,8 @@ local WidgetDefinition = {}
 function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentEnvironmentInputs
+---@field furniture? boolean Request the actor's local furniture ID.
+---@field faction_camp? boolean Test for a native camp at the actor's overmap XY position, including legacy camp terrain.
 ---@field moon_phase? boolean Request the native lunar phase.
 ---@field turns_since_midnight? boolean Request elapsed native turns since midnight.
 ---@field temperature_fahrenheit? boolean Request weather temperature converted through the native Kelvin-to-Fahrenheit path.
@@ -5444,6 +5446,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
 
 ---@class CcbEnchantmentEnvironmentSnapshot
+---@field furniture? string
+---@field faction_camp? boolean Queried lazily at the actor's captured overmap position.
 ---@field moon_phase? integer Native lunar phase from 0 (new moon) through 7 (waning crescent).
 ---@field turns_since_midnight? integer
 ---@field temperature_fahrenheit? number
@@ -5472,7 +5476,13 @@ function CcbPlatformContent.Bionic(options) end
 ---@field attitude? "any"|"allies"|"not_allies"|"hostile" Defaults to any. The speaker is excluded by character ID.
 ---@field allow_hallucinations? boolean Defaults to false. A non-character speaker only applies this filter.
 
+---@class CcbEnchantmentCalorieQuery
+---@field day? integer Nonnegative days ago; defaults to zero (today).
+---@field kind? "total"|"spent"|"gained"|"ingested" Defaults to total.
+
 ---@class CcbEnchantmentCharacterInputs
+---@field global_variable_defaults? table<string, number> Finite fallbacks for absent world variables. Present values, including zero, retain their value.
+---@field calorie_history? table<string, CcbEnchantmentCalorieQuery> Native calorie diary reads keyed by name. Non-avatar speakers return zero.
 ---@field species? string[] Native species membership to query on the speaker.
 ---@field wielded_skills? string[] Skills tested against the speaker's wielded weapon.
 ---@field wielded_categories? string[] Weapon categories tested against the speaker's wielded weapon.
@@ -5521,6 +5531,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field calorie_history? table<string, integer>
 ---@field species table<string, boolean>
 ---@field wielded_skills table<string, boolean>
 ---@field wielded_categories table<string, boolean>

@@ -756,7 +756,8 @@ static sol::table enchantment_handler_payload( runtime &owner,
 }
 
 static sol::table capture_enchantment_numbers( sol::state &lua, const const_dialogue &dialogue,
-        const var_type scope, const std::vector<std::string> &keys )
+        const var_type scope, const std::vector<std::string> &keys,
+        const std::map<std::string, double> &defaults = {} )
 {
     sol::table values = lua.create_table( 0, static_cast<int>( keys.size() ) );
     std::map<std::string, diag_value> legacy;
@@ -764,7 +765,8 @@ static sol::table capture_enchantment_numbers( sol::state &lua, const const_dial
     for( const std::string &key : keys ) {
         const diag_value *const value = maybe_read_var_value( var_info( scope, key ), dialogue );
         if( !value ) {
-            values[key] = 0.0;
+            const auto fallback = defaults.find( key );
+            values[key] = fallback == defaults.end() ? 0.0 : fallback->second;
         } else if( std::holds_alternative<diag_value::legacy_value>( value->data ) ) {
             legacy.emplace( key, *value );
         } else {
@@ -835,12 +837,15 @@ static sol::table collect_enchantment_environment( sol::state &lua, const const_
         const Creature *creature = speaker.get_const_creature();
         environment["outside"] = creature && is_creature_outside( *creature );
     }
-    if( requested.divable || requested.terrain || !requested.terrain_flags.empty() ||
+    if( requested.divable || requested.terrain || requested.furniture || !requested.terrain_flags.empty() ||
         !requested.fields.empty() ) {
         const map &here = get_map();
         const tripoint_bub_ms local_pos = speaker.pos_bub( here );
         if( requested.divable ) {
             environment["divable"] = here.is_divable( local_pos );
+        }
+        if( requested.furniture ) {
+            environment["furniture"] = here.furn( local_pos ).id().str();
         }
         if( requested.terrain || !requested.terrain_flags.empty() ) {
             const ter_id tile = here.ter( local_pos );
@@ -862,22 +867,31 @@ static sol::table collect_enchantment_environment( sol::state &lua, const const_
             environment["fields"] = std::move( fields );
         }
     }
-    if( !requested.overmap_terrain && requested.nearby_overmap_terrain.empty() ) {
+    if( !requested.overmap_terrain && !requested.faction_camp && requested.nearby_overmap_terrain.empty() ) {
         return environment;
     }
     const tripoint_abs_omt overmap_pos = speaker.pos_abs_omt();
     const std::size_t world = runtime_world_generation_storage();
     // A lookup can generate an overmap. Do it only when the Lua condition
     // actually reads the operand, and keep the original actor position.
-    if( requested.overmap_terrain ) {
+    if( requested.overmap_terrain || requested.faction_camp ) {
         sol::table meta = lua.create_table();
-        meta.set_function( "__index", [overmap_pos, world]( sol::this_state state, const sol::table &,
-        const std::string & key ) -> sol::object {
-            if( key != "overmap_terrain" || runtime_world_generation_storage() != world ) {
+        meta.set_function( "__index", [overmap_pos, world, terrain = requested.overmap_terrain,
+                           camp = requested.faction_camp]( sol::this_state state, const sol::table &,
+        const std::string &key ) -> sol::object {
+            if( runtime_world_generation_storage() != world ) {
                 return sol::make_object( state, sol::nil );
             }
-            return sol::make_object( state, std::string( oter_no_dir_or_connections(
-                                         overmap_buffer.ter( overmap_pos ) ) ) );
+            if( terrain && key == "overmap_terrain" ) {
+                return sol::make_object( state, std::string( oter_no_dir_or_connections(
+                                             overmap_buffer.ter( overmap_pos ) ) ) );
+            }
+            if( camp && key == "faction_camp" ) {
+                const std::string id = overmap_buffer.ter( overmap_pos ).id().str();
+                return sol::make_object( state, overmap_buffer.find_camp( overmap_pos.xy() ).has_value() ||
+                                         id.find( "faction_base_camp" ) != std::string::npos );
+            }
+            return sol::make_object( state, sol::nil );
         } );
         environment[sol::metatable_key] = meta;
     }
@@ -1123,7 +1137,14 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
                                     requested.character_variables );
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
-                                 requested.global_variables );
+                                 requested.global_variables, requested.global_variable_defaults );
+    if( !requested.calorie_history.empty() ) {
+        sol::table values = owner.lua->create_table();
+        for( const auto &[name, query] : requested.calorie_history ) {
+            values[name] = speaker ? speaker->get_daily_calories( query.day, query.kind ) : 0;
+        }
+        inputs["calorie_history"] = std::move( values );
+    }
     if( speaker ) {
         if( requested.identity ) {
             const Character *character = speaker->get_const_character();
