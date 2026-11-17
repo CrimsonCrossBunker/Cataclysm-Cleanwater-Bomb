@@ -7,11 +7,7 @@
     "category": "clothing",
     "name": { "str": "5-point anchor" },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_dimensional_anchor_0" }
     ],
     "extend": { "flags": [ "MUNDANE" ] }
   },
@@ -23,11 +19,7 @@
     "category": "clothing",
     "name": { "str": "5-point anchor (on)", "str_pl": "5-point anchors (on)" },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_dimensional_anchor_on_0" }
     ],
     "extend": { "flags": [ "MUNDANE" ] }
   },
@@ -37,11 +29,7 @@
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_robofac_armor_anchor_0" }
     ],
     "extend": { "flags": [ "MUNDANE" ] }
   },
@@ -51,11 +39,7 @@
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_robofac_armor_anchor_on_0" }
     ],
     "extend": { "flags": [ "MUNDANE" ] }
   }

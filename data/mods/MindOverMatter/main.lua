@@ -126,3 +126,5 @@ require("body_enchantments")
 require("contextual_enchantments")
 
 require("bionic_enchantments")
+
+require("item_enchantments")

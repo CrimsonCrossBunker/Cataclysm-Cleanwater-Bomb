@@ -17,11 +17,7 @@
     "flags": [ "DIMENSIONAL_ANCHOR", "PADDED" ],
     "armor": [ { "encumbrance": 1, "coverage": 20, "covers": [ "head" ], "specifically_covers": [ "head_crown" ] } ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_psionic_anchoring_crown_0" }
     ]
   },
   {
@@ -44,12 +40,7 @@
     ],
     "flags": [ "PADDED", "PORTAL_PROOF" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_psi_dimensionally_anchored", "intensity": 1 } ],
-        "incoming_damage_mod": [ { "type": "psi_telepathic_damage", "multiply": -1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_psionic_telepathic_dampener_0" }
     ]
   },
   {
@@ -90,17 +81,7 @@
     "faults": [ { "fault_group": "electronic_general" } ],
     "tool_ammo": "battery",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "condition": { "test_eoc": "EOC_CONDITION_HAS_MIND" },
-            "distance": 20,
-            "descriptions": [ { "id": "sense_minds", "symbol": "?", "color": "c_white", "text": "You sense a sapient mind here." } ]
-          }
-        ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_psionic_mindsight_glasses_0" }
     ]
   },
   {

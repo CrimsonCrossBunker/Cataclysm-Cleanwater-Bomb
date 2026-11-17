@@ -240,7 +240,7 @@
       { "id": "nvg_great" },
       { "id": "THERMAL_VISION_GOOD" },
       { "id": "ench_mom_fifth_sun_targeting_assistance" },
-      { "condition": "ACTIVE", "incoming_damage_mod": [ { "type": "psi_telepathic_damage", "multiply": -0.33 } ] }
+      { "id": "ITEM_ENCH_MindOverMatter_mom_fifth_sun_eagle_tac_helmet_3" }
     ],
     "armor": [
       { "encumbrance_modifiers": [ "WELL_SUPPORTED" ], "coverage": 100, "covers": [ "head" ] },
@@ -342,23 +342,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "name": "Ehēcatepantli Barrier",
-        "description": "The air around you has a faint shimmer.",
-        "ench_effects": [
-          { "effect": "effect_shield_belt_telekin_protection", "intensity": 1 },
-          { "effect": "effect_mom_fall_one_story", "intensity": 1 }
-        ],
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -8 },
-          { "type": "stab", "add": -20 },
-          { "type": "cut", "add": -15 },
-          { "type": "bullet", "add": -40 },
-          { "type": "electric", "add": -4 }
-        ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_mom_fifth_sun_standard_body_armor_0" }
     ],
     "flags": [ "VARSIZE", "STURDY", "MUNDANE", "OUTER", "NO_REPAIR", "FIFTH_SUN_TECHNOLOGY" ]
   },
@@ -401,22 +385,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "name": "Shimmering air",
-        "description": "The air around you has a faint shimmer.",
-        "ench_effects": [
-          { "effect": "effect_shield_belt_telekin_protection", "intensity": 1 },
-          { "effect": "effect_mom_fall_one_story", "intensity": 1 }
-        ],
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -8 },
-          { "type": "stab", "add": -20 },
-          { "type": "cut", "add": -15 },
-          { "type": "bullet", "add": -40 }
-        ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_mom_fifth_sun_standard_body_armor_non_fifth_sun_0" }
     ]
   },
   {

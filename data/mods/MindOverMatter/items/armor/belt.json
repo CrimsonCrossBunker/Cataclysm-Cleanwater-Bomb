@@ -47,19 +47,7 @@
     ],
     "tool_ammo": [ "battery" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "name": "Active Shield Belt",
-        "description": "The air around you has a faint shimmer.",
-        "ench_effects": [ { "effect": "effect_shield_belt_telekin_protection", "intensity": 1 } ],
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -8 },
-          { "type": "stab", "add": -20 },
-          { "type": "cut", "add": -15 },
-          { "type": "bullet", "add": -40 }
-        ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_psionic_shield_belt_0" }
     ]
   },
   {
@@ -130,15 +118,7 @@
     ],
     "tool_ammo": [ "battery" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "name": "Active Suppression Belt",
-        "description": "The air around you feels cool.",
-        "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ],
-        "ench_effects": [ { "effect": "effect_suppression_belt_fire_protection", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_psionic_fire_shield_belt_0" }
     ]
   },
   {
