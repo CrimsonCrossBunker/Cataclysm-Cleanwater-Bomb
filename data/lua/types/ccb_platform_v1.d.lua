@@ -8676,6 +8676,12 @@ local CcbSpellsApi = {}
 ---@return CcbResult result `value` is the Native effective level.
 function CcbSpellsApi.effective_level(character, raw_spell_id) end
 
+---Forget a known spell through native level removal.
+---@param character GameHandle Exact live Character handle.
+---@param spell GameId GameId<spell>.
+---@return CcbResult result `value` contains the forgotten snapshot and whether the spell is still known. Unknown spells return not_known.
+function CcbSpellsApi.forget(character, spell) end
+
 ---@class CcbRelocationMoveOptions
 ---@field strict? true Strict mode; when supplied it must be `true`. This is the only accepted option; force and fallback policies are unsupported.
 
@@ -9855,7 +9861,7 @@ function CcbVehiclesApi.open_part_service(vehicle, mechanic, repair_multiplier, 
 ---@field limit integer Page size, bounded to 256.
 ---@field returned integer Number of snapshots in this page.
 ---@field has_more boolean Whether a later native-vector page exists; callers must continue while true to inspect every mission.
----@field owner GameHandle Exact avatar owner used for the query.
+---@field owner GameHandle Exact Character owner used for the query.
 
 ---@class CcbMissionMutation
 ---@field before? CcbMissionSnapshot
@@ -9881,7 +9887,7 @@ function CcbMissionsApi.definition(id) end
 ---@param options? CcbMissionQueryOptions `offset`, `limit`, and `status`.
 ---@return CcbMissionPage
 function CcbMissionsApi.list(owner, options) end
----@param owner GameHandle Exact avatar owner; results preserve native active-vector order.
+---@param owner GameHandle Exact live Character owner; results preserve native active-vector order.
 ---@param options? CcbMissionActiveOptions `offset` and `limit`; continue through `has_more` to inspect every instance.
 ---@return CcbMissionActivePage
 function CcbMissionsApi.active(owner, options) end
@@ -9939,7 +9945,7 @@ function CcbMissionsApi.fail(owner, token) end
 ---@param force? boolean Explicit completion override.
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.complete(owner, token, force) end
----@param owner GameHandle Exact avatar owner.
+---@param owner GameHandle Exact live Character owner.
 ---@param token MissionToken Exact active mission instance.
 ---@return CcbResult result `value` is a CcbMissionMutation; wraps up without querying goal completion, like native finish_mission success.
 function CcbMissionsApi.finish(owner, token) end

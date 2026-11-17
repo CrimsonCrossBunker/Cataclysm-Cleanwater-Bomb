@@ -13,6 +13,7 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "faction.h"
 #include "flag.h"
 #include "game.h"
 #include "global_vars.h"
@@ -29,6 +30,7 @@
 #include "mattack_actors.h"
 #include "math_parser_diag_value.h"
 #include "messages.h"
+#include "mission.h"
 #include "monster.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -345,6 +347,128 @@ TEST_CASE( "xedra_lua_living_blood_through_item_and_dialogue", "[.][mods][xedra_
         REQUIRE( conversation.responses.size() == 2 );
         CHECK( conversation.responses.front().success.next_topic.id ==
                ( friend_donor ? "TALK_NONE" : "TALK_FRIEND" ) );
+        cata::lua_platform::end_dialogue_session( conversation );
+    }
+}
+
+TEST_CASE( "xedra_vampire_ascension_uses_native_kill_and_dialogue", "[.][mods][xedra_evolved]" )
+{
+    clear_avatar();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        Messages::clear_messages();
+        clear_npcs();
+        clear_avatar();
+        mission::clear_all();
+    } );
+    cata::lua_platform::runtime_world_ready( true );
+    avatar &player = get_avatar();
+    player.reset_all_missions();
+    mission::clear_all();
+    const trait_id third( "VAMPIRE3" );
+    const trait_id fourth( "VAMPIRE4" );
+    const trait_id fifth( "BLOOD_DRINKER" );
+    const trait_id vegan( "VEGAN" );
+    const trait_id psychopath( "PSYCHOPATH" );
+    const std::string morality( "shed_morality" );
+
+    const auto create_mission = []( Character &owner, const mission_type_id &type ) {
+        mission *entry = mission::reserve_new( type, character_id() );
+        REQUIRE( entry != nullptr );
+        entry->assign( owner );
+        REQUIRE( entry->in_progress() );
+        return entry;
+    };
+    const auto weakness_count = []( const Character &character ) {
+        const auto present = character.get_mutations();
+        return std::count_if( present.begin(), present.end(), []( const trait_id &trait ) {
+            return trait.str().compare( 0, 17, "VAMPIRE_WEAKNESS_" ) == 0;
+        } );
+    };
+
+    SECTION( "a qualifying kill finishes only the first matching native mission" ) {
+        npc &other = spawn_npc( player.pos_bub().xy() + point::east, "test_talker" );
+        REQUIRE( g->find_npc( other.getID() ) == &other );
+        Character &owner = GENERATE( false, true ) ? static_cast<Character &>( other ) : player;
+        CAPTURE( owner.is_avatar() );
+        const mission_type_id mission_type( "KILL_YOUR_BEST_FRIEND" );
+        mission *first = create_mission( owner, mission_type );
+        mission *second = create_mission( owner, mission_type );
+        faction *hunters = g->faction_manager_ptr->get( faction_id( "vampire_hunters" ), false );
+        REQUIRE( hunters != nullptr );
+        const restore_on_out_of_scope restore_likes( hunters->likes_u );
+        const restore_on_out_of_scope restore_respects( hunters->respects_u );
+        const restore_on_out_of_scope restore_trusts( hunters->trusts_u );
+
+        const trait_id dreamsmith( "DREAMSMITH" );
+        const trait_id werewolf( "WEREWOLF_SPELLS" );
+        const recipe_id research( "inventor_research_base_2" );
+        const spell_id forgotten( "changeling_summer_light_spell" );
+        const efftype_id sacrifice( "about_to_kill_best_friend" );
+        const efftype_id ascendant( "vampire_virus_ascendant" );
+        REQUIRE( research.is_valid() );
+        REQUIRE( forgotten.is_valid() );
+        owner.set_mutation( third );
+        owner.set_mutation( vegan );
+        owner.set_mutation( dreamsmith );
+        owner.set_mutation( werewolf );
+        owner.learn_recipe( &research.obj() );
+        owner.magic->set_spell_level( forgotten, 1, &owner );
+        REQUIRE( owner.magic->knows_spell( forgotten ) );
+
+        const auto kill = [&]() {
+            get_event_bus().send<event_type::character_kills_character>(
+                owner.getID(), character_id( 98765 ), "Sacrifice", "test_talker" );
+        };
+        kill();
+        CHECK( first->in_progress() );
+        CHECK_FALSE( owner.has_trait( fourth ) );
+        owner.add_effect( sacrifice, 1_hours );
+        rng_set_engine_seed( 70731 );
+        kill();
+        CHECK( first->has_succeeded() );
+        CHECK( second->in_progress() );
+        CHECK( owner.has_trait( fourth ) );
+        CHECK( weakness_count( owner ) == 1 );
+        CHECK_FALSE( owner.has_trait( vegan ) );
+        CHECK( owner.has_trait( psychopath ) );
+        CHECK( owner.get_value( morality ).dbl() == 1.0 );
+        CHECK_FALSE( owner.has_trait( dreamsmith ) );
+        CHECK( owner.has_trait( trait_id( "DREAMLESS" ) ) );
+        CHECK_FALSE( owner.has_trait( werewolf ) );
+        CHECK_FALSE( owner.knows_recipe( &research.obj() ) );
+        CHECK_FALSE( owner.magic->knows_spell( forgotten ) );
+        CHECK( hunters->likes_u == -100 );
+        CHECK( hunters->respects_u == -100 );
+        CHECK( hunters->trusts_u == -100 );
+        CHECK( owner.get_effect( ascendant ).get_intensity() == 1 );
+        CHECK( owner.get_effect( ascendant ).is_permanent() );
+    }
+
+    SECTION( "drinking the mentor's potion completes the component mission" ) {
+        player.set_mutation( fourth );
+        player.set_mutation( vegan );
+        mission *components = create_mission( player, mission_type_id( "GET_COMPONENTS_FOR_TIER_5" ) );
+        npc mentor;
+        mentor.normalize();
+        mentor.setID( character_id( 2720 ), true );
+        dialogue conversation( get_talker_for( player ), get_talker_for( mentor ) );
+        cata::lua_platform::begin_dialogue_session( conversation );
+        conversation.gen_responses( talk_topic( "TALK_VAMPIRE_MENTOR_MAKE_TIER_5" ) );
+        REQUIRE( conversation.responses.size() == 1 );
+        rng_set_engine_seed( 70731 );
+        const auto next = conversation.select_response( 0, conversation.response_revision() );
+        REQUIRE( next );
+        CHECK( next->id == "TALK_VAMPIRE_MENTOR_BECAME_TIER_5" );
+        CHECK( components->has_succeeded() );
+        CHECK( player.has_trait( fifth ) );
+        CHECK( weakness_count( player ) == 2 );
+        CHECK_FALSE( player.has_trait( vegan ) );
+        CHECK( player.has_trait( psychopath ) );
+        CHECK( player.get_value( morality ).dbl() == 1.0 );
+        const effect &potency = player.get_effect( efftype_id( "vampire_virus_post_mortal" ) );
+        CHECK( potency.get_intensity() == 1 );
+        CHECK( potency.is_permanent() );
         cata::lua_platform::end_dialogue_session( conversation );
     }
 }

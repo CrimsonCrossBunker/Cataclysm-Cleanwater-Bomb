@@ -23,6 +23,7 @@ extern "C" {
 
 #include "avatar.h"
 #include "calendar.h"
+#include "character.h"
 #include "character_id.h"
 #include "dialogue_helpers.h"
 #include "game.h"
@@ -719,9 +720,9 @@ sol::table active_instances(
         read_active_instance_options( requested_options );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
-    avatar *owner = resolve_exact_avatar(
-                        owner_handle, runtime_generation,
-                        world_generation, error );
+    Character *owner = resolve_exact_character(
+                           owner_handle, runtime_generation,
+                           world_generation, error );
     if( owner == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1119,7 +1120,7 @@ sol::table set_instance_deadline(
                sol::make_object( state, std::move( value ) ) );
 }
 
-bool assigned_to_owner( const mission &entry, const avatar &owner )
+bool assigned_to_owner( const mission &entry, const Character &owner )
 {
     return entry.get_assigned_player_id() ==
            owner.getID();
@@ -1354,9 +1355,9 @@ sol::table finish_instance(
 {
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
-    avatar *owner = resolve_exact_avatar(
-                        owner_handle, runtime_generation,
-                        world_generation, error );
+    Character *owner = resolve_exact_character(
+                           owner_handle, runtime_generation,
+                           world_generation, error );
     if( owner == nullptr ) {
         return make_game_error_result( state, *error );
     }
@@ -1371,7 +1372,7 @@ sol::table finish_instance(
         return make_game_error_result(
         state, game_handle_error{
             "not_active",
-            "Only an active avatar mission can be finished"
+            "Only an active mission assigned to this Character can be finished"
         } );
     }
     sol::table before = snapshot_instance(
