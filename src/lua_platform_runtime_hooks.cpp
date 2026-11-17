@@ -331,6 +331,29 @@ static sol::table event_to_lua( runtime &owner, const cata::event &event,
             "platform_event_item", event_item->uid().get_value(), 0, 0, 0, {}
         }, owner.handle_runtime(), runtime_world_generation_storage() );
     }
+    sol::table participants = owner.lua->create_table();
+    const auto copy_participant = [&]( const char *role, const const_talker *actor ) {
+        const Creature *creature = actor == nullptr ? nullptr : actor->get_const_creature();
+        if( creature == nullptr ) {
+            return;
+        }
+        sol::table snapshot = owner.lua->create_table();
+        const monster *mon = creature->as_monster();
+        snapshot["kind"] = creature->is_avatar() ? "avatar" :
+                           creature->is_npc() ? "npc" : mon != nullptr ? "monster" : "creature";
+        snapshot["dead"] = creature->is_dead_state();
+        sol::table species = owner.lua->create_table();
+        if( mon != nullptr ) {
+            for( const species_id &id : mon->type->species ) {
+                species.add( id.str() );
+            }
+        }
+        snapshot["species"] = std::move( species );
+        participants[role] = std::move( snapshot );
+    };
+    copy_participant( "speaker", speaker_actor );
+    copy_participant( "interlocutor", interlocutor_actor );
+    result["participants"] = std::move( participants );
     // Some native events carry semantic participants only through the two
     // talkers supplied by the event bus.  Keep those participants under
     // explicit speaker/interlocutor names; never infer an avatar from

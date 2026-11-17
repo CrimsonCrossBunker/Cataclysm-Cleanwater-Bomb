@@ -7194,6 +7194,17 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@field due_turn? integer Absolute due turn when an effect is running.
 ---@field overdue_turns integer Non-negative lateness at invocation.
 
+---@class PlatformNativeEventParticipant
+---@field kind 'avatar'|'npc'|'monster'|'creature'
+---@field dead boolean Native death state at event dispatch, even when the live handle is already unusable.
+---@field species string[] Complete native monster species; empty for other Creature kinds.
+
+---@class PlatformNativeEventPayload
+---@field data table<string,any> Copied native event fields.
+---@field data_types table<string,string> Native type tags for data fields.
+---@field actors table<string,any> Live generation-bound handles and typed talkers; dead handles remain unusable.
+---@field participants table<string,PlatformNativeEventParticipant> Copied explicit Creature talkers under speaker/interlocutor; no inferred avatar participant.
+
 ---Character lifecycle events supply the live actor in `payload.actors.character`.
 ---`character_ready` also sets `payload.new_character` and runs once per native
 ---initialization or load. Early load notifications are delivered at world readiness.
@@ -8848,6 +8859,19 @@ function CcbCharactersApi.damage(character, damage_type, amount, options) end
 ---@param amount integer 1..10000.
 ---@return CcbHealingResult
 function CcbCharactersApi.heal(character, body_part, amount) end
+
+---Read the native raw HP sum for all, major or minor body parts.
+---@param character GameHandle Exact live Character.
+---@param group 'ALL'|'ALL_MAJOR'|'ALL_MINOR'
+---@return CcbResult result `value` is the integer HP sum.
+function CcbCharactersApi.hp_group(character, group) end
+
+---Set each selected body's raw HP to the same value; this does not clamp to maximum HP or add a healing delta.
+---@param character GameHandle Exact live Character.
+---@param group 'ALL'|'ALL_MAJOR'|'ALL_MINOR'
+---@param hp integer Native signed-int raw HP value.
+---@return CcbResult result `value` includes group, value_per_part, parts, before and after.
+function CcbCharactersApi.set_hp_group(character, group, hp) end
 
 ---@class CcbCharacterBodyPartPickOptions
 ---@field wounded? boolean If set, only select parts whose wound state matches this value.

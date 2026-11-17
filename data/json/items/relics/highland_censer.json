@@ -73,18 +73,6 @@
     ]
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_RED_INCENSE_HEAL",
-    "eoc_type": "EVENT",
-    "required_event": "character_wakes_up",
-    "condition": { "u_has_effect": "red_incense_effect" },
-    "effect": [
-      { "math": [ "u_hp('ALL') += 5 * (3 + rand(5))" ] },
-      { "u_message": "You feel great today." },
-      { "u_lose_effect": "red_incense_effect" }
-    ]
-  },
-  {
     "type": "ter_furn_transform",
     "id": "remove_black_incense",
     "field": [ { "result": "fd_null", "valid_field": [ "fd_black_incense" ] } ]
@@ -142,18 +130,5 @@
     "//": "Hidden effect, cancels Tindalos Ignore",
     "name": [ "" ],
     "desc": [ "" ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_REMOVE_TINDALOS_IGNORE",
-    "eoc_type": "EVENT",
-    "required_event": "monster_takes_damage",
-    "condition": "has_beta",
-    "effect": [
-      {
-        "if": { "and": [ { "u_has_species": "TINDALOS" }, { "npc_has_effect": "golden_incense_effect" } ] },
-        "then": [ { "npc_add_effect": "effect_tindalos_ignore_cancel", "duration": 45 } ]
-      }
-    ]
   }
 ]

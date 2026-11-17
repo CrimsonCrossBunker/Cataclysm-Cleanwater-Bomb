@@ -93,6 +93,32 @@ ccb.runtime.handler("highland_censer_use", function(context)
     return 0
 end)
 
+ccb.runtime.handler("highland_red_incense_wake", function(event)
+    local character = event.actors.character or services.characters.avatar()
+    if not state.checked(services.effects.has(character, id("effect", "red_incense_effect"))) then return end
+    -- The native ALL assignment writes the same aggregate value to every body part.
+    local hp = state.checked(services.characters.hp_group(character, "ALL"))
+    hp = hp + 5 * (3 + services.random.native_int(0, 5))
+    state.checked(services.characters.set_hp_group(character, "ALL", hp))
+    state.message(character, services.translate("You feel great today."))
+    state.checked(services.effects.remove(character, id("effect", "red_incense_effect")))
+end)
+ccb.runtime.on("game:character_wakes_up", "highland_red_incense_wake")
+
+ccb.runtime.handler("highland_tindalos_retaliation", function(event)
+    local attacker = event.actors.interlocutor
+    local victim = event.participants.speaker
+    if not attacker or not victim then return end
+    local tindalos = false
+    for _, species in ipairs(victim.species) do
+        if species == "TINDALOS" then tindalos = true; break end
+    end
+    if tindalos and state.checked(services.effects.has(attacker, id("effect", "golden_incense_effect"))) then
+        state.add_effect(attacker, "effect_tindalos_ignore_cancel", 45)
+    end
+end)
+ccb.runtime.on("game:monster_takes_damage", "highland_tindalos_retaliation")
+
 do
     local item = content.Item {
         id = "highland_censer",

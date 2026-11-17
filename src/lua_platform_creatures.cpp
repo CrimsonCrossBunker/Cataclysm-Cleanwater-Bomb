@@ -1443,11 +1443,6 @@ sol::table set_character_hp_group(
     const std::string api_name = "services.characters.set_hp_group";
     const get_body_part_flags flags = hp_group_flags(
                                           group, api_name );
-    if( requested_hp < -maximum_character_healing ||
-        requested_hp > maximum_character_healing ) {
-        throw std::invalid_argument(
-            api_name + " value must be within -10000..10000" );
-    }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
