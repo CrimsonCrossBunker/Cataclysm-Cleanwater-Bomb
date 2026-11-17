@@ -89,16 +89,8 @@
     "//2": "Once blood clotting is a thing that can happen, repeated doses of Armus should cause it",
     "removes_effects": [ "resilience_serum_crash" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.75 },
-          { "type": "cut", "multiply": -0.666 },
-          { "type": "stab", "multiply": -0.5 },
-          { "type": "bullet", "multiply": -0.2 }
-        ],
-        "mutations": [ "INFRESIST" ]
-      },
-      { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.8 } ] }
+      "INLINE_ENCH_resilience_serum_main_0",
+      "INLINE_ENCH_resilience_serum_main_1"
     ],
     "flags": [ "PAUSE_INFECTIONS" ]
   },
@@ -108,7 +100,7 @@
     "//": "Hidden effect, provides the Jittery trait",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "mutations": [ "JITTERY" ] } ]
+    "enchantments": [ "INLINE_ENCH_resilience_serum_side_effect_jittery_0" ]
   },
   {
     "type": "effect_type",
@@ -116,7 +108,7 @@
     "//": "Hidden effect, provides the Bad Temper trait",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "mutations": [ "BADTEMPER" ] } ]
+    "enchantments": [ "INLINE_ENCH_resilience_serum_side_effect_badmood_0" ]
   },
   {
     "type": "effect_type",
@@ -124,7 +116,7 @@
     "//": "Hidden effect, provides the Kaluptic Psychosis trait",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "mutations": [ "SCHIZOPHRENIC" ] } ]
+    "enchantments": [ "INLINE_ENCH_resilience_serum_side_effect_hallucinations_0" ]
   },
   {
     "type": "effect_type",
@@ -132,7 +124,7 @@
     "//": "Hidden effect, causes temporary paralysis",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "ench_effects": [ { "effect": "downed", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_resilience_serum_side_effect_downed_0" ]
   },
   {
     "type": "effect_type",
@@ -155,6 +147,6 @@
       "heart_rate_chance": [ 5 ],
       "heart_rate_max_val": [ 125 ]
     },
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": 0.75 } ] } ]
+    "enchantments": [ "INLINE_ENCH_resilience_serum_crash_0" ]
   }
 ]

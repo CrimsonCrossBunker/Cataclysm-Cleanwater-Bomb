@@ -70,18 +70,7 @@
     "removes_effects": [ "regen_serum_crash_fatigue" ],
     "dur_add_perc": 33,
     "enchantments": [
-      {
-        "values": [
-          { "value": "REGEN_HP", "multiply": 50 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "add": 50 },
-          { "value": "METABOLISM", "multiply": 2 },
-          { "value": "HUNGER", "multiply": 2 },
-          { "value": "SLEEPINESS", "multiply": 1 },
-          { "value": "STAMINA_REGEN_MOD", "multiply": -0.5 },
-          { "value": "VOMIT_MUL", "multiply": 1 }
-        ]
-      }
+      "INLINE_ENCH_regen_serum_main_0"
     ]
   },
   {
@@ -107,6 +96,6 @@
     "desc": [ "Your body regeneration is not as fast as before, but you still feel some weakness." ],
     "apply_message": "",
     "remove_message": "",
-    "enchantments": [ { "values": [ { "value": "STAMINA_REGEN_MOD", "multiply": -0.5 }, { "value": "SLEEPINESS", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_regen_serum_crash_fatigue_0" ]
   }
 ]

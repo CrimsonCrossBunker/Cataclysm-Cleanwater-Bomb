@@ -206,7 +206,7 @@
     "remove_message": "Things seem to stitch back together.",
     "enchantments": [
       "ench_mom_incense_nether_attunement",
-      { "values": [ { "value": "ARTIFACT_RESONANCE", "add": 4500 }, { "value": "SPEED", "add": -10 } ] }
+      "INLINE_ENCH_purple_incense_effect_1"
     ]
   },
   {
@@ -218,7 +218,7 @@
     "show_in_info": true,
     "max_intensity": 1,
     "remove_message": "The feeling of dread fades away.",
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": -10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_red_incense_effect_0" ]
   },
   {
     "type": "effect_type",
@@ -229,7 +229,7 @@
     "show_in_info": true,
     "max_intensity": 1,
     "remove_message": "The feeling of calm fades away.",
-    "enchantments": [ "ench_mom_incense_nether_attunement", { "values": [ { "value": "SPEED", "add": -10 } ] } ]
+    "enchantments": [ "ench_mom_incense_nether_attunement", "INLINE_ENCH_yellow_incense_effect_1" ]
   },
   {
     "type": "effect_type",
@@ -265,14 +265,7 @@
     "remove_message": "Things seem to stitch back together.",
     "enchantments": [
       "ench_mom_incense_nether_attunement_major",
-      {
-        "values": [
-          { "value": "PHASE_DISTANCE", "add": 2 },
-          { "value": "SPEED", "add": -10 },
-          { "value": "DODGE_CHANCE", "add": -25 },
-          { "value": "EVASION", "add": 10 }
-        ]
-      }
+      "INLINE_ENCH_green_incense_effect_1"
     ]
   },
   {

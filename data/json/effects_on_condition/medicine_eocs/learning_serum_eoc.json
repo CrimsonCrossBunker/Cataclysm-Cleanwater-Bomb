@@ -131,7 +131,7 @@
     "apply_message": "",
     "remove_message": "",
     "enchantments": [
-      { "values": [ { "value": "SLEEPINESS", "multiply": 0.25 }, { "value": "LEARNING_FOCUS", "add": -25 } ] },
+      "INLINE_ENCH_learning_serum_crash_0",
       {
         "condition": { "and": [ { "not": { "u_has_worn_with_flag": "SUN_GLASSES" } }, { "and": [ "u_is_outside", "is_day" ] } ] },
         "ench_effects": [ { "effect": "learning_serum_light_pain", "intensity": 1 } ]
@@ -175,6 +175,6 @@
     "apply_message": "Everything seems to suddenly slow down!",
     "remove_message": "The world around you speeds up.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "AIMING_SPEED", "multiply": 0.25 }, { "value": "ATTACK_SPEED", "multiply": -0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_regen_serum_slow_time_0" ]
   }
 ]
