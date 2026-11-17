@@ -1379,7 +1379,7 @@
     "starting_trait": false,
     "valid": false,
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "temperature_vw_cold_mod(65, 1)" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_WEAKNESS_COLD_BLOODED_0" ],
     "flags": [ "NO_BODY_HEAT" ]
   },
   {
