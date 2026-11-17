@@ -94,3 +94,5 @@ require("snippets")
 require("enchantments")
 
 require("enchantment_values")
+
+require("enchantments_character_state")
