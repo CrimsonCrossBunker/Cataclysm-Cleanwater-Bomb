@@ -11,16 +11,7 @@
     "ugliness": 0,
     "description": "Lizardfolk are taller, stronger, and more resilient than humans but not much thicker and are surprisingly fast for their size (+1 STR, +1 DEX).  Also, they are carnivorous.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVECOST_SWIM_MOD", "multiply": -0.1 },
-          { "value": "STRENGTH", "add": 1 },
-          { "value": "DEXTERITY", "add": 1 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.25 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.05 },
-          { "value": "MAX_HP", "multiply": 0.2 }
-        ]
-      }
+      "INLINE_ENCH_LIZARDFOLK_BUILD_0"
     ],
     "vitamin_rates": [ [ "vitC", -1200 ] ],
     "flags": [ "HERITAGE", "CARNIVORE_DIET", "LARGE" ]
@@ -166,7 +157,7 @@
     "purifiable": false,
     "types": [ "PREDATION" ],
     "flags": [ "PRED2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "COMBAT_CATCHUP", "multiply": 1.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PRED_LIZ_0" ]
   },
   {
     "type": "mutation",
@@ -180,7 +171,7 @@
     "types": [ "MUZZLE" ],
     "restricts_gear": [ "mouth" ],
     "social_modifiers": { "intimidate": 10 },
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "mouth" }, { "gain": "muzzle_long" } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUZZLE_LONG_LIZ_0" ]
   },
   {
     "type": "mutation",
