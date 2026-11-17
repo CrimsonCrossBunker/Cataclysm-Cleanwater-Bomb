@@ -103,6 +103,7 @@ static const oter_str_id oter_subway_end_north( "subway_end_north" );
 static const oter_str_id oter_subway_isolated( "subway_isolated" );
 static const oter_str_id oter_underground_sub_station( "underground_sub_station" );
 
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_bridge( "bridge" );
 static const oter_type_str_id oter_type_microlab_sub_connector( "microlab_sub_connector" );
 static const oter_type_str_id oter_type_railroad_bridge( "railroad_bridge" );
@@ -110,6 +111,13 @@ static const oter_type_str_id oter_type_road( "road" );
 static const oter_type_str_id oter_type_road_nesw_manhole( "road_nesw_manhole" );
 static const oter_type_str_id oter_type_sewer_connector( "sewer_connector" );
 static const oter_type_str_id oter_type_sub_station( "sub_station" );
+
+static const overmap_location_id overmap_location_wilderness( "wilderness" );
+
+static const overmap_special_id overmap_special_Evac_Shelter( "Evac Shelter" );
+static const overmap_special_id overmap_special_mil_base( "mil_base" );
+
+static const trait_id trait_HAS_NEMESIS( "HAS_NEMESIS" );
 
 #define dbg(x) DebugLog((x),D_MAP_GEN) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -1417,12 +1425,10 @@ bool overmap::is_far_from_city( const tripoint_om_omt &p ) const
 
 tripoint_om_omt overmap::place_outskirts_shelter()
 {
-    static const overmap_special_id shelter_id( "Evac Shelter" );
-    static const overmap_location_id wilderness( "wilderness" );
-    if( !shelter_id.is_valid() ) {
+    if( !overmap_special_Evac_Shelter.is_valid() ) {
         return tripoint_om_omt::invalid;
     }
-    const overmap_special &shelter = shelter_id.obj();
+    const overmap_special &shelter = overmap_special_Evac_Shelter.obj();
     const auto footprint = shelter.required_locations();
     const tripoint_om_omt midpoint( OMAPX / 2, OMAPY / 2, 0 );
     const city &nearest = get_nearest_city( midpoint );
@@ -1430,7 +1436,8 @@ tripoint_om_omt overmap::place_outskirts_shelter()
     for( int radius = 0; radius < std::max( OMAPX, OMAPY ); ++radius ) {
         for( const point_om_omt &site : closest_points_first( center, radius, radius ) ) {
             const tripoint_om_omt p( site, 0 );
-            if( !inbounds( p, 2 ) || !wilderness->test( ter( p ) ) || !is_far_from_city( p ) ) {
+            if( !inbounds( p, 2 ) || !overmap_location_wilderness->test( ter( p ) ) ||
+                !is_far_from_city( p ) ) {
                 continue;
             }
             const auto available = [&]( om_direction::type dir ) {
@@ -1876,7 +1883,7 @@ void overmap::move_nemesis()
             continue;
         }
         if( mg.nemesis_mission_id < 0 &&
-            !get_avatar().has_trait( trait_id( "HAS_NEMESIS" ) ) ) {
+            !get_avatar().has_trait( trait_HAS_NEMESIS ) ) {
             ++it;
             continue;
         }
@@ -2374,8 +2381,6 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     auto &out = connections_out[connection];
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
-    static const oter_type_str_id road( "road" );
-    static const oter_type_str_id bridge( "atlas_road_bridge" );
     const auto can_build_street = [&]( const tripoint_om_omt & p ) {
         return !ter( p )->is_water() && connection->pick_subtype_for( ter( p ) );
     };
@@ -2389,7 +2394,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
             const oter_id previous = ter( p );
             std::size_t links = settings->place_roads ? tile.mapped_connections : 0;
             if( previous->is_water() && links ) {
-                ter_set( p, bridge->get_linear( links ) );
+                ter_set( p, oter_type_atlas_road_bridge->get_linear( links ) );
             } else if( can_build_street( p ) ) {
                 for( const auto direction : om_direction::all ) {
                     if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
@@ -2412,7 +2417,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 if( !links ) {
                     continue;
                 }
-                ter_set( p, road->get_linear( links ) );
+                ter_set( p, oter_type_road->get_linear( links ) );
             } else {
                 continue;
             }
@@ -3388,8 +3393,7 @@ bool overmap::contains_unique_special( const overmap_special_id &id ) const
 
 static bool allows_atlas_military_base( const overmap_special &special )
 {
-    static const overmap_special_id military_base( "mil_base" );
-    return north_america::active() && special.id == military_base;
+    return north_america::active() && special.id == overmap_special_mil_base;
 }
 
 bool overmap::can_place_special( const overmap_special &special, const tripoint_om_omt &p,
