@@ -857,12 +857,12 @@ std::vector<npc *> matching_npcs(
     return result;
 }
 
-// Keep the scene order: presentation choices must not silently become the
-// ID-sorted persistent follower roster (which includes off-screen NPCs).
-sol::table visible_player_allies(
+// Keep scene order rather than the ID-sorted persistent follower roster.
+// Capture the whole selection before a caller starts moving its NPCs.
+sol::table scene_npcs(
     sol::this_state lua,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool visible_allies )
 {
     sol::state_view state( lua );
     if( g == nullptr ) {
@@ -873,7 +873,7 @@ sol::table visible_player_allies(
     {
         const map &here = get_map();
         for( npc &entry : g->all_npcs() ) {
-            if( entry.is_player_ally() && get_player_view().sees( here, entry ) ) {
+            if( !visible_allies || ( entry.is_player_ally() && get_player_view().sees( here, entry ) ) ) {
                 snapshots.push_back( capture_npc_snapshot(
                                          entry, runtime_generation, world_generation ) );
             }
@@ -3011,8 +3011,16 @@ void install_npc_api(
         [current_runtime_generation, current_world_generation, require_read](
     sol::this_state lua_state ) {
         require_read();
-        return visible_player_allies(
-                   lua_state, current_runtime_generation(), current_world_generation() );
+        return scene_npcs(
+                   lua_state, current_runtime_generation(), current_world_generation(), true );
+    } );
+    npcs.set_function(
+        "loaded",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state ) {
+        require_read();
+        return scene_npcs(
+                   lua_state, current_runtime_generation(), current_world_generation(), false );
     } );
     npcs.set_function(
         "list",

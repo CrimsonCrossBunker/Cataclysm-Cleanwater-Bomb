@@ -1351,7 +1351,7 @@
       {
         "fields": [
           {
-            "line": 11966,
+            "line": 11970,
             "name": "name",
             "type": "string"
           }
@@ -1385,27 +1385,27 @@
       {
         "fields": [
           {
-            "line": 13024,
+            "line": 13028,
             "name": "items",
             "type": "table"
           },
           {
-            "line": 13027,
+            "line": 13031,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 13026,
+            "line": 13030,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 13025,
+            "line": 13029,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 13028,
+            "line": 13032,
             "name": "truncated",
             "type": "boolean"
           }
@@ -2585,17 +2585,17 @@
       {
         "fields": [
           {
-            "line": 12966,
+            "line": 12970,
             "name": "active",
             "type": "boolean"
           },
           {
-            "line": 12967,
+            "line": 12971,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 12968,
+            "line": 12972,
             "name": "level_index",
             "type": "integer"
           }
@@ -2685,62 +2685,62 @@
       {
         "fields": [
           {
-            "line": 13001,
+            "line": 13005,
             "name": "dexterity",
             "type": "integer"
           },
           {
-            "line": 13005,
+            "line": 13009,
             "name": "dexterity_base",
             "type": "integer"
           },
           {
-            "line": 13009,
+            "line": 13013,
             "name": "dexterity_bonus",
             "type": "integer"
           },
           {
-            "line": 13003,
+            "line": 13007,
             "name": "intelligence",
             "type": "integer"
           },
           {
-            "line": 13007,
+            "line": 13011,
             "name": "intelligence_base",
             "type": "integer"
           },
           {
-            "line": 13011,
+            "line": 13015,
             "name": "intelligence_bonus",
             "type": "integer"
           },
           {
-            "line": 13002,
+            "line": 13006,
             "name": "perception",
             "type": "integer"
           },
           {
-            "line": 13006,
+            "line": 13010,
             "name": "perception_base",
             "type": "integer"
           },
           {
-            "line": 13010,
+            "line": 13014,
             "name": "perception_bonus",
             "type": "integer"
           },
           {
-            "line": 13000,
+            "line": 13004,
             "name": "strength",
             "type": "integer"
           },
           {
-            "line": 13004,
+            "line": 13008,
             "name": "strength_base",
             "type": "integer"
           },
           {
-            "line": 13008,
+            "line": 13012,
             "name": "strength_bonus",
             "type": "integer"
           }
@@ -2790,7 +2790,7 @@
       {
         "fields": [
           {
-            "line": 12974,
+            "line": 12978,
             "name": "artifact_resonance",
             "type": "number"
           }
@@ -2845,12 +2845,12 @@
       {
         "fields": [
           {
-            "line": 13014,
+            "line": 13018,
             "name": "outside",
             "type": "boolean"
           },
           {
-            "line": 13015,
+            "line": 13019,
             "name": "safe_space",
             "type": "boolean"
           }
@@ -2860,12 +2860,12 @@
       {
         "fields": [
           {
-            "line": 12959,
+            "line": 12963,
             "name": "controlling_vehicle",
             "type": "boolean"
           },
           {
-            "line": 12958,
+            "line": 12962,
             "name": "driving",
             "type": "boolean"
           }
@@ -2950,12 +2950,12 @@
       {
         "fields": [
           {
-            "line": 12963,
+            "line": 12967,
             "name": "following",
             "type": "boolean"
           },
           {
-            "line": 12962,
+            "line": 12966,
             "name": "present",
             "type": "boolean"
           }
@@ -2965,7 +2965,7 @@
       {
         "fields": [
           {
-            "line": 12955,
+            "line": 12959,
             "name": "can_see",
             "type": "boolean"
           }
@@ -2975,107 +2975,107 @@
       {
         "fields": [
           {
-            "line": 12996,
+            "line": 13000,
             "name": "activity",
             "type": "CcbCharacterActivityStateSnapshot"
           },
           {
-            "line": 12977,
+            "line": 12981,
             "name": "combat",
             "type": "CcbCharacterCombatSnapshot"
           },
           {
-            "line": 12993,
+            "line": 12997,
             "name": "environment",
             "type": "CcbCharacterEnvironmentSnapshot"
           },
           {
-            "line": 12986,
+            "line": 12990,
             "name": "focus",
             "type": "integer"
           },
           {
-            "line": 12988,
+            "line": 12992,
             "name": "hunger",
             "type": "integer"
           },
           {
-            "line": 12994,
+            "line": 12998,
             "name": "movement",
             "type": "CcbCharacterMovementSnapshot"
           },
           {
-            "line": 12982,
+            "line": 12986,
             "name": "moves",
             "type": "integer"
           },
           {
-            "line": 12978,
+            "line": 12982,
             "name": "name",
             "type": "string"
           },
           {
-            "line": 12995,
+            "line": 12999,
             "name": "npc_state",
             "type": "CcbCharacterNpcStateSnapshot"
           },
           {
-            "line": 12985,
+            "line": 12989,
             "name": "pain",
             "type": "integer"
           },
           {
-            "line": 12992,
+            "line": 12996,
             "name": "senses",
             "type": "CcbCharacterSensesSnapshot"
           },
           {
-            "line": 12990,
+            "line": 12994,
             "name": "sleepiness",
             "type": "integer"
           },
           {
-            "line": 12987,
+            "line": 12991,
             "name": "speed",
             "type": "integer"
           },
           {
-            "line": 12983,
+            "line": 12987,
             "name": "stamina",
             "type": "integer"
           },
           {
-            "line": 12984,
+            "line": 12988,
             "name": "stamina_max",
             "type": "integer"
           },
           {
-            "line": 12991,
+            "line": 12995,
             "name": "stats",
             "type": "CcbCharacterAttributesSnapshot"
           },
           {
-            "line": 12989,
+            "line": 12993,
             "name": "thirst",
             "type": "integer"
           },
           {
-            "line": 12997,
+            "line": 13001,
             "name": "travel",
             "type": "CcbCharacterTravelSnapshot"
           },
           {
-            "line": 12979,
+            "line": 12983,
             "name": "x",
             "type": "integer"
           },
           {
-            "line": 12980,
+            "line": 12984,
             "name": "y",
             "type": "integer"
           },
           {
-            "line": 12981,
+            "line": 12985,
             "name": "z",
             "type": "integer"
           }
@@ -3199,7 +3199,7 @@
       {
         "fields": [
           {
-            "line": 12971,
+            "line": 12975,
             "name": "has_path",
             "type": "boolean"
           }
@@ -3221,7 +3221,7 @@
       {
         "fields": [
           {
-            "line": 12498,
+            "line": 12502,
             "name": "value",
             "type": "CcbCraftingStartValue"
           }
@@ -3231,27 +3231,27 @@
       {
         "fields": [
           {
-            "line": 12495,
+            "line": 12499,
             "name": "activity",
             "type": "GameId"
           },
           {
-            "line": 12492,
+            "line": 12496,
             "name": "batch",
             "type": "integer"
           },
           {
-            "line": 12493,
+            "line": 12497,
             "name": "continue_while_possible",
             "type": "boolean"
           },
           {
-            "line": 12494,
+            "line": 12498,
             "name": "craft_activity_active",
             "type": "boolean"
           },
           {
-            "line": 12491,
+            "line": 12495,
             "name": "recipe",
             "type": "GameId"
           }
@@ -3291,57 +3291,57 @@
       {
         "fields": [
           {
-            "line": 13038,
+            "line": 13042,
             "name": "attitude",
             "type": "string"
           },
           {
-            "line": 13039,
+            "line": 13043,
             "name": "dead",
             "type": "boolean"
           },
           {
-            "line": 13033,
+            "line": 13037,
             "name": "display_name",
             "type": "string"
           },
           {
-            "line": 13037,
+            "line": 13041,
             "name": "distance",
             "type": "integer"
           },
           {
-            "line": 13040,
+            "line": 13044,
             "name": "hp",
             "type": "integer"
           },
           {
-            "line": 13041,
+            "line": 13045,
             "name": "hp_max",
             "type": "integer"
           },
           {
-            "line": 13031,
+            "line": 13035,
             "name": "kind",
             "type": "'avatar'|'npc'|'monster'|'creature'"
           },
           {
-            "line": 13032,
+            "line": 13036,
             "name": "name",
             "type": "string"
           },
           {
-            "line": 13035,
+            "line": 13039,
             "name": "outside",
             "type": "boolean"
           },
           {
-            "line": 13034,
+            "line": 13038,
             "name": "position",
             "type": "TripointCoord"
           },
           {
-            "line": 13036,
+            "line": 13040,
             "name": "visible",
             "type": "boolean"
           }
@@ -3435,22 +3435,22 @@
       {
         "fields": [
           {
-            "line": 11910,
+            "line": 11914,
             "name": "body_part",
             "type": "GameId"
           },
           {
-            "line": 11915,
+            "line": 11919,
             "name": "force",
             "type": "boolean"
           },
           {
-            "line": 11912,
+            "line": 11916,
             "name": "intensity",
             "type": "integer"
           },
           {
-            "line": 11911,
+            "line": 11915,
             "name": "permanent",
             "type": "boolean"
           }
@@ -3460,22 +3460,22 @@
       {
         "fields": [
           {
-            "line": 12212,
+            "line": 12216,
             "name": "items",
             "type": "GameId[]"
           },
           {
-            "line": 12214,
+            "line": 12218,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 12213,
+            "line": 12217,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 12215,
+            "line": 12219,
             "name": "truncated",
             "type": "boolean"
           }
@@ -3485,12 +3485,12 @@
       {
         "fields": [
           {
-            "line": 12219,
+            "line": 12223,
             "name": "effects",
             "type": "CcbEffectRelatedIdPage"
           },
           {
-            "line": 12218,
+            "line": 12222,
             "name": "mutations",
             "type": "CcbEffectRelatedIdPage"
           }
@@ -3500,112 +3500,112 @@
       {
         "fields": [
           {
-            "line": 12243,
+            "line": 12247,
             "name": "blocks_effects",
             "type": "CcbEffectRelatedIdPage"
           },
           {
-            "line": 12241,
+            "line": 12245,
             "name": "body_part",
             "type": "GameId"
           },
           {
-            "line": 12224,
+            "line": 12228,
             "name": "description",
             "type": "string"
           },
           {
-            "line": 12228,
+            "line": 12232,
             "name": "duration",
             "type": "TimeDuration"
           },
           {
-            "line": 12238,
+            "line": 12242,
             "name": "duration_add_percent",
             "type": "integer"
           },
           {
-            "line": 12234,
+            "line": 12238,
             "name": "effective_intensity",
             "type": "integer"
           },
           {
-            "line": 12237,
+            "line": 12241,
             "name": "harmful_cough",
             "type": "boolean"
           },
           {
-            "line": 12222,
+            "line": 12226,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 12236,
+            "line": 12240,
             "name": "impairs_movement",
             "type": "boolean"
           },
           {
-            "line": 12231,
+            "line": 12235,
             "name": "intensity",
             "type": "integer"
           },
           {
-            "line": 12239,
+            "line": 12243,
             "name": "intensity_add",
             "type": "integer"
           },
           {
-            "line": 12240,
+            "line": 12244,
             "name": "intensity_duration",
             "type": "TimeDuration"
           },
           {
-            "line": 12229,
+            "line": 12233,
             "name": "maximum_duration",
             "type": "TimeDuration"
           },
           {
-            "line": 12233,
+            "line": 12237,
             "name": "maximum_effective_intensity",
             "type": "integer"
           },
           {
-            "line": 12232,
+            "line": 12236,
             "name": "maximum_intensity",
             "type": "integer"
           },
           {
-            "line": 12226,
+            "line": 12230,
             "name": "mod_source",
             "type": "string"
           },
           {
-            "line": 12223,
+            "line": 12227,
             "name": "name",
             "type": "string"
           },
           {
-            "line": 12235,
+            "line": 12239,
             "name": "permanent",
             "type": "boolean"
           },
           {
-            "line": 12242,
+            "line": 12246,
             "name": "resisted_by",
             "type": "CcbEffectResistanceIds"
           },
           {
-            "line": 12225,
+            "line": 12229,
             "name": "short_description",
             "type": "string"
           },
           {
-            "line": 12230,
+            "line": 12234,
             "name": "start_time",
             "type": "TimePoint"
           },
           {
-            "line": 12227,
+            "line": 12231,
             "name": "uses_body_part_description",
             "type": "boolean"
           }
@@ -3615,7 +3615,7 @@
       {
         "fields": [
           {
-            "line": 12246,
+            "line": 12250,
             "name": "value",
             "type": "CcbEffectSnapshot"
           }
@@ -7462,17 +7462,17 @@
       {
         "fields": [
           {
-            "line": 11920,
+            "line": 11924,
             "name": "capped",
             "type": "boolean"
           },
           {
-            "line": 11919,
+            "line": 11923,
             "name": "decay_start",
             "type": "TimeDuration"
           },
           {
-            "line": 11918,
+            "line": 11922,
             "name": "duration",
             "type": "TimeDuration"
           }
@@ -7536,22 +7536,22 @@
       {
         "fields": [
           {
-            "line": 13019,
+            "line": 13023,
             "name": "count",
             "type": "integer"
           },
           {
-            "line": 13020,
+            "line": 13024,
             "name": "current_id",
             "type": "string"
           },
           {
-            "line": 13021,
+            "line": 13025,
             "name": "desired_id",
             "type": "string"
           },
           {
-            "line": 13018,
+            "line": 13022,
             "name": "items",
             "type": "table"
           }
@@ -7606,17 +7606,17 @@
       {
         "fields": [
           {
-            "line": 12298,
+            "line": 12302,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 12297,
+            "line": 12301,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 12299,
+            "line": 12303,
             "name": "order",
             "type": "\"id\"|\"native\""
           }
@@ -7681,17 +7681,17 @@
       {
         "fields": [
           {
-            "line": 11906,
+            "line": 11910,
             "name": "removed",
             "type": "GameId[]"
           },
           {
-            "line": 11907,
+            "line": 11911,
             "name": "removed_count",
             "type": "integer"
           },
           {
-            "line": 11905,
+            "line": 11909,
             "name": "type",
             "type": "string"
           }
@@ -8463,22 +8463,22 @@
       {
         "fields": [
           {
-            "line": 11512,
+            "line": 11516,
             "name": "dialogue",
             "type": "CcbNpcDialogueActionsApi"
           },
           {
-            "line": 11509,
+            "line": 11513,
             "name": "grooming",
             "type": "CcbNpcGroomingApi"
           },
           {
-            "line": 11508,
+            "line": 11512,
             "name": "medical",
             "type": "CcbNpcMedicalApi"
           },
           {
-            "line": 11511,
+            "line": 11515,
             "name": "missions",
             "type": "CcbNpcMissionsApi"
           },
@@ -8488,7 +8488,7 @@
             "type": "CcbNpcOrdersApi"
           },
           {
-            "line": 11510,
+            "line": 11514,
             "name": "training",
             "type": "CcbNpcTrainingApi"
           }
@@ -8498,22 +8498,22 @@
       {
         "fields": [
           {
-            "line": 11923,
+            "line": 11927,
             "name": "items",
             "type": "GameId[]"
           },
           {
-            "line": 11925,
+            "line": 11929,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 11924,
+            "line": 11928,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 11926,
+            "line": 11930,
             "name": "truncated",
             "type": "boolean"
           }
@@ -8910,7 +8910,7 @@
       {
         "fields": [
           {
-            "line": 11815,
+            "line": 11819,
             "name": "activity",
             "type": "CcbPlatformCharacterActivitySnapshot"
           }
@@ -8920,12 +8920,12 @@
       {
         "fields": [
           {
-            "line": 11812,
+            "line": 11816,
             "name": "activity",
             "type": "CcbPlatformActivitySnapshot"
           },
           {
-            "line": 11811,
+            "line": 11815,
             "name": "changed",
             "type": "boolean"
           }
@@ -8935,57 +8935,57 @@
       {
         "fields": [
           {
-            "line": 11793,
+            "line": 11797,
             "name": "active",
             "type": "boolean"
           },
           {
-            "line": 11800,
+            "line": 11804,
             "name": "auto_resume",
             "type": "boolean"
           },
           {
-            "line": 11794,
+            "line": 11798,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 11798,
+            "line": 11802,
             "name": "interruptible",
             "type": "boolean"
           },
           {
-            "line": 11799,
+            "line": 11803,
             "name": "interruptible_with_keyboard",
             "type": "boolean"
           },
           {
-            "line": 11797,
+            "line": 11801,
             "name": "moves_left",
             "type": "integer"
           },
           {
-            "line": 11796,
+            "line": 11800,
             "name": "moves_total",
             "type": "integer"
           },
           {
-            "line": 11803,
+            "line": 11807,
             "name": "progress",
             "type": "number"
           },
           {
-            "line": 11802,
+            "line": 11806,
             "name": "resumable",
             "type": "boolean"
           },
           {
-            "line": 11801,
+            "line": 11805,
             "name": "rooted",
             "type": "boolean"
           },
           {
-            "line": 11795,
+            "line": 11799,
             "name": "verb",
             "type": "string"
           }
@@ -9025,22 +9025,22 @@
       {
         "fields": [
           {
-            "line": 12443,
+            "line": 12447,
             "name": "has_capacity",
             "type": "boolean"
           },
           {
-            "line": 12440,
+            "line": 12444,
             "name": "installed_count",
             "type": "integer"
           },
           {
-            "line": 12442,
+            "line": 12446,
             "name": "maximum_power",
             "type": "UnitValue"
           },
           {
-            "line": 12441,
+            "line": 12445,
             "name": "power",
             "type": "UnitValue"
           }
@@ -9079,17 +9079,17 @@
       {
         "fields": [
           {
-            "line": 11807,
+            "line": 11811,
             "name": "backlog",
             "type": "CcbPlatformActivitySnapshot[]"
           },
           {
-            "line": 11806,
+            "line": 11810,
             "name": "backlog_size",
             "type": "integer"
           },
           {
-            "line": 11808,
+            "line": 11812,
             "name": "backlog_truncated",
             "type": "boolean"
           }
@@ -9421,37 +9421,37 @@
       {
         "fields": [
           {
-            "line": 12914,
+            "line": 12918,
             "name": "age",
             "type": "TimeDuration"
           },
           {
-            "line": 12918,
+            "line": 12922,
             "name": "hit_player",
             "type": "boolean"
           },
           {
-            "line": 12917,
+            "line": 12921,
             "name": "indoor_only",
             "type": "boolean"
           },
           {
-            "line": 12913,
+            "line": 12917,
             "name": "intensity",
             "type": "number"
           },
           {
-            "line": 12916,
+            "line": 12920,
             "name": "outdoor_only",
             "type": "boolean"
           },
           {
-            "line": 12912,
+            "line": 12916,
             "name": "radius",
             "type": "number"
           },
           {
-            "line": 12915,
+            "line": 12919,
             "name": "square",
             "type": "boolean"
           }
@@ -9461,22 +9461,22 @@
       {
         "fields": [
           {
-            "line": 12950,
+            "line": 12954,
             "name": "environment",
             "type": "CcbPlatformEnvironmentQueries"
           },
           {
-            "line": 12949,
+            "line": 12953,
             "name": "mods",
             "type": "CcbPlatformModQueries"
           },
           {
-            "line": 12951,
+            "line": 12955,
             "name": "options",
             "type": "CcbPlatformGameplayOptionsApi"
           },
           {
-            "line": 12948,
+            "line": 12952,
             "name": "strings",
             "type": "CcbPlatformStringPredicates"
           }
@@ -9618,17 +9618,17 @@
       {
         "fields": [
           {
-            "line": 12719,
+            "line": 12723,
             "name": "capped",
             "type": "boolean"
           },
           {
-            "line": 12718,
+            "line": 12722,
             "name": "decay_start",
             "type": "TimeDuration"
           },
           {
-            "line": 12717,
+            "line": 12721,
             "name": "duration",
             "type": "TimeDuration"
           }
@@ -9714,32 +9714,32 @@
       {
         "fields": [
           {
-            "line": 12583,
+            "line": 12587,
             "name": "category",
             "type": "GameId"
           },
           {
-            "line": 12579,
+            "line": 12583,
             "name": "changed",
             "type": "boolean"
           },
           {
-            "line": 12580,
+            "line": 12584,
             "name": "forgotten_count",
             "type": "integer"
           },
           {
-            "line": 12582,
+            "line": 12586,
             "name": "known_after",
             "type": "integer"
           },
           {
-            "line": 12581,
+            "line": 12585,
             "name": "known_before",
             "type": "integer"
           },
           {
-            "line": 12584,
+            "line": 12588,
             "name": "subcategory",
             "type": "string"
           }
@@ -10355,47 +10355,47 @@
       {
         "fields": [
           {
-            "line": 13241,
+            "line": 13245,
             "name": "ModDefinition",
             "type": "fun(options:"
           },
           {
-            "line": 13242,
+            "line": 13246,
             "name": "content",
             "type": "CcbPlatformContent"
           },
           {
-            "line": 13244,
+            "line": 13248,
             "name": "dialogue",
             "type": "CcbPlatformDialogueApi"
           },
           {
-            "line": 13240,
+            "line": 13244,
             "name": "platform_version",
             "type": "1"
           },
           {
-            "line": 13247,
+            "line": 13251,
             "name": "presentation",
             "type": "CcbPlatformPresentation"
           },
           {
-            "line": 13243,
+            "line": 13247,
             "name": "runtime",
             "type": "CcbPlatformRuntime"
           },
           {
-            "line": 13248,
+            "line": 13252,
             "name": "services",
             "type": "CcbPlatformServices"
           },
           {
-            "line": 13245,
+            "line": 13249,
             "name": "state",
             "type": "CcbPlatformState"
           },
           {
-            "line": 13246,
+            "line": 13250,
             "name": "tasks",
             "type": "CcbPlatformTasks"
           }
@@ -10405,17 +10405,17 @@
       {
         "fields": [
           {
-            "line": 11850,
+            "line": 11854,
             "name": "after",
             "type": "CcbPlatformWoundSnapshot[]"
           },
           {
-            "line": 11849,
+            "line": 11853,
             "name": "before",
             "type": "CcbPlatformWoundSnapshot[]"
           },
           {
-            "line": 11848,
+            "line": 11852,
             "name": "changed",
             "type": "boolean"
           }
@@ -10425,32 +10425,32 @@
       {
         "fields": [
           {
-            "line": 11841,
+            "line": 11845,
             "name": "base_pain",
             "type": "integer"
           },
           {
-            "line": 11842,
+            "line": 11846,
             "name": "current_pain",
             "type": "integer"
           },
           {
-            "line": 11845,
+            "line": 11849,
             "name": "healing_fraction",
             "type": "number"
           },
           {
-            "line": 11844,
+            "line": 11848,
             "name": "healing_progress",
             "type": "TimeDuration"
           },
           {
-            "line": 11843,
+            "line": 11847,
             "name": "healing_time",
             "type": "TimeDuration"
           },
           {
-            "line": 11840,
+            "line": 11844,
             "name": "id",
             "type": "GameId"
           }
@@ -10468,17 +10468,17 @@
       {
         "fields": [
           {
-            "line": 12745,
+            "line": 12749,
             "name": "granted",
             "type": "boolean"
           },
           {
-            "line": 12746,
+            "line": 12750,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 12747,
+            "line": 12751,
             "name": "name",
             "type": "string"
           }
@@ -10488,37 +10488,37 @@
       {
         "fields": [
           {
-            "line": 12480,
+            "line": 12484,
             "name": "batch",
             "type": "integer"
           },
           {
-            "line": 12479,
+            "line": 12483,
             "name": "has_more",
             "type": "boolean"
           },
           {
-            "line": 12474,
+            "line": 12478,
             "name": "items",
             "type": "table"
           },
           {
-            "line": 12477,
+            "line": 12481,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 12476,
+            "line": 12480,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 12478,
+            "line": 12482,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 12475,
+            "line": 12479,
             "name": "total",
             "type": "integer"
           }
@@ -10528,47 +10528,47 @@
       {
         "fields": [
           {
-            "line": 12465,
+            "line": 12469,
             "name": "batch",
             "type": "integer"
           },
           {
-            "line": 12468,
+            "line": 12472,
             "name": "craftable",
             "type": "boolean"
           },
           {
-            "line": 12471,
+            "line": 12475,
             "name": "flag",
             "type": "string"
           },
           {
-            "line": 12466,
+            "line": 12470,
             "name": "include_obsolete",
             "type": "boolean"
           },
           {
-            "line": 12467,
+            "line": 12471,
             "name": "known",
             "type": "boolean"
           },
           {
-            "line": 12464,
+            "line": 12468,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 12463,
+            "line": 12467,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 12470,
+            "line": 12474,
             "name": "result",
             "type": "GameId"
           },
           {
-            "line": 12469,
+            "line": 12473,
             "name": "skill",
             "type": "GameId"
           }
@@ -10582,7 +10582,7 @@
       {
         "fields": [
           {
-            "line": 13282,
+            "line": 13286,
             "name": "definitions",
             "type": "CcbRegistryDefinitionsApi"
           }
@@ -10596,27 +10596,27 @@
       {
         "fields": [
           {
-            "line": 13271,
+            "line": 13275,
             "name": "details",
             "type": "boolean"
           },
           {
-            "line": 13269,
+            "line": 13273,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 13268,
+            "line": 13272,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 13272,
+            "line": 13276,
             "name": "order",
             "type": "\"id\"|\"native\""
           },
           {
-            "line": 13270,
+            "line": 13274,
             "name": "query",
             "type": "string"
           }
@@ -10770,17 +10770,17 @@
       {
         "fields": [
           {
-            "line": 12485,
+            "line": 12489,
             "name": "batch",
             "type": "integer"
           },
           {
-            "line": 12484,
+            "line": 12488,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 12483,
+            "line": 12487,
             "name": "offset",
             "type": "integer"
           }
@@ -10814,37 +10814,37 @@
       {
         "fields": [
           {
-            "line": 11742,
+            "line": 11746,
             "name": "charges",
             "type": "integer"
           },
           {
-            "line": 11741,
+            "line": 11745,
             "name": "count",
             "type": "integer"
           },
           {
-            "line": 11737,
+            "line": 11741,
             "name": "item",
             "type": "GameHandle"
           },
           {
-            "line": 11738,
+            "line": 11742,
             "name": "item_name",
             "type": "string"
           },
           {
-            "line": 11740,
+            "line": 11744,
             "name": "price",
             "type": "number"
           },
           {
-            "line": 11739,
+            "line": 11743,
             "name": "quantity",
             "type": "integer"
           },
           {
-            "line": 11736,
+            "line": 11740,
             "name": "source_holder",
             "type": "CcbTradeQuoteHolder"
           }
@@ -11060,22 +11060,22 @@
       {
         "fields": [
           {
-            "line": 12669,
+            "line": 12673,
             "name": "base_cooldown_seconds",
             "type": "number"
           },
           {
-            "line": 12667,
+            "line": 12671,
             "name": "character",
             "type": "GameHandle"
           },
           {
-            "line": 12666,
+            "line": 12670,
             "name": "technique_id",
             "type": "string"
           },
           {
-            "line": 12668,
+            "line": 12672,
             "name": "weapon_id",
             "type": "string"
           }
@@ -11085,227 +11085,227 @@
       {
         "fields": [
           {
-            "line": 12641,
+            "line": 12645,
             "name": "area",
             "type": "string"
           },
           {
-            "line": 12643,
+            "line": 12647,
             "name": "attack_vectors",
             "type": "CcbTechniqueIdPage"
           },
           {
-            "line": 12616,
+            "line": 12620,
             "name": "avatar_message",
             "type": "string"
           },
           {
-            "line": 12626,
+            "line": 12630,
             "name": "block_counter",
             "type": "boolean"
           },
           {
-            "line": 12647,
+            "line": 12651,
             "name": "conditional_activation",
             "type": "boolean"
           },
           {
-            "line": 12608,
+            "line": 12612,
             "name": "cooldown_seconds",
             "type": "number"
           },
           {
-            "line": 12646,
+            "line": 12650,
             "name": "cooldown_turns",
             "type": "integer"
           },
           {
-            "line": 12622,
+            "line": 12626,
             "name": "critical_compatible",
             "type": "boolean"
           },
           {
-            "line": 12621,
+            "line": 12625,
             "name": "critical_only",
             "type": "boolean"
           },
           {
-            "line": 12618,
+            "line": 12622,
             "name": "defensive",
             "type": "boolean"
           },
           {
-            "line": 12613,
+            "line": 12617,
             "name": "description",
             "type": "string"
           },
           {
-            "line": 12629,
+            "line": 12633,
             "name": "disarms",
             "type": "boolean"
           },
           {
-            "line": 12625,
+            "line": 12629,
             "name": "dodge_counter",
             "type": "boolean"
           },
           {
-            "line": 12636,
+            "line": 12640,
             "name": "down_duration",
             "type": "integer"
           },
           {
-            "line": 12620,
+            "line": 12624,
             "name": "dummy",
             "type": "boolean"
           },
           {
-            "line": 12609,
+            "line": 12613,
             "name": "dynamic_cooldown",
             "type": "boolean"
           },
           {
-            "line": 12644,
+            "line": 12648,
             "name": "eocs",
             "type": "CcbTechniqueIdPage"
           },
           {
-            "line": 12642,
+            "line": 12646,
             "name": "flags",
             "type": "CcbTechniqueFlagPage"
           },
           {
-            "line": 12614,
+            "line": 12618,
             "name": "flavor_description",
             "type": "string"
           },
           {
-            "line": 12615,
+            "line": 12619,
             "name": "goal",
             "type": "string"
           },
           {
-            "line": 12628,
+            "line": 12632,
             "name": "grab_break",
             "type": "boolean"
           },
           {
-            "line": 12648,
+            "line": 12652,
             "name": "grapple_action",
             "type": "string"
           },
           {
-            "line": 12651,
+            "line": 12655,
             "name": "grapple_cooldown_turns",
             "type": "integer"
           },
           {
-            "line": 12649,
+            "line": 12653,
             "name": "grapple_power",
             "type": "integer"
           },
           {
-            "line": 12650,
+            "line": 12654,
             "name": "grapple_stamina",
             "type": "integer"
           },
           {
-            "line": 12611,
+            "line": 12615,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 12638,
+            "line": 12642,
             "name": "knockback_distance",
             "type": "integer"
           },
           {
-            "line": 12640,
+            "line": 12644,
             "name": "knockback_follow",
             "type": "boolean"
           },
           {
-            "line": 12639,
+            "line": 12643,
             "name": "knockback_spread",
             "type": "number"
           },
           {
-            "line": 12645,
+            "line": 12649,
             "name": "manual_activation",
             "type": "boolean"
           },
           {
-            "line": 12627,
+            "line": 12631,
             "name": "miss_recovery",
             "type": "boolean"
           },
           {
-            "line": 12612,
+            "line": 12616,
             "name": "name",
             "type": "string"
           },
           {
-            "line": 12631,
+            "line": 12635,
             "name": "needs_ammo",
             "type": "boolean"
           },
           {
-            "line": 12617,
+            "line": 12621,
             "name": "npc_message",
             "type": "string"
           },
           {
-            "line": 12624,
+            "line": 12628,
             "name": "reach_compatible",
             "type": "boolean"
           },
           {
-            "line": 12623,
+            "line": 12627,
             "name": "reach_only",
             "type": "boolean"
           },
           {
-            "line": 12635,
+            "line": 12639,
             "name": "repeat_max",
             "type": "integer"
           },
           {
-            "line": 12634,
+            "line": 12638,
             "name": "repeat_min",
             "type": "integer"
           },
           {
-            "line": 12652,
+            "line": 12656,
             "name": "scripted_grapple",
             "type": "boolean"
           },
           {
-            "line": 12619,
+            "line": 12623,
             "name": "side_switch",
             "type": "boolean"
           },
           {
-            "line": 12637,
+            "line": 12641,
             "name": "stun_duration",
             "type": "integer"
           },
           {
-            "line": 12630,
+            "line": 12634,
             "name": "take_weapon",
             "type": "boolean"
           },
           {
-            "line": 12610,
+            "line": 12614,
             "name": "target_mode",
             "type": "'creature'|'position'"
           },
           {
-            "line": 12632,
+            "line": 12636,
             "name": "wall_adjacent",
             "type": "boolean"
           },
           {
-            "line": 12633,
+            "line": 12637,
             "name": "weight",
             "type": "integer"
           }
@@ -11315,22 +11315,22 @@
       {
         "fields": [
           {
-            "line": 12602,
+            "line": 12606,
             "name": "items",
             "type": "string[]"
           },
           {
-            "line": 12604,
+            "line": 12608,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 12603,
+            "line": 12607,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 12605,
+            "line": 12609,
             "name": "truncated",
             "type": "boolean"
           }
@@ -11410,22 +11410,22 @@
       {
         "fields": [
           {
-            "line": 12596,
+            "line": 12600,
             "name": "items",
             "type": "GameId[]"
           },
           {
-            "line": 12598,
+            "line": 12602,
             "name": "returned",
             "type": "integer"
           },
           {
-            "line": 12597,
+            "line": 12601,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 12599,
+            "line": 12603,
             "name": "truncated",
             "type": "boolean"
           }
@@ -11540,27 +11540,27 @@
       {
         "fields": [
           {
-            "line": 12673,
+            "line": 12677,
             "name": "available",
             "type": "boolean"
           },
           {
-            "line": 12675,
+            "line": 12679,
             "name": "base_cooldown_seconds",
             "type": "number"
           },
           {
-            "line": 12672,
+            "line": 12676,
             "name": "id",
             "type": "GameId"
           },
           {
-            "line": 12674,
+            "line": 12678,
             "name": "reason",
             "type": "string"
           },
           {
-            "line": 12676,
+            "line": 12680,
             "name": "remaining_seconds",
             "type": "number"
           }
@@ -11644,22 +11644,22 @@
       {
         "fields": [
           {
-            "line": 13114,
+            "line": 13118,
             "name": "season_id",
             "type": "string"
           },
           {
-            "line": 13115,
+            "line": 13119,
             "name": "season_name",
             "type": "string"
           },
           {
-            "line": 13112,
+            "line": 13116,
             "name": "turn",
             "type": "integer"
           },
           {
-            "line": 13113,
+            "line": 13117,
             "name": "year",
             "type": "integer"
           }
@@ -11669,12 +11669,12 @@
       {
         "fields": [
           {
-            "line": 11547,
+            "line": 11551,
             "name": "currency",
             "type": "'cash'"
           },
           {
-            "line": 11546,
+            "line": 11550,
             "name": "strategy",
             "type": "'npc_allowance'"
           }
@@ -11688,7 +11688,7 @@
       {
         "fields": [
           {
-            "line": 11675,
+            "line": 11679,
             "name": "code",
             "type": "CcbTradeCommitErrorCode"
           }
@@ -11698,27 +11698,27 @@
       {
         "fields": [
           {
-            "line": 11678,
+            "line": 11682,
             "name": "direction",
             "type": "'seller_to_buyer'|'buyer_to_seller'"
           },
           {
-            "line": 11679,
+            "line": 11683,
             "name": "item_uid",
             "type": "integer"
           },
           {
-            "line": 11681,
+            "line": 11685,
             "name": "quantity",
             "type": "integer"
           },
           {
-            "line": 11682,
+            "line": 11686,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 11680,
+            "line": 11684,
             "name": "transferred_item_uid",
             "type": "integer"
           }
@@ -11728,12 +11728,12 @@
       {
         "fields": [
           {
-            "line": 11706,
+            "line": 11710,
             "name": "error",
             "type": "CcbTradeCommitError"
           },
           {
-            "line": 11705,
+            "line": 11709,
             "name": "value",
             "type": "CcbTradeCommitValue"
           }
@@ -11743,92 +11743,92 @@
       {
         "fields": [
           {
-            "line": 11686,
+            "line": 11690,
             "name": "allowance",
             "type": "integer"
           },
           {
-            "line": 11687,
+            "line": 11691,
             "name": "allowance_offer_price",
             "type": "number"
           },
           {
-            "line": 11700,
+            "line": 11704,
             "name": "buyer_cash_after",
             "type": "integer"
           },
           {
-            "line": 11698,
+            "line": 11702,
             "name": "buyer_cash_before",
             "type": "integer"
           },
           {
-            "line": 11690,
+            "line": 11694,
             "name": "commit_generation",
             "type": "integer"
           },
           {
-            "line": 11685,
+            "line": 11689,
             "name": "committed",
             "type": "true"
           },
           {
-            "line": 11688,
+            "line": 11692,
             "name": "consumed",
             "type": "true"
           },
           {
-            "line": 11692,
+            "line": 11696,
             "name": "currency",
             "type": "'cash'"
           },
           {
-            "line": 11695,
+            "line": 11699,
             "name": "debt_after",
             "type": "integer"
           },
           {
-            "line": 11694,
+            "line": 11698,
             "name": "debt_before",
             "type": "integer"
           },
           {
-            "line": 11702,
+            "line": 11706,
             "name": "lines",
             "type": "CcbTradeCommitLineResult[]"
           },
           {
-            "line": 11689,
+            "line": 11693,
             "name": "quote_id",
             "type": "integer"
           },
           {
-            "line": 11701,
+            "line": 11705,
             "name": "seller_cash_after",
             "type": "integer"
           },
           {
-            "line": 11699,
+            "line": 11703,
             "name": "seller_cash_before",
             "type": "integer"
           },
           {
-            "line": 11693,
+            "line": 11697,
             "name": "settlement_amount",
             "type": "integer"
           },
           {
-            "line": 11691,
+            "line": 11695,
             "name": "settlement_strategy",
             "type": "CcbTradeCommitSettlementStrategy"
           },
           {
-            "line": 11697,
+            "line": 11701,
             "name": "sold_after",
             "type": "integer"
           },
           {
-            "line": 11696,
+            "line": 11700,
             "name": "sold_before",
             "type": "integer"
           }
@@ -11838,12 +11838,12 @@
       {
         "fields": [
           {
-            "line": 11543,
+            "line": 11547,
             "name": "currency",
             "type": "'cash'"
           },
           {
-            "line": 11542,
+            "line": 11546,
             "name": "strategy",
             "type": "'npc_debt'"
           }
@@ -11853,27 +11853,27 @@
       {
         "fields": [
           {
-            "line": 11554,
+            "line": 11558,
             "name": "character",
             "type": "GameHandle"
           },
           {
-            "line": 11556,
+            "line": 11560,
             "name": "container",
             "type": "GameHandle"
           },
           {
-            "line": 11553,
+            "line": 11557,
             "name": "kind",
             "type": "'character'"
           },
           {
-            "line": 11557,
+            "line": 11561,
             "name": "pocket_index",
             "type": "integer"
           },
           {
-            "line": 11555,
+            "line": 11559,
             "name": "slot",
             "type": "'inventory'|'worn'|'wielded'|'contained'"
           }
@@ -11883,12 +11883,12 @@
       {
         "fields": [
           {
-            "line": 11560,
+            "line": 11564,
             "name": "locator",
             "type": "table<string,"
           },
           {
-            "line": 11561,
+            "line": 11565,
             "name": "mutation_generation",
             "type": "integer"
           }
@@ -11898,27 +11898,27 @@
       {
         "fields": [
           {
-            "line": 11568,
+            "line": 11572,
             "name": "destination_holder",
             "type": "CcbTradeQuoteHolder"
           },
           {
-            "line": 11564,
+            "line": 11568,
             "name": "direction",
             "type": "'seller_to_buyer'|'buyer_to_seller'"
           },
           {
-            "line": 11565,
+            "line": 11569,
             "name": "item",
             "type": "GameHandle"
           },
           {
-            "line": 11566,
+            "line": 11570,
             "name": "quantity",
             "type": "integer"
           },
           {
-            "line": 11567,
+            "line": 11571,
             "name": "source_holder",
             "type": "CcbTradeQuoteHolder"
           }
@@ -11928,77 +11928,77 @@
       {
         "fields": [
           {
-            "line": 11588,
+            "line": 11592,
             "name": "accepted",
             "type": "boolean"
           },
           {
-            "line": 11580,
+            "line": 11584,
             "name": "charges_at_quote",
             "type": "integer"
           },
           {
-            "line": 11582,
+            "line": 11586,
             "name": "destination_holder",
             "type": "CcbTradeQuoteHolderSnapshot"
           },
           {
-            "line": 11584,
+            "line": 11588,
             "name": "destination_holder_mutation_generation",
             "type": "integer"
           },
           {
-            "line": 11575,
+            "line": 11579,
             "name": "direction",
             "type": "'seller_to_buyer'|'buyer_to_seller'"
           },
           {
-            "line": 11576,
+            "line": 11580,
             "name": "item",
             "type": "GameHandle"
           },
           {
-            "line": 11578,
+            "line": 11582,
             "name": "item_identity_generation",
             "type": "integer"
           },
           {
-            "line": 11577,
+            "line": 11581,
             "name": "item_uid",
             "type": "integer"
           },
           {
-            "line": 11579,
+            "line": 11583,
             "name": "quantity",
             "type": "integer"
           },
           {
-            "line": 11589,
+            "line": 11593,
             "name": "rejection_reason",
             "type": "string"
           },
           {
-            "line": 11581,
+            "line": 11585,
             "name": "source_holder",
             "type": "CcbTradeQuoteHolderSnapshot"
           },
           {
-            "line": 11583,
+            "line": 11587,
             "name": "source_holder_mutation_generation",
             "type": "integer"
           },
           {
-            "line": 11587,
+            "line": 11591,
             "name": "tax",
             "type": "integer"
           },
           {
-            "line": 11586,
+            "line": 11590,
             "name": "total",
             "type": "integer"
           },
           {
-            "line": 11585,
+            "line": 11589,
             "name": "unit_price",
             "type": "integer"
           }
@@ -12008,12 +12008,12 @@
       {
         "fields": [
           {
-            "line": 11572,
+            "line": 11576,
             "name": "expiry_turns",
             "type": "integer"
           },
           {
-            "line": 11571,
+            "line": 11575,
             "name": "settlement",
             "type": "CcbTradeQuoteSettlement"
           }
@@ -12023,17 +12023,17 @@
       {
         "fields": [
           {
-            "line": 11537,
+            "line": 11541,
             "name": "allowance",
             "type": "integer"
           },
           {
-            "line": 11536,
+            "line": 11540,
             "name": "currency",
             "type": "'cash'"
           },
           {
-            "line": 11535,
+            "line": 11539,
             "name": "strategy",
             "type": "CcbTradeQuoteSettlementStrategy"
           }
@@ -12043,167 +12043,167 @@
       {
         "fields": [
           {
-            "line": 11593,
+            "line": 11597,
             "name": "allowance",
             "type": "integer"
           },
           {
-            "line": 11594,
+            "line": 11598,
             "name": "allowance_offer_price",
             "type": "number"
           },
           {
-            "line": 11622,
+            "line": 11626,
             "name": "available_settlement_modes",
             "type": "string[]"
           },
           {
-            "line": 11596,
+            "line": 11600,
             "name": "buyer",
             "type": "GameHandle"
           },
           {
-            "line": 11617,
+            "line": 11621,
             "name": "buyer_cash_before",
             "type": "integer"
           },
           {
-            "line": 11600,
+            "line": 11604,
             "name": "buyer_identity_generation",
             "type": "integer"
           },
           {
-            "line": 11598,
+            "line": 11602,
             "name": "buyer_stable_id",
             "type": "integer"
           },
           {
-            "line": 11609,
+            "line": 11613,
             "name": "buyer_to_seller_total",
             "type": "integer"
           },
           {
-            "line": 11607,
+            "line": 11611,
             "name": "currency",
             "type": "'cash'"
           },
           {
-            "line": 11614,
+            "line": 11618,
             "name": "debt_after",
             "type": "integer|nil"
           },
           {
-            "line": 11613,
+            "line": 11617,
             "name": "debt_before",
             "type": "integer|nil"
           },
           {
-            "line": 11604,
+            "line": 11608,
             "name": "debt_generation",
             "type": "integer"
           },
           {
-            "line": 11621,
+            "line": 11625,
             "name": "expires_turn",
             "type": "integer"
           },
           {
-            "line": 11603,
+            "line": 11607,
             "name": "faction_generation",
             "type": "integer"
           },
           {
-            "line": 11619,
+            "line": 11623,
             "name": "free_exchange",
             "type": "boolean"
           },
           {
-            "line": 11601,
+            "line": 11605,
             "name": "holder_mutation_generation",
             "type": "integer"
           },
           {
-            "line": 11620,
+            "line": 11624,
             "name": "issued_turn",
             "type": "integer"
           },
           {
-            "line": 11623,
+            "line": 11627,
             "name": "lines",
             "type": "CcbTradeQuoteLineSnapshot[]"
           },
           {
-            "line": 11610,
+            "line": 11614,
             "name": "net",
             "type": "integer"
           },
           {
-            "line": 11605,
+            "line": 11609,
             "name": "opinion_generation",
             "type": "integer"
           },
           {
-            "line": 11602,
+            "line": 11606,
             "name": "pricing_generation",
             "type": "integer"
           },
           {
-            "line": 11624,
+            "line": 11628,
             "name": "rejection_reasons",
             "type": "string[]"
           },
           {
-            "line": 11595,
+            "line": 11599,
             "name": "seller",
             "type": "GameHandle"
           },
           {
-            "line": 11618,
+            "line": 11622,
             "name": "seller_cash_before",
             "type": "integer"
           },
           {
-            "line": 11599,
+            "line": 11603,
             "name": "seller_identity_generation",
             "type": "integer"
           },
           {
-            "line": 11597,
+            "line": 11601,
             "name": "seller_stable_id",
             "type": "integer"
           },
           {
-            "line": 11608,
+            "line": 11612,
             "name": "seller_to_buyer_total",
             "type": "integer"
           },
           {
-            "line": 11612,
+            "line": 11616,
             "name": "settlement_amount",
             "type": "integer"
           },
           {
-            "line": 11606,
+            "line": 11610,
             "name": "settlement_strategy",
             "type": "CcbTradeQuoteSettlementStrategy"
           },
           {
-            "line": 11616,
+            "line": 11620,
             "name": "sold_after",
             "type": "integer|nil"
           },
           {
-            "line": 11615,
+            "line": 11619,
             "name": "sold_before",
             "type": "integer|nil"
           },
           {
-            "line": 11611,
+            "line": 11615,
             "name": "tax",
             "type": "integer"
           },
           {
-            "line": 11592,
+            "line": 11596,
             "name": "token",
             "type": "TradeQuoteToken"
           }
@@ -12213,7 +12213,7 @@
       {
         "fields": [
           {
-            "line": 12003,
+            "line": 12007,
             "name": "null",
             "type": "NullValue"
           }
@@ -12223,7 +12223,7 @@
       {
         "fields": [
           {
-            "line": 12036,
+            "line": 12040,
             "name": "value",
             "type": "CcbVariableCopyValue"
           }
@@ -12233,12 +12233,12 @@
       {
         "fields": [
           {
-            "line": 12033,
+            "line": 12037,
             "name": "destination_existed",
             "type": "boolean"
           },
           {
-            "line": 12032,
+            "line": 12036,
             "name": "source_exists",
             "type": "boolean"
           }
@@ -12248,7 +12248,7 @@
       {
         "fields": [
           {
-            "line": 12023,
+            "line": 12027,
             "name": "include_before",
             "type": "boolean"
           }
@@ -12258,7 +12258,7 @@
       {
         "fields": [
           {
-            "line": 12111,
+            "line": 12115,
             "name": "strict",
             "type": "boolean"
           }
@@ -12268,7 +12268,7 @@
       {
         "fields": [
           {
-            "line": 12108,
+            "line": 12112,
             "name": "value",
             "type": "CcbVariableNumberReadValue"
           }
@@ -12278,12 +12278,12 @@
       {
         "fields": [
           {
-            "line": 12104,
+            "line": 12108,
             "name": "exists",
             "type": "boolean"
           },
           {
-            "line": 12105,
+            "line": 12109,
             "name": "value",
             "type": "number"
           }
@@ -12293,7 +12293,7 @@
       {
         "fields": [
           {
-            "line": 12020,
+            "line": 12024,
             "name": "value",
             "type": "CcbVariableReadValue"
           }
@@ -12303,12 +12303,12 @@
       {
         "fields": [
           {
-            "line": 12016,
+            "line": 12020,
             "name": "exists",
             "type": "boolean"
           },
           {
-            "line": 12017,
+            "line": 12021,
             "name": "value",
             "type": "any"
           }
@@ -12318,7 +12318,7 @@
       {
         "fields": [
           {
-            "line": 12079,
+            "line": 12083,
             "name": "value",
             "type": "CcbVariableStringReadValue"
           }
@@ -12328,12 +12328,12 @@
       {
         "fields": [
           {
-            "line": 12075,
+            "line": 12079,
             "name": "exists",
             "type": "boolean"
           },
           {
-            "line": 12076,
+            "line": 12080,
             "name": "value",
             "type": "string"
           }
@@ -12343,7 +12343,7 @@
       {
         "fields": [
           {
-            "line": 12145,
+            "line": 12149,
             "name": "value",
             "type": "CcbVariableTripointReadValue"
           }
@@ -12353,12 +12353,12 @@
       {
         "fields": [
           {
-            "line": 12141,
+            "line": 12145,
             "name": "exists",
             "type": "boolean"
           },
           {
-            "line": 12142,
+            "line": 12146,
             "name": "value",
             "type": "TripointCoord"
           }
@@ -12726,27 +12726,27 @@
       {
         "fields": [
           {
-            "line": 13087,
+            "line": 13091,
             "name": "count",
             "type": "integer"
           },
           {
-            "line": 13090,
+            "line": 13094,
             "name": "dangerous",
             "type": "boolean"
           },
           {
-            "line": 13086,
+            "line": 13090,
             "name": "direction",
             "type": "string"
           },
           {
-            "line": 13089,
+            "line": 13093,
             "name": "present",
             "type": "boolean"
           },
           {
-            "line": 13088,
+            "line": 13092,
             "name": "type_count",
             "type": "integer"
           }
@@ -12756,22 +12756,22 @@
       {
         "fields": [
           {
-            "line": 13255,
+            "line": 13259,
             "name": "limit",
             "type": "integer"
           },
           {
-            "line": 13254,
+            "line": 13258,
             "name": "offset",
             "type": "integer"
           },
           {
-            "line": 13257,
+            "line": 13261,
             "name": "order",
             "type": "\"id\"|\"native\""
           },
           {
-            "line": 13256,
+            "line": 13260,
             "name": "query",
             "type": "string"
           }
@@ -13304,22 +13304,22 @@
       {
         "fields": [
           {
-            "line": 13118,
+            "line": 13122,
             "name": "id",
             "type": "string"
           },
           {
-            "line": 13119,
+            "line": 13123,
             "name": "temperature_c",
             "type": "number"
           },
           {
-            "line": 13121,
+            "line": 13125,
             "name": "wind_direction",
             "type": "number"
           },
           {
-            "line": 13120,
+            "line": 13124,
             "name": "wind_speed",
             "type": "number"
           }
@@ -23415,82 +23415,82 @@
       {
         "fields": [
           {
-            "line": 11521,
+            "line": 11525,
             "name": "buyer_identity_generation",
             "type": "integer"
           },
           {
-            "line": 11519,
+            "line": 11523,
             "name": "buyer_stable_id",
             "type": "integer"
           },
           {
-            "line": 11525,
+            "line": 11529,
             "name": "debt_generation",
             "type": "integer"
           },
           {
-            "line": 11528,
+            "line": 11532,
             "name": "expires_turn",
             "type": "integer"
           },
           {
-            "line": 11524,
+            "line": 11528,
             "name": "faction_generation",
             "type": "integer"
           },
           {
-            "line": 11522,
+            "line": 11526,
             "name": "holder_mutation_generation",
             "type": "integer"
           },
           {
-            "line": 11530,
+            "line": 11534,
             "name": "is_valid",
             "type": "fun(self:"
           },
           {
-            "line": 11527,
+            "line": 11531,
             "name": "issued_turn",
             "type": "integer"
           },
           {
-            "line": 11526,
+            "line": 11530,
             "name": "opinion_generation",
             "type": "integer"
           },
           {
-            "line": 11523,
+            "line": 11527,
             "name": "pricing_generation",
             "type": "integer"
           },
           {
-            "line": 11515,
+            "line": 11519,
             "name": "quote_id",
             "type": "integer"
           },
           {
-            "line": 11529,
+            "line": 11533,
             "name": "registered",
             "type": "boolean"
           },
           {
-            "line": 11516,
+            "line": 11520,
             "name": "runtime_generation",
             "type": "integer"
           },
           {
-            "line": 11520,
+            "line": 11524,
             "name": "seller_identity_generation",
             "type": "integer"
           },
           {
-            "line": 11518,
+            "line": 11522,
             "name": "seller_stable_id",
             "type": "integer"
           },
           {
-            "line": 11517,
+            "line": 11521,
             "name": "world_generation",
             "type": "integer"
           }
@@ -25363,7 +25363,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1475,
+    "function_count": 1476,
     "functions": [
       {
         "line": "3320",
@@ -25624,31 +25624,31 @@
         "parameters": "speed, size, butcher, requirement_id"
       },
       {
-        "line": "11973",
+        "line": "11977",
         "name": "definition",
         "owner": "CcbBionicsApi",
         "parameters": "bionic"
       },
       {
-        "line": "11990",
+        "line": "11994",
         "name": "grant",
         "owner": "CcbBionicsApi",
         "parameters": "character, bionic"
       },
       {
-        "line": "11984",
+        "line": "11988",
         "name": "has",
         "owner": "CcbBionicsApi",
         "parameters": "character, bionic"
       },
       {
-        "line": "11996",
+        "line": "12000",
         "name": "remove_type",
         "owner": "CcbBionicsApi",
         "parameters": "character, bionic"
       },
       {
-        "line": "11978",
+        "line": "11982",
         "name": "summary",
         "owner": "CcbBionicsApi",
         "parameters": "character"
@@ -26056,103 +26056,103 @@
         "parameters": "x, y, z"
       },
       {
-        "line": "12508",
+        "line": "12512",
         "name": "start",
         "owner": "CcbCraftingApi",
         "parameters": "character, recipe, batch, continue_while_possible"
       },
       {
-        "line": "13068",
+        "line": "13072",
         "name": "at",
         "owner": "CcbCreaturesApi",
         "parameters": "position"
       },
       {
-        "line": "13060",
+        "line": "13064",
         "name": "avatar",
         "owner": "CcbCreaturesApi",
         "parameters": ""
       },
       {
-        "line": "13095",
+        "line": "13099",
         "name": "can_see",
         "owner": "CcbCreaturesApi",
         "parameters": "observer, target"
       },
       {
-        "line": "13051",
+        "line": "13055",
         "name": "damage",
         "owner": "CcbCreaturesApi",
         "parameters": "target, damage_type, amount, options"
       },
       {
-        "line": "13073",
+        "line": "13077",
         "name": "has_flag",
         "owner": "CcbCreaturesApi",
         "parameters": "creature, flag"
       },
       {
-        "line": "13104",
+        "line": "13108",
         "name": "has_line_of_sight",
         "owner": "CcbCreaturesApi",
         "parameters": "observer, target"
       },
       {
-        "line": "13078",
+        "line": "13082",
         "name": "has_species",
         "owner": "CcbCreaturesApi",
         "parameters": "creature, species"
       },
       {
-        "line": "13057",
+        "line": "13061",
         "name": "heal",
         "owner": "CcbCreaturesApi",
         "parameters": "target, body_part, amount"
       },
       {
-        "line": "13083",
+        "line": "13087",
         "name": "nearby",
         "owner": "CcbCreaturesApi",
         "parameters": "observer, options"
       },
       {
-        "line": "13099",
+        "line": "13103",
         "name": "player_can_see",
         "owner": "CcbCreaturesApi",
         "parameters": "target"
       },
       {
-        "line": "13064",
+        "line": "13068",
         "name": "snapshot",
         "owner": "CcbCreaturesApi",
         "parameters": "handle"
       },
       {
-        "line": "13109",
+        "line": "13113",
         "name": "visible_monsters",
         "owner": "CcbCreaturesApi",
         "parameters": "observer, direction"
       },
       {
-        "line": "12259",
+        "line": "12263",
         "name": "add",
         "owner": "CcbEffectsApi",
         "parameters": "creature, effect, duration, options"
       },
       {
-        "line": "12274",
+        "line": "12278",
         "name": "get",
         "owner": "CcbEffectsApi",
         "parameters": "creature, effect, body_part"
       },
       {
-        "line": "12267",
+        "line": "12271",
         "name": "has",
         "owner": "CcbEffectsApi",
         "parameters": "creature, effect, body_part, intensity"
       },
       {
-        "line": "12281",
+        "line": "12285",
         "name": "remove",
         "owner": "CcbEffectsApi",
         "parameters": "creature, effect, body_part"
@@ -26782,7 +26782,7 @@
         "parameters": "id"
       },
       {
-        "line": "12659",
+        "line": "12663",
         "name": "current",
         "owner": "CcbMartialArtsApi",
         "parameters": "character"
@@ -26908,133 +26908,133 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "13311",
+        "line": "13315",
         "name": "seeing_position",
         "owner": "CcbMonstersApi",
         "parameters": "position, radius"
       },
       {
-        "line": "13316",
+        "line": "13320",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
       },
       {
-        "line": "11955",
+        "line": "11959",
         "name": "add",
         "owner": "CcbMoraleApi",
         "parameters": "character, morale, bonus, max_bonus, options"
       },
       {
-        "line": "11961",
+        "line": "11965",
         "name": "remove",
         "owner": "CcbMoraleApi",
         "parameters": "character, morale"
       },
       {
-        "line": "12304",
+        "line": "12308",
         "name": "definitions",
         "owner": "CcbMutationsApi",
         "parameters": "options"
       },
       {
-        "line": "12372",
+        "line": "12376",
         "name": "erase",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation"
       },
       {
-        "line": "12357",
+        "line": "12361",
         "name": "grant",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, variant"
       },
       {
-        "line": "12310",
+        "line": "12314",
         "name": "has",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation"
       },
       {
-        "line": "12319",
+        "line": "12323",
         "name": "has_id_text",
         "owner": "CcbMutationsApi",
         "parameters": "character, id_text"
       },
       {
-        "line": "12387",
+        "line": "12391",
         "name": "invoke_activation",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, active"
       },
       {
-        "line": "12333",
+        "line": "12337",
         "name": "is_purifiable",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation"
       },
       {
-        "line": "12341",
+        "line": "12345",
         "name": "is_purifiable_id_text",
         "owner": "CcbMutationsApi",
         "parameters": "character, id_text"
       },
       {
-        "line": "12326",
+        "line": "12330",
         "name": "is_visible_to",
         "owner": "CcbMutationsApi",
         "parameters": "observed, observer, mutation"
       },
       {
-        "line": "12409",
+        "line": "12413",
         "name": "mutate",
         "owner": "CcbMutationsApi",
         "parameters": "character, true_random_chance, use_vitamins"
       },
       {
-        "line": "12417",
+        "line": "12421",
         "name": "mutate_category",
         "owner": "CcbMutationsApi",
         "parameters": "character, category, use_vitamins, true_random"
       },
       {
-        "line": "12425",
+        "line": "12429",
         "name": "mutate_towards",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, category, use_vitamins"
       },
       {
-        "line": "12379",
+        "line": "12383",
         "name": "remove",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation"
       },
       {
-        "line": "12402",
+        "line": "12406",
         "name": "remove_category",
         "owner": "CcbMutationsApi",
         "parameters": "character, category"
       },
       {
-        "line": "12434",
+        "line": "12438",
         "name": "remove_type",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation_type"
       },
       {
-        "line": "12365",
+        "line": "12369",
         "name": "replace",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, variant"
       },
       {
-        "line": "12396",
+        "line": "12400",
         "name": "set_active",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, active, retrigger"
       },
       {
-        "line": "12349",
+        "line": "12353",
         "name": "set_purifiable",
         "owner": "CcbMutationsApi",
         "parameters": "character, mutation, purifiable"
@@ -27244,31 +27244,31 @@
         "parameters": "provider, student, mode"
       },
       {
-        "line": "11396",
+        "line": "11400",
         "name": "add_debt",
         "owner": "CcbNpcsApi",
         "parameters": "handle, amount"
       },
       {
-        "line": "11400",
+        "line": "11404",
         "name": "add_faction_rep",
         "owner": "CcbNpcsApi",
         "parameters": "handle, amount"
       },
       {
-        "line": "11419",
+        "line": "11423",
         "name": "ai_rule_catalog",
         "owner": "CcbNpcsApi",
         "parameters": ""
       },
       {
-        "line": "11507",
+        "line": "11511",
         "name": "ai_rules",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11465",
+        "line": "11469",
         "name": "become_hostile",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
@@ -27286,37 +27286,37 @@
         "parameters": "options"
       },
       {
-        "line": "11472",
+        "line": "11476",
         "name": "clear_stolen_item_claim",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11484",
+        "line": "11488",
         "name": "companion_state",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11439",
+        "line": "11443",
         "name": "copy_ai_rules",
         "owner": "CcbNpcsApi",
         "parameters": "target, source"
       },
       {
-        "line": "11370",
+        "line": "11374",
         "name": "count_allies",
         "owner": "CcbNpcsApi",
         "parameters": "global"
       },
       {
-        "line": "11477",
+        "line": "11481",
         "name": "destinations",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11475",
+        "line": "11479",
         "name": "drop_stolen_items",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
@@ -27328,49 +27328,49 @@
         "parameters": "handle"
       },
       {
-        "line": "11367",
+        "line": "11371",
         "name": "find_unique",
         "owner": "CcbNpcsApi",
         "parameters": "unique_id"
       },
       {
-        "line": "11450",
+        "line": "11454",
         "name": "follow_temporarily",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11364",
+        "line": "11368",
         "name": "get",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11380",
+        "line": "11384",
         "name": "has_follower_nearby",
         "owner": "CcbNpcsApi",
         "parameters": "origin, class, radius"
       },
       {
-        "line": "11375",
+        "line": "11379",
         "name": "has_role_nearby",
         "owner": "CcbNpcsApi",
         "parameters": "origin, role, radius"
       },
       {
-        "line": "11458",
+        "line": "11462",
         "name": "join_player",
         "owner": "CcbNpcsApi",
         "parameters": "handle, avatar"
       },
       {
-        "line": "11482",
+        "line": "11486",
         "name": "lead_to",
         "owner": "CcbNpcsApi",
         "parameters": "handle, goal"
       },
       {
-        "line": "11461",
+        "line": "11465",
         "name": "leave_player",
         "owner": "CcbNpcsApi",
         "parameters": "handle, avatar"
@@ -27382,181 +27382,187 @@
         "parameters": "options"
       },
       {
-        "line": "11452",
+        "line": "11361",
+        "name": "loaded",
+        "owner": "CcbNpcsApi",
+        "parameters": ""
+      },
+      {
+        "line": "11456",
         "name": "make_neutral",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11442",
+        "line": "11446",
         "name": "make_thankful",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11392",
+        "line": "11396",
         "name": "modify_opinion",
         "owner": "CcbNpcsApi",
         "parameters": "handle, deltas"
       },
       {
-        "line": "11491",
+        "line": "11495",
         "name": "offer_item",
         "owner": "CcbNpcsApi",
         "parameters": "recipient, giver, item, use_item"
       },
       {
-        "line": "11486",
+        "line": "11490",
         "name": "open_companion_missions",
         "owner": "CcbNpcsApi",
         "parameters": "handle, role"
       },
       {
-        "line": "11501",
+        "line": "11505",
         "name": "open_control_menu",
         "owner": "CcbNpcsApi",
         "parameters": "avatar"
       },
       {
-        "line": "11496",
+        "line": "11500",
         "name": "open_dialogue",
         "owner": "CcbNpcsApi",
         "parameters": "npc, speaker, topic"
       },
       {
-        "line": "11499",
+        "line": "11503",
         "name": "open_rules",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11480",
+        "line": "11484",
         "name": "plan_travel",
         "owner": "CcbNpcsApi",
         "parameters": "handle, goal"
       },
       {
-        "line": "11446",
+        "line": "11450",
         "name": "record_refusal",
         "owner": "CcbNpcsApi",
         "parameters": "handle, request"
       },
       {
-        "line": "11384",
+        "line": "11388",
         "name": "rename",
         "owner": "CcbNpcsApi",
         "parameters": "handle, name"
       },
       {
-        "line": "11469",
+        "line": "11473",
         "name": "request_talk",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11424",
+        "line": "11428",
         "name": "set_ai_policy",
         "owner": "CcbNpcsApi",
         "parameters": "handle, family, rule"
       },
       {
-        "line": "11434",
+        "line": "11438",
         "name": "set_ally_override",
         "owner": "CcbNpcsApi",
         "parameters": "handle, rule, state"
       },
       {
-        "line": "11429",
+        "line": "11433",
         "name": "set_ally_rule",
         "owner": "CcbNpcsApi",
         "parameters": "handle, rule, enabled"
       },
       {
-        "line": "11388",
+        "line": "11392",
         "name": "set_attitude",
         "owner": "CcbNpcsApi",
         "parameters": "handle, attitude"
       },
       {
-        "line": "11404",
+        "line": "11408",
         "name": "set_class",
         "owner": "CcbNpcsApi",
         "parameters": "handle, class"
       },
       {
-        "line": "11485",
+        "line": "11489",
         "name": "set_companion_role",
         "owner": "CcbNpcsApi",
         "parameters": "handle, role"
       },
       {
-        "line": "11408",
+        "line": "11412",
         "name": "set_faction",
         "owner": "CcbNpcsApi",
         "parameters": "handle, faction"
       },
       {
-        "line": "11412",
+        "line": "11416",
         "name": "set_first_topic",
         "owner": "CcbNpcsApi",
         "parameters": "handle, topic"
       },
       {
-        "line": "11481",
+        "line": "11485",
         "name": "set_goal",
         "owner": "CcbNpcsApi",
         "parameters": "handle, goal"
       },
       {
-        "line": "11483",
+        "line": "11487",
         "name": "set_guard_position",
         "owner": "CcbNpcsApi",
         "parameters": "handle, position"
       },
       {
-        "line": "11464",
+        "line": "11468",
         "name": "set_guarding",
         "owner": "CcbNpcsApi",
         "parameters": "handle, enabled"
       },
       {
-        "line": "11417",
+        "line": "11421",
         "name": "set_radio_representative",
         "owner": "CcbNpcsApi",
         "parameters": "handle, avatar, enabled"
       },
       {
-        "line": "11453",
+        "line": "11457",
         "name": "start_fleeing",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11454",
+        "line": "11458",
         "name": "start_mugging",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11451",
+        "line": "11455",
         "name": "stop_temporary_following",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
       },
       {
-        "line": "11504",
+        "line": "11508",
         "name": "take_control",
         "owner": "CcbNpcsApi",
         "parameters": "handle, avatar"
       },
       {
-        "line": "11361",
+        "line": "11365",
         "name": "visible_allies",
         "owner": "CcbNpcsApi",
         "parameters": ""
       },
       {
-        "line": "11471",
+        "line": "11475",
         "name": "warn_player_departure",
         "owner": "CcbNpcsApi",
         "parameters": "handle"
@@ -27628,7 +27634,7 @@
         "parameters": "position"
       },
       {
-        "line": "11790",
+        "line": "11794",
         "name": "complete",
         "owner": "CcbPlatformAchievementsApi",
         "parameters": "id"
@@ -27640,13 +27646,13 @@
         "parameters": "handle, job"
       },
       {
-        "line": "11832",
+        "line": "11836",
         "name": "assign_timed",
         "owner": "CcbPlatformActivitiesApi",
         "parameters": "character, id, duration"
       },
       {
-        "line": "11837",
+        "line": "11841",
         "name": "cancel",
         "owner": "CcbPlatformActivitiesApi",
         "parameters": "character"
@@ -27718,7 +27724,7 @@
         "parameters": "handle"
       },
       {
-        "line": "11823",
+        "line": "11827",
         "name": "snapshot",
         "owner": "CcbPlatformActivitiesApi",
         "parameters": "character"
@@ -27754,19 +27760,19 @@
         "parameters": "character_handle, npc_handle, duration"
       },
       {
-        "line": "12454",
+        "line": "12458",
         "name": "grant",
         "owner": "CcbPlatformBionicsApi",
         "parameters": "character, id"
       },
       {
-        "line": "12460",
+        "line": "12464",
         "name": "remove_type",
         "owner": "CcbPlatformBionicsApi",
         "parameters": "character, id"
       },
       {
-        "line": "12448",
+        "line": "12452",
         "name": "summary",
         "owner": "CcbPlatformBionicsApi",
         "parameters": "character"
@@ -29536,7 +29542,7 @@
         "parameters": "descriptor"
       },
       {
-        "line": "12925",
+        "line": "12929",
         "name": "add_field_area",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, field_id, options"
@@ -29548,85 +29554,85 @@
         "parameters": "dimension"
       },
       {
-        "line": "12850",
+        "line": "12854",
         "name": "dimension",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": ""
       },
       {
-        "line": "12930",
+        "line": "12934",
         "name": "field_exists",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, field_id"
       },
       {
-        "line": "12871",
+        "line": "12875",
         "name": "furniture_has_flag",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, flag"
       },
       {
-        "line": "12883",
+        "line": "12887",
         "name": "furniture_id",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position"
       },
       {
-        "line": "12940",
+        "line": "12944",
         "name": "is_indoor_tile",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position"
       },
       {
-        "line": "12854",
+        "line": "12858",
         "name": "is_night",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": ""
       },
       {
-        "line": "12858",
+        "line": "12862",
         "name": "is_outside",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position"
       },
       {
-        "line": "12865",
+        "line": "12869",
         "name": "line_of_sight",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "from, to, range, with_fields"
       },
       {
-        "line": "12945",
+        "line": "12949",
         "name": "safe_mode_dangerous",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "direction"
       },
       {
-        "line": "12901",
+        "line": "12905",
         "name": "set_furniture",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, furniture_id, radius, square, avoid_creatures"
       },
       {
-        "line": "12892",
+        "line": "12896",
         "name": "set_terrain",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, terrain_id, radius, square, avoid_creatures"
       },
       {
-        "line": "12909",
+        "line": "12913",
         "name": "set_trap_area",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, trap_id, radius, square"
       },
       {
-        "line": "12935",
+        "line": "12939",
         "name": "terrain_has_flag",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position, flag"
       },
       {
-        "line": "12877",
+        "line": "12881",
         "name": "terrain_id",
         "owner": "CcbPlatformEnvironmentQueries",
         "parameters": "position"
@@ -29680,13 +29686,13 @@
         "parameters": "title, options"
       },
       {
-        "line": "11782",
+        "line": "11786",
         "name": "is_wearing",
         "owner": "CcbPlatformInventoryApi",
         "parameters": "character, item"
       },
       {
-        "line": "11773",
+        "line": "11777",
         "name": "wielded",
         "owner": "CcbPlatformInventoryApi",
         "parameters": "character"
@@ -29710,37 +29716,37 @@
         "parameters": "id"
       },
       {
-        "line": "12714",
+        "line": "12718",
         "name": "forget",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "character, id"
       },
       {
-        "line": "12707",
+        "line": "12711",
         "name": "learn",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "character, id"
       },
       {
-        "line": "12687",
+        "line": "12691",
         "name": "technique_definition",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "id"
       },
       {
-        "line": "12699",
+        "line": "12703",
         "name": "technique_description",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "id"
       },
       {
-        "line": "12693",
+        "line": "12697",
         "name": "technique_name",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "id"
       },
       {
-        "line": "12682",
+        "line": "12686",
         "name": "technique_state",
         "owner": "CcbPlatformMartialArtsApi",
         "parameters": "character, id"
@@ -29764,13 +29770,13 @@
         "parameters": "message, type"
       },
       {
-        "line": "12844",
+        "line": "12848",
         "name": "is_active_in_world",
         "owner": "CcbPlatformModQueries",
         "parameters": "mod_id"
       },
       {
-        "line": "12841",
+        "line": "12845",
         "name": "is_loaded",
         "owner": "CcbPlatformModQueries",
         "parameters": "mod_id"
@@ -29782,13 +29788,13 @@
         "parameters": "id"
       },
       {
-        "line": "12731",
+        "line": "12735",
         "name": "add",
         "owner": "CcbPlatformMoraleApi",
         "parameters": "character, id, bonus, max_bonus, options"
       },
       {
-        "line": "12737",
+        "line": "12741",
         "name": "remove",
         "owner": "CcbPlatformMoraleApi",
         "parameters": "character, id"
@@ -29854,127 +29860,127 @@
         "parameters": "file, volume"
       },
       {
-        "line": "12761",
+        "line": "12765",
         "name": "grant_random_missing",
         "owner": "CcbPlatformProgressionApi",
         "parameters": "character, kind, ids"
       },
       {
-        "line": "12800",
+        "line": "12804",
         "name": "chance",
         "owner": "CcbPlatformRandomApi",
         "parameters": "numerator, denominator"
       },
       {
-        "line": "12823",
+        "line": "12827",
         "name": "contested",
         "owner": "CcbPlatformRandomApi",
         "parameters": "check, difficulty, die_size"
       },
       {
-        "line": "12766",
+        "line": "12770",
         "name": "int",
         "owner": "CcbPlatformRandomApi",
         "parameters": "minimum, maximum"
       },
       {
-        "line": "12780",
+        "line": "12784",
         "name": "native_float",
         "owner": "CcbPlatformRandomApi",
         "parameters": "minimum, maximum"
       },
       {
-        "line": "12772",
+        "line": "12776",
         "name": "native_int",
         "owner": "CcbPlatformRandomApi",
         "parameters": "minimum, maximum"
       },
       {
-        "line": "12787",
+        "line": "12791",
         "name": "native_probability",
         "owner": "CcbPlatformRandomApi",
         "parameters": "numerator, denominator"
       },
       {
-        "line": "12804",
+        "line": "12808",
         "name": "one_in",
         "owner": "CcbPlatformRandomApi",
         "parameters": "denominator"
       },
       {
-        "line": "12809",
+        "line": "12813",
         "name": "probability",
         "owner": "CcbPlatformRandomApi",
         "parameters": "numerator, denominator"
       },
       {
-        "line": "12816",
+        "line": "12820",
         "name": "sample_integers",
         "owner": "CcbPlatformRandomApi",
         "parameters": "minimum, maximum, count, with_replacement"
       },
       {
-        "line": "12795",
+        "line": "12799",
         "name": "weighted_index",
         "owner": "CcbPlatformRandomApi",
         "parameters": "weights"
       },
       {
-        "line": "12524",
+        "line": "12528",
         "name": "all",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, options"
       },
       {
-        "line": "12534",
+        "line": "12538",
         "name": "by_flag",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "flag, character, options"
       },
       {
-        "line": "12529",
+        "line": "12533",
         "name": "by_skill",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "skill, character, options"
       },
       {
-        "line": "12576",
+        "line": "12580",
         "name": "forget",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, id"
       },
       {
-        "line": "12593",
+        "line": "12597",
         "name": "forget_category",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, category, subcategory"
       },
       {
-        "line": "12539",
+        "line": "12543",
         "name": "get",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, id, batch"
       },
       {
-        "line": "12543",
+        "line": "12547",
         "name": "has_flag",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "id, flag"
       },
       {
-        "line": "12564",
+        "line": "12568",
         "name": "knows",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, id"
       },
       {
-        "line": "12570",
+        "line": "12574",
         "name": "learn",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, id"
       },
       {
-        "line": "12520",
+        "line": "12524",
         "name": "list",
         "owner": "CcbPlatformRecipesApi",
         "parameters": "character, options"
@@ -30028,133 +30034,133 @@
         "parameters": "event_name, handler_id"
       },
       {
-        "line": "13231",
+        "line": "13235",
         "name": "activity_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13221",
+        "line": "13225",
         "name": "bionics_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13168",
+        "line": "13172",
         "name": "character_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character"
       },
       {
-        "line": "13211",
+        "line": "13215",
         "name": "current_tile_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, field_limit"
       },
       {
-        "line": "13128",
+        "line": "13132",
         "name": "diagnostic",
         "owner": "CcbPlatformServices",
         "parameters": "text"
       },
       {
-        "line": "13189",
+        "line": "13193",
         "name": "effects_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13199",
+        "line": "13203",
         "name": "equipment_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13136",
+        "line": "13140",
         "name": "format",
         "owner": "CcbPlatformServices",
         "parameters": "text, arguments"
       },
       {
-        "line": "13184",
+        "line": "13188",
         "name": "inventory_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13206",
+        "line": "13210",
         "name": "item_contents_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, item_handle, offset, limit"
       },
       {
-        "line": "13123",
+        "line": "13127",
         "name": "message",
         "owner": "CcbPlatformServices",
         "parameters": "text"
       },
       {
-        "line": "13226",
+        "line": "13230",
         "name": "missions_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13172",
+        "line": "13176",
         "name": "movement_modes_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character"
       },
       {
-        "line": "13216",
+        "line": "13220",
         "name": "mutations_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13237",
+        "line": "13241",
         "name": "nearby_creatures_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, radius, limit"
       },
       {
-        "line": "13194",
+        "line": "13198",
         "name": "skills_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": "character, limit"
       },
       {
-        "line": "13175",
+        "line": "13179",
         "name": "time_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": ""
       },
       {
-        "line": "13147",
+        "line": "13151",
         "name": "translate",
         "owner": "CcbPlatformServices",
         "parameters": "text, context"
       },
       {
-        "line": "13157",
+        "line": "13161",
         "name": "translate_plural",
         "owner": "CcbPlatformServices",
         "parameters": "singular, plural, count, context"
       },
       {
-        "line": "13160",
+        "line": "13164",
         "name": "turn",
         "owner": "CcbPlatformServices",
         "parameters": ""
       },
       {
-        "line": "13164",
+        "line": "13168",
         "name": "turn_native_int",
         "owner": "CcbPlatformServices",
         "parameters": ""
       },
       {
-        "line": "13178",
+        "line": "13182",
         "name": "weather_snapshot",
         "owner": "CcbPlatformServices",
         "parameters": ""
@@ -30238,13 +30244,13 @@
         "parameters": "key, value"
       },
       {
-        "line": "12834",
+        "line": "12838",
         "name": "all_equal",
         "owner": "CcbPlatformStringPredicates",
         "parameters": "values"
       },
       {
-        "line": "12830",
+        "line": "12834",
         "name": "any_equal",
         "owner": "CcbPlatformStringPredicates",
         "parameters": "values"
@@ -30328,55 +30334,55 @@
         "parameters": "descriptor"
       },
       {
-        "line": "11874",
+        "line": "11878",
         "name": "add",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part, wound"
       },
       {
-        "line": "11893",
+        "line": "11897",
         "name": "add_unbounded",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part, wound"
       },
       {
-        "line": "11883",
+        "line": "11887",
         "name": "remove",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part, wound"
       },
       {
-        "line": "11902",
+        "line": "11906",
         "name": "remove_all_direct",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part, wound"
       },
       {
-        "line": "11862",
+        "line": "11866",
         "name": "snapshot",
         "owner": "CcbPlatformWoundsApi",
         "parameters": "character, body_part"
       },
       {
-        "line": "12291",
+        "line": "12295",
         "name": "has_id_text",
         "owner": "CcbProficienciesApi",
         "parameters": "character, id_text"
       },
       {
-        "line": "13287",
+        "line": "13291",
         "name": "list",
         "owner": "CcbRegistryApi",
         "parameters": "kind, options"
       },
       {
-        "line": "13293",
+        "line": "13297",
         "name": "monster_default_faction",
         "owner": "CcbRegistryApi",
         "parameters": "id"
       },
       {
-        "line": "13279",
+        "line": "13283",
         "name": "list",
         "owner": "CcbRegistryDefinitionsApi",
         "parameters": "kind, options"
@@ -30412,37 +30418,37 @@
         "parameters": "avatar, target, options"
       },
       {
-        "line": "12558",
+        "line": "12562",
         "name": "for_recipe",
         "owner": "CcbRequirementsApi",
         "parameters": "character, id, batch"
       },
       {
-        "line": "12553",
+        "line": "12557",
         "name": "get",
         "owner": "CcbRequirementsApi",
         "parameters": "character, id, batch"
       },
       {
-        "line": "12548",
+        "line": "12552",
         "name": "list",
         "owner": "CcbRequirementsApi",
         "parameters": "character, options"
       },
       {
-        "line": "11937",
+        "line": "11941",
         "name": "level",
         "owner": "CcbSkillsApi",
         "parameters": "character, id"
       },
       {
-        "line": "11943",
+        "line": "11947",
         "name": "offered",
         "owner": "CcbSkillsApi",
         "parameters": "teacher, student"
       },
       {
-        "line": "13302",
+        "line": "13306",
         "name": "monster",
         "owner": "CcbSpawnsApi",
         "parameters": "monster_type, position, radius, upgrade"
@@ -30508,163 +30514,163 @@
         "parameters": ""
       },
       {
-        "line": "11763",
+        "line": "11767",
         "name": "commit",
         "owner": "CcbTradeApi",
         "parameters": "token, settlement"
       },
       {
-        "line": "11758",
+        "line": "11762",
         "name": "get",
         "owner": "CcbTradeApi",
         "parameters": "token"
       },
       {
-        "line": "11718",
+        "line": "11722",
         "name": "open",
         "owner": "CcbTradeApi",
         "parameters": "seller, buyer, cost, title, use_delegate"
       },
       {
-        "line": "11733",
+        "line": "11737",
         "name": "order_price",
         "owner": "CcbTradeApi",
         "parameters": "seller, buyer, item_type, count"
       },
       {
-        "line": "11725",
+        "line": "11729",
         "name": "pay",
         "owner": "CcbTradeApi",
         "parameters": "seller, buyer, cost"
       },
       {
-        "line": "11754",
+        "line": "11758",
         "name": "quote",
         "owner": "CcbTradeApi",
         "parameters": "seller, buyer, lines, options"
       },
       {
-        "line": "11746",
+        "line": "11750",
         "name": "selling_offers",
         "owner": "CcbTradeApi",
         "parameters": "seller"
       },
       {
-        "line": "12010",
+        "line": "12014",
         "name": "id",
         "owner": "CcbTypesApi",
         "parameters": "kind, value"
       },
       {
-        "line": "12013",
+        "line": "12017",
         "name": "id_kinds",
         "owner": "CcbTypesApi",
         "parameters": ""
       },
       {
-        "line": "12046",
+        "line": "12050",
         "name": "copy",
         "owner": "CcbVariablesApi",
         "parameters": "source_owner, source_key, destination_owner, destination_key"
       },
       {
-        "line": "12051",
+        "line": "12055",
         "name": "get",
         "owner": "CcbVariablesApi",
         "parameters": "character, key"
       },
       {
-        "line": "12130",
+        "line": "12134",
         "name": "get_context_number",
         "owner": "CcbVariablesApi",
         "parameters": "context, key, options"
       },
       {
-        "line": "12094",
+        "line": "12098",
         "name": "get_context_string",
         "owner": "CcbVariablesApi",
         "parameters": "context, key"
       },
       {
-        "line": "12166",
+        "line": "12170",
         "name": "get_context_tripoint",
         "owner": "CcbVariablesApi",
         "parameters": "context, key"
       },
       {
-        "line": "12072",
+        "line": "12076",
         "name": "get_global",
         "owner": "CcbVariablesApi",
         "parameters": "key"
       },
       {
-        "line": "12120",
+        "line": "12124",
         "name": "get_global_number",
         "owner": "CcbVariablesApi",
         "parameters": "key, options"
       },
       {
-        "line": "12085",
+        "line": "12089",
         "name": "get_global_string",
         "owner": "CcbVariablesApi",
         "parameters": "key"
       },
       {
-        "line": "12158",
+        "line": "12162",
         "name": "get_global_tripoint",
         "owner": "CcbVariablesApi",
         "parameters": "key"
       },
       {
-        "line": "12138",
+        "line": "12142",
         "name": "get_number",
         "owner": "CcbVariablesApi",
         "parameters": "owner, key, options"
       },
       {
-        "line": "12101",
+        "line": "12105",
         "name": "get_string",
         "owner": "CcbVariablesApi",
         "parameters": "owner, key"
       },
       {
-        "line": "12153",
+        "line": "12157",
         "name": "get_tripoint",
         "owner": "CcbVariablesApi",
         "parameters": "owner, key"
       },
       {
-        "line": "12068",
+        "line": "12072",
         "name": "remove",
         "owner": "CcbVariablesApi",
         "parameters": "character, key, options"
       },
       {
-        "line": "12179",
+        "line": "12183",
         "name": "remove_global",
         "owner": "CcbVariablesApi",
         "parameters": "key, options"
       },
       {
-        "line": "12192",
+        "line": "12196",
         "name": "resolve",
         "owner": "CcbVariablesApi",
         "parameters": "context, actor, scope, key, participants"
       },
       {
-        "line": "12062",
+        "line": "12066",
         "name": "set",
         "owner": "CcbVariablesApi",
         "parameters": "character, key, value, options"
       },
       {
-        "line": "12174",
+        "line": "12178",
         "name": "set_global",
         "owner": "CcbVariablesApi",
         "parameters": "key, value, options"
       },
       {
-        "line": "12209",
+        "line": "12213",
         "name": "set_resolved",
         "owner": "CcbVariablesApi",
         "parameters": "context, actor, scope, key, value, participants, options"
@@ -30790,7 +30796,7 @@
         "parameters": "vehicle, options"
       },
       {
-        "line": "13265",
+        "line": "13269",
         "name": "definitions",
         "owner": "CcbVitaminsApi",
         "parameters": "options"
@@ -36870,47 +36876,47 @@
   "public_root": {
     "fields": [
       {
-        "line": 13241,
+        "line": 13245,
         "name": "ModDefinition",
         "type": "fun(options:"
       },
       {
-        "line": 13242,
+        "line": 13246,
         "name": "content",
         "type": "CcbPlatformContent"
       },
       {
-        "line": 13244,
+        "line": 13248,
         "name": "dialogue",
         "type": "CcbPlatformDialogueApi"
       },
       {
-        "line": 13240,
+        "line": 13244,
         "name": "platform_version",
         "type": "1"
       },
       {
-        "line": 13247,
+        "line": 13251,
         "name": "presentation",
         "type": "CcbPlatformPresentation"
       },
       {
-        "line": 13243,
+        "line": 13247,
         "name": "runtime",
         "type": "CcbPlatformRuntime"
       },
       {
-        "line": 13248,
+        "line": 13252,
         "name": "services",
         "type": "CcbPlatformServices"
       },
       {
-        "line": 13245,
+        "line": 13249,
         "name": "state",
         "type": "CcbPlatformState"
       },
       {
-        "line": 13246,
+        "line": 13250,
         "name": "tasks",
         "type": "CcbPlatformTasks"
       }

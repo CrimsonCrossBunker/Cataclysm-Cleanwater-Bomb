@@ -11355,6 +11355,10 @@ function CcbNpcsApi.class(id) end
 ---@param options? CcbNpcQueryOptions
 ---@return CcbResult result `value` is a bounded list of exact NPC snapshots.
 function CcbNpcsApi.list(options) end
+---Complete loaded NPC snapshot in native scene iteration order, without ID sorting, visibility or allegiance filters.
+---Capture once before moving NPCs; later position changes do not change the copied selection.
+---@return CcbResult result `value` is a dense CcbNpcSnapshot[] with exact generation-bound handles.
+function CcbNpcsApi.loaded() end
 ---Loaded scene NPCs allied to the player and visible to the active player view.
 ---Preserves native scene iteration order; a complete snapshot, not the persistent follower roster.
 ---@return CcbResult result `value` is a dense CcbNpcSnapshot[] with exact live handles.
