@@ -28,12 +28,6 @@
     "uniform_region": "default_skyisland"
   },
   {
-    "type": "weather_generator",
-    "id": "sky_island_weather",
-    "copy-from": "default",
-    "weather_black_list": [ "early_portal_storm", "portal_storm", "distant_portal_storm", "close_portal_storm" ]
-  },
-  {
     "type": "region_settings",
     "id": "default_skyisland",
     "rivers": null,
@@ -98,16 +92,6 @@
     "uniform_region": "sky_island_raid_region_hot"
   },
   {
-    "type": "weather_generator",
-    "id": "sky_island_raid_weather_hot",
-    "copy-from": "default",
-    "base_temperature": 26,
-    "spring_temp_manual_mod": 15,
-    "summer_temp_manual_mod": 0,
-    "autumn_temp_manual_mod": 15,
-    "winter_temp_manual_mod": 30
-  },
-  {
     "type": "region_settings",
     "id": "sky_island_raid_region_hot",
     "copy-from": "dimension_sky_island_region",
@@ -123,16 +107,6 @@
     "id": "sky_island_raid_region_cold",
     "generation_mode": "UNIFORM",
     "uniform_region": "sky_island_raid_region_cold"
-  },
-  {
-    "type": "weather_generator",
-    "id": "sky_island_raid_weather_cold",
-    "copy-from": "default",
-    "base_temperature": -4,
-    "spring_temp_manual_mod": -15,
-    "summer_temp_manual_mod": -30,
-    "autumn_temp_manual_mod": -15,
-    "winter_temp_manual_mod": 0
   },
   {
     "type": "region_settings",
