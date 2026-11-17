@@ -52,6 +52,9 @@ set(CATA_TEST_SUITE "all" CACHE STRING "Native test sources to compile: all, lua
 set_property(CACHE CATA_TEST_SUITE PROPERTY STRINGS all lua focused)
 set(CATA_TEST_FILES "" CACHE STRING "For focused tests: semicolon-separated filenames in tests/")
 option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" "ON")
+if (NOT CATA_ENABLE_LUA_PLATFORM)
+    message(FATAL_ERROR "The core game data requires the Lua-first Platform runtime")
+endif()
 option(TRACY "Enable Tracy profiling; see doc/c++/PERFORMANCE.md." OFF)
 option(LTO "Enable link-time optimization for Release and RelWithDebInfo builds." OFF)
 set(CATA_CLANG_TIDY_INCLUDE_DIR "" CACHE STRING

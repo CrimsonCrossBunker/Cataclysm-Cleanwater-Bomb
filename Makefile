@@ -176,8 +176,8 @@ ASTYLE_BINARY = astyle
 CATA_ENABLE_LUA_PLATFORM ?= 1
 CATA_TEST_SUITE ?= all
 
-ifneq ($(filter $(CATA_ENABLE_LUA_PLATFORM),0 1),$(CATA_ENABLE_LUA_PLATFORM))
-  $(error CATA_ENABLE_LUA_PLATFORM must be 0 or 1)
+ifneq ($(CATA_ENABLE_LUA_PLATFORM),1)
+  $(error The core game data requires CATA_ENABLE_LUA_PLATFORM=1)
 endif
 
 # Disable stale game data warning by default

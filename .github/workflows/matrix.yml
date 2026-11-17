@@ -189,14 +189,11 @@ jobs:
             gold: 1
             lto: 1
             libbacktrace: 1
-            # Keep LTO/ODR coverage independent from the exceptionally large
-            # sol2 runtime TU.  Lua remains enabled in Make, CMake, Android,
-            # macOS, and Windows builds elsewhere in this matrix.
-            lua_platform: 0
+            lua_platform: 1
             native: linux64
             pch: 1
             cxxflags: -gsplit-dwarf
-            title: GCC 9, Curses, LTO (Lua disabled)
+            title: GCC 9, Curses, LTO
             ccache_limit: 7.5G
             ccache_key: linux-gcc-9-lto
             extra_package: g++-9

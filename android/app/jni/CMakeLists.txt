@@ -72,6 +72,9 @@ add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})
 option(CCB_ANDROID_NEW_UI
        "Enable the opt-in Android touch UI and customizable HUD" OFF)
 option(CATA_ENABLE_LUA_PLATFORM "Enable the Lua-first Platform runtime" ON)
+if(NOT CATA_ENABLE_LUA_PLATFORM)
+  message(FATAL_ERROR "The core game data requires the Lua-first Platform runtime")
+endif()
 
 set(
   LUA_PLATFORM_ENABLED_SOURCES
