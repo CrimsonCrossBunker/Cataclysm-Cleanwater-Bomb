@@ -382,6 +382,7 @@ static const quality_id qual_CUT_FINE( "CUT_FINE" );
 static const quality_id qual_PRY( "PRY" );
 
 static const skill_id skill_dodge( "dodge" );
+static const skill_id skill_driving( "driving" );
 static const skill_id skill_firstaid( "firstaid" );
 static const skill_id skill_gun( "gun" );
 static const skill_id skill_survival( "survival" );
@@ -809,6 +810,7 @@ void game::reset_game_state()
     weather.weather_id = WEATHER_CLEAR;
     weather.climate_origin.reset();
     weather.climate_precipitation_mm_per_hour.reset();
+    weather.reset_room_heat();
     // Weather shift in 30
     weather.nextweather = calendar::start_of_game + 30_minutes;
 
@@ -981,21 +983,29 @@ bool game::start_game()
             break;
         }
 #endif
-        if( select_starting_city && !north_america::active() && !city::get_all().empty() ) {
-            if( !u.starting_city.has_value() ) {
-                u.starting_city = random_entry( city::get_all() );
-                u.world_origin = u.starting_city->pos_om;
+        const bool use_legacy_city = select_starting_city && !north_america::active() &&
+                                     !city::get_all().empty();
+        if( use_legacy_city && !u.starting_city ) {
+            u.starting_city = random_entry( city::get_all() );
+            u.world_origin = u.starting_city->pos_om;
+        }
+        const point_abs_om origin = u.world_origin.value_or( point_abs_om() );
+        if( u.start_outskirts ) {
+            std::tie( omtstart, associated_parameters ) =
+                start_loc.find_player_initial_location_on_outskirts( origin );
+            if( omtstart.is_invalid() ) {
+                if( !query_yn(
+                        _( "No valid far-outskirts start was found for %s. Use the regular starting location?" ),
+                        start_loc.name() ) ) {
+                    return false;
+                }
+                u.start_outskirts = false;
             }
-            auto ret = u.start_outskirts ?
-                       start_loc.find_player_initial_location( u.starting_city->pos_om, true ) :
-                       start_loc.find_player_initial_location( *u.starting_city );
-            omtstart = ret.first;
-            associated_parameters = ret.second;
-        } else {
-            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ),
-                       u.start_outskirts );
-            omtstart = ret.first;
-            associated_parameters = ret.second;
+        }
+        if( !u.start_outskirts ) {
+            std::tie( omtstart, associated_parameters ) = use_legacy_city ?
+                    start_loc.find_player_initial_location( *u.starting_city ) :
+                    start_loc.find_player_initial_location( origin );
         }
         if( omtstart.is_invalid() ) {
 
@@ -1355,7 +1365,7 @@ void game::load_npcs( map *here )
 void game::unload_creatures_outside_resident_maps()
 {
     map &primary = reality_bubble();
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
     for( auto it = critter_tracker->active_npc.begin(); it != critter_tracker->active_npc.end(); ) {
         npc &actor = **it;
         if( actor.has_native_player_control() || session.loaded_map_at( primary, actor.pos_abs_sm() ) ) {
@@ -3765,7 +3775,7 @@ void game::draw_vehicle_guidance()
     // acceleration, terrain and collisions can change the actual endpoint.
     const int steps = std::clamp( static_cast<int>( std::ceil( std::abs( veh->velocity ) /
                                   vehicles::vmiph_per_tile ) ), 0, 60 );
-    const double skill = u.get_skill_level( skill_id( "driving" ) );
+    const double skill = u.get_skill_level( skill_driving );
     const int uncertainty = std::clamp( static_cast<int>( std::ceil( steps /
                                         ( 2.0 * ( skill + 1.0 ) ) ) ), 0, 6 );
     std::set<tripoint_bub_ms> guides;
@@ -3798,12 +3808,13 @@ void game::draw_vehicle_guidance()
                 for( const double side : {
                          left, right
                      } ) {
-                    const int x = std::lround( along * std::cos( angle ) - side * std::sin( angle ) );
-                    const int y = std::lround( along * std::sin( angle ) + side * std::cos( angle ) );
-                    min_x = std::min( min_x, x - uncertainty );
-                    max_x = std::max( max_x, x + uncertainty );
-                    min_y = std::min( min_y, y - uncertainty );
-                    max_y = std::max( max_y, y + uncertainty );
+                    const point corner(
+                        std::lround( along * std::cos( angle ) - side * std::sin( angle ) ),
+                        std::lround( along * std::sin( angle ) + side * std::cos( angle ) ) );
+                    min_x = std::min( min_x, corner.x - uncertainty );
+                    max_x = std::max( max_x, corner.x + uncertainty );
+                    min_y = std::min( min_y, corner.y - uncertainty );
+                    max_y = std::max( max_y, corner.y + uncertainty );
                 }
             }
             for( int x = min_x; x <= max_x; ++x ) {
@@ -4674,7 +4685,7 @@ void game::cleanup_dead()
     // can't use all_npcs as that does not include dead ones
     for( const auto &n : critter_tracker->active_npc ) {
         if( n->is_dead() ) {
-            const auto &session = multiplayer_session();
+            const cata_mp::world_session &session = multiplayer_session();
             if( session.has_regions() ) {
                 map &owner = session.map_for( reality_bubble(), n->pos_abs_sm() );
                 const swap_map context( owner );
@@ -10935,7 +10946,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     }
     // LAST CHANCE TO ABORT! Everything past here assumes the movement is going ahead.
     if( vehicle_stairs ) {
-        const auto source = here.veh_at( pos );
+        const optional_vpart_position source = here.veh_at( pos );
         if( !source || source->vehicle().uid().get_value() != deck_vehicle_uid ||
             source->vehicle().deck_transition( here, pos, movez ) != vehicle_stairs ||
             get_creature_tracker().creature_at( stairs ) ) {
@@ -11132,7 +11143,7 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     here.invalidate_map_cache( who.posz() );
     here.build_map_cache( who.posz() );
     if( vehicle_stairs && landing_context && !who.in_vehicle && who.pos_abs() == destination ) {
-        const auto landing = here.veh_at( who.pos_bub( here ) );
+        const optional_vpart_position landing = here.veh_at( who.pos_bub( here ) );
         if( landing && landing->vehicle().uid().get_value() == deck_vehicle_uid &&
             landing.part_with_feature( VPFLAG_BOARDABLE, true ) ) {
             here.board_vehicle( who.pos_bub( here ), &who );
@@ -11834,7 +11845,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     // this handles loading/unloading submaps that have scrolled on or off the viewport
     // NOLINTNEXTLINE(cata-use-named-point-constants)
     inclusive_rectangle<point_rel_sm> size_1( {-1, -1}, { 1, 1 } );
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
     std::optional<map_simulation_regions> regions;
     if( session.has_regions() && &here == &reality_bubble() ) {
         regions.emplace( session.simulation_regions( here ) );
@@ -11980,7 +11991,7 @@ void game::despawn_monster( monster &critter )
 void game::despawn_nonlocal_monsters()
 {
     map &here = get_map();
-    const auto &session = multiplayer_session();
+    const cata_mp::world_session &session = multiplayer_session();
 
     for( monster &critter : g->all_monsters() ) {
         if( session.has_regions() && session.loaded_map_at( here, critter.pos_abs_sm() ) ) {
@@ -13405,7 +13416,7 @@ void set_scenario( const scenario *new_scenario )
 
 scent_map &get_scent()
 {
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     if( session.has_regions() ) {
         if( scent_map *regional = session.scent_for( get_map() ) ) {
             return *regional;

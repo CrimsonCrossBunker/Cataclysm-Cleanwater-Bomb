@@ -1,0 +1,331 @@
+{
+  "sources": [
+    "https://www.nass.usda.gov/Publications/Todays_Reports/reports/fcdate10.pdf",
+    "https://release.nass.usda.gov/reports/cropan26.pdf",
+    "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210035901",
+    "https://gov.mb.ca/agriculture/crops/seasonal-reports/pubs/early-seeding-considerations.pdf",
+    "https://www.ontario.ca/page/publication-811-agronomy-guide-field-crops",
+    "https://nube.agricultura.gob.mx/calendario_agricola/",
+    "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf"
+  ],
+  "notes": [
+    "Representative game crops, not official acreage shares. Shared windows approximate neighboring regions.",
+    "Each row is [seed, weight, planting MMDD, harvest end MMDD]."
+  ],
+  "regions": {
+    "CA-AB": [
+      [ "seed_wheat", 40, 501, 921 ],
+      [ "seed_canola", 32, 505, 1010 ],
+      [ "seed_barley", 20, 428, 914 ],
+      [ "seed_potato_raw", 8, 506, 1011 ]
+    ],
+    "CA-BC": [
+      [ "seed_barley", 23, 426, 918 ],
+      [ "seed_corn", 30, 505, 1021 ],
+      [ "seed_wheat", 29, 427, 920 ],
+      [ "seed_potato_raw", 18, 425, 1015 ]
+    ],
+    "CA-MB": [
+      [ "seed_wheat", 33, 427, 921 ],
+      [ "seed_canola", 32, 505, 1010 ],
+      [ "soybean_seed", 16, 510, 1007 ],
+      [ "seed_oats", 9, 426, 919 ],
+      [ "seed_potato_raw", 10, 501, 1007 ]
+    ],
+    "CA-NB": [ [ "seed_potato_raw", 70, 510, 1017 ], [ "seed_barley", 18, 505, 918 ], [ "seed_oats", 12, 510, 921 ] ],
+    "CA-NL": [ [ "seed_potato_raw", 60, 529, 920 ], [ "seed_oats", 30, 524, 913 ], [ "seed_barley", 10, 522, 915 ] ],
+    "CA-NS": [
+      [ "seed_corn", 30, 518, 1018 ],
+      [ "seed_potato_raw", 35, 512, 1012 ],
+      [ "seed_oats", 25, 507, 921 ],
+      [ "seed_barley", 10, 510, 929 ]
+    ],
+    "CA-NT": [ [ "seed_potato_raw", 60, 529, 920 ], [ "seed_oats", 30, 524, 913 ], [ "seed_barley", 10, 522, 915 ] ],
+    "CA-NU": [ [ "seed_potato_raw", 60, 529, 920 ], [ "seed_oats", 30, 524, 913 ], [ "seed_barley", 10, 522, 915 ] ],
+    "CA-ON": [
+      [ "seed_corn", 50, 501, 1118 ],
+      [ "soybean_seed", 34, 515, 1030 ],
+      [ "seed_red_winter_wheat", 12, 922, 804 ],
+      [ "seed_pea", 4, 422, 804 ]
+    ],
+    "CA-PE": [ [ "seed_potato_raw", 70, 510, 1017 ], [ "seed_barley", 18, 505, 918 ], [ "seed_oats", 12, 510, 921 ] ],
+    "CA-QC": [
+      [ "seed_corn", 45, 510, 1108 ],
+      [ "soybean_seed", 30, 514, 1028 ],
+      [ "seed_barley", 13, 503, 910 ],
+      [ "seed_potato_raw", 12, 508, 1011 ]
+    ],
+    "CA-SK": [
+      [ "seed_wheat", 43, 428, 921 ],
+      [ "seed_canola", 35, 507, 1012 ],
+      [ "seed_barley", 11, 427, 926 ],
+      [ "seed_pea", 11, 430, 902 ]
+    ],
+    "CA-YT": [ [ "seed_potato_raw", 60, 529, 920 ], [ "seed_oats", 30, 524, 913 ], [ "seed_barley", 10, 522, 915 ] ],
+    "MX-AGU": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-BCN": [ [ "seed_wheat", 72, 1129, 520 ], [ "seed_corn", 18, 1115, 605 ], [ "seed_cotton_boll", 10, 310, 1015 ] ],
+    "MX-BCS": [ [ "seed_wheat", 72, 1129, 520 ], [ "seed_corn", 18, 1115, 605 ], [ "seed_cotton_boll", 10, 310, 1015 ] ],
+    "MX-CAM": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-CHH": [
+      [ "seed_corn", 42, 420, 1011 ],
+      [ "seed_cotton_boll", 28, 420, 1112 ],
+      [ "seed_beans", 18, 615, 1002 ],
+      [ "seed_wheat", 12, 1129, 528 ]
+    ],
+    "MX-CHP": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-CMX": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-COA": [
+      [ "seed_corn", 44, 212, 708 ],
+      [ "soybean_seed", 21, 619, 1115 ],
+      [ "seed_wheat", 23, 1125, 529 ],
+      [ "seed_beans", 12, 1118, 323 ]
+    ],
+    "MX-COL": [ [ "seed_corn", 65, 605, 1115 ], [ "seed_beans", 25, 608, 1109 ], [ "soybean_seed", 10, 618, 1110 ] ],
+    "MX-DUR": [ [ "seed_beans", 55, 615, 1010 ], [ "seed_corn", 35, 615, 1105 ], [ "seed_oats", 10, 619, 1120 ] ],
+    "MX-GRO": [ [ "seed_corn", 65, 605, 1115 ], [ "seed_beans", 25, 608, 1109 ], [ "soybean_seed", 10, 618, 1110 ] ],
+    "MX-GUA": [ [ "seed_corn", 61, 520, 1116 ], [ "seed_wheat", 21, 1125, 523 ], [ "seed_beans", 18, 612, 1105 ] ],
+    "MX-HID": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-JAL": [ [ "seed_corn", 61, 520, 1116 ], [ "seed_wheat", 21, 1125, 523 ], [ "seed_beans", 18, 612, 1105 ] ],
+    "MX-MEX": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-MIC": [ [ "seed_corn", 61, 520, 1116 ], [ "seed_wheat", 21, 1125, 523 ], [ "seed_beans", 18, 612, 1105 ] ],
+    "MX-MOR": [ [ "seed_corn", 65, 605, 1115 ], [ "seed_beans", 25, 608, 1109 ], [ "soybean_seed", 10, 618, 1110 ] ],
+    "MX-NAY": [ [ "seed_corn", 65, 605, 1115 ], [ "seed_beans", 25, 608, 1109 ], [ "soybean_seed", 10, 618, 1110 ] ],
+    "MX-NLE": [
+      [ "seed_corn", 44, 212, 708 ],
+      [ "soybean_seed", 21, 619, 1115 ],
+      [ "seed_wheat", 23, 1125, 529 ],
+      [ "seed_beans", 12, 1118, 323 ]
+    ],
+    "MX-OAX": [ [ "seed_corn", 65, 605, 1115 ], [ "seed_beans", 25, 608, 1109 ], [ "soybean_seed", 10, 618, 1110 ] ],
+    "MX-PUE": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-QUE": [ [ "seed_corn", 61, 520, 1116 ], [ "seed_wheat", 21, 1125, 523 ], [ "seed_beans", 18, 612, 1105 ] ],
+    "MX-ROO": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-SIN": [ [ "seed_corn", 74, 1120, 628 ], [ "seed_beans", 16, 1115, 320 ], [ "seed_wheat", 10, 1201, 521 ] ],
+    "MX-SLP": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-SON": [ [ "seed_wheat", 72, 1129, 520 ], [ "seed_corn", 18, 1115, 605 ], [ "seed_cotton_boll", 10, 310, 1015 ] ],
+    "MX-TAB": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-TAM": [
+      [ "seed_corn", 44, 212, 708 ],
+      [ "soybean_seed", 21, 619, 1115 ],
+      [ "seed_wheat", 23, 1125, 529 ],
+      [ "seed_beans", 12, 1118, 323 ]
+    ],
+    "MX-TLA": [ [ "seed_corn", 65, 510, 1114 ], [ "seed_beans", 23, 603, 1028 ], [ "seed_barley", 12, 525, 1015 ] ],
+    "MX-VER": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-YUC": [ [ "seed_corn", 66, 603, 1109 ], [ "seed_beans", 19, 612, 1026 ], [ "soybean_seed", 15, 620, 1110 ] ],
+    "MX-ZAC": [ [ "seed_beans", 55, 615, 1010 ], [ "seed_corn", 35, 615, 1105 ], [ "seed_oats", 10, 619, 1120 ] ],
+    "US-AK": [ [ "seed_barley", 45, 514, 914 ], [ "seed_potato_raw", 30, 520, 926 ], [ "seed_oats", 25, 520, 915 ] ],
+    "US-AL": [
+      [ "seed_corn", 32, 403, 923 ],
+      [ "soybean_seed", 33, 515, 1118 ],
+      [ "seed_cotton_boll", 30, 501, 1127 ],
+      [ "seed_red_winter_wheat", 5, 1020, 625 ]
+    ],
+    "US-AR": [
+      [ "soybean_seed", 58, 423, 1031 ],
+      [ "seed_corn", 23, 319, 912 ],
+      [ "seed_cotton_boll", 12, 424, 1106 ],
+      [ "seed_red_winter_wheat", 7, 1027, 614 ]
+    ],
+    "US-AZ": [ [ "seed_wheat", 49, 1201, 630 ], [ "seed_cotton_boll", 36, 402, 1203 ], [ "seed_corn", 15, 315, 913 ] ],
+    "US-CA": [
+      [ "seed_red_winter_wheat", 36, 1110, 721 ],
+      [ "seed_corn", 25, 420, 1015 ],
+      [ "seed_cotton_boll", 20, 418, 1118 ],
+      [ "seed_potato_raw", 11, 315, 926 ],
+      [ "seed_beans", 8, 515, 1010 ]
+    ],
+    "US-CO": [
+      [ "seed_red_winter_wheat", 45, 913, 810 ],
+      [ "seed_corn", 25, 430, 1101 ],
+      [ "seed_barley", 20, 422, 909 ],
+      [ "seed_potato_raw", 10, 501, 1021 ]
+    ],
+    "US-CT": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_potato_raw", 25, 427, 1022 ], [ "seed_oats", 10, 501, 918 ] ],
+    "US-DC": [
+      [ "seed_corn", 43, 430, 1117 ],
+      [ "soybean_seed", 38, 520, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1017, 720 ],
+      [ "seed_potato_raw", 4, 420, 915 ]
+    ],
+    "US-DE": [
+      [ "seed_corn", 43, 430, 1117 ],
+      [ "soybean_seed", 38, 520, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1017, 720 ],
+      [ "seed_potato_raw", 4, 420, 915 ]
+    ],
+    "US-FL": [ [ "seed_corn", 45, 303, 826 ], [ "seed_cotton_boll", 25, 425, 1114 ], [ "seed_potato_raw", 30, 115, 611 ] ],
+    "US-GA": [
+      [ "seed_corn", 32, 403, 923 ],
+      [ "soybean_seed", 33, 515, 1118 ],
+      [ "seed_cotton_boll", 30, 501, 1127 ],
+      [ "seed_red_winter_wheat", 5, 1020, 625 ]
+    ],
+    "US-HI": [ [ "seed_corn", 54, 205, 722 ], [ "seed_potato_raw", 21, 205, 728 ], [ "seed_beans", 25, 304, 802 ] ],
+    "US-IA": [ [ "seed_corn", 52, 425, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725 ] ],
+    "US-ID": [
+      [ "seed_potato_raw", 35, 422, 1025 ],
+      [ "seed_red_winter_wheat", 35, 915, 827 ],
+      [ "seed_barley", 18, 416, 915 ],
+      [ "seed_wheat", 12, 417, 918 ]
+    ],
+    "US-IL": [ [ "seed_corn", 52, 425, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725 ] ],
+    "US-IN": [ [ "seed_corn", 52, 425, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725 ] ],
+    "US-KS": [ [ "seed_red_winter_wheat", 62, 925, 715 ], [ "seed_corn", 22, 415, 1025 ], [ "soybean_seed", 16, 515, 1105 ] ],
+    "US-KY": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 420, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714 ] ],
+    "US-LA": [
+      [ "soybean_seed", 58, 423, 1031 ],
+      [ "seed_corn", 23, 319, 912 ],
+      [ "seed_cotton_boll", 12, 424, 1106 ],
+      [ "seed_red_winter_wheat", 7, 1027, 614 ]
+    ],
+    "US-MA": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_potato_raw", 25, 427, 1022 ], [ "seed_oats", 10, 501, 918 ] ],
+    "US-MD": [
+      [ "seed_corn", 43, 430, 1117 ],
+      [ "soybean_seed", 38, 520, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1017, 720 ],
+      [ "seed_potato_raw", 4, 420, 915 ]
+    ],
+    "US-ME": [
+      [ "seed_potato_raw", 55, 514, 1017 ],
+      [ "seed_corn", 25, 512, 1026 ],
+      [ "seed_oats", 12, 510, 1004 ],
+      [ "seed_barley", 8, 509, 930 ]
+    ],
+    "US-MI": [
+      [ "seed_corn", 50, 501, 1115 ],
+      [ "soybean_seed", 25, 511, 1113 ],
+      [ "seed_red_winter_wheat", 15, 922, 805 ],
+      [ "seed_potato_raw", 10, 424, 1028 ]
+    ],
+    "US-MN": [
+      [ "seed_corn", 45, 426, 1110 ],
+      [ "soybean_seed", 40, 508, 1025 ],
+      [ "seed_wheat", 8, 502, 906 ],
+      [ "seed_oats", 7, 425, 907 ]
+    ],
+    "US-MO": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 420, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714 ] ],
+    "US-MS": [
+      [ "soybean_seed", 58, 423, 1031 ],
+      [ "seed_corn", 23, 319, 912 ],
+      [ "seed_cotton_boll", 12, 424, 1106 ],
+      [ "seed_red_winter_wheat", 7, 1027, 614 ]
+    ],
+    "US-MT": [
+      [ "seed_wheat", 39, 424, 910 ],
+      [ "seed_red_winter_wheat", 36, 912, 815 ],
+      [ "seed_barley", 18, 424, 910 ],
+      [ "seed_pea", 7, 418, 825 ]
+    ],
+    "US-NC": [
+      [ "seed_corn", 32, 403, 923 ],
+      [ "soybean_seed", 33, 515, 1118 ],
+      [ "seed_cotton_boll", 30, 501, 1127 ],
+      [ "seed_red_winter_wheat", 5, 1020, 625 ]
+    ],
+    "US-ND": [
+      [ "seed_wheat", 39, 425, 912 ],
+      [ "soybean_seed", 24, 515, 1020 ],
+      [ "seed_corn", 19, 505, 1120 ],
+      [ "seed_canola", 12, 501, 914 ],
+      [ "seed_sunflower", 6, 520, 1101 ]
+    ],
+    "US-NE": [
+      [ "seed_corn", 52, 427, 1120 ],
+      [ "soybean_seed", 30, 511, 1102 ],
+      [ "seed_red_winter_wheat", 12, 909, 727 ],
+      [ "seed_wheat", 6, 420, 902 ]
+    ],
+    "US-NH": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_oats", 20, 510, 1004 ], [ "seed_potato_raw", 15, 510, 1015 ] ],
+    "US-NJ": [
+      [ "seed_corn", 43, 430, 1117 ],
+      [ "soybean_seed", 38, 520, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1017, 720 ],
+      [ "seed_potato_raw", 4, 420, 915 ]
+    ],
+    "US-NM": [ [ "seed_red_winter_wheat", 48, 921, 718 ], [ "seed_corn", 27, 425, 1023 ], [ "seed_cotton_boll", 25, 420, 1103 ] ],
+    "US-NV": [
+      [ "seed_red_winter_wheat", 47, 915, 825 ],
+      [ "seed_barley", 28, 410, 830 ],
+      [ "seed_wheat", 15, 415, 905 ],
+      [ "seed_potato_raw", 10, 424, 1015 ]
+    ],
+    "US-NY": [
+      [ "seed_corn", 50, 501, 1115 ],
+      [ "soybean_seed", 25, 511, 1113 ],
+      [ "seed_red_winter_wheat", 15, 922, 805 ],
+      [ "seed_potato_raw", 10, 424, 1028 ]
+    ],
+    "US-OH": [ [ "seed_corn", 52, 425, 1115 ], [ "soybean_seed", 43, 505, 1105 ], [ "seed_red_winter_wheat", 5, 925, 725 ] ],
+    "US-OK": [ [ "seed_red_winter_wheat", 62, 925, 715 ], [ "seed_corn", 22, 415, 1025 ], [ "soybean_seed", 16, 515, 1105 ] ],
+    "US-OR": [
+      [ "seed_red_winter_wheat", 58, 920, 901 ],
+      [ "seed_wheat", 20, 418, 916 ],
+      [ "seed_potato_raw", 16, 420, 1028 ],
+      [ "seed_pea", 6, 419, 912 ]
+    ],
+    "US-PA": [
+      [ "seed_corn", 43, 430, 1117 ],
+      [ "soybean_seed", 38, 520, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1017, 720 ],
+      [ "seed_potato_raw", 4, 420, 915 ]
+    ],
+    "US-RI": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_potato_raw", 25, 427, 1022 ], [ "seed_oats", 10, 501, 918 ] ],
+    "US-SC": [
+      [ "seed_corn", 32, 403, 923 ],
+      [ "soybean_seed", 33, 515, 1118 ],
+      [ "seed_cotton_boll", 30, 501, 1127 ],
+      [ "seed_red_winter_wheat", 5, 1020, 625 ]
+    ],
+    "US-SD": [
+      [ "seed_corn", 52, 427, 1120 ],
+      [ "soybean_seed", 30, 511, 1102 ],
+      [ "seed_red_winter_wheat", 12, 909, 727 ],
+      [ "seed_wheat", 6, 420, 902 ]
+    ],
+    "US-TN": [ [ "soybean_seed", 52, 512, 1115 ], [ "seed_corn", 38, 420, 1104 ], [ "seed_red_winter_wheat", 10, 1006, 714 ] ],
+    "US-TX": [
+      [ "seed_cotton_boll", 42, 420, 1214 ],
+      [ "seed_red_winter_wheat", 37, 1001, 710 ],
+      [ "seed_corn", 16, 315, 1010 ],
+      [ "soybean_seed", 5, 425, 1015 ]
+    ],
+    "US-UT": [
+      [ "seed_red_winter_wheat", 47, 915, 825 ],
+      [ "seed_barley", 28, 410, 830 ],
+      [ "seed_wheat", 15, 415, 905 ],
+      [ "seed_potato_raw", 10, 424, 1015 ]
+    ],
+    "US-VA": [
+      [ "seed_corn", 50, 423, 1106 ],
+      [ "soybean_seed", 30, 518, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1010, 725 ],
+      [ "seed_barley", 5, 1001, 708 ]
+    ],
+    "US-VT": [ [ "seed_corn", 65, 512, 1026 ], [ "seed_oats", 20, 510, 1004 ], [ "seed_potato_raw", 15, 510, 1015 ] ],
+    "US-WA": [
+      [ "seed_red_winter_wheat", 58, 920, 901 ],
+      [ "seed_wheat", 20, 418, 916 ],
+      [ "seed_potato_raw", 16, 420, 1028 ],
+      [ "seed_pea", 6, 419, 912 ]
+    ],
+    "US-WI": [
+      [ "seed_corn", 50, 501, 1115 ],
+      [ "soybean_seed", 25, 511, 1113 ],
+      [ "seed_red_winter_wheat", 15, 922, 805 ],
+      [ "seed_potato_raw", 10, 424, 1028 ]
+    ],
+    "US-WV": [
+      [ "seed_corn", 50, 423, 1106 ],
+      [ "soybean_seed", 30, 518, 1115 ],
+      [ "seed_red_winter_wheat", 15, 1010, 725 ],
+      [ "seed_barley", 5, 1001, 708 ]
+    ],
+    "US-WY": [
+      [ "seed_red_winter_wheat", 45, 913, 810 ],
+      [ "seed_corn", 25, 430, 1101 ],
+      [ "seed_barley", 20, 422, 909 ],
+      [ "seed_potato_raw", 10, 501, 1021 ]
+    ]
+  }
+}

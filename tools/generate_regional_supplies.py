@@ -5,14 +5,7 @@ import argparse
 import json
 
 from generate_regional_loot import (
-    DATA,
-    ITEMS,
-    WEAPONS,
-    group,
-    item,
-    records,
-    reference,
-    render,
+    DATA, ITEMS, WEAPONS, group, item, records, reference, render,
 )
 
 SUPPLIES = DATA / "raw/north_america_supplies.json"
@@ -27,10 +20,10 @@ def store_groups(policy, existing):
     for stem in policy["regional_groups"]:
         output = apparel if stem == "coats_unisex" else food
         # Keep the original distribution available inside the localized group.
-        # The original ID would re-enter the scope redirect.
+        # Referencing the original ID directly would re-enter the scope
+        # redirect.
         original = {
-            key: value
-            for key, value in existing[stem].items()
+            key: value for key, value in existing[stem].items()
             if not key.startswith("//")
         }
         original["id"] = f"regional_supply_original_{stem}"
@@ -54,15 +47,13 @@ def store_groups(policy, existing):
             ],
         }.items():
             destination = apparel if stem == "coats_unisex" else food
-            destination.append(
-                group(
-                    f"{stem}-{code}",
-                    [
-                        reference(f"regional_supply_original_{stem}", 60),
-                        *additions,
-                    ],
-                )
-            )
+            destination.append(group(
+                f"{stem}-{code}",
+                [
+                    reference(f"regional_supply_original_{stem}", 60),
+                    *additions,
+                ],
+            ))
     return food, apparel
 
 
@@ -93,12 +84,8 @@ def armory_groups(policy):
         magazines = []
         reserve = []
         for role, weight in (
-            ("sidearm", 20),
-            ("rifle", 55),
-            ("secondary", 10),
-            ("support", 10),
-            ("medium_support", 5),
-            ("sniper", 5),
+            ("sidearm", 20), ("rifle", 55), ("secondary", 10),
+            ("support", 10), ("medium_support", 5), ("sniper", 5),
         ):
             if role not in equipment:
                 continue
@@ -106,46 +93,34 @@ def armory_groups(policy):
             kit_name = f"regional_service_kit_{role}-{country}"
             case_name = f"regional_service_case_{role}-{country}"
             guns[role] = weapon_entry(weapon, charges=[0, 8])
-            groups.append(
-                group(
-                    kit_name, [weapon_entry(weapon), item(mag)], "collection"
-                )
-            )
-            groups.append(
-                group(
-                    case_name,
-                    [reference(kit_name), reference(ammo)],
-                    "collection",
-                )
-            )
+            groups.append(group(
+                kit_name, [weapon_entry(weapon), item(mag)], "collection"
+            ))
+            groups.append(group(
+                case_name, [reference(kit_name), reference(ammo)], "collection"
+            ))
             kits.append(reference(kit_name, weight))
             cases.append(reference(case_name, weight))
             magazines.append(item(mag, weight))
             reserve.append(reference(ammo, weight))
 
         regional_patrol_kit = f"regional_patrol_kit-{country}"
-        groups.append(
-            group(
-                regional_patrol_kit,
-                [
-                    reference("regional_service_kit_rifle-" + country),
-                    reference(equipment["rifle"][2]),
-                ],
-                "collection",
-            )
-        )
+        groups.append(group(regional_patrol_kit, [
+            reference("regional_service_kit_rifle-" + country),
+            reference(equipment["rifle"][2]),
+        ], "collection"))
         patrol_groups = [
             reference(ident, 20) for ident in equipment["police_longarms"]
         ]
         pistol_groups = [
             reference(ident, 50) for ident in equipment["police_pistols"]
         ]
-        police_pistol, police_pistol_mag, spare_pistol = equipment[
-            "police_field_sidearm"
-        ]
-        police_rifle, police_rifle_mag, spare_rifle = equipment[
-            "police_field_rifle"
-        ]
+        police_pistol, police_pistol_mag, spare_pistol = (
+            equipment["police_field_sidearm"]
+        )
+        police_rifle, police_rifle_mag, spare_rifle = (
+            equipment["police_field_rifle"]
+        )
         pistol_in_field = weapon_entry(
             police_pistol, charges=[0, 8], damage=[0, 3]
         )
@@ -153,28 +128,22 @@ def armory_groups(policy):
             police_rifle, charges=[0, 15], damage=[0, 3]
         )
         police_magazines = [
-            item(police_pistol_mag),
-            item(police_rifle_mag),
-            item("mp5mag"),
+            item(police_pistol_mag), item(police_rifle_mag), item("mp5mag")
         ]
         issue_rifles = [
-            {**guns["rifle"], "prob": 85},
-            {**guns["secondary"], "prob": 15},
+            {**guns["rifle"], "prob": 85}, {**guns["secondary"], "prob": 15}
         ]
         rifle_guns = [
-            *issue_rifles,
-            weapon_entry(equipment["sniper"][0], prob=5),
+            *issue_rifles, weapon_entry(equipment["sniper"][0], prob=5)
         ]
         support_guns = [
             guns[role]
-            for role in ("support", "medium_support")
-            if role in guns
+            for role in ("support", "medium_support") if role in guns
         ]
         variants = {
             "police_armory_any_pistol": pistol_groups,
             "police_armory_any_assaultrifle": [
-                reference(regional_patrol_kit, 60),
-                *patrol_groups,
+                reference(regional_patrol_kit, 60), *patrol_groups
             ],
             "police_armory_any_smg": [reference("police_armory_mp5")],
             "police_armory_any_sniperrifle": [
@@ -186,8 +155,7 @@ def armory_groups(policy):
             ],
             "sidearms_cop": [pistol_in_field],
             "sidearms_cop_in_field": [
-                pistol_in_field,
-                reference(spare_pistol),
+                pistol_in_field, reference(spare_pistol)
             ],
             "sidearms_cop_in_field_no_gun": [reference(spare_pistol)],
             "longguns_cop": [rifle_in_field],
@@ -198,8 +166,7 @@ def armory_groups(policy):
                 reference(f"longguns_cop_in_field-{country}", 85),
                 {
                     "collection": [
-                        item("hk_mp5", charges=[0, 8]),
-                        item("mp5mag"),
+                        item("hk_mp5", charges=[0, 8]), item("mp5mag")
                     ],
                     "prob": 15,
                 },
@@ -225,10 +192,9 @@ def armory_groups(policy):
             "regional_military_reserve_ammo": [
                 reference(equipment["sniper"][2])
             ],
-            "regional_military_surplus_firearms": (
-                rifle_guns +
-                [weapon_entry(equipment["sidearm"][0], prob=30)]
-            ),
+            "regional_military_surplus_firearms": rifle_guns + [
+                weapon_entry(equipment["sidearm"][0], prob=30)
+            ],
             "regional_military_surplus_magazines": magazines,
         }
         if variants.keys() != set(policy["service_groups"]):
@@ -236,8 +202,7 @@ def armory_groups(policy):
                 f"Service group list does not match the {country} definitions"
             )
         collections = {
-            "police_armory_any_shotgun",
-            "sidearms_cop_in_field",
+            "police_armory_any_shotgun", "sidearms_cop_in_field",
             "longguns_cop_in_field",
         }
         for stem, entries in variants.items():
@@ -255,16 +220,13 @@ def validate_references(generated, existing, items):
         if isinstance(value, dict):
             for key, entry in value.items():
                 if (
-                    key == "item" and
-                    isinstance(entry, str) and
+                    key == "item" and isinstance(entry, str) and
                     entry not in items
                 ):
                     raise ValueError(f"{context}: unknown item {entry}")
                 if (
-                    key == "group" and
-                    isinstance(entry, str) and
-                    entry not in ids and
-                    entry not in existing
+                    key == "group" and isinstance(entry, str) and
+                    entry not in ids and entry not in existing
                 ):
                     raise ValueError(f"{context}: unknown group {entry}")
                 if isinstance(entry, (dict, list)):
@@ -279,11 +241,8 @@ def validate_references(generated, existing, items):
 
 def build():
     policy = json.loads(SUPPLIES.read_text(encoding="utf-8"))
-    existing = records(
-        path
-        for path in (DATA / "json").rglob("*.json")
-        if path.name != "regional_supplies_north_america.json"
-    )
+    existing = records(path for path in (DATA / "json").rglob("*.json")
+                       if path.name != "regional_supplies_north_america.json")
     items = records(ITEMS.rglob("*.json"))
     food, apparel = store_groups(policy, existing)
     service = armory_groups(policy)
@@ -291,9 +250,7 @@ def build():
     return {
         path / "regional_supplies_north_america.json": render(groups) + "\n"
         for path, groups in (
-            (FOOD, food),
-            (APPAREL, apparel),
-            (SERVICE, service),
+            (FOOD, food), (APPAREL, apparel), (SERVICE, service)
         )
     }
 

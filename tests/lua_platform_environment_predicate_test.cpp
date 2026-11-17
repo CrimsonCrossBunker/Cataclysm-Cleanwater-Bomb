@@ -196,7 +196,7 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
     TranslationManager &translation_manager = TranslationManager::GetInstance();
     const std::string old_language = translation_manager.GetCurrentLanguage();
     const std::string intermediate_language = old_language == "en" ? "ru" : "en";
-    on_out_of_scope restore_language( [old_language, intermediate_language]() {
+    on_out_of_scope restore_language( [&old_language, &intermediate_language]() {
         set_language( intermediate_language );
         set_language( old_language );
     } );

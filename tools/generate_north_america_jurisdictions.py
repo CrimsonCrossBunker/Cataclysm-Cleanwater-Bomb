@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Project Natural Earth 1:10m admin-1 boundaries into the atlas."""
+"""Project Natural Earth 1:10m admin-1 boundaries into the North America \
+atlas."""
 
 import argparse
 import json
@@ -12,11 +13,7 @@ from shapely.geometry import shape
 from shapely.validation import make_valid
 
 from generate_north_america import (
-    LATITUDE,
-    LONGITUDE,
-    RADIUS,
-    components,
-    pack_polygon,
+    LATITUDE, LONGITUDE, RADIUS, components, pack_polygon,
 )
 
 
@@ -37,7 +34,8 @@ def render(source):
             code = record.record["iso_3166_2"]
             if not code:
                 raise ValueError(
-                    f"Missing ISO subdivision code for {record.record['name']}"
+                    "Missing ISO subdivision code for "
+                    f"{record.record['name']}"
                 )
             if code == "MX-X01~":
                 # Natural Earth's unnamed offshore feature has no state code.
@@ -49,12 +47,13 @@ def render(source):
                 projected = transform(
                     polygon, project.transform, interleaved=False
                 )
-                # Keep shared land-border vertices. Discard coastal rocks below
-                # the scale of the terrain atlas.
+                # Keep shared land-border vertices. Discard small coastal
+                # rocks that are also below the scale of the terrain atlas.
                 if projected.area >= 100_000:
                     rows.append((code, pack_polygon(projected)))
     body = ",\n".join(
-        "    " + json.dumps(row, separators=(",", ":")) for row in sorted(rows)
+        "    " + json.dumps(row, separators=(",", ":"))
+        for row in sorted(rows)
     )
     return '{\n  "version": 1,\n  "polygons": [\n' + body + "\n  ]\n}\n"
 
@@ -62,8 +61,7 @@ def render(source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "source",
-        type=Path,
+        "source", type=Path,
         help="Natural Earth admin-1 ZIP or SHP with its DBF",
     )
     parser.add_argument("output", type=Path)

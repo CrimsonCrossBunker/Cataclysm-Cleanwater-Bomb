@@ -55,6 +55,7 @@
 #include "vehicle_uid.h"
 #include "vpart_position.h"
 
+static const activity_id ACT_CLOSE_TILE( "ACT_CLOSE_TILE" );
 static const activity_id ACT_OPEN_TILE( "ACT_OPEN_TILE" );
 static const activity_id ACT_WAIT( "ACT_WAIT" );
 static const efftype_id effect_incorporeal( "incorporeal" );
@@ -68,6 +69,7 @@ static const vpart_id vpart_door( "door" );
 static const vpart_id vpart_frame( "frame" );
 static const vpart_id vpart_horn_bicycle( "horn_bicycle" );
 static const vproto_id vehicle_prototype_none( "none" );
+static const vproto_id vehicle_prototype_test_van( "test_van" );
 
 TEST_CASE( "doors_should_be_able_to_open_and_close", "[gates]" )
 {
@@ -537,7 +539,7 @@ TEST_CASE( "close_activity_revalidates_vehicle_identity_and_parts",
         actor.activity.serialize( output );
         actor.activity.set_to_null();
         actor.activity.deserialize( json_loader::from_string( saved.str() ).get_object() );
-        REQUIRE( actor.activity.id() == activity_id( "ACT_CLOSE_TILE" ) );
+        REQUIRE( actor.activity.id() == ACT_CLOSE_TILE );
     }
 
     SECTION( "unchanged target closes" ) {
@@ -562,7 +564,7 @@ TEST_CASE( "close_activity_revalidates_vehicle_identity_and_parts",
     SECTION( "a replacement door is not the original target" ) {
         veh->remove_part( veh->part( door ) );
         veh->part_removal_cleanup( here );
-        door = veh->install_part( here, point_rel_ms::zero, vpart_id( "door" ) );
+        door = veh->install_part( here, point_rel_ms::zero, vpart_door );
         REQUIRE( door >= 0 );
         veh->open( here, door );
         actor.activity.actor->finish( actor.activity, actor );
@@ -581,12 +583,12 @@ TEST_CASE( "close_activity_revalidates_vehicle_identity_and_parts",
     SECTION( "a different vehicle at the same tile is not closed" ) {
         const int64_t original_uid = veh->uid().get_value();
         here.destroy_vehicle( veh );
-        veh = here.add_vehicle( vproto_id( "none" ), target, 0_degrees, 0,
+        veh = here.add_vehicle( vehicle_prototype_none, target, 0_degrees, 0,
                                 veh_spawn_status::UNDAMAGED );
         REQUIRE( veh != nullptr );
         REQUIRE( veh->uid().get_value() != original_uid );
-        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-        door = veh->install_part( here, point_rel_ms::zero, vpart_id( "door" ) );
+        REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+        door = veh->install_part( here, point_rel_ms::zero, vpart_door );
         REQUIRE( door >= 0 );
         veh->open( here, door );
         here.add_vehicle_to_cache( veh );
@@ -654,7 +656,7 @@ TEST_CASE( "close_activity_resolves_fake_vehicle_doors", "[gates][close][vehicle
     } );
     map &here = get_map();
     avatar &you = get_avatar();
-    vehicle *veh = here.add_vehicle( vproto_id( "test_van" ), tripoint_bub_ms( 60, 60, 0 ),
+    vehicle *veh = here.add_vehicle( vehicle_prototype_test_van, tripoint_bub_ms( 60, 60, 0 ),
                                      315_degrees, 100, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh != nullptr );
     veh->set_owner( you );

@@ -3,12 +3,14 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <iterator>
 #include <initializer_list>
+#include <iterator>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "city.h"
@@ -17,6 +19,7 @@
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "flood_fill.h"
+#include "line.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "north_america.h"
@@ -38,6 +41,55 @@ static const oter_str_id oter_road_nesw( "road_nesw" );
 static const oter_str_id oter_road_nesw_manhole( "road_nesw_manhole" );
 
 static const oter_type_str_id oter_type_road( "road" );
+
+static const overmap_location_id overmap_location_land( "land" );
+
+static const overmap_special_id overmap_special_abandonedwarehouse_1( "abandonedwarehouse_1" );
+static const overmap_special_id overmap_special_apartments_con_new( "apartments_con_new" );
+static const overmap_special_id overmap_special_apartments_mod_new( "apartments_mod_new" );
+static const overmap_special_id overmap_special_bank( "bank" );
+static const overmap_special_id overmap_special_bank_1( "bank_1" );
+static const overmap_special_id overmap_special_house_01( "house_01" );
+static const overmap_special_id overmap_special_house_02( "house_02" );
+static const overmap_special_id overmap_special_house_03( "house_03" );
+static const overmap_special_id overmap_special_house_gardener( "house_gardener" );
+static const overmap_special_id
+overmap_special_house_regional_mexican_patio( "house_regional_mexican_patio" );
+static const overmap_special_id overmap_special_house_regional_ranch( "house_regional_ranch" );
+static const overmap_special_id overmap_special_museum( "museum" );
+static const overmap_special_id overmap_special_office_cubical( "office_cubical" );
+static const overmap_special_id overmap_special_office_doctor( "office_doctor" );
+static const overmap_special_id overmap_special_office_skyscraper( "office_skyscraper" );
+static const overmap_special_id overmap_special_office_tower( "office_tower" );
+static const overmap_special_id overmap_special_office_tower_large( "office_tower_large" );
+static const overmap_special_id overmap_special_park( "park" );
+static const overmap_special_id overmap_special_park_5( "park_5" );
+static const overmap_special_id overmap_special_park_7( "park_7" );
+static const overmap_special_id overmap_special_parking_lot_2x2( "parking_lot_2x2" );
+static const overmap_special_id overmap_special_playground( "playground" );
+static const overmap_special_id overmap_special_public_works( "public_works" );
+static const overmap_special_id overmap_special_recyclecenter( "recyclecenter" );
+static const overmap_special_id overmap_special_s_bookstore( "s_bookstore" );
+static const overmap_special_id overmap_special_s_clothes( "s_clothes" );
+static const overmap_special_id overmap_special_s_garage( "s_garage" );
+static const overmap_special_id overmap_special_s_garage_1( "s_garage_1" );
+static const overmap_special_id overmap_special_s_grocery( "s_grocery" );
+static const overmap_special_id overmap_special_s_hardware( "s_hardware" );
+static const overmap_special_id overmap_special_s_library( "s_library" );
+static const overmap_special_id overmap_special_s_library_2( "s_library_2" );
+static const overmap_special_id overmap_special_s_pharm( "s_pharm" );
+static const overmap_special_id overmap_special_s_restaurant( "s_restaurant" );
+static const overmap_special_id overmap_special_s_restaurant_fast( "s_restaurant_fast" );
+static const overmap_special_id overmap_special_school( "school" );
+static const overmap_special_id overmap_special_shopping_plaza( "shopping_plaza" );
+static const overmap_special_id overmap_special_small_office( "small_office" );
+static const overmap_special_id overmap_special_small_storage_units( "small_storage_units" );
+static const overmap_special_id overmap_special_storage_units_medium( "storage_units_medium" );
+static const overmap_special_id overmap_special_urban_35_hospital( "urban_35_hospital" );
+static const overmap_special_id
+overmap_special_urban_9_house_garage_loft( "urban_9_house_garage_loft" );
+static const overmap_special_id overmap_special_urban_library( "urban_library" );
+static const overmap_special_id overmap_special_warehouse( "warehouse" );
 
 static constexpr int BUILDINGCHANCE = 4;
 
@@ -89,12 +141,10 @@ overmap_special_id north_america::regional_house_for( std::string_view jurisdict
     }
     const std::string_view country = jurisdiction.substr( 0, 3 );
     if( country == "MX-" ) {
-        static const overmap_special_id patio( "house_regional_mexican_patio" );
-        return patio;
+        return overmap_special_house_regional_mexican_patio;
     }
     if( country == "US-" ) {
-        static const overmap_special_id ranch( "house_regional_ranch" );
-        return ranch;
+        return overmap_special_house_regional_ranch;
     }
     return overmap_special_id::NULL_ID();
 }
@@ -354,46 +404,46 @@ const urban_buildings &buildings_for( urban_zone zone )
 {
     static const std::array<urban_buildings, 5> buildings = { {
             {   {
-                    overmap_special_id( "apartments_mod_new" ), overmap_special_id( "apartments_con_new" ),
-                    overmap_special_id( "urban_9_house_garage_loft" )
+                    overmap_special_apartments_mod_new, overmap_special_apartments_con_new,
+                    overmap_special_urban_9_house_garage_loft
                 },
                 {
-                    overmap_special_id( "house_01" ), overmap_special_id( "house_02" ),
-                    overmap_special_id( "house_03" ), overmap_special_id( "house_gardener" )
+                    overmap_special_house_01, overmap_special_house_02,
+                    overmap_special_house_03, overmap_special_house_gardener
                 }
             },
-            {   { overmap_special_id( "parking_lot_2x2" ), overmap_special_id( "shopping_plaza" ) },
+            {   { overmap_special_parking_lot_2x2, overmap_special_shopping_plaza },
                 {
-                    overmap_special_id( "s_grocery" ), overmap_special_id( "s_restaurant" ),
-                    overmap_special_id( "s_bookstore" ), overmap_special_id( "s_clothes" ),
-                    overmap_special_id( "s_pharm" ), overmap_special_id( "s_hardware" )
+                    overmap_special_s_grocery, overmap_special_s_restaurant,
+                    overmap_special_s_bookstore, overmap_special_s_clothes,
+                    overmap_special_s_pharm, overmap_special_s_hardware
                 }
             },
             {   {
-                    overmap_special_id( "office_tower" ), overmap_special_id( "office_skyscraper" ),
-                    overmap_special_id( "office_tower_large" ), overmap_special_id( "apartments_mod_new" )
+                    overmap_special_office_tower, overmap_special_office_skyscraper,
+                    overmap_special_office_tower_large, overmap_special_apartments_mod_new
                 },
                 {
-                    overmap_special_id( "small_office" ), overmap_special_id( "office_cubical" ),
-                    overmap_special_id( "bank" ), overmap_special_id( "bank_1" ),
-                    overmap_special_id( "s_restaurant_fast" )
+                    overmap_special_small_office, overmap_special_office_cubical,
+                    overmap_special_bank, overmap_special_bank_1,
+                    overmap_special_s_restaurant_fast
                 }
             },
-            {   { overmap_special_id( "public_works" ), overmap_special_id( "storage_units_medium" ) },
+            {   { overmap_special_public_works, overmap_special_storage_units_medium },
                 {
-                    overmap_special_id( "warehouse" ), overmap_special_id( "abandonedwarehouse_1" ),
-                    overmap_special_id( "s_garage" ), overmap_special_id( "s_garage_1" ),
-                    overmap_special_id( "recyclecenter" ), overmap_special_id( "small_storage_units" )
+                    overmap_special_warehouse, overmap_special_abandonedwarehouse_1,
+                    overmap_special_s_garage, overmap_special_s_garage_1,
+                    overmap_special_recyclecenter, overmap_special_small_storage_units
                 }
             },
             {   {
-                    overmap_special_id( "school" ), overmap_special_id( "urban_library" ),
-                    overmap_special_id( "urban_35_hospital" )
+                    overmap_special_school, overmap_special_urban_library,
+                    overmap_special_urban_35_hospital
                 },
                 {
-                    overmap_special_id( "s_library" ), overmap_special_id( "s_library_2" ),
-                    overmap_special_id( "museum" ), overmap_special_id( "office_doctor" ),
-                    overmap_special_id( "playground" )
+                    overmap_special_s_library, overmap_special_s_library_2,
+                    overmap_special_museum, overmap_special_office_doctor,
+                    overmap_special_playground
                 }
             },
         }
@@ -483,13 +533,12 @@ int urban_cell( const point_om_omt &p )
 void overmap::build_atlas_neighborhoods( const overmap_connection &road,
         const std::vector<north_america::road_cell> &streets )
 {
-    const auto origin = global_base_point();
+    const point_abs_omt origin = global_base_point();
     const auto &districts = north_america::urban_districts_in( pos() );
     if( districts.empty() || cities.empty() ) {
         return;
     }
 
-    static const overmap_location_id land( "land" );
     std::vector<const north_america::place *> owners( OMAPX * OMAPY );
     std::vector<atlas_lot> fronts;
     constexpr int max_infill_depth = 4;
@@ -521,17 +570,24 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                     city_tiles.insert( p.xy() );
                     continue;
                 }
-                if( !land->test( existing ) || existing->is_water() ||
+                if( !overmap_location_land->test( existing ) || existing->is_water() ||
                     overmap_special_placements.count( p ) ) {
                     continue;
                 }
-                owners[urban_cell( p.xy() )] = &owner;
                 const point_abs_omt absolute = origin + p.xy().raw();
+                const int development = north_america::urban_density( district, absolute );
+                if( development == 0 ) {
+                    continue;
+                }
+                owners[urban_cell( p.xy() )] = &owner;
+                if( development < 100 && rng( 1, 100 ) > development ) {
+                    continue;
+                }
                 atlas_lot lot{ p, &town, regional_house, urban_zone::housing };
-                lot.dense = north_america::population_band( absolute ) >= 5;
+                lot.dense = development >= 75 && north_america::population_band( absolute ) >= 5;
                 bool near_arterial = false;
                 for( om_direction::type dir : om_direction::all ) {
-                    const auto delta = om_direction::displace( dir );
+                    const point_rel_omt delta = om_direction::displace( dir );
                     const tripoint_om_omt next = p + delta;
                     if( near_street( next ) ) {
                         lot.entrances[lot.frontage++] = dir;
@@ -547,7 +603,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 }
                 int depth = max_infill_depth + 1;
                 for( const om_direction::type dir : om_direction::all ) {
-                    const auto delta = om_direction::displace( dir );
+                    const point_rel_omt delta = om_direction::displace( dir );
                     tripoint_om_omt next = p + delta;
                     for( int distance = 2; distance < depth; ++distance ) {
                         next = next + delta;
@@ -655,7 +711,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
     }
 
     static const std::array<overmap_special_id, 3> green_space = {
-        overmap_special_id( "park" ), overmap_special_id( "park_5" ), overmap_special_id( "park_7" )
+        overmap_special_park, overmap_special_park_5, overmap_special_park_7
     };
     // Work from the front toward the backs of developed blocks. Do not turn
     // large gaps between streets or unserved shoreline into planned grounds.

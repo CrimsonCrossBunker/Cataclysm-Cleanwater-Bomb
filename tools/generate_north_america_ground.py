@@ -21,7 +21,7 @@ FORMS = {
 def ground_cover():
     original = json.loads(
         (TERRAIN / "terrain-north-america-soils.json").read_text(
-            encoding="utf-8",
+            encoding="utf-8"
         )
     )
     variants = []
@@ -72,10 +72,10 @@ def permafrost_grid(source):
     x, y = transform.transform(longitude.ravel(), latitude.ravel())
     cells = numpy.zeros(width * height, dtype="uint8")
     centers, shapes = shapely.STRtree(polygons).query(
-        shapely.points(x, y), predicate="within",
+        shapely.points(x, y), predicate="within"
     )
-    for center, shape_index in zip(centers, shapes):
-        value = values[shape_index]
+    for center, polygon_index in zip(centers, shapes):
+        value = values[polygon_index]
         if not cells[center] or value < cells[center]:
             cells[center] = value
     rows = [
@@ -83,7 +83,7 @@ def permafrost_grid(source):
         for row in cells.reshape(height, width)
     ]
     data = {
-        "version": 1, "west": west, "north": north, "step": step, "rows": rows,
+        "version": 1, "west": west, "north": north, "step": step, "rows": rows
     }
     return json.dumps(data, indent=2) + "\n"
 

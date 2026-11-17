@@ -56,11 +56,8 @@ def render(source):
             continue
         shapes.append((feature["geometry"], codes[SOIL_TYPES[label]]))
     cells = rasterize(
-        shapes,
-        out_shape=(HEIGHT, WIDTH),
-        dtype="uint8",
-        transform=from_origin(WEST, NORTH, STEP, STEP),
-        fill=ord("."),
+        shapes, out_shape=(HEIGHT, WIDTH), dtype="uint8",
+        transform=from_origin(WEST, NORTH, STEP, STEP), fill=ord("."),
     )
     rows = ",\n".join(
         "    " + json.dumps(row.tobytes().decode("ascii")) for row in cells

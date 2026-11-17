@@ -53,6 +53,7 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
+#include "iuse.h"
 #include "line.h"
 #include "lua_platform_runtime.h"
 #include "magic_enchantment.h"
@@ -1684,6 +1685,14 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
 
         if( !loc ) {
             add_msg( _( "Never mind." ) );
+            return;
+        }
+    }
+
+    if( loc->is_toolmod() && ( method.empty() || method == "TOOLMOD_ATTACH" ) ) {
+        const ret_val<void> source_check = iuse::can_attach_toolmod( loc );
+        if( !source_check.success() ) {
+            you.add_msg_if_player( m_info, "%s", source_check.str() );
             return;
         }
     }

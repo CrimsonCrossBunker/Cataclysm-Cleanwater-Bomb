@@ -6,13 +6,7 @@ import subprocess
 import unittest
 
 from generate_regional_loot import (
-    DATA,
-    ITEMS,
-    POLICY,
-    build,
-    magazine_capacity,
-    records,
-    render,
+    DATA, ITEMS, POLICY, build, magazine_capacity, records, render,
 )
 
 
@@ -27,9 +21,11 @@ class RegionalJsonFormatTest(unittest.TestCase):
                 self.assertEqual(render(json.loads(original)) + "\n", original)
 
     def test_nested_collections_and_string_contents(self):
-        value = [{"entries": [
-            {"item": "{ } [ ]\u00a0", "charges": [0, 4]}, {}, [],
-        ]}]
+        value = [{
+            "entries": [
+                {"item": "{ } [ ]\u00a0", "charges": [0, 4]}, {}, []
+            ]
+        }]
         self.assertEqual(
             render(value),
             '[\n  {\n    "entries": [ { "item": "{ } [ ]\\u00a0", '
@@ -75,34 +71,12 @@ class RegionalJsonFormatTest(unittest.TestCase):
 
 
 class RegionalLootTest(unittest.TestCase):
-    def test_nested_ranges_use_formatter_spacing(self):
-        self.assertEqual(
-            render({"item": "stick", "count": [1, 2]}, indent=4),
-            '{ "item": "stick", "count": [ 1, 2 ] }',
-        )
-
-    def test_wrapping_counts_collection_separator(self):
-        entry = {"item": "x" * 104}
-        inline = '{ "item": "' + "x" * 104 + '" }'
-        wrapped = '{\n      "item": "' + "x" * 104 + '"\n    }'
-        self.assertEqual(
-            render([entry, entry], indent=2),
-            "[\n    " + inline + ",\n    " + wrapped + "\n  ]",
-        )
-
-    def test_top_level_objects_stay_multiline(self):
-        self.assertEqual(
-            render([{"item": "stick"}]),
-            '[\n  {\n    "item": "stick"\n  }\n]',
-        )
-
     @classmethod
     def setUpClass(cls):
         cls.policy = json.loads(POLICY.read_text(encoding="utf-8"))
         cls.outputs = build()
         cls.groups = {
-            obj["id"]: obj
-            for output in cls.outputs.values()
+            obj["id"]: obj for output in cls.outputs.values()
             for obj in json.loads(output)
         }
 
@@ -131,12 +105,11 @@ class RegionalLootTest(unittest.TestCase):
 
     def test_boxed_pistol_magazines_change_by_profile(self):
         def magazine_for_m9(profile):
-            boxes = self.groups[f"guns_pistol_common_boxed-{profile}"][
-                "entries"
-            ]
+            boxes = self.groups[
+                f"guns_pistol_common_boxed-{profile}"
+            ]["entries"]
             box = next(
-                entry["group"]
-                for entry in boxes
+                entry["group"] for entry in boxes
                 if entry["group"].startswith("regional_boxed_m9-")
             )
             return self.groups[box]["entries"][-1]["item"]

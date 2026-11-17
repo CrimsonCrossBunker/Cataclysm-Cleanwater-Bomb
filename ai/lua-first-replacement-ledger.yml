@@ -31,17 +31,17 @@ sources:
 - id: json-object-types
   path: data/reference/json/ccb_json_object_types.json
   selector: type
-  source_fingerprint: sha256:2e178d5e28e096c4cdd8081c9a64f6f3af613b85f82321f3ff6bec08385eae32
+  source_fingerprint: sha256:d77e9391860aa91947acd82d29a1c7a86cb7f1d3829ac0ca10010766fedfac6d
   entry_count: 193
 - id: eoc-conditions
   path: data/reference/json/ccb_eoc_conditions.json
   selector: key
-  source_fingerprint: sha256:2e178d5e28e096c4cdd8081c9a64f6f3af613b85f82321f3ff6bec08385eae32
+  source_fingerprint: sha256:d77e9391860aa91947acd82d29a1c7a86cb7f1d3829ac0ca10010766fedfac6d
   entry_count: 276
 - id: eoc-effects
   path: data/reference/json/ccb_eoc_effects.json
   selector: key
-  source_fingerprint: sha256:2e178d5e28e096c4cdd8081c9a64f6f3af613b85f82321f3ff6bec08385eae32
+  source_fingerprint: sha256:d77e9391860aa91947acd82d29a1c7a86cb7f1d3829ac0ca10010766fedfac6d
   entry_count: 329
 summary:
   total: 798

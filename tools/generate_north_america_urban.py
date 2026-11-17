@@ -50,8 +50,8 @@ def districts(urban_areas, atlas):
                     continue
                 closest = min(
                     nearby,
-                    key=lambda candidate: (
-                        centers[candidate][1].distance(center)
+                    key=lambda candidate: centers[candidate][1].distance(
+                        center
                     ),
                 )
                 sampled[col, row] = centers[closest][0]

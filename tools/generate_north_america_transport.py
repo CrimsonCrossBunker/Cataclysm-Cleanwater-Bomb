@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
 COUNTRIES = {"USA", "CAN", "MEX"}
 ROAD_TYPES = {
-    "Road", "Secondary Highway", "Major Highway", "Beltway", "Bypass",
+    "Road", "Secondary Highway", "Major Highway", "Beltway", "Bypass"
 }
 DISPLAY_NAMES = {
     "MX-CMX": "Mexico City", "MX-COA": "Coahuila", "MX-MIC": "Michoacán",
@@ -80,29 +80,33 @@ def project_roads(source, places, ontario401):
     with shapefile.Reader(str(source), encoding="utf-8") as roads:
         for record in roads.iterShapeRecords():
             attributes = record.record.as_dict()
-            if (attributes["sov_a3"] not in COUNTRIES or
-                    attributes["type"] not in ROAD_TYPES):
+            if (
+                attributes["sov_a3"] not in COUNTRIES or
+                attributes["type"] not in ROAD_TYPES
+            ):
                 continue
             major = attributes["type"] in {
-                "Major Highway", "Beltway", "Bypass",
+                "Major Highway", "Beltway", "Bypass"
             }
             express = bool(attributes["expressway"])
             for part in components(
-                shape(record.shape.__geo_interface__), "LineString",
+                shape(record.shape.__geo_interface__), "LineString"
             ):
-                if (len(part.coords) < 2 or
-                        part.bounds[2] - part.bounds[0] > 180):
+                if (
+                    len(part.coords) < 2 or
+                    part.bounds[2] - part.bounds[0] > 180
+                ):
                     continue
                 line = transform(
-                    part, projection.transform, interleaved=False,
+                    part, projection.transform, interleaved=False
                 ).simplify(45)
                 if line.is_empty:
                     continue
                 for (x0, y0), (x1, y1) in zip(
-                    line.coords, list(line.coords)[1:],
+                    line.coords, list(line.coords)[1:]
                 ):
                     count = max(
-                        1, math.ceil(math.hypot(x1 - x0, y1 - y0) / 3000),
+                        1, math.ceil(math.hypot(x1 - x0, y1 - y0) / 3000)
                     )
                     for index in range(count):
                         xa, ya = (
@@ -128,8 +132,8 @@ def project_roads(source, places, ontario401):
                             )
                             if express:
                                 lanes = (
-                                    8 if urban >= 1_500_000 else
-                                    6 if urban >= 250_000 else 4
+                                    8 if urban >= 1_500_000
+                                    else 6 if urban >= 250_000 else 4
                                 )
                             elif urban >= 250_000:
                                 lanes = 4
@@ -153,7 +157,7 @@ def jurisdiction_maps(source):
     )
     codes = {row[0] for row in atlas["polygons"]}
     with shapefile.Reader(
-        str(source), encoding="utf-8", encodingErrors="replace",
+        str(source), encoding="utf-8", encodingErrors="replace"
     ) as regions:
         names = {
             record["iso_3166_2"]: record["name_en"] or record["name"]
@@ -166,8 +170,8 @@ def jurisdiction_maps(source):
 
 def map_stock(regions):
     records = [{
-        "type": "item_group", "id": "roadmap_stock", "subtype": "distribution",
-        "items": [["roadmap", 100]],
+        "type": "item_group", "id": "roadmap_stock",
+        "subtype": "distribution", "items": [["roadmap", 100]],
     }]
     for country in ("US", "CA", "MX"):
         entries = [
@@ -179,7 +183,8 @@ def map_stock(regions):
             "subtype": "distribution", "items": entries,
         })
     records.append({
-        "type": "item_group", "id": "atlas_maps", "subtype": "distribution",
+        "type": "item_group", "id": "atlas_maps",
+        "subtype": "distribution",
         "groups": [
             [f"atlas_maps_{country}", 100] for country in ("US", "CA", "MX")
         ],
@@ -218,12 +223,13 @@ def main():
             "type": "ITEM", "id": "atlas_map_" + code.lower(),
             "copy-from": "roadmap",
             "name": {
-                "str": f"road map of {name}", "str_pl": f"road maps of {name}",
+                "str": f"road map of {name}",
+                "str_pl": f"road maps of {name}",
             },
-            "description":
-                "A printed chart of highways, rivers, and major cities.",
+            "description": "A printed chart of highways, rivers, "
+                           "and major cities.",
             "use_action": {
-                "type": "reveal_map", "radius": 0, "atlas_jurisdiction": code,
+                "type": "reveal_map", "radius": 0, "atlas_jurisdiction": code
             },
         }
         for code, name in regions

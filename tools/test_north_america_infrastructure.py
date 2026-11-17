@@ -33,7 +33,7 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
             region = chart["use_action"]["atlas_jurisdiction"]
             entries = stock[f"roadmap_stock-{region}"]["entries"]
             self.assertEqual(
-                max(entries, key=lambda e: e["prob"])["item"], chart["id"],
+                max(entries, key=lambda e: e["prob"])["item"], chart["id"]
             )
 
     def test_every_surface_preserves_its_base_and_grass_transitions(self):
@@ -51,7 +51,7 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
                 self.assertEqual(terrain["copy-from"], base)
                 if next_cover:
                     self.assertEqual(
-                        terrain["transforms_into"], f"{prefix}_{next_cover}",
+                        terrain["transforms_into"], f"{prefix}_{next_cover}"
                     )
                     self.assertIn(terrain["transforms_into"], variants)
 
@@ -63,7 +63,8 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
             self.assertLess((x1, y1), (x2, y2))
             self.assertLessEqual(max(abs(x2 - x1), abs(y2 - y1)), 126)
         self.assertTrue(any(
-            lanes == 12 and -30_000 <= x1 <= -27_000 and -7_000 <= y1 <= -5_000
+            lanes == 12 and -30_000 <= x1 <= -27_000 and
+            -7_000 <= y1 <= -5_000
             for lanes, x1, y1, _, _ in roads
         ))
 
