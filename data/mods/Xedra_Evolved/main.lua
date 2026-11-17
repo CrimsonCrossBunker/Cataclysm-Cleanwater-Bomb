@@ -98,3 +98,5 @@ require("enchantments_character_state")
 require("enchantment_variables")
 
 require("learning_enchantments")
+
+require("location_enchantments")
