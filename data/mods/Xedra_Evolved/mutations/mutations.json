@@ -1592,10 +1592,7 @@
     "activated_is_setup": true,
     "activation_msg": "Your power increases as your blood burns away.",
     "enchantments": [
-      {
-        "condition": { "and": [ "ACTIVE", { "math": [ "u_vitamin('human_blood_vitamin') >= -500" ] } ] },
-        "mutations": [ "VAMPIRE_BLOOD_FOR_POTENCY_REAL" ]
-      }
+      "INLINE_ENCH_VAMPIRE_BLOOD_FOR_POTENCY_0"
     ]
   },
   {
