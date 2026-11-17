@@ -49,8 +49,8 @@ class RegionalSuppliesTest(unittest.TestCase):
             {"CA": "canadian_flag", "MX": "mexican_flag"},
         )
         self.assertTrue(
-            set(self.policy["civic_flags"].values())
-            <= {v["id"] for v in variants}
+            set(self.policy["civic_flags"].values()) <=
+            {v["id"] for v in variants}
         )
 
     def test_service_weapon_and_reserve_ammunition_are_paired(self):

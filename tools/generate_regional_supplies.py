@@ -220,13 +220,13 @@ def validate_references(generated, existing, items):
         if isinstance(value, dict):
             for key, entry in value.items():
                 if (
-                    key == "item" and isinstance(entry, str)
-                    and entry not in items
+                    key == "item" and isinstance(entry, str) and
+                    entry not in items
                 ):
                     raise ValueError(f"{context}: unknown item {entry}")
                 if (
-                    key == "group" and isinstance(entry, str)
-                    and entry not in ids and entry not in existing
+                    key == "group" and isinstance(entry, str) and
+                    entry not in ids and entry not in existing
                 ):
                     raise ValueError(f"{context}: unknown group {entry}")
                 if isinstance(entry, (dict, list)):

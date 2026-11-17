@@ -81,8 +81,8 @@ def project_roads(source, places, ontario401):
         for record in roads.iterShapeRecords():
             attributes = record.record.as_dict()
             if (
-                attributes["sov_a3"] not in COUNTRIES
-                or attributes["type"] not in ROAD_TYPES
+                attributes["sov_a3"] not in COUNTRIES or
+                attributes["type"] not in ROAD_TYPES
             ):
                 continue
             major = attributes["type"] in {
@@ -93,8 +93,8 @@ def project_roads(source, places, ontario401):
                 shape(record.shape.__geo_interface__), "LineString"
             ):
                 if (
-                    len(part.coords) < 2
-                    or part.bounds[2] - part.bounds[0] > 180
+                    len(part.coords) < 2 or
+                    part.bounds[2] - part.bounds[0] > 180
                 ):
                     continue
                 line = transform(
@@ -126,8 +126,8 @@ def project_roads(source, places, ontario401):
                         if express or major:
                             urban = max(
                                 (pop for px, py, pop in centers
-                                 if abs(px - x) < 14_000
-                                 and abs(py - y) < 14_000),
+                                 if abs(px - x) < 14_000 and
+                                 abs(py - y) < 14_000),
                                 default=0,
                             )
                             if express:

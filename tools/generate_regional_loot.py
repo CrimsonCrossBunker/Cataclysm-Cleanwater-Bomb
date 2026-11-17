@@ -148,8 +148,8 @@ def catalog_groups(policy, items, base):
             # Limit the fallback to individual category groups to avoid
             # routing loops.
             if (
-                profile == "open" and stem in base
-                and not stem.endswith("_boxed")
+                profile == "open" and stem in base and
+                not stem.endswith("_boxed")
             ):
                 original = {key: value for key, value in base[stem].items()
                             if not key.startswith("//")}

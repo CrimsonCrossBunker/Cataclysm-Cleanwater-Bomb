@@ -63,8 +63,8 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
             self.assertLess((x1, y1), (x2, y2))
             self.assertLessEqual(max(abs(x2 - x1), abs(y2 - y1)), 126)
         self.assertTrue(any(
-            lanes == 12 and -30_000 <= x1 <= -27_000
-            and -7_000 <= y1 <= -5_000
+            lanes == 12 and -30_000 <= x1 <= -27_000 and
+            -7_000 <= y1 <= -5_000
             for lanes, x1, y1, _, _ in roads
         ))
 
