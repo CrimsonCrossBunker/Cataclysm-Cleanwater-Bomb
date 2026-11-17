@@ -123,6 +123,9 @@
 
 static const furn_str_id furn_f_ash( "f_ash" );
 static const furn_str_id furn_f_console( "f_console" );
+static const furn_str_id furn_f_flagpole( "f_flagpole" );
+static const furn_str_id furn_f_indoor_flagpole( "f_indoor_flagpole" );
+static const furn_str_id furn_f_indoor_flagpole_wooden( "f_indoor_flagpole_wooden" );
 static const furn_str_id furn_f_null( "f_null" );
 static const furn_str_id furn_f_rubble( "f_rubble" );
 static const furn_str_id furn_f_sign( "f_sign" );
@@ -133,12 +136,15 @@ static const furn_str_id furn_f_vending_c_off( "f_vending_c_off" );
 static const furn_str_id furn_f_vending_reinforced( "f_vending_reinforced" );
 static const furn_str_id furn_f_vending_reinforced_networked( "f_vending_reinforced_networked" );
 static const furn_str_id furn_f_vending_reinforced_off( "f_vending_reinforced_off" );
+static const furn_str_id furn_f_wooden_flagpole( "f_wooden_flagpole" );
+static const itype_id itype_american_flag( "american_flag" );
 static const itype_id itype_ash( "ash" );
 static const itype_id itype_avgas( "avgas" );
 static const itype_id itype_diesel( "diesel" );
 static const itype_id itype_gasoline( "gasoline" );
 static const itype_id itype_glass_shard( "glass_shard" );
 static const itype_id itype_jp8( "jp8" );
+static const itype_id itype_national_flag( "national_flag" );
 static const itype_id itype_rock( "rock" );
 static const itype_id itype_water( "water" );
 
@@ -2680,21 +2686,14 @@ class jmapgen_item_group : public jmapgen_piece
         }
 };
 
-static const itype_id itype_american_flag( "american_flag" );
-static const itype_id itype_national_flag( "national_flag" );
-
-static bool is_civic_flagpole( const map &here, const tripoint_bub_ms &pos )
+bool is_civic_flagpole( const map &here, const tripoint_bub_ms &pos )
 {
     if( !here.inbounds( pos ) ) {
         return false;
     }
-    static const furn_str_id flagpole( "f_flagpole" );
-    static const furn_str_id wooden_flagpole( "f_wooden_flagpole" );
-    static const furn_str_id indoor_flagpole( "f_indoor_flagpole" );
-    static const furn_str_id indoor_wooden_flagpole( "f_indoor_flagpole_wooden" );
     const furn_id pole = here.furn( pos );
-    return pole == flagpole || pole == wooden_flagpole ||
-           pole == indoor_flagpole || pole == indoor_wooden_flagpole;
+    return pole == furn_f_flagpole || pole == furn_f_wooden_flagpole ||
+           pole == furn_f_indoor_flagpole || pole == furn_f_indoor_flagpole_wooden;
 }
 
 /** Place items from an item group */
