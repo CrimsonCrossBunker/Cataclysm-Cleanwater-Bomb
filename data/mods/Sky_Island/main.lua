@@ -14,6 +14,8 @@ require("raid_obelisk")
 
 require("raid_return")
 
+require("raid_rewards")
+
 require("recipes")
 
 if require("ccb").content.is_mod_active("magiclysm") then
