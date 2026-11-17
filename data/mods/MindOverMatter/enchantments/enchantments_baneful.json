@@ -10,27 +10,5 @@
       { "type": "bullet", "add": { "math": [ "Nemesis_iteration * -1" ] } }
     ],
     "values": [ { "value": "SPEED", "add": { "math": [ "Nemesis_iteration * 1" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_riftwalker_teleport",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "intermittent_activation": { "effects": [ { "frequency": "3 seconds", "spell_effects": [ { "id": "teleport_blink_monster" } ] } ] }
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_pyrokin_fever",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "emitter": "emit_pyrokin_fever",
-    "values": [ { "value": "LUMINATION", "add": 50 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_teleport_potion_comedown",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "intermittent_activation": { "effects": [ { "frequency": "130 minutes", "spell_effects": [ { "id": "teleport_blink_monster" } ] } ] }
   }
 ]

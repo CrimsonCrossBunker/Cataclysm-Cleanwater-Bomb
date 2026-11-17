@@ -1,13 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "enchant_clair_potion",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "values": [ { "value": "BONUS_DODGE", "add": 1 }, { "value": "HEARING_MULT", "multiply": 2.5 } ],
-    "intermittent_activation": { "effects": [ { "frequency": "2 seconds", "spell_effects": [ { "id": "clair_potion_clairvoyance" } ] } ] }
-  },
-  {
     "id": "clair_potion_clairvoyance",
     "type": "SPELL",
     "name": { "str": "[Ψ]Gray Potion Clairvoyance", "//~": "NO_I18N" },
@@ -27,14 +19,6 @@
     "max_duration": 200
   },
   {
-    "type": "enchantment",
-    "id": "ench_clair_group_tactics",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "values": [ { "value": "BONUS_DODGE", "add": -1 } ],
-    "intermittent_activation": { "effects": [ { "frequency": "2 seconds", "spell_effects": [ { "id": "clair_group_tactics_aoe" } ] } ] }
-  },
-  {
     "id": "clair_group_tactics_aoe",
     "type": "SPELL",
     "name": { "str": "[Ψ]Prescient Tactics AoE", "//~": "NO_I18N" },
@@ -51,13 +35,6 @@
     "//": "Range here is C conversational range",
     "min_duration": 200,
     "max_duration": 200
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_electrokin_zap_enemies",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_me_effect": [ { "id": "electrokin_zap_attacked", "hit_self": false, "once_in": 2 } ]
   },
   {
     "id": "electrokin_zap_attacked",
@@ -167,22 +144,6 @@
     ]
   },
   {
-    "type": "enchantment",
-    "id": "enchant_clair_sense_rads",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "intermittent_activation": { "effects": [ { "frequency": "10 seconds", "spell_effects": [ { "id": "clair_sense_rads_outside_spawn_item" } ] } ] }
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_photokin_blinding_glare",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_you_effect": [ { "id": "photokin_blinding_glare_attack", "hit_self": false, "once_in": 3 } ],
-    "hit_me_effect": [ { "id": "photokin_blinding_glare_attack", "hit_self": false, "once_in": 3 } ],
-    "values": [ { "value": "LUMINATION", "add": 10001 } ]
-  },
-  {
     "id": "photokin_blinding_glare_attack",
     "type": "SPELL",
     "name": { "str": "Photokinetic Blinding Radiance burst", "//~": "NO_I18N" },
@@ -206,16 +167,6 @@
     },
     "min_duration": 500,
     "max_duration": 2000
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_pyrokinetic_aura",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_you_effect": [ { "id": "pyro_aura_attack", "hit_self": false } ],
-    "hit_me_effect": [ { "id": "pyro_aura_attacked", "hit_self": false } ],
-    "emitter": "emit_pyrokin_fever",
-    "values": [ { "value": "LUMINATION", "add": 50 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 40 } ]
   },
   {
     "id": "pyro_aura_attack",
@@ -267,53 +218,9 @@
   },
   {
     "type": "enchantment",
-    "id": "enchant_electrokin_potion",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "incoming_damage_mod": [ { "type": "electric", "add": -5 } ],
-    "hit_me_effect": [ { "id": "electro_potion_attacked", "hit_self": false } ]
-  },
-  {
-    "type": "enchantment",
     "id": "enchant_photokin_potion_rads",
     "condition": { "math": [ "u_val('rad') > 0" ] },
     "has": "HELD",
     "values": [ { "value": "LUMINATION", "add": 10 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_photokin_potion_hide",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "values": [ { "value": "STEALTH_MODIFIER", "add": 25 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_photokin_potion_unhide",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "values": [ { "value": "STEALTH_MODIFIER", "add": -25 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_pyrokin_potion",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "incoming_damage_mod": [ { "type": "heat", "add": -50 } ],
-    "hit_me_effect": [ { "id": "pyro_aura_attacked", "hit_self": false } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "enchant_teleport_potion",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_you_effect": [
-      {
-        "id": "teleport_slow_monster",
-        "hit_self": false,
-        "min_level": 1,
-        "message": "The air around your enemy warps slightly."
-      }
-    ]
   }
 ]
