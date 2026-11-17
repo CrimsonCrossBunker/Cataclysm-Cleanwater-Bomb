@@ -15,6 +15,7 @@
 #include <string>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 
 #include "cached_options.h"
 #include "calendar.h"
@@ -65,25 +66,39 @@ namespace
 generic_factory<mon_flag> mon_flags( "monster flags" );
 
 // JSON monsters can name attacks that their Mod registers in the Lua content phase.
+// Own the JSON path because the monster's input object is gone by finalization.
 class deferred_monster_attack final : public mattack_actor
 {
     public:
-        deferred_monster_attack( const std::string &id, const JsonValue &reference,
+        using definition = std::variant<JsonObject, JsonArray>;
+
+        deferred_monster_attack( const std::string &id, definition reference,
                                  std::string_view source ) :
-            mattack_actor( id ), reference( reference ), source( source ) {}
+            mattack_actor( id ), reference( std::move( reference ) ), source( source ) {
+            allow_deferred_members();
+        }
 
         [[noreturn]] bool call( monster & ) const override {
             throw std::logic_error( "Unresolved monster attack: " + id );
         }
 
         std::unique_ptr<mattack_actor> clone() const override {
-            return std::make_unique<deferred_monster_attack>( *this );
+            auto copy = std::make_unique<deferred_monster_attack>( *this );
+            copy->allow_deferred_members();
+            return copy;
         }
 
         void load_internal( const JsonObject &, const std::string & ) override {}
 
-        const JsonValue reference;
+        const definition reference;
         const std::string source;
+
+    private:
+        void allow_deferred_members() const {
+            if( const auto *object = std::get_if<JsonObject>( &reference ) ) {
+                object->allow_omitted_members();
+            }
+        }
 };
 } // namespace
 
@@ -458,13 +473,16 @@ void MonsterGenerator::finalize_mtypes()
             }
             const auto prototype = attack_map.find( id );
             if( prototype == attack_map.end() ) {
-                deferred->reference.throw_error( "Unknown monster attack '" + id + "'" );
+                const std::string message = "Unknown monster attack '" + id + "'";
+                std::visit( [&message]( const auto & reference ) {
+                    reference.throw_error( message );
+                }, deferred->reference );
             }
-            if( deferred->reference.test_object() ) {
-                attack = create_actor( deferred->reference.get_object(), deferred->source );
+            if( const auto *object = std::get_if<JsonObject>( &deferred->reference ) ) {
+                attack = create_actor( JsonObject( *object ), deferred->source );
             } else {
                 auto actor = prototype->second->clone();
-                actor->cooldown.deserialize( deferred->reference.get_array()[1] );
+                actor->cooldown.deserialize( std::get<JsonArray>( deferred->reference )[1] );
                 attack = mtype_special_attack( std::move( actor ) );
             }
         }
@@ -1034,9 +1052,8 @@ struct special_attacks_reader : generic_typed_reader<special_attacks_reader> {
                 if( gen.attack_map.count( name ) == 0 ) {
                     report_double_def( name, jv );
                     names.push_back( name );
-                    object.allow_omitted_members();
                     return { name, mtype_special_attack(
-                            std::make_unique<deferred_monster_attack>( name, jv, src ) ) };
+                            std::make_unique<deferred_monster_attack>( name, std::move( object ), src ) ) };
                 }
             }
             mtype_special_attack new_attack = gen.create_actor( object, std::string( src ) );
@@ -1051,7 +1068,7 @@ struct special_attacks_reader : generic_typed_reader<special_attacks_reader> {
         const auto iter = gen.attack_map.find( name );
         if( iter == gen.attack_map.end() ) {
             return { name, mtype_special_attack(
-                    std::make_unique<deferred_monster_attack>( name, jv, src ) ) };
+                    std::make_unique<deferred_monster_attack>( name, std::move( inner ), src ) ) };
         }
 
         mtype_special_attack new_attack = mtype_special_attack( iter->second );
