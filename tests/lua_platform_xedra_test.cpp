@@ -10,6 +10,8 @@
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "enums.h"
+#include "event.h"
+#include "event_bus.h"
 #include "game.h"
 #include "item.h"
 #include "flexbuffer_json.h"
@@ -23,6 +25,7 @@
 #include "map_helpers_tests.h"
 #include "mattack_actors.h"
 #include "math_parser_diag_value.h"
+#include "messages.h"
 #include "monster.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -39,6 +42,45 @@ static const efftype_id effect_hedge_cure_cold_or_flu( "effect_hedge_cure_cold_o
 static const efftype_id effect_xe_hydrating_gout( "xe_hydrating_gout" );
 static const trait_id trait_HOMULLUS_EXPANDED_MUTATIONS( "HOMULLUS_EXPANDED_MUTATIONS" );
 static const trait_id trait_HOMULLUS_NO_DOLL_MUTATIONS( "HOMULLUS_NO_DOLL_MUTATIONS" );
+
+TEST_CASE( "xedra_weakness_messages_follow_native_mutation_events",
+           "[.][mods][xedra_evolved]" )
+{
+    clear_avatar();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        Messages::clear_messages();
+        clear_npcs();
+        clear_avatar();
+    } );
+    cata::lua_platform::runtime_world_ready( true );
+    avatar &player = get_avatar();
+    npc &other = spawn_npc( player.pos_bub().xy() + point::east, "test_talker" );
+    REQUIRE( player.getID().is_valid() );
+    REQUIRE( g->find_npc( other.getID() ) == &other );
+    const trait_id thirst( "VAMPIRE_WEAKNESS_MORE_BLOOD" );
+    const trait_id sunlight( "ANATHEMA_WEAKNESS_SUN_BURN" );
+    REQUIRE( thirst.is_valid() );
+    REQUIRE( sunlight.is_valid() );
+
+    const auto heard = []( const std::string &text ) {
+        const auto messages = Messages::recent_messages( 10 );
+        return std::any_of( messages.begin(), messages.end(), [&]( const auto &message ) {
+            return message.second == text;
+        } );
+    };
+    Messages::clear_messages();
+    get_event_bus().send<event_type::gains_mutation>( other.getID(), thirst );
+    CHECK_FALSE( heard( "Your thirst for blood intensifies." ) );
+    get_event_bus().send<event_type::gains_mutation>( player.getID(), thirst );
+    CHECK( heard( "Your thirst for blood intensifies." ) );
+    get_event_bus().send<event_type::gains_mutation>( player.getID(), sunlight );
+    CHECK( heard( "You know with certainty that standing under the sun will slay you in moments." ) );
+
+    Messages::clear_messages();
+    get_event_bus().send<event_type::gains_mutation>( player.getID(), trait_id( "TOUGH" ) );
+    CHECK( Messages::recent_messages( 10 ).empty() );
+}
 
 TEST_CASE( "xedra_warping_poison_uses_native_melee_and_only_mutates_on_damage",
            "[.][mods][xedra_evolved]" )
