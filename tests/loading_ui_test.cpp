@@ -5,9 +5,11 @@
 #include "cata_scope_helpers.h"
 #include "enums.h"
 #include "loading_ui_random.h"
+#include "lua_platform_loader.h"
 #include "options_helpers.h"
 #include "path_info.h"
 #include "rng.h"
+#include "text_snippets.h"
 
 TEST_CASE( "loading_choices_do_not_advance_simulation_rng", "[loading_ui][rng][regression]" )
 {
@@ -95,4 +97,19 @@ TEST_CASE( "main_menu_title_does_not_advance_simulation_rng", "[loading_ui][rng]
                  selected == PATH_INFO::title( holiday::none, true ) ) );
     }
     CHECK( rng_get_engine() == before );
+}
+
+TEST_CASE( "core_lua_content_loads_tips_without_replacing_world_mods", "[loading_ui]" )
+{
+    const restore_on_out_of_scope restore_snippets( SNIPPET );
+    SNIPPET = snippet_library{};
+    const auto world_mods = cata::lua_platform::loaded_mod_ids();
+    const auto rng_before = rng_get_engine();
+    cata::lua_platform::load_core_content( PATH_INFO::jsondir().get_unrelative_path() );
+
+    REQUIRE( SNIPPET.has_category( "tip" ) );
+    loading_ui::random_choices choices( 20261103 );
+    CHECK_FALSE( choices.tip().empty() );
+    CHECK( cata::lua_platform::loaded_mod_ids() == world_mods );
+    CHECK( rng_get_engine() == rng_before );
 }

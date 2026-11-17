@@ -62,6 +62,11 @@ struct mod_source {
     std::filesystem::path entry;
 };
 
+/** Apply optional root/main.lua static definitions before a world is selected.
+ * The entry exposes ccb.content and keeps its definitions alive in the native registries.
+ */
+void load_core_content( const std::filesystem::path &root );
+
 /** Execute root/mod.lua and require exactly one native ccb.ModDefinition result.
  * This executes trusted code, including external/native modules. User-facing
  * callers must present the execution-risk notice before invoking discovery;

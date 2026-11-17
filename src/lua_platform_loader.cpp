@@ -473,9 +473,15 @@ file_execution_result execute_file( sol::state &lua, const fs::path &path,
     return snapshot;
 }
 
+enum class entry_api : int {
+    mod,
+    core_content
+};
+
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr,
-                       const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr )
+                       const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr,
+                       const entry_api api = entry_api::mod )
 {
     // Mods are trusted executable code. State ownership is not a sandbox.
     lua.open_libraries();
@@ -491,7 +497,11 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     ccb["platform_version"] = platform_version;
     install_mod_definition( ccb );
     if( platform ) {
-        install_runtime_api( platform, lua, ccb );
+        if( api == entry_api::core_content ) {
+            platform->content.install_lua_api( lua, ccb, platform );
+        } else {
+            install_runtime_api( platform, lua, ccb );
+        }
         sol::table content = ccb["content"];
         content.set_function( "is_mod_active", [selected_mod_ids]( const std::string &id ) {
             return selected_mod_ids->count( id ) != 0;
@@ -572,7 +582,8 @@ end
 }
 
 runtime_state load_source( const mod_source &source,
-                           const std::shared_ptr<const std::set<std::string>> &selected_mod_ids )
+                           const std::shared_ptr<const std::set<std::string>> &selected_mod_ids,
+                           const entry_api api = entry_api::mod )
 {
     const mod_source resolved = resolve_source( source );
     DebugLog( D_WARNING, D_MAIN )
@@ -587,12 +598,32 @@ runtime_state load_source( const mod_source &source,
     result.lua = std::make_unique<sol::state>();
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
-    initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids );
+    initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids, api );
     execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
 
 } // namespace
+
+void load_core_content( const fs::path &root )
+{
+    const fs::path entry = root / "main.lua";
+    if( !fs::exists( entry ) ) {
+        return;
+    }
+
+    const auto no_world_mods = std::make_shared<const std::set<std::string>>();
+    const runtime_state core = load_source( { "core", root, entry }, no_world_mods,
+                                            entry_api::core_content );
+    std::string error;
+    if( !validate_runtime( core.platform, true, error ) ||
+        !apply_runtime_content( core.platform, error ) ) {
+        throw std::runtime_error( error );
+    }
+    // Core definitions are available while the main menu and loading UI run.
+    // The static entry has no runtime callbacks and never becomes a world Mod.
+    commit_runtime( core.platform );
+}
 
 bool read_mod_definition( const fs::path &root, mod_definition &result, std::string &error )
 {
@@ -1065,6 +1096,10 @@ namespace
 constexpr const char *disabled_error = "Lua-first Platform is not enabled in this build";
 
 } // namespace
+
+void load_core_content( const std::filesystem::path & )
+{
+}
 
 bool read_mod_definition( const std::filesystem::path &, mod_definition &, std::string &error )
 {
