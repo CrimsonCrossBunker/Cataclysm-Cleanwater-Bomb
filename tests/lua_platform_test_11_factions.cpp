@@ -1,5 +1,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include "cata_scope_helpers.h"
+#include "faction.h"
 
 TEST_CASE( "lua_platform_faction_for_character_requires_exact_live_handle",
            "[lua][platform][factions]" )
@@ -104,6 +106,47 @@ TEST_CASE( "lua_platform_faction_mutation_gate_precedes_typed_target_preflight",
     CHECK_FALSE( result.valid() );
     CHECK( write_gate_called );
     CHECK_FALSE( faction_services["player"].valid() );
+}
+
+TEST_CASE( "lua_platform_sets_absolute_faction_reputation",
+           "[lua][platform][factions]" )
+{
+    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime runtime( owner, 66 );
+    sol::state lua;
+    sol::table services = lua.create_table();
+    cata::lua_platform::install_faction_api( services, [runtime]() {
+        return runtime;
+    }, []() {
+        return std::size_t( 25 );
+    }, []() {}, []() {} );
+
+    faction *const exodii = g->faction_manager_ptr->get( faction_id( "exodii" ) );
+    REQUIRE( exodii != nullptr );
+    const restore_on_out_of_scope restore_likes( exodii->likes_u );
+    const restore_on_out_of_scope restore_respects( exodii->respects_u );
+    const restore_on_out_of_scope restore_trusts( exodii->trusts_u );
+    exodii->likes_u = 21;
+    exodii->respects_u = 44;
+    exodii->trusts_u = 95;
+
+    const cata::lua_platform::script_game_id id( "faction", "exodii" );
+    const sol::table factions = services["factions"];
+    const sol::protected_function set_reputation = factions["set_reputation"];
+    const sol::protected_function_result set_call =
+        set_reputation( id, lua.create_table_with( "likes", -100, "trusts", 0 ) );
+    REQUIRE( set_call.valid() );
+    REQUIRE( set_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( exodii->likes_u == -100 );
+    CHECK( exodii->respects_u == 44 );
+    CHECK( exodii->trusts_u == 0 );
+
+    const sol::protected_function modify_reputation = factions["modify_reputation"];
+    const sol::protected_function_result modify_call =
+        modify_reputation( id, lua.create_table_with( "likes", -2 ) );
+    REQUIRE( modify_call.valid() );
+    REQUIRE( modify_call.get<sol::table>()["ok"].get<bool>() );
+    CHECK( exodii->likes_u == -102 );
 }
 
 #endif // CATA_ENABLE_LUA_PLATFORM

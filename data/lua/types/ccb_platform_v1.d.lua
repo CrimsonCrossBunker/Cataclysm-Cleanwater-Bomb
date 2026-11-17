@@ -8467,6 +8467,13 @@ function CcbCharactersApi.choose_technique(attacker, target, options) end
 --- Return the actual game avatar, independently of dialogue participants.
 ---@return GameHandle player Generation-checked player handle.
 function CcbCharactersApi.avatar() end
+
+---Tests the Character's profession or a matching hobby.
+---@param character GameHandle Exact live Character handle.
+---@param profession_id string Native profession id.
+---@return CcbResult result `value` is boolean.
+function CcbCharactersApi.has_profession(character, profession_id) end
+
 ---Send one string argument through the exact Character's native player-only message hook.
 ---The format string must already be translated and follows native add_msg_if_player(format, argument) semantics.
 ---NPC hooks are no-ops; messages are not broadcast through the global messages service.
@@ -9954,6 +9961,11 @@ function CcbFactionsApi.set_known(id, known) end
 ---@param deltas table<string, integer> Typed `likes`, `respects`, and/or `trusts` deltas.
 ---@return CcbResult result
 function CcbFactionsApi.modify_reputation(id, deltas) end
+---Sets the supplied reputation fields to absolute values and preserves omitted fields.
+---@param id GameId GameId<faction>
+---@param values table<string, integer> Typed `likes`, `respects`, and/or `trusts` values.
+---@return CcbResult result
+function CcbFactionsApi.set_reputation(id, values) end
 ---@param id GameId GameId<faction>
 ---@param deltas table<string, integer> Typed `size`, `power`, and/or `wealth` deltas.
 ---@return CcbResult result

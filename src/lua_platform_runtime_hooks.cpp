@@ -3917,6 +3917,11 @@ std::optional<emission_profile> invoke_emission_profile_handler(
 }
 
 
+void on_restored_avatar_event( const cata::event &event )
+{
+    detail::dispatch_platform_event( event, nullptr, nullptr, nullptr );
+}
+
 } // namespace cata::lua_platform
 
 #endif // CATA_ENABLE_LUA_PLATFORM

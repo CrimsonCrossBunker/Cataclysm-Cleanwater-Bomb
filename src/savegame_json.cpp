@@ -7182,6 +7182,7 @@ void stats_tracker::serialize( JsonOut &jsout ) const
 
 void stats_tracker::deserialize( const JsonObject &jo )
 {
+    restored_avatar_events.clear();
     jo.allow_omitted_members();
     jo.read( "data", data );
     for( std::pair<const event_type, event_multiset> &d : data ) {
@@ -7193,6 +7194,10 @@ void stats_tracker::deserialize( const JsonObject &jo )
     // migration for saves made before addition of event_type::game_avatar_new
     event_multiset gan_evts = get_events( event_type::game_avatar_new );
     if( !gan_evts.count() ) {
+        const auto send_restored_event = [this]( const cata::event & event ) {
+            get_event_bus().send( event );
+            restored_avatar_events.push_back( event );
+        };
         event_multiset gs_evts = get_events( event_type::game_start );
         avatar &u = get_avatar();
         // check if character ID set, if loadsave, the ID will not be -1
@@ -7208,21 +7213,21 @@ void stats_tracker::deserialize( const JsonObject &jo )
                 gan_data["is_new_game"] = cata_variant::make<cata_variant_type::bool_>( true );
                 gan_data["is_debug"] = cata_variant::make<cata_variant_type::bool_>( false );
                 gan_data.erase( "game_version" );
-                get_event_bus().send( cata::event( event_type::game_avatar_new, calendar::start_of_game,
-                                                   std::move( gan_data ) ) );
+                send_restored_event( cata::event( event_type::game_avatar_new, calendar::start_of_game,
+                                                 std::move( gan_data ) ) );
 
                 // retroactively insert current avatar, if different from starting avatar
                 // we don't know when they took over, so just use current time point
                 if( u.getID() != gs_data["avatar_id"].get<cata_variant_type::character_id>() ) {
-                    get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                          u.getID(), u.name, u.custom_profession ) );
+                    send_restored_event( cata::event::make<event_type::game_avatar_new>( false, false,
+                                         u.getID(), u.name, u.custom_profession ) );
                 }
             } else {
                 // last ditch effort for really old saves that don't even have event_type::game_start
                 // treat current avatar as the starting avatar; abuse is_new_game=false to flag such cases
                 std::swap( calendar::turn, calendar::start_of_game );
-                get_event_bus().send( cata::event::make<event_type::game_avatar_new>( false, false,
-                                      u.getID(), u.name, u.custom_profession ) );
+                send_restored_event( cata::event::make<event_type::game_avatar_new>( false, false,
+                                     u.getID(), u.name, u.custom_profession ) );
                 std::swap( calendar::turn, calendar::start_of_game );
             }
         }

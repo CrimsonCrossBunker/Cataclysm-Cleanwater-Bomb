@@ -11,6 +11,11 @@
 
 #include "mod_world_option.h"
 
+namespace cata
+{
+class event;
+} // namespace cata
+
 namespace cata::lua_platform
 {
 
@@ -121,6 +126,7 @@ bool execute_console( const std::string &mod_id, const std::string &source,
 /** Activate world-bound services and load engine-owned Platform sidecars. */
 void on_world_load_started();
 void on_world_ready( bool new_game, const std::function<void()> &finish_native_load = {} );
+void on_restored_avatar_event( const cata::event &event );
 
 /** Dispatch the synchronous pre-save lifecycle hook. */
 void before_save();

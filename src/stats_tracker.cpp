@@ -344,6 +344,14 @@ void stats_tracker::clear()
     event_transformation_states.clear();
     stat_states.clear();
     initial_scores.clear();
+    restored_avatar_events.clear();
+}
+
+std::vector<cata::event> stats_tracker::take_restored_avatar_events()
+{
+    std::vector<cata::event> result;
+    result.swap( restored_avatar_events );
+    return result;
 }
 
 void stats_tracker::unwatch_all()

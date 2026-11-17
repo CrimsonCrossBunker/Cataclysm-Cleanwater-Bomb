@@ -681,21 +681,28 @@ sol::table set_faction_known(
                    state, std::move( value ) ) );
 }
 
-struct reputation_deltas {
+enum class reputation_operation {
+    modify,
+    set
+};
+
+struct reputation_values {
     std::optional<int> likes;
     std::optional<int> respects;
     std::optional<int> trusts;
 };
 
-reputation_deltas read_reputation_deltas(
-    const sol::table &requested )
+reputation_values read_reputation_values(
+    const sol::table &requested, const reputation_operation operation )
 {
-    reputation_deltas result;
+    const std::string api = operation == reputation_operation::set ?
+                            "services.factions.set_reputation" : "services.factions.modify_reputation";
+    reputation_values result;
     for( const auto &pair : requested ) {
         if( pair.first.get_type() !=
             sol::type::string ) {
             throw std::invalid_argument(
-                "services.factions.modify_reputation option keys must be strings" );
+                api + " option keys must be strings" );
         }
         const std::string key =
             pair.first.as<std::string>();
@@ -703,36 +710,32 @@ reputation_deltas read_reputation_deltas(
             key != "respects" &&
             key != "trusts" ) {
             throw std::invalid_argument(
-                "services.factions.modify_reputation received unknown option '" +
-                key + "'" );
+                api + " received unknown option '" + key + "'" );
         }
         if( !pair.second.is<int>() ) {
             throw std::invalid_argument(
-                "services.factions.modify_reputation option '" +
-                key + "' must be an integer" );
+                api + " option '" + key + "' must be an integer" );
         }
-        const int delta =
-            pair.second.as<int>();
-        if( delta < -maximum_reputation_delta ||
-            delta > maximum_reputation_delta ) {
+        const int value = pair.second.as<int>();
+        if( operation == reputation_operation::modify &&
+            ( value < -maximum_reputation_delta || value > maximum_reputation_delta ) ) {
             throw std::invalid_argument(
-                "services.factions.modify_reputation option '" +
-                key +
-                "' must be within -1000000..1000000" );
+                api + " option '" + key + "' must be within -1000000..1000000" );
         }
         if( key == "likes" ) {
-            result.likes = delta;
+            result.likes = value;
         } else if( key == "respects" ) {
-            result.respects = delta;
+            result.respects = value;
         } else {
-            result.trusts = delta;
+            result.trusts = value;
         }
     }
     if( !result.likes &&
         !result.respects &&
         !result.trusts ) {
         throw std::invalid_argument(
-            "services.factions.modify_reputation requires at least one delta" );
+            api + ( operation == reputation_operation::set ? " requires at least one value" :
+                    " requires at least one delta" ) );
     }
     return result;
 }
@@ -751,12 +754,11 @@ int adjusted_integer(
                    std::numeric_limits<int>::max() ) );
 }
 
-sol::table modify_faction_reputation(
+sol::table update_faction_reputation(
     sol::this_state lua, const script_game_id &id,
-    const sol::table &requested )
+    const sol::table &requested, const reputation_operation operation )
 {
-    const reputation_deltas deltas =
-        read_reputation_deltas( requested );
+    const reputation_values values = read_reputation_values( requested, operation );
     sol::state_view state( lua );
     if( g == nullptr ) {
         return make_game_error_result(
@@ -775,24 +777,14 @@ sol::table modify_faction_reputation(
     sol::table before =
         snapshot_reputation(
             state, *entry );
-    if( deltas.likes ) {
-        entry->likes_u =
-            adjusted_integer(
-                entry->likes_u,
-                *deltas.likes );
-    }
-    if( deltas.respects ) {
-        entry->respects_u =
-            adjusted_integer(
-                entry->respects_u,
-                *deltas.respects );
-    }
-    if( deltas.trusts ) {
-        entry->trusts_u =
-            adjusted_integer(
-                entry->trusts_u,
-                *deltas.trusts );
-    }
+    const auto apply_value = [operation]( int &current, const std::optional<int> value ) {
+        if( value ) {
+            current = operation == reputation_operation::set ? *value : adjusted_integer( current, *value );
+        }
+    };
+    apply_value( entry->likes_u, values.likes );
+    apply_value( entry->respects_u, values.respects );
+    apply_value( entry->trusts_u, values.trusts );
     sol::table value = state.create_table();
     value["before"] = std::move( before );
     value["after"] =
@@ -1342,8 +1334,14 @@ void install_faction_api(
                          const script_game_id & id,
     const sol::table & deltas ) {
         require_write();
-        return modify_faction_reputation(
-                   lua_state, id, deltas );
+        return update_faction_reputation( lua_state, id, deltas, reputation_operation::modify );
+    } );
+    factions.set_function(
+        "set_reputation",
+        [require_write]( sol::this_state lua_state, const script_game_id & id,
+    const sol::table & values ) {
+        require_write();
+        return update_faction_reputation( lua_state, id, values, reputation_operation::set );
     } );
     factions.set_function(
         "modify_resources",

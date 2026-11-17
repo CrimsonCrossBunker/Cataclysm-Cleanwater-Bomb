@@ -1152,6 +1152,10 @@ void on_world_ready( bool, const std::function<void()> &finish_native_load )
     }
 }
 
+void on_restored_avatar_event( const cata::event & )
+{
+}
+
 void before_save()
 {
 }

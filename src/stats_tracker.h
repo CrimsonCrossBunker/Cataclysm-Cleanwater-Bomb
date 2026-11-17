@@ -217,6 +217,7 @@ class stats_tracker : public event_subscriber
 
         void serialize( JsonOut & ) const;
         void deserialize( const JsonObject &jo );
+        std::vector<cata::event> take_restored_avatar_events();
     private:
         void unwatch_all();
 
@@ -234,6 +235,8 @@ class stats_tracker : public event_subscriber
                 stat_states; // NOLINT(cata-serialize)
 
         std::unordered_set<string_id<score>> initial_scores;
+        // Reconstructed from old saves and delivered to Lua once the world is ready.
+        std::vector<cata::event> restored_avatar_events; // NOLINT(cata-serialize)
 };
 
 stats_tracker &get_stats();

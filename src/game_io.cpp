@@ -563,6 +563,9 @@ bool game::load( const save_t &name )
                         u.recalculate_enchantment_cache();
                         u.enchantment_cache->activate_passive( u );
                     } );
+                    for( const cata::event &event : stats().take_restored_avatar_events() ) {
+                        cata::lua_platform::on_restored_avatar_event( event );
+                    }
                     events().send<event_type::game_load>( getVersionString() );
                     time_of_last_load = std::chrono::steady_clock::now();
                     time_played_at_last_load = std::chrono::seconds( 0 );
