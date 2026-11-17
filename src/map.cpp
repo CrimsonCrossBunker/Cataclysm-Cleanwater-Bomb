@@ -1338,7 +1338,7 @@ void map::vehmove( const std::vector<std::reference_wrapper<map>> &views,
         view.dirty_vehicle_list.clear();
     }
     std::unordered_set<vehicle *> cleaned;
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     for( const auto &candidate : dirty ) {
         if( vehicle *const veh = candidate.get(); veh && cleaned.insert( veh ).second ) {
             if( map *const owner = session.loaded_map_at( *this, veh->sm_pos ) ) {
@@ -4636,7 +4636,7 @@ void map::support_dirty( const tripoint_bub_ms &p )
         return;
     }
     if( g && g->multiplayer_session().has_regions() && has_loaded_submap( p ) ) {
-        auto &session = g->multiplayer_session();
+        cata_mp::world_session &session = g->multiplayer_session();
         const tripoint_abs_ms absolute = get_abs( p );
         const map *const owner = session.loaded_map_at( reality_bubble(), project_to<coords::sm>(
                                      absolute ) );
@@ -4658,7 +4658,7 @@ void map::process_falling()
     }
 
     if( g && this == &reality_bubble() && g->multiplayer_session().has_regions() ) {
-        auto &session = g->multiplayer_session();
+        cata_mp::world_session &session = g->multiplayer_session();
         // Local queues can contain work scheduled just before a view joined.
         // Collect all due cells before dropping anything. A drop can enqueue
         // another cell for the next pass.
