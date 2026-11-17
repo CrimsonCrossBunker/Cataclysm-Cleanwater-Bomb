@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
 #include "cata_variant.h"
 #include "character.h"
@@ -742,10 +743,11 @@ static sol::table enchantment_handler_payload( runtime &owner,
 std::optional<bool> invoke_enchantment_condition_handler(
     const std::string_view mod_id, const std::string_view enchantment,
     const std::string_view scope, const std::string_view target,
-    const std::string_view handler_id, const const_dialogue &dialogue )
+    const std::string_view handler_id, const const_dialogue &dialogue,
+    const std::optional<enchantment_activation_inputs> &load_activation_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || !owner->world_is_ready ) {
+    if( !owner || ( !owner->world_is_ready && !load_activation_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -755,7 +757,38 @@ std::optional<bool> invoke_enchantment_condition_handler(
         return std::nullopt;
     }
     sol::table payload = enchantment_handler_payload(
-                             *owner, dialogue, enchantment, scope, target, std::string_view() );
+                             *owner, dialogue, enchantment, scope, target, std::string_view(),
+                             owner->world_is_ready );
+    if( load_activation_inputs ) {
+        sol::table inputs = owner->lua->create_table();
+        const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
+        const auto collect = [&]( const char *key, const std::vector<std::string> & ids,
+        const auto & predicate ) {
+            sol::table values = owner->lua->create_table( 0, static_cast<int>( ids.size() ) );
+            for( const std::string &id : ids ) {
+                values[id] = speaker && predicate( *speaker, id );
+            }
+            inputs[key] = std::move( values );
+        };
+        const bodypart_id whole_body = bodypart_str_id::NULL_ID();
+        collect( "effects", load_activation_inputs->effects, [&]( const const_talker & actor,
+        const std::string & id ) {
+            return !actor.get_effect( efftype_id( id ), whole_body ).is_null();
+        } );
+        collect( "traits", load_activation_inputs->traits, []( const const_talker & actor,
+        const std::string & id ) {
+            return actor.has_trait( trait_id( id ) );
+        } );
+        collect( "worn_items", load_activation_inputs->worn_items, []( const const_talker & actor,
+        const std::string & id ) {
+            return actor.is_wearing( itype_id( id ) );
+        } );
+        collect( "worn_flags", load_activation_inputs->worn_flags, [&]( const const_talker & actor,
+        const std::string & id ) {
+            return actor.worn_with_flag( flag_id( id ), whole_body );
+        } );
+        payload["activation_inputs"] = std::move( inputs );
+    }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
     const sol::protected_function_result result = callback( payload );

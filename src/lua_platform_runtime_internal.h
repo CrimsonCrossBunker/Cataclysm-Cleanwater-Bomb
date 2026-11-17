@@ -302,10 +302,17 @@ std::optional<bool> invoke_widget_condition_handler(
 std::optional<widget_custom_handler_result> invoke_widget_custom_handler(
     std::string_view mod_id, std::string_view widget_id_value,
     std::string_view handler_id, const avatar &subject );
+struct enchantment_activation_inputs {
+    std::vector<std::string> effects;
+    std::vector<std::string> traits;
+    std::vector<std::string> worn_items;
+    std::vector<std::string> worn_flags;
+};
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,
-    std::string_view handler_id, const const_dialogue &dialogue );
+    std::string_view handler_id, const const_dialogue &dialogue,
+    const std::optional<enchantment_activation_inputs> &load_activation_inputs = std::nullopt );
 std::optional<double> invoke_enchantment_number_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,

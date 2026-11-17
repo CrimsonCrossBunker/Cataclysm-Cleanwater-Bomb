@@ -394,6 +394,57 @@ ccb.content.add(enchantment)
     check_load_values();
 }
 
+TEST_CASE( "lua_first_enchantment_activation_reads_loaded_character_inputs",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_load_activation" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("matching_inputs", function(ctx)
+    assert(ctx.speaker == nil)
+    local inputs = ctx.activation_inputs
+    return inputs.effects.sleep and inputs.traits.TOUGH
+        and inputs.worn_items.backpack and inputs.worn_flags.WATERPROOF
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "ccb_platform_load_activation",
+    condition_handler = "matching_inputs",
+    load_activation_inputs = {
+        effects = { "sleep" },
+        traits = { "TOUGH" },
+        worn_items = { "backpack" },
+        worn_flags = { "WATERPROOF" },
+    },
+}:value("STRENGTH", { add = 2 }))
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_load_activation" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    npc restoring_npc;
+    const enchantment_id id( "ccb_platform_load_activation" );
+    REQUIRE( id.is_valid() );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.add_effect( efftype_id( "sleep" ), 2_minutes );
+    restoring_npc.set_mutation( trait_id( "TOUGH" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+
+    item backpack( itype_id( "backpack" ) );
+    backpack.set_flag( flag_id( "WATERPROOF" ) );
+    restoring_npc.worn.wear_item( restoring_npc, backpack, false, false );
+    CHECK( id->is_active( restoring_npc, false ) );
+
+    restoring_npc.remove_effect( efftype_id( "sleep" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+}
+
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",
            "[lua][platform][content][shopkeeper]" )
 {

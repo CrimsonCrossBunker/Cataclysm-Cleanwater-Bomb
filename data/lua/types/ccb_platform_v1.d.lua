@@ -5423,10 +5423,21 @@ local WidgetDefinition = {}
 ---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
 
+---@class CcbEnchantmentActivationInputs
+---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
+---@field traits? string[] Trait IDs queried on the condition's speaker.
+---@field worn_items? string[] Worn item type IDs queried on the condition's speaker.
+---@field worn_flags? string[] Flags queried on the condition's worn items.
+
+---@class CcbEnchantmentActivationContext
+---@field activation_inputs { effects: table<string, boolean>, traits: table<string, boolean>, worn_items: table<string, boolean>, worn_flags: table<string, boolean> } Detached inputs requested by the definition.
+---@field speaker? GameHandle Available only after world_ready.
+
 ---@class EnchantmentDefinitionOptions
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
+---@field load_activation_inputs? CcbEnchantmentActivationInputs Enables the named activation condition during save reconstruction with detached inputs.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription
