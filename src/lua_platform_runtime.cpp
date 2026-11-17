@@ -2843,21 +2843,26 @@ struct trait_group_definition_data {
 
 struct weather_generator_definition_data {
     std::string id;
-    double base_temperature = 0;
-    double base_humidity = 0;
-    double base_pressure = 0;
-    double base_wind = 0;
-    std::int64_t base_wind_distrib_peaks = 0;
-    std::int64_t summer_temp_manual_mod = 0;
-    std::int64_t spring_temp_manual_mod = 0;
-    std::int64_t autumn_temp_manual_mod = 0;
-    std::int64_t winter_temp_manual_mod = 0;
-    std::int64_t spring_humidity_manual_mod = 0;
-    std::int64_t summer_humidity_manual_mod = 0;
-    std::int64_t autumn_humidity_manual_mod = 0;
-    std::int64_t winter_humidity_manual_mod = 0;
+    std::string inherits;
+    std::optional<std::string> climate_station;
+    std::optional<double> base_temperature;
+    std::optional<double> base_humidity;
+    std::optional<double> base_pressure;
+    std::optional<double> base_wind;
+    std::optional<std::int64_t> base_wind_distrib_peaks;
+    std::optional<std::int64_t> base_wind_season_variation;
+    std::optional<std::int64_t> summer_temp_manual_mod;
+    std::optional<std::int64_t> spring_temp_manual_mod;
+    std::optional<std::int64_t> autumn_temp_manual_mod;
+    std::optional<std::int64_t> winter_temp_manual_mod;
+    std::optional<std::int64_t> spring_humidity_manual_mod;
+    std::optional<std::int64_t> summer_humidity_manual_mod;
+    std::optional<std::int64_t> autumn_humidity_manual_mod;
+    std::optional<std::int64_t> winter_humidity_manual_mod;
     std::vector<std::string> weather_black_list;
     std::vector<std::string> weather_white_list;
+    bool has_blacklist = false;
+    bool has_whitelist = false;
     bool registered = false;
 };
 
@@ -2890,6 +2895,7 @@ struct weather_generator_definition_handle {
         if( value.empty() ) {
             throw std::runtime_error( "weather blacklist id cannot be empty" );
         }
+        definition->has_blacklist = true;
         definition->weather_black_list.push_back( value );
         return *this;
     }
@@ -2900,7 +2906,22 @@ struct weather_generator_definition_handle {
         if( value.empty() ) {
             throw std::runtime_error( "weather whitelist id cannot be empty" );
         }
+        definition->has_whitelist = true;
         definition->weather_white_list.push_back( value );
+        return *this;
+    }
+
+    weather_generator_definition_handle &clear_blacklist() {
+        require_building_handle( token, *definition, "weather generator" );
+        definition->has_blacklist = true;
+        definition->weather_black_list.clear();
+        return *this;
+    }
+
+    weather_generator_definition_handle &clear_whitelist() {
+        require_building_handle( token, *definition, "weather generator" );
+        definition->has_whitelist = true;
+        definition->weather_white_list.clear();
         return *this;
     }
 
@@ -3818,7 +3839,9 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "blacklisted_weather",
         &weather_generator_definition_handle::blacklisted_weather,
         "whitelisted_weather",
-        &weather_generator_definition_handle::whitelisted_weather );
+        &weather_generator_definition_handle::whitelisted_weather,
+        "clear_blacklist", &weather_generator_definition_handle::clear_blacklist,
+        "clear_whitelist", &weather_generator_definition_handle::clear_whitelist );
     ccb.new_usertype<migration_definition_handle>(
         "MigrationDefinition", sol::no_constructor );
     ccb.new_usertype<shopkeeper_definition_handle>(
@@ -4627,29 +4650,35 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<weather_generator_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->base_temperature =
-            options.get_or( "base_temperature", 0.0 );
-        definition->base_humidity = options.get_or( "base_humidity", 0.0 );
-        definition->base_pressure = options.get_or( "base_pressure", 0.0 );
-        definition->base_wind = options.get_or( "base_wind", 0.0 );
-        definition->base_wind_distrib_peaks =
-            options.get_or<std::int64_t>( "base_wind_distrib_peaks", 0 );
-        definition->summer_temp_manual_mod =
-            options.get_or<std::int64_t>( "summer_temp_manual_mod", 0 );
-        definition->spring_temp_manual_mod =
-            options.get_or<std::int64_t>( "spring_temp_manual_mod", 0 );
-        definition->autumn_temp_manual_mod =
-            options.get_or<std::int64_t>( "autumn_temp_manual_mod", 0 );
-        definition->winter_temp_manual_mod =
-            options.get_or<std::int64_t>( "winter_temp_manual_mod", 0 );
-        definition->spring_humidity_manual_mod =
-            options.get_or<std::int64_t>( "spring_humidity_manual_mod", 0 );
-        definition->summer_humidity_manual_mod =
-            options.get_or<std::int64_t>( "summer_humidity_manual_mod", 0 );
-        definition->autumn_humidity_manual_mod =
-            options.get_or<std::int64_t>( "autumn_humidity_manual_mod", 0 );
-        definition->winter_humidity_manual_mod =
-            options.get_or<std::int64_t>( "winter_humidity_manual_mod", 0 );
+        definition->inherits = options.get_or( "inherits", std::string() );
+        const auto read_number = [&]( const char *field ) -> std::optional<double> {
+            const sol::optional<double> value = options.get<sol::optional<double>>( field );
+            return value ? std::optional<double>( *value ) : std::nullopt;
+        };
+        const auto read_integer = [&]( const char *field ) -> std::optional<std::int64_t> {
+            const sol::optional<std::int64_t> value =
+                options.get<sol::optional<std::int64_t>>( field );
+            return value ? std::optional<std::int64_t>( *value ) : std::nullopt;
+        };
+        const sol::optional<std::string> climate_station =
+            options.get<sol::optional<std::string>>( "climate_station" );
+        if( climate_station ) {
+            definition->climate_station = *climate_station;
+        }
+        definition->base_temperature = read_number( "base_temperature" );
+        definition->base_humidity = read_number( "base_humidity" );
+        definition->base_pressure = read_number( "base_pressure" );
+        definition->base_wind = read_number( "base_wind" );
+        definition->base_wind_distrib_peaks = read_integer( "base_wind_distrib_peaks" );
+        definition->base_wind_season_variation = read_integer( "base_wind_season_variation" );
+        definition->summer_temp_manual_mod = read_integer( "summer_temp_manual_mod" );
+        definition->spring_temp_manual_mod = read_integer( "spring_temp_manual_mod" );
+        definition->autumn_temp_manual_mod = read_integer( "autumn_temp_manual_mod" );
+        definition->winter_temp_manual_mod = read_integer( "winter_temp_manual_mod" );
+        definition->spring_humidity_manual_mod = read_integer( "spring_humidity_manual_mod" );
+        definition->summer_humidity_manual_mod = read_integer( "summer_humidity_manual_mod" );
+        definition->autumn_humidity_manual_mod = read_integer( "autumn_humidity_manual_mod" );
+        definition->winter_humidity_manual_mod = read_integer( "winter_humidity_manual_mod" );
         return weather_generator_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -6791,22 +6820,46 @@ bool content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> weather_generator_ids;
-        for( const weather_generator_registration &entry :
-             pimpl_->weather_generators ) {
-            const weather_generator_definition_data &definition =
-                *entry.definition;
+        for( const weather_generator_registration &entry : pimpl_->weather_generators ) {
+            const weather_generator_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "weather generator" );
-            if( !std::isfinite( definition.base_temperature ) ||
-                !std::isfinite( definition.base_humidity ) ||
-                !std::isfinite( definition.base_pressure ) ||
-                !std::isfinite( definition.base_wind ) ||
-                definition.base_wind_distrib_peaks < 0 ||
-                !weather_generator_ids.insert( definition.id ).second ) {
+            const auto finite = []( const std::optional<double> &value ) {
+                return !value || std::isfinite( *value );
+            };
+            const auto native_int = []( const std::optional<std::int64_t> &value ) {
+                return !value || ( *value >= std::numeric_limits<int>::min() &&
+                                  *value <= std::numeric_limits<int>::max() );
+            };
+            if( !finite( definition.base_temperature ) ||
+                !finite( definition.base_humidity ) ||
+                !finite( definition.base_pressure ) ||
+                !finite( definition.base_wind ) ||
+                !native_int( definition.base_wind_distrib_peaks ) ||
+                !native_int( definition.base_wind_season_variation ) ||
+                !native_int( definition.summer_temp_manual_mod ) ||
+                !native_int( definition.spring_temp_manual_mod ) ||
+                !native_int( definition.autumn_temp_manual_mod ) ||
+                !native_int( definition.winter_temp_manual_mod ) ||
+                !native_int( definition.spring_humidity_manual_mod ) ||
+                !native_int( definition.summer_humidity_manual_mod ) ||
+                !native_int( definition.autumn_humidity_manual_mod ) ||
+                !native_int( definition.winter_humidity_manual_mod ) ||
+                definition.base_wind_distrib_peaks.value_or( 0 ) < 0 ||
+                ( !definition.weather_black_list.empty() && !definition.weather_white_list.empty() ) ) {
                 throw std::runtime_error( "weather generator '" + definition.id +
-                                          "' has invalid ranges or a duplicate registration" );
+                                          "' has invalid ranges or conflicting weather lists" );
             }
-            validate_operation( entry.operation,
-                                weather_generator_id( definition.id ).is_valid(),
+            if( !definition.inherits.empty() && check_engine_state &&
+                weather_generator_ids.count( definition.inherits ) == 0 &&
+                !weather_generator_id( definition.inherits ).is_valid() ) {
+                throw std::runtime_error( "weather generator '" + definition.id +
+                                          "' inherits an unavailable generator '" + definition.inherits + "'" );
+            }
+            if( !weather_generator_ids.insert( definition.id ).second ) {
+                throw std::runtime_error( "weather generator '" + definition.id +
+                                          "' is registered more than once" );
+            }
+            validate_operation( entry.operation, weather_generator_id( definition.id ).is_valid(),
                                 definition.id, "weather generator" );
         }
 
@@ -8840,35 +8893,38 @@ bool content_transaction::apply( std::string &error )
                 id, id.is_valid() ?
                 std::optional<weather_generator>( id.obj() ) : std::nullopt );
             const weather_generator_definition_data &source = *entry.definition;
-            weather_generator native;
+            weather_generator native = source.inherits.empty() ? weather_generator() :
+                                       weather_generator_id( source.inherits ).obj();
             native.id = id;
-            native.base_temperature = source.base_temperature;
-            native.base_humidity = source.base_humidity;
-            native.base_pressure = source.base_pressure;
-            native.base_wind = source.base_wind;
-            native.base_wind_distrib_peaks =
-                static_cast<int>( source.base_wind_distrib_peaks );
-            native.summer_temp_manual_mod =
-                static_cast<int>( source.summer_temp_manual_mod );
-            native.spring_temp_manual_mod =
-                static_cast<int>( source.spring_temp_manual_mod );
-            native.autumn_temp_manual_mod =
-                static_cast<int>( source.autumn_temp_manual_mod );
-            native.winter_temp_manual_mod =
-                static_cast<int>( source.winter_temp_manual_mod );
-            native.spring_humidity_manual_mod =
-                static_cast<int>( source.spring_humidity_manual_mod );
-            native.summer_humidity_manual_mod =
-                static_cast<int>( source.summer_humidity_manual_mod );
-            native.autumn_humidity_manual_mod =
-                static_cast<int>( source.autumn_humidity_manual_mod );
-            native.winter_humidity_manual_mod =
-                static_cast<int>( source.winter_humidity_manual_mod );
-            for( const std::string &weather : source.weather_black_list ) {
-                native.weather_black_list.emplace_back( weather );
+            const auto assign = []( auto &target, const auto &value ) {
+                if( value ) {
+                    target = static_cast<std::decay_t<decltype( target )>>( *value );
+                }
+            };
+            assign( native.climate_station, source.climate_station );
+            assign( native.base_temperature, source.base_temperature );
+            assign( native.base_humidity, source.base_humidity );
+            assign( native.base_pressure, source.base_pressure );
+            assign( native.base_wind, source.base_wind );
+            assign( native.base_wind_distrib_peaks, source.base_wind_distrib_peaks );
+            assign( native.base_wind_season_variation, source.base_wind_season_variation );
+            assign( native.summer_temp_manual_mod, source.summer_temp_manual_mod );
+            assign( native.spring_temp_manual_mod, source.spring_temp_manual_mod );
+            assign( native.autumn_temp_manual_mod, source.autumn_temp_manual_mod );
+            assign( native.winter_temp_manual_mod, source.winter_temp_manual_mod );
+            assign( native.spring_humidity_manual_mod, source.spring_humidity_manual_mod );
+            assign( native.summer_humidity_manual_mod, source.summer_humidity_manual_mod );
+            assign( native.autumn_humidity_manual_mod, source.autumn_humidity_manual_mod );
+            assign( native.winter_humidity_manual_mod, source.winter_humidity_manual_mod );
+            if( source.has_blacklist ) {
+                native.weather_black_list = source.weather_black_list;
             }
-            for( const std::string &weather : source.weather_white_list ) {
-                native.weather_white_list.emplace_back( weather );
+            if( source.has_whitelist ) {
+                native.weather_white_list = source.weather_white_list;
+            }
+            if( !native.weather_black_list.empty() && !native.weather_white_list.empty() ) {
+                throw std::runtime_error( "weather generator '" + source.id +
+                                          "' inherits conflicting weather lists" );
             }
             native.was_loaded = true;
             detail::weather_generator_registry().insert( native );
@@ -11237,6 +11293,45 @@ std::string content_transaction::fingerprint() const
         hash_part( state, std::to_string( value.kilocalories ) );
         hash_part( state, std::to_string( value.thirst ) );
         hash_part( state, value.deploy_furniture );
+    }
+    for( const weather_generator_registration &entry : pimpl_->weather_generators ) {
+        const weather_generator_definition_data &value = *entry.definition;
+        hash_part( state, "weather_generator" );
+        hash_part( state, operation_name( entry.operation ) );
+        hash_part( state, value.id );
+        hash_part( state, value.inherits );
+        hash_part( state, value.climate_station ? "station" : "inherited_station" );
+        if( value.climate_station ) {
+            hash_part( state, *value.climate_station );
+        }
+        const auto hash_number = [&]( const auto &number ) {
+            hash_part( state, number ? "specified" : "inherited" );
+            if( number ) {
+                hash_part( state, std::to_string( *number ) );
+            }
+        };
+        hash_number( value.base_temperature );
+        hash_number( value.base_humidity );
+        hash_number( value.base_pressure );
+        hash_number( value.base_wind );
+        hash_number( value.base_wind_distrib_peaks );
+        hash_number( value.base_wind_season_variation );
+        hash_number( value.summer_temp_manual_mod );
+        hash_number( value.spring_temp_manual_mod );
+        hash_number( value.autumn_temp_manual_mod );
+        hash_number( value.winter_temp_manual_mod );
+        hash_number( value.spring_humidity_manual_mod );
+        hash_number( value.summer_humidity_manual_mod );
+        hash_number( value.autumn_humidity_manual_mod );
+        hash_number( value.winter_humidity_manual_mod );
+        hash_part( state, value.has_blacklist ? "blacklist" : "inherited_blacklist" );
+        for( const std::string &weather : value.weather_black_list ) {
+            hash_part( state, weather );
+        }
+        hash_part( state, value.has_whitelist ? "whitelist" : "inherited_whitelist" );
+        for( const std::string &weather : value.weather_white_list ) {
+            hash_part( state, weather );
+        }
     }
     for( const weather_type_registration &entry : pimpl_->weather_types ) {
         hash_part( state, "weather_type" );

@@ -3301,11 +3301,14 @@ function MapExtraDefinition:flag(flag_id) end
 
 ---@class WeatherGeneratorDefinitionOptions
 ---@field id string Stable weather-generator id.
+---@field inherits? string Existing generator or an earlier generator in this transaction. Omitted fields retain the parent value.
+---@field climate_station? string Regional climate station id; an empty string disables station-based climate.
 ---@field base_temperature? number Base temperature.
 ---@field base_humidity? number Base humidity.
 ---@field base_pressure? number Base pressure.
 ---@field base_wind? number Base wind speed.
 ---@field base_wind_distrib_peaks? integer Non-negative wind distribution peaks.
+---@field base_wind_season_variation? integer Signed native seasonal wind variation divisor.
 ---@field summer_temp_manual_mod? integer Summer temperature modifier.
 ---@field spring_temp_manual_mod? integer Spring temperature modifier.
 ---@field autumn_temp_manual_mod? integer Autumn temperature modifier.
@@ -3326,6 +3329,14 @@ function WeatherGeneratorDefinition:blacklisted_weather(weather_id) end
 ---@param weather_id string Weather type id forced into this generator.
 ---@return WeatherGeneratorDefinition self
 function WeatherGeneratorDefinition:whitelisted_weather(weather_id) end
+
+---Replace the inherited blacklist with an empty list; subsequent blacklisted_weather calls append.
+---@return WeatherGeneratorDefinition self
+function WeatherGeneratorDefinition:clear_blacklist() end
+
+---Replace the inherited whitelist with an empty list; subsequent whitelisted_weather calls append.
+---@return WeatherGeneratorDefinition self
+function WeatherGeneratorDefinition:clear_whitelist() end
 
 ---@class MigrationDefinitionOptions
 ---@field kind 'bionic'|'effect'|'field_type'|'furniture'|'oter'|'overmap_special'|'proficiency'|'terrain'|'trap'|'var'|'vehicle_part' Native migration target kind.
