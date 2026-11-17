@@ -119,7 +119,8 @@ class pp_generator
         // decisions: persisted gate decisions for overmap_special-scoped sub-generators,
         // or nullptr when no decisions are stored for this OMT. When nullptr, every
         // sub-generator rolls fresh per OMT.
-        void execute( map &md, const tripoint_abs_omt &p,
+        // Returns whether bash_damage, move_items or pre_burn changed the map.
+        bool execute( map &md, const tripoint_abs_omt &p,
                       std::vector<pp_sub_decision> *decisions = nullptr ) const;
 
     private:

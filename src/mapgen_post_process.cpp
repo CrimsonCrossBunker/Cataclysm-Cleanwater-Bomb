@@ -463,10 +463,11 @@ static void place_bool_pools( map &md, const tripoint_bub_ms &current_tile,
     }
 }
 
-static void execute_bash_damage( map &md,
+static bool execute_bash_damage( map &md,
                                  std::list<tripoint_bub_ms> &all_points_in_map,
                                  const pp_sub_generator &sg )
 {
+    bool affected = false;
     for( int i = 0; i < sg.attempts; i++ ) {
         if( !x_in_y( sg.chance, 100 ) ) {
             continue;
@@ -475,14 +476,16 @@ static void execute_bash_damage( map &md,
         if( md.has_flag_ter( ter_furn_flag::TFLAG_NATURAL_UNDERGROUND, current_tile ) ) {
             continue;
         }
-        md.bash( current_tile, rng( sg.min_intensity, sg.max_intensity ) );
+        affected |= md.bash( current_tile, rng( sg.min_intensity, sg.max_intensity ) ).did_damage;
     }
+    return affected;
 }
 
-static void execute_move_items( map &md,
+static bool execute_move_items( map &md,
                                 std::list<tripoint_bub_ms> &all_points_in_map,
                                 const pp_sub_generator &sg )
 {
+    bool affected = false;
     for( int i = 0; i < sg.attempts; i++ ) {
         const tripoint_bub_ms current_tile = random_entry( all_points_in_map );
         if( md.has_flag_ter( ter_furn_flag::TFLAG_NATURAL_UNDERGROUND, current_tile ) ) {
@@ -508,13 +511,18 @@ static void execute_move_items( map &md,
                 const bool outbounds_Y = destination_tile.y() < 0 || destination_tile.y() >= SEEY * 2;
                 const bool cannot_place = md.has_flag( ter_furn_flag::TFLAG_DESTROY_ITEM, destination_tile ) ||
                                           md.has_flag( ter_furn_flag::TFLAG_NOITEM, destination_tile ) || !md.has_floor( destination_tile );
-                if( outbounds_X || outbounds_Y || cannot_place ) {
+                if( outbounds_X || outbounds_Y || cannot_place ||
+                    destination_tile == current_tile ) {
                     item_iterator++;
                     continue;
                 } else {
                     item copy( *item_iterator );
-                    md.add_item( destination_tile, copy );
+                    if( md.add_item( destination_tile, copy ).is_null() ) {
+                        ++item_iterator;
+                        continue;
+                    }
                     item_iterator = md.i_at( current_tile.xy() ).erase( item_iterator );
+                    affected = true;
                 }
             } else {
                 item_iterator++;
@@ -522,7 +530,7 @@ static void execute_move_items( map &md,
 
         }
     }
-
+    return affected;
 }
 
 static void execute_add_fire( map &md,
@@ -577,9 +585,10 @@ static bool pre_burn_item( item &it, std::vector<item> &remains )
 }
 
 // Apply pre_burn effects to every tile, skipping the probability gate.
-static void apply_pre_burn_tiles( map &md,
+static bool apply_pre_burn_tiles( map &md,
                                   std::list<tripoint_bub_ms> &all_points_in_map )
 {
+    bool affected = false;
     for( tripoint_bub_ms current_tile : all_points_in_map ) {
         if( md.has_flag_ter( ter_furn_flag::TFLAG_NATURAL_UNDERGROUND, current_tile ) ||
             md.has_flag_ter( ter_furn_flag::TFLAG_GOES_DOWN, current_tile ) ||
@@ -619,6 +628,8 @@ static void apply_pre_burn_tiles( map &md,
             md.furn_set( current_tile.xy(), furn_str_id::NULL_ID() );
         }
 
+        affected |= md.ter( current_tile ) != original_terrain ||
+                    md.furn( current_tile ) != original_furniture;
         if( md.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, current_tile ) ||
             md.has_flag_ter( ter_furn_flag::TFLAG_LIQUID, current_tile ) ||
             ( md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SEALED, current_tile ) &&
@@ -633,13 +644,17 @@ static void apply_pre_burn_tiles( map &md,
         map_stack items = md.i_at( current_tile );
         for( auto it = items.begin(); it != items.end(); ) {
             if( it->count_by_charges() ) {
+                const int old_charges = it->charges;
                 it->charges -= roll_remainder( it->charges * loss_percent / 100.0 );
+                affected |= it->charges != old_charges;
                 if( it->charges <= 0 ) {
                     it = items.erase( it );
+                    affected = true;
                     continue;
                 }
             } else if( x_in_y( loss_percent, 100 ) ) {
                 it = items.erase( it );
+                affected = true;
                 continue;
             }
             if( burned && pre_burn_item( *it, remains ) ) {
@@ -652,6 +667,7 @@ static void apply_pre_burn_tiles( map &md,
             md.add_item_or_charges( current_tile, std::move( survivor ) );
         }
     }
+    return affected;
 }
 
 // Compute the time-dependent pre_burn probability as a percent in [0, 100].
@@ -669,18 +685,20 @@ static int pre_burn_percent_chance( const pp_sub_generator &sg, int days_since_c
     return percent_chance;
 }
 
-static void execute_pre_burn( map &md,
+static bool execute_pre_burn( map &md,
                               std::list<tripoint_bub_ms> &all_points_in_map,
                               int days_since_cataclysm,
                               const pp_sub_generator &sg )
 {
+    bool affected = false;
     const int percent_chance = pre_burn_percent_chance( sg, days_since_cataclysm );
     for( int i = 0; i < sg.attempts; i++ ) {
         if( !x_in_y( percent_chance, 100 ) ) {
             continue;
         }
-        apply_pre_burn_tiles( md, all_points_in_map );
+        affected |= apply_pre_burn_tiles( md, all_points_in_map );
     }
+    return affected;
 }
 
 static void execute_place_blood( map &md,
@@ -919,9 +937,10 @@ static bool resolve_pp_decision( const pp_sub_generator &sg, int days_since_cata
     }
 }
 
-void pp_generator::execute( map &md, const tripoint_abs_omt &p,
+bool pp_generator::execute( map &md, const tripoint_abs_omt &p,
                             std::vector<pp_sub_decision> *decisions ) const
 {
+    bool affected = false;
     std::list<tripoint_bub_ms> all_points_in_map;
 
     for( int i = 0; i < SEEX * 2; i++ ) {
@@ -949,21 +968,21 @@ void pp_generator::execute( map &md, const tripoint_abs_omt &p,
 
         switch( sg.type ) {
             case sub_generator_type::bash_damage:
-                execute_bash_damage( md, all_points_in_map, sg );
+                affected |= execute_bash_damage( md, all_points_in_map, sg );
                 break;
             case sub_generator_type::move_items:
-                execute_move_items( md, all_points_in_map, sg );
+                affected |= execute_move_items( md, all_points_in_map, sg );
                 break;
             case sub_generator_type::add_fire:
                 execute_add_fire( md, all_points_in_map, days_since_cataclysm, sg );
                 break;
             case sub_generator_type::pre_burn:
                 if( dec && dec->st == pp_sub_decision::status::applied ) {
-                    apply_pre_burn_tiles( md, all_points_in_map );
+                    affected |= apply_pre_burn_tiles( md, all_points_in_map );
                 } else if( dec && dec->st == pp_sub_decision::status::skipped ) {
                     // Building rolled not-burned for this special.
                 } else {
-                    execute_pre_burn( md, all_points_in_map, days_since_cataclysm, sg );
+                    affected |= execute_pre_burn( md, all_points_in_map, days_since_cataclysm, sg );
                 }
                 break;
             case sub_generator_type::place_blood:
@@ -980,4 +999,5 @@ void pp_generator::execute( map &md, const tripoint_abs_omt &p,
                 break;
         }
     }
+    return affected;
 }

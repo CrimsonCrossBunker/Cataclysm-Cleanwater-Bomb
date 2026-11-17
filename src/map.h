@@ -189,6 +189,8 @@ struct bash_params {
      * have a roof either.
     */
     bool bashing_from_above = false;
+    // Did the bash change terrain, furniture, items, fields or vehicle parts?
+    bool did_damage = false;
 };
 
 /** Draw parameters used by map::drawsq() and similar methods. */
