@@ -1045,16 +1045,7 @@
     "rating": "good",
     "max_duration": 12000,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "special_vision": [
-          {
-            "condition": { "not": { "npc_has_flag": "FLIES" } },
-            "distance": { "math": [ "( u_spell_level('earthshaper_danger_sense') * 3)" ] },
-            "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense something moving here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_tremorsense_0"
     ]
   },
   {
@@ -1067,17 +1058,7 @@
     "rating": "good",
     "max_duration": 36000,
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [ { "npc_has_species": "HORROR" }, { "npc_has_species": "NETHER" }, { "npc_has_species": "nether_player_hate" } ]
-            },
-            "distance": { "math": [ "( u_spell_level('animist_sense_outsiders') * 2.5) + 3" ] },
-            "descriptions": [ { "id": "nether_creature_sense", "symbol": "?", "color": "c_pink", "text": "You sense an otherworldy danger here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_sense_outsiders_0"
     ]
   },
   {
@@ -1090,17 +1071,7 @@
     "rating": "good",
     "max_duration": 27600,
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [ { "npc_has_flag": "MAGIC_USER" }, { "and": [ "npc_is_character", { "math": [ "n_spell_count() >= 6" ] } ] } ]
-            },
-            "distance": { "math": [ "( u_spell_level('animist_detect_wizards') * 2) + 3" ] },
-            "descriptions": [ { "id": "wizard_sense", "symbol": "?", "color": "cyan", "text": "You see the ley lines of a wielder of magic." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_animist_detect_wizards_0"
     ]
   },
   {

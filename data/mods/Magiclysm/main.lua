@@ -60,3 +60,5 @@ require("inherited_enchantments")
 require("environment_enchantments")
 
 require("overlay_enchantments")
+
+require("inline_special_vision")
