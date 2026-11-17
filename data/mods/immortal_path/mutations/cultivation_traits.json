@@ -35,11 +35,7 @@
     "//en_us_description": "The body shaped by long Wood cultivation; vitality runs within, sharing the wax and wane of growing things. Wounds mend a touch faster, stamina recovers a little quicker, and one's Wood-phase power runs purer.",
     "//": "木行功法载体特性。被动：清醒回血 + 回体力 + 木行极化（polarization_wood +0.3,基础 1→1.3,放大木行法术威力 30%）。习得木行吐纳即授予。数值保守（练气期弱增益），待平衡。/ Wood carrier trait. Passive: awake HP regen + stamina regen + wood polarization (+0.3 → 1.3× on wood arts).",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "REGEN_HP_AWAKE", "multiply": 0.5 }, { "value": "STAMINA_REGEN_MOD", "add": 1 } ],
-        "custom": [ { "value": "polarization_wood", "add": 0.3 } ]
-      }
+      "INLINE_ENCH_immortal_path_body_evergreen_0"
     ]
   },
   {
@@ -56,11 +52,7 @@
     "//en_us_description": "The body shaped by long Fire cultivation; yang-flame sinks into sinew and bone. Melee strikes hit harder, cold holds no fear, and one's Fire-phase power burns fiercer.",
     "//": "火行功法载体特性。被动：近战伤害 + 抗寒（保暖）+ 火行极化（polarization_fire +0.3,基础 1→1.3,放大火弹术等火行法术威力 30%）。习得火行吐纳即授予。待平衡。/ Fire carrier trait. Passive: melee damage + cold resistance + fire polarization (+0.3 → 1.3× on fire arts like Fireball).",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "MELEE_DAMAGE", "add": 1 }, { "value": "CLIMATE_CONTROL_HEAT", "add": 15 } ],
-        "custom": [ { "value": "polarization_fire", "add": 0.3 } ]
-      }
+      "INLINE_ENCH_immortal_path_body_blazing_sun_0"
     ]
   },
   {
@@ -77,15 +69,7 @@
     "//en_us_description": "The body shaped by long Earth cultivation; ponderous essence settles into the frame, solid as a mountain. Flesh resists harm, knockback and knockdown find no purchase, and one's Earth-phase power grows weightier.",
     "//": "土行功法载体特性。被动：全护甲 + 抗击退 + 抗击倒 + 土行极化（polarization_earth +0.3）。习得土行吐纳即授予。待平衡。/ Earth carrier trait. Passive: armor + knockback/knockdown resist + earth polarization (+0.3).",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "ARMOR_ALL", "add": -1 },
-          { "value": "KNOCKBACK_RESIST", "add": 3 },
-          { "value": "KNOCKDOWN_RESIST", "add": 3 }
-        ],
-        "custom": [ { "value": "polarization_earth", "add": 0.3 } ]
-      }
+      "INLINE_ENCH_immortal_path_body_deep_earth_0"
     ]
   },
   {
@@ -102,11 +86,7 @@
     "//en_us_description": "The body shaped by long Metal cultivation; sinew and bone tempered a hundredfold like fine steel, a killing edge held within. Strikes land sharp and true, and one's Metal-phase power cuts keener.",
     "//": "金行功法载体特性。被动：近战伤害 + 命中 + 金行极化（polarization_metal +0.3）。习得金行吐纳即授予。无近战破甲 enchant value（仅远程有），故以伤害+命中表达「锋锐」。待平衡。/ Metal carrier trait. Passive: melee damage + to-hit + metal polarization (+0.3); no melee armor-pen value exists.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "MELEE_DAMAGE", "add": 1 }, { "value": "MELEE_TO_HIT", "add": 1 } ],
-        "custom": [ { "value": "polarization_metal", "add": 0.3 } ]
-      }
+      "INLINE_ENCH_immortal_path_body_true_metal_0"
     ]
   },
   {
@@ -123,7 +103,7 @@
     "//en_us_description": "The body shaped by long Water cultivation; the mind still as standing water, the dantian holding qi like an abyss holds rivers. A higher qi cap, a deeper reserve, and one's Water-phase power flows more supple.",
     "//": "水行功法载体特性。被动：额外 qi_max（与炼气士同通道，自动叠加）+ 水行极化（polarization_water +0.3）。「回灵气快」目前无 enchant 钩子（打坐回灵气是 EOC 固定值），故仅以上限加成表达;后续可在 EOC 内按特性加成。待平衡。/ Water carrier trait. Passive: extra qi_max (same channel, stacks) + water polarization (+0.3). Faster qi recovery has no enchant hook yet.",
     "enchantments": [
-      { "condition": "ALWAYS", "custom": [ { "value": "qi_max", "add": 30 }, { "value": "polarization_water", "add": 0.3 } ] }
+      "INLINE_ENCH_immortal_path_body_cold_pool_0"
     ]
   },
   {
@@ -139,6 +119,6 @@
     "description": "久修血煞炼尸功所成之体。死气血煞侵入骨髓，凶威渐长——然邪气反噬，根本受损，气血不宁。",
     "//en_us_description": "The body shaped by the Blood-Fiend Corpse Refining; death-qi and blood-fiend essence seep into the marrow, breeding menace — but the foul qi gnaws back, eroding one's foundation and unsettling the blood.",
     "//": "魔功载体特性。框架占位：被动近战伤害（凶威）+ 持续损 health（MOD_HEALTH 负，邪道反噬代价）。「需附近尸体/血液才加速修炼」等机制留待后续，届时代价与收益再做平衡。学会血煞炼化即授予。待平衡。/ Demonic carrier trait. Framework placeholder: melee damage bonus + ongoing health drain (MOD_HEALTH negative) as the dark cost. Corpse/blood-gated speedup is left for later.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "MELEE_DAMAGE", "add": 2 }, { "value": "MOD_HEALTH", "add": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_immortal_path_body_blood_fiend_0" ]
   }
 ]
