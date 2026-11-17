@@ -2472,6 +2472,9 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 ids( "effects" ), ids( "traits" ), ids( "worn_items" ), ids( "worn_flags" ),
                 ids( "wielded_flags" ), ids( "effect_intensities" ),
                 ids( "character_variables" ), ids( "global_variables" ),
+                ids( "character_flags" ), ids( "proficiency_percentages" ), ids( "spell_levels" ),
+                ids( "spell_school_levels" ), ids( "spell_school_level_sums" ),
+                activation->get_or( "move_mode", false ),
                 activation->get_or( "armed", false ), activation->get_or( "pain", false ),
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
                 activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false )
@@ -4183,9 +4186,19 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 const enchantment_character_inputs &inputs = *definition.load_character_inputs;
                 for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags,
                                         &inputs.wielded_flags, &inputs.effect_intensities,
-                                        &inputs.character_variables, &inputs.global_variables } ) {
+                                        &inputs.character_variables, &inputs.global_variables,
+                                        &inputs.character_flags, &inputs.spell_levels,
+                                        &inputs.spell_school_levels, &inputs.spell_school_level_sums } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
+                    }
+                }
+                for( const std::string &id : inputs.proficiency_percentages ) {
+                    require_valid_id( id, "enchantment proficiency" );
+                    if( check_engine_state && !staged_proficiency( id ) &&
+                        !proficiency_id( id ).is_valid() ) {
+                        throw std::runtime_error( "enchantment '" + definition.id +
+                                                  "' references unknown proficiency '" + id + "'" );
                     }
                 }
             }
@@ -7445,6 +7458,12 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
                     hash_ids( "character_variables", value.load_character_inputs->character_variables );
                     hash_ids( "global_variables", value.load_character_inputs->global_variables );
+                    hash_ids( "character_flags", value.load_character_inputs->character_flags );
+                    hash_ids( "proficiency_percentages", value.load_character_inputs->proficiency_percentages );
+                    hash_ids( "spell_levels", value.load_character_inputs->spell_levels );
+                    hash_ids( "spell_school_levels", value.load_character_inputs->spell_school_levels );
+                    hash_ids( "spell_school_level_sums", value.load_character_inputs->spell_school_level_sums );
+                    hash_part( state, value.load_character_inputs->move_mode ? "move_mode" : "no_move_mode" );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
                     hash_part( state, value.load_character_inputs->morale ? "morale" : "no_morale" );

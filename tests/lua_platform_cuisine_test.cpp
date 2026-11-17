@@ -418,6 +418,15 @@ ccb.runtime.handler("matching_inputs", function(ctx)
     local inputs = ctx.character_inputs
     return inputs.effects.sleep and inputs.traits.TOUGH
         and inputs.worn_items.backpack and inputs.worn_flags.WATERPROOF
+        and inputs.character_flags.QUADRUPED_CROUCH and inputs.move_mode == "crouch"
+end)
+ccb.runtime.handler("learning_state", function(ctx)
+    assert(ctx.speaker == nil)
+    local state = ctx.character_inputs
+    local spell = state.spell_levels.test_eoc_spell
+    assert(state.spell_school_levels.test_trait == spell)
+    assert(state.spell_school_level_sums.test_trait == math.max(0, spell))
+    return state.proficiency_percentages.prof_test + spell
 end)
 ccb.runtime.handler("loaded_strength", function(ctx)
     assert(ctx.speaker == nil)
@@ -444,10 +453,18 @@ ccb.content.add(ccb.content.Enchantment {
             "lua_test_enchantment_bonus", "lua_test_enchantment_invalid", "lua_test_enchantment_missing",
         },
         global_variables = { "lua_test_enchantment_bonus" },
+        character_flags = { "QUADRUPED_CROUCH" },
+        move_mode = true,
+        proficiency_percentages = { "prof_test" },
+        spell_levels = { "test_eoc_spell" },
+        spell_school_levels = { "test_trait" },
+        spell_school_level_sums = { "test_trait" },
         pain = true,
         armed = true,
     },
-}:value("STRENGTH", { add_handler = "loaded_strength" }))
+}
+    :value("STRENGTH", { add_handler = "loaded_strength" })
+    :value("PERCEPTION", { add_handler = "learning_state" }))
 )lua" );
     std::string error;
     REQUIRE( cata::lua_platform::prepare_mods(
@@ -464,13 +481,20 @@ ccb.content.add(ccb.content.Enchantment {
         get_globals().remove_global_value( "lua_test_enchantment_bonus" );
     } );
     restoring_npc.set_value( "lua_test_enchantment_invalid", "typed text" );
-    const auto strength_bonus = [&]() {
+    const auto bonus = [&]( const enchant_vals::mod value ) {
         enchant_cache cache;
         cache.force_add( id.obj(), restoring_npc );
-        return cache.get_value_add( enchant_vals::mod::STRENGTH );
+        return cache.get_value_add( value );
+    };
+    const auto strength_bonus = [&]() {
+        return bonus( enchant_vals::mod::STRENGTH );
     };
     restoring_npc.set_pain( 12 );
     CHECK( strength_bonus() == 11 );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == -1 );
+    restoring_npc.set_proficiency_practiced_time( proficiency_id( "prof_test" ), 43200 );
+    restoring_npc.magic->set_spell_level( spell_id( "test_eoc_spell" ), 4, &restoring_npc );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == 54 );
     restoring_npc.set_value( "lua_test_enchantment_bonus",
                              diag_value( diag_value::legacy_value( "3.5" ) ) );
     get_globals().set_global_value( "lua_test_enchantment_bonus", 4 );
@@ -486,6 +510,10 @@ ccb.content.add(ccb.content.Enchantment {
     item backpack( itype_id( "backpack" ) );
     backpack.set_flag( flag_id( "WATERPROOF" ) );
     restoring_npc.worn.wear_item( restoring_npc, backpack, false, false );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.set_mutation( trait_id( "PAWS" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.set_movement_mode( move_mode_id( "crouch" ) );
     CHECK( id->is_active( restoring_npc, false ) );
     item rock( itype_rock );
     REQUIRE( restoring_npc.wield( rock ) );

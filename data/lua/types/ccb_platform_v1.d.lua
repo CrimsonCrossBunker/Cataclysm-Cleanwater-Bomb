@@ -5434,6 +5434,12 @@ function CcbPlatformContent.Bionic(options) end
 ---@field effect_intensities? string[] Whole-body effects whose intensity is requested.
 ---@field character_variables? string[] Numeric variables saved on the speaker, using keys without a scope prefix.
 ---@field global_variables? string[] Numeric variables saved in the world.
+---@field character_flags? string[] Character flags queried on the speaker.
+---@field proficiency_percentages? string[] Proficiency IDs whose practice percentage is requested.
+---@field spell_levels? string[] Spell IDs whose current effective level is requested.
+---@field spell_school_levels? string[] School IDs whose highest effective spell level is requested.
+---@field spell_school_level_sums? string[] School IDs whose nonnegative effective spell levels are summed.
+---@field move_mode? boolean Request the speaker's movement mode ID.
 ---@field armed? boolean Request whether the speaker has a weapon.
 ---@field pain? boolean Request raw pain before painkiller reduction.
 ---@field morale? boolean Request current morale.
@@ -5450,6 +5456,12 @@ function CcbPlatformContent.Bionic(options) end
 ---@field effect_intensities table<string, integer> Missing effects have intensity -1.
 ---@field character_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
 ---@field global_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
+---@field character_flags table<string, boolean>
+---@field proficiency_percentages table<string, number> Practice percentages are on the 0–100 scale.
+---@field spell_levels table<string, integer> Unknown spells have level -1.
+---@field spell_school_levels table<string, integer> Schools with no known spells have level -1.
+---@field spell_school_level_sums table<string, integer> Schools with no known spells have sum 0.
+---@field move_mode? string
 ---@field armed? boolean
 ---@field pain? integer
 ---@field morale? integer

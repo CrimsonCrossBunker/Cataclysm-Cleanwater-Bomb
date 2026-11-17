@@ -54,6 +54,7 @@
 #include "npc.h"
 #include "player_activity.h"
 #include "profession.h"
+#include "proficiency.h"
 #include "scenario.h"
 #include "talker.h"
 #include "type_id.h"
@@ -824,11 +825,35 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.wielded_with_flag( flag_id( id ) );
     } );
+    collect( "character_flags", requested.character_flags, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.has_flag( json_character_flag( id ) );
+    } );
+    collect( "proficiency_percentages", requested.proficiency_percentages, 0.0,
+    []( const const_talker & actor, const std::string & id ) {
+        const proficiency_id prof( id );
+        return actor.proficiency_practiced_time( prof ) * 100.0 / prof->time_to_learn();
+    } );
+    collect( "spell_levels", requested.spell_levels, -1, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.get_spell_level( spell_id( id ) );
+    } );
+    collect( "spell_school_levels", requested.spell_school_levels, -1,
+    []( const const_talker & actor, const std::string & id ) {
+        return actor.get_spell_level( trait_id( id ) );
+    } );
+    collect( "spell_school_level_sums", requested.spell_school_level_sums, 0,
+    []( const const_talker & actor, const std::string & id ) {
+        return actor.get_spell_sum( trait_id( id ), 0 );
+    } );
     inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
                                     requested.character_variables );
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.move_mode ) {
+            inputs["move_mode"] = speaker->get_move_mode().str();
+        }
         if( requested.armed ) {
             inputs["armed"] = !speaker->unarmed_attack();
         }

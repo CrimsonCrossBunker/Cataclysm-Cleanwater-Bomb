@@ -311,6 +311,12 @@ struct enchantment_character_inputs {
     std::vector<std::string> effect_intensities;
     std::vector<std::string> character_variables;
     std::vector<std::string> global_variables;
+    std::vector<std::string> character_flags;
+    std::vector<std::string> proficiency_percentages;
+    std::vector<std::string> spell_levels;
+    std::vector<std::string> spell_school_levels;
+    std::vector<std::string> spell_school_level_sums;
+    bool move_mode = false;
     bool armed = false;
     bool pain = false;
     bool morale = false;
