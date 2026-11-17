@@ -102,3 +102,5 @@ require("learning_enchantments")
 require("location_enchantments")
 
 require("martial_enchantments")
+
+require("effect_enchantments")

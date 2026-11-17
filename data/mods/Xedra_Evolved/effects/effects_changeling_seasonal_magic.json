@@ -12,7 +12,7 @@
     "name": [ "Harvested Dreams" ],
     "desc": [ "Your dreams were harvested by a changeling for dreamdross, and cannot be harvested for a time after." ],
     "rating": "mixed",
-    "enchantments": [ { "mutations": [ "BADTEMPER" ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_changeling_gain_dreamdross_from_dreams_0" ]
   },
   {
     "type": "effect_type",
@@ -90,7 +90,7 @@
     "remove_message": "The bark armor cracks and falls away.",
     "max_duration": "12 hours",
     "enchantments": [
-      { "mutations": [ "ARVORE_MOSS", "BARK" ] },
+      "INLINE_ENCH_effect_changeling_spring_protective_plant_armor_0",
       {
         "condition": { "not": { "is_season": "autumn" } },
         "incoming_damage_mod": [ { "type": "cold", "multiply": -0.5 } ],
@@ -107,8 +107,8 @@
     "remove_message": "Your gossamer wings turn to flower petals and blow away.",
     "max_duration": "12 hours",
     "enchantments": [
-      { "mutations": [ "MUTATION_COSMETIC_BUTTERFLY_WINGS", "MUTATION_NO_RIGID_TORSO_ARMOR" ] },
-      { "modified_bodyparts": [ { "gain": "wing_gossamer_l" }, { "gain": "wing_gossamer_r" } ] }
+      "INLINE_ENCH_effect_changeling_spring_enchanted_butterfly_wings_0",
+      "INLINE_ENCH_effect_changeling_spring_enchanted_butterfly_wings_1"
     ]
   },
   {
@@ -175,19 +175,7 @@
     "name": [ "Branch of Yggdrasil" ],
     "desc": [ "You are in the form of a tree." ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -1 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "REGEN_HP", "multiply": 50 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 2 },
-          { "value": "SLEEPINESS_REGEN", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 25 },
-          { "value": "SLEEPY", "add": 150 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 150 }
-        ],
-        "ench_effects": [ { "effect": "effect_xe_hidden_infection_recovery", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_changeling_spring_turn_target_into_tree_0"
     ],
     "flags": [
       "DEAF",
@@ -229,10 +217,7 @@
     "max_duration": "1 hours",
     "show_in_info": true,
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "bash", "multiply": -0.1 }, { "type": "cut", "multiply": -0.1 }, { "type": "stab", "multiply": -0.1 } ],
-        "values": [ { "value": "SPEED", "multiply": 0.05 } ]
-      }
+      "INLINE_ENCH_effect_changeling_spring_charm_control_target_0"
     ]
   },
   {
@@ -243,7 +228,7 @@
     "apply_message": "",
     "remove_message": "The wisp winks out.",
     "max_duration": "12 hours",
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_changeling_summer_light_0" ]
   },
   {
     "type": "effect_type",
@@ -310,7 +295,7 @@
           }
         ]
       },
-      { "values": [ { "value": "LUMINATION", "add": 2 } ] }
+      "INLINE_ENCH_effect_changeling_fire_melee_damage_2"
     ]
   },
   {
@@ -448,7 +433,7 @@
     "name": [ "Summer Champion" ],
     "desc": [ "You stand in the ring of flames, facing your foe.  Woe to the vanquished." ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "KNOCKBACK_RESIST", "add": 100 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_changeling_summer_ring_of_flames_0" ],
     "blocks_effects": [ "blisters" ]
   },
   {
@@ -536,14 +521,7 @@
     "show_in_info": true,
     "max_duration": "12 hours",
     "enchantments": [
-      {
-        "values": [ { "value": "LUMINATION", "add": 8000 } ],
-        "intermittent_activation": {
-          "effects": [
-            { "frequency": "4 seconds", "spell_effects": [ { "id": "changeling_summer_powerful_sunlight_spell_aura_effects" } ] }
-          ]
-        }
-      }
+      "INLINE_ENCH_effect_changeling_summer_powerful_sunlight_0"
     ]
   },
   {
@@ -580,9 +558,7 @@
     "show_in_info": true,
     "max_duration": "12 hours",
     "enchantments": [
-      {
-        "values": [ { "value": "STRENGTH", "add": -3 }, { "value": "DEXTERITY", "add": -2 }, { "value": "SPEED", "add": -5 } ]
-      }
+      "INLINE_ENCH_effect_changeling_autumn_touch_of_frailty_character_0"
     ]
   },
   {
@@ -650,7 +626,7 @@
     "desc": [ "Your skin itches." ],
     "remove_message": "The itching of your skin fades.",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.667 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_changeling_autumn_stop_supernatural_healing_0" ],
     "flags": [ "BLOCK_SUPERNATURAL_HEALING" ]
   },
   {
@@ -679,17 +655,7 @@
     "show_in_info": true,
     "max_duration": "12 hours",
     "enchantments": [
-      {
-        "skills": [
-          { "value": "melee", "multiply": -1 },
-          { "value": "stabbing", "multiply": -1 },
-          { "value": "bashing", "multiply": -1 },
-          { "value": "cutting", "multiply": -1 },
-          { "value": "dodge", "multiply": -1 },
-          { "value": "gun", "multiply": -1 },
-          { "value": "archery", "multiply": -1 }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_autumn_wither_with_time_character_0"
     ]
   },
   {
@@ -767,7 +733,7 @@
     "remove_message": "Life returns to your limbs.",
     "show_in_info": true,
     "max_duration": "6 hours",
-    "enchantments": [ { "mutations": [ "WINTER_FEIGN_DEATH_TRAITS" ], "ench_effects": [ { "effect": "downed", "intensity": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_changeling_winter_feign_death_0" ],
     "limb_score_mods": [
       { "limb_score": "lift", "modifier": 0.2 },
       { "limb_score": "block", "modifier": 0.0 },
@@ -812,7 +778,7 @@
     "remove_message": "The bone-deep chill fades away.",
     "show_in_info": true,
     "max_duration": "20 minutes",
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_changeling_winter_frozen_breath_0" ],
     "base_mods": { "hit_mod": [ -1 ] }
   },
   {

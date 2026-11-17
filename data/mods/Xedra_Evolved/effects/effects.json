@@ -27,7 +27,7 @@
     "remove_message": "You return to your normal speed.",
     "rating": "good",
     "base_mods": { "dex_mod": [ 4 ], "speed_mod": [ 250 ] },
-    "enchantments": [ { "values": [ { "value": "RANGE_DODGE", "add": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_haste_vampire_0" ]
   },
   {
     "type": "effect_type",
@@ -45,7 +45,7 @@
     "rating": "good",
     "show_in_info": true,
     "remove_message": "Your undead flesh blunts the attack.",
-    "enchantments": [ { "values": [ { "value": "FORCEFIELD", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_vampire_resilience_flesh_of_marble_0" ]
   },
   {
     "type": "effect_type",
@@ -88,7 +88,7 @@
     "apply_message": "",
     "remove_message": "The glow around you fades.",
     "base_mods": { "dodge_mod": [ -2 ] },
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_wild_hunt_illumination_0" ]
   },
   {
     "type": "effect_type",
@@ -98,7 +98,7 @@
     "apply_message": "The cut begins to burn!",
     "remove_message": "The ache from your wounds finally fades.",
     "base_mods": { "pain_min": [ 1 ], "pain_chance": [ 5 ], "pain_max_val": [ 15 ], "pain_tick": [ 60 ] },
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.6 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_reduced_healing_0" ]
   },
   {
     "type": "effect_type",
@@ -268,7 +268,7 @@
     "name": [ "Shadow Damage Reduction" ],
     "desc": [ "You are flatter and less real in ways that makes you less susceptible to damage." ],
     "show_in_info": true,
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "bash", "multiply": -0.75 }, { "type": "bullet", "multiply": -0.75 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_shadow_damage_reduction_0" ]
   },
   {
     "type": "effect_type",
@@ -709,7 +709,7 @@
     "//": "Hidden--cosmetic to make dhampirs with Corpselike Pallor more pale",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "mutations": [ "PALE" ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_dhampir_corpselike_pallor_pale_0" ]
   },
   {
     "type": "effect_type",
@@ -777,7 +777,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      { "mutations": [ "POISRESIST" ] },
+      "INLINE_ENCH_effect_dhampir_resist_disease_poison_infection_0",
       { "condition": { "not": { "u_has_trait": "DISIMMUNE" } }, "mutations": [ "DISRESISTANT" ] },
       { "condition": { "not": { "u_has_trait": "INFIMMUNE" } }, "mutations": [ "INFRESIST" ] }
     ]
@@ -1086,8 +1086,8 @@
     "remove_message": "You end your imitation of death.",
     "rating": "mixed",
     "enchantments": [
-      { "mutations": [ "WINTER_FEIGN_DEATH_TRAITS" ] },
-      { "ench_effects": [ { "effect": "downed", "intensity": 1 } ] },
+      "INLINE_ENCH_effect_vampire_feign_death_0",
+      "INLINE_ENCH_effect_vampire_feign_death_1",
       {
         "condition": { "u_has_trait": "VAMPIRE_TORPOR_REFINEMENT_FEIGN_DEATH" },
         "values": [
@@ -1163,7 +1163,7 @@
     "//": "Hidden effect, used to make sure mist form doesn't drop items.",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "values": [ { "value": "EVASION", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_vampire_mist_form_0" ],
     "flags": [ "ETHEREAL", "INVISIBLE" ]
   },
   {
@@ -1177,7 +1177,7 @@
     "remove_message": "The warm feeling fades away.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 6 }, { "value": "REGEN_HP", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_eater_lump_pool_0" ]
   },
   {
     "type": "effect_type",
@@ -1282,7 +1282,7 @@
     "remove_message": "External forces apply to your body again.",
     "blocks_effects": [ "grabbed" ],
     "rating": "good",
-    "enchantments": [ { "mutations": [ "eater_unbreakable" ] } ]
+    "enchantments": [ "INLINE_ENCH_spell_unbreakable_eff_0" ]
   },
   {
     "type": "effect_type",
@@ -1351,7 +1351,7 @@
     "//": "Just to make karma arms drop a proper liquid when damaged",
     "show_intensity": false,
     "show_in_info": false,
-    "enchantments": [ { "emitter": "emit_blood_karma" } ]
+    "enchantments": [ "INLINE_ENCH_bleed_karma_0" ]
   },
   {
     "type": "effect_type",
@@ -1724,7 +1724,7 @@
     "desc": [ "You are emitting a pollen that will weaken and disorient your enemies." ],
     "rating": "good",
     "removes_effects": [ "effect_pollen_arvore_weaken" ],
-    "enchantments": [ { "emitter": "emit_arvore_poison_pollen" } ]
+    "enchantments": [ "INLINE_ENCH_effect_arvore_poison_pollen_0" ]
   },
   {
     "type": "effect_type",
@@ -1775,7 +1775,7 @@
     "desc": [ "It's very hard for you to move." ],
     "remove_message": "It's easier for you to move again.",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_ierde_slow_enemies_0" ]
   },
   {
     "type": "effect_type",
@@ -1784,15 +1784,7 @@
     "desc": [ "Drawing on the immobility of the mountain, you are resilient but rooted in place." ],
     "removes_effects": [ "stunned", "dazed", "downed" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.25 },
-          { "type": "stab", "multiply": -0.25 },
-          { "type": "cut", "multiply": -0.25 },
-          { "type": "bullet", "multiply": -0.25 },
-          { "type": "heat", "multiply": -0.25 }
-        ]
-      }
+      "INLINE_ENCH_effect_ierde_rooted_in_place_0"
     ],
     "flags": [ "CANNOT_MOVE" ]
   },
@@ -1805,15 +1797,7 @@
     "remove_message": "The magicks reinforcing your skin vanish.",
     "rating": "good",
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.3 },
-          { "type": "stab", "multiply": -0.3 },
-          { "type": "cut", "multiply": -0.3 },
-          { "type": "bullet", "multiply": -0.3 }
-        ],
-        "values": [ { "value": "MOVE_COST", "multiply": 0.1 }, { "value": "BLEEDING_RATE", "multiply": -0.333 } ]
-      }
+      "INLINE_ENCH_effect_ierde_buff_armor_allies_0"
     ]
   },
   {
@@ -1846,7 +1830,7 @@
     "name": [ "Impenetrable Earthen Shield" ],
     "desc": [ "You are protected by the living earth." ],
     "remove_message": "Your earthen shield finally crumbles.",
-    "enchantments": [ { "values": [ { "value": "FORCEFIELD", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_ierde_earthen_shield_0" ]
   },
   {
     "type": "effect_type",
@@ -1876,7 +1860,7 @@
     "apply_message": "",
     "remove_message": "Nearby enemies twitch and start turning towards you.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_homullus_reduced_visibility_ally_0" ]
   },
   {
     "type": "effect_type",
@@ -1997,10 +1981,7 @@
     "rating": "good",
     "removes_effects": [ "onfire", "blisters" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "heat", "add": -1000 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ]
-      }
+      "INLINE_ENCH_effect_hidden_flame_immunity_0"
     ]
   },
   {
@@ -2110,7 +2091,7 @@
     "apply_message": "The air around you heats up.",
     "remove_message": "The air around you cools down.",
     "rating": "good",
-    "enchantments": [ { "emitter": "emit_salamander_heat" } ]
+    "enchantments": [ "INLINE_ENCH_effect_salamander_emit_heat_0" ]
   },
   {
     "type": "effect_type",
@@ -2124,7 +2105,7 @@
     "name": [ "Phoenix's Rejuvenation" ],
     "desc": [ "Like the phoenix, the flames are renewing your flesh." ],
     "remove_message": "The aftereffects of the phoenix fire finally fade.",
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_salamander_phoenix_healing_0" ]
   },
   {
     "type": "effect_type",
@@ -2144,8 +2125,8 @@
     "rating": "good",
     "removes_effects": [ "smoke_eyes", "smoke_lungs", "teargas" ],
     "enchantments": [
-      { "emitter": "emit_smoke_blast" },
-      { "values": [ { "value": "MELEE_DAMAGE", "multiply": -1.0 }, { "value": "RANGED_DAMAGE", "multiply": -1.0 } ] }
+      "INLINE_ENCH_effect_salamander_smoke_form_0",
+      "INLINE_ENCH_effect_salamander_smoke_form_1"
     ],
     "flags": [
       "INVISIBLE",
@@ -2214,7 +2195,7 @@
     "remove_message": "The wind around you dies down.",
     "rating": "bad",
     "base_mods": { "dodge_mod": [ -2 ] },
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_sylph_hindering_wind_0" ]
   },
   {
     "type": "effect_type",
@@ -2225,9 +2206,7 @@
     "remove_message": "The winds around you die down.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [ { "value": "MOVECOST_FLATGROUND_MOD", "multiply": -0.2 }, { "value": "MOVECOST_OBSTACLE_MOD", "multiply": -0.3 } ]
-      }
+      "INLINE_ENCH_effect_sylph_increase_ally_speed_0"
     ],
     "flags": [ "STEADY" ]
   },
@@ -2239,7 +2218,7 @@
     "apply_message": "",
     "remove_message": "Your body regains its solidity.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": -0.8 }, { "value": "EVASION", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_sylph_cloud_body_0" ],
     "flags": [ "ETHEREAL", "INVISIBLE", "LEVITATION", "CLIMB_FLYING", "DISTRIBUTED_DAMAGE", "INHALED_TOXIN_IMMUNE", "MYCUS_IMMUNE" ]
   },
   {
@@ -2265,7 +2244,7 @@
       { "limb_score": "block", "modifier": 1.2 },
       { "limb_score": "crawl", "modifier": 1.5 }
     ],
-    "enchantments": [ { "values": [ { "value": "FALL_DAMAGE", "multiply": -0.6 }, { "value": "EVASION", "add": 0.33 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_undine_escape_grabs_0" ],
     "flags": [ "DOWNED_RECOVERY", "EFFECT_LIMB_SCORE_MOD", "ONE_STORY_FALL" ]
   },
   {
@@ -2277,10 +2256,7 @@
     "remove_message": "The acidic mist around you dissipates.",
     "rating": "good",
     "enchantments": [
-      {
-        "hit_me_effect": [ { "id": "undine_acid_resist_ally_thorns", "hit_self": false, "once_in": 3 } ],
-        "incoming_damage_mod": [ { "type": "acid", "multiply": -0.75 } ]
-      }
+      "INLINE_ENCH_effect_undine_acid_resist_ally_0"
     ]
   },
   {
@@ -2616,7 +2592,7 @@
     "name": [ "Step of Gad" ],
     "desc": [ "Your foot seems to keep finding just the right place to step." ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": 1 }, { "value": "FREE_DODGES", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_hedge_magic_luck_spell_0" ]
   },
   {
     "type": "effect_type",
@@ -2639,7 +2615,7 @@
     "id": "effect_hedge_increase_healing_rate",
     "name": [ "Convalescence" ],
     "desc": [ "Your wounds are healing more quickly, as long as you don't do too much to upset the charm." ],
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_hedge_increase_healing_rate_0" ]
   },
   {
     "type": "effect_type",
@@ -2647,7 +2623,7 @@
     "name": [ "Halt the Scarlet Flow" ],
     "desc": [ "Blood easily stops flowing under your touch." ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "BLEED_STOP_BONUS", "multiply": 0.66 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_hedge_increase_bandaging_rate_0" ]
   },
   {
     "type": "effect_type",
@@ -2656,7 +2632,7 @@
     "desc": [ "You are protected from heat and smoke." ],
     "remove_message": "Your charm of protection fades away.",
     "removes_effects": [ "blisters", "smoke_eyes", "smoke_lungs" ],
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_hedge_extinguish_fire_spell_self_resistance_0" ],
     "flags": [ "HEATPROOF" ]
   },
   {
@@ -2676,13 +2652,7 @@
     "remove_message": "",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": -0.96 },
-          { "value": "EVASION", "add": 1 },
-          { "value": "PHASE_DISTANCE", "add": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_hedge_astral_projection_0"
     ],
     "flags": [
       "ETHEREAL",
@@ -3180,13 +3150,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -1 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "SLEEPINESS", "multiply": -1 }
-        ]
-      }
+      "INLINE_ENCH_effect_trow_no_eating_or_sleep_0"
     ]
   },
   {
@@ -3205,7 +3169,7 @@
     "remove_message": "Your body shrinks back into its normal space.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 70 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_dream_drainer_speed_0" ]
   },
   {
     "type": "effect_type",
@@ -3216,7 +3180,7 @@
     "rating": "bad",
     "show_intensity": false,
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "ARMOR_ALL", "add": -15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_dream_drainer_armor_0" ]
   },
   {
     "id": "effect_moon_withdrawal",
@@ -3232,7 +3196,7 @@
     "rating": "bad",
     "show_intensity": false,
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "add": -130 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_moon_withdrawal_0" ]
   },
   {
     "type": "effect_type",
@@ -3309,7 +3273,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "removes_effects": [ "grabbed", "downed" ],
-    "enchantments": [ { "values": [ { "value": "EVASION", "add": 0.55 } ] } ]
+    "enchantments": [ "INLINE_ENCH_lilit_prevent_death_escape_0" ]
   },
   {
     "type": "effect_type",
@@ -3467,7 +3431,7 @@
     "name": [ { "str": "Silent in Darkness" } ],
     "desc": [ "Your movements make as little noise as the shadows of the night." ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_lilin_silent_at_night_0" ]
   },
   {
     "type": "effect_type",
@@ -3545,14 +3509,7 @@
     "max_intensity": 1,
     "flags": [ "INVISIBLE", "NO_SCENT", "PAIN_IMMUNE", "BLIND", "DEAF", "LEVITATION" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "SLEEPY", "add": 9999 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 500 },
-          { "value": "CLIMATE_CONTROL_CHILL", "add": 500 },
-          { "value": "FORCEFIELD", "add": 1 }
-        ]
-      }
+      "INLINE_ENCH_effect_sleep_shield_0"
     ],
     "removes_effects": [ "grabbed", "bleed" ]
   },
@@ -3574,7 +3531,7 @@
     "max_duration": "5 m",
     "base_mods": { "hit_mod": [ -1 ], "dodge_mod": [ -2 ] },
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_lilin_aoe_daze_0" ]
   },
   {
     "type": "effect_type",
@@ -3586,14 +3543,7 @@
     "base_mods": { "hit_mod": [ -1 ], "dodge_mod": [ -2 ] },
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SPEED", "multiply": -0.1 },
-          { "value": "ARMOR_ALL", "multiply": 0.05 },
-          { "value": "VISION_RANGE", "multiply": -0.15 },
-          { "value": "REGEN_HP", "multiply": -0.5 }
-        ]
-      }
+      "INLINE_ENCH_effect_lilin_supernatural_disease_0"
     ],
     "limb_score_mods": [
       { "limb_score": "balance", "modifier": 0.8 },
@@ -3616,14 +3566,7 @@
     "base_mods": { "hit_mod": [ -2 ], "dodge_mod": [ -4 ] },
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SPEED", "multiply": -0.25 },
-          { "value": "ARMOR_ALL", "multiply": 0.1 },
-          { "value": "VISION_RANGE", "multiply": -0.35 },
-          { "value": "REGEN_HP", "multiply": -0.95 }
-        ]
-      }
+      "INLINE_ENCH_effect_lilin_supernatural_disease_focused_0"
     ],
     "limb_score_mods": [
       { "limb_score": "balance", "modifier": 0.6 },
@@ -3681,7 +3624,7 @@
       "FREEZE_EFFECTS",
       "CANNOT_GAIN_EFFECTS"
     ],
-    "enchantments": [ { "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_xedra_time_freeze_0" ],
     "show_in_info": true
   },
   {
@@ -3699,7 +3642,7 @@
     "id": "effect_xedra_dreamer_generate_accelerated_time",
     "name": [ "Accelerated Time Emission" ],
     "desc": [ "You continuously generate fields of short-lived accelerated time." ],
-    "enchantments": [ { "emitter": "xedra_dreamer_emit_accelerated_time" } ],
+    "enchantments": [ "INLINE_ENCH_effect_xedra_dreamer_generate_accelerated_time_0" ],
     "rating": "good",
     "show_in_info": true
   },
@@ -3713,7 +3656,7 @@
     "max_intensity": 1,
     "max_duration": "2 seconds",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_xedra_dreamer_accelerated_time_0" ]
   },
   {
     "type": "effect_type",
@@ -3724,7 +3667,7 @@
     "rating": "good",
     "max_intensity": 1,
     "show_in_info": true,
-    "enchantments": [ { "hit_you_effect": [ { "id": "xedra_eater_erosion_attack" } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_xedra_eater_erosion_0" ]
   },
   {
     "type": "effect_type",
@@ -3762,7 +3705,7 @@
     "max_intensity": 1,
     "show_in_info": true,
     "enchantments": [
-      { "hit_you_effect": [ { "id": "xedra_chronomancer_destabilizing_strikes_attack" } ] },
+      "INLINE_ENCH_effect_xedra_chronomancer_destabilizing_strikes_0",
       {
         "values": [
           {
@@ -3852,7 +3795,7 @@
     "desc": [ "Every few seconds every change to your person reverts." ],
     "rating": "good",
     "flags": [ "CANNOT_CHANGE_TEMPERATURE", "FREEZE_EFFECTS", "CANNOT_GAIN_EFFECTS" ],
-    "enchantments": [ { "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_xedra_time_loop_0" ],
     "show_in_info": true
   },
   {
@@ -3871,7 +3814,7 @@
     "rating": "good",
     "max_intensity": 1,
     "show_in_info": true,
-    "enchantments": [ { "hit_you_effect": [ { "id": "xedra_monster_erosion_attack" } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_xedra_monster_erosion_0" ]
   },
   {
     "type": "effect_type",
@@ -4082,19 +4025,9 @@
     "desc": [ "" ],
     "base_mods": { "dodge_mod": [ 15 ] },
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.66 },
-          { "type": "stab", "multiply": -0.25 },
-          { "type": "cut", "multiply": -0.33 },
-          { "type": "bullet", "multiply": -0.85 },
-          { "type": "heat", "multiply": 3 }
-        ]
-      },
-      {
-        "values": [ { "value": "EVASION", "add": 0.7 }, { "value": "DODGE_CHANCE", "add": 15 }, { "value": "BONUS_DODGE", "add": 2 } ]
-      },
-      { "hit_me_effect": [ { "id": "VAMPIRE_ANATHEMA_REACT_TO_HIT", "hit_self": true } ] }
+      "INLINE_ENCH_effect_anathema_resilience_0",
+      "INLINE_ENCH_effect_anathema_resilience_1",
+      "INLINE_ENCH_effect_anathema_resilience_2"
     ]
   },
   {
@@ -4104,7 +4037,7 @@
     "//2": "This isn't a vampire power, just them taking you a little more seriously as you managed to injure them.",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 125 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_anathema_battle_started_0" ]
   },
   {
     "type": "effect_type",
@@ -4114,7 +4047,7 @@
     "desc": [ "The Anathema is much quicker now thanks to vampiric abilities." ],
     "show_in_info": true,
     "base_mods": { "hit_mod": [ 50 ], "dodge_mod": [ 20 ] },
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 468 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_anathema_final_form_0" ]
   },
   {
     "type": "effect_type",
@@ -4426,7 +4359,7 @@
     "//": "Hidden effect, used to make sure werewolves don't drink their items when Ghostwalking.",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "values": [ { "value": "EVASION", "add": 1 }, { "value": "PHASE_DISTANCE", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_xe_werewolf_walk_through_walls_0" ],
     "flags": [ "ETHEREAL", "INVISIBLE" ]
   },
   {
@@ -4520,6 +4453,6 @@
     "desc": [ { "str": "You feel strangely enervated." } ],
     "rating": "bad",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_withering_healing_down_0" ]
   }
 ]

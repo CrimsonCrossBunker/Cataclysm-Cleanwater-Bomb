@@ -9,9 +9,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "30 seconds", "spell_effects": [ { "id": "goblin_fruit_regeneration_spell" } ] } ] }
-      }
+      "INLINE_ENCH_effect_goblin_fruit_heal_0"
     ]
   },
   {
@@ -45,7 +43,7 @@
     "remove_message": "Your muscles twitch as the goblin fruit's magic fades.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "ATTACK_SPEED", "add": -15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_speed_0" ]
   },
   {
     "id": "effect_goblin_fruit_thorns",
@@ -82,7 +80,7 @@
     "remove_message": "You shiver as a cool breeze hits your skin.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_keep_warm_0" ]
   },
   {
     "id": "effect_goblin_fruit_purge_blood",
@@ -119,7 +117,7 @@
       { "limb_score": "crawl", "modifier": 1.5 }
     ],
     "base_mods": { "dodge_mod": [ 1 ] },
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_dodge_0" ],
     "flags": [ "DOWNED_RECOVERY", "EFFECT_LIMB_SCORE_MOD" ]
   },
   {
@@ -141,7 +139,7 @@
     "apply_message": "Your footsteps feel quieter.",
     "remove_message": "Your steps are normal once again.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -0.67 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_shadow_0" ]
   },
   {
     "type": "effect_type",
@@ -165,7 +163,7 @@
     "rating": "good",
     "show_intensity": false,
     "limb_score_mods": [ { "limb_score": "vision", "modifier": 1.25 } ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_perception_0" ],
     "flags": [ "GLARE_RESIST", "EFFECT_LIMB_SCORE_MOD" ]
   },
   {
@@ -244,7 +242,7 @@
     "apply_message": "You find it hard to notice your own presence.",
     "remove_message": "You become noticeable again.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_stealth_0" ]
   },
   {
     "type": "effect_type",
@@ -255,23 +253,7 @@
     "remove_message": "Your level of violence returns to normal.",
     "rating": "good",
     "enchantments": [
-      {
-        "skills": [
-          { "value": "bashing", "add": 2 },
-          { "value": "cutting", "add": 2 },
-          { "value": "melee", "add": 2 },
-          { "value": "throw", "add": 2 },
-          { "value": "dodge", "add": 2 },
-          { "value": "stabbing", "add": 2 },
-          { "value": "unarmed", "add": 2 },
-          { "value": "archery", "add": 2 },
-          { "value": "gun", "add": 2 },
-          { "value": "launcher", "add": 2 },
-          { "value": "rifle", "add": 2 },
-          { "value": "shotgun", "add": 2 },
-          { "value": "smg", "add": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_goblin_fruit_combat_skill_boost_0"
     ]
   },
   {
@@ -283,17 +265,7 @@
     "remove_message": "Your talent to imitate fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "skills": [
-          { "value": "mechanics", "add": 2 },
-          { "value": "tailor", "add": 2 },
-          { "value": "computer", "add": 2 },
-          { "value": "cooking", "add": 2 },
-          { "value": "electronics", "add": 2 },
-          { "value": "fabrication", "add": 2 },
-          { "value": "chemistry", "add": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_goblin_fruit_craft_skill_boost_0"
     ]
   },
   {
@@ -305,7 +277,7 @@
     "remove_message": "You stumble a little as your immovability ceases.",
     "rating": "good",
     "removes_effects": [ "stunned", "dazed", "downed" ],
-    "enchantments": [ { "values": [ { "value": "KNOCKBACK_RESIST", "add": 100 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_immovable_0" ]
   },
   {
     "type": "effect_type",
@@ -319,13 +291,7 @@
     "flags": [ "UNCANNY_DODGE" ],
     "removes_effects": [ "grabbed" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "DODGE_CHANCE", "add": 100 },
-          { "value": "RANGE_DODGE", "add": 100 },
-          { "value": "BONUS_DODGE", "add": 15 }
-        ]
-      }
+      "INLINE_ENCH_effect_goblin_fruit_dodge_instant_0"
     ]
   },
   {
@@ -336,7 +302,7 @@
     "apply_message": "Everything feels a little easier to understand now.",
     "remove_message": "Your mind returns to its regular level of understanding.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "LEARNING_FOCUS", "add": 20 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_focus_boost_0" ]
   },
   {
     "type": "effect_type",
@@ -356,9 +322,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "1 seconds", "spell_effects": [ { "id": "goblin_fruit_teleport_spell" } ] } ] }
-      }
+      "INLINE_ENCH_effect_goblin_fruit_teleport_0"
     ]
   },
   {
@@ -409,7 +373,7 @@
     "desc": [ "You find it easier to carry heavy charges." ],
     "apply_message": "You feel lighter, as does everything you're carrying.",
     "remove_message": "The weight of your belongings return to normal.",
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "add": 30000 } ] } ],
+    "enchantments": [ "INLINE_ENCH_goblin_fruit_carry_boost_0" ],
     "rating": "good"
   },
   {
@@ -454,7 +418,7 @@
     "rating": "mixed",
     "show_in_info": true,
     "base_mods": { "speed_mod": [ -10 ] },
-    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "add": -10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_goblin_fruit_slowing_armor_0" ]
   },
   {
     "type": "effect_type",
@@ -466,13 +430,7 @@
     "rating": "good",
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SOCIAL_LIE", "add": 15 },
-          { "value": "SOCIAL_PERSUADE", "add": 15 },
-          { "value": "SOCIAL_INTIMIDATE", "add": 15 }
-        ]
-      }
+      "INLINE_ENCH_effect_goblin_fruit_social_boost_0"
     ]
   },
   {
@@ -496,8 +454,8 @@
     "rating": "good",
     "show_in_info": true,
     "enchantments": [
-      { "incoming_damage_mod": [ { "type": "cold", "multiply": -0.33 } ] },
-      { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 30 } ] }
+      "INLINE_ENCH_effect_goblin_fruit_cold_resist_0",
+      "INLINE_ENCH_effect_goblin_fruit_cold_resist_1"
     ]
   },
   {
