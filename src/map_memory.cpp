@@ -6,6 +6,7 @@
 #include <limits>
 #include <memory>
 #include <ostream>
+#include <set>
 #include <tuple>
 #include <utility>
 
@@ -100,6 +101,7 @@ void mm_submap::set_tile( const point_sm_ms &p, const memorized_tile &value )
         tiles.resize( SEEX * SEEY, default_tile );
     }
     tiles[p.y() * SEEX + p.x()] = value;
+    dirty = true;
 }
 
 mm_region::mm_region() : submaps( nullptr ) {}
@@ -329,7 +331,8 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
         inclusive_rectangle<point_abs_sm> rect(
             point_abs_sm( cache_pos.xy() ),
             point_abs_sm( cache_pos.xy() + cache_size ) );
-        if( rect.contains( sm_p1.xy() ) && rect.contains( sm_p2.xy() ) ) {
+        if( rect.contains( sm_p1.xy() ) && rect.contains( sm_p2.xy() ) &&
+            cache_size.x <= 2 * sm_size.x() && cache_size.y <= 2 * sm_size.y() ) {
             return false;
         }
     }
@@ -360,6 +363,7 @@ bool map_memory::prepare_region( const tripoint_abs_ms &p1, const tripoint_abs_m
     cached = std::move( prepared );
     cache_pos = sm_pos;
     cache_size = sm_size.raw();
+    prune_clean_regions();
     return true;
 }
 
@@ -465,6 +469,7 @@ shared_ptr_fast<mm_submap> map_memory::load_submap( const tripoint_abs_sm &sm_po
         for( size_t x = 0; x < MM_REG_SIZE; x++ ) {
             const tripoint_abs_sm pos( mmr_to_sm_copy( p.reg ) + tripoint( x, y, 0 ) );
             shared_ptr_fast<mm_submap> &sm = mmr.submaps[x][y];
+            sm->mark_clean();
             if( pos == sm_pos ) {
                 ret = sm;
             }
@@ -601,6 +606,9 @@ bool map_memory::save( const tripoint_abs_ms &pos )
                 for( size_t x = 0; x < MM_REG_SIZE; x++ ) {
                     const tripoint_abs_sm p = regp_sm + tripoint( x, y, 0 );
                     shared_ptr_fast<mm_submap> &sm = reg.submaps[x][y];
+                    if( written ) {
+                        sm->mark_clean();
+                    }
                     submaps.insert( std::make_pair( p, sm ) );
                 }
             }
@@ -617,6 +625,25 @@ bool map_memory::save( const tripoint_abs_ms &pos )
 
     return result;
 }
+void map_memory::prune_clean_regions()
+{
+    // Keep whole regions: allocate/load/save rely on all their submaps existing.
+    // Cached shared owners pin the current view; unsaved writes pin old regions.
+    std::set<tripoint> retained;
+    for( const auto &entry : submaps ) {
+        if( entry.second->is_dirty() || entry.second.use_count() > 1 ) {
+            retained.insert( reg_coord_pair( entry.first ).reg );
+        }
+    }
+    for( auto it = submaps.begin(); it != submaps.end(); ) {
+        if( retained.count( reg_coord_pair( it->first ).reg ) == 0 ) {
+            it = submaps.erase( it );
+        } else {
+            ++it;
+        }
+    }
+}
+
 void map_memory::clear()
 {
     clear_cache();

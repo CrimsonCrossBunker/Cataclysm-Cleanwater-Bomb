@@ -154,6 +154,35 @@ TEST_CASE( "map_memory_disk_reads_preserve_regions_and_observe_later_saves",
     } );
 }
 
+TEST_CASE( "map_memory_releases_clean_regions_but_keeps_unsaved_tiles", "[map_memory][memory]" )
+{
+    with_map_memory_world( false, []() {
+        map_memory memory;
+        const tripoint_abs_ms origin( 0, 0, 0 );
+        memory.prepare_region( origin, origin );
+        memory.set_tile_symbol( origin, U'!' );
+        const std::size_t initial = memory.submap_count();
+        for( int step = 1; step <= 12; ++step ) {
+            const tripoint_abs_ms far( step * 1000, step * 1000, 0 );
+            memory.prepare_region( far, far );
+            CHECK( memory.submap_count() <= initial * 3 );
+        }
+        memory.prepare_region( origin, origin );
+        CHECK( memory.get_tile( origin ).symbol == U'!' );
+        REQUIRE( memory.save( origin ) );
+        const tripoint_abs_ms far( 12000, 12000, 0 );
+        memory.prepare_region( far, far );
+        CHECK( memory.submap_count() <= initial );
+        memory.prepare_region( origin, origin );
+        CHECK( memory.get_tile( origin ).symbol == U'!' );
+        memory.prepare_region( origin - point( 600, 600 ), origin + point( 600, 600 ) );
+        const std::size_t expanded = memory.submap_count();
+        memory.prepare_region( origin, origin );
+        CHECK( memory.submap_count() < expanded );
+        CHECK( memory.get_tile( origin ).symbol == U'!' );
+    } );
+}
+
 TEST_CASE( "guest_map_memory_is_private_to_the_selected_store",
            "[map_memory][save][multiplayer][regression]" )
 {
