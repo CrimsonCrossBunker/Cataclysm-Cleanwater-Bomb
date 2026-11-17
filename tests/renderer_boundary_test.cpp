@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <iterator>
 #include <map>
 #include <string>
 
@@ -214,6 +215,27 @@ TEST_CASE( "draw_cache_sprite_indices_follow_append_relocation_and_rebuild",
     add( cache[0][10], 0, false );
     add( cache[0][10], 1, true );
     verify( cache[0][10] );
+}
+
+TEST_CASE( "draw_cache_releases_old_viewport_storage", "[tiles][renderer_boundary][memory]" )
+{
+    draw_points_cache_t cache;
+    cache.prepare( -1, 1, -50, 100, 256 );
+    CHECK( cache[-1][-50].capacity() == 0 );
+    cache[0][-50].reserve( 256 );
+    const std::size_t large_capacity = cache[0][-50].capacity();
+    REQUIRE( large_capacity >= 256 );
+    cache.prepare( -1, 1, -50, 100, 256 );
+    CHECK( cache[0][-50].capacity() == large_capacity );
+    for( int pass = 0; pass < 20; ++pass ) {
+        cache.prepare( 0, 0, pass * 100, 10, 8 );
+        CHECK( std::distance( cache[0].begin(), cache[0].end() ) == 10 );
+        CHECK( cache[0][pass * 100].capacity() < large_capacity );
+        CHECK( cache[-1].begin() == cache[-1].end() );
+        CHECK( cache[1].begin() == cache[1].end() );
+        cache.prepare( -1, 1, -50, 100, 256 );
+        cache[0][-50].reserve( 256 );
+    }
 }
 
 TEST_CASE( "renderer_mixed_cache_keeps_worker_indices_and_preview_counts",

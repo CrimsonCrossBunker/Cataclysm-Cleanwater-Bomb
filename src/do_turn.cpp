@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <map>
 #include <memory>
@@ -1034,6 +1035,32 @@ void game::simulate_turn_prefix()
             } );
             if( MAPBUFFER.submap_count() > 2 * resident_capacity ) {
                 autosave();
+            }
+        }
+    }
+
+    // Reclaim saved, nonresident maps independently of autosave settings. No
+    // temporary simulation map is borrowed at this turn boundary.
+    if( !cata_mp::is_client_mode() && !u.is_dead_state() ) {
+        static auto retry_after = std::chrono::steady_clock::time_point::min();
+        const auto now = std::chrono::steady_clock::now();
+        if( now >= retry_after ) {
+            std::vector<std::reference_wrapper<const map>> resident;
+            std::size_t resident_capacity = 0;
+            multiplayer_session().visit_resident_maps( m, [&]( const map & terrain ) {
+                resident.emplace_back( terrain );
+                const std::size_t width = terrain.getmapsize() + 4;
+                resident_capacity += width * width * OVERMAP_LAYERS;
+            } );
+            if( MAPBUFFER.submap_count() > resident_capacity + 512 ) {
+                try {
+                    if( MAPBUFFER.trim( resident ) == 0 ) {
+                        retry_after = now + std::chrono::seconds( 1 );
+                    }
+                } catch( const std::exception &err ) {
+                    DebugLog( D_WARNING, D_GAME ) << "Map cache eviction deferred: " << err.what();
+                    retry_after = now + std::chrono::seconds( 30 );
+                }
             }
         }
     }

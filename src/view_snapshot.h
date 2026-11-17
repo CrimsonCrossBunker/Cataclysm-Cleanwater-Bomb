@@ -228,7 +228,7 @@ struct tile_render_info {
  *
  * The z dimension is a fixed array indexed by (zlevel + OVERMAP_DEPTH); the row
  * dimension is a contiguous vector offset by the first row touched. Both reuse
- * their buffers across frames (see soft_clear) so the per-move rebuild no longer
+ * their buffers across frames (see prepare) so the per-move rebuild no longer
  * frees and reallocates std::map nodes / row vectors every step — that churn was
  * the dominant movement-time render cost. operator[] auto-grows like the old
  * std::map operator[], so an untouched [z][row] still reads back empty.
@@ -257,6 +257,20 @@ class draw_points_cache_t
                 void reserve( std::size_t count ) {
                     entries_.reserve( count );
                     sprite_indices_.reserve( count );
+                }
+                void prepare( std::size_t count ) {
+                    clear();
+                    if( entries_.capacity() > 2 * count ) {
+                        std::vector<tile_render_info>().swap( entries_ );
+                    }
+                    if( sprite_indices_.capacity() > 2 * count ) {
+                        std::vector<std::size_t>().swap( sprite_indices_ );
+                    }
+                    // Empty lower levels must not allocate a viewport-sized
+                    // buffer. emplace_back grows only rows that contain tiles.
+                }
+                std::size_t capacity() const {
+                    return entries_.capacity();
                 }
                 void clear() {
                     entries_.clear();
@@ -324,6 +338,17 @@ class draw_points_cache_t
                         r.clear(); // keep capacity
                     }
                 }
+                void prepare( int first_row, std::size_t count, std::size_t columns ) {
+                    if( rows.capacity() > 2 * count ) {
+                        std::vector<row_vec>().swap( rows );
+                    }
+                    rows.resize( count );
+                    row_base = first_row;
+                    initialized = true;
+                    for( row_vec &r : rows ) {
+                        r.prepare( columns );
+                    }
+                }
                 // Range-based for support for per-z-level row iteration.
                 auto begin()       {
                     return rows.begin();
@@ -343,6 +368,13 @@ class draw_points_cache_t
                 std::vector<row_vec> rows;
         };
 
+        void prepare( int min_z, int max_z, int first_row, int row_count, int columns ) {
+            for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                const bool visible = z >= min_z && z <= max_z;
+                levels[z + OVERMAP_DEPTH].prepare( first_row, visible ? row_count : 0,
+                                                  visible ? columns : 0 );
+            }
+        }
         level_rows &operator[]( const int zlevel ) {
             return levels[zlevel + OVERMAP_DEPTH];
         }

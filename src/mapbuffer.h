@@ -49,6 +49,11 @@ class mapbuffer
         void save( bool delete_after_save = false,
                    const std::vector<std::reference_wrapper<const map>> &resident_maps = {} );
 
+        // Call between simulation phases with every live map supplied.
+        // Saves before releasing distant quads; retains a resident-map halo.
+        std::size_t trim( const std::vector<std::reference_wrapper<const map>> &resident_maps,
+                          std::size_t max_quads = 32 );
+
         /** Delete all buffered submaps. **/
         void clear();
 

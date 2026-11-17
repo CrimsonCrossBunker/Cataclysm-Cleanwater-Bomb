@@ -8,6 +8,7 @@
 #include <string>
 #include <system_error>
 #include <thread>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
@@ -214,6 +215,34 @@ TEST_CASE( "map_save_keeps_quads_resident_in_either_active_map", "[map_storage][
     CHECK( buffer.submap_count() == 8 );
     check_quad( buffer, outside_base, ter_t_soil );
     CHECK( buffer.submap_count() == 12 );
+}
+
+TEST_CASE( "map_trim_preserves_live_maps_and_bounds_each_batch", "[map_storage][memory]" )
+{
+    const bool compressed = GENERATE( false, true );
+    storage_fixture fixture;
+    mapbuffer buffer( fixture.context( "a", "default", compressed ) );
+    const residency_map primary( tripoint_abs_sm( 1, 1, 0 ) );
+    const residency_map remote( tripoint_abs_sm( 40, -40, 0 ) );
+    const tripoint_abs_sm edge( -2, 0, 1 );
+    const tripoint_abs_sm distant( -60, 60, 0 );
+    const tripoint_abs_sm another( -80, 80, 0 );
+    insert_quad( buffer, edge, ter_t_dirt );
+    insert_quad( buffer, remote.get_abs_sub(), ter_t_floor );
+    insert_quad( buffer, distant, ter_t_soil );
+    insert_quad( buffer, another, ter_t_soil );
+    submap *const pinned = buffer.lookup_submap( edge );
+    const std::vector<std::reference_wrapper<const map>> resident{ primary, remote };
+    CHECK( buffer.trim( {}, 1 ) == 0 );
+    CHECK( buffer.trim( resident, 0 ) == 0 );
+    CHECK( buffer.trim( resident, 1 ) == 4 );
+    CHECK( buffer.submap_count() == 12 );
+    CHECK( buffer.trim( resident, 1 ) == 4 );
+    CHECK( buffer.submap_count() == 8 );
+    CHECK( buffer.trim( resident, 1 ) == 0 );
+    CHECK( buffer.lookup_submap( edge ) == pinned );
+    check_quad( buffer, distant, ter_t_soil );
+    check_quad( buffer, another, ter_t_soil );
 }
 
 TEST_CASE( "overlapping_map_views_tick_shared_fields_and_items_once",
@@ -457,6 +486,9 @@ TEST_CASE( "failed_map_save_retains_owned_submaps_for_retry", "[map_storage][sav
         blocked << "not a directory";
         REQUIRE( blocked.good() );
     }
+    const residency_map remote( tripoint_abs_sm( 80, 80, 0 ) );
+    CHECK_THROWS_AS( buffer.trim( { std::cref( remote ) }, 1 ), std::runtime_error );
+    CHECK( buffer.lookup_submap( base ) == original );
     CHECK_THROWS_AS( buffer.save( true ), std::runtime_error );
     CHECK( buffer.lookup_submap( base ) == original );
     check_quad( buffer, base, ter_t_floor );

@@ -364,6 +364,62 @@ void mapbuffer::save( bool delete_after_save,
     }
 }
 
+std::size_t mapbuffer::trim(
+    const std::vector<std::reference_wrapper<const map>> &resident_maps,
+    const std::size_t max_quads )
+{
+    if( resident_maps.empty() || max_quads == 0 ) {
+        return 0;
+    }
+    std::set<tripoint_abs_omt> candidates;
+    for( const auto &entry : submaps ) {
+        const tripoint_abs_omt quad = project_to<coords::omt>( entry.first );
+        const tripoint_abs_sm base = project_to<coords::sm>( quad );
+        const bool retained = std::any_of( resident_maps.begin(), resident_maps.end(),
+        [&]( const map & resident ) {
+            const tripoint_abs_sm origin = resident.get_abs_sub();
+            const int width = resident.getmapsize();
+            // Test the whole quad, including odd map origins. Keep all z-levels
+            // and one quad of look-ahead to avoid immediate reloads on reversal.
+            return base.x() + 1 >= origin.x() - 2 && base.x() < origin.x() + width + 2 &&
+                   base.y() + 1 >= origin.y() - 2 && base.y() < origin.y() + width + 2;
+        } );
+        if( !retained ) {
+            candidates.insert( quad );
+            if( candidates.size() >= max_quads ) {
+                break;
+            }
+        }
+    }
+    if( candidates.empty() ) {
+        return 0;
+    }
+    scoped_prefetch_pause prefetch_pause( prefetcher_ );
+    on_out_of_scope invalidate_listings( [this]() {
+        zzip_listing_cache.clear();
+    } );
+    if( !assure_dir_exist( storage().directory() / "maps" ) ) {
+        throw std::runtime_error( "Cannot create map storage directory" );
+    }
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds( 8 );
+    std::size_t removed = 0;
+    for( const tripoint_abs_omt &quad : candidates ) {
+        const cata_path dirname = find_dirname( quad );
+        std::list<tripoint_abs_sm> pending;
+        save_quad( dirname, dirname / quad_file_name( quad ), quad, pending, true );
+        // A failed write throws before ownership changes. Earlier successful
+        // quads are already released, so a later failure does not pin the batch.
+        for( const tripoint_abs_sm &pos : pending ) {
+            remove_submap( pos );
+            ++removed;
+        }
+        if( std::chrono::steady_clock::now() >= deadline ) {
+            break;
+        }
+    }
+    return removed;
+}
+
 void mapbuffer::save_quad(
     const cata_path &dirname, const cata_path &filename, const tripoint_abs_omt &om_addr,
     std::list<tripoint_abs_sm> &submaps_to_delete, bool delete_after_save )

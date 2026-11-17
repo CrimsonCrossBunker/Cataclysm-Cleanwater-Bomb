@@ -825,12 +825,11 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         CATA_PROFILE_SCOPE_NAMED( "tiles.draw_cache_rebuild" );
         draw_cache_rebuild_guard cache_rebuild( draw_cache_state_.dirty );
         // overlay_strings and color_blocks are generated with draw_points and thus are cleared together
-        // Soft clear: keep the per-z/per-row buffers and each row's vector capacity
-        // so the per-move rebuild reuses last frame's buffers instead of freeing and
-        // reallocating every step. Freeing here was the dominant movement-time cost
-        // (profiled: std::map _Erase_tree + vector reserve/realloc churn). All access
-        // is via operator[], so leftover empty rows are indistinguishable from absent.
-        draw_points_cache_.tiles.soft_clear();
+        // Reuse stable view buffers, but release obsolete rows/levels and
+        // oversized capacities when the visible footprint shrinks.
+        draw_points_cache_.tiles.prepare( draw_min_z, center.z(), min_row,
+                                          std::max( 0, max_row - min_row ),
+                                          std::max( 0, max_col - min_col ) );
         overlay_strings_cache_.clear();
         color_blocks_cache_ = {};
 
@@ -869,10 +868,6 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // Generate new draw points
         creature_tracker &creatures = get_creature_tracker();
         for( int row = min_row; row < max_row; row ++ ) {
-            // Reserve columns on each row
-            for( int zlevel = center.z(); zlevel >= draw_min_z; zlevel -- ) {
-                draw_points_cache_.tiles[zlevel][row].reserve( std::max( 0, max_col - min_col ) );
-            }
             for( int col = min_col; col < max_col; col ++ ) {
                 const std::optional<point> temp = tile_to_player( { col, row } );
                 if( !temp.has_value() ) {

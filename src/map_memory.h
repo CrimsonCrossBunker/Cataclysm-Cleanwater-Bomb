@@ -3,6 +3,7 @@
 #define CATA_SRC_MAP_MEMORY_H
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -71,6 +72,12 @@ struct mm_submap {
         bool is_empty() const;
         // @returns true if mm_submap is valid, i.e. not returned from an uninitialized region.
         bool is_valid() const;
+        bool is_dirty() const {
+            return dirty;
+        }
+        void mark_clean() {
+            dirty = false;
+        }
 
         const memorized_tile &get_tile( const point_sm_ms &p ) const;
         void set_tile( const point_sm_ms &p, const memorized_tile &value );
@@ -83,6 +90,8 @@ struct mm_submap {
         std::vector<memorized_tile> tiles; // holds either 0 or SEEX*SEEY elements
         // NOLINTNEXTLINE(cata-serialize)
         bool valid = true;
+        // NOLINTNEXTLINE(cata-serialize)
+        bool dirty = false;
 };
 
 /**
@@ -120,6 +129,10 @@ class map_memory
 
     public:
         map_memory();
+
+        std::size_t submap_count() const {
+            return submaps.size();
+        }
 
         // A guest's memory uses its own uncompressed store. An empty directory
         // restores the normal character and dimension save path.
@@ -221,6 +234,7 @@ class map_memory
         //@}
 
         void clear_cache();
+        void prune_clean_regions();
 };
 
 #endif // CATA_SRC_MAP_MEMORY_H
