@@ -118,3 +118,5 @@ require("inherited_enchantments")
 require("attribute_scaling")
 
 require("shared_enchantment_values")
+
+require("environment_enchantments")

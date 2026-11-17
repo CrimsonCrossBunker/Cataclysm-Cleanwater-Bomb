@@ -122,10 +122,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_CHECK_IERDE_ON_NATURAL_EARTH_OR_UNDERGROUND" },
-        "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_IERDE_STRONG_EQUIPMENT_0"
     ]
   },
   {
@@ -380,26 +377,7 @@
     "changes_to": [ "IERDE_HEAL_FASTER_UNDERGROUND" ],
     "prereqs": [ "IERDE_CARDIO2", "IERDE_CARDIO3" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "math": [ "u_val('pos_z') <= -1" ] },
-            {
-              "and": [
-                { "u_is_on_terrain_with_flag": "DIGGABLE" },
-                { "not": { "u_is_on_terrain": "t_vitrified_sand" } },
-                { "not": { "u_is_on_terrain": "t_pit_corpsed" } },
-                { "not": { "u_is_on_terrain": "t_fungus" } },
-                { "not": { "u_is_on_terrain": "t_glassed_sand" } },
-                { "not": { "u_is_on_terrain": "t_rubber_mulch" } },
-                { "not": { "u_is_on_terrain": "t_swater_surf" } },
-                { "not": { "u_is_on_terrain": "t_woodchips" } }
-              ]
-            }
-          ]
-        },
-        "values": [ { "value": "REGEN_STAMINA", "multiply": 0.5 } ]
-      }
+      "INLINE_ENCH_IERDE_REGAIN_STAMINA_UNDERGROUND_0"
     ]
   },
   {
@@ -413,26 +391,7 @@
     "prereqs": [ "IERDE_CARDIO2", "IERDE_CARDIO3" ],
     "prereqs2": [ "IERDE_REGAIN_STAMINA_UNDERGROUND" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "math": [ "u_val('pos_z') <= -1" ] },
-            {
-              "and": [
-                { "u_is_on_terrain_with_flag": "DIGGABLE" },
-                { "not": { "u_is_on_terrain": "t_vitrified_sand" } },
-                { "not": { "u_is_on_terrain": "t_pit_corpsed" } },
-                { "not": { "u_is_on_terrain": "t_fungus" } },
-                { "not": { "u_is_on_terrain": "t_glassed_sand" } },
-                { "not": { "u_is_on_terrain": "t_rubber_mulch" } },
-                { "not": { "u_is_on_terrain": "t_swater_surf" } },
-                { "not": { "u_is_on_terrain": "t_woodchips" } }
-              ]
-            }
-          ]
-        },
-        "values": [ { "value": "REGEN_STAMINA", "multiply": 0.5 }, { "value": "REGEN_HP", "multiply": 0.33 } ]
-      }
+      "INLINE_ENCH_IERDE_HEAL_FASTER_UNDERGROUND_0"
     ]
   },
   {
@@ -677,10 +636,7 @@
     "threshreq": [ "THRESH_IERDE" ],
     "prereqs": [ "IERDE_FEEL_HALF_PAIN" ],
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_CHECK_IERDE_ON_NATURAL_EARTH_OR_UNDERGROUND" },
-        "values": [ { "value": "PAIN", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_IERDE_FEEL_NO_PAIN_0"
     ]
   },
   {

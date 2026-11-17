@@ -493,10 +493,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_HOMULLUS" ],
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_HOMULLUS_IN_CIVILIZATION_CHECKER_CONDITION" },
-        "values": [ { "value": "REGEN_MANA", "multiply": 0.25 } ]
-      }
+      "INLINE_ENCH_HOMULLUS_GAIN_BIONIC_POWER_AND_MANA_0"
     ]
   },
   {
@@ -587,10 +584,7 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_HOMULLUS_IN_CIVILIZATION_CHECKER_CONDITION" },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.15 } ]
-      }
+      "INLINE_ENCH_HOMULLUS_CRAFTING_BONUS_1_0"
     ]
   },
   {
@@ -606,16 +600,7 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_HOMULLUS_IN_CIVILIZATION_CHECKER_CONDITION" },
-        "skills": [
-          { "value": "electronics", "add": 1 },
-          { "value": "fabrication", "add": 1 },
-          { "value": "mechanics", "add": 1 },
-          { "value": "tailor", "add": 1 }
-        ],
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.25 } ]
-      }
+      "INLINE_ENCH_HOMULLUS_CRAFTING_BONUS_2_0"
     ]
   },
   {
@@ -632,16 +617,7 @@
     "threshreq": [ "THRESH_HOMULLUS" ],
     "//": "This should also reduce Construction times once there's some way to do so.",
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_HOMULLUS_IN_CIVILIZATION_CHECKER_CONDITION" },
-        "skills": [
-          { "value": "electronics", "add": 2 },
-          { "value": "fabrication", "add": 2 },
-          { "value": "mechanics", "add": 2 },
-          { "value": "tailor", "add": 2 }
-        ],
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.35 } ]
-      }
+      "INLINE_ENCH_HOMULLUS_CRAFTING_BONUS_3_0"
     ]
   },
   {

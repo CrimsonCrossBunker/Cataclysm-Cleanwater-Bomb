@@ -505,22 +505,10 @@
     "category": [ "ARVORE" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "is_season": "spring" },
-        "values": [ { "value": "SLEEPINESS", "multiply": -0.1 }, { "value": "SLEEPINESS_REGEN", "multiply": 0.1 } ]
-      },
-      {
-        "condition": { "is_season": "summer" },
-        "values": [ { "value": "SLEEPINESS", "multiply": -0.25 }, { "value": "SLEEPINESS_REGEN", "multiply": 0.25 } ]
-      },
-      {
-        "condition": { "is_season": "autumn" },
-        "values": [ { "value": "SLEEPINESS", "multiply": 0.1 }, { "value": "SLEEPINESS_REGEN", "multiply": -0.1 } ]
-      },
-      {
-        "condition": { "is_season": "winter" },
-        "values": [ { "value": "SLEEPINESS", "multiply": 0.25 }, { "value": "SLEEPINESS_REGEN", "multiply": -0.25 } ]
-      }
+      "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_0",
+      "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_1",
+      "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_2",
+      "INLINE_ENCH_ARVORE_MOOD_CHANGES_WITH_SEASONS_3"
     ]
   },
   {
