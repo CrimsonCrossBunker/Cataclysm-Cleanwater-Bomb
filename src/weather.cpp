@@ -529,7 +529,7 @@ static void apply_weather_to_player( map &terrain, const weather_type_id &w, Cha
 void handle_weather_effects( const weather_type_id &w )
 {
     map &here = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     if( session.has_regions() ) {
         const map_simulation_regions regions = session.simulation_regions( here );
         session.visit_resident_maps( here, [&]( map & terrain ) {
@@ -1115,7 +1115,8 @@ void weather_manager::on_game_start()
 void weather_manager::update_solar_location()
 {
     if( north_america::active() ) {
-        const auto solar_location = north_america::location( get_player_character().pos_abs().xy() );
+        const regional_climate::coordinates solar_location = north_america::location(
+                    get_player_character().pos_abs().xy() );
         calendar::set_location( solar_location.latitude, solar_location.longitude );
     } else if( g && g->north_america_world ) {
         calendar::set_location( get_option<float>( "LATITUDE" ), get_option<float>( "LONGITUDE" ) );
@@ -1613,7 +1614,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
             ( !here.is_outside( location ) || here.is_roofed( location ) ) ) {
             if( !indoor_reference_time || calendar::turn < *indoor_reference_time ||
                 calendar::turn - *indoor_reference_time >= 30_minutes ) {
-                const auto &generator = get_cur_weather_gen();
+                const weather_generator &generator = get_cur_weather_gen();
                 const tripoint_abs_ms origin = here.get_abs( player );
                 double mean_c = 0;
                 for( int hours = 2; hours < 24; hours += 4 ) {
@@ -1647,7 +1648,7 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
 units::temperature weather_manager::get_historical_temperature( const tripoint_abs_ms &location,
         time_point when )
 {
-    const auto dimension = g->get_dimension_prefix();
+    const dimension_id dimension = g->get_dimension_prefix();
     if( historical_weather_dimension != dimension ) {
         historical_weather.clear();
         historical_weather_dimension = dimension;
@@ -1664,7 +1665,7 @@ units::temperature weather_manager::get_historical_temperature( const tripoint_a
         found = historical_weather.try_emplace( cell ).first;
         found->second.normals = generator.climate_at( center );
     }
-    auto &history = found->second;
+    historical_weather_cell &history = found->second;
     const int sample_time = to_turn<int>( when );
     const auto existing = history.samples.find( sample_time );
     if( existing != history.samples.end() ) {
