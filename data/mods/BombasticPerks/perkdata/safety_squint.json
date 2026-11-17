@@ -36,11 +36,7 @@
     "environmental_protection": 0,
     "extend": { "flags": [ "ZERO_WEIGHT", "TRADER_AVOID", "PERSONAL", "INTEGRATED", "SEMITANGIBLE", "UNBREAKABLE", "OVERSIZE" ] },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_perk_safety_squint_reduced_vision", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_BombasticPerks_perk_safety_squint_integrated_goggles_0" }
     ]
   }
 ]
