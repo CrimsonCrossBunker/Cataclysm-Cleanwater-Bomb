@@ -1840,10 +1840,7 @@
     "player_display": false,
     "chargen_allow_npc": false,
     "enchantments": [
-      {
-        "condition": { "u_at_om_location": "FACTION_CAMP_ANY" },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.02 } ]
-      }
+      "INLINE_ENCH_XE_FACTION_CAMP_BROWNIE_BLESSING_0"
     ]
   }
 ]
