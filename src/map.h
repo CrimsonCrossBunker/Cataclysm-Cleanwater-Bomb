@@ -842,7 +842,7 @@ class map
         void clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles );
         void idle_vehicles( std::unordered_set<int64_t> *advanced,
                             const map_simulation_regions *regions );
-        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicles,
+        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
                          const std::unordered_set<int64_t> *assigned );
     public:
 
