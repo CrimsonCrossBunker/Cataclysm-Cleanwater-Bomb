@@ -73,7 +73,7 @@
     "remove_message": "You return to your normal speed.",
     "rating": "good",
     "max_duration": "2 minutes",
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": -0.7 }, { "value": "ATTACK_SPEED", "multiply": -0.7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_haste_0" ]
   },
   {
     "type": "effect_type",
