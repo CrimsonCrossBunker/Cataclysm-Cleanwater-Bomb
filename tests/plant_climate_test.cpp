@@ -4,6 +4,10 @@
 #include "plant_climate.h"
 #include "weather.h"
 
+static const itype_id itype_seed_corn( "seed_corn" );
+static const itype_id itype_seed_potato_raw( "seed_potato_raw" );
+static const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
+
 TEST_CASE( "crop_heat_units_account_for_cold_and_heat_stress", "[farming][weather]" )
 {
     const crop_climate_profile tomato{ 10, 26, 0, 38, 690, 510, 88, 0.68 };
@@ -32,8 +36,8 @@ TEST_CASE( "closed_windows_and_walls_retain_heat_longer", "[weather]" )
 
 TEST_CASE( "regional_field_calendar_tracks_pre_cataclysm_sowing", "[farming][weather]" )
 {
-    const field_crop spring{ itype_id( "seed_potato_raw" ), 116, 294 };
-    const field_crop winter{ itype_id( "seed_red_winter_wheat" ), 275, 200 };
+    const field_crop spring{ itype_seed_potato_raw, 116, 294 };
+    const field_crop winter{ itype_seed_red_winter_wheat, 275, 200 };
     const time_duration year = calendar::year_length();
     const time_point new_year = calendar::turn_zero - calendar::turn_zero_offset();
     const time_point may = new_year + year * ( 139.0 / 365 );
@@ -54,7 +58,7 @@ TEST_CASE( "regional_farms_select_distinct_local_mix", "[farming][north_america]
     REQUIRE( iowa );
     REQUIRE( maine );
     REQUIRE( sinaloa );
-    CHECK( iowa->seed == itype_id( "seed_corn" ) );
-    CHECK( maine->seed == itype_id( "seed_potato_raw" ) );
+    CHECK( iowa->seed == itype_seed_corn );
+    CHECK( maine->seed == itype_seed_potato_raw );
     CHECK( sinaloa->planting_day > sinaloa->harvest_day );
 }
