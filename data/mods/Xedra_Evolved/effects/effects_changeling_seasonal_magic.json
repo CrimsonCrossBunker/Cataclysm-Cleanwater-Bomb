@@ -105,52 +105,8 @@
     "remove_message": "The warmth fades away.",
     "max_duration": "12 hours",
     "enchantments": [
-      {
-        "condition": { "and": [ "u_is_outside", "u_is_avatar" ] },
-        "values": [
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          {
-            "value": "REGEN_HP",
-            "multiply": {
-              "math": [
-                "( 10 + u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SPRING') + (u_skill('gramarye') * 2) ) * (global_what_is_the_season == 3 ? 0.5 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "MENDING_MODIFIER",
-            "multiply": {
-              "math": [
-                "(3 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_SPRING') / 3) + u_skill('gramarye') ) * (global_what_is_the_season == 3 ? 0.5 : 1)"
-              ]
-            }
-          }
-        ],
-        "ench_effects": [ { "effect": "effect_xe_hidden_infection_recovery", "intensity": 1 } ]
-      },
-      {
-        "condition": { "and": [ "u_is_outside", "u_is_npc" ] },
-        "values": [
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          {
-            "value": "REGEN_HP",
-            "multiply": {
-              "math": [
-                "(10 + u_spring_magic_spell_count + (u_spring_magic_deduction_level * 2) ) * (global_what_is_the_season == 3 ? 0.5 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "MENDING_MODIFIER",
-            "multiply": {
-              "math": [
-                "(3 + (u_spring_magic_spell_count / 3) + u_spring_magic_deduction_level) * (global_what_is_the_season == 3 ? 0.5 : 1)"
-              ]
-            }
-          }
-        ],
-        "ench_effects": [ { "effect": "effect_xe_hidden_infection_recovery", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_changeling_spring_healing_increase_while_outside_0",
+      "INLINE_ENCH_effect_changeling_spring_healing_increase_while_outside_1"
     ]
   },
   {
@@ -260,21 +216,8 @@
     "show_in_info": true,
     "rating": "bad",
     "enchantments": [
-      {
-        "condition": "u_is_monster",
-        "melee_damage_bonus": [ { "type": "bash", "multiply": -0.2 }, { "type": "cut", "multiply": -0.2 }, { "type": "stab", "multiply": -0.2 } ]
-      },
-      {
-        "condition": "u_is_character",
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": {
-              "math": [ "max( (-1 + ( u_changeling_summer_glamour_tracker / -8 ) + (u_changeling_gramarye_tracker * -0.3) ), -6)" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_summer_absorb_strength_0",
+      "INLINE_ENCH_effect_changeling_summer_absorb_strength_1"
     ]
   },
   {
