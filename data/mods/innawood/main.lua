@@ -7,3 +7,5 @@ local definition = content.Blacklist {
 }
 definition:category("MAN_MADE")
 content.add(definition)
+
+require("requirements")
