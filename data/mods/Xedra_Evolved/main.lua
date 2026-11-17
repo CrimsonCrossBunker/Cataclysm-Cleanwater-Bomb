@@ -146,3 +146,5 @@ require("bionic_enchantments")
 require("item_enchantments")
 
 require("weather_types")
+
+require("blotted_sun")

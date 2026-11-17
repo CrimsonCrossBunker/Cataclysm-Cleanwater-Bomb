@@ -150,20 +150,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_BLOT_THE_SUN",
-    "effect": [ { "math": [ "blotted_sun = 1" ] }, "next_weather" ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_UNBLOT_THE_SUN",
-    "effect": [
-      { "math": [ "blotted_sun = 0" ] },
-      "next_weather",
-      { "u_message": "The darkness you summoned fades away, clearing the sky.", "type": "bad" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PARACLESIAN_SKILLS_UPDATE_START",
     "eoc_type": "EVENT",
     "required_event": "game_start",
