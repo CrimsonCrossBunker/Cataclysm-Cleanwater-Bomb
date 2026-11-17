@@ -10,10 +10,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "SPELLCASTING_AID" },
-        "ench_effects": [ { "effect": "effect_magiclysm_spellcasting_aid_item_wielded", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_SPELLCASTING_DEFAULT_TRAIT_0"
     ]
   },
   {
