@@ -1467,7 +1467,7 @@ class map
         // from a sealed adjacent rack to the operator's tile.
         int unload_furniture_item( item_location source, Character &who, item_location *placed = nullptr );
         // The same operation can place a selected portion at another reachable tile.
-        int unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+        int unload_furniture_item( const tripoint_bub_ms &destination, const item_location &source,
                                    item portion, Character &who, item_location *placed = nullptr );
         // Machinery already owns the operation at this tile. Only a root item
         // at pos may be settled; the operator need not be within walking reach.

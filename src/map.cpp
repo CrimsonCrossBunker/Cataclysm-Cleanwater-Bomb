@@ -7227,7 +7227,7 @@ int map::unload_furniture_item( item_location source, Character &who, item_locat
                                            placed ) : 0;
 }
 
-int map::unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+int map::unload_furniture_item( const tripoint_bub_ms &destination, const item_location &source,
                                 item portion, Character &who, item_location *placed )
 {
     if( !source || source.where() != item_location::type::map || source.has_parent() ||
