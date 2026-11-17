@@ -70,6 +70,7 @@ extern "C" {
 #include "recipe.h"
 #include "recipe_dictionary.h"
 #include "recipe_groups.h"
+#include "relic.h"
 #include "requirements.h"
 #include "scent_map.h"
 #include "skill.h"
@@ -201,6 +202,8 @@ struct item_definition_data {
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
     bool clear_use_actions = false;
+    bool has_tool = false;
+    std::vector<std::string> passive_enchantments;
     std::string use_handler;
     authored_text use_label;
     std::optional<authored_text> use_description;
@@ -849,6 +852,21 @@ struct item_definition_handle {
         value.read_time_turns = options.get_or<std::int64_t>( "read_time_turns", 0 );
         value.fun = options.get_or<std::int64_t>( "fun", 0 );
         definition->book = std::move( value );
+        return *this;
+    }
+
+    item_definition_handle &tool() {
+        require_building_handle( token, *definition, "item" );
+        definition->has_tool = true;
+        return *this;
+    }
+
+    item_definition_handle &passive_enchantment( const std::string &id ) {
+        require_building_handle( token, *definition, "item" );
+        if( id.empty() ) {
+            throw std::invalid_argument( "item passive enchantment id cannot be empty" );
+        }
+        definition->passive_enchantments.push_back( id );
         return *this;
     }
 
@@ -2475,6 +2493,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "comestible", &item_definition_handle::comestible,
         "vitamin", &item_definition_handle::vitamin,
         "book", &item_definition_handle::book,
+        "tool", &item_definition_handle::tool,
+        "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
         "on_consume", &item_definition_handle::on_consume );
@@ -5582,6 +5602,29 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const std::string &flag : definition.flags ) {
                         native->item_tags.insert( flag_id( flag ) );
                     }
+                    if( definition.has_tool && !native->tool ) {
+                        native->tool = cata::make_value<islot_tool>();
+                        native->tool->was_loaded = true;
+                    }
+                    for( const std::string &name : definition.passive_enchantments ) {
+                        const enchantment_id id( name );
+                        if( !id.is_valid() ) {
+                            throw std::runtime_error( "item '" + definition.id +
+                                                      "' references unknown passive enchantment '" + name + "'" );
+                        }
+                        if( !native->relic_data ) {
+                            native->relic_data = cata::make_value<relic>();
+                            // Fresh authored relics use the same activation cost as relic::load.
+                            native->relic_data->moves = 100;
+                            native->relic_data->was_loaded = true;
+                        }
+                        // Match relic::finalize, including anonymous passives stored on each item.
+                        if( id->item_instance ) {
+                            native->relic_data->add_passive_effect( enchant_cache::from_item_definition( id.obj() ) );
+                        } else {
+                            native->relic_data->add_passive_effect( id.obj() );
+                        }
+                    }
                     if( entry.definition->comestible ) {
                         const item_definition_data::comestible_data &source =
                             *entry.definition->comestible;
@@ -6873,6 +6916,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.clear_use_actions ? "clear_use_actions" : "inherit_use_actions" );
+                hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
+                for( const std::string &enchantment : v.passive_enchantments ) {
+                    hash_part( state, "passive_enchantment" );
+                    hash_part( state, enchantment );
+                }
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );
                 hash_text( v.use_label.translated );

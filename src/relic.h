@@ -29,6 +29,7 @@ struct relic_charge_template;
 namespace cata::lua_platform
 {
 class content_transaction;
+class items_content_transaction;
 }
 
 class relic_procgen_data
@@ -209,6 +210,7 @@ struct relic_charge_info {
 class relic
 {
     private:
+        friend class cata::lua_platform::items_content_transaction;
         std::vector<fake_spell> active_effects;
         std::vector<enchant_cache> proc_passive_effects;
         std::vector<enchantment> defined_passive_effects; // NOLINT(cata-serialize)

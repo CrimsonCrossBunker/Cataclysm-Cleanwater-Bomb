@@ -778,6 +778,15 @@ function ItemDefinition:on_use(handler_id, label, description) end
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
 
+---Ensure the native tool slot exists; an inherited tool keeps its existing settings.
+---@return ItemDefinition self
+function ItemDefinition:tool() end
+
+---Append a passive native enchantment, preserving item-instance behavior and inherited passives.
+---@param enchantment_id string Existing or same-transaction enchantment id.
+---@return ItemDefinition self
+function ItemDefinition:passive_enchantment(enchantment_id) end
+
 ---@param handler_id string
 ---@param label? string
 ---@return ItemDefinition self
@@ -12912,7 +12921,11 @@ local CcbPlatformGameplayApi = {}
 ---@class CcbCharacterTravelSnapshot
 ---@field has_path boolean Whether the native overmap travel path is non-empty.
 
+---@class CcbCharacterCombatSnapshot
+---@field artifact_resonance number Raw native cached artifact-resonance modifier; truncate toward zero for the Character's integer resonance.
+
 ---@class CcbCharacterSnapshot
+---@field combat CcbCharacterCombatSnapshot
 ---@field name string
 ---@field x integer
 ---@field y integer
