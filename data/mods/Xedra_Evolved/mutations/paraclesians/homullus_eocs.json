@@ -172,24 +172,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_HOMULLUS_CUT_OFF_FURTHER_HOMULLUS_MUTATIONS",
-    "eoc_type": "EVENT",
-    "required_event": "character_consumes_item",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "iv_mutagen", { "context_val": "itype" } ] },
-            { "compare_string": [ "mutagen", { "context_val": "itype" } ] }
-          ]
-        },
-        { "u_has_trait": "HOMULLUS_EXPANDED_MUTATIONS" }
-      ]
-    },
-    "effect": [ { "u_add_trait": "HOMULLUS_NO_DOLL_MUTATIONS" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_HOMULLUS_CUT_OFF_FURTHER_HOMULLUS_MUTATIONS_2",
     "recurrence": "10 m",
     "condition": { "u_has_trait": "HOMULLUS_NO_DOLL_MUTATIONS" },
