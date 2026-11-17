@@ -938,6 +938,12 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         inputs[key] = std::move( values );
     };
+    const auto collect_requested = [&]( const char *key, const std::vector<std::string> &ids,
+    const auto fallback, const auto &predicate ) {
+        if( !ids.empty() ) {
+            collect( key, ids, fallback, predicate );
+        }
+    };
     const bodypart_id whole_body = bodypart_str_id::NULL_ID();
     collect( "effects", requested.effects, false, [&]( const const_talker & actor,
     const std::string & id ) {
@@ -968,11 +974,11 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.has_flag( json_character_flag( id ) );
     } );
-    collect( "known_proficiencies", requested.known_proficiencies, false,
+    collect_requested( "known_proficiencies", requested.known_proficiencies, false,
     []( const const_talker &actor, const std::string &id ) {
         return actor.knows_proficiency( proficiency_id( id ) );
     } );
-    collect( "hit_points", requested.hit_points, 0,
+    collect_requested( "hit_points", requested.hit_points, 0,
     []( const const_talker &actor, const std::string &id ) {
         if( id == "ALL_MAJOR" || id == "ALL_MINOR" ) {
             const get_body_part_flags parts = id == "ALL_MAJOR" ? get_body_part_flags::only_main :
@@ -985,7 +991,7 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         return actor.get_cur_hp( id == "ALL" ? bodypart_str_id::NULL_ID() : bodypart_id( id ) );
     } );
-    collect( "max_hit_points", requested.max_hit_points, 0,
+    collect_requested( "max_hit_points", requested.max_hit_points, 0,
     []( const const_talker &actor, const std::string &id ) {
         return actor.get_hp_max( bodypart_id( id ) );
     } );
@@ -1002,23 +1008,34 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string &id ) {
         return actor.get_skill_level( skill_id( id ) );
     } );
-    collect( "species", requested.species, false, []( const const_talker &actor,
+    collect_requested( "species", requested.species, false, []( const const_talker &actor,
     const std::string &id ) {
         return actor.has_species( species_id( id ) );
     } );
-    collect( "wielded_skills", requested.wielded_skills, false, []( const const_talker &actor,
+    collect_requested( "wielded_skills", requested.wielded_skills, false, []( const const_talker &actor,
     const std::string &id ) {
         return actor.wielded_with_weapon_skill( skill_id( id ) );
     } );
-    collect( "wielded_categories", requested.wielded_categories, false, []( const const_talker &actor,
+    collect_requested( "wielded_categories", requested.wielded_categories, false, []( const const_talker &actor,
     const std::string &id ) {
         return actor.wielded_with_weapon_category( weapon_category_id( id ) );
     } );
-    collect( "wielded_ammunition", requested.wielded_ammunition, false, []( const const_talker &actor,
+    collect_requested( "wielded_ammunition", requested.wielded_ammunition, false, []( const const_talker &actor,
     const std::string &id ) {
         return actor.wielded_with_item_ammotype( ammotype( id ) );
     } );
-    collect( "encumbrance", requested.encumbrance, 0, []( const const_talker &actor,
+    collect_requested( "active_traits", requested.active_traits, false, []( const const_talker &actor,
+    const std::string &id ) {
+        const Character *character = actor.get_const_character();
+        return character && character->has_active_mutation( trait_id( id ) );
+    } );
+    collect_requested( "wielded_damage", requested.wielded_damage, 0, []( const const_talker &actor,
+    const std::string &id ) {
+        const Character *character = actor.get_const_character();
+        const item_location weapon = character ? character->get_wielded_item() : item_location();
+        return weapon ? weapon->damage_melee( damage_type_id( id ) ) : 0;
+    } );
+    collect_requested( "encumbrance", requested.encumbrance, 0, []( const const_talker &actor,
     const std::string &id ) {
         bodypart_id part( id );
         return actor.encumbrance_at( part );
@@ -1077,6 +1094,19 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
             body_part_effects[id] = std::move( values );
         }
         inputs["body_part_effects"] = std::move( body_part_effects );
+    }
+    if( !requested.body_part_armor.empty() ) {
+        sol::table parts = owner.lua->create_table();
+        for( const auto &[part, types] : requested.body_part_armor ) {
+            sol::table values = owner.lua->create_table();
+            bodypart_id body_part( part );
+            for( const std::string &id : types ) {
+                damage_type_id damage( id );
+                values[id] = speaker ? speaker->armor_at( damage, body_part ) : 0.0;
+            }
+            parts[part] = std::move( values );
+        }
+        inputs["body_part_armor"] = std::move( parts );
     }
     if( !requested.body_part_effect_intensities.empty() ) {
         sol::table parts = owner.lua->create_table();
@@ -1146,6 +1176,9 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         inputs["calorie_history"] = std::move( values );
     }
     if( speaker ) {
+        if( requested.attack_speed ) {
+            inputs["attack_speed"] = speaker->attack_speed();
+        }
         if( requested.identity ) {
             const Character *character = speaker->get_const_character();
             inputs["identity"] = owner.lua->create_table_with(

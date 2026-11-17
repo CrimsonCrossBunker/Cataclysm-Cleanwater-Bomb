@@ -138,3 +138,5 @@ require("contextual_enchantments")
 require("power_enchantments")
 
 require("world_enchantments")
+
+require("blood_potency_enchantment")

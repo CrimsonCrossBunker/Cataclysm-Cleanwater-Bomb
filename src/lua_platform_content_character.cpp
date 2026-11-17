@@ -2549,7 +2549,9 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 ids( *activation, "species" ), ids( *activation, "wielded_skills" ),
                 ids( *activation, "wielded_categories" ), ids( *activation, "wielded_ammunition" ),
                 ids( *activation, "encumbrance" ), activation->get_or( "identity", false ),
-                activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}, {}, {}
+                activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}, {}, {},
+                ids( *activation, "active_traits" ), ids( *activation, "wielded_damage" ), {},
+                activation->get_or( "attack_speed", false )
             };
             if( const auto defaults = activation->get<sol::optional<sol::table>>( "global_variable_defaults" ) ) {
                 auto &inputs = *definition->load_character_inputs;
@@ -2615,14 +2617,16 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                             } );
                 }
             }
-            for( const char *field : { "body_part_effects", "body_part_effect_intensities" } ) {
+            for( const char *field : { "body_part_effects", "body_part_effect_intensities", "body_part_armor" } ) {
                 if( const auto parts = activation->get<sol::optional<sol::table>>( field ) ) {
                     auto &requests = std::string_view( field ) == "body_part_effects" ?
                                      definition->load_character_inputs->body_part_effects :
-                                     definition->load_character_inputs->body_part_effect_intensities;
+                                     std::string_view( field ) == "body_part_effect_intensities" ?
+                                     definition->load_character_inputs->body_part_effect_intensities :
+                                     definition->load_character_inputs->body_part_armor;
                     for( const auto &[part, raw] : *parts ) {
                         if( part.get_type() != sol::type::string || !raw.is<sol::table>() ) {
-                            throw std::runtime_error( std::string( field ) + " requires body part IDs and effect arrays" );
+                            throw std::runtime_error( std::string( field ) + " requires body part IDs and ID arrays" );
                         }
                         requests.emplace( part.as<std::string>(),
                                           read_enchantment_id_array( raw.as<sol::table>(), field ) );
@@ -4383,7 +4387,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills,
                                         &inputs.category_counts, &inputs.hit_points, &inputs.max_hit_points,
                                         &inputs.known_proficiencies, &inputs.species, &inputs.wielded_skills,
-                                        &inputs.wielded_categories, &inputs.wielded_ammunition, &inputs.encumbrance } ) {
+                                        &inputs.wielded_categories, &inputs.wielded_ammunition, &inputs.encumbrance,
+                                        &inputs.active_traits, &inputs.wielded_damage } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -4414,7 +4419,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                         require_valid_id( type, "enchantment monster type" );
                     }
                 }
-                for( const auto *requests : { &inputs.body_part_effects, &inputs.body_part_effect_intensities } ) {
+                for( const auto *requests : { &inputs.body_part_effects, &inputs.body_part_effect_intensities,
+                                             &inputs.body_part_armor } ) {
                     for( const auto &[part, effects] : *requests ) {
                         require_valid_id( part, "enchantment effect body part" );
                         if( check_engine_state && !staged_body_part( part ) &&
@@ -7712,6 +7718,13 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "hit_points", value.load_character_inputs->hit_points );
                     hash_ids( "max_hit_points", value.load_character_inputs->max_hit_points );
                     hash_ids( "known_proficiencies", value.load_character_inputs->known_proficiencies );
+                    hash_ids( "active_traits", value.load_character_inputs->active_traits );
+                    hash_ids( "wielded_damage", value.load_character_inputs->wielded_damage );
+                    hash_part( state, value.load_character_inputs->attack_speed ? "attack_speed" : "no_attack_speed" );
+                    hash_part( state, std::to_string( value.load_character_inputs->body_part_armor.size() ) );
+                    for( const auto &[part, types] : value.load_character_inputs->body_part_armor ) {
+                        hash_ids( part.c_str(), types );
+                    }
                     hash_part( state, std::to_string( value.load_character_inputs->global_variable_defaults.size() ) );
                     for( const auto &[key, fallback] : value.load_character_inputs->global_variable_defaults ) {
                         hash_part( state, key );

@@ -14,7 +14,7 @@
     "name": { "str": "Slice n' Dice" },
     "points": 0,
     "description": "You've become very skilled with cutting weapons of all sorts, and know how to use them better.",
-    "enchantments": [ { "condition": { "math": [ "u_melee_damage('cut') > 1" ] }, "melee_damage_bonus": [ { "type": "cut", "add": 5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_slice&dice_0" ],
     "category": [ "perk" ]
   },
   {
@@ -24,7 +24,7 @@
     "points": 0,
     "description": "You've become very skilled with blunt instruments of all sorts, and know how to use them better.",
     "enchantments": [
-      { "condition": { "math": [ "u_melee_damage('bash') > 1" ] }, "melee_damage_bonus": [ { "type": "bash", "add": 5 } ] }
+      "INLINE_ENCH_perk_bash&mash_0"
     ],
     "category": [ "perk" ]
   },
@@ -35,7 +35,7 @@
     "points": 0,
     "description": "You're very in tune with the ways of stabbing somebody.",
     "enchantments": [
-      { "condition": { "math": [ "u_melee_damage('stab') > 1" ] }, "melee_damage_bonus": [ { "type": "stab", "add": 5 } ] }
+      "INLINE_ENCH_perk_knifey_0"
     ],
     "category": [ "perk" ]
   },
