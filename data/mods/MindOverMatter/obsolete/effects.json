@@ -9,18 +9,7 @@
     "remove_message": "For just a moment, you feel your blood rushing through your veins.",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "BLEEDING_RATE",
-            "multiply": { "math": [ "( ( u_spell_level('vita_slow_bleeding') * -0.03 ) + -0.33 ) * psionic_power_modifiers()" ] }
-          },
-          {
-            "value": "BLEED_STOP_BONUS",
-            "multiply": { "math": [ "( ( u_spell_level('vita_slow_bleeding') * 0.05 ) + 0.15 ) * psionic_power_modifiers()" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vitakin_slow_bleeding_01_0"
     ]
   },
   {
@@ -32,14 +21,7 @@
     "remove_message": "For just a moment, you feel your blood rushing through your veins.",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "BLEED_STOP_BONUS",
-            "multiply": { "math": [ "( ( u_spell_level('vita_slow_bleeding') * 0.05 ) + 0.15 ) * psionic_power_modifiers()" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vitakin_slow_bleeding_02_0"
     ]
   },
   {
@@ -52,14 +34,7 @@
     "max_duration": "7 days",
     "blocks_effects": [ "bleed" ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "BLEED_STOP_BONUS",
-            "multiply": { "math": [ "( ( u_spell_level('vita_slow_bleeding') * 0.05 ) + 0.15 ) * psionic_power_modifiers()" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vitakin_slow_bleeding_03_0"
     ]
   }
 ]
