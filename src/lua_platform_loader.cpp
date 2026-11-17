@@ -65,6 +65,7 @@ struct runtime_state {
     std::string id;
     fs::path root;
     fs::path entry;
+    mod_source_type type = mod_source_type::mod;
     std::unique_ptr<sol::state> lua;
     std::shared_ptr<runtime> platform;
     std::shared_ptr<const std::set<std::string>> selected_mod_ids;
@@ -125,9 +126,18 @@ std::optional<fs::path> resolve_local_module( const fs::path &root,
 
 mod_source resolve_source( const mod_source &source )
 {
-    if( source.id.empty() || source.id.size() > 256 ||
-        source.id.find( '#' ) != std::string::npos ||
-        source.id.find( '\0' ) != std::string::npos ) {
+    const auto valid_mod_id = []( const std::string_view id ) {
+        return !id.empty() && id.size() <= 256 &&
+               id.find( '#' ) == std::string_view::npos &&
+               id.find( '\0' ) == std::string_view::npos;
+    };
+    const std::string_view id = source.id;
+    const std::size_t separator = id.find( '#' );
+    const bool valid_id = source.type == mod_source_type::interaction_content ?
+                          separator != std::string_view::npos && valid_mod_id( id.substr( 0, separator ) ) &&
+                          valid_mod_id( id.substr( separator + 1 ) ) :
+                          valid_mod_id( id );
+    if( !valid_id ) {
         throw std::runtime_error( "Invalid Lua-first Mod id '" + source.id + "'" );
     }
 
@@ -150,7 +160,7 @@ mod_source resolve_source( const mod_source &source )
         throw std::runtime_error( "Lua-first Mod entry for '" + source.id +
                                   "' is not a regular file" );
     }
-    return { source.id, root, entry };
+    return { source.id, root, entry, source.type };
 }
 
 template<typename T>
@@ -473,15 +483,10 @@ file_execution_result execute_file( sol::state &lua, const fs::path &path,
     return snapshot;
 }
 
-enum class entry_api : int {
-    mod,
-    core_content
-};
-
 void initialize_state( sol::state &lua, const fs::path &requested_root,
                        const std::shared_ptr<runtime> &platform = nullptr,
                        const std::shared_ptr<const std::set<std::string>> &selected_mod_ids = nullptr,
-                       const entry_api api = entry_api::mod )
+                       const mod_source_type type = mod_source_type::mod )
 {
     // Mods are trusted executable code. State ownership is not a sandbox.
     lua.open_libraries();
@@ -497,7 +502,7 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
     ccb["platform_version"] = platform_version;
     install_mod_definition( ccb );
     if( platform ) {
-        if( api == entry_api::core_content ) {
+        if( type != mod_source_type::mod ) {
             platform->content.install_lua_api( lua, ccb, platform );
         } else {
             install_runtime_api( platform, lua, ccb );
@@ -582,8 +587,7 @@ end
 }
 
 runtime_state load_source( const mod_source &source,
-                           const std::shared_ptr<const std::set<std::string>> &selected_mod_ids,
-                           const entry_api api = entry_api::mod )
+                           const std::shared_ptr<const std::set<std::string>> &selected_mod_ids )
 {
     const mod_source resolved = resolve_source( source );
     DebugLog( D_WARNING, D_MAIN )
@@ -594,11 +598,13 @@ runtime_state load_source( const mod_source &source,
     result.id = resolved.id;
     result.root = resolved.root;
     result.entry = resolved.entry;
+    result.type = resolved.type;
     result.selected_mod_ids = selected_mod_ids;
     result.lua = std::make_unique<sol::state>();
     result.platform = make_runtime( resolved.id, generation_counter + 1,
                                     *result.lua, resolved.root );
-    initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids, api );
+    initialize_state( *result.lua, resolved.root, result.platform, result.selected_mod_ids,
+                      result.type );
     execute_file( *result.lua, resolved.entry, "Lua-first Mod '" + resolved.id + "' entry" );
     return result;
 }
@@ -613,8 +619,8 @@ void load_core_content( const fs::path &root )
     }
 
     const auto no_world_mods = std::make_shared<const std::set<std::string>>();
-    const runtime_state core = load_source( { "core", root, entry }, no_world_mods,
-                                            entry_api::core_content );
+    const runtime_state core = load_source( { "core", root, entry, mod_source_type::core_content },
+                                            no_world_mods );
     std::string error;
     if( !validate_runtime( core.platform, true, error ) ||
         !apply_runtime_content( core.platform, error ) ) {
@@ -686,7 +692,9 @@ bool prepare_mods( const std::vector<mod_source> &sources, std::string &error,
             if( !seen_ids.insert( source.id ).second ) {
                 throw std::runtime_error( "Duplicate Lua-first Mod id '" + source.id + "'" );
             }
-            all_ids.insert( source.id );
+            if( source.type == mod_source_type::mod ) {
+                all_ids.insert( source.id );
+            }
         }
         const auto selected = std::make_shared<const std::set<std::string>>( std::move( all_ids ) );
         for( const mod_source &source : sources ) {
@@ -795,7 +803,9 @@ void commit_prepared_mods()
     std::vector<std::shared_ptr<runtime>> active;
     active.reserve( active_states.size() );
     for( const runtime_state &state : active_states ) {
-        active.push_back( state.platform );
+        if( state.type == mod_source_type::mod ) {
+            active.push_back( state.platform );
+        }
     }
     set_active_runtimes( active );
     ++generation_counter;
@@ -834,10 +844,11 @@ std::vector<std::string> loaded_mod_ids()
 {
     std::vector<std::string> result;
     result.reserve( active_states.size() );
-    std::transform( active_states.begin(), active_states.end(), std::back_inserter( result ),
-    []( const runtime_state & state ) {
-        return state.id;
-    } );
+    for( const runtime_state &state : active_states ) {
+        if( state.type == mod_source_type::mod ) {
+            result.push_back( state.id );
+        }
+    }
     return result;
 }
 
@@ -884,7 +895,7 @@ bool reload_active_mods( std::string &error )
         }
         active_fingerprint << state.id.size() << ':' << state.id << ':'
                            << runtime_fingerprint( state.platform ) << ';';
-        sources.push_back( { state.id, state.root, state.entry } );
+        sources.push_back( { state.id, state.root, state.entry, state.type } );
     }
 
     // Candidate entry scripts and replacement lifecycle callbacks can enter
@@ -906,7 +917,9 @@ bool reload_active_mods( std::string &error )
     replacement.reserve( prepared_states.size() );
     for( const runtime_state &state : prepared_states ) {
         seal_runtime_content( state.platform );
-        replacement.push_back( state.platform );
+        if( state.type == mod_source_type::mod ) {
+            replacement.push_back( state.platform );
+        }
     }
     hot_swap_active_runtimes( replacement );
     active_states = std::move( prepared_states );
@@ -1010,7 +1023,7 @@ bool execute_console( const std::string &mod_id, const std::string &source,
     }
     const auto found = std::find_if( active_states.begin(), active_states.end(),
     [&mod_id]( const runtime_state & state ) {
-        return state.id == mod_id;
+        return state.type == mod_source_type::mod && state.id == mod_id;
     } );
     if( found == active_states.end() ) {
         error = "No active Lua Mod named '" + mod_id + "'";

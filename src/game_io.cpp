@@ -115,12 +115,13 @@ static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
     const std::vector<mod_id> &mods )
 {
     std::vector<cata::lua_platform::mod_source> result;
+    std::vector<cata::lua_platform::mod_source> interactions;
     std::set<mod_id> seen;
-    for( const mod_id &mod_id : mods ) {
-        if( !seen.insert( mod_id ).second || !mod_id.is_valid() ) {
+    for( const mod_id &id : mods ) {
+        if( !seen.insert( id ).second || !id.is_valid() ) {
             continue;
         }
-        const MOD_INFORMATION &mod = *mod_id;
+        const MOD_INFORMATION &mod = *id;
         if( mod.lua_platform_version == 0 ) {
             continue;
         }
@@ -128,14 +129,39 @@ static std::vector<cata::lua_platform::mod_source> lua_platform_sources(
             throw std::runtime_error( "Lua-first Mod '" + mod.ident.str() +
                                       "' is unavailable: " + mod.lua_platform_error );
         }
-        if( mod.lua_platform_entry.empty() ) {
+        if( !mod.lua_platform_entry.empty() ) {
+            result.push_back( {
+                mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
+                mod.lua_platform_entry.get_unrelative_path()
+            } );
+        }
+
+        // Like JSON interaction data, visit each owner's selected companions
+        // in canonical ID order. Lua interaction content follows all base entries.
+        const cata_path root = mod.path / "mod_interactions";
+        if( !dir_exist( root.get_unrelative_path() ) ) {
             continue;
         }
-        result.push_back( {
-            mod.ident.str(), mod.mod_root_path.get_unrelative_path(),
-            mod.lua_platform_entry.get_unrelative_path()
-        } );
+        std::multimap<mod_id, cata_path> entries;
+        for( const cata_path &folder : get_directories( root, false ) ) {
+            const mod_id companion = canonical_mod_id( mod_id( folder.get_unrelative_path()
+                                     .filename().string() ) );
+            const cata_path entry = folder / "main.lua";
+            if( companion.is_valid() &&
+                std::find( mods.begin(), mods.end(), companion ) != mods.end() &&
+                file_exist( entry.get_unrelative_path() ) ) {
+                entries.emplace( companion, entry );
+            }
+        }
+        for( const auto &[companion, entry] : entries ) {
+            interactions.push_back( {
+                mod.ident.str() + "#" + companion.str(), mod.mod_root_path.get_unrelative_path(),
+                entry.get_unrelative_path(), cata::lua_platform::mod_source_type::interaction_content
+            } );
+        }
     }
+    result.insert( result.end(), std::make_move_iterator( interactions.begin() ),
+                   std::make_move_iterator( interactions.end() ) );
     return result;
 }
 

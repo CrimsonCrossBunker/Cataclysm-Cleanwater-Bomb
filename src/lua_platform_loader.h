@@ -55,11 +55,18 @@ struct mod_definition {
     bool core_set = false;
 };
 
-/** A resolved Platform source.  Paths must already be confined to root. */
+enum class mod_source_type : int {
+    mod,
+    core_content,
+    interaction_content
+};
+
+/** A Platform source. Paths must already be confined to root. */
 struct mod_source {
     std::string id;
     std::filesystem::path root;
     std::filesystem::path entry;
+    mod_source_type type = mod_source_type::mod;
 };
 
 /** Apply optional root/main.lua static definitions before a world is selected.
@@ -78,6 +85,7 @@ bool read_mod_definition( const std::filesystem::path &root, mod_definition &res
 /**
  * Execute every entry in fresh per-Mod states.  Successful states remain candidates
  * until commit_prepared_mods() or discard_prepared_mods() is called.
+ * Place interaction content after ordinary Mod entries in native load order.
  * selected_mod_ids includes selected data-only Mods, which have no Lua source.
  */
 bool prepare_mods( const std::vector<mod_source> &sources, std::string &error,

@@ -13,6 +13,7 @@
 #include <options.h>
 #include <path_info.h>
 #include <speech.h>
+#include <text_snippets.h>
 #include <worldfactory.h>
 #include <filesystem>
 #include <string>
@@ -184,6 +185,72 @@ assert(not content.is_mod_active("inactive"))
     platform::commit_prepared_mods();
     platform::runtime_world_ready( true );
     REQUIRE( platform::reload_active_mods( error ) );
+}
+
+TEST_CASE( "lua_platform_static_interactions_keep_order_rollback_and_reload_identity",
+           "[lua][platform][loader][regression]" )
+{
+    namespace platform = cata::lua_platform;
+    platform::shutdown();
+    const restore_on_out_of_scope restore_snippets( SNIPPET );
+    const on_out_of_scope cleanup( []() {
+        platform::shutdown();
+    } );
+    const platform_lua_test_directory files;
+    files.write( "main.lua", R"lua(
+local content = require("ccb").content
+content.add(content.SnippetCategory { id = "lua_interaction_notes" }
+    :entry { id = "lua_interaction_base_note", text = "base" })
+)lua" );
+    files.write( "interaction.lua", R"lua(
+local content = require("ccb").content
+content.replace(content.SnippetCategory { id = "lua_missing_interaction_category" }:text("broken"))
+)lua" );
+
+    const std::vector<platform::mod_source> sources = {
+        { "interaction_owner", files.root, files.root / "main.lua" },
+        { "interaction_owner#data_companion", files.root, files.root / "interaction.lua",
+          platform::mod_source_type::interaction_content },
+    };
+    std::string error;
+    REQUIRE( platform::prepare_mods( sources, error, { "data_companion" } ) );
+    REQUIRE_FALSE( platform::apply_prepared_content( error ) );
+    CHECK( error.find( "lua_missing_interaction_category" ) != std::string::npos );
+    CHECK_FALSE( SNIPPET.has_category( "lua_interaction_notes" ) );
+
+    files.write( "interaction.lua", R"lua(
+local ccb = require("ccb")
+assert(ccb.runtime == nil)
+assert(ccb.content.is_mod_active("interaction_owner"))
+assert(ccb.content.is_mod_active("data_companion"))
+assert(not ccb.content.is_mod_active("interaction_owner#data_companion"))
+ccb.content.add(ccb.content.SnippetCategory { id = "lua_interaction_notes" }
+    :entry { id = "lua_interaction_late_note", text = "late" })
+)lua" );
+    REQUIRE( platform::prepare_mods( sources, error, { "data_companion" } ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+    platform::commit_prepared_mods();
+    const auto notes = SNIPPET.get_snippets_by_category( "lua_interaction_notes" );
+    REQUIRE( notes.size() == 2 );
+    CHECK( notes[0].first == snippet_id( "lua_interaction_base_note" ) );
+    CHECK( notes[1].first == snippet_id( "lua_interaction_late_note" ) );
+    CHECK( platform::loaded_mod_ids() == std::vector<std::string>{ "interaction_owner" } );
+    std::string output;
+    CHECK_FALSE( platform::execute_console( "interaction_owner#data_companion", "return 1",
+                                           output, error ) );
+    REQUIRE( platform::reload_active_mods( error ) );
+
+    files.write( "interaction.lua", R"lua(
+local content = require("ccb").content
+content.add(content.SnippetCategory { id = "lua_interaction_notes" }
+    :entry { id = "lua_interaction_late_note", text = "changed" })
+)lua" );
+    CHECK_FALSE( platform::reload_active_mods( error ) );
+    CHECK( error.find( "requires_full_data_reload" ) != std::string::npos );
+    const auto retained = SNIPPET.get_snippet_by_id( snippet_id( "lua_interaction_late_note" ) );
+    REQUIRE( retained );
+    CHECK( retained->translated() == "late" );
 }
 
 TEST_CASE( "lua_platform_appends_speech_in_mod_load_order",

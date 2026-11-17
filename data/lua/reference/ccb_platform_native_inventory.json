@@ -685,7 +685,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 481
+          "line": 486
         },
         "direct_roots": []
       },
@@ -695,7 +695,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 323
+          "line": 333
         },
         "direct_roots": [
           "ModDefinition"
@@ -1149,7 +1149,7 @@
         "callee": "platform_v1.install_mod_definition",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 498
+          "line": 503
         },
         "surfaces": [
           "platform_v1"
@@ -1160,7 +1160,7 @@
         "callee": "platform_v1.install_runtime_api",
         "source": {
           "path": "src/lua_platform_loader.cpp",
-          "line": 503
+          "line": 508
         },
         "surfaces": [
           "platform_v1"
@@ -13908,7 +13908,7 @@
       "registration_name": "_ModDefinitionNative",
       "registration": {
         "path": "src/lua_platform_loader.cpp",
-        "line": 325,
+        "line": 335,
         "installer": "platform_v1.install_mod_definition",
         "namespace": "ccb"
       },
@@ -13943,7 +13943,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 367
+                "line": 377
               }
             ]
           },
@@ -13958,7 +13958,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 383
+                "line": 393
               }
             ]
           },
@@ -13973,7 +13973,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 391
+                "line": 401
               }
             ]
           },
@@ -13988,7 +13988,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 359
+                "line": 369
               }
             ]
           },
@@ -14003,7 +14003,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 375
+                "line": 385
               }
             ]
           },
@@ -14018,7 +14018,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 351
+                "line": 361
               }
             ]
           },
@@ -14033,7 +14033,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 327
+                "line": 337
               }
             ]
           },
@@ -14048,7 +14048,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 406
+                "line": 416
               }
             ]
           },
@@ -14063,7 +14063,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 335
+                "line": 345
               }
             ]
           },
@@ -14180,7 +14180,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 343
+                "line": 353
               }
             ]
           },
@@ -14195,7 +14195,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_loader.cpp",
-                "line": 399
+                "line": 409
               }
             ]
           }
