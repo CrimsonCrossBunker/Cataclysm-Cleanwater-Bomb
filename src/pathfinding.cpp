@@ -72,10 +72,11 @@ struct reusable_queue : std::priority_queue<T, std::vector<T>, Compare> {
 struct pathfinder {
     using queue_type = reusable_queue<std::pair<int, tripoint_bub_ms>, pair_greater_cmp_first>;
     queue_type open;
+    int first_z = -OVERMAP_DEPTH;
     std::array< std::unique_ptr< path_data_layer >, OVERMAP_LAYERS > path_data;
 
     path_data_layer &get_layer( const int z ) {
-        std::unique_ptr< path_data_layer > &ptr = path_data[z + OVERMAP_DEPTH];
+        std::unique_ptr< path_data_layer > &ptr = path_data[z - first_z];
         if( ptr != nullptr ) {
             return *ptr;
         }
@@ -83,12 +84,13 @@ struct pathfinder {
         return *ptr;
     }
 
-    void reset( int minz, int maxz ) {
+    void reset( int minz, int maxz, int bottom ) {
+        first_z = bottom;
         for( int i = minz; i <= maxz; ++i ) {
-            std::unique_ptr< path_data_layer > &ptr = path_data[i + OVERMAP_DEPTH];
+            std::unique_ptr< path_data_layer > &ptr = path_data[i - first_z];
             if( ptr != nullptr ) {
                 // NOLINTNEXTLINE(readability-ambiguous-smartptr-reset-call) calls path_data_layer::reset
-                path_data[i + OVERMAP_DEPTH]->reset();
+                path_data[i - first_z]->reset();
             }
         }
         open.clear();
@@ -525,7 +527,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
 
     auto search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
     pathfinder &pf = search.get().ordinary;
-    pf.reset( min.z(), max.z() );
+    pf.reset( min.z(), max.z(), min_z() );
 
     pf.add_point( 0, 0, f, f );
 

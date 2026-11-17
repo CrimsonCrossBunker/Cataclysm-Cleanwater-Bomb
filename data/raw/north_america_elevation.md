@@ -1,13 +1,15 @@
 # North America elevations
 
 Atlas worlds use metres above sea level for weather, oxygen, land grade and
-the overmap position widget. The physical range is -16,384 to 16,384 metres.
-The atlas projection treats one map square as one horizontal metre. The
-existing integer z coordinate still identifies connected floors, roofs,
-basements, tunnels and subway layers, with each level four metres above or
-below local grade. Existing saves, classic worlds and dimension mods keep
-their current z layout. This does not add thousands of buildable floors or
-change the limits of the structural z grid.
+the overmap coordinates and survey display. The physical range is -16,384
+to 16,384 metres. The atlas projection treats one map square as one
+horizontal metre. Each structural level represents four metres from local
+grade. The overmap cursor and debug travel use that datum for height, and
+debug travel rounds to the nearest available level. The local map loads a
+bounded window of levels around destinations outside the original range.
+New strata use the ordinary rock and open-air terrain. Existing buildings,
+basements and utility tunnels use their original layouts. Classic worlds
+and mod dimensions use the original structural range.
 
 House floors use a level site at the centre of their overmap tile. City
 generation rejects larger building footprints with more than one floor of
@@ -21,7 +23,8 @@ The portable data asset uses a light continental elevation grid, with
 interpolation between samples. It models the broad slope and altitude of
 terrain and cannot reconstruct individual cuts, embankments or cliffs.
 Walking costs increase on climbs and steep descents. ASCII arrows on open
-ground point uphill. Tiles use slope shading with an unchanging tile grid.
+ground point uphill in eight directions. The 2D renderer shades slope
+with a light direction and a surface normal, using the existing tile grid.
 
 ## Terrain source and format
 

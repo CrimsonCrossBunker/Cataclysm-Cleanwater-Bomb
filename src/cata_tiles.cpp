@@ -714,7 +714,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), -OVERMAP_DEPTH );
+    const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), here.min_z() );
 
     // Map memory should be at least the size of the view range
     // so that new tiles can be memorized, and at least the size of the display
@@ -832,6 +832,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // (profiled: std::map _Erase_tree + vector reserve/realloc churn). All access
         // is via operator[], so leftover empty rows are indistinguishable from absent.
         draw_points_cache_.tiles.soft_clear();
+        draw_points_cache_.tiles.set_first_z( here.min_z() );
         overlay_strings_cache_.clear();
         color_blocks_cache_ = {};
 
@@ -1403,8 +1404,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_deferred_glide_critters.clear();
         m_collecting_glide_critters = !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
                                       !m_creature_attack_anims.empty();
-        int cur_zlevel = std::max( center.z() - get_map().observer_z_range( get_avatar() ),
-                                   -OVERMAP_DEPTH );
+        int cur_zlevel = std::max( center.z() - here.observer_z_range( get_avatar() ), here.min_z() );
         bool draw_aborted = false;
         const cata_shader::variant_pass *const tint_vp = get_shared_variant_pass();
         const bool shader_tint = tint_vp && tint_vp->tint_available();
@@ -1603,7 +1603,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             const tripoint_bub_ms &position = entry.tile->view.pos;
                             const point slope = draw_relief ?
                                                 north_america::surface_slope( here, position ) : point::zero;
-                            const int shade = std::clamp( slope.x + slope.y, -45, 45 );
+                            const int shade = north_america::surface_relief_shade( slope );
                             const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
                             if( cover == snow_cover::none && std::abs( shade ) < 7 ) {
                                 continue;
@@ -2375,7 +2375,7 @@ bool cata_tiles::begin_smooth_lighting( const visibility_variables &cache,
     using smooth_lighting::lighting_status;
     smooth_lighting_active = false;
     const std::string &mode = get_option<std::string>( "LIGHTING_MODE" );
-    if( mode == "classic" ) {
+    if( mode == "classic" || get_map().z_origin() != 0 ) {
         note_lighting_status( lighting_status::classic_by_option );
         return false;
     }
@@ -5092,7 +5092,7 @@ bool cata_tiles::draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int
     Character &you = get_player_character();
     const Creature *pcritter = nullptr;
     // Search for a creature above
-    while( pcritter == nullptr && scan_p.z() <= OVERMAP_HEIGHT &&
+    while( pcritter == nullptr && scan_p.z() <= here.max_z() &&
            !here.dont_draw_lower_floor( scan_p ) &&
            scan_p.z() - here.observer_position( you ).z() <= here.observer_z_range( you ) ) {
         pcritter = get_creature_tracker().creature_at( scan_p, true );

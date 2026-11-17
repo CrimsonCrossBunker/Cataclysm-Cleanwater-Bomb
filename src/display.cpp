@@ -24,6 +24,7 @@
 #include "map.h"
 #include "mood_face.h"
 #include "move_mode.h"
+#include "north_america_elevation.h"
 #include "mtype.h"
 #include "npc.h"
 #include "omdata.h"
@@ -1332,8 +1333,13 @@ std::string display::colorized_overmap_text( const avatar &u, const int width, c
     return overmap_text;
 }
 
-std::string display::overmap_position_text( const tripoint_abs_omt &loc )
+std::string display::overmap_position_text( const tripoint_abs_omt &loc,
+        std::optional<double> actual_altitude )
 {
+    if( !loc.is_invalid() && north_america::elevation_active() ) {
+        const double altitude = actual_altitude ? *actual_altitude : north_america::altitude_at( loc );
+        return string_format( _( "(%d, %d, %.1f m)" ), loc.x(), loc.y(), altitude );
+    }
     return loc.to_string();
 }
 

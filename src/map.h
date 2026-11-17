@@ -1986,11 +1986,24 @@ class map
         }
         bool inbounds( const tripoint_abs_omt &p ) const;
         bool inbounds( const point_bub_ms &p ) const {
-            return inbounds( tripoint_bub_ms( p, 0 ) );
+            return inbounds( tripoint_bub_ms( p, abs_sub.z() ) );
         }
 
-        bool inbounds_z( const int z ) const {
-            return z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT;
+        bool ensure_z_in_window( const tripoint_bub_ms &destination );
+        int min_z() const {
+            return vertical_origin - OVERMAP_DEPTH;
+        }
+        int max_z() const {
+            return vertical_origin + OVERMAP_HEIGHT;
+        }
+        int layer_for_z( int z ) const {
+            return z - min_z();
+        }
+        int z_origin() const {
+            return vertical_origin;
+        }
+        bool inbounds_z( int z ) const {
+            return z >= min_z() && z <= max_z();
         }
 
         /** Clips the coordinates of p to fit the map bounds */
@@ -2185,6 +2198,7 @@ class map
         int my_MAPSIZE;
         int my_HALF_MAPSIZE;
         bool zlevels;
+        int vertical_origin = 0;
 
         /**
          * Absolute coordinates of first submap (get_submap_at(0,0))
@@ -2477,7 +2491,7 @@ class map
 
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
-            std::unique_ptr < level_cache, level_cache_free > &cache = caches[zlev + OVERMAP_DEPTH];
+            std::unique_ptr < level_cache, level_cache_free > &cache = caches[layer_for_z( zlev )];
             if( !cache ) {
                 cache = alloc_cache();
             }
@@ -2487,7 +2501,7 @@ class map
         static std::unique_ptr < level_cache, level_cache_free > alloc_cache();
 
         level_cache *get_cache_lazy( int zlev ) const {
-            return caches[zlev + OVERMAP_DEPTH].get();
+            return caches[layer_for_z( zlev )].get();
         }
 
         pathfinding_cache &get_pathfinding_cache( int zlev ) const;

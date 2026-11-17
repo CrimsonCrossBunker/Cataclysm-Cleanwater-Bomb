@@ -1288,6 +1288,11 @@ bool overmap::generate_over( const int z )
                 }
 
                 if( oter_ground->get_type_id() == oter_type_bridge ) {
+                    if( north_america::active() &&
+                        ( ter( p )->get_type_id() == oter_type_str_id( "bridge_road" ) ||
+                          ter( p )->get_type_id() == oter_type_str_id( "atlas_raised_bridge_deck" ) ) ) {
+                        continue;
+                    }
                     ter_set( p, oter_id( "bridge_road" + oter_get_rotation_string( oter_ground ) ) );
                     bridge_points.push_back( p.xy() );
                     tripoint_om_omt support_point = p + tripoint::below;
@@ -2368,7 +2373,10 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
     static const oter_type_str_id road( "road" );
-    static const oter_type_str_id bridge( "atlas_road_bridge" );
+    static const oter_type_str_id raised_deck( "bridge_road" );
+    static const oter_type_str_id curved_deck( "atlas_raised_bridge_deck" );
+    static const oter_type_str_id bridgehead( "bridgehead_ground" );
+    static const oter_type_str_id ramp( "bridgehead_ramp" );
     const auto atlas_water_at = [&]( const tripoint_om_omt & p ) {
         const int index = ( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1;
         return coast[index] != north_america::terrain::land;
@@ -2387,8 +2395,39 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                                 ( settings->overmap_highway && tile.lanes >= 4 );
             std::size_t links = mapped ? tile.mapped_connections : 0;
             if( atlas_water_at( p ) && links ) {
-                ter_set( p, bridge->get_linear( links ) );
+                const bool ns = links == om_lines::set_segment(
+                                    om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::south );
+                const bool ew = links == om_lines::set_segment(
+                                    om_lines::set_segment( 0, om_direction::type::east ), om_direction::type::west );
+                const auto axis = om_lines::has_segment( links, om_direction::type::north ) ||
+                                  om_lines::has_segment( links, om_direction::type::south ) ?
+                                  om_direction::type::north : om_direction::type::east;
+                const oter_id support = oter_type_bridge->get_rotated( axis );
+                ter_set( p, support );
+                for( tripoint_om_omt below = p + tripoint::below;
+                     inbounds( below ) && ter( below )->is_water(); below += tripoint::below ) {
+                    ter_set( below, support );
+                }
+                ter_set( p + tripoint::above, ns || ew ? raised_deck->get_rotated( axis ) :
+                         curved_deck->get_linear( links ) );
             } else if( links || can_build_street( p ) ) {
+                std::optional<om_direction::type> bridge_direction;
+                for( const auto direction : om_direction::all ) {
+                    if( om_lines::has_segment( links, direction ) &&
+                        atlas_water_at( p + om_direction::displace( direction ) ) ) {
+                        bridge_direction = direction;
+                        break;
+                    }
+                }
+                if( bridge_direction ) {
+                    const auto facing = om_direction::opposite( *bridge_direction );
+                    const bool connects_to_road = !atlas_water_at( p + om_direction::displace( facing ) );
+                    if( connects_to_road ) {
+                        ter_set( p, bridgehead->get_rotated( facing ) );
+                        ter_set( p + tripoint::above, ramp->get_rotated( facing ) );
+                        continue;
+                    }
+                }
                 for( const auto direction : om_direction::all ) {
                     if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
                         om_lines::has_segment( links, direction ) ||
@@ -3390,7 +3429,7 @@ static bool allows_atlas_military_base( const overmap_special &special )
 }
 
 bool overmap::can_place_special( const overmap_special &special, const tripoint_om_omt &p,
-                                 om_direction::type dir, const bool must_be_unexplored ) const
+                                 om_direction::type dir, const bool must_be_unexplored, int margin ) const
 {
     cata_assert( dir != om_direction::type::invalid );
 
@@ -3447,7 +3486,7 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
     [&]( const overmap_special_locations & elem ) {
         const tripoint_om_omt rp = p + om_direction::rotate( elem.p, dir );
 
-        if( !inbounds( rp, 1 ) ) {
+        if( !inbounds( rp, margin ) ) {
             return false;
         }
 

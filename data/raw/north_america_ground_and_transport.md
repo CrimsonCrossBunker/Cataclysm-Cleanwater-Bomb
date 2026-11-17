@@ -45,7 +45,10 @@ in the East River crossings, the Harlem River Washington Bridge, the FDR Drive,
 West Street, and sections of the Henry Hudson Parkway. The supplemental
 `north_america_nyc.transport` uses the same projected segment format as the
 main transport file. It also includes generalized George Washington and
-Queensboro bridge decks and their approaches. [NYC DOT bridge inventory](https://www.nyc.gov/html/dot/html/infrastructure/bridges.shtml)
+Queensboro bridge decks and their approaches. Parallel carriageways on the
+major East River bridges share a centreline. Mapped crossings use raised
+decks, original bridges and bridgeheads, with curved deck sections joining
+turns in the mapped routes. [NYC DOT bridge inventory](https://www.nyc.gov/html/dot/html/infrastructure/bridges.shtml)
 
 Road width uses the expressway class and the population of nearby cities in
 areas without lane counts. The Ontario Road Network segment layer supplies

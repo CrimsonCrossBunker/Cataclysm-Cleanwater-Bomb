@@ -4175,7 +4175,7 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
     map &here = get_map();
     if( new_pos != src ) {
         // On Z axis, make sure we do not exceed map boundaries
-        valid_pos.z() = clamp( valid_pos.z(), -OVERMAP_DEPTH, OVERMAP_HEIGHT );
+        valid_pos.z() = clamp( valid_pos.z(), get_map().min_z(), get_map().max_z() );
         // Or current view range
         valid_pos.z() = clamp( valid_pos.z() - src.z(), -get_map().observer_z_range( *you ),
                                get_map().observer_z_range( *you ) ) + src.z();
@@ -4635,8 +4635,8 @@ void target_ui::set_view_offset( const tripoint_rel_ms &new_offset ) const
 {
     const int desired_z = you->posz() + new_offset.z();
     const int target_z = clamp( desired_z, std::max( src.z() - get_map().observer_z_range( *you ),
-                                -OVERMAP_DEPTH ),
-                                std::min( src.z() + get_map().observer_z_range( *you ), OVERMAP_HEIGHT ) );
+                                get_map().min_z() ),
+                                std::min( src.z() + get_map().observer_z_range( *you ), get_map().max_z() ) );
     tripoint_rel_ms new_( new_offset.xy(), target_z - you->posz() );
     const bool changed_z = you->view_offset.z() != new_.z();
     you->view_offset = new_;

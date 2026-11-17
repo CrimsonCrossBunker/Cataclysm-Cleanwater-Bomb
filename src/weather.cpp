@@ -1001,9 +1001,9 @@ static bool has_sunlight_access( const tripoint_bub_ms &pos )
 {
     tripoint_bub_ms checked_pnt = pos;
     const map &here = get_map();
-    while( checked_pnt.z() < OVERMAP_HEIGHT ) {
+    while( checked_pnt.z() < here.max_z() ) {
         const tripoint_bub_ms pnt_above = {checked_pnt.xy(), checked_pnt.z() + 1 };
-        const bool should_check_above = pnt_above.z() < OVERMAP_HEIGHT;
+        const bool should_check_above = pnt_above.z() < here.max_z();
         // If checking above would take us outside of game bounds, just assume that it's all open air up there.
         const bool transparent_roof = should_check_above ?
                                       here.has_flag_ter( "NO_FLOOR", pnt_above ) || here.has_flag_ter( "TRANSPARENT_FLOOR", pnt_above ) :
@@ -1204,7 +1204,7 @@ void weather_manager::update_weather()
 
         if( weather_id->sight_penalty != old_weather->sight_penalty ) {
             g->multiplayer_session().visit_resident_maps( here, []( map & terrain ) {
-                for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                for( int z = terrain.min_z(); z <= terrain.max_z(); ++z ) {
                     terrain.set_transparency_cache_dirty( z );
                     terrain.set_seen_cache_dirty( z );
                 }

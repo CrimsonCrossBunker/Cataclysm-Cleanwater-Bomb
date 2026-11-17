@@ -29,6 +29,10 @@ std::optional<water_level> water_surface_elevation( point_abs_ms position );
 bool elevation_active();
 double surface_elevation( point_abs_ms position );
 double altitude_at( const tripoint_abs_ms &position );
+double altitude_at( const tripoint_abs_omt &position );
+int minimum_overmap_z( point_abs_omt location );
+int maximum_overmap_z( point_abs_omt location );
+std::optional<tripoint_abs_omt> overmap_at_altitude( point_abs_omt location, double metres );
 double altitude_at( const map &here, const tripoint_bub_ms &position );
 bool within_altitude_limits( double metres );
 
@@ -37,6 +41,7 @@ double grade_move_multiplier( double grade );
 double grade_between( const map &here, const tripoint_bub_ms &from,
                       const tripoint_bub_ms &to );
 point surface_slope( const map &here, const tripoint_bub_ms &position );
+int surface_relief_shade( point slope );
 double temperature_delta_at_height( double altitude_m, double reference_m );
 double pressure_ratio_at_height( double altitude_m );
 double wind_speed_factor( double altitude_m, double surface_m );

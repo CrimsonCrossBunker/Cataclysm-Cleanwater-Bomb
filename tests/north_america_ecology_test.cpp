@@ -50,6 +50,52 @@ TEST_CASE( "atlas_elevation_distinguishes_sea_level_from_local_storeys", "[north
            north_america::grade_move_multiplier( -0.30 ) );
 }
 
+TEST_CASE( "atlas_elevation_navigation_extends_past_the_structural_layers", "[north_america]" )
+{
+    const point_abs_omt city_site = point_abs_omt::zero;
+    const double ground = north_america::altitude_at( tripoint_abs_omt( city_site, 0 ) );
+    const auto underground = north_america::overmap_at_altitude( city_site, ground - 97.0 );
+    const auto in_air = north_america::overmap_at_altitude( city_site, ground + 97.0 );
+    REQUIRE( underground );
+    REQUIRE( in_air );
+    CHECK( underground->z() == -24 );
+    CHECK( in_air->z() == 24 );
+    CHECK( north_america::altitude_at( *underground ) == Approx( ground - 96.0 ) );
+    CHECK( north_america::minimum_overmap_z( city_site ) < -OVERMAP_DEPTH );
+    CHECK( north_america::maximum_overmap_z( city_site ) > OVERMAP_HEIGHT );
+    CHECK_FALSE( north_america::overmap_at_altitude( city_site,
+                 north_america::altitude_limit_m + 1 ) );
+}
+
+TEST_CASE( "atlas_extended_map_window_loads_original_rock_and_air", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    smallmap sample;
+    map &window = *sample.cast_to_map();
+    const point_abs_sm site( 9876, 23456 );
+    const point_bub_ms middle( SEEX, SEEY );
+
+    window.load( tripoint_abs_sm( site, -30 ), false, false );
+    REQUIRE( window.inbounds_z( -30 ) );
+    CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_str_id( "t_rock" ).id() );
+    CHECK( !window.inbounds_z( 0 ) );
+
+    window.load( tripoint_abs_sm( site, 30 ), false, false );
+    REQUIRE( window.inbounds_z( 30 ) );
+    CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_str_id( "t_open_air" ).id() );
+    CHECK( !window.inbounds_z( -30 ) );
+}
+
+TEST_CASE( "atlas_diagonal_slopes_have_visible_relief", "[north_america]" )
+{
+    CHECK( north_america::surface_relief_shade( point::zero ) == 0 );
+    CHECK( north_america::surface_relief_shade( point( 25, -25 ) ) != 0 );
+    CHECK( north_america::surface_relief_shade( point( -25, 25 ) ) != 0 );
+    CHECK( north_america::surface_relief_shade( point( 25, 25 ) ) >
+           north_america::surface_relief_shade( point( -25, -25 ) ) );
+}
+
 TEST_CASE( "atlas_george_washington_bridge_crosses_the_water_overmap_seam", "[north_america]" )
 {
     const point_abs_omt left( -9361, 7354 );

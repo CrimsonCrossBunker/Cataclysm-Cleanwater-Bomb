@@ -197,6 +197,7 @@ class map_memory
         // never allocate, insert missing levels or fetch data from storage.
         using region_cache = std::array<std::vector<shared_ptr_fast<mm_submap>>, OVERMAP_LAYERS>;
         region_cache cached;
+        int first_cached_z = -OVERMAP_DEPTH;
         mm_submap unavailable_submap{ false };
         tripoint_abs_sm cache_pos;
         point cache_size;

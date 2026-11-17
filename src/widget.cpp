@@ -1408,11 +1408,10 @@ std::string widget::color_text_function_string( const avatar &ava, unsigned int 
             desc = display::pain_text_color( ava );
             break;
         case widget_var::overmap_loc_text:
-            desc.first = display::overmap_position_text( ava.pos_abs_omt() );
-            if( north_america::elevation_active() ) {
-                desc.first = string_format( _( "%s / %.1f m" ), desc.first,
-                                            north_america::altitude_at( get_map(), ava.pos_bub() ) );
-            }
+            desc.first = display::overmap_position_text( ava.pos_abs_omt(),
+                         north_america::elevation_active() ?
+                         std::optional<double>( north_america::altitude_at( get_map(), ava.pos_bub() ) ) :
+                         std::nullopt );
             break;
         case widget_var::overmap_text:
             desc.first = display::colorized_overmap_text( ava, _width == 0 ? max_width : _width, _height );

@@ -4153,13 +4153,14 @@ void game::draw_veh_dir_indicator( bool next )
 float game::natural_light_level( const int zlev ) const
 {
     // ignore while underground or above limits
-    if( zlev > OVERMAP_HEIGHT || zlev < 0 ) {
+    if( zlev < 0 || ( zlev > OVERMAP_HEIGHT && !north_america::elevation_active() ) ) {
         return LIGHT_AMBIENT_MINIMAL;
     }
 
-    if( latest_lightlevels[zlev] > std::numeric_limits<float>::lowest() ) {
+    const int cache_level = std::min( zlev, OVERMAP_HEIGHT );
+    if( latest_lightlevels[cache_level] > std::numeric_limits<float>::lowest() ) {
         // Already found the light level for now?
-        return latest_lightlevels[zlev];
+        return latest_lightlevels[cache_level];
     }
 
     float ret = LIGHT_AMBIENT_MINIMAL;
@@ -4202,7 +4203,7 @@ float game::natural_light_level( const int zlev ) const
     // Cap everything to our minimum light level
     ret = std::max<float>( LIGHT_AMBIENT_MINIMAL, ret );
 
-    latest_lightlevels[zlev] = ret;
+    latest_lightlevels[cache_level] = ret;
 
     return ret;
 }
@@ -6871,8 +6872,8 @@ look_around_result game::look_around(
     ctxt.register_action( "toggle_pixel_minimap" );
 
     const int old_levz = peeking ? here.observer_position( u ).z() : here.get_abs_sub().z();
-    const int min_levz = std::max( old_levz - view_z_range, -OVERMAP_DEPTH );
-    const int max_levz = std::min( old_levz + view_z_range, OVERMAP_HEIGHT );
+    const int min_levz = std::max( old_levz - view_z_range, here.min_z() );
+    const int max_levz = std::min( old_levz + view_z_range, here.max_z() );
 
     here.update_visibility_cache( old_levz );
     const visibility_variables &cache = here.get_visibility_variables_cache();
@@ -9648,9 +9649,15 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     return submap_shift;
 }
 
-void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player )
+void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player,
+                                 bool debug_landing )
 {
     map &here = get_map();
+    const bool atlas = north_america::elevation_active();
+    if( atlas && !north_america::within_altitude_limits( north_america::altitude_at( om_dest ) ) ) {
+        add_msg( m_bad, _( "The destination is outside the supported elevation range." ) );
+        return;
+    }
 
     // if player is teleporting around, they don't bring their horse with them
     if( u.is_mounted() ) {
@@ -9671,7 +9678,7 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     if( u.in_vehicle ) {
         here.unboard_vehicle( u.pos_bub() );
     }
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = here.min_z(); z <= here.max_z(); z++ ) {
         here.clear_vehicle_list( z );
     }
     here.rebuild_vehicle_level_caches();
@@ -9681,8 +9688,10 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     // player will be centered in the middle of the map.
     const tripoint_abs_sm map_sm_pos =
         project_to<coords::sm>( om_dest ) - point( HALF_MAPSIZE, HALF_MAPSIZE );
-    const tripoint_bub_ms player_pos( u.pos_bub().xy(), map_sm_pos.z() );
+    const tripoint_bub_ms previous_local_pos( u.pos_bub().xy(), map_sm_pos.z() );
     load_map( map_sm_pos );
+    const tripoint_bub_ms player_pos = atlas && debug_landing ?
+                                       here.get_bub( project_to<coords::ms>( om_dest ) + point( SEEX, SEEY ) ) : previous_local_pos;
     if( hosting ) {
         unload_creatures_outside_resident_maps();
     }
@@ -9697,6 +9706,10 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     // update weather now as it could be different on the new location
     weather.set_nextweather( calendar::turn );
     if( move_player ) {
+        if( debug_landing && atlas && om_dest.z() < -OVERMAP_DEPTH &&
+            here.ter( player_pos ) == ter_str_id( "t_rock" ).id() ) {
+            here.ter_set( player_pos, ter_str_id( "t_rock_floor" ).id() );
+        }
         place_player( player_pos );
     }
 }
@@ -10631,7 +10644,10 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return lifetime && who.pos_abs() == origin && who.mounted_creature == mount;
     };
     const int64_t requested_z = static_cast<int64_t>( who.posz() ) + movez;
-    if( requested_z < -OVERMAP_DEPTH || requested_z > OVERMAP_HEIGHT ) {
+    map &here = get_map();
+    if( ( requested_z < here.min_z() || requested_z > here.max_z() ) &&
+        ( !who.is_avatar() || std::abs( movez ) > 2 ||
+          !here.ensure_z_in_window( tripoint_bub_ms( who.pos_bub( here ).xy(), requested_z ) ) ) ) {
         who.add_msg_if_player( _( "The way is blocked off." ) );
         return;
     }
@@ -10650,7 +10666,6 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         }
     }
 
-    map &here = get_map();
     const auto map_context = here.get_context_reference();
     tripoint_bub_ms pos = who.pos_bub( here );
     if( north_america::elevation_active() &&
@@ -10805,10 +10820,10 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     }
 
     const int z_after = static_cast<int>( requested_z );
-    if( z_after < -OVERMAP_DEPTH ) {
+    if( z_after < here.min_z() ) {
         who.add_msg_if_player( m_info, _( "Halfway down, the way down becomes blocked off." ) );
         return;
-    } else if( z_after > OVERMAP_HEIGHT ) {
+    } else if( z_after > here.max_z() ) {
         who.add_msg_if_player( m_info, _( "Halfway up, the way up becomes blocked off." ) );
         return;
     }
@@ -11249,7 +11264,7 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
         return false;
     }
     player.save_map_memory();
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = here.min_z(); z <= here.max_z(); z++ ) {
         here.clear_vehicle_list( z );
     }
     here.rebuild_vehicle_level_caches();
@@ -11654,9 +11669,9 @@ bool game::vertical_shift( const int z_after )
 {
     map &here = get_map();
 
-    if( z_after < -OVERMAP_DEPTH || z_after > OVERMAP_HEIGHT ) {
+    if( !here.inbounds_z( z_after ) ) {
         debugmsg( "Tried to get z-level %d outside allowed range of %d-%d",
-                  z_after, -OVERMAP_DEPTH, OVERMAP_HEIGHT );
+                  z_after, here.min_z(), here.max_z() );
         return false;
     }
 
@@ -11757,8 +11772,8 @@ static void prefetch_leading_edge( const map &here, const point_rel_sm &shift )
     // real edge immediately. Cost: a z-change (stairs) gets no prefetch, but that
     // is rare and one level at a time. Widen this if vertical travel needs it.
     constexpr int Z_RADIUS = 0;
-    const int z_lo = std::max( -OVERMAP_DEPTH, player_z - Z_RADIUS );
-    const int z_hi = std::min( OVERMAP_HEIGHT, player_z + Z_RADIUS );
+    const int z_lo = std::max( get_map().min_z(), player_z - Z_RADIUS );
+    const int z_hi = std::min( get_map().max_z(), player_z + Z_RADIUS );
 
     // Free any previously buffered quads the player has now moved away from, so a
     // turn or reversal doesn't leave a stale frontier pinned in memory and the
@@ -11916,7 +11931,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     load_npcs();
 
     // Make sure map cache is consistent since it may have shifted.
-    for( int zlev = -OVERMAP_DEPTH; zlev <= OVERMAP_HEIGHT; ++zlev ) {
+    for( int zlev = here.min_z(); zlev <= here.max_z(); ++zlev ) {
         here.invalidate_map_cache( zlev );
     }
     here.build_map_cache( here.get_abs_sub().z() );

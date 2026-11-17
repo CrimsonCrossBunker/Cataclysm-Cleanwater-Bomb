@@ -164,6 +164,39 @@ double altitude_at( const tripoint_abs_ms &position )
     return surface_elevation( position.xy() ) + position.z() * floor_height_m;
 }
 
+static point_abs_ms overmap_tile_center( point_abs_omt location )
+{
+    return project_to<coords::ms>( location ) + point( SEEX, SEEY );
+}
+
+double altitude_at( const tripoint_abs_omt &position )
+{
+    return altitude_at( tripoint_abs_ms( overmap_tile_center( position.xy() ), position.z() ) );
+}
+
+int minimum_overmap_z( point_abs_omt location )
+{
+    return static_cast<int>( std::ceil( ( -altitude_limit_m -
+                                          surface_elevation( overmap_tile_center( location ) ) ) / floor_height_m ) );
+}
+
+int maximum_overmap_z( point_abs_omt location )
+{
+    return static_cast<int>( std::floor( ( altitude_limit_m -
+                                           surface_elevation( overmap_tile_center( location ) ) ) / floor_height_m ) );
+}
+
+std::optional<tripoint_abs_omt> overmap_at_altitude( point_abs_omt location, double metres )
+{
+    if( !within_altitude_limits( metres ) ) {
+        return std::nullopt;
+    }
+    const double surface = surface_elevation( overmap_tile_center( location ) );
+    const int z = static_cast<int>( std::lround( ( metres - surface ) / floor_height_m ) );
+    return tripoint_abs_omt( location, std::clamp( z, minimum_overmap_z( location ),
+                             maximum_overmap_z( location ) ) );
+}
+
 double altitude_at( const map &here, const tripoint_bub_ms &position )
 {
     const tripoint_abs_ms absolute = here.get_abs( position );
@@ -218,6 +251,19 @@ point surface_slope( const map &here, const tripoint_bub_ms &position )
                        surface_elevation( p - point::south ) ) / 2.0;
     return { static_cast<int>( std::clamp( std::lround( x * 100 ), -100L, 100L ) ),
              static_cast<int>( std::clamp( std::lround( y * 100 ), -100L, 100L ) ) };
+}
+
+int surface_relief_shade( point slope )
+{
+    const double grade = std::hypot( slope.x, slope.y );
+    if( grade < 7 ) {
+        return 0;
+    }
+    // Oblique light and the reduced vertical component of a sloping surface.
+    const double normal = std::hypot( 100.0, grade );
+    const double light = ( 100.0 + 0.72 * slope.x + 0.36 * slope.y ) / normal - 1.0;
+    const int tone = static_cast<int>( std::lround( light * 95 ) );
+    return tone >= 7 ? std::min( tone, 55 ) : std::clamp( tone, -55, -7 );
 }
 
 double temperature_delta_at_height( double altitude_m, double reference_m )

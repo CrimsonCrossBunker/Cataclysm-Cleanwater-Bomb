@@ -563,8 +563,8 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
         }
         const overmap_special_id regional_house = north_america::regional_house_for(
                     north_america::jurisdiction_at( project_to<coords::ms>( origin + local_center.xy().raw() ) ) );
-        for( int y = std::max( start.y, 1 ); y < std::min( stop.y, OMAPY - 1 ); ++y ) {
-            for( int x = std::max( start.x, 1 ); x < std::min( stop.x, OMAPX - 1 ); ++x ) {
+        for( int y = std::max( start.y, 0 ); y < std::min( stop.y, OMAPY ); ++y ) {
+            for( int x = std::max( start.x, 0 ); x < std::min( stop.x, OMAPX ); ++x ) {
                 const tripoint_om_omt p( x, y, 0 );
                 const oter_id existing = ter( p );
                 if( road.has( existing ) || north_america::is_avenue_flank( existing ) ) {
@@ -651,9 +651,16 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
             low = high = north_america::surface_elevation(
                              project_to<coords::ms>( origin + lot.pos.xy().raw() ) + point( SEEX, SEEY ) );
         }
+        // A building confined to one column cannot straddle an overmap seam.
+        const bool single_column = !footprint->second.empty() &&
+                                   std::all_of( footprint->second.begin(), footprint->second.end(),
+        []( const tripoint_rel_omt & p ) {
+            return p.xy().raw() == point::zero;
+        } );
+        const int margin = single_column ? 0 : 1;
         for( const tripoint_rel_omt &offset : footprint->second ) {
             const tripoint_om_omt tile = lot.pos + om_direction::rotate( offset, direction );
-            if( !inbounds( tile, 1 ) || overmap_special_placements.count( tile ) ||
+            if( !inbounds( tile, margin ) || overmap_special_placements.count( tile ) ||
                 ( offset.z() == 0 && ( city_tiles.count( tile.xy() ) ||
                                        owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) ) ) {
                 return false;
@@ -668,7 +675,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 }
             }
         }
-        if( !can_place_special( special, lot.pos, direction, false ) ) {
+        if( !can_place_special( special, lot.pos, direction, false, margin ) ) {
             return false;
         }
         for( const tripoint_om_omt &used : place_special( special, lot.pos, direction,

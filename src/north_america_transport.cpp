@@ -30,6 +30,7 @@
 #include "north_america_ecology.h"
 #include "omdata.h"
 #include "overmap.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
 #include "point.h"
 #include "rng.h"
@@ -50,6 +51,12 @@ static const oter_str_id oter_road_ew( "road_ew" );
 static const oter_str_id oter_road_ns( "road_ns" );
 
 static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
+static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
+static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
+static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
+static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
+static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
+static const ter_str_id ter_t_open_air( "t_open_air" );
 static const oter_type_str_id oter_type_road( "road" );
 
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
@@ -474,15 +481,22 @@ static bool draw_wide_avenue( mapgendata &dat )
         return false;
     }
     const oter_id side = avenue_flank( vertical );
-    // Straight road mapgen rotates its neighbor array so the direction of
-    // travel is always north/south and the flank is always to its right.
-    if( !flank && dat.east() != side ) {
-        return false;
+    const oter_id spine = vertical ? oter_road_ns : oter_road_ew;
+    const point across_step = vertical ? point::east : point::south;
+    const point along_step = vertical ? point::south : point::east;
+    const tripoint_abs_omt base = flank ? dat.pos() - across_step : dat.pos();
+    const auto has_pair = [&]( const tripoint_abs_omt & p ) {
+        return overmap_buffer.ter_existing( p ) == spine &&
+               overmap_buffer.ter_existing( p + across_step ) == side;
+    };
+    if( !has_pair( base ) ) {
+        if( flank ) {
+            dat.m.draw_fill_background( ter_t_grass.id() );
+        }
+        return flank;
     }
-    const bool continues_before = ( flank ? ( vertical ? dat.north() : dat.west() ) :
-                                    ( vertical ? dat.neast() : dat.seast() ) ) == side;
-    const bool continues_after = ( flank ? ( vertical ? dat.south() : dat.east() ) :
-                                   ( vertical ? dat.seast() : dat.neast() ) ) == side;
+    const bool continues_before = has_pair( base - along_step );
+    const bool continues_after = has_pair( base + along_step );
     constexpr int span = SEEX * 2;
     constexpr int taper = span / 2 - 1;
     for( int along = 0; along < span; ++along ) {
@@ -521,9 +535,70 @@ static bool draw_wide_avenue( mapgendata &dat )
     return true;
 }
 
+static void draw_raised_deck( mapgendata &dat )
+{
+    constexpr int span = 2 * SEEX;
+    constexpr int center = SEEX;
+    const std::size_t links = dat.terrain_type()->get_line();
+    std::vector<point> endpoints;
+    for( const auto direction : om_direction::all ) {
+        if( om_lines::has_segment( links, direction ) ) {
+            endpoints.push_back( point( center, center ) + center * om_direction::displace(
+                                     direction ).raw() );
+        }
+    }
+    dat.m.draw_fill_background( ter_t_open_air.id() );
+    if( endpoints.empty() ) {
+        return;
+    }
+
+    const point middle( center, center );
+    std::vector<point> curve;
+    // Edge midpoints and tangents agree with vanilla decks and bridgehead ramps.
+    if( endpoints.size() == 2 && endpoints[0] + endpoints[1] != 2 * middle ) {
+        for( int i = 0; i <= 32; ++i ) {
+            const double t = i / 32.0;
+            const double a = ( 1.0 - t ) * ( 1.0 - t );
+            const double b = 2.0 * t * ( 1.0 - t );
+            const double c = t * t;
+            curve.emplace_back( std::lround( a * endpoints[0].x + b * center + c * endpoints[1].x ),
+                                std::lround( a * endpoints[0].y + b * center + c * endpoints[1].y ) );
+        }
+    } else {
+        for( const point &endpoint : endpoints ) {
+            curve.insert( curve.end(), 1, middle );
+            const auto arm = line_to( middle, endpoint );
+            curve.insert( curve.end(), arm.begin(), arm.end() );
+        }
+    }
+    for( int y = 0; y < span; ++y ) {
+        for( int x = 0; x < span; ++x ) {
+            const point tile( x, y );
+            int distance = span * span;
+            for( const point &sample : curve ) {
+                const point offset = sample - tile;
+                distance = std::min( distance, offset.x * offset.x + offset.y * offset.y );
+            }
+            if( distance <= 100 ) {
+                const ter_str_id &terrain = distance == 0 && ( x + y ) % 6 < 3 ?
+                                            ter_t_pavement_y_hw_air : distance < 81 ? ter_t_pavement_hw_air :
+                                            distance < 93 ? ter_t_sidewalk_hw_air : ter_t_guardrail_hw_air;
+                dat.m.ter_set( point_bub_ms( tile ), terrain.id() );
+            }
+        }
+    }
+}
+
 bool draw_mapped_road( mapgendata &dat )
 {
-    if( dat.zlevel() != 0 || !active() ) {
+    if( !active() ) {
+        return false;
+    }
+    if( dat.zlevel() == 1 && dat.terrain_type()->get_type_id() == oter_type_atlas_raised_bridge_deck ) {
+        draw_raised_deck( dat );
+        return true;
+    }
+    if( dat.zlevel() != 0 ) {
         return false;
     }
     if( draw_wide_avenue( dat ) ) {
