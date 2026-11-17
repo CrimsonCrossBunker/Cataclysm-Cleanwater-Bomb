@@ -1332,7 +1332,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You love the rush of taking different drugs at once, and now this rush is much more impactful than before.  You gain +3 speed for each recreational or combat-enhancing drug currently affecting you.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "add": { "math": [ "speedball_counter()" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_speedballing_0" ],
     "flags": [ "PERK" ]
   },
   {

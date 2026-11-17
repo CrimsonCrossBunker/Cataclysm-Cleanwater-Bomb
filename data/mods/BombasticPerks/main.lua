@@ -21,3 +21,5 @@ require("inline_special_vision")
 require("body_enchantments")
 
 require("contextual_enchantments")
+
+require("power_enchantments")
