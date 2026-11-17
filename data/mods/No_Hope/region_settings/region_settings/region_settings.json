@@ -122,11 +122,5 @@
         "subway_nohope"
       ]
     }
-  },
-  {
-    "type": "weather_generator",
-    "id": "default_nohope",
-    "copy-from": "default",
-    "base_humidity": 90.0
   }
 ]
