@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Expand the editable North America gameplay profiles into ordinary item groups."""
+(
+    "Expand the editable North America gameplay profiles into ordinary "
+    "item groups."
+)
 
 import argparse
 import copy
@@ -33,7 +36,10 @@ def reference(group_id, prob=100, **fields):
 
 
 def group(group_id, entries, subtype="distribution", **fields):
-    return {"type": "item_group", "id": group_id, "subtype": subtype, **fields, "entries": entries}
+    return {
+        "type": "item_group", "id": group_id, "subtype": subtype,
+        **fields, "entries": entries,
+    }
 
 
 def pockets(items, item_id):
@@ -67,11 +73,19 @@ def weapons_for_profile(items, catalog, profile, settings):
         if profile == "canada" and "rimfire" in tags:
             limit = 10
         gun_pockets = pockets(items, gun)
-        fits = {mag for pocket in gun_pockets for mag in pocket.get("item_restriction", [])}
+        fits = {
+            mag for pocket in gun_pockets
+            for mag in pocket.get("item_restriction", [])
+        }
         if not set(magazines) <= fits:
-            raise ValueError(f"{gun} has incompatible magazines in the regional catalog")
+            raise ValueError(
+                f"{gun} has incompatible magazines in the regional catalog"
+            )
         choices = [(magazine_capacity(items, mag), mag) for mag in magazines]
-        choices = sorted((capacity, mag) for capacity, mag in choices if not limit or capacity <= limit)
+        choices = sorted(
+            (capacity, mag) for capacity, mag in choices
+            if not limit or capacity <= limit
+        )
         if magazines and not choices:
             continue
         yield gun, category, weight, choices
@@ -81,7 +95,9 @@ def catalog_groups(policy, items, base):
     groups = []
     kit_ids = set()
     for profile, settings in policy["profiles"].items():
-        catalog = list(weapons_for_profile(items, policy["firearms"], profile, settings))
+        catalog = list(weapons_for_profile(
+            items, policy["firearms"], profile, settings
+        ))
         kit_for_gun = {}
         for gun, category, _, choices in catalog:
             kit_id = f"regional_boxed_{gun}"
@@ -110,7 +126,9 @@ def catalog_groups(policy, items, base):
                 suffix = stem.removeprefix("guns_common")
                 categories = [
                     reference(f"guns_{kind}_common{suffix}-{profile}", weight)
-                    for kind, weight in (("pistol", 90), ("rifle", 30), ("shotgun", 8))
+                    for kind, weight in (
+                        ("pistol", 90), ("rifle", 30), ("shotgun", 8)
+                    )
                     if any(weapon[1] == kind for weapon in catalog)
                 ]
                 groups.append(group(ident, categories))
@@ -129,13 +147,19 @@ def catalog_groups(policy, items, base):
                     fields["damage"] = [1, 4]
                 entries.append(item(gun, weight, **fields))
             # Keep the broad original inventory as part of uncapped U.S. stock.
-            # Limit the fallback to individual category groups to avoid routing loops.
-            if profile == "open" and stem in base and not stem.endswith("_boxed"):
+            # Limit the fallback to individual category groups to avoid
+            # routing loops.
+            if (
+                profile == "open" and stem in base
+                and not stem.endswith("_boxed")
+            ):
                 original = {key: value for key, value in base[stem].items()
                             if not key.startswith("//")}
                 original["id"] = f"regional_original_{stem}"
                 groups.append(original)
-                entries.append(reference(original["id"], sum(entry["prob"] for entry in entries)))
+                entries.append(reference(
+                    original["id"], sum(entry["prob"] for entry in entries)
+                ))
             groups.append(group(ident, entries))
     return groups
 
@@ -143,7 +167,9 @@ def catalog_groups(policy, items, base):
 def magazine_groups(policy, items, base):
     groups = []
     for profile, settings in policy["profiles"].items():
-        catalog = list(weapons_for_profile(items, policy["firearms"], profile, settings))
+        catalog = list(weapons_for_profile(
+            items, policy["firearms"], profile, settings
+        ))
         for stem in policy["state_groups"] + policy["firearm_groups"]:
             if not stem.startswith("mags_"):
                 continue
@@ -159,39 +185,59 @@ def magazine_groups(policy, items, base):
                         "rifle" in stem and category != "rifle"):
                     continue
                 for index, (_, mag) in enumerate(reversed(choices)):
-                    entries[mag] = entries.get(mag, 0) + max(1, weight // (1 << index))
+                    entries[mag] = entries.get(mag, 0) + max(
+                        1, weight // (1 << index)
+                    )
             if profile == "open" and stem == "mags_common":
                 original = copy.deepcopy(base[stem])
                 original["id"] = "regional_original_mags_common"
                 groups.append(original)
-            choices = [item(mag, weight) for mag, weight in sorted(entries.items())]
+            choices = [
+                item(mag, weight) for mag, weight in sorted(entries.items())
+            ]
             if profile == "open":
-                choices.append(reference("regional_original_mags_common", sum(entries.values())))
+                choices.append(reference(
+                    "regional_original_mags_common", sum(entries.values())
+                ))
             groups.append(group(ident, choices))
     return groups
 
 
 def ammunition_groups(policy, base):
     groups = []
-    longarms = {"22lr", "12", "20", "410", "308", "3006", "3030", "270", "303", "338", "4570"}
+    longarms = {
+        "22lr", "12", "20", "410", "308", "3006", "3030", "270", "303", "338",
+        "4570",
+    }
     allowed = {
         "canada": longarms | {"223", "762", "762R", "300", "450"},
         "mexico": longarms - {"338"} | {"380", "38"},
     }
-    aliases = {"22_lr": "22lr", "270win_jsp": "270", "338lapua_hpbt": "338", "762_54R": "762R"}
+    aliases = {
+        "22_lr": "22lr", "270win_jsp": "270", "338lapua_hpbt": "338",
+        "762_54R": "762R",
+    }
     stems = [stem for stem in policy["state_groups"] + policy["firearm_groups"]
              if stem.startswith("ammo_")]
     for stem in stems:
-        groups.append(group(f"regional_original_{stem}", base[stem]["entries"]))
+        groups.append(group(
+            f"regional_original_{stem}", base[stem]["entries"]
+        ))
     for profile in policy["profiles"]:
         for stem in stems:
             if profile not in allowed:
-                groups.append(group(f"{stem}-{profile}", [reference(f"regional_original_{stem}")]))
+                groups.append(group(
+                    f"{stem}-{profile}",
+                    [reference(f"regional_original_{stem}")],
+                ))
                 continue
             entries = []
             for entry in base[stem]["entries"]:
                 key = entry.get("group", entry.get("item"))
-                calibre = key.removeprefix("boxed_").removesuffix("_used").removesuffix("_looted")
+                calibre = (
+                    key.removeprefix("boxed_").removesuffix("_used")
+                    .removesuffix("_looted")
+                )
                 calibre = calibre.removesuffix("_loose")
                 calibre = aliases.get(calibre, calibre)
                 if calibre not in allowed[profile]:
@@ -206,7 +252,10 @@ def ammunition_groups(policy, base):
 def uniform_groups(policy, base):
     groups = []
     for name, (shirt, pants, boots, hat) in policy["uniforms"].items():
-        top = item("postman_shirt" if shirt == "sheriff" else "dress_shirt", variant=shirt)
+        top = item(
+            "postman_shirt" if shirt == "sheriff" else "dress_shirt",
+            variant=shirt,
+        )
         trousers = item("pants_tactical", variant=pants)
         helmet = [item(hat, 85), item("helmet_riot", 15)]
         for stem, entries in {
@@ -222,16 +271,24 @@ def uniform_groups(policy, base):
             groups.append(group(f"{stem}-{name}", entries))
         officer = copy.deepcopy(base["clothing_navy_officer"])
         officer["id"] += f"-{name}"
-        if name in {"ontario", "quebec", "pacific_ca", "rcmp", "central_mx", "patrol_mx"}:
-            officer["items"][:3] = [item(boots), item("hat_ball"), item("dress_shirt", variant="white"),
-                                    item("pants_tactical", variant="tactical_pants_black")]
+        if name in {
+            "ontario", "quebec", "pacific_ca", "rcmp",
+            "central_mx", "patrol_mx",
+        }:
+            officer["items"][:3] = [
+                item(boots), item("hat_ball"),
+                item("dress_shirt", variant="white"),
+                item("pants_tactical", variant="tactical_pants_black"),
+            ]
         groups.append(officer)
     return groups
 
 
 def service_drops(base):
     groups = []
-    for country, variant in (("ca", "tactical_pants_black"), ("mx", "tactical_pants_grey")):
+    for country, variant in (
+        ("ca", "tactical_pants_black"), ("mx", "tactical_pants_grey")
+    ):
         swat = copy.deepcopy(base["mon_zombie_swat_death_drops"])
         swat["id"] += "-" + country
         swat["entries"] = [
@@ -241,8 +298,13 @@ def service_drops(base):
         ]
         torso = copy.deepcopy(base["swat_torso"])
         torso["id"] += "-" + country
-        torso["entries"][1] = item("dress_shirt", variant="black", damage=[0, 4])
-        next(entry for entry in swat["entries"] if entry.get("group") == "swat_torso")["group"] = torso["id"]
+        torso["entries"][1] = item(
+            "dress_shirt", variant="black", damage=[0, 4]
+        )
+        next(
+            entry for entry in swat["entries"]
+            if entry.get("group") == "swat_torso"
+        )["group"] = torso["id"]
         groups.extend([swat, torso])
 
         marine = copy.deepcopy(base["mon_zombie_marine_death_drops"])
@@ -250,10 +312,12 @@ def service_drops(base):
         marine["entries"] = [
             item("pants_tactical", damage=[0, 4], variant=variant)
             if entry.get("item") == "pants_army" else entry
-            for entry in marine["entries"] if entry.get("group") != "clothing_navy"
+            for entry in marine["entries"]
+            if entry.get("group") != "clothing_navy"
         ]
         marine["entries"].extend([
-            item("combat_shirt", damage=[0, 4]), item("nomex_socks"), reference("underwear")
+            item("combat_shirt", damage=[0, 4]), item("nomex_socks"),
+            reference("underwear"),
         ])
         groups.append(marine)
     return groups
@@ -269,11 +333,15 @@ def _inline_json(value):
 
 
 def render(value, indent=0, separator=""):
-    """Render item groups with the repository JSON formatter's collection layout."""
+    (
+        "Render item groups with the repository JSON formatter's "
+        "collection layout."
+    )
     flat = _inline_json(value)
     if isinstance(value, (dict, list)):
         # Native depth starts at -1: root and immediate child collections wrap.
-        # Count the pending separator toward tools/format/format.cpp's byte limit.
+        # Count the pending separator toward tools/format/format.cpp's
+        # byte limit.
         if indent >= 4 and len((separator + flat).encode("utf-8")) <= 120:
             return flat
         left, right = ("{", "}") if isinstance(value, dict) else ("[", "]")
@@ -281,8 +349,13 @@ def render(value, indent=0, separator=""):
             parts = [_inline_json(key) + ": " + render(part, indent + 2)
                      for key, part in value.items()]
         else:
-            parts = [render(part, indent + 2, ",\n" + " " * (indent + 2) if index else "")
-                     for index, part in enumerate(value)]
+            parts = [
+                render(
+                    part, indent + 2,
+                    ",\n" + " " * (indent + 2) if index else "",
+                )
+                for index, part in enumerate(value)
+            ]
         body = ",\n".join(" " * (indent + 2) + part for part in parts)
         return left + "\n" + (body if parts else " " * (indent + 2)) + (
             "\n" + " " * indent + right
@@ -303,7 +376,9 @@ def build():
     }
     for stem, directory in zip(policy["state_groups"], list(buckets)[:3]):
         for code, profile, _ in policy["jurisdictions"]:
-            buckets[directory].append(group(f"{stem}-{code}", [reference(f"{stem}-{profile}")]))
+            buckets[directory].append(group(
+                f"{stem}-{code}", [reference(f"{stem}-{profile}")]
+            ))
     return {path / "regional_north_america.json": render(groups) + "\n"
             for path, groups in buckets.items()}
 
@@ -315,7 +390,11 @@ def main():
     for path, output in build().items():
         if args.check:
             if not path.exists() or path.read_text(encoding="utf-8") != output:
-                parser.exit(1, f"Regional loot is out of date: {path.relative_to(ROOT)}\n")
+                parser.exit(
+                    1,
+                    f"Regional loot is out of date: "
+                    f"{path.relative_to(ROOT)}\n",
+                )
         else:
             path.write_text(output, encoding="utf-8", newline="\n")
 
