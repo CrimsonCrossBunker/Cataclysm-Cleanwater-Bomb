@@ -352,11 +352,11 @@ struct snippet_category_definition_handle {
     snippet_category_definition_handle &text( const sol::object &value,
             const sol::optional<std::int64_t> &weight ) {
         require_building_handle( token, *definition, "snippet category" );
+        if( !value.valid() || value.get_type() == sol::type::nil ) {
+            throw std::runtime_error( "snippet text is required" );
+        }
         detail::authored_text text = detail::read_singular_text(
                                          value, {}, "SnippetCategory.text" );
-        if( text.empty() ) {
-            throw std::runtime_error( "snippet text cannot be empty" );
-        }
         definition->entries.push_back( snippet_entry_definition_data{
             std::string(), std::move( text ), {}, weight.value_or( 1 ), std::string()
         } );
@@ -1180,7 +1180,11 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
         std::set<std::string> staged_snippet_ids;
         for( const snippet_category_registration &entry : pimpl_->snippet_categories ) {
             const snippet_category_definition_data &definition = *entry.definition;
-            require_valid_id( definition.id, "snippet category" );
+            // Snippet categories are text expansion tags, which can include '#' (e.g. "<A#>").
+            if( definition.id.empty() || definition.id.size() > 256 ||
+                definition.id.find( '\0' ) != std::string::npos ) {
+                throw std::runtime_error( "invalid snippet category id '" + definition.id + "'" );
+            }
             if( !snippet_category_ids.insert( definition.id ).second ||
                 definition.entries.empty() ) {
                 throw std::runtime_error( "snippet category '" + definition.id +
@@ -1195,7 +1199,7 @@ bool presentation_content_transaction::validate( const runtime &owner_runtime,
             }
             std::uint64_t category_weight = 0;
             for( const snippet_entry_definition_data &snippet : definition.entries ) {
-                if( snippet.text.empty() || snippet.weight <= 0 ) {
+                if( ( !snippet.id.empty() && snippet.text.empty() ) || snippet.weight <= 0 ) {
                     throw std::runtime_error( "snippet category '" + definition.id +
                                               "' has an invalid text or weight" );
                 }

@@ -383,7 +383,19 @@ snippet_id snippet_library::migrate_hash_to_id( const int old_hash )
         for( const auto &id_and_text : snippets_by_id ) {
             std::optional<int> hash = id_and_text.second.legacy_hash();
             if( hash ) {
-                hash_to_id_migration->emplace( hash.value(), id_and_text.first );
+                const auto [entry, inserted] = hash_to_id_migration->emplace( *hash, id_and_text.first );
+                if( inserted ) {
+                    continue;
+                }
+                // A legacy hash cannot distinguish copies of the same text. Preserve a
+                // title when a duplicate entry omits it.
+                const auto name = name_by_id.find( id_and_text.first );
+                const auto previous_name = name_by_id.find( entry->second );
+                if( name != name_by_id.end() && !name->second.empty() &&
+                    ( previous_name == name_by_id.end() || previous_name->second.empty() ) &&
+                    id_and_text.second == snippets_by_id.at( entry->second ) ) {
+                    entry->second = id_and_text.first;
+                }
             }
         }
     }

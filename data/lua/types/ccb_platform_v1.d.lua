@@ -2708,7 +2708,7 @@ function HelpTopicDefinition:paragraph(text) end
 ---@field id string
 local SnippetCategoryDefinition = {}
 
----@param text string|LocalizedText Player-facing anonymous snippet text; plural text is rejected.
+---@param text string|LocalizedText Player-facing anonymous snippet text. An explicit empty string participates in selection; plural text is rejected.
 ---@param weight? integer Positive selection weight; defaults to 1.
 ---@return SnippetCategoryDefinition self
 function SnippetCategoryDefinition:text(text, weight) end
