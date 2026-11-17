@@ -3,7 +3,17 @@ local services = ccb.services
 local state = require("raid_state")
 local returning = require("raid_return")
 local sickness = require("raid_sickness")
+local warp = require("raid_warp")
 local content = ccb.content
+local id = services.types.id
+
+local function activation_charge(context)
+    if context.item:is_valid()
+        and state.checked(services.inventory.contains(context.character, context.item)) then
+        return 1
+    end
+    return 0
+end
 
 ccb.runtime.handler("sky_homeward_mote", function(context)
     if not context.character then return nil end
@@ -16,6 +26,27 @@ ccb.runtime.handler("sky_earthbound_pill", function(context)
     if not context.character then return end
     state.set("timeawayfromhome", state.number("timeawayfromhome") - 5)
     sickness.tick(context.character)
+end)
+
+ccb.runtime.handler("sky_skyward_beacon", function(context)
+    local character = context.character
+    if not character then return nil end
+    if warp.no_enemies(character) then
+        state.checked(services.activities.assign_timed(character, id("activity", "ACT_WARP_HOME"),
+            services.time.duration(60, "turn")))
+    else
+        state.message(character, services.translate("You cannot warp home with enemies nearby!"), "bad")
+    end
+    return activation_charge(context)
+end)
+
+ccb.runtime.handler("sky_waterwalking_stone", function(context)
+    local character = context.character
+    if not character then return nil end
+    state.checked(services.inventory.consume_by_type(character, id("item", "warp_waterwalking_stone"), 1, 0))
+    state.message(character, services.translate("You feel somehow lighter."), "good")
+    state.add_effect(character, "effect_warped_waterwalking", 180)
+    return activation_charge(context)
 end)
 
 do
@@ -53,5 +84,43 @@ do
     item:flag("UNBREAKABLE")
     item:comestible { type = "MED" }
     item:on_consume("sky_earthbound_pill")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "warp_skyward_beacon",
+        name = content.plural_text("skyward beacon", "skyward beacon"),
+        description = content.text("This smooth purplish sphere seems like it wants to rise right out of your hand.  If you activate it, you will return directly to the island with everything you are carrying."),
+        mass_grams = 5,
+        volume_ml = 5,
+        category = "other",
+        looks_like = "spiral_stone",
+        symbol = ".",
+        color = "magenta",
+    }
+    item:material("alien_resin", 1)
+    item:flag("UNBREAKABLE")
+    item:ammunition { type = "components", count = 1, stack_size = 100 }
+    item:on_use("sky_skyward_beacon", content.text("Activate"), content.text("Return to the sky."))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "warp_waterwalking_stone",
+        name = content.plural_text("flotation stone", "flotation stone"),
+        description = content.text("This smooth, whorled stone seems cool and wet to the touch, but when you take your hand off it your skin is perfectly dry.  If you activate it, you will be able to walk on the surface of water for three minutes."),
+        mass_grams = 5,
+        volume_ml = 5,
+        category = "other",
+        looks_like = "spiral_stone",
+        symbol = ".",
+        color = "cyan",
+    }
+    item:material("alien_resin", 1)
+    item:flag("UNBREAKABLE")
+    item:ammunition { type = "components", count = 1, stack_size = 100 }
+    item:on_use("sky_waterwalking_stone", content.text("Activate"), content.text("Cross the waters."))
     content.add(item)
 end

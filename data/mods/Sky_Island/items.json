@@ -446,30 +446,6 @@
     }
   },
   {
-    "id": "warp_skyward_beacon",
-    "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "category": "other",
-    "name": { "str_sp": "skyward beacon" },
-    "description": "This smooth purplish sphere seems like it wants to rise right out of your hand.  If you activate it, you will return directly to the island with everything you are carrying.",
-    "weight": "5 g",
-    "volume": "5 ml",
-    "count": 1,
-    "stack_size": 100,
-    "looks_like": "spiral_stone",
-    "flags": [ "UNBREAKABLE" ],
-    "material": [ "alien_resin" ],
-    "symbol": ".",
-    "color": "magenta",
-    "ammo_type": "components",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "consume": true,
-      "description": "Return to the sky.",
-      "effect_on_conditions": [ "EOC_WARPED_ENEMY_CHECK_RETURN" ]
-    }
-  },
-  {
     "id": "warp_healing_salve",
     "type": "ITEM",
     "category": "drugs",
@@ -484,30 +460,6 @@
     "symbol": ",",
     "color": "magenta",
     "use_action": { "type": "heal", "move_cost": 2500, "limb_power": 21, "head_power": 21, "torso_power": 21 }
-  },
-  {
-    "id": "warp_waterwalking_stone",
-    "type": "ITEM",
-    "subtypes": [ "AMMO" ],
-    "category": "other",
-    "name": { "str_sp": "flotation stone" },
-    "description": "This smooth, whorled stone seems cool and wet to the touch, but when you take your hand off it your skin is perfectly dry.  If you activate it, you will be able to walk on the surface of water for three minutes.",
-    "weight": "5 g",
-    "volume": "5 ml",
-    "count": 1,
-    "stack_size": 100,
-    "looks_like": "spiral_stone",
-    "flags": [ "UNBREAKABLE" ],
-    "material": [ "alien_resin" ],
-    "symbol": ".",
-    "color": "cyan",
-    "ammo_type": "components",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "consume": true,
-      "description": "Cross the waters.",
-      "effect_on_conditions": [ "EOC_WARPED_WATERWALKING" ]
-    }
   },
   {
     "id": "warptoken",
