@@ -318,7 +318,7 @@
     "changes_to": [ "SALAMANDER_HEAT_HEAL" ],
     "category": [ "SALAMANDER" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "temperature_speed_mod_salamander(65, 1)" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_SALAMANDER_ECTOTHERM_0" ]
   },
   {
     "type": "mutation",
@@ -333,7 +333,7 @@
     "purifiable": false,
     "enchantments": [
       "ench_salamander_heat_healing",
-      { "values": [ { "value": "SPEED", "add": { "math": [ "temperature_speed_mod_salamander(65, 1)" ] } } ] }
+      "INLINE_ENCH_SALAMANDER_HEAT_HEAL_1"
     ]
   },
   {

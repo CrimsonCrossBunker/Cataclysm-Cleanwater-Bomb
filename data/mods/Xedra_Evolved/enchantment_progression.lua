@@ -179,4 +179,23 @@ function progression.chron_spell(ctx, level, multiplier, base)
         * runtime.call_number("attribute_scaling", ctx.character_inputs.stats.intelligence)
 end
 
+local bloodthorn_traits = {
+    "BLOODTHORNE_DRUID_SYMBIOTIC_PLANT",
+    "BLOODTHORNE_DRUID_SYMBIOTIC_PLANT_WHIP",
+    "BLOODTHORNE_DRUID_REGAIN_BLOOD",
+    "BLOODTHORNE_DRUID_BONUS_MANA_REGEN",
+    "BLOODTHORNE_DRUID_PREVENT_VAMPIRISM",
+    "BLOODTHORNE_DRUID_STOP_BLEEDING",
+    "BLOODTHORNE_DRUID_WHIP_TARGETS_IN_NATURE",
+    "BLOODTHORNE_DRUID_REDUCED_PAIN_PENALTIES",
+    "BLOODTHORNE_DRUID_HEAL_FROM_SPILLED_BLOOD",
+    "BLOODTHORNE_DRUID_SUMMON_THORNHOUND",
+    "BLOODTHORNE_DRUID_SLOWER_BLEEDING",
+    "BLOODTHORNE_DRUID_CREATE_THORN_PRISON",
+}
+
+function progression.bloodthorn_traits(ctx)
+    return count_traits(ctx, bloodthorn_traits)
+end
+
 return progression

@@ -126,3 +126,5 @@ require("overlay_enchantments")
 require("inline_special_vision")
 
 require("progression_enchantments")
+
+require("innate_enchantments")

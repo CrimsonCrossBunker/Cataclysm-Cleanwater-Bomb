@@ -2540,42 +2540,7 @@
     "remove_message": "Your athletic prowess fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "DODGE_CHANCE",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.08) + (u_skill('gramarye') * 0.25) )" ] }
-          },
-          {
-            "value": "BONUS_DODGE",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.05) + (u_skill('gramarye') * 0.2) )" ] }
-          },
-          {
-            "value": "THROW_STR",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.07) + (u_skill('gramarye') * 0.35) )" ] }
-          },
-          {
-            "value": "RANGE_DODGE",
-            "add": {
-              "math": [
-                "min( (0.33 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.005) + (u_skill('gramarye') * 0.02) )), 0.98)"
-              ]
-            }
-          },
-          {
-            "value": "MOVE_COST",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.0015) - (u_skill('gramarye') * 0.015) )" ]
-            }
-          },
-          {
-            "value": "ATTACK_SPEED",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.0015) - (u_skill('gramarye') * 0.015) )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_noble_movement_buffs_0"
     ],
     "flags": [ "CLIMB_NO_LADDER", "FEATHER_FALL" ]
   },
@@ -3625,34 +3590,7 @@
     "remove_message": "Your wilderness-enhanced prowess fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": {
-              "math": [
-                "min( ( (1 + (0.3 * bloodthorn_druid_traits_sum() ) + (0.1 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 10)"
-              ]
-            }
-          },
-          {
-            "value": "DEXTERITY",
-            "add": {
-              "math": [
-                "min( ( (1 + (0.3 * bloodthorn_druid_traits_sum() ) + (0.1 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 10)"
-              ]
-            }
-          },
-          {
-            "value": "MAX_HP",
-            "multiply": {
-              "math": [
-                "min( ( (0.1 + (0.02 * bloodthorn_druid_traits_sum() ) + (0.005 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 0.6)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_bloodthorne_druid_gain_strength_dexterity_buff_0"
     ]
   },
   {
@@ -3710,15 +3648,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_any_trait": [ "WEREWOLF_HYBRID_FORM_TRAITS", "WEREWOLF_PRIMAL_FORM_TRAITS" ] } },
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": { "math": [ "min( (2 + (werewolf_tier_four_traits() * 0.2) + (werewolf_tier_five_traits() * 0.35) ), 8)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_primal_strength_human_form_0"
     ]
   },
   {
@@ -3737,19 +3667,7 @@
     "desc": [ "" ],
     "enchantments": [
       "INLINE_ENCH_effect_xe_werewolf_camouflage_as_wolf_0",
-      {
-        "condition": { "u_has_trait": "WOLF_VAMPIRE_WOLF_FORM_TRAITS" },
-        "values": [
-          {
-            "value": "STEALTH_MODIFIER",
-            "add": {
-              "math": [
-                "min( (25 + (werewolf_tier_three_traits() * 1) + (werewolf_tier_four_traits() * 2) + (werewolf_tier_five_traits() * 4) ), 50)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_camouflage_as_wolf_1"
     ]
   },
   {

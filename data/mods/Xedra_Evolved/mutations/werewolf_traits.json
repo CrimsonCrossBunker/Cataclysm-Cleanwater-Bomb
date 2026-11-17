@@ -164,19 +164,7 @@
     "valid": false,
     "mana": true,
     "enchantments": [
-      {
-        "condition": { "not": "u_has_weapon" },
-        "values": [
-          {
-            "value": "WEAKPOINT_ACCURACY",
-            "multiply": {
-              "math": [
-                "min( (0.25 + (werewolf_tier_three_traits() * 0.1) + (werewolf_tier_four_traits() * 0.15) + (werewolf_tier_five_traits() * 0.2) ), 2)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_WEREWOLF_EXTRA_WEAKPOINT_HITS_0"
     ]
   },
   {
@@ -275,15 +263,7 @@
     "cost": 1,
     "time": 5,
     "enchantments": [
-      {
-        "condition": { "u_has_any_trait": [ "WEREWOLF_HYBRID_FORM_TRAITS", "WEREWOLF_PRIMAL_FORM_TRAITS" ] },
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": { "math": [ "min( (2 + (werewolf_tier_four_traits() * 0.2) + (werewolf_tier_five_traits() * 0.35) ), 8)" ] }
-          }
-        ]
-      },
+      "INLINE_ENCH_WEREWOLF_STRENGTH_BONUS_0",
       "INLINE_ENCH_WEREWOLF_STRENGTH_BONUS_1"
     ]
   },
@@ -361,27 +341,7 @@
     "time": 1,
     "activation_msg": "A soft silvery glow springs forth around you.",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": { "math": [ "max( (-6 + (werewolf_tier_five_traits() * -0.4) ), -12)" ] } },
-          {
-            "type": "bash",
-            "multiply": { "math": [ "max( (-0.2 + (werewolf_tier_five_traits() * -0.05) ), -0.5)" ] }
-          },
-          { "type": "cut", "add": { "math": [ "max( (-4 + (werewolf_tier_five_traits() * -0.4) ), -8)" ] } },
-          {
-            "type": "cut",
-            "multiply": { "math": [ "max( (-0.15 + (werewolf_tier_five_traits() * -0.04) ), -0.5)" ] }
-          },
-          { "type": "stab", "add": { "math": [ "max( (-2 + (werewolf_tier_five_traits() * -0.4) ), -4)" ] } },
-          {
-            "type": "stab",
-            "multiply": { "math": [ "max( (-0.1 + (werewolf_tier_five_traits() * -0.03) ), -0.5)" ] }
-          }
-        ],
-        "values": [ { "value": "LUMINATION", "add": { "math": [ "min( (10 + (werewolf_tier_five_traits() * 1) ), 30)" ] } } ]
-      }
+      "INLINE_ENCH_WEREWOLF_MOON_ARMOR_0"
     ]
   },
   {
