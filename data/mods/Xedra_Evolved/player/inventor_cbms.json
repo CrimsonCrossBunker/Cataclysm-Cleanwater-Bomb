@@ -18,12 +18,7 @@
       [ "hand_r", 1 ]
     ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "BIONIC_MANA_PENALTY", "multiply": -1 },
-          { "value": "BIONIC_POWER", "add": { "math": [ "u_val('mana') * -1000000" ] } }
-        ]
-      }
+      "BIONIC_ENCH_bio_inventor_mana_kj_penalty_switch_0"
     ]
   },
   {
@@ -60,43 +55,35 @@
     "activated_eocs": [ "EOC_bio_inventor_book_burn_boost_activated" ],
     "//": "When an option to boost all skills at once will exist, convert the skill boosts below to it.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "READING_EXP", "add": { "math": [ "(u_effect_intensity('effect_burned_books') * -20) -20" ] } },
-          {
-            "value": "LEARNING_FOCUS",
-            "add": { "math": [ "(u_effect_intensity('effect_burned_books') * -20) - 20" ] }
-          }
-        ]
-      },
-      { "skills": [ { "value": "deduction", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "speech", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "computer", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "firstaid", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "mechanics", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "traps", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "driving", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "swimming", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "fabrication", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "cooking", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "tailor", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "survival", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "electronics", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "archery", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "gun", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "launcher", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "pistol", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "rifle", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "shotgun", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "smg", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "throw", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "melee", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "bashing", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "cutting", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "dodge", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "stabbing", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "unarmed", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] },
-      { "skills": [ { "value": "chemistry", "add": { "math": [ "u_effect_intensity('effect_burned_books')" ] } } ] }
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_0",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_1",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_2",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_3",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_4",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_5",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_6",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_7",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_8",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_9",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_10",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_11",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_12",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_13",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_14",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_15",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_16",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_17",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_18",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_19",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_20",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_21",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_22",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_23",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_24",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_25",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_26",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_27",
+      "BIONIC_ENCH_bio_inventor_book_burn_boost_28"
     ]
   }
 ]
