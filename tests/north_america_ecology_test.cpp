@@ -80,11 +80,17 @@ TEST_CASE( "atlas_extended_map_window_loads_original_rock_and_air", "[north_amer
     REQUIRE( window.inbounds_z( -30 ) );
     CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_str_id( "t_rock" ).id() );
     CHECK( !window.inbounds_z( 0 ) );
+    REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, -41 ) ) );
+    CHECK( window.get_abs_sub().z() == -30 );
+    CHECK( window.ter( tripoint_bub_ms( middle, -41 ) ) == ter_str_id( "t_rock" ).id() );
 
     window.load( tripoint_abs_sm( site, 30 ), false, false );
     REQUIRE( window.inbounds_z( 30 ) );
     CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_str_id( "t_open_air" ).id() );
     CHECK( !window.inbounds_z( -30 ) );
+    REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, 41 ) ) );
+    CHECK( window.get_abs_sub().z() == 30 );
+    CHECK( window.ter( tripoint_bub_ms( middle, 41 ) ) == ter_str_id( "t_open_air" ).id() );
 }
 
 TEST_CASE( "atlas_diagonal_slopes_have_visible_relief", "[north_america]" )
@@ -345,7 +351,20 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                     ++widened;
                     const bool vertical = terrain == flank_ns;
                     const oter_id core( vertical ? "road_ns" : "road_ew" );
-                    CHECK( om->ter( p + ( vertical ? point::west : point::north ) ) == core );
+                    const point across = vertical ? point::east : point::south;
+                    bool has_core = false;
+                    for( const int direction : {
+                             -1, 1
+                             } ) {
+                        for( int n = 1; n <= north_america::max_road_flanks; ++n ) {
+                            const oter_id other = om->ter( p + across * ( direction * n ) );
+                            if( other != terrain ) {
+                                has_core = has_core || other == core;
+                                break;
+                            }
+                        }
+                    }
+                    CHECK( has_core );
                     const point step = vertical ? point::north : point::east;
                     CHECK( ( om->ter( p + step ) == terrain || om->ter( p - step ) == terrain ) );
                     continue;
@@ -380,6 +399,40 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
     CHECK( widened > 0 );
 }
 
+TEST_CASE( "atlas_highways_reserve_multiple_overmap_columns", "[north_america][worldgen]" )
+{
+    const restore_on_out_of_scope saved_mode( g->north_america_world );
+    g->north_america_world = true;
+    const std::size_t links = om_lines::set_segment(
+                                  om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::south );
+    for( const unsigned lanes : {
+             6u, 8u
+         } ) {
+        const auto om = std::make_unique<overmap>( point_abs_om::zero );
+        std::vector<north_america::road_cell> roads( OMAPX * OMAPY );
+        for( int y = 20; y < 36; ++y ) {
+            auto &cell = roads[y * OMAPX + 40];
+            cell.lanes = lanes;
+            cell.connections = cell.mapped_connections = links;
+        }
+        overmap_test_helper::place_atlas_roads_on_land( *om, roads );
+        CAPTURE( lanes );
+        REQUIRE( om->ter( { 40, 28, 0 } ) == oter_id( "road_ns" ) );
+        int width = 1;
+        for( const int direction : {
+                 -1, 1
+                 } ) {
+            for( int n = 1; n <= north_america::max_road_flanks; ++n ) {
+                if( !north_america::is_avenue_flank( om->ter( { 40 + direction * n, 28, 0 } ) ) ) {
+                    break;
+                }
+                ++width;
+            }
+        }
+        CHECK( width == lanes / 2 );
+    }
+}
+
 TEST_CASE( "atlas_city_building_can_be_placed_at_an_overmap_edge",
            "[north_america][worldgen]" )
 {
@@ -397,6 +450,26 @@ TEST_CASE( "atlas_city_building_can_be_placed_at_an_overmap_edge",
     CHECK( occupied.size() == 2 );
     CHECK( om->ter( edge ) == oter_id( "house_regional_cape_cod_north" ) );
     CHECK( om->ter( edge + tripoint::above ) == oter_id( "house_regional_cape_cod_roof_north" ) );
+}
+
+TEST_CASE( "atlas_overmap_overlay_queries_handle_layers_without_stored_metadata",
+           "[north_america][worldgen]" )
+{
+    const auto om = std::make_unique<overmap>( point_abs_om::zero );
+    const tripoint_om_omt marked( OMAPX / 2, OMAPY / 2, 0 );
+    om->add_note( marked, "Danger" );
+    om->mark_note_dangerous( marked, 1, true );
+    REQUIRE( om->is_marked_dangerous( marked ) );
+    for( const int z : {
+             -OVERMAP_DEPTH - 1, OVERMAP_HEIGHT + 1
+             } ) {
+        const tripoint_om_omt outside( marked.xy(), z );
+        CAPTURE( z );
+        CHECK_FALSE( om->is_marked_dangerous( outside ) );
+        CHECK( om->find_notes( z, "" ).empty() );
+        CHECK( om->find_extras( z, "" ).empty() );
+        CHECK_FALSE( om->get_omt_summary( outside ) );
+    }
 }
 
 TEST_CASE( "atlas_special_placement_does_not_generate_neighbor_overmaps",

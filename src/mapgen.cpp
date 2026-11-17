@@ -382,9 +382,11 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                 oter_id omt = overmap_buffer.ter( omt_point );
                 std::vector<pp_resolved_generator> *stored_decisions =
                     overmap_buffer.pp_decisions( omt_point );
+                bool riot_damaged = false;
                 if( omt->has_flag( oter_flags::road ) && overmap_buffer.is_in_city( omt_point ) ) {
                     // Roads use a dedicated generator; not yet migrated to oter_type_t field
-                    pp_generator_riot_damage_road.obj().execute( *this, omt_point, nullptr );
+                    riot_damaged =
+                        pp_generator_riot_damage_road.obj().execute( *this, omt_point, nullptr );
                 } else if( !omt->get_post_process_generators().empty() ) {
                     for( const pp_generator_id &gen_id : omt->get_post_process_generators() ) {
                         std::vector<pp_sub_decision> *gen_decisions = nullptr;
@@ -396,16 +398,24 @@ void map::generate( const tripoint_abs_omt &p, const time_point &when, bool save
                                 }
                             }
                         }
-                        gen_id.obj().execute( *this, omt_point, gen_decisions );
+                        const bool affected =
+                            gen_id.obj().execute( *this, omt_point, gen_decisions );
+                        if( gen_id == pp_generator_riot_damage || gen_id == pp_generator_riot_damage_road ) {
+                            riot_damaged |= affected;
+                        }
                     }
                 } else {
                     // Legacy flag-based dispatch for unmigrated content
                     if( omt->has_flag( oter_flags::pp_generate_riot_damage ) ) {
-                        pp_generator_riot_damage.obj().execute( *this, omt_point, nullptr );
+                        riot_damaged =
+                            pp_generator_riot_damage.obj().execute( *this, omt_point, nullptr );
                     }
                     if( omt->has_flag( oter_flags::pp_generate_ruined ) ) {
                         pp_generator_aftershock_ruin.obj().execute( *this, omt_point, nullptr );
                     }
+                }
+                if( save_results && riot_damaged ) {
+                    overmap_buffer.set_riot_damage( omt_point );
                 }
             }
             if( any_missing || !save_results ) {

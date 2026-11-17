@@ -42,6 +42,7 @@
 #include "map_iterator.h"
 #include "map_movement_query.h"
 #include "map_scale_constants.h"
+#include "north_america_elevation.h"
 #include "mapdata.h"
 #include "mattack_common.h"
 #include "messages.h"
@@ -1878,6 +1879,13 @@ int monster::calc_movecost( const map &here, const tripoint_bub_ms &from,
     int movecost = std::max( tilecosts[from] + tilecosts[to], 1 ) * 25;
     if( !has_flag( json_flag_FLIES ) && !has_flag( json_flag_SNOWWALKING ) ) {
         movecost += snow_move_penalty( get_weather().get_snow_cover( here, to ) );
+    }
+    const bool swimming = swims() &&
+                          here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SWIMMABLE, to );
+    if( ( !flies() || swimming ) && north_america::elevation_active() ) {
+        const double grade = north_america::grade_between( here, from, to );
+        movecost = std::max( 1, static_cast<int>( std::lround(
+                                 movecost * north_america::grade_move_multiplier( grade ) ) ) );
     }
 
     add_msg_debug( debugmode::DF_MONMOVE, "%s t1:%i  t2:%i movecost: %i", name(), tilecosts[from],

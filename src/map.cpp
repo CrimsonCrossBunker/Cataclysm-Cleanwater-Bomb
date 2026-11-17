@@ -1339,7 +1339,7 @@ void map::vehmove( const std::vector<std::reference_wrapper<map>> &views,
         view.dirty_vehicle_list.clear();
     }
     std::unordered_set<vehicle *> cleaned;
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     for( const auto &candidate : dirty ) {
         if( vehicle *const veh = candidate.get(); veh && cleaned.insert( veh ).second ) {
             if( map *const owner = session.loaded_map_at( *this, veh->sm_pos ) ) {
@@ -4641,7 +4641,7 @@ void map::support_dirty( const tripoint_bub_ms &p )
         return;
     }
     if( g && g->multiplayer_session().has_regions() && has_loaded_submap( p ) ) {
-        auto &session = g->multiplayer_session();
+        cata_mp::world_session &session = g->multiplayer_session();
         const tripoint_abs_ms absolute = get_abs( p );
         const map *const owner = session.loaded_map_at( reality_bubble(), project_to<coords::sm>(
                                      absolute ) );
@@ -4663,7 +4663,7 @@ void map::process_falling()
     }
 
     if( g && this == &reality_bubble() && g->multiplayer_session().has_regions() ) {
-        auto &session = g->multiplayer_session();
+        cata_mp::world_session &session = g->multiplayer_session();
         // Local queues can contain work scheduled just before a view joined.
         // Collect all due cells before dropping anything. A drop can enqueue
         // another cell for the next pass.
@@ -6118,6 +6118,9 @@ bash_params map::bash( const tripoint_bub_ms &p, const std::map<damage_type_id, 
         return bsh;
     }
 
+    const ter_id old_terrain = ter( p );
+    const furn_id old_furniture = furn( p );
+    const int old_damage = get_map_damage( p );
     bool bashed_sealed = false;
     if( has_flag( ter_furn_flag::TFLAG_SEALED, p ) ) {
         bash_ter_furn( p, bsh, repair_missing_ground );
@@ -6148,6 +6151,8 @@ bash_params map::bash( const tripoint_bub_ms &p, const std::map<damage_type_id, 
         clear_original_terrain_at( p );
     }
 
+    bsh.did_damage |= ter( p ) != old_terrain || furn( p ) != old_furniture ||
+                      get_map_damage( p ) != old_damage;
     return bsh;
 }
 
@@ -6166,6 +6171,7 @@ void map::bash_items( const tripoint_bub_ms &p, bash_params &params )
         float glass_fraction = glass_portion / static_cast<float>( bashed_item->type->mat_portion_total );
         if( glass_portion && !bashed_item->active && rng_float( 0.0f, 1.0f ) < glass_fraction * 0.5f ) {
             params.did_bash = true;
+            params.did_damage = true;
             smashed_glass = true;
             for( const item *bashed_content : bashed_item->all_items_top() ) {
                 smashed_contents.emplace_back( *bashed_content );
@@ -6189,9 +6195,22 @@ void map::bash_vehicle( const tripoint_bub_ms &p, bash_params &params )
 {
     // Smash vehicle if present
     if( const optional_vpart_position vp = veh_at( p ) ) {
+        int hp_before = 0;
+        int parts_before = 0;
+        for( const vpart_reference &part : vp->vehicle().get_all_parts() ) {
+            hp_before += part.part().hp();
+            ++parts_before;
+        }
         for( const std::pair<const damage_type_id, int> &dam : params.strength ) {
             vp->vehicle().damage( *this, vp->part_index(), dam.second, dam.first );
         }
+        int hp_after = 0;
+        int parts_after = 0;
+        for( const vpart_reference &part : vp->vehicle().get_all_parts() ) {
+            hp_after += part.part().hp();
+            ++parts_after;
+        }
+        params.did_damage |= hp_after < hp_before || parts_after < parts_before;
         if( !params.silent ) {
             sounds::sound( p, 18, sounds::sound_t::combat, _( "crash!" ), false,
                            "smash_success", "hit_vehicle" );
@@ -6214,6 +6233,7 @@ void map::bash_field( const tripoint_bub_ms &p, bash_params &params )
         }
     }
     for( field_type_id fd : to_remove ) {
+        params.did_damage = true;
         remove_field( p, fd );
         // A zero-intensity entry remains in the field container until field
         // processing runs.  That stale entry would intercept an immediate
@@ -7212,7 +7232,7 @@ int map::unload_furniture_item( item_location source, Character &who, item_locat
                                            placed ) : 0;
 }
 
-int map::unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+int map::unload_furniture_item( const tripoint_bub_ms &destination, const item_location &source,
                                 item portion, Character &who, item_location *placed )
 {
     if( !source || source.where() != item_location::type::map || source.has_parent() ||
@@ -10105,7 +10125,7 @@ bool map::sees( const tripoint_bub_ms &F, const tripoint_bub_ms &T, const int ra
     bool ( map:: * f_transparent )( const tripoint_bub_ms & p ) const =
         with_fields ? &map::is_transparent : &map::is_transparent_wo_fields;
     lru_cache_t &skew_cache = with_fields ? skew_vision_cache : skew_vision_wo_fields_cache;
-    if( std::abs( F.z() - T.z() ) > fov_3d_z_range ||
+    if( std::abs( F.z() - T.z() ) > z_range() ||
         ( range >= 0 && range < rl_dist( F, T ) ) ||
         !inbounds( T ) ) {
         bresenham_slope = 0;
@@ -10498,7 +10518,7 @@ std::vector<tripoint_bub_ms> map::reachable_item_points( const tripoint_bub_ms &
 bool map::clear_path( const tripoint_bub_ms &f, const tripoint_bub_ms &t, const int range,
                       const int cost_min, const int cost_max ) const
 {
-    if( std::abs( f.z() - t.z() ) > fov_3d_z_range ) {
+    if( std::abs( f.z() - t.z() ) > z_range() ) {
         return false;
     }
 
@@ -10659,7 +10679,8 @@ static bool is_replica_window( const map &terrain )
 }
 
 void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
-                const bool pump_events, const map_simulation_regions *regions )
+                const bool pump_events, const map_simulation_regions *regions,
+                std::optional<int> z_origin_override )
 {
     context_lifetime_.reset();
     viewpoint_.reset();
@@ -10681,11 +10702,16 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     support_cache_dirty.clear();
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
-    const int next_origin = north_america::elevation_active() &&
-                            ( w.z() < -OVERMAP_DEPTH || w.z() > OVERMAP_HEIGHT ) ? w.z() : 0;
+    const int next_origin = z_origin_override.value_or( north_america::elevation_active() &&
+                            ( w.z() < -OVERMAP_DEPTH || w.z() > OVERMAP_HEIGHT ) ? w.z() : 0 );
     if( vertical_origin != next_origin ) {
+        skew_vision_cache.clear();
+        skew_vision_wo_fields_cache.clear();
         for( auto &cache : caches ) {
             cache.reset();
+        }
+        for( auto &cache : pathfinding_caches ) {
+            cache->dirty = true;
         }
         max_populated_zlev.reset();
         vertical_origin = next_origin;
@@ -11052,10 +11078,27 @@ bool map::ensure_z_in_window( const tripoint_bub_ms &destination )
         return false;
     }
     const tripoint_abs_sm previous = abs_sub;
+    if( std::abs( previous.z() - destination.z() ) > z_range() ) {
+        return false;
+    }
+    // Keep the player in the window and leave room for a few more scroll steps.
+    constexpr int prefetch = 3;
+    const int origin = destination.z() > max_z() ?
+                       std::min( destination.z() - OVERMAP_HEIGHT + prefetch, previous.z() + OVERMAP_DEPTH ) :
+                       std::max( destination.z() + OVERMAP_DEPTH - prefetch, previous.z() - OVERMAP_HEIGHT );
+    const auto previous_viewpoint = viewpoint_;
     save();
-    load( tripoint_abs_sm( previous.xy(), destination.z() ), true, false );
-    vertical_shift( previous.z() );
+    load( previous, true, false, nullptr, origin );
+    if( previous_viewpoint && inbounds( previous_viewpoint->position ) ) {
+        viewpoint_ = previous_viewpoint;
+    }
     return true;
+}
+
+int map::z_range() const
+{
+    return zlevels && north_america::elevation_active() && !cata_mp::is_session_active() ?
+           OVERMAP_LAYERS - 1 : fov_3d_z_range;
 }
 
 void map::vertical_shift( const int newz )

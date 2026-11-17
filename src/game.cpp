@@ -6774,6 +6774,10 @@ look_around_result game::look_around(
     bool change_lv )
 {
     map &here = get_map();
+    const int old_origin = here.z_origin();
+    if( !here.ensure_z_in_window( center ) ) {
+        return {};
+    }
     const int view_z_range = here.observer_z_range( u );
 
     bVMonsterLookFire = false;
@@ -6872,8 +6876,8 @@ look_around_result game::look_around(
     ctxt.register_action( "toggle_pixel_minimap" );
 
     const int old_levz = peeking ? here.observer_position( u ).z() : here.get_abs_sub().z();
-    const int min_levz = std::max( old_levz - view_z_range, here.min_z() );
-    const int max_levz = std::min( old_levz + view_z_range, here.max_z() );
+    const int min_levz = old_levz - view_z_range;
+    const int max_levz = old_levz + view_z_range;
 
     here.update_visibility_cache( old_levz );
     const visibility_variables &cache = here.get_visibility_variables_cache();
@@ -7022,8 +7026,12 @@ look_around_result game::look_around(
             }
         } else if( action == "LEVEL_UP" || action == "LEVEL_DOWN" ) {
             const int dz = action == "LEVEL_UP" ? 1 : -1;
+            const int next_z = clamp( center.z() + dz, min_levz, max_levz );
+            if( !here.ensure_z_in_window( tripoint_bub_ms( center.xy(), next_z ) ) ) {
+                continue;
+            }
             lz = clamp( lz + dz, min_levz, max_levz );
-            center.z() = clamp( center.z() + dz, min_levz, max_levz );
+            center.z() = next_z;
 
             add_msg_debug( debugmode::DF_GAME, "levx: %d, levy: %d, levz: %d",
                            here.get_abs_sub().x(), here.get_abs_sub().y(), center.z() );
@@ -7112,7 +7120,13 @@ look_around_result game::look_around(
     } while( action != "QUIT" && action != "CONFIRM" && action != "SELECT" && action != "TRAVEL_TO" &&
              action != "throw_blind" && action != "throw_blind_wielded" );
 
-    if( center.z() != old_levz ) {
+    const bool restore_window = here.z_origin() != old_origin &&
+                                ( action == "QUIT" || action == "map" );
+    if( restore_window ) {
+        here.save();
+        here.load( here.get_abs_sub(), true, false, nullptr, old_origin );
+    }
+    if( restore_window || center.z() != old_levz ) {
         here.invalidate_map_cache( old_levz );
         here.build_map_cache( old_levz );
         u.view_offset.z() = 0;

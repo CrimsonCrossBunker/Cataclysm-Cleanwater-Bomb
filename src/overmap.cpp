@@ -1,7 +1,4 @@
 #include "cube_direction.h" // IWYU pragma: associated
-#include "north_america.h"
-#include "north_america_ecology.h"
-#include "north_america_transport.h"
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -17,6 +14,7 @@
 #include <mapgendata.h>
 #include <mdarray.h>
 #include <memory_fast.h>
+#include <overmap_location.h>
 #include <point.h>
 #include <translation.h>
 #include <type_id.h>
@@ -61,6 +59,9 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_ecology.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "options.h"
 #include "overmap_connection.h"
@@ -109,6 +110,13 @@ static const oter_type_str_id oter_type_road( "road" );
 static const oter_type_str_id oter_type_road_nesw_manhole( "road_nesw_manhole" );
 static const oter_type_str_id oter_type_sewer_connector( "sewer_connector" );
 static const oter_type_str_id oter_type_sub_station( "sub_station" );
+
+static const overmap_location_id overmap_location_wilderness( "wilderness" );
+
+static const overmap_special_id overmap_special_Evac_Shelter( "Evac Shelter" );
+static const overmap_special_id overmap_special_mil_base( "mil_base" );
+
+static const trait_id trait_HAS_NEMESIS( "HAS_NEMESIS" );
 
 #define dbg(x) DebugLog((x),D_MAP_GEN) << __FILE__ << ":" << __LINE__ << ": "
 
@@ -483,6 +491,18 @@ std::vector<oter_id> overmap::predecessors( const tripoint_om_omt &p )
     return it->second;
 }
 
+bool overmap::has_riot_damage( const tripoint_om_omt &p ) const
+{
+    return riot_damage.count( p ) > 0;
+}
+
+void overmap::set_riot_damage( const tripoint_om_omt &p )
+{
+    if( inbounds( p ) ) {
+        riot_damage.insert( p );
+    }
+}
+
 void overmap::set_seen( const tripoint_om_omt &p, om_vision_level val, bool force )
 {
     if( !inbounds( p ) ) {
@@ -618,6 +638,9 @@ bool overmap::has_note( const tripoint_om_omt &p ) const
 
 bool overmap::is_marked_dangerous( const tripoint_om_omt &p ) const
 {
+    if( !inbounds( p ) ) {
+        return false;
+    }
     for( const om_note &i : layer[p.z() + OVERMAP_DEPTH].notes ) {
         if( !i.dangerous ) {
             continue;
@@ -686,6 +709,9 @@ void overmap::add_note( const tripoint_om_omt &p, std::string message )
 
 void overmap::mark_note_dangerous( const tripoint_om_omt &p, int radius, bool is_dangerous )
 {
+    if( !inbounds( p ) ) {
+        return;
+    }
     for( om_note &i : layer[p.z() + OVERMAP_DEPTH].notes ) {
         if( p.xy() == i.p ) {
             i.dangerous = is_dangerous;
@@ -717,6 +743,9 @@ void overmap::delete_note( const tripoint_om_omt &p )
 std::vector<point_abs_omt> overmap::find_notes( const int z, const std::string &text )
 {
     std::vector<point_abs_omt> note_locations;
+    if( !inbounds( tripoint_om_omt( 0, 0, z ) ) ) {
+        return note_locations;
+    }
     map_layer &this_layer = layer[z + OVERMAP_DEPTH];
     for( const om_note &note : this_layer.notes ) {
         if( match_include_exclude( note.text, text ) ) {
@@ -783,6 +812,9 @@ void overmap::add_extra( const tripoint_om_omt &p, const map_extra_id &id )
 
 void overmap::add_extra_note( const tripoint_om_omt &p, bool force_add )
 {
+    if( !inbounds( p ) ) {
+        return;
+    }
     // overmap::add_extra_note is called from overmap::set_seen - to add notes for already generated,
     // but as yet unseen, tiles.
     const std::vector<om_map_extra> &layer_extras = layer[p.z() + OVERMAP_DEPTH].extras;
@@ -840,6 +872,9 @@ void overmap::delete_extra( const tripoint_om_omt &p )
 std::vector<point_abs_omt> overmap::find_extras( const int z, const std::string &text )
 {
     std::vector<point_abs_omt> extra_locations;
+    if( !inbounds( tripoint_om_omt( 0, 0, z ) ) ) {
+        return extra_locations;
+    }
     map_layer &this_layer = layer[z + OVERMAP_DEPTH];
     for( const om_map_extra &extra : this_layer.extras ) {
         const std::string extra_text = extra.id.c_str();
@@ -885,6 +920,9 @@ bool overmap::passable( const tripoint_om_ms &p )
     point_om_omt omt_origin;
     tripoint_omt_ms index;
     std::tie( omt_origin, index ) = project_remain<coords::omt>( p );
+    if( !inbounds( tripoint_om_omt( omt_origin, p.z() ) ) ) {
+        return false;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[index.z() +
             OVERMAP_DEPTH].map_cache[omt_origin];
     if( !ptr ) {
@@ -900,6 +938,9 @@ bool overmap::passable( const tripoint_om_ms &p )
 
 std::shared_ptr<map_data_summary> overmap::get_omt_summary( const tripoint_om_omt &p )
 {
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[p.z() +
             OVERMAP_DEPTH].map_cache[p.xy()];
     if( !ptr ) {
@@ -915,6 +956,9 @@ void overmap::set_passable( const tripoint_om_ms &p, bool new_passable )
     point_om_omt omt_origin;
     tripoint_omt_ms index;
     std::tie( omt_origin, index ) = project_remain<coords::omt>( p );
+    if( !inbounds( tripoint_om_omt( omt_origin, p.z() ) ) ) {
+        return;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[index.z() +
             OVERMAP_DEPTH].map_cache[omt_origin];
     if( !ptr ) {
@@ -936,7 +980,7 @@ void overmap::set_passable( const tripoint_abs_omt &p,
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     layer[omt_coord.z() + OVERMAP_DEPTH].map_cache[omt_coord.xy()] = std::move( new_passable );
@@ -948,7 +992,7 @@ void overmap::set_passable( const tripoint_abs_omt &p,
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     std::shared_ptr<map_data_summary> &ptr = layer[omt_coord.z() +
@@ -965,7 +1009,7 @@ void overmap::set_passable( const tripoint_abs_omt &p, const std::bitset<24 * 24
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     std::shared_ptr<map_data_summary> &ptr = layer[omt_coord.z() +
@@ -1415,12 +1459,10 @@ bool overmap::is_far_from_city( const tripoint_om_omt &p ) const
 
 tripoint_om_omt overmap::place_outskirts_shelter()
 {
-    static const overmap_special_id shelter_id( "Evac Shelter" );
-    static const overmap_location_id wilderness( "wilderness" );
-    if( !shelter_id.is_valid() ) {
+    if( !overmap_special_Evac_Shelter.is_valid() ) {
         return tripoint_om_omt::invalid;
     }
-    const overmap_special &shelter = shelter_id.obj();
+    const overmap_special &shelter = overmap_special_Evac_Shelter.obj();
     const auto footprint = shelter.required_locations();
     const tripoint_om_omt midpoint( OMAPX / 2, OMAPY / 2, 0 );
     const city &nearest = get_nearest_city( midpoint );
@@ -1428,7 +1470,8 @@ tripoint_om_omt overmap::place_outskirts_shelter()
     for( int radius = 0; radius < std::max( OMAPX, OMAPY ); ++radius ) {
         for( const point_om_omt &site : closest_points_first( center, radius, radius ) ) {
             const tripoint_om_omt p( site, 0 );
-            if( !inbounds( p, 2 ) || !wilderness->test( ter( p ) ) || !is_far_from_city( p ) ) {
+            if( !inbounds( p, 2 ) || !overmap_location_wilderness->test( ter( p ) ) ||
+                !is_far_from_city( p ) ) {
                 continue;
             }
             const auto available = [&]( om_direction::type dir ) {
@@ -1874,7 +1917,7 @@ void overmap::move_nemesis()
             continue;
         }
         if( mg.nemesis_mission_id < 0 &&
-            !get_avatar().has_trait( trait_id( "HAS_NEMESIS" ) ) ) {
+            !get_avatar().has_trait( trait_HAS_NEMESIS ) ) {
             ++it;
             continue;
         }
@@ -2372,7 +2415,6 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     auto &out = connections_out[connection];
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
-    static const oter_type_str_id road( "road" );
     static const oter_type_str_id raised_deck( "bridge_road" );
     static const oter_type_str_id curved_deck( "atlas_raised_bridge_deck" );
     static const oter_type_str_id bridgehead( "bridgehead_ground" );
@@ -2448,7 +2490,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 if( !links ) {
                     continue;
                 }
-                ter_set( p, road->get_linear( links ) );
+                ter_set( p, oter_type_road->get_linear( links ) );
             } else {
                 continue;
             }
@@ -2462,51 +2504,65 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
         }
     }
 
-    if( !generate_city_streets || north_america::urban_districts_in( pos() ).empty() ) {
-        return;
-    }
-    // The road tile keeps its original connections. Reserve extra width on
-    // the east or south for stretches with at least two clear shoulder tiles.
-    enum class flank_plan { none, north_south, east_west, conflict };
-    std::vector<flank_plan> flanks( OMAPX * OMAPY );
-    const auto at = [&]( const point_om_omt & p ) -> flank_plan & {
-        return flanks[p.y() * OMAPX + p.x()];
-    };
     const oter_id road_ns( "road_ns" );
     const oter_id road_ew( "road_ew" );
-    for( int y = 1; y < OMAPY - 1; ++y ) {
-        for( int x = 1; x < OMAPX - 1; ++x ) {
-            const auto &tile = network[y * OMAPX + x];
-            if( tile.street != north_america::urban_road::arterial || tile.lanes > 4 ) {
-                continue;
+    for( const bool north_south : {
+             true, false
+         } ) {
+        const int length = north_south ? OMAPY : OMAPX;
+        const int columns = north_south ? OMAPX : OMAPY;
+        const auto at = [north_south]( int across, int along ) {
+            return north_south ? tripoint_om_omt( across, along, 0 ) :
+                   tripoint_om_omt( along, across, 0 );
+        };
+        const oter_id flank = north_america::avenue_flank( north_south );
+        const oter_id &spine = north_south ? road_ns : road_ew;
+        const auto width_at = [&]( int across, int along ) {
+            const tripoint_om_omt p = at( across, along );
+            if( ter( p ) != spine ) {
+                return 1;
             }
-            const tripoint_om_omt spine( x, y, 0 );
-            const oter_id existing = ter( spine );
-            if( existing != road_ns && existing != road_ew ) {
-                continue;
+            const auto &tile = network[p.y() * OMAPX + p.x()];
+            const int width = tile.lanes >= 6 ? static_cast<int>( tile.lanes / 2 ) :
+                              generate_city_streets && tile.street == north_america::urban_road::arterial ? 2 : 1;
+            const int first = -( width - 1 ) / 2;
+            for( int offset = first; offset < first + width; ++offset ) {
+                if( offset == 0 ) {
+                    continue;
+                }
+                const tripoint_om_omt side = at( across + offset, along );
+                if( !inbounds( side ) || network[side.y() * OMAPX + side.x()].connections ||
+                    north_america::is_avenue_flank( ter( side ) ) || !can_build_street( side ) ||
+                    ( width == 2 && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
+                    return 1;
+                }
             }
-            const bool north_south = existing == road_ns;
-            const tripoint_om_omt side = spine + ( north_south ? point::east : point::south );
-            if( inbounds( side, 1 ) && !network[side.y() * OMAPX + side.x()].connections &&
-                can_build_street( side ) && north_america::in_urban_footprint( origin + side.xy().raw() ) ) {
-                flank_plan &planned = at( side.xy() );
-                // If both orientations want this space, keep the intersection clear.
-                planned = planned != flank_plan::none ? flank_plan::conflict :
-                          north_south ? flank_plan::north_south : flank_plan::east_west;
-            }
-        }
-    }
-    for( int y = 1; y < OMAPY - 1; ++y ) {
-        for( int x = 1; x < OMAPX - 1; ++x ) {
-            const point_om_omt p( x, y );
-            const flank_plan flank = at( p );
-            if( flank == flank_plan::none || flank == flank_plan::conflict ) {
-                continue;
-            }
-            const bool north_south = flank == flank_plan::north_south;
-            const point step = north_south ? point::south : point::east;
-            if( at( p + step ) == flank || at( p - step ) == flank ) {
-                ter_set( tripoint_om_omt( p, 0 ), north_america::avenue_flank( north_south ) );
+            return width;
+        };
+        // Stay single-width through bends, junctions and obstacles. Require a
+        // straight run long enough for a taper at both ends.
+        for( int across = 0; across < columns; ++across ) {
+            for( int begin = 0; begin < length; ) {
+                const int width = width_at( across, begin );
+                if( width == 1 ) {
+                    ++begin;
+                    continue;
+                }
+                int end = begin + 1;
+                while( end < length && width_at( across, end ) == width ) {
+                    ++end;
+                }
+                if( end - begin >= north_america::min_wide_road_run ) {
+                    const int first = -( width - 1 ) / 2;
+                    for( int along = begin; along < end; ++along ) {
+                        for( int offset = first; offset < first + width; ++offset ) {
+                            if( offset != 0 ) {
+                                ter_set( at( across + offset, along ), flank );
+                            }
+                        }
+                    }
+                }
+                begin = end;
             }
         }
     }
@@ -3424,8 +3480,7 @@ bool overmap::contains_unique_special( const overmap_special_id &id ) const
 
 static bool allows_atlas_military_base( const overmap_special &special )
 {
-    static const overmap_special_id military_base( "mil_base" );
-    return north_america::active() && special.id == military_base;
+    return north_america::active() && special.id == overmap_special_mil_base;
 }
 
 bool overmap::can_place_special( const overmap_special &special, const tripoint_om_omt &p,

@@ -14,7 +14,7 @@ scoped_map_viewpoint::scoped_map_viewpoint( map &here, const Character &observer
 {
     if( here.inbounds( position ) ) {
         here.viewpoint_ = map_viewpoint{ observer.getID(), observer.pos_abs(), position, standing,
-                                         z_range < 0 ? fov_3d_z_range : std::clamp( z_range, 0, OVERMAP_DEPTH + OVERMAP_HEIGHT ) };
+                                         z_range < 0 ? here.z_range() : std::clamp( z_range, 0, here.z_range() ) };
         here.invalidate_visibility_cache();
         here.set_seen_cache_dirty( here.get_bub( position ) );
     }
@@ -63,5 +63,5 @@ bool map::observer_standing( const Character &observer ) const
 int map::observer_z_range( const Creature &observer ) const
 {
     const auto *view = viewpoint_for( observer );
-    return view ? view->z_range : fov_3d_z_range;
+    return view ? view->z_range : z_range();
 }

@@ -1358,6 +1358,10 @@ static void draw( overmap_draw_data_t &data )
 
 static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string> context )
 {
+    if( curs.z() < -OVERMAP_DEPTH || curs.z() > OVERMAP_HEIGHT ) {
+        popup( _( "This overmap layer does not store map notes." ) );
+        return false;
+    }
     const std::string old_note = overmap_buffer.note( curs );
     if( !context ) {
         if( old_note.empty() ) {
@@ -2383,7 +2387,8 @@ static tripoint_abs_omt display()
         } else if( action == "look" ) {
             tripoint_abs_ms pos = project_combine( curs, g->overmap_data.origin_remainder );
             tripoint_bub_ms pos_rel = here.get_bub( pos );
-            if( !here.inbounds_z( pos_rel.z() ) ) {
+            if( !here.inbounds_z( pos_rel.z() ) &&
+                std::abs( pos_rel.z() - here.get_abs_sub().z() ) > here.z_range() ) {
                 continue;
             }
             uistate.open_menu = [pos_rel]() {

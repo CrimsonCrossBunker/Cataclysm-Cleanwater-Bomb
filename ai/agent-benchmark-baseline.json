@@ -12,7 +12,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 3121,
+      "estimated_tokens": 3280,
       "id": "cpp-bug",
       "passed": true,
       "selected_routes": [
@@ -57,7 +57,7 @@
     },
     {
       "errors": [],
-      "estimated_tokens": 3141,
+      "estimated_tokens": 3301,
       "id": "save-compatibility",
       "passed": true,
       "selected_routes": [

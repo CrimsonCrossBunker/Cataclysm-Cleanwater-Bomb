@@ -511,6 +511,8 @@ class overmap
         std::vector<pp_resolved_generator> *pp_decisions( const tripoint_om_omt & );
         std::string *join_used_at( const om_pos_dir & );
         std::vector<oter_id> predecessors( const tripoint_om_omt & );
+        bool has_riot_damage( const tripoint_om_omt &p ) const;
+        void set_riot_damage( const tripoint_om_omt &p );
         void set_seen( const tripoint_om_omt &p, om_vision_level val, bool force = false );
         om_vision_level seen( const tripoint_om_omt &p ) const;
         bool seen_more_than( const tripoint_om_omt &p, om_vision_level test ) const;
@@ -684,6 +686,7 @@ class overmap
         };
 
         std::array<map_layer, OVERMAP_LAYERS> layer;
+        std::unordered_set<tripoint_om_omt> riot_damage;
         std::unordered_map<tripoint_abs_omt, scent_trace> scents;
 
         // Records the locations where a given overmap special was placed, which
