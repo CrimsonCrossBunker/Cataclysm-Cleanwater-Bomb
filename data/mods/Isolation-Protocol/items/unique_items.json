@@ -174,10 +174,7 @@
     ],
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "iso_lewis_mag" ] } ],
     "passive_effects": [
-      {
-        "has": "WIELD",
-        "values": [ { "value": "ATTACK_SPEED", "multiply": -0.67 }, { "value": "MELEE_STAMINA_CONSUMPTION", "multiply": -0.8 } ]
-      }
+      { "id": "ITEM_ENCH_Isolation_Protocol_iso_lewis_gun_0" }
     ]
   },
   {
