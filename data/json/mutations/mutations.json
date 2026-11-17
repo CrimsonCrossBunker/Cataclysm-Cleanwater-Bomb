@@ -5101,18 +5101,7 @@
     "ugliness": 2,
     "flags": [ "IRRITANT_IMMUNE" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": "u_has_weapon" },
-            { "not": { "u_has_trait": "BIONIC_ARM_BASIC_BOTH" } },
-            {
-              "x_in_y_chance": { "x": 1, "y": { "math": [ "max( (23 - u_skill('unarmed') - (u_val('dexterity') / 2 ) ), 2)" ] } }
-            }
-          ]
-        },
-        "melee_damage_bonus": [ { "type": "acid", "add": { "math": [ "rng(2, ( (u_skill('unarmed') / 2) + 6) )" ] } } ]
-      }
+      "INLINE_ENCH_MUCUS_SECRETION2_0"
     ]
   },
   {
