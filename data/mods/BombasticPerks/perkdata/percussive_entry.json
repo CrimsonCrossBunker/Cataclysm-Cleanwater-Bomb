@@ -15,11 +15,7 @@
     "max_intensity": 100,
     "int_add_val": 3,
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "multiply": { "math": [ "0 + (u_effect_intensity('effect_perk_percussive_entry') / 100 )" ] } }
-        ]
-      }
+      "INLINE_ENCH_effect_perk_percussive_entry_0"
     ]
   },
   {

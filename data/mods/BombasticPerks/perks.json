@@ -1363,14 +1363,7 @@
     "valid": false,
     "description": "You hate the feeling of your blood leaking so much that it empowers you.  You deal more melee damage the more you are bleeding.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "melee_damage_bonus": [
-          { "type": "bash", "multiply": { "math": [ "u_effect_intensity('bleed') * 0.05" ] } },
-          { "type": "stab", "multiply": { "math": [ "u_effect_intensity('bleed') * 0.05" ] } },
-          { "type": "cut", "multiply": { "math": [ "u_effect_intensity('bleed') * 0.05" ] } }
-        ]
-      }
+      "INLINE_ENCH_perk_redrage_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1458,10 +1451,7 @@
     "valid": false,
     "description": "Strong you might not be, but you can still break things down by hitting them the right way.  You get a bonus to your smashing ability that increases the weaker you are.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "SMASH_BONUS", "add": { "math": [ "16 - clamp(u_val('strength'), 0, 16)" ] } } ]
-      }
+      "INLINE_ENCH_perk_smash_boost_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1509,18 +1499,9 @@
     "valid": false,
     "description": "You've found that you can move just a little bit quicker the more dexterous you are.  Unfortunately, this applies comes at a loss to your max carry weight.  Gain 2 speed for every point of DEX away from 8.  You lose 4% of your max carry weight for each point between 8 and 20 DEX, and 2% for each point beyond 20.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "SPEED", "add": { "math": [ "max( 0, u_val('dexterity') - 8 ) * 2" ] } } ]
-      },
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CARRY_WEIGHT", "multiply": { "math": [ "min( 0, 8 - u_val('dexterity') ) * 0.04" ] } } ]
-      },
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CARRY_WEIGHT", "multiply": { "math": [ "min( 0, 20 - u_val('dexterity') ) * -0.02" ] } } ]
-      }
+      "INLINE_ENCH_perk_dexterous_speed_0",
+      "INLINE_ENCH_perk_dexterous_speed_1",
+      "INLINE_ENCH_perk_dexterous_speed_2"
     ],
     "flags": [ "PERK" ]
   },
