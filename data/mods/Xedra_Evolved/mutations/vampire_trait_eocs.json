@@ -134,104 +134,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_BLOOD_DRINKING_INEDIBLE",
-    "eoc_type": "EVENT",
-    "required_event": "character_eats_item",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "animal_blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "blood_tainted", { "context_val": "itype" } ] }
-          ]
-        },
-        { "or": [ { "u_has_trait": "VAMPIRE" }, { "u_has_effect": "vampire_virus" } ] }
-      ]
-    },
-    "effect": [ { "u_message": "You still feel as hungry as before.  This blood cannot sustain you.", "type": "bad" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONSUME_VAMPIRE_BLOOD",
-    "eoc_type": "EVENT",
-    "required_event": "character_eats_item",
-    "condition": {
-      "and": [
-        { "compare_string": [ "vampire_blood", { "context_val": "itype" } ] },
-        { "or": [ { "u_has_trait": "VAMPIRE" }, { "u_has_effect": "vampire_virus" } ] }
-      ]
-    },
-    "effect": [
-      {
-        "if": { "u_has_trait": "VAMPIRE_ANATHEMA" },
-        "then": [
-          {
-            "if": { "u_has_trait": "VAMPIRE_DRINK_VAMPIRE_BLOOD" },
-            "then": [
-              { "math": [ "u_vitamin('human_blood_vitamin') += 400 + rand(100)" ] },
-              { "math": [ "u_vitamin('vampire_blood_vitamin') += 30 + rand(20)" ] },
-              { "u_message": "This blood is the best you could drink.  You want more.", "type": "good" },
-              {
-                "if": { "u_has_trait": "BLOOD_FUN" },
-                "then": [
-                  {
-                    "if": { "u_has_trait": "BLOOD_FUN_UPGRADE" },
-                    "then": [ { "u_add_morale": "morale_drank_blood", "bonus": 90, "max_bonus": 180, "duration": "60 m", "decay_start": "30 m" } ],
-                    "else": [ { "u_add_morale": "morale_drank_blood", "bonus": 30, "max_bonus": 60, "duration": "20 m", "decay_start": "10 m" } ]
-                  }
-                ]
-              },
-              {
-                "if": { "u_has_trait": "ANATHEMA_WEAKNESS_MIND_CHAOS" },
-                "then": [ { "run_eocs": "EOC_ANATHEMA_MIND_CHAOS" } ]
-              },
-              {
-                "if": { "u_has_trait": "ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD" },
-                "then": [
-                  { "u_add_effect": "effect_recent_vampire_drink", "duration": "4 days" },
-                  { "u_lose_effect": "effect_anathema_need_vampire_blood" }
-                ]
-              }
-            ],
-            "else": [
-              { "math": [ "u_vitamin('vampire_blood_vitamin') += 30 + rand(20)" ] },
-              { "u_message": "Though it cannot sustain you, this blood can empower you.", "type": "mixed" },
-              {
-                "if": { "u_has_trait": "ANATHEMA_WEAKNESS_MIND_CHAOS" },
-                "then": [ { "run_eocs": "EOC_ANATHEMA_MIND_CHAOS" } ]
-              },
-              {
-                "if": { "u_has_trait": "ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD" },
-                "then": [
-                  { "u_add_effect": "effect_recent_vampire_drink", "duration": "4 days" },
-                  { "u_lose_effect": "effect_anathema_need_vampire_blood" }
-                ]
-              }
-            ]
-          }
-        ],
-        "else": { "u_message": "You need the blood of the living, not the blood of the dead.", "type": "bad" }
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONSUME_VAMPIRE_BLOOD_NON_VAMPIRE",
-    "eoc_type": "EVENT",
-    "required_event": "character_eats_item",
-    "condition": {
-      "and": [
-        { "compare_string": [ "vampire_blood", { "context_val": "itype" } ] },
-        { "not": { "u_has_effect": "vampire_virus" } }
-      ]
-    },
-    "effect": [
-      { "u_message": "As you drink, some of the vampire blood enters your gums.", "type": "mixed" },
-      { "u_add_effect": "vampire_virus", "intensity": 1, "duration": "PERMANENT" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_DRINK_BLOOD_WITH_FANGS_activated",
     "condition": {
       "or": [
@@ -405,25 +307,6 @@
       { "u_message": "You cancelled drinking blood and thus get no blood.", "type": "debug" },
       { "u_lose_effect": "effect_vampire_blood_drinking" }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD_HALVING",
-    "eoc_type": "EVENT",
-    "required_event": "character_eats_item",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "fae_blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "demihuman_blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "mutant_human_blood", { "context_val": "itype" } ] }
-          ]
-        },
-        { "u_has_trait": "VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD" }
-      ]
-    },
-    "effect": [ { "math": [ "u_vitamin('human_blood_vitamin') -= 200 + rand(50)" ] } ]
   },
   {
     "type": "effect_on_condition",
@@ -3057,63 +2940,6 @@
         ],
         "type": "mutation",
         "true_eocs": [ "EOC_XE_VAMPIRE_BLOOD_RESEARCH_SUCCESS" ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ANATHEMA_MIND_CHAOS",
-    "//": "Checks the variable every time the player drinks vampire blood with the weakness.  If the effect triggers, it gives a random mental negative.  If it cannot give one, it gives a negative effect for a while.  If the effect doesn't trigger, it increments the variable.",
-    "//2": "It doesn't give nyctophobia and pyromania for obvious reasons.",
-    "condition": { "x_in_y_chance": { "x": { "math": [ "u_counter_anathema_mind_chaos" ] }, "y": 100 } },
-    "effect": [
-      {
-        "u_roll_remainder": [
-          "BADTEMPER",
-          "CHEMIMBALANCE",
-          "SHOUT3",
-          "JITTERY",
-          "SEASONAL_AFFECTIVE",
-          "SCHIZOPHRENIC",
-          "MOODSWINGS",
-          "INSOMNIA",
-          "JEKYLL",
-          "NOMAD2",
-          "HATES_BOOKS",
-          "INATTENTIVE",
-          "PACIFIST",
-          "SAVANT",
-          "SLOWLEARNER",
-          "UNOBSERVANT",
-          "SQUEAMISH",
-          "SLOWREADER",
-          "TABLEMANNERS"
-        ],
-        "type": "mutation",
-        "true_eocs": [ "EOC_ANATHEMA_MIND_CHAOS_ROLL_SUCCESS" ],
-        "false_eocs": [ "EOC_ANATHEMA_MIND_CHAOS_ROLL_FAIL" ]
-      },
-      { "math": [ "u_counter_anathema_mind_chaos", "=", "0" ] }
-    ],
-    "false_effect": [ { "math": [ "u_counter_anathema_mind_chaos++" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ANATHEMA_MIND_CHAOS_ROLL_SUCCESS",
-    "effect": [ { "u_message": "The chaos within your head coalesces and destabilizes your mind.", "type": "bad" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ANATHEMA_MIND_CHAOS_ROLL_FAIL",
-    "effect": [
-      {
-        "u_message": "The chaos within your head coalesces but it cannot latch on your mind, so it will remain there until it decoheres.",
-        "type": "bad"
-      },
-      {
-        "u_add_effect": "effect_anathema_mind_chaos",
-        "intensity": { "math": [ "u_effect_intensity('effect_anathema_mind_chaos') + 1" ] },
-        "duration": { "math": [ "rand(259200) + 86400" ] }
       }
     ]
   },

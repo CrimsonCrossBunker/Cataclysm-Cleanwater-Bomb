@@ -9921,6 +9921,16 @@ function CcbMissionsApi.abandon(owner, token) end
 ---@field returned integer
 ---@field has_more boolean
 
+---@class CcbNeedsApi
+local CcbNeedsApi = {}
+
+---Adjust one Character's vitamin level through native clamping and daily tracking.
+---@param character GameHandle Exact live Character handle.
+---@param id GameId GameId<vitamin>.
+---@param delta integer
+---@return CcbResult result `value` contains before and after vitamin levels.
+function CcbNeedsApi.modify_vitamin(character, id, delta) end
+
 ---@class CcbFactionsApi
 local CcbFactionsApi = {}
 

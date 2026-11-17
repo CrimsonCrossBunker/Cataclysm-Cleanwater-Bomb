@@ -56,6 +56,7 @@ ccb.runtime.on("game:game_start", "initialize_encounter_timer")
 
 require("character_start")
 require("consumables")
+require("vampire_diet")
 
 require("nested_recipes")
 
