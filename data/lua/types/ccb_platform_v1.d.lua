@@ -880,8 +880,9 @@ function RecipeDefinition:on_complete(handler_id) end
 local NestedRecipeCategoryDefinition = {}
 
 ---@param recipe_id string Native, same-transaction recipe, or nested-category id.
+---@param optional? boolean Allow the member to be absent after loading the active Mods. Defaults to false.
 ---@return NestedRecipeCategoryDefinition self
-function NestedRecipeCategoryDefinition:recipe(recipe_id) end
+function NestedRecipeCategoryDefinition:recipe(recipe_id, optional) end
 
 ---@class RequirementDefinitionOptions
 ---@field id string Stable reusable requirement id.

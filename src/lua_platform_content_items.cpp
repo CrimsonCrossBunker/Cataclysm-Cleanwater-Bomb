@@ -224,7 +224,7 @@ struct recipe_definition_data {
     std::string category = "CC_OTHER";
     std::string subcategory = "CSC_OTHER_OTHER";
     double activity_level = NO_EXERCISE;
-    std::set<std::string> nested_recipes;
+    std::map<std::string, bool> nested_recipes;
     std::string skill;
     std::int64_t difficulty = 0;
     std::int64_t time_moves = 100;
@@ -1028,9 +1028,10 @@ struct nested_recipe_category_definition_handle {
     std::shared_ptr<recipe_definition_data> definition;
     std::shared_ptr<owner_token> token;
 
-    nested_recipe_category_definition_handle &recipe( const std::string &id ) {
+    nested_recipe_category_definition_handle &recipe( const std::string &id,
+            const sol::optional<bool> &optional ) {
         require_building_handle( token, *definition, "nested recipe category" );
-        if( id.empty() || !definition->nested_recipes.insert( id ).second ) {
+        if( id.empty() || !definition->nested_recipes.emplace( id, optional.value_or( false ) ).second ) {
             throw std::runtime_error(
                 "nested recipe category requires unique non-empty recipe ids" );
         }
@@ -4270,8 +4271,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown category '" + definition.category + "'" );
                 }
                 if( check_engine_state ) {
-                    for( const std::string &member : definition.nested_recipes ) {
-                        if( declared_recipe_ids.count( member ) == 0 &&
+                    for( const auto &[member, optional] : definition.nested_recipes ) {
+                        if( !optional && declared_recipe_ids.count( member ) == 0 &&
                             recipe_dict.recipes.count( recipe_id( member ) ) == 0 ) {
                             throw std::runtime_error( "nested recipe category '" + definition.id +
                                                       "' references unknown recipe '" + member + "'" );
@@ -5540,8 +5541,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.exertion = static_cast<float>( entry.definition->activity_level );
                         native.skill_used = skill_id::NULL_ID();
                         native.never_learn = true;
-                        for( const std::string &member : entry.definition->nested_recipes ) {
-                            native.nested_category_data.emplace( member );
+                        for( const auto &member : entry.definition->nested_recipes ) {
+                            native.nested_category_data.emplace( member.first );
                         }
                         native.was_loaded = true;
                         native.src.emplace_back( id, mod_id( pimpl_->owner ) );
@@ -6758,8 +6759,9 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.category );
                 hash_part( state, v.subcategory );
                 hash_part( state, std::to_string( v.activity_level ) );
-                for( const auto &id : v.nested_recipes ) {
+                for( const auto &[id, optional] : v.nested_recipes ) {
                     hash_part( state, id );
+                    hash_part( state, optional ? "optional" : "required" );
                 }
                 hash_part( state, v.skill );
                 hash_part( state, std::to_string( v.difficulty ) );
