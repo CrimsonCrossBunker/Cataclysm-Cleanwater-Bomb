@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -123,6 +124,20 @@ void reset_test_globals()
 {
     global_variables &globvars = get_globals();
     globvars.clear_global_values();
+}
+
+time_point date_in_season( season_type season )
+{
+    time_point date = calendar::turn_zero + 12_hours;
+    const time_point end = date + calendar::year_length();
+    for( ; date < end; date += 1_days ) {
+        if( season_of_year( date ) == season && season_of_year( date - 2_days ) == season &&
+            season_of_year( date + 2_days ) == season ) {
+            break;
+        }
+    }
+    REQUIRE( date < end );
+    return date;
 }
 
 } // namespace
@@ -318,6 +333,7 @@ TEST_CASE( "plant_effective_growth_time_authority", "[plant][growth]" )
     // Use the test (non-irrigated) plant furniture so sub-day growth stages
     // are processed immediately instead of being deferred to the daily loop.
     item seed( itype_test_seed_simple );
+    REQUIRE_FALSE( seed.type->seed->climate.has_value() );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
     here.furn_set( plot, furn_test_f_plant_seed );
@@ -1406,12 +1422,12 @@ TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
-    calendar::turn = calendar::turn_zero + calendar::season_length();
+    calendar::turn = date_in_season( SUMMER );
     ret_val<void> wrong_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( !wrong_season.success() );
     CHECK( wrong_season.str().find( "correct season" ) != std::string::npos );
 
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     ret_val<void> correct_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( correct_season.success() );
 
@@ -1445,7 +1461,7 @@ TEST_CASE( "terrain_growth_can_fertilize_syncs_expired_growth",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
     terrain_growth_state state;
@@ -1474,7 +1490,7 @@ TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
     here.add_item( plot, item( itype_test_seed_simple ) );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
@@ -1932,7 +1948,7 @@ TEST_CASE( "vehicle_farming_uses_the_driver_and_commits_before_callbacks",
     vehicle *machine = here.add_vehicle( vehicle_prototype_oldtractor, origin, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
     REQUIRE( machine );
-    npc &driver = spawn_npc( origin.xy(), "test_talker" );
+    npc &driver = spawn_npc( host.pos_bub().xy(), "test_talker" );
     clear_character( driver, true );
     driver.setpos( here, origin );
     driver.controlling_vehicle = true;
@@ -2377,12 +2393,31 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     }
 }
 
+TEST_CASE( "plant_examine_actions_remain_distinct_after_linking", "[plant][examine]" )
+{
+    const std::array<std::pair<furn_str_id, iexamine_examine_function>, 3> flowers = {{
+            { furn_str_id( "f_mutpoppy" ), iexamine::flower_poppy },
+            { furn_str_id( "f_dahlia" ), iexamine::flower_dahlia },
+            { furn_str_id( "f_flower_marloss" ), iexamine::flower_marloss }
+        }
+    };
+    for( const auto &flower : flowers ) {
+        CAPTURE( flower.first );
+        for( const auto &candidate : flowers ) {
+            CAPTURE( candidate.first );
+            CHECK( flower.first.obj().has_examine( candidate.second ) ==
+                   ( flower.first == candidate.first ) );
+        }
+        CHECK_FALSE( flower.first.obj().has_examine( iexamine::flower_cactus ) );
+    }
+}
+
 TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
            "[plant][harvest][multiplayer]" )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const restore_on_out_of_scope restore_time( calendar::turn );
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     clear_avatar();
     clear_map_without_vision();
     map &here = get_map();
@@ -2424,11 +2459,11 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
         CHECK( yield( remote, itype_id( "seed_dahlia" ) ) == 0 );
     }
     SECTION( "winter_and_forged_nectar_choices_are_rejected_without_rng" ) {
-        calendar::turn = calendar::turn_zero + 3 * calendar::season_length() + 12_hours;
+        calendar::turn = date_in_season( WINTER );
         REQUIRE( season_of_year( calendar::turn ) == WINTER );
         const auto random_before = rng_get_engine();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        calendar::turn = calendar::turn_zero + 12_hours;
+        calendar::turn = date_in_season( SPRING );
         choice.drink = true;
         choice.pick = false;
         REQUIRE_FALSE( iexamine_helper::can_drink_nectar( remote ) );
@@ -2502,7 +2537,7 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
         REQUIRE( sub.events.size() == 1 );
         CHECK( event.get<character_id>( "character" ) == remote_id );
         CHECK_FALSE( here.has_furn( flower ) );
-        CHECK( seeds() == 3 );
+        CHECK( seeds() == item( itype_marloss_seed ).count() );
         const auto random_before = rng_get_engine();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK_FALSE( execute_farming_command( host, choice ) );
@@ -2521,7 +2556,7 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
     } );
     CHECK( execute_farming_command( remote, choice ) );
     REQUIRE( sub.events.size() == 1 );
-    CHECK( seeds() == 3 );
+    CHECK( seeds() == item( itype_marloss_seed ).count() );
     CHECK( here.i_at( origin ).size() == 2 );
     CHECK_FALSE( host.activity );
     if( !remove_operator ) {
@@ -2543,18 +2578,22 @@ TEST_CASE( "special_tree_harvest_uses_native_traits_and_tools_of_the_operator",
     clear_character( remote, true );
     remote.setpos( here, host.pos_bub() + tripoint::south );
     remote.set_moves( 100 );
+    clear_items( 0 );
+    REQUIRE( here.i_at( host.pos_bub() ).empty() );
+    REQUIRE( here.i_at( remote.pos_bub() ).empty() );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = remote.pos_bub() + tripoint::east;
     SECTION( "marloss_offering_depends_on_remote_traits_not_host_traits" ) {
-        here.ter_set( tree, ter_str_id( "t_marloss" ) );
+        const bool is_tree = GENERATE( false, true );
+        here.ter_set( tree, ter_str_id( is_tree ? "t_marloss_tree" : "t_marloss" ) );
         host.set_mutation( trait_id( "THRESH_MYCUS" ) );
         remote.set_mutation( trait_id( "THRESH_MARLOSS" ) );
         const auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
                             farming_action::marloss );
         REQUIRE( execute_farming_command( remote, choice ) );
-        CHECK( here.ter( tree ) == ter_str_id( "t_fungus" ) );
+        CHECK( here.ter( tree ) == ter_str_id( is_tree ? "t_tree_fungal" : "t_fungus" ) );
         REQUIRE( here.i_at( remote.pos_bub() ).size() == 1 );
         CHECK( here.i_at( remote.pos_bub() ).begin()->typeId() == itype_id( "mycus_fruit" ) );
         CHECK( here.i_at( host.pos_bub() ).empty() );
@@ -2570,7 +2609,7 @@ TEST_CASE( "special_tree_harvest_uses_native_traits_and_tools_of_the_operator",
         const auto random_before = rng_get_engine();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( rng_get_engine() == random_before );
-        remote.wield( remote.i_add( item( itype_id( "shovel" ) ) ) );
+        remote.set_wielded_item( item( itype_id( "shovel" ) ) );
         REQUIRE( remote.has_quality( quality_id( "DIG" ) ) );
         remote.set_moves( 1000 );
         REQUIRE( execute_farming_command( remote, choice ) );
@@ -2659,11 +2698,13 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
+    here.i_clear( tree );
     here.ter_set( tree, ter_str_id( "t_tree_maple" ) );
     host.i_add( item( itype_id( "hand_drill" ) ) );
     host.i_add( item( itype_id( "hammer" ) ) );
@@ -2685,6 +2726,9 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     CHECK( remote.get_moves() == 10000 );
     remote.i_add( item( itype_id( "hand_drill" ) ) );
     remote.i_add( item( itype_id( "hammer" ) ) );
+    remote.invalidate_crafting_inventory();
+    REQUIRE( remote.has_quality( quality_id( "DRILL" ) ) );
+    REQUIRE( remote.has_quality( quality_id( "HAMMER" ) ) );
     REQUIRE( execute_farming_command( remote, choice ) );
     CHECK( remote.get_moves() == 10000 - to_moves<int>( 20_seconds ) );
     CHECK( host.get_moves() == 10000 );
@@ -2725,6 +2769,7 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
     remote.set_moves( 10000 );
     host.set_moves( 10000 );
@@ -2732,6 +2777,7 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
+    here.i_clear( tree );
     here.ter_set( tree, ter_str_id( "t_tree_maple_tapped" ) );
     here.add_item_unprocessed( tree, item( itype_id( "tree_spile" ) ) );
     item bottle( itype_id( "bottle_plastic" ) );

@@ -113,6 +113,7 @@
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
+#include "plant_climate.h"
 #include "player_activity.h"
 #include "point.h"
 #include "recipe.h"
@@ -3245,6 +3246,7 @@ int iexamine::get_plant_water( const item &seed )
 void iexamine::set_plant_water( item &seed, int water )
 {
     seed.set_var( "seed_water", std::max( 0, water ) );
+    seed.erase_var( "crop_irrigation_fraction" );
 }
 
 int iexamine::get_seed_water_consumption( const item &seed )
@@ -3274,6 +3276,7 @@ int iexamine::get_plant_effective_growth_turns( const item &seed )
 void iexamine::set_plant_effective_growth_turns( item &seed, int turns )
 {
     seed.set_var( "seed_effective_growth_turns", std::max( 0, turns ) );
+    seed.erase_var( "crop_growth_fraction" );
 }
 
 void iexamine::set_plant_effective_growth_time( item &seed, time_duration effective,
@@ -3294,16 +3297,31 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     }
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
+    item *seed = get_seed_at( here, examp );
+    if( !seed ) {
+        you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
+        return;
+    }
+    if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+        const int64_t identity = seed->uid().get_value();
+        const itype_id original_type = seed->typeId();
+        const auto generation = you.activity.identity_generation();
+        here.grow_plant( examp, &you, true );
+        if( !lifetime || !context || you.activity.identity_generation() != generation ||
+            !reachable_crop( you, here, examp ) ) {
+            return;
+        }
+        seed = get_seed_at( here, examp );
+        if( !seed || seed->uid().get_value() != identity || seed->typeId() != original_type ||
+            !here.furn( examp )->plant ) {
+            return;
+        }
+    }
     const tool_activity_target plot = tool_activity_target::capture( here, here.get_abs( examp ) );
     const furn_t &furn = here.furn( examp ).obj();
     const int max_water = get_plant_max_water( furn );
     if( max_water <= 0 ) {
         you.add_msg_if_player( m_info, _( "This %s cannot hold water." ), furn.name() );
-        return;
-    }
-    item *seed = get_seed_at( here, examp );
-    if( !seed ) {
-        you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
         return;
     }
     const item_source original = capture_item_source( you,
@@ -3332,8 +3350,13 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !watered->has_var( "seed_last_water_check" ) ) {
         set_plant_last_water_check( *watered, calendar::turn );
     }
-    set_plant_water( *watered, std::min( max_water,
-                                         get_plant_water( *watered ) + irrigation::WATER_PER_POUR ) );
+    const double fraction = watered->get_var( "crop_irrigation_fraction", 0.0 );
+    const int new_water = std::min( max_water,
+                                    get_plant_water( *watered ) + irrigation::WATER_PER_POUR );
+    set_plant_water( *watered, new_water );
+    if( new_water < max_water ) {
+        watered->set_var( "crop_irrigation_fraction", fraction );
+    }
     const itype_id seed_type = watered->typeId();
     const int stage_idx = get_plant_current_stage_idx_from_effective( here,
                           here.get_bub( plot.position ) );
@@ -3375,6 +3398,30 @@ bool iexamine::can_water_plant( Character &you, const tripoint_bub_ms &examp )
            you.has_charges( itype_water, 1, craft_reservation::usable_by_automation );
 }
 
+bool iexamine::plant_needs_water( Character &you, const tripoint_bub_ms &examp )
+{
+    map &here = get_map();
+    item *seed = get_seed_at( here, examp );
+    if( !seed || !seed->type->seed->climate || seed->type->seed->get_harvest_stage_idx() <= 0 ) {
+        return can_water_plant( you, examp );
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const auto generation = you.activity.identity_generation();
+    const int64_t identity = seed->uid().get_value();
+    here.grow_plant( examp, &you );
+    if( !lifetime || !context || you.activity.identity_generation() != generation ) {
+        return false;
+    }
+    seed = get_seed_at( here, examp );
+    if( !seed || seed->uid().get_value() != identity || !can_water_plant( you, examp ) ||
+        !seed->type->seed->climate || seed->type->seed->get_harvest_stage_idx() <= 0 ) {
+        return false;
+    }
+    const crop_water_status status = get_crop_water_status( here, examp, *seed );
+    return status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm;
+}
+
 int iexamine::rain_water_for_weather( const weather_type_id &weather )
 {
     if( !weather->rains || weather->precip == precip_class::none ) {
@@ -3406,6 +3453,32 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
         // Defensive sync: make sure displayed water/age matches the authoritative
         // effective growth time before any UI reads it.
         here.grow_plant( p );
+        seed = get_seed_at( here, p );
+        if( !seed || !here.furn( p )->plant ) {
+            return std::string();
+        }
+        if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+            const crop_water_status status = get_crop_water_status( here, p, *seed );
+            std::string desc = string_format(
+                                   _( "Soil water: <color_cyan>%.1f</color>/<color_cyan>%.1f</color> mm\n"
+                                      "Irrigation reserve: <color_cyan>%d</color>/<color_cyan>%d</color>\n"
+                                      "Daily water demand: <color_cyan>%.1f</color> mm\n%s" ),
+                                   status.soil_moisture_mm, status.soil_capacity_mm,
+                                   get_plant_water( *seed ), get_plant_max_water( here.furn( p ).obj() ),
+                                   status.daily_need_mm,
+                                   plant_age_description( *seed, here.furn( p )->plant->growth_multiplier ) );
+            if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
+                desc += _( "\n<color_yellow>Water supply is below one day's demand.</color>" );
+            } else {
+                desc += _( "\n<color_green>Water supply covers one day's demand.</color>" );
+            }
+            if( status.temperature_limited ) {
+                desc += _( "\n<color_yellow>Temperature limits growth.</color>" );
+            }
+            desc += is_plant_fertilized( *seed ) ? _( "\n<color_green>Fertilized.</color>" ) :
+                    _( "\n<color_light_gray>Not fertilized.</color>" );
+            return desc;
+        }
         const int current_water = get_plant_water( *seed );
         const int base_consumption = get_seed_water_consumption( *seed );
         const float consumption_mult = get_plant_water_consumption_multiplier( furn );

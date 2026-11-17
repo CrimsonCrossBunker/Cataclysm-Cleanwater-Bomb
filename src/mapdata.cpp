@@ -644,6 +644,10 @@ bool plant_data::load( const JsonObject &jsobj, std::string_view member,
     optional( j, false, "growth_multiplier", growth_multiplier, 1.0f );
     optional( j, false, "harvest_multiplier", harvest_multiplier, 1.0f );
     optional( j, false, "max_water_storage", max_water_storage, 0 );
+    optional( j, false, "soil_source", soil_source, std::string( "inherit" ) );
+    if( soil_source != "inherit" && soil_source != "terrain" && soil_source != "substrate" ) {
+        j.get_member( "soil_source" ).throw_error( "Expected inherit, terrain or substrate" );
+    }
     optional( j, false, "water_consumption_multiplier", water_consumption_multiplier, 1.0f );
 
     auto load_eocs = [&]( const char *key, std::vector<effect_on_condition_id> &out ) {

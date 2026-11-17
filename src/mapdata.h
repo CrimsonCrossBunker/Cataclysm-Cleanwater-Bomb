@@ -178,6 +178,7 @@ struct plant_data {
     float harvest_multiplier;
     // Maximum water storage for irrigable planting furniture (e.g. planters).  0 means not irrigable.
     int max_water_storage = 0;
+    std::string soil_source = "inherit";
     // Multiplier on daily water consumption for plants in this furniture.
     // Values > 1.0 make the plant thirstier; values < 1.0 make it more drought-tolerant.
     // Defaults to 1.0 (normal).

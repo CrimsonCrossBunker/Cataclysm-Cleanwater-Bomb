@@ -212,6 +212,7 @@ void set_plant_effective_growth_time( item &seed, time_duration effective,
                                       float growth_multiplier, float crop_growth_speed );
 void water_plant( Character &you, const tripoint_bub_ms &examp );
 bool can_water_plant( Character &you, const tripoint_bub_ms &examp );
+bool plant_needs_water( Character &you, const tripoint_bub_ms &examp );
 int rain_water_for_weather( const weather_type_id &weather );
 std::string plant_water_description( map &here, const tripoint_bub_ms &p );
 

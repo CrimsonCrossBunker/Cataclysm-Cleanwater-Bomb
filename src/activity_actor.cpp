@@ -12808,15 +12808,30 @@ void fertilize_plant_activity_actor::finish( player_activity &act, Character &wh
     const auto context = here.get_context_reference();
     const character_action_guard lifetime( who );
     const std::uint64_t generation = act.identity_generation();
-    const tool_activity_target expected = *target;
+    tool_activity_target expected = *target;
     const std::optional<item_source> original_seed = seed_source;
     const tripoint_bub_ms plant_position = here.get_bub( this->plant_position );
     const itype_id fertilizer = this->fertilizer;
+    if( original_seed ) {
+        const item *seed = resolve_planted_seed( here, *original_seed );
+        if( seed && seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+            here.grow_plant( plant_position, &who, true );
+            if( !lifetime || !context || act.identity_generation() != generation ) {
+                return;
+            }
+            if( !resolve_planted_seed( here, *original_seed ) ) {
+                act.set_to_null();
+                return;
+            }
+            expected = tool_activity_target::capture( here, here.get_abs( plant_position ) );
+        }
+    }
     const ret_val<void> eligible = multi_farm_activity_actor::can_fertilize( who, plant_position );
     if( !lifetime || !context || act.identity_generation() != generation ) {
         return;
     }
     if( !eligible.success() || !expected.matches( here ) ||
+        expected.position.z() != who.pos_abs().z() || rl_dist( who.pos_abs(), expected.position ) > 1 ||
         ( original_seed && !resolve_planted_seed( here, *original_seed ) ) ) {
         act.set_to_null();
         return;

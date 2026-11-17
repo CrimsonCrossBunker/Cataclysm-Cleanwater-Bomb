@@ -2598,7 +2598,7 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
         }
         // there's a plant that isn't overgrown or harvestable, water it if needed and possible
         else if( here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, src_loc ) &&
-                 iexamine::can_water_plant( you, src_loc ) ) {
+                 iexamine::plant_needs_water( you, src_loc ) ) {
             return activity_reason_info::ok( do_activity_reason::NEEDS_WATERING );
         }
         // there's a plant that isn't overgrown or harvestable, apply fertilizer if possible

@@ -19,7 +19,12 @@
       "sound_fail": "whish.",
       "items": [ { "group": "fcl_hydrop_bash_results" } ]
     },
-    "plant_data": { "transform": "f_fcl_hydroponics_seed", "max_water_storage": 200, "water_consumption_multiplier": 0.5 },
+    "plant_data": {
+      "transform": "f_fcl_hydroponics_seed",
+      "max_water_storage": 200,
+      "water_consumption_multiplier": 0.5,
+      "soil_source": "substrate"
+    },
     "examine_action": "dirtmound"
   },
   {

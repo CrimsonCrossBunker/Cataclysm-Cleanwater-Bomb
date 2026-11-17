@@ -64,7 +64,7 @@ add_compile_definitions(
 # Linker flags used by all builds:
 add_link_options(
     /OPT:REF # remove unreferenced COMDATs
-    /OPT:ICF # force identical COMDATs
+    /OPT:NOICF
     /LTCG:OFF
     /INCREMENTAL:NO
     /DYNAMICBASE # does this app realy need ASLR ?

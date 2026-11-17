@@ -5,7 +5,9 @@
 #include <cmath>
 #include <functional>
 #include <memory>
+#include <set>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -173,7 +175,7 @@ constexpr time_duration crop_history = 2 * 364_days;
 struct crop_day {
     double low;
     double high;
-    double rain;
+    std::array<double, 24> rain;
 };
 
 struct crop_weather_cell {
@@ -186,6 +188,15 @@ std::unordered_map<tripoint_abs_omt, crop_weather_cell> cells;
 
 crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generator &generator )
 {
+    const auto &weather = get_weather_const();
+    const auto current = std::make_tuple( g->get_seed(), &generator, calendar::year_length(),
+                                          get_option<std::string>( "ETERNAL_WEATHER" ), weather.weather_override,
+                                          weather.forced_temperature, weather.climate_origin );
+    static auto previous = current;
+    if( previous != current ) {
+        cells.clear();
+        previous = current;
+    }
     const auto found = cells.find( cell );
     if( found != cells.end() ) {
         return found->second;
@@ -198,7 +209,7 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
     return sample;
 }
 
-crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
+const crop_day &sample_day( const tripoint_abs_ms &pos, time_point date )
 {
     const weather_manager &weather = get_weather_const();
     const weather_generator &generator = weather.get_cur_weather_gen();
@@ -217,23 +228,76 @@ crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
     const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
     const weather_type_id forced = eternal == "normal" ? weather.weather_override :
                                    weather_type_id( eternal );
-    crop_day result{ 100, -100, 0 };
-    for( int hour = 3; hour < 24; hour += 6 ) {
+    crop_day result{ 100, -100, {} };
+    for( int hour = 0; hour < 24; ++hour ) {
         const w_point sample = generator.get_weather( location, start + hour * 1_hours, g->get_seed(),
                                false, &cached.normals );
         const double c = units::to_celsius( weather.forced_temperature.value_or( sample.temperature ) );
-        result.low = std::min( result.low, c );
-        result.high = std::max( result.high, c );
+        if( hour % 6 == 3 ) {
+            result.low = std::min( result.low, c );
+            result.high = std::max( result.high, c );
+        }
         if( c > 1 ) {
             const weather_type_id type = forced == WEATHER_NULL ? generator.get_weather_conditions( sample ) :
                                          forced;
-            const double rate = forced == WEATHER_NULL ? sample.climate_precipitation_mm_per_hour.value_or(
-                                    precip_mm_per_hour( type->precip ) ) : precip_mm_per_hour( type->precip );
-            result.rain += 6 * rate;
+            if( type->rains ) {
+                const auto regional_rate = forced == WEATHER_NULL ?
+                                           regional_precipitation_rate( type, sample ) : std::nullopt;
+                result.rain[hour] = regional_rate.value_or( precip_mm_per_hour( type->precip ) );
+            }
         }
     }
-    cached.days.emplace( day, result );
-    return result;
+    return cached.days.emplace( day, result ).first->second;
+}
+
+north_america::crop_soil_properties crop_soil( const map &here, const tripoint_bub_ms &p,
+        const furn_t &furniture )
+{
+    const plant_data *plant = furniture.plant.get();
+    std::set<const plant_data *> visited;
+    while( plant && visited.insert( plant ).second ) {
+        if( plant->soil_source == "substrate" ) {
+            return {};
+        }
+        if( plant->soil_source == "terrain" || plant->base.is_null() || !plant->base.is_valid() ) {
+            break;
+        }
+        plant = plant->base->plant.get();
+    }
+    return north_america::crop_soil_at( here.ter( p ) );
+}
+
+double effective_crop_turns( const item &seed )
+{
+    return iexamine::get_plant_effective_growth_turns( seed ) +
+           seed.get_var( "crop_growth_fraction", 0.0 );
+}
+
+double crop_water_need( const item &seed, const furn_t &furniture, double stage,
+                        double water_use )
+{
+    const crop_climate_profile &climate = *seed.type->seed->climate;
+    return climate.water_mm / climate.growing_days * model_days /
+           to_days<double>( calendar::year_length() ) * water_use *
+           iexamine::get_plant_water_consumption_multiplier( furniture ) *
+           ( 1.25 - 0.6 * std::abs( std::clamp( stage, 0.0, 1.0 ) - climate.water_peak ) );
+}
+
+double crop_heat_fraction( const map &here, const tripoint_bub_ms &p,
+                           const crop_climate_profile &climate, const crop_day &day )
+{
+    double offset = 0;
+    if( &here == &get_map() ) {
+        weather_manager &weather = get_weather();
+        const auto ambient = weather.forced_temperature.value_or( weather.temperature );
+        offset = units::to_celsius( weather.get_temperature( p ) ) - units::to_celsius( ambient );
+    }
+    const double mean = ( day.low + day.high ) / 2;
+    const double restraint = here.is_roofed( p ) || p.z() < 0 ? ( day.high - day.low ) * 0.2 : 0;
+    const double low = std::min( mean, day.low + restraint ) + offset;
+    const double high = std::max( mean, day.high - restraint ) + offset;
+    return climate.heat_units( low, high ) * model_days /
+           to_days<double>( calendar::year_length() ) / climate.degree_days;
 }
 } // namespace
 
@@ -242,93 +306,134 @@ void clear_plant_climate_cache()
     cells.clear();
 }
 
+crop_water_status get_crop_water_status( const map &here, const tripoint_bub_ms &p,
+        const item &seed )
+{
+    const furn_t &furniture = here.furn( p ).obj();
+    const islot_seed &slot = *seed.type->seed;
+    const crop_climate_profile &climate = *slot.climate;
+    const auto &thresholds = slot.get_cumulative_stage_thresholds();
+    const double maturity = to_turns<double>( thresholds[slot.get_harvest_stage_idx() - 1] );
+    const double capacity = std::max( 12.0, climate.water_mm / climate.growing_days * 5 ) *
+                            crop_soil( here, p, furniture ).water_capacity;
+    const double moisture = std::clamp( seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 ),
+                                        0.0, capacity );
+    const double irrigation = iexamine::get_plant_max_water( furniture ) > 0 ?
+                              ( iexamine::get_plant_water( seed ) +
+                                seed.get_var( "crop_irrigation_fraction", 0.0 ) ) * charge_mm : 0;
+    const double day_fraction = model_days / to_days<double>( calendar::year_length() ) /
+                                climate.growing_days;
+    return { moisture, capacity, irrigation,
+             crop_water_need( seed, furniture, effective_crop_turns( seed ) / maturity,
+                              get_option<float>( "CROP_WATER_CONSUMPTION" ) ),
+             crop_heat_fraction( here, p, climate, sample_day( here.get_abs( p ), calendar::turn ) ) <
+             day_fraction };
+}
+
 time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, item &seed,
-                                   const furn_t &furniture, float growth_speed, float water_use )
+                                   const furn_t &furniture, float growth_speed, float water_use,
+                                   bool finish_interval )
 {
     const islot_seed &slot = *seed.type->seed;
     const crop_climate_profile &climate = *slot.climate;
     const auto &thresholds = slot.get_cumulative_stage_thresholds();
     const int harvest = slot.get_harvest_stage_idx();
     const time_duration maturity = thresholds[std::max( 0, harvest - 1 )];
+    const int overgrown = iexamine::get_plant_overgrown_stage_idx( slot );
+    const bool allow_overgrowth = get_option<bool>( "CROP_OVERGROWN_ENABLED" ) &&
+                                  !furniture.has_flag( "NO_CROP_OVERGROWTH" );
+    const int final_stage = !allow_overgrowth && overgrown > 0 ?
+                            overgrown - 1 : static_cast<int>( thresholds.size() ) - 1;
+    const double final_growth = to_turns<double>( thresholds[std::max( 0, final_stage - 1 )] );
     const double per_model_day = model_days / to_days<double>( calendar::year_length() );
-    const double average_need = climate.water_mm / climate.growing_days * per_model_day *
-                                std::max( 0.01f, water_use ) *
-                                iexamine::get_plant_water_consumption_multiplier( furniture );
     const bool covered = here.is_roofed( p ) || p.z() < 0;
-    const int max_water = iexamine::get_plant_max_water( furniture );
-    const north_america::crop_soil_properties soil = max_water > 0 ?
-            north_america::crop_soil_properties{} :
-            north_america::crop_soil_at( here.ter( p ) );
-    const double capacity = std::max( 12.0, average_need * 5 ) * soil.water_capacity;
-    int irrigation = max_water > 0 ? iexamine::get_plant_water( seed ) : 0;
+    const furn_t *stage_furniture = &furniture;
+    auto soil = crop_soil( here, p, furniture );
+    const double base_capacity = std::max( 12.0, climate.water_mm / climate.growing_days * 5 );
+    double capacity = base_capacity * soil.water_capacity;
+    double irrigation = iexamine::get_plant_max_water( furniture ) > 0 ?
+                        ( iexamine::get_plant_water( seed ) +
+                          seed.get_var( "crop_irrigation_fraction", 0.0 ) ) * charge_mm : 0;
     double moisture = std::clamp( seed.get_var( "crop_soil_moisture_mm", capacity * 0.65 ),
                                   0.0, capacity );
     time_point start = iexamine::get_plant_last_water_check( seed );
-    if( start == time_point::from_turn( 0 ) ) {
+    if( !seed.has_var( "seed_last_water_check" ) ) {
         start = calendar::turn - seed.age();
     }
 
-    time_duration effective = time_duration::from_turns( iexamine::get_plant_effective_growth_turns(
-                                  seed ) );
-    const int current_stage = iexamine::get_plant_current_stage_idx( here, p,
-                              slot.get_growth_stages() );
+    double effective = effective_crop_turns( seed );
+    int current_stage = iexamine::get_plant_current_stage_idx( here, p,
+                        slot.get_growth_stages() );
     if( current_stage > 0 && current_stage <= static_cast<int>( thresholds.size() ) ) {
-        effective = std::max( effective, thresholds[current_stage - 1] );
+        effective = std::max( effective, to_turns<double>( thresholds[current_stage - 1] ) );
+    }
+    if( start > calendar::turn ) {
+        return time_duration::from_turns( effective );
     }
     start = std::max( start, calendar::turn - crop_history );
     const tripoint_abs_ms position = here.get_abs( p );
-    const double rate = growth_speed * furniture.plant->growth_multiplier;
-    double temperature_offset = 0;
-    if( &here == &get_map() ) {
-        weather_manager &weather = get_weather();
-        const units::temperature ambient = weather.forced_temperature.value_or( weather.temperature );
-        // Historical weather has no heater state; use the current local temperature offset.
-        temperature_offset = units::to_celsius( weather.get_temperature( p ) ) -
-                             units::to_celsius( ambient );
-    }
-    for( ; start + 1_days <= calendar::turn; start += 1_days ) {
-        const crop_day day = sample_day( position, start );
-        const double stage = std::clamp( effective / maturity, 0.0, 1.0 );
-        const double need = average_need * ( 1.25 - 0.6 * std::abs( stage - climate.water_peak ) );
-        const double rain = covered ? 0 : day.rain;
-        if( max_water > 0 && rain > 0 ) {
-            irrigation = std::min( max_water, irrigation + static_cast<int>( rain / charge_mm ) );
-        } else {
-            moisture = std::min( capacity, moisture + rain * soil.infiltration );
+    const time_point end = finish_interval ? calendar::turn :
+                           calendar::turn - time_past_midnight( calendar::turn ) % 1_hours;
+    const double maturity_turns = to_turns<double>( maturity );
+    while( start < end && effective < final_growth ) {
+        while( current_stage >= 0 && current_stage < final_stage &&
+               effective >= to_turns<double>( thresholds[current_stage] ) &&
+               stage_furniture->plant && !stage_furniture->plant->transform.is_null() ) {
+            stage_furniture = &stage_furniture->plant->transform.obj();
+            ++current_stage;
+            soil = crop_soil( here, p, *stage_furniture );
+            capacity = base_capacity * soil.water_capacity;
+            moisture = std::min( moisture, capacity );
+            irrigation = std::min( irrigation,
+                                   iexamine::get_plant_max_water( *stage_furniture ) * charge_mm );
         }
-        const int consumed = std::min( irrigation, static_cast<int>( std::ceil( need / charge_mm ) ) );
+        const time_duration step = std::min( end - start,
+                                             1_hours - time_past_midnight( start ) % 1_hours );
+        const double days = to_days<double>( step );
+        const crop_day &day = sample_day( position, start );
+        const int hour = to_hours<int>( time_past_midnight( start ) );
+        const double need = crop_water_need( seed, *stage_furniture, effective / maturity_turns,
+                                             std::max( 0.01f, water_use ) ) * days;
+        const double rain = covered ? 0 : day.rain[hour] * to_hours<double>( step );
+        moisture = std::min( capacity, moisture + rain * soil.infiltration );
+        const double consumed = std::min( irrigation, std::max( 0.0, need - moisture ) );
         irrigation -= consumed;
-        const double available = moisture + consumed * charge_mm;
+        const double available = moisture + consumed;
         const double water_ratio = std::clamp( available / need, 0.0, 1.0 );
         moisture = std::clamp( available - need, 0.0, capacity );
-        moisture -= std::max( 0.0, moisture - 0.5 * capacity ) * soil.drainage;
+        moisture -= std::max( 0.0, moisture - 0.5 * capacity ) *
+                    ( 1 - std::pow( 1 - soil.drainage, days ) );
 
-        if( effective >= maturity ) {
-            effective += 1_days * rate;
-            if( effective >= thresholds.back() ) {
-                start = calendar::turn;
-                break;
-            }
-            continue;
+        const double rate = stage_furniture->plant ?
+                            growth_speed * stage_furniture->plant->growth_multiplier : growth_speed;
+        if( effective >= maturity_turns ) {
+            effective += to_turns<double>( step ) * rate;
+        } else {
+            const double heat_fraction = crop_heat_fraction( here, p, climate, day );
+            const double day_fraction = per_model_day / climate.growing_days;
+            effective += maturity_turns * std::min( heat_fraction, day_fraction ) * days *
+                         water_ratio * rate * soil.root_growth;
         }
-        const double mean = ( day.low + day.high ) / 2;
-        const double restraint = covered ? ( day.high - day.low ) * 0.2 : 0;
-        const double low = std::min( mean, day.low + restraint ) + temperature_offset;
-        const double high = std::max( mean, day.high - restraint ) + temperature_offset;
-        const double heat_fraction = climate.heat_units( low, high ) * per_model_day / climate.degree_days;
-        const double day_fraction = per_model_day / climate.growing_days;
-        const double progress = std::min( heat_fraction, day_fraction ) * water_ratio * rate *
-                                soil.root_growth;
-        effective += maturity * progress;
+        start += step;
+        if( effective >= final_growth ) {
+            effective = final_growth;
+            break;
+        }
+    }
+    if( effective >= final_growth ) {
+        start = std::max( start, end );
     }
 
-    if( max_water > 0 ) {
-        iexamine::set_plant_water( seed, irrigation );
+    if( iexamine::get_plant_max_water( *stage_furniture ) > 0 ) {
+        const double charges = irrigation / charge_mm;
+        iexamine::set_plant_water( seed, static_cast<int>( charges ) );
+        seed.set_var( "crop_irrigation_fraction", charges - static_cast<int>( charges ) );
     }
     seed.set_var( "crop_soil_moisture_mm", moisture );
     iexamine::set_plant_last_water_check( seed, start );
-    iexamine::set_plant_effective_growth_turns( seed, to_turns<int>( effective ) );
-    return effective;
+    iexamine::set_plant_effective_growth_turns( seed, static_cast<int>( effective ) );
+    seed.set_var( "crop_growth_fraction", effective - static_cast<int>( effective ) );
+    return time_duration::from_turns( effective );
 }
 
 int fruit_model_day( time_point when )
