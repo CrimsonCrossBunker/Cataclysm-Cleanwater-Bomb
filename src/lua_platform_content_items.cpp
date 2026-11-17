@@ -176,6 +176,7 @@ struct item_definition_data {
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
     std::int64_t volume_ml = 0;
+    std::optional<units::length> longest_side;
     std::int64_t price_cents = 0;
     std::int64_t price_postapoc_cents = 0;
     std::string color = "white";
@@ -201,6 +202,7 @@ struct item_definition_data {
     bool has_magazine_capacity = false;
     std::string use_handler;
     authored_text use_label;
+    std::optional<authored_text> use_description;
     std::string consume_handler;
     std::optional<comestible_data> comestible;
     std::optional<book_data> book;
@@ -800,7 +802,8 @@ struct item_definition_handle {
     }
 
     item_definition_handle &on_use( const std::string &handler,
-                                    const sol::optional<sol::object> &label ) {
+                                    const sol::optional<sol::object> &label,
+                                    const sol::optional<sol::object> &description ) {
         require_building_handle( token, *definition, "item" );
         if( handler.empty() ) {
             throw std::runtime_error( "item use handler id cannot be empty" );
@@ -808,8 +811,13 @@ struct item_definition_handle {
         authored_text parsed_label = label ?
                                      read_singular_text( *label, handler, "item use label" ) :
                                      authored_text{ handler, std::nullopt };
+        std::optional<authored_text> parsed_description;
+        if( description ) {
+            parsed_description = read_singular_text( *description, "", "item use description" );
+        }
         definition->use_handler = handler;
         definition->use_label = std::move( parsed_label );
+        definition->use_description = std::move( parsed_description );
         return *this;
     }
 
@@ -2144,9 +2152,10 @@ class lua_platform_iuse_actor : public iuse_actor
 {
     public:
         lua_platform_iuse_actor( std::string mod_id, std::string handler_id,
-                                 authored_text label ) :
+                                 authored_text label, std::optional<authored_text> description ) :
             iuse_actor( "lua_platform" ), mod_id_( std::move( mod_id ) ),
-            handler_id_( std::move( handler_id ) ), label_( std::move( label ) ) {}
+            handler_id_( std::move( handler_id ) ), label_( std::move( label ) ),
+            description_( std::move( description ) ) {}
 
         void load( const JsonObject &, const std::string & ) override {}
 
@@ -2168,10 +2177,17 @@ class lua_platform_iuse_actor : public iuse_actor
             return label_.native().translated();
         }
 
+        void info( const item &, std::vector<iteminfo> &dump ) const override {
+            if( description_ ) {
+                dump.emplace_back( "DESCRIPTION", description_->native().translated() );
+            }
+        }
+
     private:
         std::string mod_id_;
         std::string handler_id_;
         authored_text label_;
+        std::optional<authored_text> description_;
 };
 
 void hash_part( std::uint64_t &state, const std::string_view value )
@@ -2767,6 +2783,14 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 options.get<sol::optional<std::int64_t>>( "volume_ml" ) ) {
             definition->volume_ml = *volume;
             definition->has_volume = true;
+        }
+        if( const auto longest_side = options.get<sol::optional<std::int64_t>>( "longest_side_mm" ) ) {
+            if( *longest_side < -1 ||
+                *longest_side > std::numeric_limits<units::length::value_type>::max() ) {
+                throw std::runtime_error( "item longest side is outside the native range" );
+            }
+            definition->longest_side = units::from_millimeter(
+                                           static_cast<units::length::value_type>( *longest_side ) );
         }
         if( const sol::optional<std::int64_t> price =
                 options.get<sol::optional<std::int64_t>>( "price_cents" ) ) {
@@ -4385,7 +4409,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                            requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                            declared_item_ids.count( component.id ) != 0 ||
                                            item::type_is_defined( itype_id( component.id ) );
-                        if( !valid ) {
+                        // Native item inheritance is resolved before the engine-state pass.
+                        if( check_engine_state && !valid ) {
                             throw std::runtime_error( "recipe '" + definition.id +
                                                       "' references unknown " +
                                                       ( component.requirement ? std::string( "requirement" ) : kind ) +
@@ -5449,6 +5474,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.has_volume ) {
                         native->volume = units::from_milliliter<std::int64_t>( definition.volume_ml );
                     }
+                    if( definition.longest_side ) {
+                        native->longest_side = *definition.longest_side;
+                    }
                     if( definition.has_price ) {
                         native->price = units::from_cent<std::int64_t>( definition.price_cents );
                     }
@@ -5566,7 +5594,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->use_methods.emplace(
                             action_id,
                             use_function( std::make_unique<lua_platform_iuse_actor>(
-                                              pimpl_->owner, definition.use_handler, definition.use_label ) ) );
+                                              pimpl_->owner, definition.use_handler, definition.use_label,
+                                              definition.use_description ) ) );
                     }
                     if( !definition.consume_handler.empty() ) {
                         if( !native->comestible ) {
@@ -6763,6 +6792,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.symbol );
                 hash_part( state, std::to_string( v.mass_grams ) );
                 hash_part( state, std::to_string( v.volume_ml ) );
+                hash_part( state, v.longest_side ? std::to_string( units::to_millimeter( *v.longest_side ) ) :
+                           "inherit_length" );
                 hash_part( state, std::to_string( v.price_cents ) );
                 hash_part( state, std::to_string( v.price_postapoc_cents ) );
                 hash_part( state, v.color );
@@ -6774,6 +6805,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );
                 hash_text( v.use_label.translated );
+                hash_part( state, v.use_description ? "use_description" : "no_use_description" );
+                if( v.use_description ) {
+                    hash_part( state, v.use_description->raw );
+                    hash_text( v.use_description->translated );
+                }
                 hash_part( state, v.consume_handler );
                 if( v.comestible ) {
                     const item_definition_data::comestible_data &food = *v.comestible;

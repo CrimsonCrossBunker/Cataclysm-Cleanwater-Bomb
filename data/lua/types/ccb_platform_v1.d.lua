@@ -680,6 +680,7 @@ local ModDefinition = {}
 ---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
 ---@field volume_ml? integer Non-negative volume in milliliters.
+---@field longest_side_mm? integer Longest side in millimeters. Omit to inherit; -1 derives length from volume.
 ---@field price_cents? integer Non-negative pre-Cataclysm price in cents.
 ---@field price_postapoc_cents? integer Non-negative post-Cataclysm price in cents.
 ---@field magazine_capacity? integer Positive legacy magazine capacity, independent of per-ammo pocket restrictions.
@@ -765,8 +766,9 @@ function ItemDefinition:book(options) end
 
 ---@param handler_id string
 ---@param label? string|LocalizedText Action menu label; content.text stays dynamically translated, plain strings remain literal, and omission defaults to handler_id.
+---@param description? string|LocalizedText Action description shown in item info.
 ---@return ItemDefinition self
-function ItemDefinition:on_use(handler_id, label) end
+function ItemDefinition:on_use(handler_id, label, description) end
 
 ---@param handler_id string
 ---@param label? string

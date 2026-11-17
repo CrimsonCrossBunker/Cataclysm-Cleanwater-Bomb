@@ -63,6 +63,9 @@ require("anathema_sunlight")
 require("anathema_progression")
 require("vampire_infection")
 require("vampire_ascension")
+if content.is_mod_active("skyisland") then
+    require("mod_interactions.skyisland.vampire_amplifiers")
+end
 
 require("nested_recipes")
 

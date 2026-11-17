@@ -20,6 +20,20 @@ local function advance_potency(character, effect)
     end
 end
 
+local function gain_ascendant_potency(character)
+    advance_potency(character, "vampire_virus_ascendant")
+    if character.subtype == "avatar" then
+        services.messages.add(ccb.services.translate("Your eyes redden even more as you pass a point of no return."), "mixed")
+    end
+end
+
+local function gain_post_mortal_potency(character)
+    advance_potency(character, "vampire_virus_post_mortal")
+    if character.subtype == "avatar" then
+        services.messages.add(ccb.services.translate("Your thirst for blood grows, and so does your power, as you reach the final state of vampirism."), "mixed")
+    end
+end
+
 local function first_active_mission(character, mission_id)
     local offset = 0
     while true do
@@ -59,9 +73,8 @@ ccb.runtime.handler("vampire_sacrifice", function(event)
     cleanup.remove_dream_magic(character)
     cleanup.remove_other_supernatural_powers(character)
     remove_drowned_morals(character)
-    advance_potency(character, "vampire_virus_ascendant")
+    gain_ascendant_potency(character)
     if character.subtype == "avatar" then
-        services.messages.add(ccb.services.translate("Your eyes redden even more as you pass a point of no return."), "mixed")
         services.messages.add(ccb.services.translate("You feel your thirst for blood deepen as you kill someone who fully trusted you."), "mixed")
     end
 end)
@@ -86,12 +99,14 @@ ccb.dialogue.register_topic {
                     value(services.mutations.replace(character, id("mutation", "BLOOD_DRINKER")))
                     remove_drowned_morals(character)
                     weaknesses.grant(character, 2)
-                    advance_potency(character, "vampire_virus_post_mortal")
-                    if character.subtype == "avatar" then
-                        services.messages.add(ccb.services.translate("Your thirst for blood grows, and so does your power, as you reach the final state of vampirism."), "mixed")
-                    end
+                    gain_post_mortal_potency(character)
                 end,
             },
         }
     end,
+}
+
+return {
+    gain_ascendant_potency = gain_ascendant_potency,
+    gain_post_mortal_potency = gain_post_mortal_potency,
 }

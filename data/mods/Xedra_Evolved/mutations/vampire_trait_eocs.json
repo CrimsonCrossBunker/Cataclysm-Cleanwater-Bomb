@@ -1,45 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_ADD_ONE_WEAKNESS",
-    "//": "This EOC adds a single vampiric weakness when ran.",
-    "//2": "This EOC is intended to be ran multiple times, to properly assign the intended amount of weaknesses to the player.",
-    "//3": "When adding new weaknesses, make sure to also add them to the roll_remainder below so the player can obtain them.",
-    "effect": [
-      {
-        "u_roll_remainder": [
-          "VAMPIRE_WEAKNESS_MORE_BLOOD",
-          "VAMPIRE_WEAKNESS_GROTESQUE",
-          "VAMPIRE_WEAKNESS_EARTH_SLEEP",
-          "VAMPIRE_WEAKNESS_HOLY_BURN",
-          "VAMPIRE_WEAKNESS_VAST_WATER_BURN",
-          "VAMPIRE_WEAKNESS_ANIMAL_HATE",
-          "VAMPIRE_WEAKNESS_FIRE_VULNERABLE",
-          "VAMPIRE_WEAKNESS_COLD_BLOODED",
-          "VAMPIRE_WEAKNESS_NEED_LIVING_BLOOD",
-          "VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD",
-          "VAMPIRE_WEAKNESS_BLOOD_CRAVING",
-          "VAMPIRE_WEAKNESS_NO_FUN"
-        ],
-        "type": "mutation",
-        "true_eocs": [ "EOC_VAMPIRE_ADD_ONE_WEAKNESS_SUCCESS" ],
-        "false_eocs": [ "EOC_VAMPIRE_ADD_ONE_WEAKNESS_FAIL" ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_ADD_ONE_WEAKNESS_SUCCESS",
-    "//": "Workaround to the below not working due to the roll_remainder used.  When this will be fixed, remove this EOC as the others give a message informing the player of the new weakness.",
-    "effect": [ { "u_message": "You gain a new vampiric weakness.", "type": "bad" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_ADD_ONE_WEAKNESS_FAIL",
-    "effect": [ { "u_message": "The EOC failed to give you a weakness.  Please report this on GitHub.", "popup": true } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_SET_VAMPIRE_TRAIT_NUMBERS_FOR_NPC_USE",
     "//": "This is necessary for powers whose effect on NPCs is variable, since the jmath equations return the avatar's traits",
     "eoc_type": "EVENT",
@@ -1497,67 +1458,6 @@
         ],
         "else": { "u_message": "You must be near a door or window to seep through." }
       }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_TIER_4_REMOVE_MORALS",
-    "//": "When a tier 3 vampire becomes a tier 4 or when a tier 4+ drinks blood, they gain the uncaring trait and lose morality-based traits such as pacifist and vegan.",
-    "//2": "A vampire that somehow regain morals will keep them until the next drink.  Then the thirst will drown all worries and morals.",
-    "//3": " The message is not given upon gaining tier 4+, as these EOCs have their own messages.",
-    "condition": { "u_has_trait": "VAMPIRE4" },
-    "effect": [
-      {
-        "if": { "u_has_trait": "VEGAN" },
-        "then": [
-          { "u_lose_trait": "VEGAN" },
-          {
-            "if": { "math": [ "u_shed_morality > 0" ] },
-            "then": [ { "u_message": "A wave of crimson drowns your empathy for lesser beings.", "type": "mixed" } ]
-          }
-        ]
-      },
-      {
-        "if": { "u_has_trait": "SPIRITUAL" },
-        "then": [
-          { "u_lose_trait": "SPIRITUAL" },
-          {
-            "if": { "math": [ "u_shed_morality > 0" ] },
-            "then": [
-              {
-                "u_message": "There are no wonders and nothing beyond sight, only the thirst and how you will sate it.",
-                "type": "mixed"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "if": { "u_has_trait": "PACIFIST" },
-        "then": [
-          { "u_lose_trait": "PACIFIST" },
-          {
-            "if": { "math": [ "u_shed_morality > 0" ] },
-            "then": [ { "u_message": "Your disdain for violence melts as you drink your fill.", "type": "mixed" } ]
-          }
-        ]
-      },
-      {
-        "if": { "not": { "u_has_trait": "PSYCHOPATH" } },
-        "then": [
-          { "u_add_trait": "PSYCHOPATH" },
-          {
-            "if": { "math": [ "u_shed_morality > 0" ] },
-            "then": [
-              {
-                "u_message": "The blood in your mouth makes you realise that anything that isn't blood isn't worth caring about.",
-                "type": "mixed"
-              }
-            ]
-          }
-        ]
-      },
-      { "math": [ "u_shed_morality++" ] }
     ]
   },
   {

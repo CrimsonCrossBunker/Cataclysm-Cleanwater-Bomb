@@ -18,6 +18,9 @@
 #include "game.h"
 #include "global_vars.h"
 #include "item.h"
+#include "item_location.h"
+#include "iuse.h"
+#include "itype.h"
 #include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
@@ -39,6 +42,7 @@
 #include "rng.h"
 #include "talker.h"
 #include "type_id.h"
+#include "worldfactory.h"
 
 static const itype_id itype_item_hedge_cure_cold_or_flu( "item_hedge_cure_cold_or_flu" );
 static const itype_id itype_mutagen( "mutagen" );
@@ -471,6 +475,134 @@ TEST_CASE( "xedra_vampire_ascension_uses_native_kill_and_dialogue", "[.][mods][x
         CHECK( potency.is_permanent() );
         cata::lua_platform::end_dialogue_session( conversation );
     }
+}
+
+// Run with --mods xedra_evolved,skyisland for active interaction coverage.
+TEST_CASE( "xedra_sky_island_amplifiers_use_native_items_and_recipes",
+           "[.][mods][xedra_evolved][skyisland]" )
+{
+    const bool supreme = GENERATE( false, true );
+    const std::string name = supreme ? "upgradekey_vampire5" : "upgradekey_vampire4";
+    const itype_id amplifier( name );
+    const recipe_id craft( name );
+    CAPTURE( name );
+    const bool sky_active = std::any_of( world_generator->active_world->active_mod_order.begin(),
+    world_generator->active_world->active_mod_order.end(), []( const mod_id & active ) {
+        return active.str() == "skyisland";
+    } );
+    if( !sky_active ) {
+        CHECK_FALSE( amplifier.is_valid() );
+        CHECK_FALSE( craft.is_valid() );
+        return;
+    }
+    REQUIRE( amplifier.is_valid() );
+    REQUIRE( craft.is_valid() );
+    clear_avatar();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        Messages::clear_messages();
+        clear_avatar();
+    } );
+    avatar &player = get_avatar();
+    // The generic test world is not a Sky Island character-creation scenario.
+    for( const bodypart_id &part : player.get_all_body_parts() ) {
+        player.set_part_hp_cur( part, player.get_part_hp_max( part ) );
+    }
+    REQUIRE_FALSE( player.is_dead_state() );
+    cata::lua_platform::runtime_world_ready( true );
+    REQUIRE( player.wear_item( item( itype_id( "backpack" ) ), false ) );
+    item_location held = player.i_add( item( amplifier ), false );
+    REQUIRE( held );
+    REQUIRE( player.i_add( item( amplifier ), false ) );
+    REQUIRE( player.has_amount( amplifier, 2 ) );
+
+    const itype &kind = *held->type;
+    CHECK( kind.weight == 150_gram );
+    CHECK( kind.volume == 250_ml );
+    CHECK( kind.longest_side == 90_mm );
+    CHECK( kind.category_force == item_category_id( "spare_parts" ) );
+    CHECK( held->type_name() ==
+           ( supreme ? "Superior Vampiric Amplificator" : "Vampiric Amplificator" ) );
+    const use_function *action = kind.get_default_use();
+    REQUIRE( action != nullptr );
+    CHECK( action->get_name() == "Activate" );
+    std::vector<iteminfo> details;
+    action->dump_info( *held, details );
+    REQUIRE( details.size() == 1 );
+    CHECK( details.front().sName == "Empower your vampirism." );
+
+    const recipe &formula = craft.obj();
+    CHECK( formula.result() == amplifier );
+    CHECK( formula.category == crafting_category_id( "CC_WARP" ) );
+    CHECK( formula.subcategory == "CSC_WARP_UPGRADES" );
+    CHECK( formula.exertion_level() == 1 );
+    CHECK( formula.has_flag( "SECRET" ) );
+    CHECK( formula.has_flag( "BLIND_EASY" ) );
+    const auto &tools = formula.simple_requirements().get_tools();
+    REQUIRE( tools.size() == 1 );
+    REQUIRE( tools.front().size() == 1 );
+    CHECK( tools.front().front().type == itype_id( "fakeitem_statue" ) );
+    CHECK( tools.front().front().count == -1 );
+    const auto &components = formula.simple_requirements().get_components();
+    REQUIRE( components.size() == ( supreme ? 12 : 6 ) );
+    REQUIRE( components.front().size() == 1 );
+    CHECK( components.front().front().type == itype_id( "warptoken" ) );
+    CHECK( components.front().front().count == ( supreme ? 50 : 25 ) );
+    REQUIRE( components[1].size() == ( supreme ? 1 : 4 ) );
+
+    player.learn_recipe( &formula );
+    REQUIRE( player.knows_recipe( &formula ) );
+    const auto activate = [&]() {
+        REQUIRE( held );
+        CHECK( kind.invoke( &player, *held, &get_map(), player.pos_bub() ) == 0 );
+    };
+    if( !supreme ) {
+        Messages::clear_messages();
+        activate();
+        REQUIRE( player.has_amount( amplifier, 2 ) );
+        REQUIRE( player.knows_recipe( &formula ) );
+        const auto uninfected = Messages::recent_messages( 5 );
+        CHECK( std::any_of( uninfected.begin(), uninfected.end(), []( const auto & line ) {
+            return line.second == "You cannot empower your vampirism without being a vampire.";
+        } ) );
+        player.add_effect( efftype_id( "vampire_virus" ), 1_hours );
+        Messages::clear_messages();
+        activate();
+        REQUIRE( player.has_amount( amplifier, 2 ) );
+        CHECK( player.knows_recipe( &formula ) );
+        const auto infected = Messages::recent_messages( 5 );
+        CHECK( std::any_of( infected.begin(), infected.end(), []( const auto & line ) {
+            return line.second == "You lack the vampiric potency to use this.";
+        } ) );
+    }
+
+    const trait_id vegan( "VEGAN" );
+    const trait_id dreamsmith( "DREAMSMITH" );
+    const trait_id werewolf( "WEREWOLF_SPELLS" );
+    player.set_mutation( trait_id( supreme ? "VAMPIRE4" : "VAMPIRE3" ) );
+    player.set_mutation( vegan );
+    player.set_mutation( dreamsmith );
+    player.set_mutation( werewolf );
+    const auto count_weaknesses = [&]() {
+        const auto traits = player.get_mutations();
+        return std::count_if( traits.begin(), traits.end(), []( const trait_id & trait ) {
+            return trait.str().find( "VAMPIRE_WEAKNESS_" ) == 0;
+        } );
+    };
+    const auto before_weaknesses = count_weaknesses();
+    rng_set_engine_seed( 70731 );
+    activate();
+    CHECK_FALSE( player.has_amount( amplifier, 1 ) );
+    CHECK_FALSE( player.knows_recipe( &formula ) );
+    CHECK( player.has_trait( trait_id( supreme ? "BLOOD_DRINKER" : "VAMPIRE4" ) ) );
+    CHECK( player.has_trait( vegan ) == supreme );
+    CHECK( player.has_trait( dreamsmith ) == supreme );
+    CHECK( player.has_trait( werewolf ) == supreme );
+    CHECK( count_weaknesses() == before_weaknesses + ( supreme ? 2 : 1 ) );
+    const effect &potency = player.get_effect( efftype_id( supreme
+                            ? "vampire_virus_post_mortal" : "vampire_virus_ascendant" ) );
+    CHECK( potency.get_intensity() == 1 );
+    CHECK( potency.is_permanent() );
 }
 
 TEST_CASE( "xedra_lua_interrupts_the_queued_combat_blood_reward", "[.][mods][xedra_evolved]" )
