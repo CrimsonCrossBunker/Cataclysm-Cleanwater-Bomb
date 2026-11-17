@@ -83,4 +83,12 @@ function M.prepare(character)
     end
 end
 
+function M.finish(character)
+    state.checked(services.effects.remove(character, services.types.id("effect", "challenge_mode_speed_reduction")))
+    state.checked(services.mutations.erase(character, services.types.id("mutation", "CHALLENGE_MODE_HORDES")))
+    state.set("target_fields_weight", 15)
+    state.set("target_forests_weight", state.number("hardmissions"))
+    state.set("target_houses_weight", state.number("hardermissions"))
+end
+
 return M

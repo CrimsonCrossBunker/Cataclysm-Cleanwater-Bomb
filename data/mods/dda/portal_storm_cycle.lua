@@ -7,6 +7,10 @@ ccb.runtime.handler("portal_storm_begin_early", function(character)
     storm.start_early(character)
 end)
 
+ccb.runtime.handler("portal_storm_cancel", function(character)
+    storm.stop(character)
+end)
+
 ccb.runtime.handler("portal_storm_cycle", function(character)
     if services.gameplay.environment.dimension() == "default" then
         storm.start_early(character)
