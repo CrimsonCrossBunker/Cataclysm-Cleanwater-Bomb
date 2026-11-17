@@ -5461,6 +5461,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field species? string[] Restrict the count to monsters in any listed species.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field skills? string[] Current native skill levels requested for any enchantment callback.
 ---@field physiology? boolean Request hunger, thirst, sleepiness, focus, perceived pain and body size.
 ---@field fine_detail_vision? boolean Request the native integer fine-detail vision modifier.
 ---@field stats? boolean Request the speaker's current strength, dexterity, intelligence and perception.
@@ -5491,6 +5492,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field skills? table<string, integer>
 ---@field physiology? CcbEnchantmentPhysiologySnapshot
 ---@field fine_detail_vision? integer
 ---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
@@ -5536,7 +5538,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
----@field load_character_inputs? CcbEnchantmentCharacterInputs Enables activation, modifier and vision distance callbacks during save reconstruction.
+---@field load_character_inputs? CcbEnchantmentCharacterInputs Detached inputs available to activation, modifier and vision callbacks during save reconstruction.
 ---@field native_modifier_order? boolean Invoke modifier handlers in the engine’s normal stat and damage slot order.
 ---@field [string] any
 
@@ -5553,6 +5555,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionTargetInputs
+---@field body_part_effects? table<string, string[]> Body part IDs mapped to effect IDs to test on the target.
 ---@field species? string[]
 ---@field flags? string[] Target creature or character flags to test.
 ---@field traits? string[]
@@ -5567,6 +5570,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field spell_count? boolean Request the target's count of known spells.
 
 ---@class CcbEnchantmentVisionTargetSnapshot
+---@field body_part_effects? table<string, table<string, boolean>>
 ---@field species? table<string, boolean>
 ---@field flags? table<string, boolean>
 ---@field traits? table<string, boolean>

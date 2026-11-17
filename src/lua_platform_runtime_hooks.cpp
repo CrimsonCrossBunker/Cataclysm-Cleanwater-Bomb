@@ -952,6 +952,10 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.get_spell_level( spell_id( id ) );
     } );
+    collect( "skills", requested.skills, 0, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.get_skill_level( skill_id( id ) );
+    } );
     collect( "spell_school_levels", requested.spell_school_levels, -1,
     []( const const_talker & actor, const std::string & id ) {
         return actor.get_spell_level( trait_id( id ) );
@@ -1100,6 +1104,17 @@ static sol::table collect_enchantment_vision_target( sol::state &lua, const cons
     collect( "effects", requested.effects, [&]( const std::string &id ) {
         return !target.get_effect( efftype_id( id ), bodypart_str_id::NULL_ID() ).is_null();
     } );
+    if( !requested.body_part_effects.empty() ) {
+        sol::table parts = lua.create_table();
+        for( const auto &[part, effects] : requested.body_part_effects ) {
+            sol::table values = lua.create_table();
+            for( const std::string &id : effects ) {
+                values[id] = !target.get_effect( efftype_id( id ), bodypart_id( part ) ).is_null();
+            }
+            parts[part] = std::move( values );
+        }
+        inputs["body_part_effects"] = std::move( parts );
+    }
     if( requested.line_of_sight ) {
         const Creature *observer = dialogue.has_alpha ?
                                    dialogue.const_actor( false )->get_const_creature() : nullptr;

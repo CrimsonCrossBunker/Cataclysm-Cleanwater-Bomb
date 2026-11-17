@@ -335,6 +335,7 @@ struct enchantment_vision_target_inputs {
     bool hostile = false;
     bool anger = false;
     bool spell_count = false;
+    std::map<std::string, std::vector<std::string>> body_part_effects;
 };
 struct enchantment_monster_count_query {
     int radius;
@@ -370,6 +371,7 @@ struct enchantment_character_inputs {
     std::vector<std::string> vitamins;
     bool physiology = false;
     bool fine_detail_vision = false;
+    std::vector<std::string> skills;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

@@ -457,6 +457,15 @@ static std::optional<enchantment_vision_target_inputs> read_enchantment_vision_t
     inputs.hostile = request->get_or( "hostile", false );
     inputs.anger = request->get_or( "anger", false );
     inputs.spell_count = request->get_or( "spell_count", false );
+    if( const auto parts = request->get<sol::optional<sol::table>>( "body_part_effects" ) ) {
+        for( const auto &[part, effects] : *parts ) {
+            if( !part.is<std::string>() || !effects.is<sol::table>() ) {
+                throw std::runtime_error( "vision body_part_effects requires body part IDs and effect arrays" );
+            }
+            inputs.body_part_effects.emplace( part.as<std::string>(),
+                                             read_enchantment_id_array( effects.as<sol::table>(), "vision body part effects" ) );
+        }
+    }
     return inputs;
 }
 
@@ -2532,7 +2541,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false ),
                 std::nullopt, {}, ids( *activation, "spell_school_counts" ), {},
                 activation->get_or( "stats", false ), ids( *activation, "vitamins" ),
-                activation->get_or( "physiology", false ), activation->get_or( "fine_detail_vision", false )
+                activation->get_or( "physiology", false ), activation->get_or( "fine_detail_vision", false ),
+                ids( *activation, "skills" )
             };
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
@@ -4291,12 +4301,16 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 definition.modifiers.end(), []( const enchantment_modifier_definition_data & modifier ) {
                     return !modifier.add_handler.empty() || !modifier.multiply_handler.empty();
                 } );
-                const bool has_distance_handler = std::any_of( definition.visions.begin(),
+                const bool has_vision_handler = std::any_of( definition.visions.begin(),
                 definition.visions.end(), []( const enchantment_vision_definition_data &vision ) {
-                    return !vision.distance_handler.empty();
+                    return !vision.distance_handler.empty() || !vision.condition_handler.empty() ||
+                           std::any_of( vision.descriptions.begin(), vision.descriptions.end(),
+                    []( const enchantment_vision_description_definition_data &description ) {
+                        return !description.condition_handler.empty();
+                    } );
                 } );
-                if( definition.condition_handler.empty() && !has_numeric_handler && !has_distance_handler ) {
-                    throw std::runtime_error( "enchantment load_character_inputs requires an activation, modifier or vision distance handler" );
+                if( definition.condition_handler.empty() && !has_numeric_handler && !has_vision_handler ) {
+                    throw std::runtime_error( "enchantment load_character_inputs requires an activation, modifier or vision handler" );
                 }
                 const enchantment_character_inputs &inputs = *definition.load_character_inputs;
                 for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags,
@@ -4304,7 +4318,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.character_variables, &inputs.global_variables,
                                         &inputs.character_flags, &inputs.spell_levels,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums,
-                                        &inputs.spell_school_counts, &inputs.vitamins } ) {
+                                        &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -4505,6 +4519,17 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                             &inputs->effects } ) {
                         for( const std::string &id : *ids ) {
                             require_valid_id( id, "enchantment vision target input" );
+                        }
+                    }
+                    for( const auto &[part, effects] : inputs->body_part_effects ) {
+                        require_valid_id( part, "enchantment vision body part" );
+                        if( check_engine_state && !staged_body_part( part ) &&
+                            !bodypart_str_id( part ).is_valid() ) {
+                            throw std::runtime_error( "enchantment '" + definition.id +
+                                                      "' references unknown vision body part '" + part + "'" );
+                        }
+                        for( const std::string &effect : effects ) {
+                            require_valid_id( effect, "enchantment vision body part effect" );
                         }
                     }
                 };
@@ -6371,11 +6396,12 @@ void character_content_transaction::impl::apply_enchantment()
                 };
             } else {
                 const std::string handler = vision.condition_handler;
-                value.condition = [owner, enchantment_name, handler, target_inputs = vision.target_inputs](
+                value.condition = [owner, enchantment_name, handler, target_inputs = vision.target_inputs,
+                                   load_character_inputs = source.load_character_inputs](
                 const const_dialogue & dialogue ) {
                     return invoke_enchantment_condition_handler(
                                owner, enchantment_name, "vision", std::string_view(),
-                               handler, dialogue, std::nullopt, target_inputs ).value_or( false );
+                               handler, dialogue, load_character_inputs, target_inputs ).value_or( false );
                 };
             }
             if( !vision.distance_handler.empty() ) {
@@ -6406,11 +6432,12 @@ void character_content_transaction::impl::apply_enchantment()
                     const std::string handler = description.condition_handler;
                     const std::string description_id = description.id;
                     result.condition = [owner, enchantment_name, handler, description_id,
-                                       target_inputs = description.target_inputs ? description.target_inputs : vision.target_inputs](
+                                       target_inputs = description.target_inputs ? description.target_inputs : vision.target_inputs,
+                                       load_character_inputs = source.load_character_inputs](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_condition_handler(
                                    owner, enchantment_name, "vision_description",
-                                   description_id, handler, dialogue, std::nullopt, target_inputs ).value_or( false );
+                                   description_id, handler, dialogue, load_character_inputs, target_inputs ).value_or( false );
                     };
                 }
                 value.special_vision_descriptions_vector.push_back( std::move( result ) );
@@ -7591,6 +7618,7 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "worn_flags", value.load_character_inputs->worn_flags );
                     hash_ids( "wielded_flags", value.load_character_inputs->wielded_flags );
                     hash_ids( "vitamins", value.load_character_inputs->vitamins );
+                    hash_ids( "skills", value.load_character_inputs->skills );
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
                     hash_ids( "character_variables", value.load_character_inputs->character_variables );
                     hash_ids( "global_variables", value.load_character_inputs->global_variables );
@@ -7730,6 +7758,13 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, inputs->hostile ? "hostile" : "no_hostile" );
                         hash_part( state, inputs->anger ? "anger" : "no_anger" );
                         hash_part( state, inputs->spell_count ? "spell_count" : "no_spell_count" );
+                        hash_part( state, std::to_string( inputs->body_part_effects.size() ) );
+                        for( const auto &[part, effects] : inputs->body_part_effects ) {
+                            hash_part( state, part );
+                            for( const std::string &effect : effects ) {
+                                hash_part( state, effect );
+                            }
+                        }
                     };
                     hash_target_inputs( vision.target_inputs );
                     hash_part( state, vision.precise ? "precise" : "imprecise" );
