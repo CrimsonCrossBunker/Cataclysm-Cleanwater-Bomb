@@ -44,3 +44,5 @@ require("snippets")
 require("enchantments")
 
 require("enchantment_values")
+
+require("school_enchantments")
