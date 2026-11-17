@@ -1,1 +1,3 @@
 require("difficulty")
+
+require("snippets")
