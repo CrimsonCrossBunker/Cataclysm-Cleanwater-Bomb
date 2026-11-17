@@ -16,30 +16,5 @@
       "CSC_ENCHANTED_RESEARCH",
       "CSC_ENCHANTED_ENCHANTING"
     ]
-  },
-  {
-    "type": "tool_quality",
-    "id": "MANA_FOCUS",
-    "name": "mana focusing"
-  },
-  {
-    "type": "tool_quality",
-    "id": "MANA_INFUSE",
-    "name": "mana infusing"
-  },
-  {
-    "type": "tool_quality",
-    "id": "MANA_WEAVE",
-    "name": "mana weaving"
-  },
-  {
-    "type": "tool_quality",
-    "id": "MAGIC_MUTAGEN",
-    "name": "magic mutagen mixer"
-  },
-  {
-    "type": "tool_quality",
-    "id": "MAGIC_CAULDRON",
-    "name": "alchemical cauldron"
   }
 ]

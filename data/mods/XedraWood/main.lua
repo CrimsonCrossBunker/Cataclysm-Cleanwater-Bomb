@@ -41,3 +41,5 @@ end, 1)
 ccb.runtime.on("game:game_start", "initialize_character")
 
 require("flags")
+
+require("tool_qualities")

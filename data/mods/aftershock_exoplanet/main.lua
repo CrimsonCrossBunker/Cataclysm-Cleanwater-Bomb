@@ -33,3 +33,5 @@ require("speech")
 require("ammunition_types")
 
 require("ammo_effects")
+
+require("tool_qualities")

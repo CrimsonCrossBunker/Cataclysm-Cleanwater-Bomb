@@ -76,3 +76,5 @@ require("ammunition_types")
 require("ammo_effects")
 require("mutation_snippets")
 require("mutation_artifact")
+
+require("tool_qualities")

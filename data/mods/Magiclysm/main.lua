@@ -34,3 +34,5 @@ require("monster_flags")
 require("speech")
 
 require("ammunition_types")
+
+require("tool_qualities")

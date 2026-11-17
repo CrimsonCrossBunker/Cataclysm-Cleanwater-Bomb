@@ -75,3 +75,5 @@ require("ammunition_types")
 
 require("ammo_effects")
 require("monster_attacks")
+
+require("tool_qualities")
