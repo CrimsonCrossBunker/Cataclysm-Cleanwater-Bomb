@@ -29,7 +29,7 @@
     "warmth": 10,
     "material_thickness": 2,
     "flags": [ "VARSIZE", "POCKETS", "STURDY", "MUNDANE" ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_0" } ]
   },
   {
     "id": "armor_nomad_advanced",
@@ -88,7 +88,7 @@
     "material_thickness": 4,
     "flags": [ "VARSIZE", "POCKETS", "STURDY", "USES_BIONIC_POWER", "MUNDANE" ],
     "tool_ammo": "battery",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] }, { "id": "ench_climate_control_all" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_advanced_0" }, { "id": "ench_climate_control_all" } ]
   },
   {
     "id": "armor_nomad_advanced_on",

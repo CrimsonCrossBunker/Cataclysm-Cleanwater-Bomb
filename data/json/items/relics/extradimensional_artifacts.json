@@ -77,6 +77,6 @@
       }
     ],
     "flags": [ "ZERO_WEIGHT", "TARDIS" ],
-    "passive_effects": [ { "has": "HELD", "condition": "ALWAYS", "values": [ { "value": "ARTIFACT_RESONANCE", "add": 2000 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_string_dimension_hypercube_0" } ]
   }
 ]

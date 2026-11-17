@@ -16,7 +16,7 @@
     "color": "yellow",
     "melee_damage": { "bash": 5 },
     "flags": [ "MUNDANE" ],
-    "passive_effects": [ { "condition": "ALWAYS", "values": [ { "value": "ARTIFACT_RESONANCE", "add": 200 } ] } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_highland_censer_0" } ],
     "use_action": [
       { "type": "effect_on_conditions", "menu_text": "Burn incense", "effect_on_conditions": [ "EOC_ARTIFACT_BURN_INCENSE" ] }
     ]

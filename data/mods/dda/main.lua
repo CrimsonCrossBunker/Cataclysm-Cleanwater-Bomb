@@ -126,3 +126,5 @@ require("world_enchantments")
 require("chance_enchantments")
 
 require("bionic_enchantments")
+
+require("item_enchantments")

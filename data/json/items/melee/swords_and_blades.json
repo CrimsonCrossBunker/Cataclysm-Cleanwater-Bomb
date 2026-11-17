@@ -2924,7 +2924,7 @@
     "flags": [ "SPEAR", "REACH_ATTACK", "UNBREAKABLE_MELEE", "SHEATH_SWORD", "NONCONDUCTIVE" ],
     "techniques": [ "WBLOCK_1", "WIDE", "SPIN", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "uneven" },
-    "passive_effects": [ { "has": "WIELD", "values": [ { "value": "MELEE_STAMINA_CONSUMPTION", "multiply": -0.67 } ] } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_jade_nagamaki_0" } ],
     "melee_damage": { "bash": 10, "cut": 32 }
   },
   {

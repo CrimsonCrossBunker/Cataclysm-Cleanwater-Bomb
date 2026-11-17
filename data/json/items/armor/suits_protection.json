@@ -4057,7 +4057,7 @@
       "need_charges_msg": "Your internal reservoir is empty."
     },
     "tool_ammo": "battery",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] }, { "id": "ench_climate_control_all" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_plate_0" }, { "id": "ench_climate_control_all" } ]
   },
   {
     "id": "armor_nomad_plate_on",
@@ -4126,7 +4126,7 @@
       "need_charges_msg": "Your internal reservoir is empty."
     },
     "tool_ammo": "battery",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] }, { "id": "ench_climate_control_all" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_lightplate_0" }, { "id": "ench_climate_control_all" } ]
   },
   {
     "id": "armor_nomad_lightplate_on",
@@ -4194,7 +4194,7 @@
       "need_charges_msg": "Your internal reservoir is empty."
     },
     "tool_ammo": "battery",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] }, { "id": "ench_climate_control_all" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_heavyplate_0" }, { "id": "ench_climate_control_all" } ]
   },
   {
     "id": "armor_nomad_heavyplate_on",
@@ -4261,7 +4261,7 @@
       "need_charges": 1,
       "need_charges_msg": "Your internal reservoir is empty."
     },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] }, { "id": "ench_climate_control_all" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_armor_nomad_chainmail_0" }, { "id": "ench_climate_control_all" } ]
   },
   {
     "id": "armor_nomad_chainmail_on",

@@ -4628,7 +4628,7 @@
     ],
     "melee_damage": { "bash": 10 },
     "tool_ammo": "battery",
-    "passive_effects": [ { "condition": "ACTIVE", "values": [ { "value": "CARRY_WEIGHT", "add": 215000 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_utility_exoskeleton_off_0" } ]
   },
   {
     "id": "utility_exoskeleton_on",
@@ -4685,7 +4685,7 @@
     ],
     "melee_damage": { "bash": 10 },
     "tool_ammo": "gasoline",
-    "passive_effects": [ { "condition": "ACTIVE", "values": [ { "value": "CARRY_WEIGHT", "add": 190000 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_ice_utility_exoskeleton_off_0" } ]
   },
   {
     "id": "ice_utility_exoskeleton_on",

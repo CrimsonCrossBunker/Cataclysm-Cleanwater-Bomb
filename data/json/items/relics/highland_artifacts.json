@@ -100,7 +100,7 @@
     "name": { "str": "silver obol" },
     "description": "A small silver coin, looted from the dead.  Its face shows the faded profile of a man, the reverse depicts a tree crowned by three starlike eyes.",
     "flags": [ "MUNDANE" ],
-    "passive_effects": [ { "condition": "ALWAYS", "values": [ { "value": "ARTIFACT_RESONANCE", "add": 5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_dda_coin_highlands_0" } ]
   },
   {
     "id": "highland_shroud",
