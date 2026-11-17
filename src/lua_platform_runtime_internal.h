@@ -406,6 +406,10 @@ struct enchantment_character_inputs {
     std::map<std::string, std::vector<std::string>> body_part_effect_intensities;
     std::map<std::string, double> global_variable_defaults;
     std::map<std::string, enchantment_calorie_query> calorie_history;
+    std::vector<std::string> active_traits;
+    std::vector<std::string> wielded_damage;
+    std::map<std::string, std::vector<std::string>> body_part_armor;
+    bool attack_speed = false;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

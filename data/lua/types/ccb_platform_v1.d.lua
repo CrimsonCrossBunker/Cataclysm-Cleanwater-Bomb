@@ -5481,6 +5481,10 @@ function CcbPlatformContent.Bionic(options) end
 ---@field kind? "total"|"spent"|"gained"|"ingested" Defaults to total.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field active_traits? string[] Traits whose powered mutation state is requested; false on non-character speakers.
+---@field wielded_damage? string[] Damage type IDs whose native wielded-item melee damage is requested; zero without a weapon.
+---@field body_part_armor? table<string, string[]> Body part IDs mapped to damage types whose native worn armor resistance is requested.
+---@field attack_speed? boolean Request the native attack cost for the character's currently used weapon.
 ---@field global_variable_defaults? table<string, number> Finite fallbacks for absent world variables. Present values, including zero, retain their value.
 ---@field calorie_history? table<string, CcbEnchantmentCalorieQuery> Native calorie diary reads keyed by name. Non-avatar speakers return zero.
 ---@field species? string[] Native species membership to query on the speaker.
@@ -5531,6 +5535,10 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field active_traits? table<string, boolean>
+---@field wielded_damage? table<string, integer>
+---@field body_part_armor? table<string, table<string, number>>
+---@field attack_speed? integer Native move points.
 ---@field calorie_history? table<string, integer>
 ---@field species? table<string, boolean>
 ---@field wielded_skills? table<string, boolean>

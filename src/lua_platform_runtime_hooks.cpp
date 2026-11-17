@@ -1024,6 +1024,17 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string &id ) {
         return actor.wielded_with_item_ammotype( ammotype( id ) );
     } );
+    collect_requested( "active_traits", requested.active_traits, false, []( const const_talker &actor,
+    const std::string &id ) {
+        const Character *character = actor.get_const_character();
+        return character && character->has_active_mutation( trait_id( id ) );
+    } );
+    collect_requested( "wielded_damage", requested.wielded_damage, 0, []( const const_talker &actor,
+    const std::string &id ) {
+        const Character *character = actor.get_const_character();
+        const item_location weapon = character ? character->get_wielded_item() : item_location();
+        return weapon ? weapon->damage_melee( damage_type_id( id ) ) : 0;
+    } );
     collect_requested( "encumbrance", requested.encumbrance, 0, []( const const_talker &actor,
     const std::string &id ) {
         bodypart_id part( id );
@@ -1083,6 +1094,19 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
             body_part_effects[id] = std::move( values );
         }
         inputs["body_part_effects"] = std::move( body_part_effects );
+    }
+    if( !requested.body_part_armor.empty() ) {
+        sol::table parts = owner.lua->create_table();
+        for( const auto &[part, types] : requested.body_part_armor ) {
+            sol::table values = owner.lua->create_table();
+            bodypart_id body_part( part );
+            for( const std::string &id : types ) {
+                damage_type_id damage( id );
+                values[id] = speaker ? speaker->armor_at( damage, body_part ) : 0.0;
+            }
+            parts[part] = std::move( values );
+        }
+        inputs["body_part_armor"] = std::move( parts );
     }
     if( !requested.body_part_effect_intensities.empty() ) {
         sol::table parts = owner.lua->create_table();
@@ -1152,6 +1176,9 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         inputs["calorie_history"] = std::move( values );
     }
     if( speaker ) {
+        if( requested.attack_speed ) {
+            inputs["attack_speed"] = speaker->attack_speed();
+        }
         if( requested.identity ) {
             const Character *character = speaker->get_const_character();
             inputs["identity"] = owner.lua->create_table_with(
