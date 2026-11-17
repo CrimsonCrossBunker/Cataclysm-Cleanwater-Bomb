@@ -68,3 +68,5 @@ require("progression_enchantments")
 require("innate_enchantments")
 
 require("body_enchantments")
+
+require("contextual_enchantments")

@@ -785,22 +785,10 @@
     "removes_effects": [ "eagles_sight", "cats_grace", "foxs_cunning", "ogres_strength", "bless" ],
     "enchantments": [
       "INLINE_ENCH_effect_technomancer_arete_0",
-      {
-        "condition": { "math": [ "(u_val('strength_base') + u_val('strength_bonus') ) >= 16" ] },
-        "values": [ { "value": "STRENGTH", "add": 2 } ]
-      },
-      {
-        "condition": { "math": [ "( u_val('dexterity_base') + u_val('dexterity_bonus') ) >= 16" ] },
-        "values": [ { "value": "DEXTERITY", "add": 2 } ]
-      },
-      {
-        "condition": { "math": [ "(u_val('intelligence_base') + u_val('intelligence_bonus') ) >= 16" ] },
-        "values": [ { "value": "INTELLIGENCE", "add": 2 } ]
-      },
-      {
-        "condition": { "math": [ "(u_val('perception_base') + u_val('perception_bonus') ) >= 16" ] },
-        "values": [ { "value": "PERCEPTION", "add": 2 } ]
-      }
+      "INLINE_ENCH_effect_technomancer_arete_1",
+      "INLINE_ENCH_effect_technomancer_arete_2",
+      "INLINE_ENCH_effect_technomancer_arete_3",
+      "INLINE_ENCH_effect_technomancer_arete_4"
     ],
     "limb_score_mods": [
       { "limb_score": "manip", "modifier": 1.1 },
@@ -1553,33 +1541,7 @@
     "show_in_info": true,
     "remove_message": "The energy vanishes from your sling.",
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "u_has_wielded_with_skill": "throw" },
-            { "u_has_wielded_with_flag": "PRIMITIVE_RANGED_WEAPON" },
-            { "or": [ { "u_has_wielded_with_ammotype": "pebble" }, { "u_has_wielded_with_ammotype": "rock" } ] }
-          ]
-        },
-        "values": [
-          {
-            "value": "RANGE",
-            "multiply": { "math": [ "(u_spell_level('magus_summon_impact_sling') + u_spell_level('magus_summon_impact_sling_plus') ) * 0.05" ] }
-          },
-          {
-            "value": "RANGED_DAMAGE",
-            "multiply": {
-              "math": [ "( (u_spell_level('magus_summon_impact_sling') + u_spell_level('magus_summon_impact_sling_plus') ) * 0.05) + 0.25" ]
-            }
-          },
-          {
-            "value": "RANGED_ARMOR_PENETRATION",
-            "add": {
-              "math": [ "( (u_spell_level('magus_summon_impact_sling') + u_spell_level('magus_summon_impact_sling_plus') ) * 0.25) + 4" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_magus_impact_sling_buff_0"
     ]
   },
   {
