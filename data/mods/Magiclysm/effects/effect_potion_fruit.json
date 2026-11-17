@@ -9,9 +9,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "30 seconds", "spell_effects": [ { "id": "pfruit_regeneration_spell" } ] } ] }
-      }
+      "INLINE_ENCH_effect_pfruit_heal_0"
     ]
   },
   {
@@ -33,7 +31,7 @@
     "remove_message": "Your muscle's twitch as the pear's magic fades.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "ATTACK_SPEED", "add": -15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_pfruit_attack_speed_0" ]
   },
   {
     "id": "effect_pfruit_thorns",
@@ -70,7 +68,7 @@
     "remove_message": "You shiver as a cool breeze hits your skin.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_pfruit_keep_warm_0" ]
   },
   {
     "id": "effect_pfruit_purge",
@@ -106,7 +104,7 @@
       { "limb_score": "block", "modifier": 1.2 },
       { "limb_score": "crawl", "modifier": 1.5 }
     ],
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_pfruit_dodge_0" ],
     "flags": [ "DOWNED_RECOVERY", "EFFECT_LIMB_SCORE_MOD" ]
   },
   {
@@ -142,7 +140,7 @@
     "rating": "good",
     "show_intensity": false,
     "limb_score_mods": [ { "limb_score": "vision", "modifier": 1.25 } ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_pfruit_vision_0" ],
     "flags": [ "GLARE_RESIST", "EFFECT_LIMB_SCORE_MOD" ]
   },
   {

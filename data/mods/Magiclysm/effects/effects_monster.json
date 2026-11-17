@@ -8,7 +8,7 @@
     "max_duration": "30 seconds",
     "removes_effects": [ "magic_slowed" ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_demon_spider_speed_0" ]
   },
   {
     "id": "effect_demon_spider_venom",
@@ -22,8 +22,8 @@
     "immune_bp_flags": [ "BIONIC_LIMB", "NON_FLESH_LIMB" ],
     "base_mods": { "pain_amount": [ 2 ], "pain_min": [ 1 ], "pain_chance": [ 30 ], "pain_max_val": [ 40 ] },
     "enchantments": [
-      { "incoming_damage_mod": [ { "type": "heat", "multiply": 0.33 } ] },
-      { "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": -40 } ] }
+      "INLINE_ENCH_effect_demon_spider_venom_0",
+      "INLINE_ENCH_effect_demon_spider_venom_1"
     ]
   },
   {
@@ -53,7 +53,7 @@
     "rating": "good",
     "max_duration": "12 hours",
     "show_in_info": true,
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "nether", "multiply": -1 }, { "type": "bullet", "multiply": -0.8 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_migo_nether_shield_monster_0" ],
     "base_mods": { "dodge_mod": [ 1 ] }
   },
   {
@@ -66,7 +66,7 @@
     "rating": "bad",
     "max_duration": "7 days",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.75 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_migo_fleshwarper_block_healing_0" ],
     "flags": [ "BLOCK_SUPERNATURAL_HEALING" ]
   },
   {
@@ -78,15 +78,8 @@
     "max_duration": "12 hours",
     "show_in_info": true,
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.2 },
-          { "type": "cut", "multiply": -0.2 },
-          { "type": "stab", "multiply": -0.2 },
-          { "type": "acid", "multiply": -0.8 }
-        ]
-      },
-      { "values": [ { "value": "SPEED", "multiply": 0.15 } ] }
+      "INLINE_ENCH_effect_migo_enhance_flesh_monster_0",
+      "INLINE_ENCH_effect_migo_enhance_flesh_monster_1"
     ]
   }
 ]

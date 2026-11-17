@@ -121,6 +121,6 @@
     ],
     "rating": "bad",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_soul_burn_0" ]
   }
 ]
