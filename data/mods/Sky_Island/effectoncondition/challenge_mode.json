@@ -10,22 +10,5 @@
       { "math": [ "target_forests_weight = hardmissions" ] },
       { "math": [ "target_houses_weight = hardermissions" ] }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_raid_challenge_mode_horde_chase_recurrence",
-    "recurrence": [ "1 minutes", "5 minutes" ],
-    "condition": { "u_has_trait": "CHALLENGE_MODE_HORDES" },
-    "deactivate_condition": { "not": { "u_has_trait": "CHALLENGE_MODE_HORDES" } },
-    "effect": [ { "run_eocs": [ "EOC_raid_challenge_mode_horde_chase_action" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_raid_challenge_mode_horde_chase_action",
-    "effect": [
-      { "u_location_variable": { "context_val": "your_pos" } },
-      { "signal_hordes": { "context_val": "your_pos" }, "signal_power": { "math": [ "5000" ] } },
-      { "u_message": "Your skin itches, you can feel them closing in.", "type": "bad" }
-    ]
   }
 ]

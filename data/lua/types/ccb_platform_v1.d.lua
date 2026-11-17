@@ -7597,6 +7597,13 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 ---@param handler_id string Registered handler with payload fields `character` and `due_turn`.
 function CcbPlatformTasks.after_character_turn(character, turns, handler_id) end
 
+---Inspect this Mod's saved queue on the exact Character, including tasks restored from a save.
+---Does not search other characters or the shared avatar queue; it does not enqueue or consume a task.
+---@param character GameHandle Exact live Character.
+---@param handler_id string Named handler whose queued entries are queried.
+---@return boolean queued
+function CcbPlatformTasks.has_character_turn(character, handler_id) end
+
 ---Append a saved callback to the shared avatar-turn queue, after local character tasks.
 ---Each call adds an independent entry; an already-due callback runs on the next queue pass.
 ---The callback receives the current avatar as character and the original absolute due_turn.

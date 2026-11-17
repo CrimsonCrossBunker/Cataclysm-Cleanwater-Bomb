@@ -1372,6 +1372,20 @@ void detail::install_runtime_state_task_api(
         result["payload"] = persistent_table( *owner.lua, task.payload );
         return result;
     };
+    tasks.set_function( "has_character_turn", [weak]( const game_handle & handle,
+    const std::string & handler ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready ) {
+            throw std::runtime_error( "Character turn tasks require an active world" );
+        }
+        std::optional<game_handle_error> error;
+        Character *actor = resolve_exact_character( handle, owner->handle_runtime(),
+                           detail::runtime_world_generation_storage(), error );
+        if( !actor ) {
+            throw std::invalid_argument( error->message );
+        }
+        return has_character_turn_task( *actor, owner->mod_id, handler );
+    } );
     tasks.set_function( "after_character_turn", [weak]( const game_handle & handle,
     const std::int64_t turns, const std::string & handler ) {
         const std::shared_ptr<runtime> owner = weak.lock();

@@ -222,7 +222,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 26> migrated_character_tasks = {{
+const std::array<character_task_migration, 28> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -274,7 +274,11 @@ const std::array<character_task_migration, 26> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_raid_challenge_mode_slow_effect_warning" ),
           "sky_raid_slow_warning", nullptr, false, "skyisland" },
         { effect_on_condition_id( "EOC_SI_START_PORTAL_STORM" ),
-          "sky_raid_storm_due", nullptr, false, "skyisland" }
+          "sky_raid_storm_due", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_horde_chase_recurrence" ),
+          "sky_raid_horde_due", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_horde_chase_action" ),
+          "sky_raid_horde_signal", nullptr, false, "skyisland" }
     }
 };
 
@@ -315,9 +319,11 @@ void cata::lua_platform::queue_character_task( Character &actor, time_point due,
     queue_turn_task( actor.queued_effect_on_conditions, character_task_record( due, mod, handler ) );
 }
 
-bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string_view handler )
+namespace
 {
-    const auto &entries = g->queued_global_effect_on_conditions.list;
+bool has_turn_task( const queued_eocs &queue, std::string_view mod, std::string_view handler )
+{
+    const auto &entries = queue.list;
     return std::any_of( entries.begin(), entries.end(), [&]( const queued_eoc & entry ) {
         if( entry.eoc != lua_task_record ) {
             return false;
@@ -327,6 +333,18 @@ bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string
         return owner != entry.context.end() && owner->second.to_string() == mod &&
                callback != entry.context.end() && callback->second.to_string() == handler;
     } );
+}
+} // namespace
+
+bool cata::lua_platform::has_character_turn_task( const Character &actor,
+        std::string_view mod, std::string_view handler )
+{
+    return has_turn_task( actor.queued_effect_on_conditions, mod, handler );
+}
+
+bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string_view handler )
+{
+    return has_turn_task( g->queued_global_effect_on_conditions, mod, handler );
 }
 
 void cata::lua_platform::queue_avatar_turn_task( time_point due, std::string_view mod,

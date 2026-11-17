@@ -15,6 +15,8 @@ void queue_character_task( Character &actor, time_point due, std::string_view mo
 void queue_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 void ensure_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 bool has_avatar_turn_task( std::string_view mod, std::string_view handler );
+bool has_character_turn_task( const Character &actor, std::string_view mod,
+                              std::string_view handler );
 void invoke_character_task( Character &actor, time_point due, const std::string &mod,
                             const std::string &handler );
 void notify_character_ready( Character &actor, bool new_character );
