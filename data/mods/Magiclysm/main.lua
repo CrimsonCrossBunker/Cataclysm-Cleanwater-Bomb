@@ -70,3 +70,5 @@ require("innate_enchantments")
 require("body_enchantments")
 
 require("contextual_enchantments")
+
+require("thermal_overlay_enchantments")
