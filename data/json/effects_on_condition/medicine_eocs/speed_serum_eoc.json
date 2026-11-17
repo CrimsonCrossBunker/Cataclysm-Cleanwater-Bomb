@@ -142,10 +142,7 @@
           { "value": "KCAL", "multiply": -0.15 }
         ]
       },
-      {
-        "condition": { "math": [ "u_pain('type': 'perceived') <= 40" ] },
-        "values": [ { "value": "BONUS_BLOCK", "add": 1 }, { "value": "BONUS_DODGE", "add": 1 } ]
-      }
+      "INLINE_ENCH_speed_serum_main_1"
     ]
   },
   {
