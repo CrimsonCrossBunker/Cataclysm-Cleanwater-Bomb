@@ -15,13 +15,13 @@
 #include <mounted_charge.h>
 #include <mp_equipment.h>
 #include <mp_firearm.h>
+#include <plant_climate.h>
 #include <spell_casting_choice.h>
 #include <tool_activity_target.h>
 #include <vehicle_tool_use.h>
 #include <vehicle_turret_control.h>
 #include <vehicle_uid.h>
 #include <walking.h>
-
 #include <algorithm>
 #include <array>
 #include <climits>
@@ -63,10 +63,9 @@
 #include "cata_utility.h"
 #include "character.h"
 #include "character_action_guard.h"
-#include "charcoal_kiln.h"
-#include "smoking_rack.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
+#include "charcoal_kiln.h"
 #include "clzones.h"
 #include "construction.h"
 #include "contents_change_handler.h"
@@ -110,10 +109,10 @@
 #include "item_group.h"
 #include "item_healing.h"
 #include "item_location.h"
-#include "item_repair.h"
 #include "item_move.h"
 #include "item_pocket.h"
 #include "item_reload.h"
+#include "item_repair.h"
 #include "item_uid.h"
 #include "item_wakeup.h"
 #include "itype.h"
@@ -123,6 +122,7 @@
 #include "json_loader.h"
 #include "lightmap.h"
 #include "line.h"
+#include "liquid_transfer.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
@@ -136,8 +136,8 @@
 #include "messages.h"
 #include "mongroup.h"
 #include "monster.h"
-#include "mp_client_conn.h"
 #include "mp_actor_binding.h"
+#include "mp_client_conn.h"
 #include "mp_gamestate.h"
 #include "mp_inventory_activity.h"
 #include "mtype.h"
@@ -154,7 +154,6 @@
 #include "pickup.h"
 #include "pimpl.h"
 #include "player_activity.h"
-#include "safecracking.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "proficiency.h"
@@ -168,8 +167,10 @@
 #include "ret_val.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "safecracking.h"
 #include "shearing.h"
 #include "skill.h"
+#include "smoking_rack.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "submap.h"
@@ -193,7 +194,6 @@
 #include "vehicle_heating.h"
 #include "vehicle_selector.h"
 #include "vehicle_water.h"
-#include "liquid_transfer.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"

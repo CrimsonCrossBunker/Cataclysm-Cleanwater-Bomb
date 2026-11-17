@@ -1,10 +1,19 @@
-#include <optional>
-
+#include <clone_ptr.h>
+#include <coordinates.h>
+#include <dialogue_helpers.h>
+#include <overmap_ui.h>
+#include <point.h>
+#include <ret_val.h>
+#include <value_ptr.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
+#include <memory>
 #include <optional>
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "activity_actor.h"
 #include "avatar.h"
@@ -34,6 +43,25 @@
 #include "weather_gen.h"
 #include "weather_type.h"
 
+static const activity_id activity_ACT_WAIT( "ACT_WAIT" );
+static const effect_on_condition_id
+effect_on_condition_EOC_TEST_PLANT_GROW( "EOC_TEST_PLANT_GROW" );
+static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
+static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
+static const furn_str_id furn_f_plant_seedling( "f_plant_seedling" );
+static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
+static const furn_str_id furn_f_planter_seedling( "f_planter_seedling" );
+static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
+static const itype_id itype_seed_corn( "seed_corn" );
+static const itype_id itype_seed_potato_raw( "seed_potato_raw" );
+static const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
+static const itype_id itype_water_clean( "water_clean" );
+static const ter_str_id ter_t_atlas_soil_gravelly( "t_atlas_soil_gravelly" );
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_flat_roof( "t_flat_roof" );
+static const weather_type_id weather_rain( "rain" );
+
 namespace
 {
 struct crop_water_fixture {
@@ -55,9 +83,9 @@ struct crop_water_fixture {
         get_weather().clear_temp_cache();
         clear_plant_climate_cache();
         plot = get_avatar().pos_bub() + tripoint::east;
-        here.ter_set( plot, ter_str_id( "t_dirt" ) );
-        here.furn_set( plot, furn_str_id( "f_plant_seed" ) );
-        here.add_item( plot, item( itype_id( "seed_corn" ), calendar::turn ) );
+        here.ter_set( plot, ter_t_dirt );
+        here.furn_set( plot, furn_f_plant_seed );
+        here.add_item( plot, item( itype_seed_corn, calendar::turn ) );
         iexamine::set_plant_water( seed(), 0 );
         iexamine::set_plant_effective_growth_turns( seed(), 0 );
         iexamine::set_plant_last_water_check( seed(), calendar::turn );
@@ -82,12 +110,12 @@ struct crop_water_fixture {
                seed().get_var( "crop_growth_fraction", 0.0 );
     }
 };
-}
+} // namespace
 
 TEST_CASE( "crop_rain_recharges_soil_before_irrigation", "[farming][weather][water]" )
 {
     crop_water_fixture crop;
-    scoped_weather_override rain( weather_type_id( "rain" ) );
+    scoped_weather_override rain( weather_rain );
     REQUIRE_FALSE( crop.here.is_roofed( crop.plot ) );
     iexamine::set_plant_water( crop.seed(), 80 );
 
@@ -100,7 +128,7 @@ TEST_CASE( "crop_rain_recharges_soil_before_irrigation", "[farming][weather][wat
     }
 
     SECTION( "roof_blocks_rain" ) {
-        crop.here.ter_set( crop.plot + tripoint::above, ter_str_id( "t_flat_roof" ) );
+        crop.here.ter_set( crop.plot + tripoint::above, ter_t_flat_roof );
         REQUIRE( crop.here.is_roofed( crop.plot ) );
         calendar::turn += 1_days;
         crop.here.grow_plant( crop.plot );
@@ -122,7 +150,7 @@ TEST_CASE( "crop_query_cadence_does_not_change_hourly_water_or_growth",
            "[farming][weather][water]" )
 {
     crop_water_fixture crop;
-    scoped_weather_override rain( weather_type_id( "rain" ) );
+    scoped_weather_override rain( weather_rain );
     const item initial = crop.seed();
     const furn_id initial_furniture = crop.here.furn( crop.plot );
     const time_point start = calendar::turn;
@@ -132,7 +160,7 @@ TEST_CASE( "crop_query_cadence_does_not_change_hourly_water_or_growth",
         crop.here.grow_plant( crop.plot );
     }
     const double frequent_growth = crop.growth();
-    const auto frequent_water = crop.status();
+    const crop_water_status frequent_water = crop.status();
 
     crop.seed() = initial;
     crop.here.furn_set( crop.plot, initial_furniture );
@@ -170,8 +198,9 @@ TEST_CASE( "crop_accounts_for_each_hour_of_a_regional_rain_event", "[farming][we
     } );
     g->set_seed( 713 );
     const weather_generator &generator = get_weather().get_cur_weather_gen();
-    const auto cell = snow_climate_cell( project_to<coords::omt>( crop.here.get_abs( crop.plot ) ) );
-    const auto location = project_to<coords::ms>( cell ) + point( 384, 384 );
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( crop.here.get_abs(
+                                      crop.plot ) ) );
+    const tripoint_abs_ms location = project_to<coords::ms>( cell ) + point( 384, 384 );
     const auto normals = generator.climate_at( location );
     REQUIRE( normals );
     std::array<double, 24> rain{};
@@ -198,7 +227,7 @@ TEST_CASE( "crop_accounts_for_each_hour_of_a_regional_rain_event", "[farming][we
     iexamine::set_plant_last_water_check( crop.seed(), calendar::turn );
     double expected_moisture = 0;
     for( int hour = 0; hour < 24; ++hour ) {
-        const auto before = crop.status();
+        const crop_water_status before = crop.status();
         expected_moisture = std::max( 0.0,
                                       std::min( before.soil_capacity_mm, expected_moisture + rain[hour] ) -
                                       before.daily_need_mm / 24 );
@@ -238,11 +267,11 @@ TEST_CASE( "crop_soil_capacity_uses_terrain_but_planters_use_substrate", "[farmi
 {
     crop_water_fixture crop;
     const double loam_capacity = crop.status().soil_capacity_mm;
-    crop.here.ter_set( crop.plot, ter_str_id( "t_atlas_soil_gravelly" ) );
+    crop.here.ter_set( crop.plot, ter_t_atlas_soil_gravelly );
     CHECK( crop.status().soil_capacity_mm == Approx( loam_capacity * 0.51 ) );
-    crop.here.furn_set( crop.plot, furn_str_id( "f_planter_seed" ) );
+    crop.here.furn_set( crop.plot, furn_f_planter_seed );
     CHECK( crop.status().soil_capacity_mm == Approx( loam_capacity ) );
-    crop.here.furn_set( crop.plot, furn_str_id( "f_planter_seedling" ) );
+    crop.here.furn_set( crop.plot, furn_f_planter_seedling );
     CHECK( crop.status().soil_capacity_mm == Approx( loam_capacity ) );
 
     SECTION( "consumption_does_not_scale_capacity" ) {
@@ -260,16 +289,16 @@ TEST_CASE( "crop_soil_capacity_uses_terrain_but_planters_use_substrate", "[farmi
     }
 
     SECTION( "stage_can_explicitly_use_terrain" ) {
-        plant_data &stage = *furn_str_id( "f_planter_seedling" )->plant;
+        plant_data &stage = *furn_f_planter_seedling->plant;
         const restore_on_out_of_scope restore_source( stage.soil_source );
         stage.soil_source = "terrain";
         CHECK( crop.status().soil_capacity_mm == Approx( loam_capacity * 0.51 ) );
     }
 
     SECTION( "cyclic_base_chain_falls_back_to_terrain" ) {
-        plant_data &stage = *furn_str_id( "f_planter_seedling" )->plant;
+        plant_data &stage = *furn_f_planter_seedling->plant;
         const restore_on_out_of_scope restore_base( stage.base );
-        stage.base = furn_str_id( "f_planter_seedling" );
+        stage.base = furn_f_planter_seedling;
         CHECK( crop.status().soil_capacity_mm == Approx( loam_capacity * 0.51 ) );
     }
 }
@@ -278,7 +307,7 @@ TEST_CASE( "crop_rainfed_growth_matches_a_watered_control_through_stage_changes"
            "[farming][weather][water]" )
 {
     crop_water_fixture crop;
-    scoped_weather_override rain( weather_type_id( "rain" ) );
+    scoped_weather_override rain( weather_rain );
     override_option no_overgrowth( "CROP_OVERGROWN_ENABLED", "false" );
     const item initial = crop.seed();
     const time_point start = calendar::turn;
@@ -289,10 +318,10 @@ TEST_CASE( "crop_rainfed_growth_matches_a_watered_control_through_stage_changes"
     }
     const double watered_growth = crop.growth();
     const furn_id watered_furniture = crop.here.furn( crop.plot );
-    REQUIRE( watered_furniture == furn_str_id( "f_plant_harvest" ) );
+    REQUIRE( watered_furniture == furn_f_plant_harvest );
 
     crop.seed() = initial;
-    crop.here.furn_set( crop.plot, furn_str_id( "f_plant_seed" ) );
+    crop.here.furn_set( crop.plot, furn_f_plant_seed );
     crop.here.grow_plant( crop.plot );
     CHECK( crop.here.furn( crop.plot ) == watered_furniture );
     CHECK( crop.growth() == Approx( watered_growth ) );
@@ -304,8 +333,8 @@ TEST_CASE( "crop_watering_is_not_retroactive_and_automation_checks_total_water",
 {
     crop_water_fixture crop;
     scoped_weather_override dry( WEATHER_CLEAR );
-    item bottle( itype_id( "bottle_plastic" ) );
-    REQUIRE( bottle.put_in( item( itype_id( "water_clean" ), calendar::turn, 2 ),
+    item bottle( itype_bottle_plastic );
+    REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 2 ),
                             pocket_type::CONTAINER ).success() );
     get_avatar().i_add( bottle );
 
@@ -322,7 +351,8 @@ TEST_CASE( "crop_watering_is_not_retroactive_and_automation_checks_total_water",
 
     SECTION( "automatic_watering_counts_soil_and_reserve" ) {
         CHECK( iexamine::plant_needs_water( get_avatar(), crop.plot ) );
-        crop.seed().set_var( "crop_soil_moisture_mm", crop.status().daily_need_mm );
+        const double daily_need = crop.status().daily_need_mm;
+        crop.seed().set_var( "crop_soil_moisture_mm", daily_need );
         CHECK( iexamine::can_water_plant( get_avatar(), crop.plot ) );
         CHECK_FALSE( iexamine::plant_needs_water( get_avatar(), crop.plot ) );
         crop.seed().set_var( "crop_soil_moisture_mm", 0.0 );
@@ -335,11 +365,11 @@ TEST_CASE( "crop_fertilizing_settles_the_pending_partial_hour", "[farming][water
 {
     crop_water_fixture crop;
     scoped_weather_override dry( WEATHER_CLEAR );
-    crop.here.furn_set( crop.plot, furn_str_id( "f_plant_seedling" ) );
+    crop.here.furn_set( crop.plot, furn_f_plant_seedling );
     iexamine::set_plant_effective_growth_turns( crop.seed(), to_turns<int>( 20_days ) );
-    get_avatar().i_add( item( itype_id( "fertilizer_commercial" ), calendar::turn ) );
+    get_avatar().i_add( item( itype_fertilizer_commercial, calendar::turn ) );
     calendar::turn += 2_days + 30_minutes;
-    iexamine::fertilize_plant( get_avatar(), crop.plot, itype_id( "fertilizer_commercial" ) );
+    iexamine::fertilize_plant( get_avatar(), crop.plot, itype_fertilizer_commercial );
     process_activity( get_avatar() );
     CHECK( iexamine::is_plant_fertilized( crop.seed() ) );
     CHECK( iexamine::get_plant_last_water_check( crop.seed() ) == calendar::turn );
@@ -367,12 +397,12 @@ TEST_CASE( "crop_growth_callbacks_revalidate_watering_and_fertilizing_reach",
     iexamine::set_plant_effective_growth_turns( crop.seed(), to_turns<int>( seedling - 1_seconds ) );
     crop.seed().set_var( "crop_soil_moisture_mm", 10.0 );
 
-    const effect_on_condition_id hook_id( "EOC_TEST_PLANT_GROW" );
-    effect_on_condition &hook = const_cast<effect_on_condition &>( hook_id.obj() );
+    effect_on_condition &hook = const_cast<effect_on_condition &>
+                                ( effect_on_condition_EOC_TEST_PLANT_GROW.obj() );
     const restore_on_out_of_scope restore_effect( hook.true_effect );
-    auto &growth_hooks = furn_str_id( "f_plant_seedling" )->plant->eoc_on_grow;
+    auto &growth_hooks = furn_f_plant_seedling->plant->eoc_on_grow;
     const restore_on_out_of_scope restore_hooks( growth_hooks );
-    growth_hooks = { hook_id };
+    growth_hooks = { effect_on_condition_EOC_TEST_PLANT_GROW };
     int callbacks = 0;
     hook.true_effect.effects.clear();
     hook.true_effect.effects.emplace_back( [&who, &crop, &callbacks, destination,
@@ -380,26 +410,25 @@ TEST_CASE( "crop_growth_callbacks_revalidate_watering_and_fertilizing_reach",
         ++callbacks;
         who.setpos( crop.here, destination );
         if( replace_activity ) {
-            who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 321 ) );
+            who.assign_activity( player_activity( activity_ACT_WAIT, 321 ) );
         }
     } );
 
-    const itype_id water( "water_clean" );
-    const itype_id fertilizer( "fertilizer_commercial" );
     if( fertilizing ) {
-        item material( fertilizer, calendar::turn );
+        item material( itype_fertilizer_commercial, calendar::turn );
         material.charges = 2;
         who.i_add( material );
     } else {
-        item bottle( itype_id( "bottle_plastic" ) );
-        REQUIRE( bottle.put_in( item( water, calendar::turn, 2 ), pocket_type::CONTAINER ).success() );
+        item bottle( itype_bottle_plastic );
+        REQUIRE( bottle.put_in( item( itype_water_clean, calendar::turn, 2 ),
+                                pocket_type::CONTAINER ).success() );
         who.i_add( bottle );
     }
-    REQUIRE( who.charges_of( fertilizing ? fertilizer : water ) == 2 );
-    const int water_before = who.charges_of( water );
-    const int fertilizer_before = who.charges_of( fertilizer );
+    REQUIRE( who.charges_of( fertilizing ? itype_fertilizer_commercial : itype_water_clean ) == 2 );
+    const int water_before = who.charges_of( itype_water_clean );
+    const int fertilizer_before = who.charges_of( itype_fertilizer_commercial );
     if( fertilizing ) {
-        iexamine::fertilize_plant( who, crop.plot, fertilizer );
+        iexamine::fertilize_plant( who, crop.plot, itype_fertilizer_commercial );
         REQUIRE( who.activity.actor );
     }
     REQUIRE( callbacks == 0 );
@@ -412,15 +441,16 @@ TEST_CASE( "crop_growth_callbacks_revalidate_watering_and_fertilizing_reach",
 
     REQUIRE( callbacks == 1 );
     CHECK( who.pos_bub() == destination );
-    CHECK( crop.here.furn( crop.plot ) == furn_str_id( "f_plant_seedling" ) );
+    CHECK( crop.here.furn( crop.plot ) == furn_f_plant_seedling );
     CHECK( iexamine::get_plant_last_water_check( crop.seed() ) == calendar::turn );
-    CHECK( who.charges_of( water ) == water_before - ( !fertilizing && !out_of_reach ? 1 : 0 ) );
-    CHECK( who.charges_of( fertilizer ) ==
+    CHECK( who.charges_of( itype_water_clean ) == water_before - ( !fertilizing &&
+            !out_of_reach ? 1 : 0 ) );
+    CHECK( who.charges_of( itype_fertilizer_commercial ) ==
            fertilizer_before - ( fertilizing && !out_of_reach ? 1 : 0 ) );
     CHECK( iexamine::get_plant_water( crop.seed() ) == ( !fertilizing && !out_of_reach ? 50 : 0 ) );
     CHECK( iexamine::is_plant_fertilized( crop.seed() ) == ( fertilizing && !out_of_reach ) );
     if( replace_activity ) {
-        CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( who.activity.id() == activity_ACT_WAIT );
         CHECK( who.activity.moves_left == 321 );
     } else {
         CHECK_FALSE( who.activity );
@@ -431,12 +461,12 @@ TEST_CASE( "crop_existing_stage_and_missing_timestamp_are_preserved", "[farming]
 {
     crop_water_fixture crop;
     scoped_weather_override dry( WEATHER_CLEAR );
-    crop.here.furn_set( crop.plot, furn_str_id( "f_plant_seedling" ) );
+    crop.here.furn_set( crop.plot, furn_f_plant_seedling );
     crop.seed().erase_var( "seed_last_water_check" );
     calendar::turn += 3_hours;
     crop.here.grow_plant( crop.plot );
     CHECK( crop.growth() == Approx( to_turns<double>( 20_days ) ) );
-    CHECK( crop.here.furn( crop.plot ) == furn_str_id( "f_plant_seedling" ) );
+    CHECK( crop.here.furn( crop.plot ) == furn_f_plant_seedling );
     CHECK( iexamine::get_plant_last_water_check( crop.seed() ) == calendar::turn );
     const double moisture = crop.status().soil_moisture_mm;
     crop.here.grow_plant( crop.plot );
@@ -451,10 +481,6 @@ TEST_CASE( "crop_soil_source_rejects_unknown_values", "[farming][json]" )
                                       R"({ "plant_data": { "soil_source": "unknown" } })" ).get_object();
     CHECK_THROWS_AS( plant.load( definition, "plant_data", "test_data" ), JsonError );
 }
-
-static const itype_id itype_seed_corn( "seed_corn" );
-static const itype_id itype_seed_potato_raw( "seed_potato_raw" );
-static const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
 
 TEST_CASE( "crop_heat_units_account_for_cold_and_heat_stress", "[farming][weather]" )
 {

@@ -4,6 +4,7 @@
 #include <coords_fwd.h>
 #include <enum_bitset.h>
 #include <lightmap.h>
+#include <plant_climate.h>
 #include <requirements.h>
 #include <translation.h>
 #include <units.h>

@@ -188,7 +188,7 @@ std::unordered_map<tripoint_abs_omt, crop_weather_cell> cells;
 
 crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generator &generator )
 {
-    const auto &weather = get_weather_const();
+    const weather_manager &weather = get_weather_const();
     const auto current = std::make_tuple( g->get_seed(), &generator, calendar::year_length(),
                                           get_option<std::string>( "ETERNAL_WEATHER" ), weather.weather_override,
                                           weather.forced_temperature, weather.climate_origin );
@@ -348,7 +348,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
     const double per_model_day = model_days / to_days<double>( calendar::year_length() );
     const bool covered = here.is_roofed( p ) || p.z() < 0;
     const furn_t *stage_furniture = &furniture;
-    auto soil = crop_soil( here, p, furniture );
+    north_america::crop_soil_properties soil = crop_soil( here, p, furniture );
     const double base_capacity = std::max( 12.0, climate.water_mm / climate.growing_days * 5 );
     double capacity = base_capacity * soil.water_capacity;
     double irrigation = iexamine::get_plant_max_water( furniture ) > 0 ?

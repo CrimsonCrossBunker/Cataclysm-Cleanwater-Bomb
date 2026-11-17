@@ -19,7 +19,6 @@
 #include "color.h"
 #include "coords_fwd.h"
 #include "enum_bitset.h"
-#include "game_constants.h"
 #include "iexamine.h"
 #include "lightmap.h"
 #include "plant_climate.h"
@@ -46,8 +45,8 @@ class content_transaction;
 const int NUM_TERCONN = 256;
 connect_group get_connect_group( const std::string &name );
 
-template <typename E> struct enum_traits;
 struct map_data_common_t;
+template <typename E> struct enum_traits;
 
 struct map_common_bash_info { //TODO: Half of this shouldn't be common
         // min str(*) required to bash
