@@ -112,3 +112,5 @@ require("overlay_enchantments")
 require("inline_special_vision")
 
 require("thermal_scaling")
+
+require("innate_enchantments")
