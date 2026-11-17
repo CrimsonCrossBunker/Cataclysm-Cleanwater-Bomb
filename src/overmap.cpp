@@ -483,6 +483,18 @@ std::vector<oter_id> overmap::predecessors( const tripoint_om_omt &p )
     return it->second;
 }
 
+bool overmap::has_riot_damage( const tripoint_om_omt &p ) const
+{
+    return riot_damage.count( p ) > 0;
+}
+
+void overmap::set_riot_damage( const tripoint_om_omt &p )
+{
+    if( inbounds( p ) ) {
+        riot_damage.insert( p );
+    }
+}
+
 void overmap::set_seen( const tripoint_om_omt &p, om_vision_level val, bool force )
 {
     if( !inbounds( p ) ) {

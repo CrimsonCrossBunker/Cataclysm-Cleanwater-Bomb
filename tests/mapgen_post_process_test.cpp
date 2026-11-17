@@ -851,6 +851,35 @@ TEST_CASE( "post_process_oter_field_inherit_delete", "[mapgen][post_process]" )
 
 // Real-core smoke tests verifying the JSON migration didn't break inheritance.
 
+TEST_CASE( "post_process_riot_marker_roundtrip", "[mapgen][post_process]" )
+{
+    clear_overmaps();
+    const tripoint_om_omt local( 10, 10, 0 );
+    auto original = std::make_unique<overmap>( point_abs_om( 0, 0 ) );
+    CHECK_FALSE( original->has_riot_damage( local ) );
+    original->set_riot_damage( local );
+    original->set_riot_damage( local );
+    std::ostringstream saved;
+    original->serialize( saved );
+    auto restored = std::make_unique<overmap>( point_abs_om( 0, 0 ) );
+    std::istringstream input( saved.str() );
+    restored->unserialize( input );
+    CHECK( restored->has_riot_damage( local ) );
+    CHECK_FALSE( restored->has_riot_damage( tripoint_om_omt( 11, 10, 0 ) ) );
+
+    const tripoint_abs_omt pos( 10, 10, 0 );
+    overmap_buffer.ter_set( pos, oter_s_pharm_north.id() );
+    overmap_buffer.set_riot_damage( pos );
+    overmap_buffer.set_seen( pos, om_vision_level::full );
+    CHECK( overmap_buffer.get_description_at( project_to<coords::sm>( pos ), false ).find(
+               "(riot damage)" ) != std::string::npos );
+    const overmap_with_local_coords om_loc = overmap_buffer.get_om_global( pos );
+    om_loc.om->set_seen( om_loc.local, om_vision_level::vague, true );
+    CHECK( overmap_buffer.get_description_at( project_to<coords::sm>( pos ), false ).find(
+               "(riot damage)" ) == std::string::npos );
+    clear_overmaps();
+}
+
 TEST_CASE( "post_process_real_core_inherited_riot", "[mapgen][post_process]" )
 {
     // s_pharm inherits riot_damage from generic_city_building -> generic_city_building_no_sidewalk.
@@ -871,15 +900,20 @@ TEST_CASE( "post_process_real_core_inherited_riot", "[mapgen][post_process]" )
     rng_set_engine_seed( 42424242 );
     MAPBUFFER.clear_outside_reality_bubble();
 
+    const bool save_results = GENERATE( false, true );
+    CHECK_FALSE( overmap_buffer.has_riot_damage( pos ) );
     smallmap tm;
-    tm.generate( pos, calendar::turn, false, true );
+    tm.generate( pos, calendar::turn, save_results, true );
 
     pp_scan_result result = scan_omt( *tm.cast_to_map(), 0 );
 
     // Riot damage ran: blood proves PP dispatch hit the field path
     CHECK( result.blood_field_count > 0 );
+    CHECK( overmap_buffer.has_riot_damage( pos ) == save_results );
 
-    tm.delete_unmerged_submaps();
+    if( !save_results ) {
+        tm.delete_unmerged_submaps();
+    }
     clear_overmaps();
 }
 
