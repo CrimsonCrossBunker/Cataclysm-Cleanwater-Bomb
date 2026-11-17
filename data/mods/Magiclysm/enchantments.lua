@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 -- effect_potion_fruit.json
 content.add(content.Enchantment { id = "enchant_pfruit_thorns", has = "HELD", condition = "ALWAYS" }
@@ -63,3 +64,20 @@ content.add(content.Enchantment { id = "ench_mana_siphon_2" }
 
 content.add(content.Enchantment { id = "ench_mana_siphon_3" }
     :hit_you({ id = "sp_mana_siphon", self = true, level = 6, trigger_once_in = 5, trigger_message = content.text("You recover some mana.") }))
+
+ccb.runtime.handler("enchantment_wizards_eye_detects_target", function(ctx)
+    local target = ctx.target_inputs
+    return target.flags.MAGIC_USER or (target.character and target.spell_count >= 6)
+end)
+
+content.add(content.Enchantment {
+    id = "ench_bio_see_wizards_eye", has = "WORN", condition = "ACTIVE",
+}:vision {
+    distance = 22,
+    condition_handler = "enchantment_wizards_eye_detects_target",
+    target_inputs = { flags = { "MAGIC_USER" }, character = true, spell_count = true },
+    descriptions = { {
+        id = "fae_sense", symbol = "?", color = "cyan",
+        text = content.text("You see the ley lines of a wielder of magic."),
+    } },
+})

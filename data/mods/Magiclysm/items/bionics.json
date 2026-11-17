@@ -59,21 +59,6 @@
     "flags": [ "BIONIC_TOGGLED" ]
   },
   {
-    "type": "enchantment",
-    "id": "ench_bio_see_wizards_eye",
-    "has": "WORN",
-    "condition": "ACTIVE",
-    "special_vision": [
-      {
-        "condition": {
-          "or": [ { "npc_has_flag": "MAGIC_USER" }, { "and": [ "npc_is_character", { "math": [ "n_spell_count() >= 6" ] } ] } ]
-        },
-        "distance": 22,
-        "descriptions": [ { "id": "fae_sense", "symbol": "?", "color": "cyan", "text": "You see the ley lines of a wielder of magic." } ]
-      }
-    ]
-  },
-  {
     "id": "bio_mana_to_bionic_power",
     "copy-from": "bionic_general",
     "type": "ITEM",
