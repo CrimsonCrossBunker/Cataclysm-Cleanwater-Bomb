@@ -51,3 +51,5 @@ require("effect_enchantments")
 require("mutation_enchantments")
 
 require("inline_enchantment_values")
+
+require("attribute_scaling")
