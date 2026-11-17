@@ -6,11 +6,7 @@
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "copy-from": "thought_shield_item",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_item_mind_protection", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_thought_shield_item_0" }
     ]
   },
   {
@@ -20,11 +16,7 @@
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
     "copy-from": "thought_shield_plus_item",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_item_mind_protection", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_MindOverMatter_thought_shield_plus_item_0" }
     ]
   }
 ]
