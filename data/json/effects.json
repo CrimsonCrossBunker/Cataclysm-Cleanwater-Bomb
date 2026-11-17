@@ -5640,9 +5640,7 @@
     "base_mods": { "vomit_chance": [ 6000 ] },
     "scaling_mods": { "vomit_chance": [ -300 ], "pain_min": [ 1 ], "pain_max_val": [ 4 ] },
     "enchantments": [
-      {
-        "values": [ { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": { "math": [ "u_vitamin('triffid_fiber') / -275" ] } } ]
-      },
+      "INLINE_ENCH_triffid_fiber_indigestion_0",
       "INLINE_ENCH_triffid_fiber_indigestion_1"
     ],
     "rating": "bad"
