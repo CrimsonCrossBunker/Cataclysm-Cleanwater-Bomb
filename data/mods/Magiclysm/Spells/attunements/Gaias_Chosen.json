@@ -64,6 +64,6 @@
     "name": [ "Terra Armor" ],
     "desc": [ "Your body is covered in dense, ethereal shell, that protect you." ],
     "remove_message": "Your lost your terra shell.",
-    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "add": { "math": [ "u_spell_level('terra_armor') * -3" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_terra_armor_0" ]
   }
 ]
