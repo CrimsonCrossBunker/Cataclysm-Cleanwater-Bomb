@@ -2885,7 +2885,7 @@ const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
     if( !tried_snow_texture ) {
         tried_snow_texture = true;
         const std::filesystem::path file = ( PATH_INFO::gfxdir() / "weather" /
-                                            "snow_cover.png" ).get_unrelative_path();
+                                             "snow_cover.png" ).get_unrelative_path();
         try {
             const SDL_Surface_Ptr surface = load_image( file.u8string().c_str() );
             if( surface->w == snow_sheet_width && surface->h == snow_sheet_height ) {
