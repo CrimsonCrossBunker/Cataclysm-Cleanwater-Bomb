@@ -85,15 +85,6 @@
     "intermittent_activation": { "effects": [ { "frequency": "120 seconds", "spell_effects": [ { "id": "afs_cryosuit_ui_spell" } ] } ] }
   },
   {
-    "id": "afs_ench_climate_control_warm_helmet",
-    "type": "enchantment",
-    "has": "WORN",
-    "name": { "str": "Cold Climate Control Helmet" },
-    "description": "You are wearing equipment that helps handle harsh climates.",
-    "condition": { "u_has_worn_with_flag": "ACTIVE_CRYOSUIT" },
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 75 } ]
-  },
-  {
     "id": "afs_ench_climate_control_warm",
     "type": "enchantment",
     "name": { "str": "Cold Climate Control" },
@@ -110,33 +101,6 @@
     "has": "WORN",
     "condition": "ACTIVE",
     "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 50 } ]
-  },
-  {
-    "id": "afs_ench_climate_control_2",
-    "type": "enchantment",
-    "name": { "str": "Exosuit Climate Control" },
-    "description": "Your active jumpsuit helps maintain your body temperature.",
-    "has": "WORN",
-    "condition": { "u_is_wearing": "modular_exosuit_on" },
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 75 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 75 } ]
-  },
-  {
-    "id": "afs_ench_climate_control_3",
-    "type": "enchantment",
-    "name": { "str": "Exosuit Climate Control" },
-    "description": "Your active jumpsuit helps maintain your body temperature.",
-    "has": "WORN",
-    "condition": { "u_is_wearing": "modular_exosuit_on" },
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 100 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 150 } ]
-  },
-  {
-    "id": "afs_ench_climate_control_4",
-    "type": "enchantment",
-    "name": { "str": "Exosuit Climate Control" },
-    "description": "Your active jumpsuit helps maintain your body temperature.",
-    "has": "WORN",
-    "condition": { "u_is_wearing": "modular_exosuit_on" },
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 300 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 300 } ]
   },
   {
     "id": "ench_exo_carry",
