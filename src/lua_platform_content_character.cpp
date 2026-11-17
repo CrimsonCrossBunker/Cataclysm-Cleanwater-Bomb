@@ -511,12 +511,14 @@ struct bionic_definition_data {
     bool registered = false;
 };
 
+constexpr char default_spell_skill[] = "spellcraft";
+
 struct spell_definition_data {
     std::string id;
     authored_text name;
     authored_text description;
     authored_text message{ "You cast %s!", std::nullopt };
-    std::string skill = "spellcraft";
+    std::string skill = default_spell_skill;
     std::string magic_type;
     std::string components;
     authored_text sound_description{ "an explosion.", std::nullopt };
@@ -4579,7 +4581,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' requires name, description, and targets" );
             }
-            if( check_engine_state && !index_defines( index.defines_skill,  definition.skill ) &&
+            // Native spells can use the default spellcraft skill even in worlds
+            // without a Mod that defines it, such as worlds with core relics.
+            if( check_engine_state && definition.skill != default_spell_skill &&
+                !index_defines( index.defines_skill, definition.skill ) &&
                 !skill_id( definition.skill ).is_valid() ) {
                 throw std::runtime_error( "spell '" + definition.id +
                                           "' references unknown skill '" + definition.skill + "'" );

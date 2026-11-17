@@ -54,15 +54,6 @@
     "max_range": 1
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_random_artifact_mutate",
-    "condition": { "x_in_y_chance": { "x": 1, "y": 4 } },
-    "effect": [
-      { "set_string_var": "<random_category>", "target_var": { "context_val": "dart_mutation_category" }, "parse_tags": true },
-      { "u_mutate_category": { "context_val": "dart_mutation_category" }, "use_vitamins": false, "true_random": true }
-    ]
-  },
-  {
     "id": "migo_enhance_flesh_monster",
     "type": "SPELL",
     "name": { "str": "Enhance Flesh", "//~": "NO_I18N" },

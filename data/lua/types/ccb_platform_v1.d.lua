@@ -5548,6 +5548,7 @@ function CcbPlatformContent.RelicProcgen(options) end
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText
+---@field skill? string Native casting skill. Defaults to spellcraft, which is accepted in worlds without that skill.
 ---@field message? string|LocalizedText Casting message. An explicit empty string suppresses it.
 ---@field sound_description? string|LocalizedText
 ---@field caster_condition_fail_message? string|LocalizedText

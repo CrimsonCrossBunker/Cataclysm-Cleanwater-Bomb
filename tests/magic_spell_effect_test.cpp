@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <set>
 #include <string>
 #include <utility>
@@ -6,24 +7,79 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "field.h"
 #include "field_type.h"
 #include "flexbuffer_json.h"
 #include "json_loader.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_spell_effect_helpers.h"
 #include "map.h"
 #include "map_helpers.h"
 #include "map_helpers_tests.h"
 #include "messages.h"
+#include "mod_manager.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "rng.h"
 #include "type_id.h"
+#include "worldfactory.h"
 
 static const spell_id spell_AO_CLOSE_TEAR( "AO_CLOSE_TEAR" );
 static const spell_id spell_test_line_spell( "test_line_spell" );
+
+TEST_CASE( "artifact_mutation_spell_uses_world_probability_and_preserves_calorie_cost",
+           "[.][magic][artifacts]" )
+{
+    const spell_id spell_to_cast = GENERATE( spell_id( "AEA_MUTATE" ), spell_id( "MoM_AEA_MUTATE" ) );
+    const bool psionic_artifact = spell_to_cast == spell_id( "MoM_AEA_MUTATE" );
+    if( psionic_artifact && !spell_to_cast.is_valid() ) {
+        return;
+    }
+    REQUIRE( spell_to_cast.is_valid() );
+    if( psionic_artifact ) {
+        REQUIRE( spell_to_cast->additional_spells.size() == 1 );
+        CHECK( spell_to_cast->additional_spells.front().self );
+    }
+    REQUIRE( world_generator->active_world );
+    const auto &mods = world_generator->active_world->active_mod_order;
+    const bool magiclysm = std::find( mods.begin(), mods.end(), mod_id( "magiclysm" ) ) != mods.end();
+    const unsigned int seed = GENERATE( 1u, 2u, 3u );
+    CAPTURE( spell_to_cast, magiclysm, seed );
+
+    clear_avatar();
+    clear_map_without_vision();
+    const on_out_of_scope cleanup( []() {
+        clear_avatar();
+    } );
+    cata::lua_platform::runtime_world_ready( true );
+    avatar &player = get_avatar();
+    player.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    player.set_stored_kcal( 60000 );
+    const auto before = player.get_mutations();
+
+    rng_set_engine_seed( seed );
+    const double threshold_roll = rng_float( 0, 1 );
+    const bool should_mutate = threshold_roll <= ( magiclysm ? 1.0 / 4.0 : 1.0 / 3.0 );
+    rng_set_engine_seed( seed );
+    const spell mutation( spell_to_cast );
+    mutation.cast_all_effects( player, player.pos_bub() );
+
+    const int next_draw = rng( 0, 1000000 );
+    const auto traits = player.get_mutations();
+    CAPTURE( threshold_roll, traits, next_draw );
+    CHECK( ( traits != before ) == should_mutate );
+    const int calorie_cost = 60000 - player.get_stored_kcal();
+    if( psionic_artifact ) {
+        CHECK( calorie_cost >= 100 );
+        CHECK( calorie_cost <= 250 );
+    } else {
+        CHECK( calorie_cost == 0 );
+    }
+}
 
 static std::set<tripoint_abs_ms> count_fields_near(
     const tripoint_abs_ms &p, const field_type_str_id &field_type )

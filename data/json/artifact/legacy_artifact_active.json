@@ -491,19 +491,6 @@
   },
   {
     "type": "SPELL",
-    "id": "AEA_MUTATE",
-    "name": { "str": "Artifact Mutate", "//~": "NO_I18N" },
-    "description": { "str": "Mutates you randomly.", "//~": "NO_I18N" },
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_random_artifact_mutate",
-    "shape": "blast",
-    "message": "",
-    "//": "33.33% chance, or 1/3",
-    "flags": [ "VERBAL", "SILENT", "NO_EXPLOSION_SFX" ],
-    "valid_targets": [ "self" ]
-  },
-  {
-    "type": "SPELL",
     "id": "AEA_STORM_bolt",
     "name": { "str": "Bolt", "//~": "NO_I18N" },
     "description": { "str": "One of the bolts thrown by Artifact Storm.", "//~": "NO_I18N" },

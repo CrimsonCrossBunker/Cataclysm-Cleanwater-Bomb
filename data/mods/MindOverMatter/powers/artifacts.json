@@ -183,20 +183,6 @@
     "extra_effects": [ { "id": "mom_aea_artifact_calorie_hit", "hit_self": true } ]
   },
   {
-    "type": "SPELL",
-    "id": "MoM_AEA_MUTATE",
-    "name": { "str": "Artifact Mutate" },
-    "description": "Mutates you randomly.",
-    "flags": [ "VERBAL", "SILENT", "NO_EXPLOSION_SFX" ],
-    "valid_targets": [ "self" ],
-    "skill": "metaphysics",
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_random_artifact_mutate",
-    "shape": "blast",
-    "message": "",
-    "extra_effects": [ { "id": "mom_aea_artifact_calorie_hit", "hit_self": true } ]
-  },
-  {
     "id": "MoM_AEA_PHYSICAL_ENHANCEMENT",
     "type": "SPELL",
     "name": { "str": "MoM AEA Add Physical Boost", "//~": "NO_I18N" },
