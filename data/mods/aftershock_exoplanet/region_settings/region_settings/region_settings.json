@@ -79,18 +79,6 @@
     ]
   },
   {
-    "type": "weather_generator",
-    "id": "default_aftershock",
-    "copy-from": "default",
-    "base_temperature": -50.0,
-    "base_humidity": 80.0,
-    "base_pressure": 1015.0,
-    "base_wind": 9.0,
-    "base_wind_distrib_peaks": 80,
-    "base_wind_season_variation": 0,
-    "weather_white_list": [ "clear", "sunny", "cloudy", "afs_whiteout", "afs_thunder", "afs_lightning", "afs_flurries", "afs_snowing" ]
-  },
-  {
     "type": "map_extra_collection",
     "id": "road_aftershock",
     "chance": 75,
