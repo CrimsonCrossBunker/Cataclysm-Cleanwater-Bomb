@@ -457,6 +457,7 @@ static std::optional<enchantment_vision_target_inputs> read_enchantment_vision_t
     inputs.hostile = request->get_or( "hostile", false );
     inputs.anger = request->get_or( "anger", false );
     inputs.spell_count = request->get_or( "spell_count", false );
+    inputs.divable = request->get_or( "divable", false );
     if( const auto parts = request->get<sol::optional<sol::table>>( "body_part_effects" ) ) {
         for( const auto &[part, effects] : *parts ) {
             if( !part.is<std::string>() || !effects.is<sol::table>() ) {
@@ -2551,7 +2552,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 ids( *activation, "encumbrance" ), activation->get_or( "identity", false ),
                 activation->get_or( "stat_bonuses", false ), activation->get_or( "artifact_resonance", false ), {}, {}, {},
                 ids( *activation, "active_traits" ), ids( *activation, "wielded_damage" ), {},
-                activation->get_or( "attack_speed", false )
+                activation->get_or( "attack_speed", false ), ids( *activation, "character_strings" ),
+                activation->get_or( "mana", false )
             };
             if( const auto defaults = activation->get<sol::optional<sol::table>>( "global_variable_defaults" ) ) {
                 auto &inputs = *definition->load_character_inputs;
@@ -4388,7 +4390,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.category_counts, &inputs.hit_points, &inputs.max_hit_points,
                                         &inputs.known_proficiencies, &inputs.species, &inputs.wielded_skills,
                                         &inputs.wielded_categories, &inputs.wielded_ammunition, &inputs.encumbrance,
-                                        &inputs.active_traits, &inputs.wielded_damage } ) {
+                                        &inputs.active_traits, &inputs.wielded_damage, &inputs.character_strings } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -7719,6 +7721,8 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "max_hit_points", value.load_character_inputs->max_hit_points );
                     hash_ids( "known_proficiencies", value.load_character_inputs->known_proficiencies );
                     hash_ids( "active_traits", value.load_character_inputs->active_traits );
+                    hash_ids( "character_strings", value.load_character_inputs->character_strings );
+                    hash_part( state, value.load_character_inputs->mana ? "mana" : "no_mana" );
                     hash_ids( "wielded_damage", value.load_character_inputs->wielded_damage );
                     hash_part( state, value.load_character_inputs->attack_speed ? "attack_speed" : "no_attack_speed" );
                     hash_part( state, std::to_string( value.load_character_inputs->body_part_armor.size() ) );
@@ -7905,6 +7909,7 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, inputs->hostile ? "hostile" : "no_hostile" );
                         hash_part( state, inputs->anger ? "anger" : "no_anger" );
                         hash_part( state, inputs->spell_count ? "spell_count" : "no_spell_count" );
+                        hash_part( state, inputs->divable ? "divable" : "no_divable" );
                         hash_part( state, std::to_string( inputs->body_part_effects.size() ) );
                         for( const auto &[part, effects] : inputs->body_part_effects ) {
                             hash_part( state, part );

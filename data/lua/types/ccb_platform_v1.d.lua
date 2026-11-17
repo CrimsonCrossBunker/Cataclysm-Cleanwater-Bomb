@@ -5481,6 +5481,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field kind? "total"|"spent"|"gained"|"ingested" Defaults to total.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field character_strings? string[] String variables saved on the speaker, using keys without a scope prefix.
+---@field mana? boolean Request current native mana.
 ---@field active_traits? string[] Traits whose powered mutation state is requested; false on non-character speakers.
 ---@field wielded_damage? string[] Damage type IDs whose native wielded-item melee damage is requested; zero without a weapon.
 ---@field body_part_armor? table<string, string[]> Body part IDs mapped to damage types whose native worn armor resistance is requested.
@@ -5535,6 +5537,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field character_strings? table<string, string> Missing keys read as empty strings. Legacy conversions and type errors surface on access.
+---@field mana? integer
 ---@field active_traits? table<string, boolean>
 ---@field wielded_damage? table<string, integer>
 ---@field body_part_armor? table<string, table<string, number>>
@@ -5620,6 +5624,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionTargetInputs
+---@field divable? boolean Test whether the target's tile has swimmable deep water, using native map semantics.
 ---@field body_part_effects? table<string, string[]> Body part IDs mapped to effect IDs to test on the target.
 ---@field species? string[]
 ---@field flags? string[] Target creature or character flags to test.
@@ -5635,6 +5640,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field spell_count? boolean Request the target's count of known spells.
 
 ---@class CcbEnchantmentVisionTargetSnapshot
+---@field divable? boolean
 ---@field body_part_effects? table<string, table<string, boolean>>
 ---@field species? table<string, boolean>
 ---@field flags? table<string, boolean>

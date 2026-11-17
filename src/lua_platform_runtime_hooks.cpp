@@ -798,6 +798,34 @@ static sol::table capture_enchantment_numbers( sol::state &lua, const const_dial
     return values;
 }
 
+static sol::table capture_enchantment_strings( sol::state &lua, const const_dialogue &dialogue,
+        const std::vector<std::string> &keys )
+{
+    sol::table values = lua.create_table( 0, static_cast<int>( keys.size() ) );
+    std::map<std::string, diag_value> deferred;
+    for( const std::string &key : keys ) {
+        const diag_value *value = maybe_read_var_value( var_info( var_type::u, key ), dialogue );
+        if( !value ) {
+            values[key] = std::string();
+        } else if( std::holds_alternative<std::string>( value->data ) ) {
+            values[key] = value->str();
+        } else {
+            deferred.emplace( key, *value );
+        }
+    }
+    if( !deferred.empty() ) {
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [deferred = std::move( deferred )]( sol::this_state state,
+        const sol::table &, const std::string &key ) -> sol::object {
+            const auto found = deferred.find( key );
+            return found == deferred.end() ? sol::make_object( state, sol::nil ) :
+                   sol::make_object( state, found->second.str() );
+        } );
+        values[sol::metatable_key] = meta;
+    }
+    return values;
+}
+
 static sol::table collect_enchantment_environment( sol::state &lua, const const_talker &speaker,
         const enchantment_environment_inputs &requested )
 {
@@ -1164,6 +1192,10 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         inputs["nearby_monsters"] = std::move( counts );
     }
+    if( !requested.character_strings.empty() ) {
+        inputs["character_strings"] = capture_enchantment_strings( *owner.lua, dialogue,
+                                      requested.character_strings );
+    }
     inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
                                     requested.character_variables );
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
@@ -1176,6 +1208,9 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         inputs["calorie_history"] = std::move( values );
     }
     if( speaker ) {
+        if( requested.mana ) {
+            inputs["mana"] = speaker->mana_cur();
+        }
         if( requested.attack_speed ) {
             inputs["attack_speed"] = speaker->attack_speed();
         }
@@ -1293,6 +1328,9 @@ static sol::table collect_enchantment_vision_target( sol::state &lua, const cons
         const Creature *creature = target.get_const_creature();
         inputs["line_of_sight"] = observer && creature &&
                                   get_map().sees( observer->pos_bub(), creature->pos_bub(), MAX_VIEW_DISTANCE );
+    }
+    if( requested.divable ) {
+        inputs["divable"] = get_map().is_divable( target.pos_bub( get_map() ) );
     }
     if( requested.warm ) {
         inputs["warm"] = target.is_warm();
