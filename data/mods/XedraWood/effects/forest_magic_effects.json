@@ -10,10 +10,7 @@
     "remove_message": "Nature no longer speeds your movements.",
     "enchantments": [
       "INLINE_ENCH_effect_forest_traverse_the_wilds_0",
-      {
-        "condition": { "math": [ "u_spell_level('effect_forest_traverse_the_wilds') > 7" ] },
-        "values": [ { "value": "PHASE_DISTANCE", "add": 2 } ]
-      }
+      "INLINE_ENCH_effect_forest_traverse_the_wilds_1"
     ]
   }
 ]
