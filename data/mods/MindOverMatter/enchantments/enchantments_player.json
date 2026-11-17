@@ -93,49 +93,6 @@
     "field_intensity_variance": 10
   },
   {
-    "type": "enchantment",
-    "id": "enchant_pyrokin_cloak",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "emitter": "emit_pyrokin_cloak",
-    "incoming_damage_mod": [
-      {
-        "type": "heat",
-        "multiply": {
-          "math": [
-            "( ( u_spell_level('pyrokinetic_cloak') * -1) * ( ( u_val('intelligence') + 10) / 20 ) ) * u_nether_attunement_power_scaling"
-          ]
-        }
-      },
-      {
-        "type": "cold",
-        "multiply": {
-          "math": [
-            "( ( u_spell_level('pyrokinetic_cloak') * -3) * ( ( u_val('intelligence') + 10) / 20 ) ) * u_nether_attunement_power_scaling"
-          ]
-        }
-      }
-    ],
-    "values": [
-      {
-        "value": "CLIMATE_CONTROL_CHILL",
-        "add": {
-          "math": [
-            "(60 + ( u_spell_level('pyrokinetic_cloak') * 4) * ( ( u_val('intelligence') + 10) / 20 ) ) * u_nether_attunement_power_scaling"
-          ]
-        }
-      },
-      {
-        "value": "CLIMATE_CONTROL_HEAT",
-        "add": {
-          "math": [
-            "( ( u_spell_level('pyrokinetic_cloak') * 10) * ( ( u_val('intelligence') + 10) / 20 ) ) * u_nether_attunement_power_scaling"
-          ]
-        }
-      }
-    ]
-  },
-  {
     "id": "photokin_blinding_glare_attack",
     "type": "SPELL",
     "name": { "str": "Photokinetic Blinding Radiance burst", "//~": "NO_I18N" },
