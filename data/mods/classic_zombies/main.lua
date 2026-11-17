@@ -29,3 +29,5 @@ end, 1)
 ccb.runtime.on("game:game_begin", "initialize_dialogue_flag")
 
 require("speech")
+
+require("snippets")
