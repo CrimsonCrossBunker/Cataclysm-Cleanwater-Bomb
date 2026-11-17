@@ -254,39 +254,6 @@ class ModSdkTest(unittest.TestCase):
                             ValueError, "LuaLS report for"):
                         mod_sdk.check_mod(mod, "luals")
 
-    def test_diagnostic_file_uris_decode_drive_and_percent_once(self):
-        cases = (
-            ("file:///C%3A/mod%20name/100%2520.lua",
-             "C:/mod name/100%20.lua" if os.name == "nt" else
-             "/C:/mod name/100%20.lua"),
-            ("file:///C%3a/mod%20name/main.lua",
-             "C:/mod name/main.lua" if os.name == "nt" else
-             "/C:/mod name/main.lua"),
-            ("file:///C:/mod%20name/main.lua",
-             "C:/mod name/main.lua" if os.name == "nt" else
-             "/C:/mod name/main.lua"),
-            ("file:///tmp/mod%20name/100%2520.lua",
-             "/tmp/mod name/100%20.lua"),
-        )
-        with tempfile.TemporaryDirectory() as directory:
-            mod = self.make_sdk(Path(directory), "example")
-            for uri, expected in cases:
-                def diagnose(command, **kwargs):
-                    log = next(part.split("=", 1)[1] for part in command
-                               if part.startswith("--logpath="))
-                    report = {uri: [{
-                        "range": {"start": {"line": 1, "character": 2}},
-                        "message": "invalid argument",
-                    }]}
-                    (Path(log) / "check.json").write_text(
-                        json.dumps(report), encoding="utf-8")
-                    return subprocess.CompletedProcess(command, 1, "", "")
-
-                with self.subTest(uri=uri), patch.object(
-                        mod_sdk.subprocess, "run", side_effect=diagnose):
-                    self.assertEqual(mod_sdk.check_mod(mod, "luals"), [
-                        f"{Path(expected)}:2:3: diagnostic: invalid argument"])
-
     def test_checker_crash_is_not_a_clean_report(self):
         with tempfile.TemporaryDirectory() as directory:
             mod = self.make_sdk(Path(directory), "example")

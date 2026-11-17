@@ -119,12 +119,12 @@ class TransifexInstallTest(unittest.TestCase):
             binary_dir.mkdir()
             sudo = binary_dir / "sudo"
             sudo.write_text("""#!/usr/bin/env python3
-import os, subprocess, sys
+import os, sys
 args = sys.argv[1:]
 assert args[0] == "tar"
 assert args[args.index("-C") + 1] == "/usr/bin"
 args[args.index("-C") + 1] = os.environ["TEST_INSTALL_DIR"]
-sys.exit(subprocess.call(args))
+os.execvp(args[0], args)
 """)
             sudo.chmod(0o755)
             server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -138,14 +138,12 @@ sys.exit(subprocess.call(args))
                 )
                 env = dict(os.environ)
                 env.update(
-                    RUNNER_TEMP=".",
+                    RUNNER_TEMP=str(path),
                     TEST_INSTALL_DIR=str(install_dir),
-                    MSYS2_ARG_CONV_EXCL="/usr/bin",
                     PATH=str(binary_dir) + os.pathsep + os.environ["PATH"],
                 )
                 result = subprocess.run(
                     ["bash", "-e", "-o", "pipefail", "-c", script],
-                    cwd=path,
                     env=env, capture_output=True, text=True, timeout=30,
                 )
                 installed = (install_dir / "tx").exists()
