@@ -1,9 +1,18 @@
 #include "north_america_transport.h"
 
+#include <cata_path.h>
+#include <coordinates.h>
+#include <enums.h>
+#include <point.h>
+#include <type_id.h>
 #include <algorithm>
 #include <cstdlib>
+#include <functional>
+#include <initializer_list>
+#include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 #include "cata_utility.h"
 #include "flexbuffer_json.h"

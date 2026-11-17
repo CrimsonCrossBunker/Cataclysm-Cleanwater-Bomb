@@ -1,169 +1,172 @@
-#include "vertical_movement.h"
-#include "deployed_furniture.h"
-#include "terrain_examine.h"
-#include "safecracking.h"
-#include "mp_firearm.h"
-#include "radio_car_control.h"
-#include "grab.h"
-#include "hauling.h"
-#include "walking.h"
-#include "mp_inventory_activity.h"
-#include "iuse_actor.h"
-
-#include <cstdlib>
-#include <cstdint>
-#include <initializer_list>
-#include <list>
-#include <map>
-#include <unordered_map>
+#include <dialogue_chatbin.h>
+#include <subbodypart.h>
+#include <tileray.h>
+#include <vehicle_water.h>
 #include <algorithm>
+#include <cstdint>
+#include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
-#include <sstream>
+#include <list>
+#include <map>
 #include <set>
+#include <sstream>
 #include <tuple>
-#include <vector>
+#include <unordered_map>
 #include <utility>
 #include <variant>
+#include <vector>
 
+#include "action.h"
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
-#include "butchery.h"
-#include "disassembly.h"
+#include "activity_handlers.h"
+#include "arc_furnace.h"
+#include "autoclave.h"
 #include "avatar.h"
 #include "avatar_action.h"
-#include "bionics.h"
 #include "bionic_activation.h"
 #include "bionic_water_activity.h"
-#include "vehicle_heating.h"
-#include "repair_activity.h"
-#include "remote_vehicle_activity.h"
-#include "martial_style_selection.h"
-#include "character.h"
-#include "martialarts.h"
-#include "help.h"
-#include "activity_handlers.h"
-#include "clzones.h"
-#include "zone_edit.h"
-#include "zone_work.h"
-#include "farming.h"
-#include "fireplace.h"
-#include "arc_furnace.h"
-#include "stook.h"
-#include "autoclave.h"
-#include "mill.h"
-#include "iexamine_actors.h"
-#include "furniture_reload.h"
-#include "keg.h"
-#include "liquid_transfer.h"
-#include "charcoal_kiln.h"
-#include "smoking_rack.h"
-#include "fermentation_vessel.h"
-#include "character_action_guard.h"
+#include "bionics.h"
+#include "butchery.h"
+#include "cached_options.h"
+#include "calendar.h"
 #include "cata_scope_helpers.h"
+#include "character.h"
+#include "character_action_guard.h"
+#include "character_id.h"
+#include "charcoal_kiln.h"
+#include "clone_ptr.h"
+#include "clzones.h"
 #include "color.h"
-#include "craft_command.h"
-#include "crafting.h"
 #include "construction.h"
+#include "coordinates.h"
+#include "craft_command.h"
+#include "craft_result_state.h"
+#include "crafting.h"
+#include "crafting_enums.h"
+#include "creature.h"
+#include "creature_tracker.h"
+#include "deployed_furniture.h"
 #include "dialogue.h"
 #include "dialogue_win.h"
-#include "input_context.h"
-#include "input_popup.h"
-#include "creature_tracker.h"
-#include "flag.h"
+#include "disassembly.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "farming.h"
+#include "fermentation_vessel.h"
+#include "fireplace.h"
+#include "flag.h"
+#include "flexbuffer_json.h"
+#include "furniture_reload.h"
 #include "game.h"
-#include "cached_options.h"
 #include "game_inventory.h"
+#include "grab.h"
+#include "hacksaw_activity.h"
+#include "handle_liquid.h"
+#include "hauling.h"
+#include "help.h"
+#include "iexamine_actors.h"
+#include "input_context.h"
+#include "input_enums.h"
+#include "input_popup.h"
 #include "item.h"
 #include "item_activation.h"
-#include "hacksaw_activity.h"
-#include "tool_activity_target.h"
-#include "item_healing.h"
-#include "item_disposition.h"
-#include "item_insert.h"
-#include "item_move.h"
-#include "mp_equipment.h"
+#include "item_components.h"
 #include "item_consumption.h"
+#include "item_disposition.h"
+#include "item_healing.h"
+#include "item_insert.h"
 #include "item_location.h"
+#include "item_move.h"
 #include "item_reload.h"
+#include "item_repair.h"
+#include "item_source.h"
 #include "item_uid.h"
+#include "item_unload.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
 #include "json.h"
+#include "keg.h"
+#include "liquid_transfer.h"
+#include "lua_platform_state.h"
 #include "magic.h"
 #include "map.h"
+#include "map_iterator.h"
+#include "map_scale_constants.h"
+#include "martial_style_selection.h"
+#include "martialarts.h"
 #include "melee.h"
-#include "monster.h"
-#include "mtype.h"
-#include "npc.h"
-#include "npctalk.h"
-#include "output.h"
-#include "spell_casting_choice.h"
 #include "messages.h"
-#include "options.h"
+#include "mill.h"
+#include "monster.h"
+#include "mp_actor_binding.h"
 #include "mp_client_conn.h"
 #include "mp_combat_result.h"
+#include "mp_equipment.h"
+#include "mp_firearm.h"
 #include "mp_gamestate.h"
+#include "mp_inventory_activity.h"
 #include "mp_item_source.h"
 #include "mp_npc_trade.h"
+#include "mp_peek.h"
 #include "mp_pickup.h"
 #include "mp_player_view.h"
-#include "npc_radio.h"
 #include "mp_unload.h"
 #include "mp_world_session.h"
+#include "mp_world_state.h"
+#include "mtype.h"
+#include "npc.h"
+#include "npc_radio.h"
+#include "npctalk.h"
+#include "options.h"
+#include "output.h"
+#include "pimpl.h"
 #include "player_activity.h"
+#include "player_identity.h"
+#include "point.h"
+#include "radio_car_control.h"
+#include "recipe.h"
+#include "remote_vehicle_activity.h"
+#include "repair_activity.h"
 #include "ret_val.h"
-#include "sleep.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "safecracking.h"
+#include "sleep.h"
+#include "smoking_rack.h"
+#include "spell_casting_choice.h"
+#include "stook.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "talker_npc.h"
+#include "terrain_examine.h"
+#include "tool_activity_target.h"
+#include "translation.h"
 #include "translations.h"
+#include "type_id.h"
 #include "ui_manager.h"
 #include "uilist.h"
 #include "uistate.h"
+#include "units.h"
 #include "veh_interact.h"
 #include "veh_type.h"
 #include "vehicle.h"
-#include "vehicle_power_connection.h"
 #include "vehicle_control.h"
+#include "vehicle_heating.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_uid.h"
-#include "vpart_position.h"
-#include "action.h"
-#include "activity_actor.h"
-#include "calendar.h"
-#include "character_id.h"
-#include "clone_ptr.h"
-#include "coordinates.h"
-#include "craft_result_state.h"
-#include "crafting_enums.h"
-#include "creature.h"
-#include "enums.h"
-#include "flexbuffer_json.h"
-#include "handle_liquid.h"
-#include "input_enums.h"
-#include "item_components.h"
-#include "item_repair.h"
-#include "item_source.h"
-#include "item_unload.h"
-#include "lua_platform_state.h"
-#include "map_iterator.h"
-#include "map_scale_constants.h"
-#include "mp_actor_binding.h"
-#include "mp_peek.h"
-#include "mp_world_state.h"
-#include "pimpl.h"
-#include "player_identity.h"
-#include "point.h"
-#include "recipe.h"
-#include "translation.h"
-#include "type_id.h"
-#include "units.h"
+#include "vertical_movement.h"
 #include "view_action.h"
+#include "vpart_position.h"
 #include "vpart_range.h"
+#include "walking.h"
+#include "zone_edit.h"
+#include "zone_work.h"
 
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_CHOP_LOGS( "ACT_CHOP_LOGS" );
@@ -176,6 +179,7 @@ static const activity_id ACT_GLIDE( "ACT_GLIDE" );
 static const activity_id ACT_HOTWIRE_CAR( "ACT_HOTWIRE_CAR" );
 static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_LONGSALVAGE( "ACT_LONGSALVAGE" );
+static const activity_id ACT_MEND_ITEM( "ACT_MEND_ITEM" );
 static const activity_id ACT_MOVE_ITEMS( "ACT_MOVE_ITEMS" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_MULTIPLE_CONSTRUCTION( "ACT_MULTIPLE_CONSTRUCTION" );
@@ -186,6 +190,7 @@ static const activity_id ACT_SPELLCASTING( "ACT_SPELLCASTING" );
 static const activity_id ACT_START_ENGINES( "ACT_START_ENGINES" );
 static const activity_id ACT_START_FIRE( "ACT_START_FIRE" );
 static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+static const activity_id ACT_VEHICLE( "ACT_VEHICLE" );
 static const activity_id ACT_VEHICLE_FOLD( "ACT_VEHICLE_FOLD" );
 static const activity_id ACT_VEHICLE_UNFOLD( "ACT_VEHICLE_UNFOLD" );
 static const activity_id ACT_WAIT_NPC( "ACT_WAIT_NPC" );
@@ -3913,7 +3918,7 @@ void client_start_mending( const item_location &target, item_repair::mending_sel
         !item_repair::confirm_target_ownership( get_avatar(), target, selection.target ) ) {
         return;
     }
-    player_activity view( activity_id( "ACT_MEND_ITEM" ), 1 );
+    player_activity view( ACT_MEND_ITEM, 1 );
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
         send_inventory_activity( "start", [&]( JsonOut & out ) {
@@ -4165,7 +4170,7 @@ bool client_drive_radio_car( const point_rel_ms &direction )
 
 void client_plug_appliance( const appliance_connection_selection &selection )
 {
-    player_activity view( activity_id( "ACT_VEHICLE" ), 1 );
+    player_activity view( ACT_VEHICLE, 1 );
     view.set_execution( activity_execution::presentation );
     if( begin_client_inventory_activity( view ) ) {
         send_inventory_activity( "start", [&]( JsonOut & out ) {
