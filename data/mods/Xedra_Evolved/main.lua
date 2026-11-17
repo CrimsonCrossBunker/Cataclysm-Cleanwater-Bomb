@@ -84,3 +84,5 @@ require("monster_attacks")
 require("tool_qualities")
 
 require("vitamins")
+
+require("snippets")

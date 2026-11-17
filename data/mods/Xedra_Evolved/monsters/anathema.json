@@ -538,20 +538,5 @@
     "id": "EOC_CONDITION_IS_NOT_ON_SKY_ISLAND",
     "condition": { "math": [ "0 == 0" ] },
     "effect": [  ]
-  },
-  {
-    "type": "snippet",
-    "category": "Anathema_Warnings_Snippets",
-    "text": [
-      "You shudder at the thought of vampire hunters.  Knowing your luck, one is probably tracking you as this very moment.",
-      "You long for the safety of a warm uncontrolled blaze, burning away the thing stalking you from the shadows.",
-      "Your instincts warn you about something far more dangerous than you are, wandering the shadows to find you.",
-      "You long for proximity to vast waters and holy ground, no matter how uneasy you might be about them.",
-      "You feel a threatening presence.  Someone who desires nothing but killing vampires has their sights on you.",
-      "You have a passing thought about standing in unblocked sunlight, and how you would be safer in it than you currently are here.",
-      "Someone is coming to kill you.  You can feel them knowing where you are, waiting for the right moment to strike.",
-      "You are filled with the fear that a vampire will soon drink you dry.  You know that vampire blood is inedible to vampires, but you're still unsettled.",
-      "For a moment, the darkness doesn't feel like home.  It feels like a slaughterhouse, and you're next in line to be killed."
-    ]
   }
 ]
