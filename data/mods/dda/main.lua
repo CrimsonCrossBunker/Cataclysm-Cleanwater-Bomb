@@ -114,3 +114,5 @@ require("inline_special_vision")
 require("thermal_scaling")
 
 require("innate_enchantments")
+
+require("body_enchantments")

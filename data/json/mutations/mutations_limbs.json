@@ -711,11 +711,7 @@
     "points": 0,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": { "and": [ { "math": [ "u_hp('wing_insect_l') > 10" ] }, { "math": [ "u_hp('wing_insect_r') > 10" ] } ] },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ],
-        "ench_effects": [ { "effect": "effect_insect_wings_muscle_veh_boost", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_WINGS_INSECT_active_0"
     ]
   },
   {
