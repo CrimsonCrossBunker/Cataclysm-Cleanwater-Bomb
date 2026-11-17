@@ -1,20 +1,6 @@
 [
   {
     "type": "enchantment",
-    "id": "EATER_SIXTH_SENSE",
-    "condition": "ALWAYS",
-    "special_vision": [
-      {
-        "condition": {
-          "or": [ { "npc_has_species": "HORROR" }, { "npc_has_species": "NETHER" }, { "npc_has_species": "nether_player_hate" } ]
-        },
-        "distance": { "math": [ "u_spell_count('school': 'EATER')" ] },
-        "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense an otherworldy danger here." } ]
-      }
-    ]
-  },
-  {
-    "type": "enchantment",
     "id": "DRUNKEN_UNARMED",
     "condition": { "not": "u_has_weapon" },
     "melee_damage_bonus": [
