@@ -28,3 +28,30 @@ content.add(content.Enchantment {
     load_character_inputs = { radiation = true },
 }
     :value("LUMINATION", { add = 10 }))
+
+local psychic_traits = {
+    "BIOKINETIC", "CLAIRSENTIENT", "ELECTROKINETIC", "PHOTOKINETIC", "PYROKINETIC",
+    "TELEKINETIC", "TELEPATH", "TELEPORTER", "VITAKINETIC", "PSYCHIC_KNACK",
+}
+
+ccb.runtime.handler("nether_incense_psychic_affinity", function(ctx)
+    local traits = ctx.character_inputs.traits
+    for _, trait in ipairs(psychic_traits) do
+        if traits[trait] then
+            return true
+        end
+    end
+    return false
+end)
+
+local function register_nether_incense(id, effect)
+    content.upsert_enchantment(content.Enchantment {
+        id = id,
+        has = "HELD",
+        condition_handler = "nether_incense_psychic_affinity",
+        load_character_inputs = { traits = psychic_traits },
+    }:effect(effect, 1))
+end
+
+register_nether_incense("ench_mom_incense_nether_attunement", "effect_mom_incense_nether_attunement_minor")
+register_nether_incense("ench_mom_incense_nether_attunement_major", "effect_mom_incense_nether_attunement_major")
