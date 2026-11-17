@@ -120,3 +120,5 @@ require("inline_special_vision")
 require("progression_enchantments")
 
 require("body_enchantments")
+
+require("contextual_enchantments")
