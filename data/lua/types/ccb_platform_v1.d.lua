@@ -6031,6 +6031,11 @@ function CcbPlatformSnippetsApi.has_category(category) end
 ---@param category string
 ---@return any
 function CcbPlatformSnippetsApi.random(category) end
+---Select and recursively expand a category with the game's shared native RNG.
+---Available only in live runtime callbacks. Dialogue tags are left for text.expand_for.
+---@param category string Native category id, without extra byte limits.
+---@return string|nil Localized expanded text; nil for a missing or empty category.
+function CcbPlatformSnippetsApi.native_random(category) end
 ---@param category string
 ---@return any
 function CcbPlatformSnippetsApi.random_named(category) end

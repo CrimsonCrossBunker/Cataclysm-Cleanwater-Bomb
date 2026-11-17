@@ -3398,6 +3398,21 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, SNIPPET.expand(
                        selected->translated(), next_snippet_seed() ) );
     } );
+    snippets.set_function( "native_random", [require_read, weak](
+    sol::this_state state, const std::string & category ) {
+        require_read();
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+            throw std::runtime_error(
+                "Native snippet randomness is only available inside a runtime callback" );
+        }
+        sol::state_view lua_state( state );
+        const std::optional<translation> selected = SNIPPET.random_from_category( category );
+        if( !selected ) {
+            return sol::make_object( lua_state, sol::lua_nil );
+        }
+        return sol::make_object( lua_state, SNIPPET.expand( selected->translated() ) );
+    } );
     snippets.set_function( "random_named", [require_read, require_snippet_key,
                                             next_snippet_seed, snippet_record](
     sol::this_state state, const std::string & category ) {
