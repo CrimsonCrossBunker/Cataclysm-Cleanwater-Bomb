@@ -1015,19 +1015,31 @@ local ItemActionDefinition = {}
 ---Calendar defaults match native JSON scenarios without explicit dates, using SEASON_LENGTH.
 ---Game start is at 08:00; the cataclysm begins five calendar days earlier at 00:00.
 ---@field id string Stable scenario id.
----@field name string|LocalizedText Scenario display name.
----@field description string|LocalizedText Scenario description.
----@field start_name string|LocalizedText Start-location display name.
+---@field inherits? string Existing scenario, or a scenario registered earlier in this transaction. Omitted fields inherit. Legacy startup behavior requires an explicit on_start replacement.
+---@field name? string|LocalizedText Scenario display name; also used for female characters unless female_name is supplied. Defaults to id for fresh definitions.
+---@field female_name? string|LocalizedText Female-character display name, including its own translation context.
+---@field description? string|LocalizedText Scenario description; also used for female characters unless female_description is supplied.
+---@field female_description? string|LocalizedText Female-character scenario description.
+---@field start_name? string|LocalizedText Start-location display name.
 ---@field points? integer Character-creation point cost; defaults to 0.
 ---@field blacklist? boolean Professions are a blacklist instead of a whitelist.
 ---@field extra_professions? boolean Professions add to the default set.
 ---@field reveal_locale? boolean Whether the start locale is revealed; defaults to true.
 ---@field hard_requirement? boolean Whether the unlock requirement applies with metaprogression disabled.
 ---@field distance_initial_visibility? integer Initial overmap visibility distance.
----@field map_extra? string Native map-extra id applied at game start; omission means none.
+---@field map_extra? string Native map-extra id applied at game start; empty string clears an inherited value.
+---@field requirement? string Unlock achievement id; empty string clears an inherited requirement.
+---@field on_start? string Registered character-start handler; empty string removes an inherited handler.
+---@field locations? string[] Starting-location ids. Arrays replace inherited lists, including an explicit empty array; a scenario must retain at least one location.
+---@field professions? string[] Profession ids replacing the inherited list.
+---@field allowed_traits? string[] Selectable trait ids replacing the inherited set.
+---@field forced_traits? string[] Forced trait ids replacing the inherited set.
+---@field forbidden_traits? string[] Forbidden trait ids replacing the inherited set.
+---@field flags? string[] Native scenario flags replacing the inherited set.
 
 ---@class ScenarioDefinition
 ---@field id string
+---List methods append to the authored replacement list. Calling one starts a replacement even when inheriting a scenario.
 local ScenarioDefinition = {}
 
 ---@param location_id string Native start-location id.

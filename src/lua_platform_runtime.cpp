@@ -281,24 +281,33 @@ void require_readable_handle( const std::shared_ptr<owner_token> &token,
 
 struct scenario_definition_data {
     std::string id;
-    detail::authored_text name;
-    detail::authored_text description;
-    detail::authored_text start_name;
-    std::int64_t points = 0;
-    bool blacklist = false;
-    bool extra_professions = false;
-    bool reveal_locale = true;
-    bool hard_requirement = false;
-    std::int64_t distance_initial_visibility = 15;
+    std::string inherits;
+    std::optional<detail::authored_text> name;
+    std::optional<detail::authored_text> female_name;
+    std::optional<detail::authored_text> description;
+    std::optional<detail::authored_text> female_description;
+    std::optional<detail::authored_text> start_name;
+    std::optional<std::int64_t> points;
+    std::optional<bool> blacklist;
+    std::optional<bool> extra_professions;
+    std::optional<bool> reveal_locale;
+    std::optional<bool> hard_requirement;
+    std::optional<std::int64_t> distance_initial_visibility;
     std::vector<std::string> locations;
     std::vector<std::string> professions;
     std::vector<std::string> allowed_traits;
     std::vector<std::string> forced_traits;
     std::vector<std::string> forbidden_traits;
     std::vector<std::string> flags;
-    std::string map_extra;
-    std::string requirement;
-    std::string start_handler;
+    bool has_locations = false;
+    bool has_professions = false;
+    bool has_allowed_traits = false;
+    bool has_forced_traits = false;
+    bool has_forbidden_traits = false;
+    bool has_flags = false;
+    std::optional<std::string> map_extra;
+    std::optional<std::string> requirement;
+    std::optional<std::string> start_handler;
     bool registered = false;
 };
 
@@ -1153,6 +1162,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario location id cannot be empty" );
         }
         definition->locations.push_back( id );
+        definition->has_locations = true;
         return *this;
     }
 
@@ -1162,6 +1172,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario profession id cannot be empty" );
         }
         definition->professions.push_back( id );
+        definition->has_professions = true;
         return *this;
     }
 
@@ -1171,6 +1182,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario trait id cannot be empty" );
         }
         definition->allowed_traits.push_back( id );
+        definition->has_allowed_traits = true;
         return *this;
     }
 
@@ -1180,6 +1192,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario trait id cannot be empty" );
         }
         definition->forced_traits.push_back( id );
+        definition->has_forced_traits = true;
         return *this;
     }
 
@@ -1189,6 +1202,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario trait id cannot be empty" );
         }
         definition->forbidden_traits.push_back( id );
+        definition->has_forbidden_traits = true;
         return *this;
     }
 
@@ -1198,6 +1212,7 @@ struct scenario_definition_handle {
             throw std::runtime_error( "scenario flag cannot be empty" );
         }
         definition->flags.push_back( name );
+        definition->has_flags = true;
         return *this;
     }
 
@@ -3921,22 +3936,68 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<scenario_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = detail::read_singular_text( options["name"], definition->id, "Scenario.name" );
-        definition->description = detail::read_singular_text( options["description"], {},
-            "Scenario.description" );
-        definition->start_name = detail::read_singular_text( options["start_name"], {},
-            "Scenario.start_name" );
-        definition->points = options.get_or<std::int64_t>( "points", 0 );
-        definition->blacklist = options.get_or( "blacklist", false );
-        definition->extra_professions = options.get_or( "extra_professions", false );
-        definition->reveal_locale = options.get_or( "reveal_locale", true );
-        definition->hard_requirement = options.get_or( "hard_requirement", false );
-        definition->distance_initial_visibility = options.get_or<std::int64_t>(
-                "distance_initial_visibility", 15 );
-        definition->map_extra = options.get_or( "map_extra", std::string() );
-        definition->start_handler = options.get_or(
-                                        "on_start", options.get_or(
-                                            "start_handler", std::string() ) );
+        definition->inherits = options.get_or( "inherits", std::string() );
+        const auto read_text = [&]( const char *field ) -> std::optional<detail::authored_text> {
+            const sol::object value = options[field];
+            if( !value.valid() || value.get_type() == sol::type::lua_nil ) {
+                return std::nullopt;
+            }
+            return detail::read_singular_text( value, {}, std::string( "Scenario." ) + field );
+        };
+        const auto read_integer = [&]( const char *field ) -> std::optional<std::int64_t> {
+            const sol::optional<std::int64_t> value =
+                options.get<sol::optional<std::int64_t>>( field );
+            return value ? std::optional<std::int64_t>( *value ) : std::nullopt;
+        };
+        const auto read_boolean = [&]( const char *field ) -> std::optional<bool> {
+            const sol::optional<bool> value = options.get<sol::optional<bool>>( field );
+            return value ? std::optional<bool>( *value ) : std::nullopt;
+        };
+        const auto read_string = [&]( const char *field ) -> std::optional<std::string> {
+            const sol::optional<std::string> value = options.get<sol::optional<std::string>>( field );
+            return value ? std::optional<std::string>( *value ) : std::nullopt;
+        };
+        const auto read_ids = [&]( const char *field, std::vector<std::string> &ids,
+        bool &present ) {
+            const sol::optional<sol::table> values = options.get<sol::optional<sol::table>>( field );
+            if( !values ) {
+                return;
+            }
+            const std::size_t count = require_dense_array( *values,
+                                      std::string( "Scenario." ) + field, 0, values->size() );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const std::string id = values->get<std::string>( index );
+                if( id.empty() ) {
+                    throw std::invalid_argument( std::string( "Scenario." ) + field +
+                                                 " cannot contain an empty id" );
+                }
+                ids.push_back( id );
+            }
+            present = true;
+        };
+        definition->name = read_text( "name" );
+        definition->female_name = read_text( "female_name" );
+        definition->description = read_text( "description" );
+        definition->female_description = read_text( "female_description" );
+        definition->start_name = read_text( "start_name" );
+        definition->points = read_integer( "points" );
+        definition->blacklist = read_boolean( "blacklist" );
+        definition->extra_professions = read_boolean( "extra_professions" );
+        definition->reveal_locale = read_boolean( "reveal_locale" );
+        definition->hard_requirement = read_boolean( "hard_requirement" );
+        definition->distance_initial_visibility = read_integer( "distance_initial_visibility" );
+        definition->map_extra = read_string( "map_extra" );
+        definition->requirement = read_string( "requirement" );
+        definition->start_handler = read_string( "on_start" );
+        if( !definition->start_handler ) {
+            definition->start_handler = read_string( "start_handler" );
+        }
+        read_ids( "locations", definition->locations, definition->has_locations );
+        read_ids( "professions", definition->professions, definition->has_professions );
+        read_ids( "allowed_traits", definition->allowed_traits, definition->has_allowed_traits );
+        read_ids( "forced_traits", definition->forced_traits, definition->has_forced_traits );
+        read_ids( "forbidden_traits", definition->forbidden_traits, definition->has_forbidden_traits );
+        read_ids( "flags", definition->flags, definition->has_flags );
         return scenario_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "VehicleColorPalette",
@@ -7219,19 +7280,36 @@ bool content_transaction::validate( const runtime &owner_runtime,
             // JSON locations may still await copy-from resolution. Resolve
             // available parents without finalizing or dropping missing ones.
             detail::start_location_registry().resolve_deferred();
+            detail::scenario_registry().resolve_deferred();
         }
         std::set<std::string> scenario_ids;
         for( const scenario_registration &entry : pimpl_->scenarios ) {
             const scenario_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "scenario" );
-            if( !definition.start_handler.empty() &&
-                !runtime_has_handler( owner_runtime, definition.start_handler ) ) {
+            if( definition.start_handler && !definition.start_handler->empty() &&
+                !runtime_has_handler( owner_runtime, *definition.start_handler ) ) {
                 throw std::runtime_error(
                     "scenario '" + definition.id +
                     "' references missing start handler '" +
-                    definition.start_handler + "'" );
+                    *definition.start_handler + "'" );
             }
-            if( definition.name.empty() ||
+            if( !definition.inherits.empty() && check_engine_state &&
+                scenario_ids.count( definition.inherits ) == 0 &&
+                !string_id<scenario>( definition.inherits ).is_valid() ) {
+                throw std::runtime_error( "scenario '" + definition.id +
+                                          "' inherits an unavailable scenario '" + definition.inherits + "'" );
+            }
+            const auto native_int = []( const std::optional<std::int64_t> &value ) {
+                return !value || ( *value >= std::numeric_limits<int>::min() &&
+                                  *value <= std::numeric_limits<int>::max() );
+            };
+            if( !native_int( definition.points ) ||
+                !native_int( definition.distance_initial_visibility ) ) {
+                throw std::runtime_error( "scenario '" + definition.id +
+                                          "' has a value outside the native integer range" );
+            }
+            if( ( definition.name && definition.name->empty() ) ||
+                ( definition.female_name && definition.female_name->empty() ) ||
                 !scenario_ids.insert( definition.id ).second ) {
                 // An empty start_name is a deliberate legacy value (e.g.
                 // defense_mode_fortified renders no start label).
@@ -7269,18 +7347,18 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown trait '" + trait + "'" );
                 }
             }
-            if( !definition.map_extra.empty() &&
-                map_extra_ids.count( definition.map_extra ) == 0 &&
-                !map_extra_id( definition.map_extra ).is_valid() ) {
+            if( definition.map_extra && !definition.map_extra->empty() &&
+                map_extra_ids.count( *definition.map_extra ) == 0 &&
+                !map_extra_id( *definition.map_extra ).is_valid() ) {
                 throw std::runtime_error( "scenario '" + definition.id +
                                           "' references unknown map extra '" +
-                                          definition.map_extra + "'" );
+                                          *definition.map_extra + "'" );
             }
-            if( !definition.requirement.empty() &&
-                !achievement_id( definition.requirement ).is_valid() ) {
+            if( definition.requirement && !definition.requirement->empty() &&
+                !achievement_id( *definition.requirement ).is_valid() ) {
                 throw std::runtime_error( "scenario '" + definition.id +
                                           "' references unknown achievement '" +
-                                          definition.requirement + "'" );
+                                          *definition.requirement + "'" );
             }
             validate_operation(
                 entry.operation, string_id<scenario>( definition.id ).is_valid(),
@@ -9110,51 +9188,106 @@ bool content_transaction::apply( std::string &error )
                 id, id.is_valid() ? std::optional<scenario>( id.obj() ) :
                 std::nullopt );
             const scenario_definition_data &source = *entry.definition;
-            scenario native;
-            // Use the same option-dependent calendar defaults as a fresh JSON scenario.
-            native.initialize_default_calendar();
+            scenario native = source.inherits.empty() ? scenario() :
+                              string_id<scenario>( source.inherits ).obj();
+            if( source.inherits.empty() ) {
+                native.initialize_default_calendar();
+                native._name_male = no_translation( source.id );
+                native._name_female = native._name_male;
+                native.distance_initial_visibility = 15;
+                native._map_extra = map_extra_id::NULL_ID();
+            }
+            if( !native._eoc.empty() && !source.start_handler ) {
+                throw std::runtime_error( "scenario '" + source.id +
+                                          "' must replace inherited legacy startup behavior with on_start" );
+            }
+            native._eoc.clear();
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native._name_male = source.name.native();
-            native._name_female = source.name.native();
-            native._description_male = source.description.native();
-            native._description_female = source.description.native();
-            native._start_name = source.start_name.native();
-            native._point_cost = static_cast<int>( source.points );
-            native.blacklist = source.blacklist;
-            native.extra_professions = source.extra_professions;
-            native.reveal_locale = source.reveal_locale;
-            native.hard_requirement = source.hard_requirement;
-            native.distance_initial_visibility =
-                static_cast<int>( source.distance_initial_visibility );
-            native._map_extra = source.map_extra.empty() ?
-                                map_extra_id::NULL_ID() : map_extra_id( source.map_extra );
+            if( source.name ) {
+                native._name_male = source.name->native();
+                native._name_female = native._name_male;
+            }
+            if( source.female_name ) {
+                native._name_female = source.female_name->native();
+            }
+            if( source.description ) {
+                native._description_male = source.description->native();
+                native._description_female = native._description_male;
+            }
+            if( source.female_description ) {
+                native._description_female = source.female_description->native();
+            }
+            if( source.start_name ) {
+                native._start_name = source.start_name->native();
+            }
+            const auto assign = []( auto &target, const auto &value ) {
+                if( value ) {
+                    target = static_cast<std::decay_t<decltype( target )>>( *value );
+                }
+            };
+            assign( native._point_cost, source.points );
+            assign( native.blacklist, source.blacklist );
+            assign( native.extra_professions, source.extra_professions );
+            assign( native.reveal_locale, source.reveal_locale );
+            assign( native.hard_requirement, source.hard_requirement );
+            assign( native.distance_initial_visibility, source.distance_initial_visibility );
+            if( source.map_extra ) {
+                native._map_extra = source.map_extra->empty() ?
+                                    map_extra_id::NULL_ID() : map_extra_id( *source.map_extra );
+            }
+            if( source.has_locations ) {
+                native._allowed_locs.clear();
+            }
             for( const std::string &location : source.locations ) {
                 native._allowed_locs.push_back( start_location_id( location ) );
+            }
+            if( source.has_professions ) {
+                native.professions.clear();
             }
             for( const std::string &profession : source.professions ) {
                 native.professions.push_back( profession_id( profession ) );
             }
+            if( source.has_allowed_traits ) {
+                native._allowed_traits.clear();
+            }
             for( const std::string &trait : source.allowed_traits ) {
                 native._allowed_traits.insert( trait_id( trait ) );
+            }
+            if( source.has_forced_traits ) {
+                native._forced_traits.clear();
             }
             for( const std::string &trait : source.forced_traits ) {
                 native._forced_traits.insert( trait_id( trait ) );
             }
+            if( source.has_forbidden_traits ) {
+                native._forbidden_traits.clear();
+            }
             for( const std::string &trait : source.forbidden_traits ) {
                 native._forbidden_traits.insert( trait_id( trait ) );
+            }
+            if( source.has_flags ) {
+                native.flags.clear();
             }
             for( const std::string &flag : source.flags ) {
                 native.flags.insert( flag );
             }
-            if( !source.requirement.empty() ) {
-                native._requirement = achievement_id( source.requirement );
+            if( source.requirement ) {
+                native._requirement = source.requirement->empty() ? std::nullopt :
+                                      std::optional<achievement_id>( achievement_id( *source.requirement ) );
             }
-            if( !source.start_handler.empty() ) {
-                native.lua_platform_mod = pimpl_->owner;
-                native.lua_platform_start_handler = source.start_handler;
+            if( source.start_handler ) {
+                native.lua_platform_mod = source.start_handler->empty() ? std::string() : pimpl_->owner;
+                native.lua_platform_start_handler = *source.start_handler;
             }
+            if( native._allowed_locs.empty() ||
+                ( native.hard_requirement && !native._requirement ) ) {
+                throw std::runtime_error( "scenario '" + source.id +
+                                          "' requires starting locations and a requirement for hard_requirement" );
+            }
+            native.cached_permitted_professions.clear();
+            native.cached_permitted_hobbies.clear();
             detail::scenario_registry().insert( native );
         }
         if( !pimpl_->scenarios.empty() ) {
@@ -11124,42 +11257,63 @@ std::string content_transaction::fingerprint() const
         hash_part( state, operation_name( entry.operation ) );
         const scenario_definition_data &value = *entry.definition;
         hash_part( state, value.id );
-        hash_part( state, value.name );
-        hash_part( state, value.description );
-        hash_part( state, value.start_name );
-        hash_part( state, std::to_string( value.points ) );
-        hash_part( state, value.blacklist ? "blacklist" : "whitelist" );
-        hash_part( state, value.extra_professions ? "extra" : "exclusive" );
-        hash_part( state, value.reveal_locale ? "reveal" : "hidden" );
-        hash_part( state, value.hard_requirement ? "hard" : "soft" );
-        hash_part( state, std::to_string( value.distance_initial_visibility ) );
+        hash_part( state, value.inherits );
+        const auto hash_text = [&]( const auto &text ) {
+            hash_part( state, text ? "set" : "inherit" );
+            if( text ) {
+                hash_part( state, *text );
+            }
+        };
+        const auto hash_number = [&]( const auto &number ) {
+            hash_part( state, number ? "set" : "inherit" );
+            if( number ) {
+                hash_part( state, std::to_string( *number ) );
+            }
+        };
+        hash_text( value.name );
+        hash_text( value.female_name );
+        hash_text( value.description );
+        hash_text( value.female_description );
+        hash_text( value.start_name );
+        hash_number( value.points );
+        hash_number( value.blacklist );
+        hash_number( value.extra_professions );
+        hash_number( value.reveal_locale );
+        hash_number( value.hard_requirement );
+        hash_number( value.distance_initial_visibility );
+        hash_part( state, value.has_locations ? "set_locations" : "inherit_locations" );
         for( const std::string &location : value.locations ) {
             hash_part( state, "location" );
             hash_part( state, location );
         }
+        hash_part( state, value.has_professions ? "set_professions" : "inherit_professions" );
         for( const std::string &profession : value.professions ) {
             hash_part( state, "profession" );
             hash_part( state, profession );
         }
+        hash_part( state, value.has_allowed_traits ? "set_allowed_traits" : "inherit_allowed_traits" );
         for( const std::string &trait : value.allowed_traits ) {
             hash_part( state, "allowed_trait" );
             hash_part( state, trait );
         }
+        hash_part( state, value.has_forced_traits ? "set_forced_traits" : "inherit_forced_traits" );
         for( const std::string &trait : value.forced_traits ) {
             hash_part( state, "forced_trait" );
             hash_part( state, trait );
         }
+        hash_part( state, value.has_forbidden_traits ? "set_forbidden_traits" : "inherit_forbidden_traits" );
         for( const std::string &trait : value.forbidden_traits ) {
             hash_part( state, "forbidden_trait" );
             hash_part( state, trait );
         }
+        hash_part( state, value.has_flags ? "set_flags" : "inherit_flags" );
         for( const std::string &flag : value.flags ) {
             hash_part( state, "flag" );
             hash_part( state, flag );
         }
-        hash_part( state, value.map_extra );
-        hash_part( state, value.requirement );
-        hash_part( state, value.start_handler );
+        hash_text( value.map_extra );
+        hash_text( value.requirement );
+        hash_text( value.start_handler );
     }
     pimpl_->character.append_fingerprint(
         character_content_fingerprint_phase::profession_group, state );
