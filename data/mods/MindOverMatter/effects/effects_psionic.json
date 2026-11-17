@@ -464,31 +464,7 @@
         },
         "ench_effects": [ { "effect": "effect_clair_better_senses_safecracking", "intensity": 1 } ]
       },
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_any_effect": [ "hallu", "datura", "taint", "hallucination_attacks", "visuals", "fearparalyze" ] } },
-            {
-              "or": [
-                { "u_has_flag": "BLIND" },
-                { "u_has_effect": "blind" },
-                { "u_is_in_field": "fd_smoke" },
-                {
-                  "math": [
-                    "( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) * psionic_power_modifiers() ) >= 15"
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        "special_vision": [
-          {
-            "distance": 2,
-            "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense something moving here." } ]
-          }
-        ]
-      },
+      "INLINE_ENCH_effect_clair_better_senses_4",
       {
         "condition": {
           "or": [
@@ -669,20 +645,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [
-                { "and": [ { "not": "npc_is_character" }, { "math": [ "n_val('anger') >= 10" ] } ] },
-                { "and": [ "npc_is_character", "npc_hostile" ] }
-              ]
-            },
-            "distance": { "math": [ "( u_spell_level('clair_sense_hostile_creatures') * 2) * psionic_power_modifiers()" ] },
-            "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense a danger here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_clair_sense_hostile_creatures_0"
     ]
   },
   {
@@ -836,27 +799,7 @@
     "max_duration": "7 days",
     "max_intensity": 83,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "special_vision": [
-          {
-            "condition": { "test_eoc": "EOC_IS_ELECTRIC" },
-            "distance": {
-              "math": [
-                "( ( ( u_spell_level('electrokinetic_see_electric') + u_spell_level('electrokinetic_see_electric_knack') ) * 1.5) + 6 ) * psionic_power_modifiers()"
-              ]
-            },
-            "descriptions": [
-              {
-                "id": "electric_creature_sense",
-                "symbol": "?",
-                "color": "c_cyan",
-                "text": "You sense something emitting electricity here."
-              }
-            ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_electrokin_see_electricity_0"
     ]
   },
   {
@@ -1635,20 +1578,7 @@
     "max_duration": "7 days",
     "max_intensity": 50,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "special_vision": [
-          {
-            "condition": { "test_eoc": "EOC_CONDITION_HAS_MIND" },
-            "distance": {
-              "math": [
-                "( ( (u_spell_level('telepathic_mind_sense') + u_spell_level('telepathic_mind_sense_knack') ) * 2) ) * psionic_power_modifiers()"
-              ]
-            },
-            "descriptions": [ { "id": "sense_minds", "symbol": "?", "color": "c_white", "text": "You sense something sapient here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_telepath_sense_minds_0"
     ]
   },
   {
