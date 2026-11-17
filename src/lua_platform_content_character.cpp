@@ -95,7 +95,7 @@ using detail::read_singular_text;
 
 using detail::invoke_enchantment_condition_handler;
 using detail::invoke_enchantment_number_handler;
-using detail::enchantment_activation_inputs;
+using detail::enchantment_character_inputs;
 using detail::invoke_mission_condition_handler;
 using detail::invoke_mission_deadline_handler;
 using detail::invoke_mission_phase_handler;
@@ -438,7 +438,7 @@ struct enchantment_definition_data {
     std::string has = "HELD";
     std::string condition = "ALWAYS";
     std::string condition_handler;
-    std::optional<enchantment_activation_inputs> load_activation_inputs;
+    std::optional<enchantment_character_inputs> load_character_inputs;
     std::string emitter;
     std::vector<std::pair<std::string, std::int64_t>> effects;
     std::vector<std::pair<std::string, std::string>> modified_bodyparts;
@@ -2457,7 +2457,7 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
         definition->condition_handler = options.get_or(
                                             "condition_handler", std::string() );
         if( const sol::optional<sol::table> activation = options.get<sol::optional<sol::table>>(
-                    "load_activation_inputs" ) ) {
+                    "load_character_inputs" ) ) {
             const auto ids = [&]( const char *field ) {
                 std::vector<std::string> result;
                 if( const auto list = activation->get<sol::optional<sol::table>>( field ) ) {
@@ -2468,8 +2468,12 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 }
                 return result;
             };
-            definition->load_activation_inputs = enchantment_activation_inputs{
-                ids( "effects" ), ids( "traits" ), ids( "worn_items" ), ids( "worn_flags" )
+            definition->load_character_inputs = enchantment_character_inputs{
+                ids( "effects" ), ids( "traits" ), ids( "worn_items" ), ids( "worn_flags" ),
+                ids( "wielded_flags" ), ids( "effect_intensities" ),
+                activation->get_or( "armed", false ), activation->get_or( "pain", false ),
+                activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
+                activation->get_or( "radiation", false )
             };
         }
         definition->emitter = options.get_or( "emitter", std::string() );
@@ -4167,14 +4171,19 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "enchantment '" + definition.id +
                                           "' has a Lua condition handler but no dynamic condition" );
             }
-            if( definition.load_activation_inputs ) {
-                if( definition.condition_handler.empty() ) {
-                    throw std::runtime_error( "enchantment load_activation_inputs requires a condition handler" );
+            if( definition.load_character_inputs ) {
+                const bool has_numeric_handler = std::any_of( definition.modifiers.begin(),
+                definition.modifiers.end(), []( const enchantment_modifier_definition_data & modifier ) {
+                    return !modifier.add_handler.empty() || !modifier.multiply_handler.empty();
+                } );
+                if( definition.condition_handler.empty() && !has_numeric_handler ) {
+                    throw std::runtime_error( "enchantment load_character_inputs requires a condition or numeric handler" );
                 }
-                const enchantment_activation_inputs &inputs = *definition.load_activation_inputs;
-                for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags } ) {
+                const enchantment_character_inputs &inputs = *definition.load_character_inputs;
+                for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags,
+                                        &inputs.wielded_flags, &inputs.effect_intensities } ) {
                     for( const std::string &id : *ids ) {
-                        require_valid_id( id, "enchantment activation input" );
+                        require_valid_id( id, "enchantment character input" );
                     }
                 }
             }
@@ -6057,11 +6066,11 @@ void character_content_transaction::impl::apply_enchantment()
             const std::string enchantment_name = source.id;
             const std::string handler = source.condition_handler;
             native.dialog_condition = [owner, enchantment_name, handler,
-                                           load_activation_inputs = source.load_activation_inputs](
+                                           load_character_inputs = source.load_character_inputs](
                                            const const_dialogue & dialogue ) {
                 return invoke_enchantment_condition_handler(
                            owner, enchantment_name, "activation", std::string_view(),
-                           handler, dialogue, load_activation_inputs ).value_or( false );
+                           handler, dialogue, load_character_inputs ).value_or( false );
             };
         }
         if( !source.emitter.empty() ) {
@@ -6157,11 +6166,12 @@ void character_content_transaction::impl::apply_enchantment()
                     const std::string target = modifier.target;
                     const std::string part = modifier.part;
                     value.add = [owner, enchantment_name, kind, target, part, handler,
-                                 load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels](
+                                 load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels,
+                                 load_character_inputs = source.load_character_inputs](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_number_handler(
                                    owner, enchantment_name, kind + ":add", target, part,
-                                   handler, dialogue, load_skills, load_spell_levels ).value_or( 0.0 );
+                                   handler, dialogue, load_skills, load_spell_levels, load_character_inputs ).value_or( 0.0 );
                     };
                 }
                 if( !modifier.multiply_handler.empty() ) {
@@ -6170,11 +6180,12 @@ void character_content_transaction::impl::apply_enchantment()
                     const std::string target = modifier.target;
                     const std::string part = modifier.part;
                     value.multiply = [owner, enchantment_name, kind, target, part, handler,
-                                      load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels](
+                                      load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels,
+                                      load_character_inputs = source.load_character_inputs](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_number_handler(
                                    owner, enchantment_name, kind + ":multiply", target, part,
-                                   handler, dialogue, load_skills, load_spell_levels ).value_or( 0.0 );
+                                   handler, dialogue, load_skills, load_spell_levels, load_character_inputs ).value_or( 0.0 );
                     };
                 }
                 native.platform_modifiers.push_back( std::move( value ) );
@@ -7415,8 +7426,8 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.has );
                 hash_part( state, value.condition );
                 hash_part( state, value.condition_handler );
-                if( value.load_activation_inputs ) {
-                    hash_part( state, "load_activation_inputs" );
+                if( value.load_character_inputs ) {
+                    hash_part( state, "load_character_inputs" );
                     const auto hash_ids = [&]( const char *key, const std::vector<std::string> & ids ) {
                         hash_part( state, key );
                         hash_part( state, std::to_string( ids.size() ) );
@@ -7424,10 +7435,17 @@ void character_content_transaction::append_fingerprint(
                             hash_part( state, id );
                         }
                     };
-                    hash_ids( "effects", value.load_activation_inputs->effects );
-                    hash_ids( "traits", value.load_activation_inputs->traits );
-                    hash_ids( "worn_items", value.load_activation_inputs->worn_items );
-                    hash_ids( "worn_flags", value.load_activation_inputs->worn_flags );
+                    hash_ids( "effects", value.load_character_inputs->effects );
+                    hash_ids( "traits", value.load_character_inputs->traits );
+                    hash_ids( "worn_items", value.load_character_inputs->worn_items );
+                    hash_ids( "worn_flags", value.load_character_inputs->worn_flags );
+                    hash_ids( "wielded_flags", value.load_character_inputs->wielded_flags );
+                    hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
+                    hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
+                    hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
+                    hash_part( state, value.load_character_inputs->morale ? "morale" : "no_morale" );
+                    hash_part( state, value.load_character_inputs->max_mana ? "max_mana" : "no_max_mana" );
+                    hash_part( state, value.load_character_inputs->radiation ? "radiation" : "no_radiation" );
                 }
                 hash_part( state, value.emitter );
                 for( const auto &[effect, intensity] : value.effects ) {

@@ -302,24 +302,32 @@ std::optional<bool> invoke_widget_condition_handler(
 std::optional<widget_custom_handler_result> invoke_widget_custom_handler(
     std::string_view mod_id, std::string_view widget_id_value,
     std::string_view handler_id, const avatar &subject );
-struct enchantment_activation_inputs {
+struct enchantment_character_inputs {
     std::vector<std::string> effects;
     std::vector<std::string> traits;
     std::vector<std::string> worn_items;
     std::vector<std::string> worn_flags;
+    std::vector<std::string> wielded_flags;
+    std::vector<std::string> effect_intensities;
+    bool armed = false;
+    bool pain = false;
+    bool morale = false;
+    bool max_mana = false;
+    bool radiation = false;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,
     std::string_view handler_id, const const_dialogue &dialogue,
-    const std::optional<enchantment_activation_inputs> &load_activation_inputs = std::nullopt );
+    const std::optional<enchantment_character_inputs> &load_character_inputs = std::nullopt );
 std::optional<double> invoke_enchantment_number_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,
     std::string_view part, std::string_view handler_id,
     const const_dialogue &dialogue,
     const std::optional<std::vector<std::string>> &load_skills = std::nullopt,
-    const std::optional<std::vector<std::string>> &load_spell_levels = std::nullopt );
+    const std::optional<std::vector<std::string>> &load_spell_levels = std::nullopt,
+    const std::optional<enchantment_character_inputs> &load_character_inputs = std::nullopt );
 std::optional<bool> invoke_spell_condition_handler(
     std::string_view mod_id, std::string_view spell_id_value,
     std::string_view phase, std::string_view handler_id,

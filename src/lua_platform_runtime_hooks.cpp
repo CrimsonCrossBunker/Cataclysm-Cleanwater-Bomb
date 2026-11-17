@@ -740,14 +740,73 @@ static sol::table enchantment_handler_payload( runtime &owner,
     } );
 }
 
+static sol::table collect_enchantment_character_inputs( runtime &owner,
+        const const_dialogue &dialogue, const enchantment_character_inputs &requested )
+{
+    sol::table inputs = owner.lua->create_table();
+    const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
+    const auto collect = [&]( const char *key, const std::vector<std::string> &ids,
+    const auto fallback, const auto & predicate ) {
+        sol::table values = owner.lua->create_table( 0, static_cast<int>( ids.size() ) );
+        for( const std::string &id : ids ) {
+            values[id] = speaker ? predicate( *speaker, id ) : fallback;
+        }
+        inputs[key] = std::move( values );
+    };
+    const bodypart_id whole_body = bodypart_str_id::NULL_ID();
+    collect( "effects", requested.effects, false, [&]( const const_talker & actor,
+    const std::string & id ) {
+        return !actor.get_effect( efftype_id( id ), whole_body ).is_null();
+    } );
+    collect( "effect_intensities", requested.effect_intensities, -1, [&]( const const_talker & actor,
+    const std::string & id ) {
+        const effect current = actor.get_effect( efftype_id( id ), whole_body );
+        return current.is_null() ? -1 : current.get_intensity();
+    } );
+    collect( "traits", requested.traits, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.has_trait( trait_id( id ) );
+    } );
+    collect( "worn_items", requested.worn_items, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.is_wearing( itype_id( id ) );
+    } );
+    collect( "worn_flags", requested.worn_flags, false, [&]( const const_talker & actor,
+    const std::string & id ) {
+        return actor.worn_with_flag( flag_id( id ), whole_body );
+    } );
+    collect( "wielded_flags", requested.wielded_flags, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.wielded_with_flag( flag_id( id ) );
+    } );
+    if( speaker ) {
+        if( requested.armed ) {
+            inputs["armed"] = !speaker->unarmed_attack();
+        }
+        if( requested.pain ) {
+            inputs["pain"] = speaker->pain_cur();
+        }
+        if( requested.morale ) {
+            inputs["morale"] = speaker->morale_cur();
+        }
+        if( requested.max_mana ) {
+            inputs["max_mana"] = speaker->mana_max();
+        }
+        if( requested.radiation ) {
+            inputs["radiation"] = speaker->get_rad();
+        }
+    }
+    return inputs;
+}
+
 std::optional<bool> invoke_enchantment_condition_handler(
     const std::string_view mod_id, const std::string_view enchantment,
     const std::string_view scope, const std::string_view target,
     const std::string_view handler_id, const const_dialogue &dialogue,
-    const std::optional<enchantment_activation_inputs> &load_activation_inputs )
+    const std::optional<enchantment_character_inputs> &load_character_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || ( !owner->world_is_ready && !load_activation_inputs ) ) {
+    if( !owner || ( !owner->world_is_ready && !load_character_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -759,35 +818,9 @@ std::optional<bool> invoke_enchantment_condition_handler(
     sol::table payload = enchantment_handler_payload(
                              *owner, dialogue, enchantment, scope, target, std::string_view(),
                              owner->world_is_ready );
-    if( load_activation_inputs ) {
-        sol::table inputs = owner->lua->create_table();
-        const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
-        const auto collect = [&]( const char *key, const std::vector<std::string> & ids,
-        const auto & predicate ) {
-            sol::table values = owner->lua->create_table( 0, static_cast<int>( ids.size() ) );
-            for( const std::string &id : ids ) {
-                values[id] = speaker && predicate( *speaker, id );
-            }
-            inputs[key] = std::move( values );
-        };
-        const bodypart_id whole_body = bodypart_str_id::NULL_ID();
-        collect( "effects", load_activation_inputs->effects, [&]( const const_talker & actor,
-        const std::string & id ) {
-            return !actor.get_effect( efftype_id( id ), whole_body ).is_null();
-        } );
-        collect( "traits", load_activation_inputs->traits, []( const const_talker & actor,
-        const std::string & id ) {
-            return actor.has_trait( trait_id( id ) );
-        } );
-        collect( "worn_items", load_activation_inputs->worn_items, []( const const_talker & actor,
-        const std::string & id ) {
-            return actor.is_wearing( itype_id( id ) );
-        } );
-        collect( "worn_flags", load_activation_inputs->worn_flags, [&]( const const_talker & actor,
-        const std::string & id ) {
-            return actor.worn_with_flag( flag_id( id ), whole_body );
-        } );
-        payload["activation_inputs"] = std::move( inputs );
+    if( load_character_inputs ) {
+        payload["character_inputs"] = collect_enchantment_character_inputs( *owner, dialogue,
+                                      *load_character_inputs );
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
@@ -811,10 +844,11 @@ std::optional<double> invoke_enchantment_number_handler(
     const std::string_view part, const std::string_view handler_id,
     const const_dialogue &dialogue,
     const std::optional<std::vector<std::string>> &load_skills,
-    const std::optional<std::vector<std::string>> &load_spell_levels )
+    const std::optional<std::vector<std::string>> &load_spell_levels,
+    const std::optional<enchantment_character_inputs> &load_character_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    const bool load_inputs = load_skills || load_spell_levels;
+    const bool load_inputs = load_skills || load_spell_levels || load_character_inputs;
     if( !owner || ( !owner->world_is_ready && !load_inputs ) ) {
         return std::nullopt;
     }
@@ -845,6 +879,10 @@ std::optional<double> invoke_enchantment_number_handler(
             }
             payload["spell_levels"] = std::move( levels );
         }
+    }
+    if( load_character_inputs ) {
+        payload["character_inputs"] = collect_enchantment_character_inputs( *owner, dialogue,
+                                      *load_character_inputs );
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );

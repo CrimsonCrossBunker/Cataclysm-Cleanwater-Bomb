@@ -5231,7 +5231,7 @@ function ComputerAccessContext:remove_value(key) end
 ---@param key string
 ---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
 function ComputerAccessContext:set_value(key, value) end
----@class CcbEnchantmentNumericInputs
+---@class CcbEnchantmentNumericInputs: CcbEnchantmentCharacterContext
 ---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer } Detached current stats of the native speaker, when present.
 ---@field skills? table<string, integer> Detached effective skill levels requested via load_skills, truncated as in native dialogue.
 ---@field spell_levels? table<string, integer> Detached effective levels requested via load_spell_levels, with -1 for an unknown spell.
@@ -5425,21 +5425,41 @@ local WidgetDefinition = {}
 ---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
 
----@class CcbEnchantmentActivationInputs
+---@class CcbEnchantmentCharacterInputs
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
 ---@field traits? string[] Trait IDs queried on the condition's speaker.
 ---@field worn_items? string[] Worn item type IDs queried on the condition's speaker.
 ---@field worn_flags? string[] Flags queried on the condition's worn items.
+---@field wielded_flags? string[] Flags queried on the speaker's wielded item.
+---@field effect_intensities? string[] Whole-body effects whose intensity is requested.
+---@field armed? boolean Request whether the speaker has a weapon.
+---@field pain? boolean Request raw pain before painkiller reduction.
+---@field morale? boolean Request current morale.
+---@field max_mana? boolean Request current maximum mana.
+---@field radiation? boolean Request current radiation.
 
----@class CcbEnchantmentActivationContext
----@field activation_inputs { effects: table<string, boolean>, traits: table<string, boolean>, worn_items: table<string, boolean>, worn_flags: table<string, boolean> } Detached inputs requested by the definition.
+---@class CcbEnchantmentCharacterSnapshot
+---@field effects table<string, boolean>
+---@field traits table<string, boolean>
+---@field worn_items table<string, boolean>
+---@field worn_flags table<string, boolean>
+---@field wielded_flags table<string, boolean>
+---@field effect_intensities table<string, integer> Missing effects have intensity -1.
+---@field armed? boolean
+---@field pain? integer
+---@field morale? integer
+---@field max_mana? integer
+---@field radiation? integer
+
+---@class CcbEnchantmentCharacterContext
+---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
 ---@field speaker? GameHandle Available only after world_ready.
 
 ---@class EnchantmentDefinitionOptions
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
----@field load_activation_inputs? CcbEnchantmentActivationInputs Enables the named activation condition during save reconstruction with detached inputs.
+---@field load_character_inputs? CcbEnchantmentCharacterInputs Enables named activation and numeric callbacks during save reconstruction with detached inputs.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription
