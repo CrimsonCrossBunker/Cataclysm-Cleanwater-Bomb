@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 -- enchantment_bionic.json
 content.add(content.Enchantment { id = "ench_bio_physical_buffs", has = "WORN", condition = "ACTIVE" }
@@ -64,3 +65,23 @@ content.add(content.Enchantment { id = "enchant_pyrokin_potion", has = "HELD", c
 
 content.add(content.Enchantment { id = "enchant_teleport_potion", has = "HELD", condition = "ALWAYS" }
     :hit_you({ id = "teleport_slow_monster", self = false, level = 1, trigger_message = content.text("The air around your enemy warps slightly.") }))
+
+ccb.runtime.handler("enchantment_dangersight_detects_target", function(ctx)
+    local target = ctx.target_inputs
+    if target.character then
+        return target.hostile
+    end
+    return target.anger >= 10
+end)
+
+content.add(content.Enchantment {
+    id = "ench_bio_dangersight_eyes", has = "WORN", condition = "ACTIVE",
+}:vision {
+    distance = 25,
+    condition_handler = "enchantment_dangersight_detects_target",
+    target_inputs = { character = true, hostile = true, anger = true },
+    descriptions = { {
+        id = "moving_creature", symbol = "?", color = "c_white",
+        text = content.text("You sense a hostile target here."),
+    } },
+})
