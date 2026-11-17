@@ -26,10 +26,7 @@
     "points": 2,
     "changes_to": [ "GOODCARDIO2" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "THROW_STR", "multiply": 2 }, { "value": "THROW_DAMAGE", "multiply": 1.25 } ]
-      }
+      "INLINE_ENCH_AFS_THROWING_STRENGTH_0"
     ]
   },
   {
@@ -40,14 +37,7 @@
     "category": [ "COMBAT_BRUTE" ],
     "points": 4,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "MENDING_MODIFIER", "multiply": -0.25 },
-          { "value": "REGEN_HP", "multiply": -0.25 }
-        ]
-      }
+      "INLINE_ENCH_AFS_STRONG_0"
     ]
   },
   {
@@ -59,11 +49,7 @@
     "points": 1,
     "integrated_armor": [ "integrated_cranial_padding" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "INTELLIGENCE", "add": -2 }, { "value": "LEARNING_FOCUS", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "afs_remove_stun_biological", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_AFS_GOOD_HEAD_0"
     ]
   },
   {
@@ -75,18 +61,7 @@
     "points": 15,
     "category": [ "COMBAT_BRUTE" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "PERCEPTION", "add": 2 },
-          { "value": "SPEED", "add": 10 },
-          { "value": "THROW_STR", "multiply": 1 },
-          { "value": "METABOLISM", "multiply": 1 },
-          { "value": "THROW_DAMAGE", "multiply": 0.25 }
-        ]
-      }
+      "INLINE_ENCH_AFS_WAR_BUILD_0"
     ]
   },
   {
@@ -137,7 +112,7 @@
     "cost": 9,
     "kcal": true,
     "transform": { "target": "AFS_HYPERMETABOLISM", "msg_transform": "Your hyper-metabolism slows down.", "active": false, "moves": 0 },
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": 349 }, { "value": "REGEN_HP_AWAKE", "multiply": 0.85 } ] } ]
+    "enchantments": [ "INLINE_ENCH_AFS_HYPERMETABOLISM_active_0" ]
   },
   {
     "type": "effect_on_condition",
@@ -156,7 +131,7 @@
     "name": { "str": "Accelerated Hematopoiesis" },
     "description": "Your body produces blood at a prodigious rate, allowing you to recover from injuries that would be fatal to any ordinary human.",
     "points": 15,
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_AFS_FAST_BLOOD_PRODUCTION_0" ],
     "threshreq": [ "THRESH_COMBAT_BRUTE" ],
     "category": [ "COMBAT_BRUTE" ]
   },
@@ -169,20 +144,7 @@
     "points": 15,
     "category": [ "COMBAT_BRUTE" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod_post_absorbed": [
-          { "type": "bash", "multiply": -0.25 },
-          { "type": "cut", "multiply": -0.25 },
-          { "type": "bullet", "multiply": -0.5 },
-          { "type": "pierce", "multiply": -0.5 },
-          { "type": "afs_laser", "multiply": -0.15 },
-          { "type": "afs_plasma", "multiply": -0.15 },
-          { "type": "afs_toxin_bullet", "multiply": -0.5 },
-          { "type": "afs_toxin_pierce", "multiply": -0.5 },
-          { "type": "psi_telekinetic_damage", "multiply": -0.15 }
-        ]
-      }
+      "INLINE_ENCH_AFS_REDUNDANT_ORGANS_0"
     ]
   }
 ]

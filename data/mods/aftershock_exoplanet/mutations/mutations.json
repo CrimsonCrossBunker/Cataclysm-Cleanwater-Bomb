@@ -133,7 +133,7 @@
     "points": 1,
     "visibility": 8,
     "ugliness": 5,
-    "enchantments": [ { "values": [ { "value": "CONSUME_TIME_MOD", "multiply": -0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_FACIAL_TENTACLES_0" ],
     "description": "A set of tentacles surrounds your mouth.  They allow you to eat twice as fast.  Slightly decreases wet penalties.",
     "types": [ "MUZZLE" ],
     "prereqs": [ "MOUTH_TENDRILS" ],
@@ -243,7 +243,7 @@
     "changes_to": [ "EXPANDED_CONSCIOUSNESS" ],
     "types": [ "INT" ],
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_NEURAL_IMPROVEMENT_0" ]
   },
   {
     "type": "mutation",
@@ -255,7 +255,7 @@
     "prereqs": [ "NEURAL_IMPROVEMENT" ],
     "changes_to": [ "UPLIFTED_CONSCIOUSNESS" ],
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_EXPANDED_CONSCIOUSNESS_0" ]
   },
   {
     "type": "mutation",
@@ -269,7 +269,7 @@
     "types": [ "INT" ],
     "changes_to": [ "ALIEN_INT" ],
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_UPLIFTED_CONSCIOUSNESS_0" ]
   },
   {
     "type": "mutation",
@@ -284,7 +284,7 @@
     "category": [ "MIGO" ],
     "threshreq": [ "THRESH_YUGGOTH" ],
     "starting_trait": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ALIEN_INT_0" ]
   },
   {
     "type": "mutation",
@@ -295,7 +295,7 @@
     "types": [ "DEX" ],
     "changes_to": [ "QUICKENING" ],
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ENHANCED_REACTIONS_0" ]
   },
   {
     "type": "mutation",
@@ -307,7 +307,7 @@
     "prereqs": [ "ENHANCED_REACTIONS" ],
     "changes_to": [ "OTHERWORLDLY_GRACE" ],
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_QUICKENING_0" ]
   },
   {
     "type": "mutation",
@@ -320,7 +320,7 @@
     "threshreq": "THRESH_YUGGOTH",
     "social_modifiers": { "persuade": -10, "lie": -6 },
     "category": [ "MIGO" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_OTHERWORLDLY_GRACE_0" ]
   },
   {
     "type": "mutation",
@@ -332,7 +332,7 @@
     "category": [ "MIGO" ],
     "types": [ "STR" ],
     "social_modifiers": { "persuade": -3, "intimidate": 2 },
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_NEW_MUSCLES_0" ]
   },
   {
     "type": "mutation",
@@ -345,7 +345,7 @@
     "category": [ "MIGO" ],
     "social_modifiers": { "persuade": -3, "intimidate": 2 },
     "ugliness": 2,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUSCLE_FIBER_0" ]
   },
   {
     "type": "mutation",
@@ -357,7 +357,7 @@
     "types": [ "EARS" ],
     "category": [ "MIGO" ],
     "ugliness": 4,
-    "enchantments": [ { "values": [ { "value": "HEARING_MULT", "multiply": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MIGO_EARS_0" ]
   },
   {
     "type": "mutation",
@@ -491,7 +491,7 @@
     "description": "You are capable of carrying far more than someone with similar strength could.  Your maximum weight carried is increased by 60%.",
     "category": [ "MASTODON" ],
     "cancels": [ "BADBACK" ],
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.6 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HAULER_0" ]
   },
   {
     "type": "mutation",
@@ -574,7 +574,7 @@
     "points": 4,
     "visibility": 10,
     "ugliness": 3,
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 1.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_MASTODON_FUR_0" ],
     "description": "Your fur has grown out and thickened, providing great protection from attacks as well as considerable insulation.",
     "types": [ "SKIN" ],
     "prereqs": [ "FUR" ],
@@ -920,6 +920,6 @@
     "description": "You took the bionic skullgun out of your noggin, but that didn't replace the brain cells you lost when you installed it.",
     "valid": false,
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": -4 }, { "value": "PERCEPTION", "add": -2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SKULLGUN_STUPID_0" ]
   }
 ]

@@ -47,3 +47,5 @@ require("enchantments")
 require("enchantment_variables")
 
 require("effect_enchantments")
+
+require("mutation_enchantments")
