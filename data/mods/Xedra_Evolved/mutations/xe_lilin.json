@@ -161,10 +161,7 @@
     "purifiable": false,
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] } ] },
-        "ench_effects": [ { "effect": "effect_lilin_silent_at_night", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_SILENT_AT_NIGHT_0"
     ]
   },
   {
@@ -198,10 +195,7 @@
     "prereqs": [ "PRETTY", "BEAUTIFUL" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "SOCIAL_PERSUADE", "add": { "math": [ "12 + (12 * u_has_trait('THRESH_LILIN') )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_PERSUASION_0"
     ]
   },
   {
@@ -214,10 +208,7 @@
     "prereqs": [ "PRETTY", "BEAUTIFUL" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "SOCIAL_LIE", "add": { "math": [ "12 + (12 * u_has_trait('THRESH_LILIN') )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_LYING_0"
     ]
   },
   {
@@ -254,10 +245,7 @@
     "prereqs": [ "LILIN_ETERNAL_YOUTH" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "ench_effects": [ { "effect": "effect_lilin_steady_speed", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_STEADY_SPEED_0"
     ]
   },
   {
@@ -536,19 +524,7 @@
     "prereqs": [ "LILIN_SLEEP_EASY_DURING_DAY" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "LEARNING_FOCUS",
-            "add": {
-              "math": [
-                "5 + clamp( (u_vitamin('lilin_ruach_vitamin') / 100 ), 0, 10) + clamp( ( (u_vitamin('lilin_ruach_vitamin') - 1000) / 250 ), 0, 10) +  clamp( ( (u_vitamin('lilin_ruach_vitamin') - 3000) / 500 ), 0, 10)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_LILIN_GAIN_MORE_FOCUS_0"
     ]
   },
   {
@@ -562,10 +538,7 @@
     "prereqs2": [ "LILIN_NIGHT_VISION", "LILIN_NIGHT_VISION_UPGRADE" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "WEAKPOINT_ACCURACY", "multiply": { "math": [ "0.5 + (u_vitamin('lilin_ruach_vitamin') / 2000 )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_EASIER_WEAKPOINT_ATTACKS_0"
     ]
   },
   {
@@ -622,10 +595,7 @@
     "purifiable": false,
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": { "math": [ "15 + (u_vitamin('lilin_ruach_vitamin') / 100)" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_RESIST_COLD_0"
     ]
   },
   {
@@ -642,15 +612,7 @@
     "prereqs2": [ "LILIN_DRAIN_RUACH_DISTANCE", "LILIN_DRAIN_RUACH_LONG_DISTANCE" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "THIRST", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "METABOLISM", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "KCAL", "multiply": -0.333 }
-        ]
-      }
+      "INLINE_ENCH_LILIN_REDUCED_NEEDS_WITH_RUACH_0"
     ]
   },
   {
@@ -664,10 +626,7 @@
     "prereqs": [ "LILIN_SLEEP_EASY_DURING_DAY" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "(u_vitamin('lilin_ruach_vitamin') / 250)" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_HEALING_0"
     ]
   },
   {
@@ -817,10 +776,7 @@
     "category": [ "LILIN" ],
     "threshreq": [ "THRESH_LILIN" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "u_vitamin('lilin_ruach_vitamin') >= 1" ] } ] },
-        "ench_effects": [ { "effect": "effect_lilin_limb_score_bonuses_at_night", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_LIMB_SCORE_BONUSES_AT_NIGHT_0"
     ]
   },
   {
@@ -867,15 +823,7 @@
     "category": [ "LILIN" ],
     "threshreq": [ "THRESH_LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "THIRST", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "METABOLISM", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "KCAL", "multiply": -0.333 }
-        ]
-      }
+      "INLINE_ENCH_LILIN_REDUCED_NEEDS_WITH_RUACH_AND_KCAL_DRAIN_0"
     ]
   },
   {

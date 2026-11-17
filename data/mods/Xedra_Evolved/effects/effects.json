@@ -739,26 +739,7 @@
       "You have used up much of the power in your blood, and are slightly listless as a result.  In addition, some of your vampiric powers will not function as well, or at all, until the power returns to your blood."
     ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "HUNGER",
-            "multiply": { "math": [ "0.05 + clamp(( (u_vitamin('human_blood_vitamin') + 500) * 0.001), 0, 1)" ] }
-          },
-          {
-            "value": "THIRST",
-            "multiply": { "math": [ "0.05 + clamp(( (u_vitamin('human_blood_vitamin') + 500) * 0.001), 0, 1)" ] }
-          },
-          {
-            "value": "SLEEPINESS",
-            "multiply": { "math": [ "0.05 + clamp(( (u_vitamin('human_blood_vitamin') + 500) * 0.001), 0, 1)" ] }
-          },
-          {
-            "value": "REGEN_STAMINA",
-            "multiply": { "math": [ "-0.025 + clamp(( (u_vitamin('human_blood_vitamin') + 500) * -0.00025), -0.5, 0)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_dhampir_enervated_blood_0"
     ],
     "removes_effects": [ "withering" ]
   },
@@ -859,10 +840,7 @@
           }
         ]
       },
-      {
-        "condition": { "math": [ "u_val('strength') >= 25" ] },
-        "ench_effects": [ { "effect": "effect_xe_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_vampiric_strength_1"
     ]
   },
   {
@@ -3426,10 +3404,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "u_has_trait": "TURN_INTO_OWL_TRAITS" },
-        "values": [ { "value": "EVASION", "add": { "math": [ "0.4 + (u_vitamin('lilin_ruach_vitamin') / 18000)" ] } } ]
-      },
+      "INLINE_ENCH_effect_lilin_owl_form_pass_through_walls_0",
       "INLINE_ENCH_effect_lilin_owl_form_pass_through_walls_1"
     ]
   },

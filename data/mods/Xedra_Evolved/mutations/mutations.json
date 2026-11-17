@@ -171,38 +171,11 @@
     "mixed_effect": true,
     "vitamin_rates": [ [ "mutagen", 600 ], [ "mutagenic_slurry", 1 ] ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_trait": "DHAMPIR_WEAKNESS_SLOWER_BLOOD_GAIN" } },
-            { "not": { "u_has_effect": "effect_dhampir_the_blood_is_the_life" } },
-            { "math": [ "u_vitamin('human_blood_vitamin')", "<", "1799" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_gain", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "u_has_trait": "DHAMPIR_WEAKNESS_SLOWER_BLOOD_GAIN" },
-            { "not": { "u_has_effect": "effect_dhampir_the_blood_is_the_life" } },
-            { "math": [ "u_vitamin('human_blood_vitamin')", "<", "1799" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_gain_with_weakness", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", ">=", "1800" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_loss", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", "<", "0" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_enervated_blood", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", ">", "0" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_empowered_blood_indicator", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_DHAMPIR_TRAIT_0",
+      "INLINE_ENCH_DHAMPIR_TRAIT_1",
+      "INLINE_ENCH_DHAMPIR_TRAIT_2",
+      "INLINE_ENCH_DHAMPIR_TRAIT_3",
+      "INLINE_ENCH_DHAMPIR_TRAIT_4",
       "INLINE_ENCH_DHAMPIR_TRAIT_5"
     ],
     "//": "Dhampirs not getting Cannibal is deliberate.  The struggle over their own humanity is a core part of the dhampir theme.",
@@ -335,9 +308,7 @@
     "//": "This should prevent permanent damage from wounds, once that's possible.",
     "description": "You are only half-alive now, sustained as much by the energy in your blood as by biological processes.  You age far slower than a mortal, and when your limbs break, they heal more quickly in proportion to how much empowered blood you have.",
     "enchantments": [
-      {
-        "values": [ { "value": "MENDING_MODIFIER", "multiply": { "math": [ "max( (u_vitamin('human_blood_vitamin') / 250), 0)" ] } } ]
-      }
+      "INLINE_ENCH_DHAMPIR_MEND_WOUNDS_FASTER_0"
     ],
     "flags": [ "MEND_ALL" ]
   },
@@ -1075,41 +1046,10 @@
     "flags": [ "CANNIBAL", "DAYFEAR", "HEMOVORE", "MEND_ALL" ],
     "enchantments": [
       "INLINE_ENCH_VAMPIRE4_0",
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin') <= 0" ] },
-        "values": [ { "value": "MENDING_MODIFIER", "multiply": -1 }, { "value": "REGEN_HP", "multiply": -1 } ]
-      },
-      {
-        "condition": {
-          "and": [ { "math": [ "u_vitamin('human_blood_vitamin') > 0" ] }, { "math": [ "u_vitamin('human_blood_vitamin') < 1800" ] } ]
-        },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "5 + (u_vitamin('human_blood_vitamin') / 300)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 2 }
-        ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_vitamin('human_blood_vitamin') >= 1800" ] },
-            { "math": [ "u_vitamin('human_blood_vitamin') < 4400" ] }
-          ]
-        },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "11 + ((u_vitamin('human_blood_vitamin') - 1800 ) / 325)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 6 }
-        ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin') >= 4400" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "19 + ((u_vitamin('human_blood_vitamin') - 4400 ) / 600)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 12 }
-        ]
-      },
+      "INLINE_ENCH_VAMPIRE4_1",
+      "INLINE_ENCH_VAMPIRE4_2",
+      "INLINE_ENCH_VAMPIRE4_3",
+      "INLINE_ENCH_VAMPIRE4_4",
       "INLINE_ENCH_VAMPIRE4_5",
       {
         "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
