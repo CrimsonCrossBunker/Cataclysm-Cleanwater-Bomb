@@ -150,3 +150,5 @@ definition:entry("mon_zoose")
 content.add(definition)
 
 require("requirements")
+
+require("weather_generators")

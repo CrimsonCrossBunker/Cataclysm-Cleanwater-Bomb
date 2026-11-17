@@ -22,26 +22,6 @@
     "noise_threshold_forest_thick": 0.2
   },
   {
-    "type": "weather_generator",
-    "id": "default",
-    "copy-from": "default",
-    "base_temperature": 16.0,
-    "base_humidity": 83.5,
-    "base_pressure": 1010.0,
-    "base_wind": 6.0,
-    "base_wind_distrib_peaks": 30,
-    "base_wind_season_variation": 0,
-    "spring_temp_manual_mod": 5,
-    "summer_temp_manual_mod": 0,
-    "autumn_temp_manual_mod": 3,
-    "winter_temp_manual_mod": 5,
-    "spring_humidity_manual_mod": 5,
-    "summer_humidity_manual_mod": 20,
-    "autumn_humidity_manual_mod": 20,
-    "winter_humidity_manual_mod": 0,
-    "weather_black_list": [ "flurries", "snowing", "snowstorm" ]
-  },
-  {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover",
     "ter_id": "t_region_groundcover",
