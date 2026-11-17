@@ -24,12 +24,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CONDITIONS_VAMPIRE_DRINK_BLOOD_WITH_FANGS_MOM",
-    "condition": { "math": [ "0 == 1" ] },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CONDITIONS_WEREWOLF_HUNT_TARGETS",
     "condition": {
       "or": [

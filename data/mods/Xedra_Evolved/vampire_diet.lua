@@ -237,11 +237,7 @@ local function receive_living_blood(character)
     end
 end
 
-local function drink_from_donor(character, donor, cooldown_days)
-    if has_trait(donor, "FAE_CREATURE") then
-        set_number(character, fae_blood, 1)
-    end
-    receive_living_blood(character)
+local function give_feeding_calories(character, donor)
     if has_trait(character, "DHAMPIR_TRAIT") then
         local calories = 300 + random.native_int(0, 150)
         value(services.needs.modify_calories(character, calories, true))
@@ -254,6 +250,14 @@ local function drink_from_donor(character, donor, cooldown_days)
             message(character, expanded, "debug")
         end
     end
+end
+
+local function drink_from_donor(character, donor, cooldown_days)
+    if has_trait(donor, "FAE_CREATURE") then
+        set_number(character, fae_blood, 1)
+    end
+    receive_living_blood(character)
+    give_feeding_calories(character, donor)
     value(services.effects.add(donor, id("effect", "feed_from_recently"), duration(cooldown_days, "day")))
     change_vitamin(donor, "blood", -400 - random.native_int(0, 100))
     change_vitamin(donor, "redcells", -400 - random.native_int(0, 100))
@@ -363,3 +367,149 @@ ccb.runtime.handler("interrupt_blood_feeding", function(event)
     end
 end, 1)
 ccb.runtime.on("game:character_finished_activity", "interrupt_blood_feeding")
+
+local function add_effect(character, effect, turns)
+    value(services.effects.add(character, id("effect", effect), duration(turns, "turn")))
+end
+
+local function has_species(creature, species)
+    local species_id = id("species", species)
+    return species_id:is_valid() and value(services.creatures.has_species(creature, species_id))
+end
+
+local function is_incapacitated(target)
+    for _, effect in ipairs({ "stunned", "dazed", "sleep", "effect_vampire_hypnotism", "effect_vampire_blood_drinking_target" }) do
+        if has_effect(target, effect) then
+            return true
+        end
+    end
+    return ccb.content.is_mod_active("mindovermatter") and has_effect(target, "psi_stunned")
+end
+
+local function handle_holy_symbol(caster, target)
+    local ward = id("json_flag", "WARDING_SYMBOL")
+    if value(services.inventory.has_worn_flag(target, ward)) and has_trait(caster, "VAMPIRE_WEAKNESS_HOLY_BURN") then
+        message(caster, ccb.services.translate("The holy symbol they wear burns you!"), "bad")
+        value(services.needs.modify_raw_pain(caster, math.floor(random.native_float(10, 15))))
+    end
+end
+
+local combat_reward = "finish_combat_blood_feeding"
+ccb.runtime.handler(combat_reward, function(payload)
+    local character = payload.character
+    if has_effect(character, "effect_vampire_blood_drinking") then
+        receive_living_blood(character)
+        give_feeding_calories(character)
+        message(character, ccb.services.translate("You drink some blood."), "good")
+    end
+end, 1)
+
+local function begin_combat_drinking(caster, target)
+    add_effect(target, "effect_vampire_blood_drinking_target", math.floor(random.native_float(3, 4)))
+    add_effect(target, "dazed", math.floor(random.native_float(3, 4)))
+    add_effect(caster, "effect_vampire_blood_drinking", 4)
+    value(services.activities.assign_timed(caster, id("activity", feeding_activity), duration(3, "turn")))
+end
+
+local disgusting_species = { "MIGO", "ZOMBIE", "HORROR", "INSECT", "INSECT_FLYING",
+    "CENTIPEDE", "SPIDER", "MOLLUSK", "WORM" }
+
+ccb.runtime.handler("combat_blood_feeding", function(payload)
+    local caster = payload.caster
+    local target = payload.target_creature
+    if not target then
+        return
+    end
+    if not is_incapacitated(target) then
+        message(caster, ccb.services.translate("You can only drink blood from an incapacitated or sleeping target."), "bad")
+        return
+    end
+
+    local is_npc = target.subtype == "npc"
+    local is_character = is_npc or target.subtype == "avatar"
+    local is_fae = is_character and has_trait(target, "FAE_CREATURE")
+    local is_vampire = is_character and has_trait(target, "VAMPIRE")
+    local is_saint = is_character and has_trait(target, "BLOOD_OF_SAINTS")
+    if is_npc and not is_fae and not is_vampire and not is_saint then
+        ccb.tasks.after_character_turn(caster, 2, combat_reward)
+        change_vitamin(target, "blood", -750 - random.native_int(0, 450))
+        change_vitamin(target, "redcells", -750 - random.native_int(0, 450))
+        value(services.npcs.modify_opinion(target, {
+            value = -2 - random.native_int(0, 2),
+            trust = -2 - random.native_int(0, 2),
+            fear = 2 + random.native_int(0, 2),
+            anger = 2 + random.native_int(0, 2),
+        }))
+        begin_combat_drinking(caster, target)
+        services.messages.add(ccb.services.translate("You are drinking from an NPC."), "debug")
+        handle_holy_symbol(caster, target)
+        if value(services.needs.get_vitamin(target, id("vitamin", "blood"))) <= -40000 or
+            value(services.needs.get_vitamin(target, id("vitamin", "redcells"))) <= -40000 then
+            value(services.characters.die(target))
+        end
+        return
+    end
+
+    local human = has_species(target, "HUMAN")
+    local zombie = has_species(target, "ZOMBIE")
+    local vampire_species = has_species(target, "VAMPIRE")
+    local feral = has_species(target, "FERAL")
+    local renfield = has_species(target, "RENFIELD")
+    local changeling = has_species(target, "CHANGELING")
+    local homullus = has_species(target, "HOMULLUS")
+    if not is_vampire and not is_saint and
+        ((human and not zombie and not vampire_species) or feral or renfield or
+            (changeling and not zombie) or homullus or is_fae) then
+        if changeling or homullus or is_fae then
+            set_number(caster, fae_blood, 1)
+        end
+        if is_npc then
+            handle_holy_symbol(caster, target)
+        end
+        ccb.tasks.after_character_turn(caster, 2, combat_reward)
+        add_effect(target, "effect_vampire_drunk_from_in_combat", 48 * 60 * 60)
+        begin_combat_drinking(caster, target)
+        services.messages.add(ccb.services.translate("You are drinking from a human-type monster."), "debug")
+    elseif not is_npc and (not human or zombie or vampire_species) and
+        not feral and not changeling and not renfield and not homullus and not is_fae then
+        if vampire_species then
+            message(caster, ccb.services.translate("The vampire's blood refuses to leave its veins, no matter how hard you try to drain it."), "bad")
+        else
+            message(caster, ccb.services.translate("You get a taste of blood but stop drinking when you realize it cannot sustain you."), "bad")
+        end
+        services.messages.add(ccb.services.translate("You are drinking from an inhuman monster."), "debug")
+        for _, species in ipairs(disgusting_species) do
+            if has_species(target, species) then
+                message(caster, ccb.services.translate("…and it tastes absolutely disgusting!"), "bad")
+                change_vitamin(caster, "bad_food", math.floor(random.native_float(10, 15)))
+                break
+            end
+        end
+    else
+        if is_vampire then
+            message(caster, ccb.services.translate("The vampire's blood refuses to leave its veins, no matter how hard you try to drain it."), "bad")
+        end
+        if is_saint then
+            message(caster, ccb.services.translate("This blood is the foulest thing you ever tasted!"), "bad")
+            change_vitamin(caster, "bad_food", math.floor(random.native_float(20, 25)))
+        end
+    end
+end, 1)
+
+ccb.content.add(ccb.content.Spell {
+    id = "vampire_drink_blood_with_fangs_spell",
+    name = ccb.content.text("Drink Blood"),
+    description = ccb.content.text("Your fangs allow you to drink blood from an incapacitated or sleeping target."),
+    message = "",
+    teachable = false,
+    magic_type = "xe_vampire_blood_powers",
+    shape = "blast",
+    valid_targets = { "ally", "hostile" },
+    flags = { "NO_HANDS", "SILENT", "NO_FAIL" },
+    skill = "deduction",
+    spell_class = "VAMPIRE_BLOOD_ARTS",
+    base_energy_cost = 0,
+    base_casting_time = 0,
+    difficulty = 1,
+    min_range = 1,
+}:lua_impact("combat_blood_feeding"))

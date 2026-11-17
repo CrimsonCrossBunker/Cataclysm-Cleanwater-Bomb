@@ -34,6 +34,7 @@
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_dialogue.h"
+#include "lua_platform_character_tasks.h"
 #include "lua_platform_hordes.h"
 #include "lua_platform_overmap.h"
 #include "lua_platform_trade.h"
@@ -1361,6 +1362,28 @@ void detail::install_runtime_state_task_api(
         result["payload"] = persistent_table( *owner.lua, task.payload );
         return result;
     };
+    tasks.set_function( "after_character_turn", [weak]( const game_handle & handle,
+    const std::int64_t turns, const std::string & handler ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->task_migration_active ) {
+            throw std::runtime_error( "Character turn tasks require an active world" );
+        }
+        if( owner->handlers.find( handler ) == owner->handlers.end() ) {
+            throw std::runtime_error( "Character turn task references missing handler '" + handler + "'" );
+        }
+        const std::int64_t now = to_turn<std::int64_t>( calendar::turn );
+        if( turns <= 0 || turns > std::numeric_limits<int>::max() - now ) {
+            throw std::invalid_argument( "Character turn task delay must be positive and fit the game calendar" );
+        }
+        std::optional<game_handle_error> error;
+        Character *actor = resolve_exact_character( handle, owner->handle_runtime(),
+                           detail::runtime_world_generation_storage(), error );
+        if( !actor ) {
+            throw std::invalid_argument( error->message );
+        }
+        queue_character_task( *actor, time_point::from_turn( static_cast<int>( now + turns ) ),
+                              owner->mod_id, handler );
+    } );
     tasks.set_function( "after", [schedule_persistent_task](
                             const std::int64_t turns,
                             const std::string & handler_id,
@@ -1643,6 +1666,29 @@ void runtime_after_save( bool success, std::string_view error )
         payload["success"] = success;
         payload["error"] = std::string( error );
         dispatch_lifecycle( *owner, "after_save", payload );
+    }
+}
+
+void invoke_character_task( Character &actor, time_point due, const std::string &mod,
+                            const std::string &handler )
+{
+    const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod );
+    if( !owner || !owner->world_is_ready ) {
+        return;
+    }
+    const auto callback = owner->handlers.find( handler );
+    if( callback == owner->handlers.end() ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Missing Lua-first Character turn task " << mod << ':' << handler;
+        return;
+    }
+    sol::table payload = owner->lua->create_table();
+    payload["character"] = platform_creature_handle( *owner, actor );
+    payload["due_turn"] = to_turn<std::int64_t>( due );
+    const sol::protected_function callable = callback->second.callback;
+    callback_scope scope( *owner, &actor );
+    const sol::protected_function_result result = callable( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler, result );
     }
 }
 

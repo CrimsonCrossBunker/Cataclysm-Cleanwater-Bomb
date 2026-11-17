@@ -1,4 +1,5 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <sstream>
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
@@ -8,8 +9,13 @@
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "item.h"
+#include "flexbuffer_json.h"
+#include "json.h"
+#include "json_loader.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
+#include "magic.h"
+#include "map_helpers.h"
 #include "math_parser_diag_value.h"
 #include "npc.h"
 #include "npc_opinion.h"
@@ -69,8 +75,10 @@ static const efftype_id effect_feed_from_recently( "feed_from_recently" );
 static const efftype_id effect_recent_vampire_drink( "effect_recent_vampire_drink" );
 static const efftype_id effect_vampire_blood_drinking( "effect_vampire_blood_drinking" );
 static const efftype_id effect_vampire_virus( "vampire_virus" );
+static const efftype_id effect_stunned( "stunned" );
+static const efftype_id effect_psi_stunned( "psi_stunned" );
 static const activity_id ACT_VAMPIRE_DRINKING_BLOOD( "ACT_VAMPIRE_DRINKING_BLOOD" );
-static const effect_on_condition_id eoc_combat_blood_reward( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" );
+static const spell_id spell_vampire_drink_blood_with_fangs( "vampire_drink_blood_with_fangs_spell" );
 static const morale_type morale_drank_blood( "morale_drank_blood" );
 static const trait_id trait_ANATHEMA_WEAKNESS_MIND_CHAOS( "ANATHEMA_WEAKNESS_MIND_CHAOS" );
 static const trait_id trait_ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD( "ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD" );
@@ -81,6 +89,7 @@ static const trait_id trait_DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD( "DHAMPIR_WEAK
 static const trait_id trait_VAMPIRE( "VAMPIRE" );
 static const trait_id trait_VAMPIRE_ANATHEMA( "VAMPIRE_ANATHEMA" );
 static const trait_id trait_VAMPIRE_DRINK_VAMPIRE_BLOOD( "VAMPIRE_DRINK_VAMPIRE_BLOOD" );
+static const trait_id trait_VAMPIRE_WEAKNESS_HOLY_BURN( "VAMPIRE_WEAKNESS_HOLY_BURN" );
 static const trait_id trait_VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD( "VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD" );
 static const vitamin_id vitamin_human_blood_vitamin( "human_blood_vitamin" );
 static const vitamin_id vitamin_drank_fae_blood( "drank_fae_blood" );
@@ -223,15 +232,45 @@ TEST_CASE( "xedra_lua_interrupts_the_queued_combat_blood_reward", "[.][mods][xed
 {
     const restore_on_out_of_scope restore_time( calendar::turn );
     const bool interrupted = GENERATE( false, true );
+    clear_map();
     clear_avatar();
+    const on_out_of_scope cleanup( [] {
+        clear_npcs();
+        clear_avatar();
+    } );
     avatar &player = get_avatar();
     cata::lua_platform::runtime_world_ready( true );
     player.set_mutation( trait_VAMPIRE );
+    player.set_mutation( trait_VAMPIRE_WEAKNESS_HOLY_BURN );
     player.vitamin_set( vitamin_human_blood_vitamin, 0 );
-    player.add_effect( effect_vampire_blood_drinking, 4_turns );
-    effect_on_conditions::queue_effect_on_condition( 2_turns, eoc_combat_blood_reward, player, {} );
-    player.assign_activity( ACT_VAMPIRE_DRINKING_BLOOD, to_moves<int>( 3_turns ) );
+    npc &donor = spawn_npc( player.pos_bub().xy() + point::east, "test_talker" );
+    donor.set_attitude( NPCATT_KILL );
+    donor.vitamin_set( vitamin_blood, 0 );
+    donor.vitamin_set( vitamin_redcells, 0 );
+    const spell fangs( spell_vampire_drink_blood_with_fangs );
+    REQUIRE( fangs.is_valid_target( player, donor.pos_bub() ) );
+    fangs.cast_all_effects( player, donor.pos_bub() );
+    CHECK_FALSE( player.has_activity( ACT_VAMPIRE_DRINKING_BLOOD ) );
+    CHECK( player.queued_effect_on_conditions.empty() );
+
+    const itype_id holy_symbol( "holy_symbol" );
+    REQUIRE( donor.wear_item( item( holy_symbol ), false ) );
+    donor.add_effect( effect_psi_stunned.is_valid() ? effect_psi_stunned : effect_stunned, 10_turns );
+    const int pain_before = player.get_pain();
+    const npc_opinion opinion_before = donor.op_of_u;
+    fangs.cast_all_effects( player, donor.pos_bub() );
     REQUIRE( player.has_activity( ACT_VAMPIRE_DRINKING_BLOOD ) );
+    REQUIRE_FALSE( player.queued_effect_on_conditions.empty() );
+    CHECK( player.queued_effect_on_conditions.top().time == calendar::turn + 2_turns );
+    CHECK( donor.vitamin_get( vitamin_blood ) <= -750 );
+    CHECK( donor.vitamin_get( vitamin_blood ) >= -1200 );
+    CHECK( donor.vitamin_get( vitamin_redcells ) <= -750 );
+    CHECK( donor.vitamin_get( vitamin_redcells ) >= -1200 );
+    CHECK( donor.op_of_u.trust <= opinion_before.trust - 2 );
+    CHECK( donor.op_of_u.fear >= opinion_before.fear + 2 );
+    CHECK( player.get_pain() >= pain_before + 10 );
+    CHECK( player.get_pain() <= pain_before + 14 );
+    CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == 0 );
 
     if( interrupted ) {
         player.cancel_activity();
@@ -245,6 +284,42 @@ TEST_CASE( "xedra_lua_interrupts_the_queued_combat_blood_reward", "[.][mods][xed
     const int blood = player.vitamin_get( vitamin_human_blood_vitamin );
     CHECK( blood >= ( interrupted ? 0 : 400 ) );
     CHECK( blood <= ( interrupted ? 0 : 500 ) );
+}
+
+TEST_CASE( "xedra_lua_restores_a_saved_combat_blood_reward", "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [] {
+        clear_avatar();
+    } );
     clear_avatar();
+    avatar &player = get_avatar();
+    cata::lua_platform::runtime_world_ready( true );
+    player.set_mutation( trait_VAMPIRE );
+    player.vitamin_set( vitamin_human_blood_vitamin, 0 );
+    player.add_effect( effect_vampire_blood_drinking, 4_turns );
+    const time_point due = calendar::turn + 2_turns;
+    player.queued_effect_on_conditions.push( {
+        effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ), due, {}
+    } );
+
+    std::ostringstream buffer;
+    JsonOut json( buffer );
+    player.serialize( json );
+    player.queued_effect_on_conditions = queued_eocs();
+    player.setID( character_id(), true );
+    player.deserialize( json_loader::from_string( buffer.str() ).get_object() );
+    effect_on_conditions::load_existing_character( player );
+
+    calendar::turn = due - 1_turns;
+    effect_on_conditions::process_effect_on_conditions( player );
+    CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == 0 );
+    calendar::turn = due;
+    effect_on_conditions::process_effect_on_conditions( player );
+    const int reward = player.vitamin_get( vitamin_human_blood_vitamin );
+    CHECK( reward >= 400 );
+    CHECK( reward <= 500 );
+    effect_on_conditions::process_effect_on_conditions( player );
+    CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == reward );
 }
 #endif

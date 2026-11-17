@@ -11,6 +11,7 @@ extern "C" {
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -1364,6 +1365,23 @@ void install_need_api(
                    lua_state, handle, id, delta,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    needs.set_function(
+        "modify_raw_pain",
+        [current_runtime_generation, current_world_generation, require_write](
+    sol::this_state lua_state, const game_handle & handle, int delta ) {
+        require_write();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        const std::int64_t pain = static_cast<std::int64_t>( character->get_pain() ) + delta;
+        character->set_pain( static_cast<int>( std::clamp<std::int64_t>(
+                                 pain, 0, std::numeric_limits<int>::max() ) ) );
+        return make_game_value_result( state, sol::make_object( state, character->get_pain() ) );
     } );
     needs.set_function(
         "daily_calories",

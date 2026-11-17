@@ -23,6 +23,7 @@
 
 #include "lua_platform_content_text.h"
 #include "lua_platform_runtime_internal.h"
+#include "spell_impact.h"
 
 class Character;
 class avatar;
@@ -525,6 +526,7 @@ struct spell_definition_data {
     std::string sound_variant = "default";
     std::string effect = "none";
     std::string effect_handler;
+    bool effect_per_impact = false;
     std::string shape = "line";
     std::string effect_data;
     std::string explosion_light;
@@ -1604,6 +1606,13 @@ struct spell_definition_handle {
         require_building_handle( token, *definition, "spell" );
         definition->effect = "lua";
         definition->effect_handler = handler;
+        definition->effect_per_impact = false;
+        return *this;
+    }
+
+    spell_definition_handle &lua_impact( const std::string &handler ) {
+        lua_effect( handler );
+        definition->effect_per_impact = true;
         return *this;
     }
 
@@ -3395,6 +3404,7 @@ void character_content_transaction::install_lua_api( sol::state &lua, sol::table
         "stat_range", &spell_definition_handle::stat_range,
         "dynamic_stat", &spell_definition_handle::dynamic_stat,
         "lua_effect", &spell_definition_handle::lua_effect,
+        "lua_impact", &spell_definition_handle::lua_impact,
         "caster_when", &spell_definition_handle::caster_when,
         "target_when", &spell_definition_handle::target_when );
     ccb.new_usertype < mission_definition_handle > (
@@ -4565,9 +4575,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             const spell_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "spell" );
             if( definition.name.empty() || definition.description.empty() ||
-                definition.message.empty() || definition.valid_targets.empty() ) {
+                definition.valid_targets.empty() ) {
                 throw std::runtime_error( "spell '" + definition.id +
-                                          "' requires name, description, message, and targets" );
+                                          "' requires name, description, and targets" );
             }
             if( check_engine_state && !index_defines( index.defines_skill,  definition.skill ) &&
                 !skill_id( definition.skill ).is_valid() ) {
@@ -6382,6 +6392,13 @@ void character_content_transaction::impl::apply_spell()
         native.effect_name = source.effect;
         if( source.effect_handler.empty() ) {
             native.effect = spell_effect::effect_map.at( source.effect );
+        } else if( source.effect_per_impact ) {
+            const std::string owner = this->owner;
+            const std::string handler = source.effect_handler;
+            native.effect = [owner, handler]( const spell & cast_spell, Creature & caster,
+            const tripoint_bub_ms & target ) {
+                detail::invoke_spell_impact_handler( owner, handler, cast_spell, caster, target );
+            };
         } else {
             const std::string owner = this->owner;
             const std::string spell_name = source.id;
@@ -7558,6 +7575,9 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.sound_variant );
                 hash_part( state, value.effect );
                 hash_part( state, value.effect_handler );
+                if( value.effect_per_impact ) {
+                    hash_part( state, "impact" );
+                }
                 hash_part( state, value.shape );
                 hash_part( state, value.effect_data );
                 hash_part( state, value.explosion_light );

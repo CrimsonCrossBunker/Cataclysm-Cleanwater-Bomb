@@ -46,6 +46,7 @@
 #include "kill_tracker.h"
 #include "line.h"
 #include "magic.h"
+#include "spell_impact.h"
 #include "magic_spell_effect_helpers.h"
 #include "magic_teleporter_list.h"
 #include "magic_ter_furn_transform.h"
@@ -2087,23 +2088,32 @@ void spell_effect::pickup( const spell &sp, Creature &caster,
 
 }
 
-void spell_effect::effect_on_condition( const spell &sp, Creature &caster,
-                                        const tripoint_bub_ms &target )
+void spell_effect::for_each_impact( const spell &sp, Creature &caster, const tripoint_bub_ms &target,
+        const std::function<void( const tripoint_bub_ms &, Creature * )> &callback )
 {
-    ::map &here = get_map();
-
     const std::set<tripoint_bub_ms> area = spell_effect_area( sp, target, caster );
-
     creature_tracker &creatures = get_creature_tracker();
     for( const tripoint_bub_ms &potential_target : area ) {
         if( !sp.is_valid_target( caster, potential_target ) ) {
             continue;
         }
+        const bool targets_creature = sp.is_valid_target( spell_target::ally ) ||
+                                      sp.is_valid_target( spell_target::hostile ) ||
+                                      sp.is_valid_target( spell_target::self );
+        callback( potential_target, targets_creature ?
+                  creatures.creature_at<Creature>( potential_target ) : nullptr );
+    }
+}
+
+void spell_effect::effect_on_condition( const spell &sp, Creature &caster,
+                                        const tripoint_bub_ms &target )
+{
+    ::map &here = get_map();
+    for_each_impact( sp, caster, target, [&]( const tripoint_bub_ms & potential_target,
+    Creature * victim ) {
         dialogue d;
         optional_vpart_position veh = here.veh_at( target );
-        Creature *victim = creatures.creature_at<Creature>( potential_target );
-        if( victim && ( sp.is_valid_target( spell_target::ally ) ||
-                        sp.is_valid_target( spell_target::hostile ) || sp.is_valid_target( spell_target::self ) ) ) {
+        if( victim ) {
             d = dialogue( get_talker_for( victim ), get_talker_for( caster ) );
         } else if( sp.is_valid_target( spell_target::vehicle ) && veh ) {
             d = dialogue( get_talker_for( veh.value().vehicle() ), get_talker_for( caster ) );
@@ -2115,7 +2125,7 @@ void spell_effect::effect_on_condition( const spell &sp, Creature &caster,
         d.amend_callstack( string_format( "Spell: %s Caster: %s", sp.id().c_str(), caster.disp_name() ) );
         effect_on_condition_id eoc = effect_on_condition_id( sp.effect_data() );
         eoc->activate_activation_only( d, "a spell", "spell being cast", "spell" );
-    }
+    } );
 }
 
 void spell_effect::slime_split_on_death( const spell &sp, Creature &caster,

@@ -1,4 +1,5 @@
 #include "lua_platform_runtime_internal.h"
+#include "spell_impact.h"
 #include "item_category.h"
 #include "itype.h"
 
@@ -919,10 +920,10 @@ std::optional<double> invoke_spell_stat_handler(
     return value;
 }
 
-void invoke_spell_effect_handler(
+static void run_spell_handler(
     const std::string_view mod_id, const std::string_view spell_id_value,
     const std::string_view handler_id, const spell &cast_spell,
-    Creature &caster, const tripoint_bub_ms &target )
+    Creature &caster, const tripoint_bub_ms &target, const Creature *target_creature )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
     if( !owner || !owner->world_is_ready ) {
@@ -936,6 +937,7 @@ void invoke_spell_effect_handler(
     }
     sol::table payload = platform_callback_payload( *owner, {
         { "caster", static_cast<const Creature *>( &caster ) },
+        { "target_creature", target_creature },
         {
             "spell", cata::lua_platform::native_callback_id{
                 "spell", std::string( spell_id_value ) }
@@ -952,6 +954,24 @@ void invoke_spell_effect_handler(
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
     }
+}
+
+void invoke_spell_effect_handler(
+    const std::string_view mod_id, const std::string_view spell_id_value,
+    const std::string_view handler_id, const spell &cast_spell,
+    Creature &caster, const tripoint_bub_ms &target )
+{
+    run_spell_handler( mod_id, spell_id_value, handler_id, cast_spell, caster, target, nullptr );
+}
+
+void invoke_spell_impact_handler( std::string_view mod, std::string_view handler,
+                                  const spell &cast_spell, Creature &caster,
+                                  const tripoint_bub_ms &target )
+{
+    spell_effect::for_each_impact( cast_spell, caster, target, [&]( const tripoint_bub_ms & position,
+    Creature * victim ) {
+        run_spell_handler( mod, cast_spell.id().str(), handler, cast_spell, caster, position, victim );
+    } );
 }
 
 std::optional<bool> invoke_mission_condition_handler(

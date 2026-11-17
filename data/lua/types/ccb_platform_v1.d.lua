@@ -5328,6 +5328,7 @@ local RelicProcgenDefinition = {}
 ---@field ignore_species any
 ---@field learn_spell any
 ---@field lua_effect any
+---@field lua_impact fun(self:SpellDefinition, handler:string):SpellDefinition Run the handler for each tile accepted by the native spell area. The payload includes the live caster, the bubble position and an optional target_creature.
 ---@field stat any
 ---@field stat_range any
 ---@field target any
@@ -5510,7 +5511,7 @@ function CcbPlatformContent.RelicProcgen(options) end
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText
----@field message? string|LocalizedText
+---@field message? string|LocalizedText Casting message. An explicit empty string suppresses it.
 ---@field sound_description? string|LocalizedText
 ---@field caster_condition_fail_message? string|LocalizedText
 ---@field target_condition_fail_message? string|LocalizedText
@@ -7193,6 +7194,13 @@ local CcbPlatformTasks = {}
 ---@param participants? table<string, GameHandle> Optional required participant handles keyed by unique role names; at most 4 participants. Role names must match ASCII `[A-Za-z_][A-Za-z0-9_]{0,31}`.
 ---@return integer task_id
 function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, scope, actor, participants) end
+
+---Schedule a saved callback on the Character's own turn. The callback receives
+---the exact Character and its original absolute due turn.
+---@param character GameHandle Exact live Character.
+---@param turns integer Positive delay in turns, within the game calendar.
+---@param handler_id string Registered handler with payload fields `character` and `due_turn`.
+function CcbPlatformTasks.after_character_turn(character, turns, handler_id) end
 
 ---Cancels a pending task, including one due this turn whose callback has not started.
 ---@param task_id integer
@@ -9935,6 +9943,17 @@ local CcbNeedsApi = {}
 ---@return CcbResult result `value` contains before and after vitamin levels.
 function CcbNeedsApi.modify_vitamin(character, id, delta) end
 
+---@param character GameHandle Exact live Character handle.
+---@param id GameId GameId<vitamin>.
+---@return CcbResult result `value` is the current vitamin amount.
+function CcbNeedsApi.get_vitamin(character, id) end
+
+---Adjust raw pain through the native setter, ignoring pain resistance.
+---@param character GameHandle Exact live Character handle.
+---@param delta integer Signed change to raw pain.
+---@return CcbResult result `value` is the updated raw pain.
+function CcbNeedsApi.modify_raw_pain(character, delta) end
+
 ---Adjust stored calories through native calorie accounting.
 ---@param character GameHandle Exact live Character handle.
 ---@param delta integer Kilocalorie change within -1000000..1000000.
@@ -12569,6 +12588,11 @@ function CcbCreaturesApi.avatar() end
 ---@param handle GameHandle Exact live Creature handle.
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
+
+---@param creature GameHandle Exact live Creature handle.
+---@param species GameId GameId<species>.
+---@return CcbResult result `value` is the native species membership.
+function CcbCreaturesApi.has_species(creature, species) end
 
 ---@param observer GameHandle Exact live Character observer handle.
 ---@param options? CcbCreatureNearbyOptions Query limits and filters; results contain generation-safe handles and detached values.
