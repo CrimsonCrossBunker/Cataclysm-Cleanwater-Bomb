@@ -753,7 +753,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 3577
+          "line": 3604
         },
         "direct_roots": [
           "AchievementDefinition",
@@ -1215,7 +1215,7 @@
         "callee": "platform_v1.items_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5451
+          "line": 5479
         },
         "surfaces": [
           "platform_v1"
@@ -1226,7 +1226,7 @@
         "callee": "platform_v1.creatures_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5452
+          "line": 5480
         },
         "surfaces": [
           "platform_v1"
@@ -1237,7 +1237,7 @@
         "callee": "platform_v1.character_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5453
+          "line": 5481
         },
         "surfaces": [
           "platform_v1"
@@ -1248,7 +1248,7 @@
         "callee": "platform_v1.presentation_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5454
+          "line": 5482
         },
         "surfaces": [
           "platform_v1"
@@ -1259,7 +1259,7 @@
         "callee": "platform_v1.worldgen_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5455
+          "line": 5483
         },
         "surfaces": [
           "platform_v1"
@@ -1270,7 +1270,7 @@
         "callee": "platform_v1.world_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5456
+          "line": 5484
         },
         "surfaces": [
           "platform_v1"
@@ -1429,7 +1429,7 @@
       "registration_name": "AchievementDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3823,
+        "line": 3851,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1470,7 +1470,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3826
+                "line": 3854
               }
             ]
           },
@@ -1487,7 +1487,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3825
+                "line": 3853
               }
             ]
           },
@@ -1504,7 +1504,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2998
+                "line": 3025
               }
             ]
           },
@@ -1521,7 +1521,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2999
+                "line": 3026
               }
             ]
           }
@@ -1676,7 +1676,7 @@
       "registration_name": "AddictionTypeDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3715,
+        "line": 3742,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -1717,7 +1717,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3717
+                "line": 3744
               }
             ]
           },
@@ -1734,7 +1734,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2009
+                "line": 2012
               }
             ]
           },
@@ -1751,7 +1751,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2010
+                "line": 2013
               }
             ]
           },
@@ -1768,7 +1768,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3718
+                "line": 3745
               }
             ]
           }
@@ -2273,7 +2273,7 @@
       "registration_name": "AsciiArtDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3655,
+        "line": 3682,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2314,7 +2314,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3657
+                "line": 3684
               }
             ]
           },
@@ -2331,7 +2331,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3658
+                "line": 3685
               }
             ]
           },
@@ -2348,7 +2348,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1574
+                "line": 1577
               }
             ]
           },
@@ -2365,7 +2365,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1575
+                "line": 1578
               }
             ]
           }
@@ -2379,7 +2379,7 @@
       "registration_name": "AttackVectorDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3772,
+        "line": 3800,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2420,7 +2420,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3776
+                "line": 3804
               }
             ]
           },
@@ -2437,7 +2437,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3779
+                "line": 3807
               }
             ]
           },
@@ -2454,7 +2454,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3774
+                "line": 3802
               }
             ]
           },
@@ -2471,7 +2471,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3775
+                "line": 3803
               }
             ]
           },
@@ -2488,7 +2488,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3017
+                "line": 3044
               }
             ]
           },
@@ -2505,7 +2505,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3018
+                "line": 3045
               }
             ]
           },
@@ -2522,7 +2522,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3778
+                "line": 3806
               }
             ]
           },
@@ -2539,7 +2539,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3777
+                "line": 3805
               }
             ]
           }
@@ -2553,7 +2553,7 @@
       "registration_name": "BashDamageProfileDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3665,
+        "line": 3692,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -2594,7 +2594,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3668
+                "line": 3695
               }
             ]
           },
@@ -2611,7 +2611,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3667
+                "line": 3694
               }
             ]
           },
@@ -2628,7 +2628,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1613
+                "line": 1616
               }
             ]
           },
@@ -2645,7 +2645,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1614
+                "line": 1617
               }
             ]
           }
@@ -3281,7 +3281,7 @@
       "registration_name": "BlacklistDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3827,
+        "line": 3855,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -3322,7 +3322,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3830
+                "line": 3858
               }
             ]
           },
@@ -3339,7 +3339,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3829
+                "line": 3857
               }
             ]
           },
@@ -3356,7 +3356,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2769
+                "line": 2796
               }
             ]
           },
@@ -3373,7 +3373,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2770
+                "line": 2797
               }
             ]
           },
@@ -3390,7 +3390,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3831
+                "line": 3859
               }
             ]
           }
@@ -4437,7 +4437,7 @@
       "registration_name": "CharacterModifierDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3719,
+        "line": 3746,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4478,7 +4478,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3722
+                "line": 3749
               }
             ]
           },
@@ -4495,7 +4495,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3721
+                "line": 3748
               }
             ]
           },
@@ -4512,7 +4512,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2025
+                "line": 2028
               }
             ]
           },
@@ -4529,7 +4529,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2026
+                "line": 2029
               }
             ]
           }
@@ -4737,7 +4737,7 @@
       "registration_name": "ClimbingAidDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3731,
+        "line": 3758,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4778,7 +4778,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3734
+                "line": 3761
               }
             ]
           },
@@ -4795,7 +4795,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3736
+                "line": 3763
               }
             ]
           },
@@ -4812,7 +4812,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3737
+                "line": 3764
               }
             ]
           },
@@ -4829,7 +4829,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3735
+                "line": 3762
               }
             ]
           },
@@ -4846,7 +4846,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3733
+                "line": 3760
               }
             ]
           },
@@ -4863,7 +4863,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2109
+                "line": 2112
               }
             ]
           },
@@ -4880,7 +4880,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2110
+                "line": 2113
               }
             ]
           }
@@ -4894,7 +4894,7 @@
       "registration_name": "ClothingModDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3669,
+        "line": 3696,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -4935,7 +4935,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3671
+                "line": 3698
               }
             ]
           },
@@ -4952,7 +4952,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3672
+                "line": 3699
               }
             ]
           },
@@ -4969,7 +4969,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1633
+                "line": 1636
               }
             ]
           },
@@ -4986,7 +4986,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1634
+                "line": 1637
               }
             ]
           }
@@ -5316,7 +5316,7 @@
       "registration_name": "ConstructionCategoryDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3629,
+        "line": 3656,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5357,7 +5357,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3631
+                "line": 3658
               }
             ]
           },
@@ -5374,7 +5374,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1460
+                "line": 1463
               }
             ]
           },
@@ -5391,7 +5391,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1461
+                "line": 1464
               }
             ]
           }
@@ -5405,7 +5405,7 @@
       "registration_name": "ConstructionDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3786,
+        "line": 3814,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5446,7 +5446,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3788
+                "line": 3816
               }
             ]
           },
@@ -5463,7 +5463,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2543
+                "line": 2570
               }
             ]
           },
@@ -5480,7 +5480,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2544
+                "line": 2571
               }
             ]
           },
@@ -5497,7 +5497,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3793
+                "line": 3821
               }
             ]
           },
@@ -5514,7 +5514,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3792
+                "line": 3820
               }
             ]
           },
@@ -5531,7 +5531,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3791
+                "line": 3819
               }
             ]
           },
@@ -5548,7 +5548,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3789
+                "line": 3817
               }
             ]
           },
@@ -5565,7 +5565,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3790
+                "line": 3818
               }
             ]
           }
@@ -5579,7 +5579,7 @@
       "registration_name": "ConstructionGroupDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3632,
+        "line": 3659,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5620,7 +5620,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3634
+                "line": 3661
               }
             ]
           },
@@ -5637,7 +5637,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1470
+                "line": 1473
               }
             ]
           },
@@ -5654,7 +5654,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1471
+                "line": 1474
               }
             ]
           }
@@ -5668,7 +5668,7 @@
       "registration_name": "DamageInfoOrderDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3642,
+        "line": 3669,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -5709,7 +5709,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3644
+                "line": 3671
               }
             ]
           },
@@ -5726,7 +5726,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1511
+                "line": 1514
               }
             ]
           },
@@ -5743,7 +5743,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1512
+                "line": 1515
               }
             ]
           },
@@ -5760,7 +5760,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3645
+                "line": 3672
               }
             ]
           }
@@ -6287,7 +6287,7 @@
       "registration_name": "DreamDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3820,
+        "line": 3848,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -6328,7 +6328,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3822
+                "line": 3850
               }
             ]
           },
@@ -6345,7 +6345,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2755
+                "line": 2782
               }
             ]
           },
@@ -6362,7 +6362,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2756
+                "line": 2783
               }
             ]
           }
@@ -7297,7 +7297,7 @@
       "registration_name": "EventStatisticDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3758,
+        "line": 3786,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7338,7 +7338,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3760
+                "line": 3788
               }
             ]
           },
@@ -7355,7 +7355,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2348
+                "line": 2375
               }
             ]
           },
@@ -7372,7 +7372,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2349
+                "line": 2376
               }
             ]
           }
@@ -7386,7 +7386,7 @@
       "registration_name": "EventTransformationDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3746,
+        "line": 3774,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7427,7 +7427,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3749
+                "line": 3777
               }
             ]
           },
@@ -7444,7 +7444,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3750
+                "line": 3778
               }
             ]
           },
@@ -7461,7 +7461,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3748
+                "line": 3776
               }
             ]
           },
@@ -7478,7 +7478,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2225
+                "line": 2252
               }
             ]
           },
@@ -7495,7 +7495,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2226
+                "line": 2253
               }
             ]
           },
@@ -7512,7 +7512,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3752
+                "line": 3780
               }
             ]
           },
@@ -7529,7 +7529,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3751
+                "line": 3779
               }
             ]
           },
@@ -7546,7 +7546,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3757
+                "line": 3785
               }
             ]
           },
@@ -7563,7 +7563,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3756
+                "line": 3784
               }
             ]
           },
@@ -7580,7 +7580,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3754
+                "line": 3782
               }
             ]
           },
@@ -7597,7 +7597,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3755
+                "line": 3783
               }
             ]
           },
@@ -7614,7 +7614,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3753
+                "line": 3781
               }
             ]
           }
@@ -7628,7 +7628,7 @@
       "registration_name": "ExplosionLightDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3707,
+        "line": 3734,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7669,7 +7669,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3712
+                "line": 3739
               }
             ]
           },
@@ -7686,7 +7686,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3709
+                "line": 3736
               }
             ]
           },
@@ -7703,7 +7703,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1928
+                "line": 1931
               }
             ]
           },
@@ -7720,7 +7720,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1929
+                "line": 1932
               }
             ]
           },
@@ -7737,7 +7737,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3713
+                "line": 3740
               }
             ]
           },
@@ -7754,7 +7754,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3714
+                "line": 3741
               }
             ]
           },
@@ -7771,7 +7771,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3710
+                "line": 3737
               }
             ]
           },
@@ -7788,7 +7788,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3711
+                "line": 3738
               }
             ]
           }
@@ -8234,7 +8234,7 @@
       "registration_name": "FaultDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3808,
+        "line": 3836,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8275,7 +8275,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3812
+                "line": 3840
               }
             ]
           },
@@ -8292,7 +8292,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3813
+                "line": 3841
               }
             ]
           },
@@ -8309,7 +8309,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3811
+                "line": 3839
               }
             ]
           },
@@ -8326,7 +8326,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3810
+                "line": 3838
               }
             ]
           },
@@ -8343,7 +8343,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2680
+                "line": 2707
               }
             ]
           },
@@ -8360,7 +8360,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2681
+                "line": 2708
               }
             ]
           }
@@ -8374,7 +8374,7 @@
       "registration_name": "FaultFixDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3814,
+        "line": 3842,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8415,7 +8415,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3819
+                "line": 3847
               }
             ]
           },
@@ -8432,7 +8432,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3816
+                "line": 3844
               }
             ]
           },
@@ -8449,7 +8449,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2717
+                "line": 2744
               }
             ]
           },
@@ -8466,7 +8466,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2718
+                "line": 2745
               }
             ]
           },
@@ -8483,7 +8483,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3818
+                "line": 3846
               }
             ]
           },
@@ -8500,7 +8500,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3817
+                "line": 3845
               }
             ]
           }
@@ -8514,7 +8514,7 @@
       "registration_name": "FaultGroupDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3703,
+        "line": 3730,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -8555,7 +8555,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3706
+                "line": 3733
               }
             ]
           },
@@ -8572,7 +8572,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3705
+                "line": 3732
               }
             ]
           },
@@ -8589,7 +8589,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1908
+                "line": 1911
               }
             ]
           },
@@ -8606,7 +8606,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1909
+                "line": 1912
               }
             ]
           }
@@ -9266,7 +9266,7 @@
       "registration_name": "FurnitureDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3794,
+        "line": 3822,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9307,7 +9307,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3797
+                "line": 3825
               }
             ]
           },
@@ -9324,7 +9324,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3796
+                "line": 3824
               }
             ]
           },
@@ -9341,7 +9341,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2601
+                "line": 2628
               }
             ]
           },
@@ -9358,7 +9358,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2602
+                "line": 2629
               }
             ]
           },
@@ -9375,7 +9375,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3798
+                "line": 3826
               }
             ]
           }
@@ -9908,7 +9908,7 @@
       "registration_name": "GateDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3804,
+        "line": 3832,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -9949,7 +9949,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3806
+                "line": 3834
               }
             ]
           },
@@ -9966,7 +9966,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2661
+                "line": 2688
               }
             ]
           },
@@ -9983,7 +9983,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2662
+                "line": 2689
               }
             ]
           },
@@ -10000,7 +10000,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3807
+                "line": 3835
               }
             ]
           }
@@ -10014,7 +10014,7 @@
       "registration_name": "HarvestDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3623,
+        "line": 3650,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10055,7 +10055,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3626
+                "line": 3653
               }
             ]
           },
@@ -10072,7 +10072,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3625
+                "line": 3652
               }
             ]
           },
@@ -10089,7 +10089,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3628
+                "line": 3655
               }
             ]
           },
@@ -10106,7 +10106,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3627
+                "line": 3654
               }
             ]
           },
@@ -10123,7 +10123,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1392
+                "line": 1395
               }
             ]
           },
@@ -10140,7 +10140,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1393
+                "line": 1396
               }
             ]
           }
@@ -10154,7 +10154,7 @@
       "registration_name": "HarvestDropTypeDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3619,
+        "line": 3646,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10195,7 +10195,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3621
+                "line": 3648
               }
             ]
           },
@@ -10212,7 +10212,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1373
+                "line": 1376
               }
             ]
           },
@@ -10229,7 +10229,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1374
+                "line": 1377
               }
             ]
           },
@@ -10246,7 +10246,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3622
+                "line": 3649
               }
             ]
           }
@@ -10367,7 +10367,7 @@
       "registration_name": "HitRangeDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3662,
+        "line": 3689,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -10408,7 +10408,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3664
+                "line": 3691
               }
             ]
           },
@@ -10425,7 +10425,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1603
+                "line": 1606
               }
             ]
           },
@@ -10442,7 +10442,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1604
+                "line": 1607
               }
             ]
           }
@@ -12029,7 +12029,7 @@
       "registration_name": "LimbScoreDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3659,
+        "line": 3686,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12070,7 +12070,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3661
+                "line": 3688
               }
             ]
           },
@@ -12087,7 +12087,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1593
+                "line": 1596
               }
             ]
           },
@@ -12104,7 +12104,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1594
+                "line": 1597
               }
             ]
           }
@@ -12362,7 +12362,7 @@
       "registration_name": "MapExtraCollectionDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3686,
+        "line": 3713,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12403,7 +12403,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3689
+                "line": 3716
               }
             ]
           },
@@ -12420,7 +12420,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3688
+                "line": 3715
               }
             ]
           },
@@ -12437,7 +12437,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1745
+                "line": 1748
               }
             ]
           },
@@ -12454,7 +12454,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1746
+                "line": 1749
               }
             ]
           }
@@ -12468,7 +12468,7 @@
       "registration_name": "MapExtraDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3832,
+        "line": 3860,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -12509,7 +12509,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3835
+                "line": 3863
               }
             ]
           },
@@ -12526,7 +12526,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3834
+                "line": 3862
               }
             ]
           },
@@ -12543,7 +12543,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2870
+                "line": 2897
               }
             ]
           },
@@ -12560,7 +12560,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2871
+                "line": 2898
               }
             ]
           }
@@ -13384,7 +13384,7 @@
       "registration_name": "MigrationDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3845,
+        "line": 3873,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -13425,7 +13425,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2935
+                "line": 2962
               }
             ]
           },
@@ -13442,7 +13442,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2936
+                "line": 2963
               }
             ]
           }
@@ -14209,7 +14209,7 @@
       "registration_name": "MonsterAdjustmentDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3856,
+        "line": 3884,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -14250,7 +14250,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2940
+                "line": 2967
               }
             ]
           },
@@ -14267,7 +14267,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2941
+                "line": 2968
               }
             ]
           }
@@ -15083,7 +15083,7 @@
       "registration_name": "MonsterGroupDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3606,
+        "line": 3633,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15124,7 +15124,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3610
+                "line": 3637
               }
             ]
           },
@@ -15141,7 +15141,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3608
+                "line": 3635
               }
             ]
           },
@@ -15158,7 +15158,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3609
+                "line": 3636
               }
             ]
           },
@@ -15175,7 +15175,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1270
+                "line": 1273
               }
             ]
           },
@@ -15192,7 +15192,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1271
+                "line": 1274
               }
             ]
           }
@@ -15206,7 +15206,7 @@
       "registration_name": "MoodFaceDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3638,
+        "line": 3665,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -15247,7 +15247,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3640
+                "line": 3667
               }
             ]
           },
@@ -15264,7 +15264,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1490
+                "line": 1493
               }
             ]
           },
@@ -15281,7 +15281,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1491
+                "line": 1494
               }
             ]
           },
@@ -15298,7 +15298,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3641
+                "line": 3668
               }
             ]
           }
@@ -16085,7 +16085,7 @@
       "registration_name": "NamedColorDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3649,
+        "line": 3676,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16126,7 +16126,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3651
+                "line": 3678
               }
             ]
           },
@@ -16143,7 +16143,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1554
+                "line": 1557
               }
             ]
           },
@@ -16160,7 +16160,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1555
+                "line": 1558
               }
             ]
           }
@@ -16858,7 +16858,7 @@
       "registration_name": "OvermapConnectionDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3611,
+        "line": 3638,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16899,7 +16899,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3613
+                "line": 3640
               }
             ]
           },
@@ -16916,7 +16916,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1302
+                "line": 1305
               }
             ]
           },
@@ -16933,7 +16933,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1303
+                "line": 1306
               }
             ]
           },
@@ -16950,7 +16950,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3614
+                "line": 3641
               }
             ]
           }
@@ -16964,7 +16964,7 @@
       "registration_name": "OvermapLandUseCodeDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3673,
+        "line": 3700,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17005,7 +17005,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3675
+                "line": 3702
               }
             ]
           },
@@ -17022,7 +17022,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1672
+                "line": 1675
               }
             ]
           },
@@ -17039,7 +17039,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1673
+                "line": 1676
               }
             ]
           }
@@ -17053,7 +17053,7 @@
       "registration_name": "OvermapLocationDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3681,
+        "line": 3708,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17094,7 +17094,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3683
+                "line": 3710
               }
             ]
           },
@@ -17111,7 +17111,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1717
+                "line": 1720
               }
             ]
           },
@@ -17128,7 +17128,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1718
+                "line": 1721
               }
             ]
           },
@@ -17145,7 +17145,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3684
+                "line": 3711
               }
             ]
           },
@@ -17162,7 +17162,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3685
+                "line": 3712
               }
             ]
           }
@@ -17432,7 +17432,7 @@
       "registration_name": "OvermapVisionDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3676,
+        "line": 3703,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17473,7 +17473,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3679
+                "line": 3706
               }
             ]
           },
@@ -17490,7 +17490,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3680
+                "line": 3707
               }
             ]
           },
@@ -17507,7 +17507,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3678
+                "line": 3705
               }
             ]
           },
@@ -17524,7 +17524,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1682
+                "line": 1685
               }
             ]
           },
@@ -17541,7 +17541,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1683
+                "line": 1686
               }
             ]
           }
@@ -19036,7 +19036,7 @@
       "registration_name": "PostProcessGeneratorDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3587,
+        "line": 3614,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -19077,7 +19077,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3589
+                "line": 3616
               }
             ]
           },
@@ -19094,7 +19094,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1108
+                "line": 1111
               }
             ]
           },
@@ -19111,7 +19111,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1109
+                "line": 1112
               }
             ]
           },
@@ -19128,7 +19128,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3590
+                "line": 3617
               }
             ]
           }
@@ -23927,7 +23927,7 @@
       "registration_name": "RelicProcgenDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3761,
+        "line": 3789,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -23968,7 +23968,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3766
+                "line": 3794
               }
             ]
           },
@@ -23985,7 +23985,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3771
+                "line": 3799
               }
             ]
           },
@@ -24002,7 +24002,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3763
+                "line": 3791
               }
             ]
           },
@@ -24019,7 +24019,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3770
+                "line": 3798
               }
             ]
           },
@@ -24036,7 +24036,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2358
+                "line": 2385
               }
             ]
           },
@@ -24053,7 +24053,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2359
+                "line": 2386
               }
             ]
           },
@@ -24070,7 +24070,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3768
+                "line": 3796
               }
             ]
           },
@@ -24087,7 +24087,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3767
+                "line": 3795
               }
             ]
           },
@@ -24104,7 +24104,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3764
+                "line": 3792
               }
             ]
           },
@@ -24121,7 +24121,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3765
+                "line": 3793
               }
             ]
           },
@@ -24138,7 +24138,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3769
+                "line": 3797
               }
             ]
           }
@@ -24361,7 +24361,7 @@
       "registration_name": "RotatableSymbolDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3652,
+        "line": 3679,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -24402,7 +24402,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3654
+                "line": 3681
               }
             ]
           },
@@ -24419,7 +24419,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1564
+                "line": 1567
               }
             ]
           },
@@ -24436,7 +24436,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1565
+                "line": 1568
               }
             ]
           }
@@ -24450,7 +24450,7 @@
       "registration_name": "ScenarioDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3591,
+        "line": 3618,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -24491,7 +24491,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3596
+                "line": 3623
               }
             ]
           },
@@ -24508,7 +24508,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3599
+                "line": 3626
               }
             ]
           },
@@ -24525,7 +24525,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3598
+                "line": 3625
               }
             ]
           },
@@ -24542,7 +24542,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3597
+                "line": 3624
               }
             ]
           },
@@ -24559,7 +24559,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3593
+                "line": 3620
               }
             ]
           },
@@ -24576,7 +24576,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3594
+                "line": 3621
               }
             ]
           },
@@ -24593,7 +24593,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1142
+                "line": 1145
               }
             ]
           },
@@ -24610,7 +24610,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1143
+                "line": 1146
               }
             ]
           },
@@ -24627,7 +24627,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3601
+                "line": 3628
               }
             ]
           },
@@ -24644,7 +24644,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3595
+                "line": 3622
               }
             ]
           },
@@ -24661,7 +24661,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3600
+                "line": 3627
               }
             ]
           }
@@ -25910,7 +25910,7 @@
       "registration_name": "ShopkeeperDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3847,
+        "line": 3875,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -25951,7 +25951,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3850
+                "line": 3878
               }
             ]
           },
@@ -25968,7 +25968,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3849
+                "line": 3877
               }
             ]
           },
@@ -25985,7 +25985,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2978
+                "line": 3005
               }
             ]
           },
@@ -26002,7 +26002,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2979
+                "line": 3006
               }
             ]
           }
@@ -26862,7 +26862,7 @@
       "registration_name": "SpeedDescriptionDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3615,
+        "line": 3642,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -26903,7 +26903,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3617
+                "line": 3644
               }
             ]
           },
@@ -26920,7 +26920,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1340
+                "line": 1343
               }
             ]
           },
@@ -26937,7 +26937,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1341
+                "line": 1344
               }
             ]
           },
@@ -26954,7 +26954,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3618
+                "line": 3645
               }
             ]
           }
@@ -27313,7 +27313,7 @@
       "registration_name": "StartLocationDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3723,
+        "line": 3750,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -27354,7 +27354,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3729
+                "line": 3756
               }
             ]
           },
@@ -27371,7 +27371,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3728
+                "line": 3755
               }
             ]
           },
@@ -27388,7 +27388,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3727
+                "line": 3754
               }
             ]
           },
@@ -27405,7 +27405,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3725
+                "line": 3752
               }
             ]
           },
@@ -27422,7 +27422,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2041
+                "line": 2044
               }
             ]
           },
@@ -27439,7 +27439,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2042
+                "line": 2045
               }
             ]
           },
@@ -27456,7 +27456,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3726
+                "line": 3753
               }
             ]
           },
@@ -27473,7 +27473,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3730
+                "line": 3757
               }
             ]
           }
@@ -27939,7 +27939,7 @@
       "registration_name": "TerrainDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3799,
+        "line": 3827,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -27980,7 +27980,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3802
+                "line": 3830
               }
             ]
           },
@@ -27997,7 +27997,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3801
+                "line": 3829
               }
             ]
           },
@@ -28014,7 +28014,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2631
+                "line": 2658
               }
             ]
           },
@@ -28031,7 +28031,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2632
+                "line": 2659
               }
             ]
           },
@@ -28048,7 +28048,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3803
+                "line": 3831
               }
             ]
           }
@@ -28062,7 +28062,7 @@
       "registration_name": "TerrainTransformDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3580,
+        "line": 3607,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -28103,7 +28103,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3585
+                "line": 3612
               }
             ]
           },
@@ -28120,7 +28120,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3584
+                "line": 3611
               }
             ]
           },
@@ -28137,7 +28137,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3582
+                "line": 3609
               }
             ]
           },
@@ -28154,7 +28154,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1037
+                "line": 1040
               }
             ]
           },
@@ -28171,7 +28171,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1038
+                "line": 1041
               }
             ]
           },
@@ -28188,7 +28188,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3583
+                "line": 3610
               }
             ]
           },
@@ -28205,7 +28205,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3586
+                "line": 3613
               }
             ]
           }
@@ -29316,7 +29316,7 @@
       "registration_name": "TraitGroupDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3851,
+        "line": 3879,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -29357,7 +29357,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3855
+                "line": 3883
               }
             ]
           },
@@ -29374,7 +29374,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3853
+                "line": 3881
               }
             ]
           },
@@ -29391,7 +29391,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2945
+                "line": 2972
               }
             ]
           },
@@ -29408,7 +29408,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2946
+                "line": 2973
               }
             ]
           },
@@ -29425,7 +29425,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3854
+                "line": 3882
               }
             ]
           }
@@ -29439,7 +29439,7 @@
       "registration_name": "TrapDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3780,
+        "line": 3808,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -29480,7 +29480,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3784
+                "line": 3812
               }
             ]
           },
@@ -29497,7 +29497,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3783
+                "line": 3811
               }
             ]
           },
@@ -29514,7 +29514,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3782
+                "line": 3810
               }
             ]
           },
@@ -29531,7 +29531,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2503
+                "line": 2530
               }
             ]
           },
@@ -29548,7 +29548,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2504
+                "line": 2531
               }
             ]
           },
@@ -29565,7 +29565,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3785
+                "line": 3813
               }
             ]
           }
@@ -30460,7 +30460,7 @@
       "registration_name": "VehicleColorPaletteDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3602,
+        "line": 3629,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30501,7 +30501,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3605
+                "line": 3632
               }
             ]
           },
@@ -30518,7 +30518,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3604
+                "line": 3631
               }
             ]
           },
@@ -30535,7 +30535,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1225
+                "line": 1228
               }
             ]
           },
@@ -30552,7 +30552,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1226
+                "line": 1229
               }
             ]
           }
@@ -30619,7 +30619,7 @@
       "registration_name": "VehicleGroupDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3690,
+        "line": 3717,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30660,7 +30660,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3692
+                "line": 3719
               }
             ]
           },
@@ -30677,7 +30677,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1765
+                "line": 1768
               }
             ]
           },
@@ -30694,7 +30694,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1766
+                "line": 1769
               }
             ]
           },
@@ -30711,7 +30711,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3693
+                "line": 3720
               }
             ]
           }
@@ -30725,7 +30725,7 @@
       "registration_name": "VehiclePartCategoryDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3646,
+        "line": 3673,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30766,7 +30766,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3648
+                "line": 3675
               }
             ]
           },
@@ -30783,7 +30783,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1544
+                "line": 1547
               }
             ]
           },
@@ -30800,7 +30800,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1545
+                "line": 1548
               }
             ]
           }
@@ -30867,7 +30867,7 @@
       "registration_name": "VehiclePartLocationDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3635,
+        "line": 3662,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30908,7 +30908,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3637
+                "line": 3664
               }
             ]
           },
@@ -30925,7 +30925,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1480
+                "line": 1483
               }
             ]
           },
@@ -30942,7 +30942,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1481
+                "line": 1484
               }
             ]
           }
@@ -30956,7 +30956,7 @@
       "registration_name": "VehiclePlacementDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3694,
+        "line": 3721,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -30997,7 +30997,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3696
+                "line": 3723
               }
             ]
           },
@@ -31014,7 +31014,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3697
+                "line": 3724
               }
             ]
           },
@@ -31031,7 +31031,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1785
+                "line": 1788
               }
             ]
           },
@@ -31048,7 +31048,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1786
+                "line": 1789
               }
             ]
           }
@@ -31062,7 +31062,7 @@
       "registration_name": "VehicleSpawnDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3698,
+        "line": 3725,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -31103,7 +31103,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3701
+                "line": 3728
               }
             ]
           },
@@ -31120,7 +31120,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3700
+                "line": 3727
               }
             ]
           },
@@ -31137,7 +31137,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1849
+                "line": 1852
               }
             ]
           },
@@ -31154,7 +31154,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 1850
+                "line": 1853
               }
             ]
           },
@@ -31171,7 +31171,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3702
+                "line": 3729
               }
             ]
           }
@@ -31659,7 +31659,7 @@
       "registration_name": "WeatherGeneratorDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3836,
+        "line": 3864,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -31700,7 +31700,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3839
+                "line": 3867
               }
             ]
           },
@@ -31717,7 +31717,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3843
+                "line": 3871
               }
             ]
           },
@@ -31734,7 +31734,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3844
+                "line": 3872
               }
             ]
           },
@@ -31751,7 +31751,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3838
+                "line": 3866
               }
             ]
           },
@@ -31768,7 +31768,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2889
+                "line": 2916
               }
             ]
           },
@@ -31785,7 +31785,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2890
+                "line": 2917
               }
             ]
           },
@@ -31802,7 +31802,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3841
+                "line": 3869
               }
             ]
           }
@@ -31816,7 +31816,7 @@
       "registration_name": "WeatherTypeDefinition",
       "registration": {
         "path": "src/lua_platform_runtime.cpp",
-        "line": 3738,
+        "line": 3765,
         "installer": "platform_v1.content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -31857,7 +31857,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3742
+                "line": 3769
               }
             ]
           },
@@ -31874,7 +31874,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3745
+                "line": 3773
               }
             ]
           },
@@ -31891,7 +31891,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3741
+                "line": 3768
               }
             ]
           },
@@ -31908,7 +31908,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3740
+                "line": 3767
               }
             ]
           },
@@ -31925,7 +31925,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2161
+                "line": 2164
               }
             ]
           },
@@ -31942,7 +31942,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 2162
+                "line": 2165
               }
             ]
           },
@@ -31959,7 +31959,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3744
+                "line": 3772
               }
             ]
           },
@@ -31976,7 +31976,24 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime.cpp",
-                "line": 3743
+                "line": 3771
+              }
+            ]
+          },
+          {
+            "id": "tint",
+            "cpp_members": [
+              "tint"
+            ],
+            "cpp_kind": "member",
+            "lua_access": [
+              "WeatherTypeDefinition.tint"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_runtime.cpp",
+                "line": 3770
               }
             ]
           }

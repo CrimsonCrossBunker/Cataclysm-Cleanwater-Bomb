@@ -368,7 +368,7 @@ weather_type_id weather_generator::get_weather_conditions( const w_point &w ) co
         if( w.climate_precipitation_mm_per_hour && regular_precipitation &&
             ( current_conditions->precip == precip_class::none || type != climate_weather ) ) {
             const std::optional<bool> lua_condition =
-                cata::lua_platform::invoke_weather_type_handler( type.str(), w );
+                cata::lua_platform::invoke_weather_type_handler( type.str(), w, type == climate_weather );
             if( lua_condition.value_or( type == climate_weather ) ) {
                 current_conditions = type;
             }

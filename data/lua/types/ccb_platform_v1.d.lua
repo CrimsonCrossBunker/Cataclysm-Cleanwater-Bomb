@@ -2485,7 +2485,7 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 
 ---@class WeatherTypeDefinitionOptions
 ---@field id string Stable weather-type id.
----@field name string Player-facing weather name.
+---@field name string|LocalizedText Player-facing weather name.
 ---@field color? string Native text color; defaults to white.
 ---@field map_color? string Native overmap color; defaults to white.
 ---@field symbol? string Exactly one Unicode codepoint used by text displays.
@@ -2509,6 +2509,12 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 ---@field color string Native animation color.
 ---@field symbol string Exactly one Unicode codepoint.
 
+---@class WeatherTintOptions
+---@field red integer Red component from zero to 255.
+---@field green integer Green component from zero to 255.
+---@field blue integer Blue component from zero to 255.
+---@field strength? number Tint strength from zero to one; defaults to one.
+
 ---@class WeatherPassiveEffectOptions
 ---@field effect string Native character-effect id.
 ---@field minimum_duration_turns? integer Positive minimum duration in game turns.
@@ -2522,10 +2528,14 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 ---@field chance_in_vehicle? integer Percentage chance from zero through 100.
 ---@field chance_inside_vehicle? integer Percentage chance from zero through 100.
 ---@field chance_outside_vehicle? integer Percentage chance from zero through 100.
----@field message? string Player-facing application message.
----@field npc_message? string NPC-facing application message.
+---@field message? string|LocalizedText Player-facing application message.
+---@field npc_message? string|LocalizedText NPC-facing application message.
+---@field environmental_resistance? table<string, integer> Native body-part type to environmental protection threshold.
 
 ---@class WeatherConditionPayload
+---@field daylight boolean Current game daylight, including dawn and dusk; matches native is_day.
+---@field dimension string Current dimension id.
+---@field climate_match? boolean Native station precipitation selection for this type; present only during climate-controlled selection.
 ---@field weather_type_id string
 ---@field temperature_kelvin number
 ---@field humidity number
@@ -2549,6 +2559,10 @@ function WeatherTypeDefinition:duration(minimum_turns, maximum_turns) end
 ---@return WeatherTypeDefinition self
 function WeatherTypeDefinition:animation(options) end
 
+---@param options WeatherTintOptions
+---@return WeatherTypeDefinition self
+function WeatherTypeDefinition:tint(options) end
+
 ---@param weather_id string Native or same-transaction prerequisite weather id.
 ---@return WeatherTypeDefinition self
 function WeatherTypeDefinition:requires(weather_id) end
@@ -2557,6 +2571,7 @@ function WeatherTypeDefinition:requires(weather_id) end
 ---@return WeatherTypeDefinition self
 function WeatherTypeDefinition:passive_effect(options) end
 
+---Without a condition callback the weather is unconditional.
 ---@param handler_id string Named callback registered with ccb.runtime.handler; it must return one boolean.
 ---@return WeatherTypeDefinition self
 function WeatherTypeDefinition:condition(handler_id) end
@@ -6590,7 +6605,7 @@ function CcbPlatformContent.RegionSettingsCity(options) end
 ---@return ForestBiomeMapgenDefinition
 function CcbPlatformContent.ForestBiomeMapgen(options) end
 
----@alias PlatformContentDefinition MissionDefinition|MonsterAdjustmentDefinition|FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition|ScenarioDefinition
+---@alias PlatformContentDefinition MissionDefinition|MonsterAdjustmentDefinition|FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition|ScenarioDefinition|WeatherGeneratorDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -9123,6 +9138,7 @@ function CcbRelocationApi.travel_to_dimension(dimension, options) end
 ---@field winter CcbWeatherSeasonModifiers
 
 ---@class CcbWeatherGeneratorSnapshot
+---@field climate_station string Station id, or an empty string when station-based climate is disabled.
 ---@field id GameId GameId<weather_generator>
 ---@field loaded boolean Whether the native generator was loaded.
 ---@field base_temperature_c number

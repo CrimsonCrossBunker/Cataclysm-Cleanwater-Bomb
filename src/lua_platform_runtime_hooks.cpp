@@ -4106,7 +4106,8 @@ std::optional<double> invoke_character_modifier_handler(
 }
 
 std::optional<bool> invoke_weather_type_handler(
-    const std::string_view weather_type_id_value, const w_point &sample )
+    const std::string_view weather_type_id_value, const w_point &sample,
+    const std::optional<bool> climate_match )
 {
     for( auto iterator = detail::active_runtime_values().rbegin();
          iterator != detail::active_runtime_values().rend(); ++iterator ) {
@@ -4119,7 +4120,10 @@ std::optional<bool> invoke_weather_type_handler(
                 weather_type_id_value, handler_id ) ) {
             continue;
         }
-        if( handler_id.empty() || !owner->world_is_ready ) {
+        if( handler_id.empty() ) {
+            return std::nullopt;
+        }
+        if( !owner->world_is_ready ) {
             return false;
         }
         const auto handler = owner->handlers.find( handler_id );
@@ -4137,6 +4141,11 @@ std::optional<bool> invoke_weather_type_handler(
         payload["wind_description"] = sample.wind_desc;
         payload["wind_direction"] = sample.winddirection;
         payload["turn"] = to_turn<std::int64_t>( sample.time.t );
+        payload["daylight"] = !is_night( calendar::turn );
+        payload["dimension"] = g->get_dimension_prefix().str();
+        if( climate_match ) {
+            payload["climate_match"] = *climate_match;
+        }
         sol::table location = owner->lua->create_table();
         location["coordinate_space"] = "abs_ms";
         location["x"] = sample.location.x();

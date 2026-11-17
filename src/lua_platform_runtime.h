@@ -491,7 +491,8 @@ void invoke_examine_handler(
 
 /** Evaluate a Lua-authored weather condition against one generated sample. */
 std::optional<bool> invoke_weather_type_handler(
-    std::string_view weather_type_id, const w_point &sample );
+    std::string_view weather_type_id, const w_point &sample,
+    std::optional<bool> climate_match = std::nullopt );
 
 /** Evaluate a Lua-authored end-screen selection policy. */
 std::optional<bool> invoke_end_screen_handler(

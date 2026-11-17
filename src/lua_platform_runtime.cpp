@@ -726,13 +726,14 @@ struct weather_passive_effect_definition_data {
     std::int64_t chance_in_vehicle = 0;
     std::int64_t chance_inside_vehicle = 0;
     std::int64_t chance_outside_vehicle = 0;
-    std::string message;
-    std::string npc_message;
+    detail::authored_text message;
+    detail::authored_text npc_message;
+    std::vector<std::pair<bp_type, int>> environmental_resistance;
 };
 
 struct weather_type_definition_data {
     std::string id;
-    std::string name;
+    detail::authored_text name;
     std::string color = "white";
     std::string map_color = "white";
     std::string symbol = "%";
@@ -743,6 +744,8 @@ struct weather_type_definition_data {
     double temperature_delta_kelvin = 0.0;
     double light_multiplier = 1.0;
     double sun_multiplier = 1.0;
+    std::array<std::int64_t, 3> tint_color = {};
+    double tint_strength = 0.0;
     std::int64_t sound_attenuation = 0;
     bool dangerous = false;
     std::string precipitation = "none";
@@ -2184,6 +2187,15 @@ struct weather_type_definition_handle {
         return *this;
     }
 
+    weather_type_definition_handle &tint( const sol::table &options ) {
+        require_building_handle( token, *definition, "weather type" );
+        definition->tint_color = { options.get_or<std::int64_t>( "red", 0 ),
+                                   options.get_or<std::int64_t>( "green", 0 ),
+                                   options.get_or<std::int64_t>( "blue", 0 ) };
+        definition->tint_strength = options.get_or( "strength", 1.0 );
+        return *this;
+    }
+
     weather_type_definition_handle &passive_effect( const sol::table &options ) {
         require_building_handle( token, *definition, "weather type" );
         weather_passive_effect_definition_data value;
@@ -2203,8 +2215,23 @@ struct weather_type_definition_handle {
                                           "chance_inside_vehicle", 0 );
         value.chance_outside_vehicle = options.get_or<std::int64_t>(
                                            "chance_outside_vehicle", 0 );
-        value.message = options.get_or( "message", std::string() );
-        value.npc_message = options.get_or( "npc_message", std::string() );
+        value.message = detail::read_singular_text( options["message"], {}, "WeatherType.passive_effect.message" );
+        value.npc_message = detail::read_singular_text( options["npc_message"], {},
+                            "WeatherType.passive_effect.npc_message" );
+        const sol::optional<sol::table> resistance =
+            options.get<sol::optional<sol::table>>( "environmental_resistance" );
+        if( resistance ) {
+            for( const auto &entry : *resistance ) {
+                const bp_type part = io::string_to_enum<bp_type>( entry.first.as<std::string>() );
+                const std::int64_t threshold = entry.second.as<std::int64_t>();
+                if( threshold < std::numeric_limits<int>::min() ||
+                    threshold > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "weather protection threshold is outside the native integer range" );
+                }
+                value.environmental_resistance.emplace_back( part, static_cast<int>( threshold ) );
+            }
+            std::sort( value.environmental_resistance.begin(), value.environmental_resistance.end() );
+        }
         definition->passive_effects.push_back( std::move( value ) );
         return *this;
     }
@@ -3740,6 +3767,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "id", sol::property( &weather_type_definition_handle::id ),
         "duration", &weather_type_definition_handle::duration,
         "animation", &weather_type_definition_handle::animation,
+        "tint", &weather_type_definition_handle::tint,
         "requires", &weather_type_definition_handle::requires,
         "passive_effect", &weather_type_definition_handle::passive_effect,
         "condition", &weather_type_definition_handle::condition );
@@ -4328,7 +4356,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<weather_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
+        definition->name = detail::read_singular_text( options["name"], {}, "WeatherType.name" );
         definition->color = options.get_or( "color", std::string( "white" ) );
         definition->map_color = options.get_or( "map_color", std::string( "white" ) );
         definition->symbol = options.get_or( "symbol", std::string( "%" ) );
@@ -6185,6 +6213,10 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.light_multiplier < 0.0 ||
                 !finite_float( definition.sun_multiplier ) ||
                 definition.sun_multiplier < 0.0 ||
+                !std::isfinite( definition.tint_strength ) || definition.tint_strength < 0.0 ||
+                definition.tint_strength > 1.0 ||
+                std::any_of( definition.tint_color.begin(), definition.tint_color.end(),
+            []( const std::int64_t value ) { return value < 0 || value > 255; } ) ||
                 !native_int( definition.sound_attenuation ) ||
                 !platform_precipitation( definition.precipitation ) ||
                 !platform_weather_sound_category( definition.sound_category ) ||
@@ -6193,7 +6225,6 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.minimum_duration_turns > std::numeric_limits<int>::max() ||
                 definition.maximum_duration_turns < definition.minimum_duration_turns ||
                 definition.maximum_duration_turns > std::numeric_limits<int>::max() ||
-                definition.condition_handler.empty() ||
                 ( definition.has_animation &&
                   ( !finite_float( definition.animation_factor ) ||
                     definition.animation_factor < 0.0 ||
@@ -6203,7 +6234,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "weather type '" + definition.id +
                                           "' has invalid presentation, physics, timing, or condition data" );
             }
-            if( owner_runtime.handlers.count( definition.condition_handler ) == 0 ) {
+            if( !definition.condition_handler.empty() &&
+                owner_runtime.handlers.count( definition.condition_handler ) == 0 ) {
                 throw std::runtime_error( "weather type '" + definition.id +
                                           "' references missing condition handler '" +
                                           definition.condition_handler + "'" );
@@ -8245,7 +8277,7 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native.name = no_translation( source.name );
+            native.name = source.name.native();
             native.color = color_from_string( source.color, report_color_error::no );
             native.map_color = color_from_string( source.map_color, report_color_error::no );
             native.symbol = UTF8_getch( source.symbol );
@@ -8257,6 +8289,10 @@ bool content_transaction::apply( std::string &error )
                                               source.temperature_delta_kelvin );
             native.light_multiplier = static_cast<float>( source.light_multiplier );
             native.sun_multiplier = static_cast<float>( source.sun_multiplier );
+            native.tint_color.r = source.tint_color[0] / 255.0f;
+            native.tint_color.g = source.tint_color[1] / 255.0f;
+            native.tint_color.b = source.tint_color[2] / 255.0f;
+            native.tint_strength = static_cast<float>( source.tint_strength );
             native.sound_attn = static_cast<int>( source.sound_attenuation );
             native.dangerous = source.dangerous;
             native.precip = *platform_precipitation( source.precipitation );
@@ -8298,14 +8334,14 @@ bool content_transaction::apply( std::string &error )
                                                    effect_source.chance_inside_vehicle );
                 effect.chance_outside_vehicle = static_cast<int>(
                                                     effect_source.chance_outside_vehicle );
-                effect.message = effect_source.message.empty() ? translation() :
-                                 no_translation( effect_source.message );
-                effect.message_npc = effect_source.npc_message.empty() ? translation() :
-                                     no_translation( effect_source.npc_message );
+                effect.message = effect_source.message.native();
+                effect.message_npc = effect_source.npc_message.native();
+                effect.immunity_data.immunity_data_body_part_env_resistance =
+                    effect_source.environmental_resistance;
                 native.passive_effect.push_back( std::move( effect ) );
             }
-            native.condition = []( const const_dialogue & ) {
-                return false;
+            native.condition = [unconditional = source.condition_handler.empty()]( const const_dialogue & ) {
+                return unconditional;
             };
             native.debug_cause_eoc.reset();
             native.debug_leave_eoc.reset();
@@ -11349,6 +11385,10 @@ std::string content_transaction::fingerprint() const
         hash_part( state, std::to_string( value.temperature_delta_kelvin ) );
         hash_part( state, std::to_string( value.light_multiplier ) );
         hash_part( state, std::to_string( value.sun_multiplier ) );
+        for( const std::int64_t component : value.tint_color ) {
+            hash_part( state, std::to_string( component ) );
+        }
+        hash_part( state, std::to_string( value.tint_strength ) );
         hash_part( state, std::to_string( value.sound_attenuation ) );
         hash_part( state, value.dangerous ? "dangerous" : "safe" );
         hash_part( state, value.precipitation );
@@ -11380,6 +11420,10 @@ std::string content_transaction::fingerprint() const
             hash_part( state, std::to_string( effect.chance_outside_vehicle ) );
             hash_part( state, effect.message );
             hash_part( state, effect.npc_message );
+            for( const auto &[part, resistance] : effect.environmental_resistance ) {
+                hash_part( state, io::enum_to_string( part ) );
+                hash_part( state, std::to_string( resistance ) );
+            }
         }
         hash_part( state, value.condition_handler );
     }
@@ -12327,7 +12371,8 @@ void invoke_examine_handler(
 {
 }
 
-std::optional<bool> invoke_weather_type_handler( std::string_view, const w_point & )
+std::optional<bool> invoke_weather_type_handler( std::string_view, const w_point &,
+        std::optional<bool> )
 {
     return std::nullopt;
 }

@@ -676,6 +676,7 @@ sol::table snapshot_generator(
             generator.id.str() );
     result["loaded"] =
         generator.was_loaded;
+    result["climate_station"] = generator.climate_station;
     result["base_temperature_c"] =
         generator.base_temperature;
     result["base_humidity"] =
