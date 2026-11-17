@@ -141,16 +141,7 @@
     "apply_message": "",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "MATRIX_CRYSTAL_TELEPATHY" },
-        "special_vision": [
-          {
-            "condition": { "test_eoc": "EOC_CONDITION_HAS_MIND" },
-            "distance": 15,
-            "descriptions": [ { "id": "sense_minds", "symbol": "?", "color": "c_white", "text": "You sense something sapient here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_mom_artifact_mind_sight_0"
     ]
   },
   {

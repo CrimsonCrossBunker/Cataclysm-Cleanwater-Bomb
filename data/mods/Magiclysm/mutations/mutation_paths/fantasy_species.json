@@ -298,28 +298,8 @@
     "category": [ "SPECIES_ELF" ],
     "enchantments": [
       "INLINE_ENCH_ELVEN_SIGHT_0",
-      {
-        "condition": {
-          "and": [
-            "u_is_outside",
-            { "not": { "is_weather": "clear" } },
-            { "not": { "is_weather": "sunny" } },
-            { "and": [ { "math": [ "moon_phase() >= 2" ] }, { "math": [ "moon_phase() < 7" ] } ] }
-          ]
-        },
-        "values": [ { "value": "NIGHT_VIS", "add": 10 }, { "value": "OVERMAP_SIGHT", "add": 2 } ]
-      },
-      {
-        "condition": {
-          "and": [
-            "u_is_outside",
-            { "not": { "is_weather": "clear" } },
-            { "not": { "is_weather": "sunny" } },
-            { "or": [ { "math": [ "moon_phase() <= 1" ] }, { "math": [ "moon_phase() == 7" ] } ] }
-          ]
-        },
-        "values": [ { "value": "NIGHT_VIS", "add": 2 } ]
-      },
+      "INLINE_ENCH_ELVEN_SIGHT_1",
+      "INLINE_ENCH_ELVEN_SIGHT_2",
       "INLINE_ENCH_ELVEN_SIGHT_3"
     ]
   },

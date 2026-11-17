@@ -10,16 +10,7 @@
     "visibility": 2,
     "ugliness": 1,
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": 0.1 },
-          { "value": "THIRST", "multiply": 0.1 },
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "(50 * bloodthorn_druid_traits_sum() ) + (25 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_BLOODTHORNE_DRUID_SYMBIOTIC_PLANT_0"
     ],
     "anger_relations": [ [ "THORNBEAST", -100 ] ],
     "flags": [ "ATTUNEMENT", "TREE_COMMUNION_PLUS", "NO_CBM_INSTALLATION" ],
@@ -113,34 +104,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "PAIN_PENALTY_MOD_STR",
-            "multiply": {
-              "math": [
-                "max( ( -0.15 + (-0.02 * bloodthorn_druid_traits_sum() ) + (-0.01 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ), -0.6)"
-              ]
-            }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_DEX",
-            "multiply": {
-              "math": [
-                "max( ( -0.15 + (-0.02 * bloodthorn_druid_traits_sum() ) + (-0.01 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ), -0.6)"
-              ]
-            }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_SPEED",
-            "multiply": {
-              "math": [
-                "max( ( -0.15 + (-0.02 * bloodthorn_druid_traits_sum() ) + (-0.01 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ), -0.6)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_BLOODTHORNE_DRUID_REDUCED_PAIN_PENALTIES_0"
     ]
   },
   {
@@ -152,22 +116,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" },
-            { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST" }
-          ]
-        },
-        "values": [
-          {
-            "value": "REGEN_MANA",
-            "multiply": {
-              "math": [ "(0.02 * bloodthorn_druid_traits_sum() ) + (0.01 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_BLOODTHORNE_DRUID_BONUS_MANA_REGEN_0"
     ]
   },
   {

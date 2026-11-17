@@ -110,3 +110,9 @@ require("attribute_scaling")
 require("environment_enchantments")
 
 require("overlay_enchantments")
+
+require("inline_special_vision")
+
+require("thermal_scaling")
+
+require("innate_enchantments")

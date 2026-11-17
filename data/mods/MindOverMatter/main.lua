@@ -116,3 +116,7 @@ require("attribute_scaling")
 require("shared_enchantment_values")
 
 require("overlay_enchantments")
+
+require("inline_special_vision")
+
+require("progression_enchantments")

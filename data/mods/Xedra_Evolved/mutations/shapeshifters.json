@@ -93,15 +93,7 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_WEREWOLF_HYBRID_FORM_TRAITS_0",
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "moon_phase() == 4" ] } ] },
-        "values": [
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "SPEED", "multiply": 0.05 },
-          { "value": "REGEN_MANA", "multiply": 1 }
-        ]
-      }
+      "INLINE_ENCH_WEREWOLF_HYBRID_FORM_TRAITS_1"
     ],
     "integrated_armor": [ "integrated_claws_werewolf" ],
     "flags": [ "HANDS_CANNOT_USE_FIREARMS", "NO_SPELLCASTING", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_HUGE" ],

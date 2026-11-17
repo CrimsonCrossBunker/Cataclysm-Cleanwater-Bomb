@@ -792,18 +792,7 @@
     "desc": [ "You can see in the dark." ],
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "NIGHT_VIS",
-            "add": {
-              "math": [
-                "5 + (vampire_total_tier_one_traits_plus_potency() * 1) + (vampire_total_tier_two_traits() * 2) + (vampire_total_tier_three_traits() * 3) + (vampire_total_tier_four_traits_plus_potence() * 4) + (vampire_total_tier_five_traits_plus_cauldron() * 5)"
-              ]
-            }
-          }
-        ]
-      },
+      "INLINE_ENCH_eyegleam_0",
       "INLINE_ENCH_eyegleam_1"
     ]
   },
@@ -820,26 +809,7 @@
     "desc": [ "You have the strength of the damned." ],
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": {
-              "math": [
-                "1 + (vampire_total_tier_one_traits_plus_potency() * 0.25) + (vampire_total_tier_two_traits() * 0.33) + (vampire_total_tier_three_traits() * 0.5) + (vampire_total_tier_four_traits_plus_potence() * 0.75)  + (vampire_total_tier_five_traits_plus_cauldron() * 1)"
-              ]
-            }
-          },
-          {
-            "value": "OVERKILL_DAMAGE",
-            "add": {
-              "math": [
-                "-10 + (vampire_total_tier_one_traits_plus_potency() * -1) + (vampire_total_tier_two_traits() * -2) + (vampire_total_tier_three_traits() * -3) + (vampire_total_tier_four_traits_plus_potence() * -4)  + (vampire_total_tier_five_traits_plus_cauldron() * -5)"
-              ]
-            }
-          }
-        ]
-      },
+      "INLINE_ENCH_effect_vampiric_strength_0",
       "INLINE_ENCH_effect_vampiric_strength_1"
     ]
   },
@@ -851,18 +821,7 @@
     "max_intensity": 20,
     "int_add_val": 1,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SMASH_BONUS",
-            "add": {
-              "math": [
-                "(1 + (vampire_total_tier_one_traits_plus_potency() * 0.25) + (vampire_total_tier_two_traits() * 0.33) + (vampire_total_tier_three_traits() * 0.5) + (vampire_total_tier_four_traits_plus_potence() * 0.75)  + (vampire_total_tier_five_traits_plus_cauldron() * 1) ) * (u_effect_intensity('effect_vampire_unholy_devastation') * 0.25 )"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vampire_unholy_devastation_0"
     ]
   },
   {
@@ -872,42 +831,7 @@
     "desc": [ "You have the fortitude of the grave." ],
     "rating": "good",
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          {
-            "type": "bash",
-            "multiply": {
-              "math": [
-                "max(((vampire_total_tier_one_traits_plus_potency() * -0.01) + (vampire_total_tier_two_traits() * -0.02) + (vampire_total_tier_three_traits() * -0.04) + (vampire_total_tier_four_traits_plus_potence() * -0.06) + (vampire_total_tier_five_traits_plus_cauldron() * -0.08)), -0.66)"
-              ]
-            }
-          },
-          {
-            "type": "stab",
-            "multiply": {
-              "math": [
-                "max(((vampire_total_tier_one_traits_plus_potency() * -0.003) + (vampire_total_tier_two_traits() * -0.007) + (vampire_total_tier_three_traits() * -0.015) + (vampire_total_tier_four_traits_plus_potence() * -0.025) + (vampire_total_tier_five_traits_plus_cauldron() * -0.035)), -0.25)"
-              ]
-            }
-          },
-          {
-            "type": "cut",
-            "multiply": {
-              "math": [
-                "max(((vampire_total_tier_one_traits_plus_potency() * -0.005) + (vampire_total_tier_two_traits() * -0.01) + (vampire_total_tier_three_traits() * -0.02) + (vampire_total_tier_four_traits_plus_potence() * -0.03) + (vampire_total_tier_five_traits_plus_cauldron() * -0.04)), -0.33)"
-              ]
-            }
-          },
-          {
-            "type": "bullet",
-            "multiply": {
-              "math": [
-                "max(((vampire_total_tier_one_traits_plus_potency() * -0.012) + (vampire_total_tier_two_traits() * -0.025) + (vampire_total_tier_three_traits() * -0.05) + (vampire_total_tier_four_traits_plus_potence() * -0.075) + (vampire_total_tier_five_traits_plus_cauldron() * 0.1)), -0.85)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vampiric_resilience_0"
     ]
   },
   {
@@ -972,27 +896,7 @@
     "rating": "good",
     "blocks_effects": [ "grabbed" ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "EVASION",
-            "add": {
-              "math": [
-                "min(0.15 + ((vampire_total_tier_one_traits_plus_potency() * 0.012) + (vampire_total_tier_two_traits() * 0.025) + (vampire_total_tier_three_traits() * 0.05) + (vampire_total_tier_four_traits_plus_potence() * 0.075) + (vampire_total_tier_five_traits_plus_cauldron() * 0.1)), 0.7)"
-              ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "min(1 + ((vampire_total_tier_one_traits_plus_potency() * 0.25) + (vampire_total_tier_two_traits() * 0.45) + (vampire_total_tier_three_traits() * 0.65) + (vampire_total_tier_four_traits_plus_potence() * 0.95) + (vampire_total_tier_five_traits_plus_cauldron() * 1.25)), 15)"
-              ]
-            }
-          },
-          { "value": "BONUS_DODGE", "add": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_vampiric_dodge_0"
     ],
     "flags": [ "HARDTOHIT" ]
   },
@@ -1002,19 +906,7 @@
     "name": [ "Cloak of Shadows" ],
     "desc": [ "You are clouding nearby minds and are harder to spot in dim light or darkness." ],
     "enchantments": [
-      {
-        "condition": { "or": [ { "not": "is_day" }, { "not": "u_is_outside" } ] },
-        "values": [
-          {
-            "value": "STEALTH_MODIFIER",
-            "add": {
-              "math": [
-                "min(30 + ((vampire_total_tier_one_traits_plus_potency() * 0.25) + (vampire_total_tier_two_traits() * 0.4) + (vampire_total_tier_three_traits() * 0.55) + (vampire_total_tier_four_traits_plus_potence() * 0.75) + (vampire_total_tier_five_traits_plus_cauldron() * 1)), 60)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vampiric_stealth_bonus_0"
     ]
   },
   {
@@ -1034,29 +926,7 @@
     "enchantments": [
       "INLINE_ENCH_effect_vampire_feign_death_0",
       "INLINE_ENCH_effect_vampire_feign_death_1",
-      {
-        "condition": { "u_has_trait": "VAMPIRE_TORPOR_REFINEMENT_FEIGN_DEATH" },
-        "values": [
-          {
-            "value": "REGEN_HP",
-            "multiply": {
-              "math": [
-                "(u_vampire_total_tier_one_traits_plus_potency * 0.02) + (u_vampire_total_tier_two_traits * 0.03) + (u_vampire_total_tier_three_traits * 0.04) + (vampire_total_tier_four_traits_plus_potence() * 0.05) + (u_vampire_total_tier_five_traits_plus_cauldron * 0.06)"
-              ]
-            }
-          },
-          {
-            "value": "MENDING_MODIFIER",
-            "multiply": {
-              "math": [
-                "(u_vampire_total_tier_one_traits_plus_potency * 0.03) + (u_vampire_total_tier_two_traits * 0.04) + (u_vampire_total_tier_three_traits * 0.05) + (vampire_total_tier_four_traits_plus_potence() * 0.06) + (u_vampire_total_tier_five_traits_plus_cauldron * 0.07)"
-              ]
-            }
-          },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "SLEEPINESS", "multiply": -0.5 }
-        ]
-      }
+      "INLINE_ENCH_effect_vampire_feign_death_2"
     ],
     "flags": [ "CANNOT_ATTACK", "CANNOT_MOVE", "NO_BODY_HEAT" ]
   },
@@ -1777,14 +1647,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "distance": { "math": [ "u_val('strength') + u_val('perception')" ] },
-            "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense something moving here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_ierde_sense_nearby_monsters_0"
     ]
   },
   {
@@ -2245,15 +2108,7 @@
     "desc": [ "You can sense nearby creatures that come from under the hill." ],
     "rating": "good",
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": { "or": [ { "npc_has_flag": "FAE_CREATURE" }, { "npc_has_flag": "FAERIECREATURE" } ] },
-            "distance": { "math": [ "(u_val('perception') * 1.5) * (paraclesian_post_threshold_doubler(1))" ] },
-            "descriptions": [ { "id": "fae_sense", "text": "You sense fae here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_paraclesian_see_fae_0"
     ]
   },
   {
@@ -2263,22 +2118,7 @@
     "desc": [ "You can sense nearby vampires." ],
     "rating": "good",
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [
-                { "npc_has_any_trait": [ "VAMPIRE", "VAMPIRE2", "VAMPIRE3", "VAMPIRE4", "BLOOD_DRINKER" ] },
-                { "npc_has_species": "VAMPIRE" }
-              ]
-            },
-            "distance": { "math": [ "u_val('perception') * 2" ] },
-            "precise": true,
-            "ignores_aiming_cone": true,
-            "descriptions": [ { "id": "vamnpire_sense", "text": "You detect a vampire here.", "symbol": "V", "color": "red" } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_sense_vampire_0"
     ]
   },
   {
@@ -2295,17 +2135,7 @@
     "desc": [ "You rubbed the paste of blood and herbs and ashes on your eyes.  It stings.  A lot." ],
     "rating": "mixed",
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [ { "npc_has_species": "HORROR" }, { "npc_has_species": "NETHER" }, { "npc_has_species": "nether_player_hate" } ]
-            },
-            "distance": 40,
-            "descriptions": [ { "id": "nether_creature_sense", "symbol": "?", "color": "c_pink", "text": "You sense an otherworldy danger here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_hedge_nether_eye_paste_0"
     ],
     "limb_score_mods": [ { "limb_score": "vision", "modifier": 0.6 } ],
     "base_mods": { "pain_min": [ 1 ], "pain_chance": [ 60 ], "pain_tick": [ 180 ] },
@@ -2710,42 +2540,7 @@
     "remove_message": "Your athletic prowess fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "DODGE_CHANCE",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.08) + (u_skill('gramarye') * 0.25) )" ] }
-          },
-          {
-            "value": "BONUS_DODGE",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.05) + (u_skill('gramarye') * 0.2) )" ] }
-          },
-          {
-            "value": "THROW_STR",
-            "add": { "math": [ "1 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.07) + (u_skill('gramarye') * 0.35) )" ] }
-          },
-          {
-            "value": "RANGE_DODGE",
-            "add": {
-              "math": [
-                "min( (0.33 + ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.005) + (u_skill('gramarye') * 0.02) )), 0.98)"
-              ]
-            }
-          },
-          {
-            "value": "MOVE_COST",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.0015) - (u_skill('gramarye') * 0.015) )" ]
-            }
-          },
-          {
-            "value": "ATTACK_SPEED",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.0015) - (u_skill('gramarye') * 0.015) )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_noble_movement_buffs_0"
     ],
     "flags": [ "CLIMB_NO_LADDER", "FEATHER_FALL" ]
   },
@@ -3312,18 +3107,7 @@
     "max_intensity": 1,
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "xedra_chron_spell_calc( u_spell_level('xedra_chronomancer_chronal_acceleration'), 5, 0 )" ] }
-          },
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "-max( 1000 - ( 25 * u_spell_level('xedra_chronomancer_chronal_acceleration') ), 250 )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xedra_chronomancer_chronal_accel_0"
     ]
   },
   {
@@ -3377,19 +3161,7 @@
     "desc": [ "Your injuries are disappearing in a harmless paradox." ],
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "REGEN_HP",
-            "multiply": { "math": [ "xedra_chron_spell_calc( u_spell_level('xedra_chronomancer_rewrite_wound_causality'), 5, 0 )" ] }
-          },
-          {
-            "value": "MENDING_MODIFIER",
-            "multiply": { "math": [ "xedra_chron_spell_calc( u_spell_level('xedra_chronomancer_rewrite_wound_causality'), 5, 0 )" ] }
-          },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 }
-        ]
-      }
+      "INLINE_ENCH_effect_xedra_rewrite_wound_causality_0"
     ]
   },
   {
@@ -3818,34 +3590,7 @@
     "remove_message": "Your wilderness-enhanced prowess fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": {
-              "math": [
-                "min( ( (1 + (0.3 * bloodthorn_druid_traits_sum() ) + (0.1 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 10)"
-              ]
-            }
-          },
-          {
-            "value": "DEXTERITY",
-            "add": {
-              "math": [
-                "min( ( (1 + (0.3 * bloodthorn_druid_traits_sum() ) + (0.1 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 10)"
-              ]
-            }
-          },
-          {
-            "value": "MAX_HP",
-            "multiply": {
-              "math": [
-                "min( ( (0.1 + (0.02 * bloodthorn_druid_traits_sum() ) + (0.005 * u_sum_traits_of_category_char_has('ARVORE_ALCHEMY') ) ) * (u_arvore_is_in_wilderness == 1 ? 1.5 : 1) ), 0.6)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_bloodthorne_druid_gain_strength_dexterity_buff_0"
     ]
   },
   {
@@ -3903,15 +3648,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_any_trait": [ "WEREWOLF_HYBRID_FORM_TRAITS", "WEREWOLF_PRIMAL_FORM_TRAITS" ] } },
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": { "math": [ "min( (2 + (werewolf_tier_four_traits() * 0.2) + (werewolf_tier_five_traits() * 0.35) ), 8)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_primal_strength_human_form_0"
     ]
   },
   {
@@ -3930,19 +3667,7 @@
     "desc": [ "" ],
     "enchantments": [
       "INLINE_ENCH_effect_xe_werewolf_camouflage_as_wolf_0",
-      {
-        "condition": { "u_has_trait": "WOLF_VAMPIRE_WOLF_FORM_TRAITS" },
-        "values": [
-          {
-            "value": "STEALTH_MODIFIER",
-            "add": {
-              "math": [
-                "min( (25 + (werewolf_tier_three_traits() * 1) + (werewolf_tier_four_traits() * 2) + (werewolf_tier_five_traits() * 4) ), 50)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_camouflage_as_wolf_1"
     ]
   },
   {

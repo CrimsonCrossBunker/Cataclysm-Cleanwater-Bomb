@@ -1185,29 +1185,7 @@
     "flags": [ "DEAF", "BLIND" ],
     "enchantments": [
       "INLINE_ENCH_effect_vampire_torpor_0",
-      {
-        "values": [
-          {
-            "value": "REGEN_HP",
-            "multiply": {
-              "math": [
-                "(u_vampire_total_tier_one_traits_plus_potency * 0.05) + (u_vampire_total_tier_two_traits * 0.075) + (u_vampire_total_tier_three_traits * 0.1) + (vampire_total_tier_four_traits_plus_potence() * 0.2) + (u_vampire_total_tier_five_traits_plus_cauldron * 0.3)"
-              ]
-            }
-          },
-          {
-            "value": "MENDING_MODIFIER",
-            "multiply": {
-              "math": [
-                "(u_vampire_total_tier_one_traits_plus_potency * 0.05) + (u_vampire_total_tier_two_traits * 0.075) + (u_vampire_total_tier_three_traits * 0.1) + (vampire_total_tier_four_traits_plus_potence() * 0.2) + (u_vampire_total_tier_five_traits_plus_cauldron * 0.3)"
-              ]
-            }
-          },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "SLEEPINESS_REGEN", "multiply": 20 },
-          { "value": "SLEEPINESS", "multiply": -0.99 }
-        ]
-      }
+      "INLINE_ENCH_effect_vampire_torpor_1"
     ]
   },
   {

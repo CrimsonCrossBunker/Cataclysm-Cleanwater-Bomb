@@ -216,15 +216,7 @@
     "category": [ "FAIR_FOLK_NOBLE" ],
     "types": [ "HERITAGE" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_MANA", "add": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 70" ] } },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') * 0.02" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_UNKNOWING_CHANGELING_NOBLE_0"
     ],
     "flags": [ "HERITAGE", "NO_CBM_INSTALLATION" ],
     "cancels": [ "CHAOTIC", "CHAOTIC_BAD" ],
@@ -237,15 +229,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "allowed_category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_MANA", "add": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_BROWNIE') * 40" ] } },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_BROWNIE') * 0.01" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_UNKNOWING_CHANGELING_COMMONER_BROWNIE_0"
     ],
     "cancels": [ "CHAOTIC", "CHAOTIC_BAD" ],
     "chargen_allow_npc": false
@@ -268,15 +252,7 @@
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
     "allowed_category": [ "FAIR_FOLK_COMMONER_POOKA" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_MANA", "add": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 50" ] } },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 0.01" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_UNKNOWING_CHANGELING_COMMONER_POOKA_0"
     ],
     "cancels": [ "CHAOTIC", "CHAOTIC_BAD" ],
     "chargen_allow_npc": false
@@ -299,15 +275,7 @@
     "category": [ "FAIR_FOLK_COMMONER_SELKIE" ],
     "allowed_category": [ "FAIR_FOLK_COMMONER_SELKIE" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_MANA", "add": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 25" ] } },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') * 0.01" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_UNKNOWING_CHANGELING_COMMONER_SELKIE_0"
     ],
     "cancels": [ "CHAOTIC", "CHAOTIC_BAD" ],
     "chargen_allow_npc": false
@@ -330,15 +298,7 @@
     "category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "allowed_category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_MANA", "add": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 15" ] } },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') * 0.01" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_UNKNOWING_CHANGELING_COMMONER_TROW_0"
     ],
     "cancels": [ "CHAOTIC", "CHAOTIC_BAD" ],
     "chargen_allow_npc": false
@@ -616,10 +576,7 @@
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_0",
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_1",
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_2",
-      {
-        "condition": { "u_has_any_effect": [ "formication", "visuals", "hallu", "bite", "infected" ] },
-        "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_3"
     ]
   },
   {
@@ -840,23 +797,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_brownie_sense_intruders != 0" ] } ] },
-        "special_vision": [
-          {
-            "distance": { "math": [ "u_val('perception') + u_brownie_homebody_speed_bonus" ] },
-            "descriptions": [
-              {
-                "id": "moving_creature",
-                "//": "prooly need to separate unagressive creatures, TODO",
-                "symbol": "?",
-                "color": "c_white",
-                "text": "Intruder!"
-              }
-            ]
-          }
-        ]
-      }
+      "INLINE_ENCH_BROWNIE_SENSE_INTRUDERS_0"
     ]
   },
   {
@@ -1339,35 +1280,7 @@
     "prereqs2": [ "POOKA_CLAWS", "POOKA_STAINLESS_CLAWS", "POOKA_TAIL_STING" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": "u_can_drop_weapon" },
-            { "not": { "u_has_worn_with_flag": "STURDY" } },
-            {
-              "u_has_any_trait": [ "ANTLERS", "HORNS_CURLED", "FANGS", "SABER_TEETH", "CLAWS", "CLAWS_ST", "TAIL_STING" ]
-            },
-            {
-              "not": {
-                "u_has_any_trait": [
-                  "VAMPIRE_BAT_FORM_TRAITS",
-                  "TURN_INTO_RAVEN_TRAITS",
-                  "TURN_INTO_BEAR_TRAITS",
-                  "TURN_INTO_DEER_TRAITS",
-                  "VAMPIRE_WOLF_FORM_TRAITS",
-                  "TURN_INTO_COUGAR_TRAITS"
-                ]
-              }
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "MELEE_DAMAGE",
-            "multiply": { "math": [ "0.1 + (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 0.01)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_POOKA_UNARMED_ATTACK_BONUSES_0"
     ]
   },
   {
@@ -1380,52 +1293,7 @@
     "prereqs": [ "POOKA_UNARMED_ATTACK_BONUSES" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": "u_can_drop_weapon" },
-            { "not": { "u_has_worn_with_flag": "STURDY" } },
-            {
-              "u_has_any_trait": [
-                "ANTLERS",
-                "HORNS_CURLED",
-                "FANGS",
-                "SABER_TEETH",
-                "CLAWS",
-                "CLAWS_ST",
-                "WINGS_BIRD",
-                "URSINE_FUR",
-                "CHITIN2",
-                "POOKA_QUADRUPED_TRAITS",
-                "TAIL_FLUFFY",
-                "TAIL_LONG"
-              ]
-            },
-            {
-              "not": {
-                "u_has_any_trait": [
-                  "VAMPIRE_BAT_FORM_TRAITS",
-                  "TURN_INTO_RAVEN_TRAITS",
-                  "TURN_INTO_BEAR_TRAITS",
-                  "TURN_INTO_DEER_TRAITS",
-                  "VAMPIRE_WOLF_FORM_TRAITS",
-                  "TURN_INTO_COUGAR_TRAITS"
-                ]
-              }
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": { "math": [ "min( (1 + (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 0.1)),4)" ] }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": { "math": [ "min( (2 + (u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') * 0.25) ),12)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_POOKA_UNARMED_DODGE_BONUSES_0"
     ]
   },
   {

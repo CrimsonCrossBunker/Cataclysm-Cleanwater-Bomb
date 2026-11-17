@@ -547,7 +547,7 @@
     "changes_to": [ "DRAGONBLOOD2" ],
     "types": [ "METABOLISM" ],
     "category": [ "DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.2)" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGONBLOOD_0" ]
   },
   {
     "type": "mutation",
@@ -560,12 +560,7 @@
     "types": [ "METABOLISM" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": 0.25 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.333)" ] } }
-        ]
-      }
+      "INLINE_ENCH_DRAGONBLOOD2_0"
     ]
   },
   {
@@ -581,12 +576,7 @@
     "types": [ "METABOLISM" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": 0.5 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_DRAGONBLOOD3_0"
     ]
   },
   {

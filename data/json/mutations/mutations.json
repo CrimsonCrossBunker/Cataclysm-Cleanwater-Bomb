@@ -2971,12 +2971,7 @@
     "vitamin_cost": 90,
     "flags": [ "COLDBLOOD" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.333 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.2)" ] } }
-        ]
-      }
+      "INLINE_ENCH_COLDBLOOD_0"
     ]
   },
   {
@@ -2993,12 +2988,7 @@
     "vitamin_cost": 90,
     "flags": [ "COLDBLOOD2" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.333)" ] } }
-        ]
-      }
+      "INLINE_ENCH_COLDBLOOD2_0"
     ]
   },
   {
@@ -3015,12 +3005,7 @@
     "vitamin_cost": 160,
     "flags": [ "COLDBLOOD3", "NO_BODY_HEAT" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_COLDBLOOD3_0"
     ]
   },
   {
@@ -3038,12 +3023,7 @@
     "vitamin_cost": 160,
     "flags": [ "ECTOTHERM", "NO_BODY_HEAT" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod_bipolar(65, 0.5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_COLDBLOOD4_0"
     ]
   },
   {
@@ -3264,7 +3244,7 @@
     "threshreq": [ "THRESH_ALPHA" ],
     "points": 6,
     "vitamin_cost": 400,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": { "math": [ "alpha_stat_bonus(u_val('strength_base'))" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_ALPHA_0" ]
   },
   {
     "type": "mutation",
@@ -3392,7 +3372,7 @@
     "threshreq": [ "THRESH_ALPHA" ],
     "points": 6,
     "vitamin_cost": 400,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": { "math": [ "alpha_stat_bonus(u_val('dexterity_base'))" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_ALPHA_0" ]
   },
   {
     "type": "mutation",
@@ -3477,7 +3457,7 @@
     "threshreq": [ "THRESH_ALPHA" ],
     "points": 6,
     "vitamin_cost": 400,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": { "math": [ "alpha_stat_bonus(u_val('intelligence_base'))" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_ALPHA_0" ]
   },
   {
     "type": "mutation",
@@ -3586,7 +3566,7 @@
     "threshreq": [ "THRESH_ALPHA" ],
     "points": 6,
     "vitamin_cost": 400,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": { "math": [ "alpha_stat_bonus(u_val('perception_base'))" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_ALPHA_0" ]
   },
   {
     "type": "mutation",
