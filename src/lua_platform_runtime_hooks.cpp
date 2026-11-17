@@ -2168,6 +2168,45 @@ void install_runtime_callback_api(
         }
         throw std::runtime_error( "runtime.call_number references missing handler '" + id + "'" );
     } );
+    runtime_api.set_function( "call_character", [weak]( const std::string &id,
+    const game_handle &handle ) {
+        const std::shared_ptr<runtime> caller = weak.lock();
+        if( !caller || !caller->world_is_ready || caller->callback_depth <= 0 ||
+            find_active_runtime( caller->mod_id ) != caller ) {
+            throw std::runtime_error( "runtime.call_character requires a live runtime callback" );
+        }
+        std::optional<game_handle_error> actor_error;
+        Character *actor = resolve_exact_character( handle, caller->handle_runtime(),
+                           runtime_world_generation_storage(), actor_error );
+        if( actor == nullptr ) {
+            throw std::invalid_argument( actor_error->message );
+        }
+        for( auto entry = active_runtimes.rbegin(); entry != active_runtimes.rend(); ++entry ) {
+            const std::shared_ptr<runtime> provider = *entry;
+            if( !provider ) {
+                continue;
+            }
+            const auto handler = provider->handlers.find( id );
+            if( handler == provider->handlers.end() ) {
+                continue;
+            }
+            if( !provider->world_is_ready || provider->callback_depth >= 16 ) {
+                throw std::runtime_error( "runtime.call_character provider is unavailable for '" + id + "'" );
+            }
+            // Cross-state userdata must be rebound to the provider, preserving the exact actor.
+            const game_handle argument = platform_creature_handle( *provider, *actor );
+            sol::protected_function callback = handler->second.callback;
+            callback_scope scope( *provider, actor );
+            const sol::protected_function_result result = callback( argument );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( "runtime.call_character '" + provider->mod_id + ":" +
+                                          id + "' failed: " + error.what() );
+            }
+            return;
+        }
+        throw std::runtime_error( "runtime.call_character references missing handler '" + id + "'" );
+    } );
     runtime_api.set_function( "character_recurring", [weak](
                                   const std::string & effect_handler,
     const std::string & interval_handler ) {

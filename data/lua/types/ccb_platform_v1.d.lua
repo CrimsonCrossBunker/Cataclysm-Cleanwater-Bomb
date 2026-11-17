@@ -7162,6 +7162,15 @@ function CcbPlatformRuntime.handler(id, callback, payload_version) end
 ---@return number value Exactly one finite numeric result.
 function CcbPlatformRuntime.call_number(id, ...) end
 
+---Call the last active Mod's named behavior with the exact live Character.
+---The Character is rebound to the provider's runtime; no Lua userdata is shared between states.
+---Provider lookup follows active Mod order and hot reload on every call. Handler errors propagate.
+---Requires a live runtime callback; missing, stale or non-Character targets fail without selecting another actor.
+---@param id string Handler registered with runtime.handler; receives one GameHandle.
+---@param character GameHandle Exact live avatar or NPC owned by the calling runtime.
+---@return nil Handler results are ignored.
+function CcbPlatformRuntime.call_character(id, character) end
+
 ---Register one per-Character recurring policy. The effect handler runs only
 ---when the Character-local due turn is reached; the interval handler runs on
 ---initial enrollment and after every due effect and must return 1..31536000
