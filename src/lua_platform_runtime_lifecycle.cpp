@@ -1394,6 +1394,22 @@ void detail::install_runtime_state_task_api(
         queue_character_task( *actor, time_point::from_turn( static_cast<int>( now + turns ) ),
                               owner->mod_id, handler );
     } );
+    tasks.set_function( "ensure_avatar_turn", [weak]( const std::int64_t turns,
+    const std::string & handler ) {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->task_migration_active ) {
+            throw std::runtime_error( "Avatar turn tasks require an active world" );
+        }
+        if( owner->handlers.find( handler ) == owner->handlers.end() ) {
+            throw std::runtime_error( "Avatar turn task references missing handler '" + handler + "'" );
+        }
+        const std::int64_t now = to_turn<std::int64_t>( calendar::turn );
+        if( turns < 0 || turns > std::numeric_limits<int>::max() - now ) {
+            throw std::invalid_argument( "Avatar turn task delay must be nonnegative and fit the game calendar" );
+        }
+        ensure_avatar_turn_task( time_point::from_turn( static_cast<int>( now + turns ) ),
+                                 owner->mod_id, handler );
+    } );
     tasks.set_function( "after", [schedule_persistent_task](
                             const std::int64_t turns,
                             const std::string & handler_id,

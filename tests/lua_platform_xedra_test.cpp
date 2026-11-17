@@ -1,5 +1,6 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <sstream>
 #include "avatar.h"
@@ -446,8 +447,8 @@ struct xedra_timer {
                ( name != entry.context.end() && name->second.to_string() == handler );
     }
 
-    std::optional<time_point> due( const Character &character ) const {
-        const auto &queue = character.queued_effect_on_conditions.list;
+    std::optional<time_point> due( const queued_eocs &tasks ) const {
+        const auto &queue = tasks.list;
         const auto found = std::find_if( queue.begin(), queue.end(), [this]( const queued_eoc & entry ) {
             return matches( entry );
         } );
@@ -460,20 +461,163 @@ struct xedra_timer {
         return found->time;
     }
 
-    void isolate( Character &character ) const {
+    std::optional<time_point> due( const Character &character ) const {
+        return due( character.queued_effect_on_conditions );
+    }
+
+    void isolate( queued_eocs &tasks ) const {
         queued_eocs selected;
-        for( const queued_eoc &entry : character.queued_effect_on_conditions.list ) {
+        for( const queued_eoc &entry : tasks.list ) {
             if( matches( entry ) ) {
                 selected.push( entry );
             }
         }
-        character.queued_effect_on_conditions = std::move( selected );
+        tasks = std::move( selected );
+    }
+
+    void isolate( Character &character ) const {
+        isolate( character.queued_effect_on_conditions );
         if( character.is_avatar() ) {
             g->queued_global_effect_on_conditions = queued_eocs();
         }
     }
 };
 } // namespace
+
+TEST_CASE( "xedra_anathema_sunlight_preserves_burn_and_sunrise_deadlines",
+           "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [] {
+        effect_on_conditions::clear( get_avatar() );
+        clear_avatar();
+    } );
+    clear_avatar();
+    clear_map();
+    avatar &player = get_avatar();
+    effect_on_conditions::clear( player );
+    cata::lua_platform::runtime_world_ready( true );
+    map &here = get_map();
+    const tripoint_bub_ms tile( 60, 60, 0 );
+    player.setpos( here, tile );
+    set_time( calendar::turn_zero + 12_hours );
+    REQUIRE( here.is_outside( tile ) );
+    player.set_mutation( trait_id( "ANATHEMA_WEAKNESS_SUN_BURN" ) );
+
+    const efftype_id burning( "effect_slain_by_the_sun" );
+    const efftype_id limiter( "effect_slain_by_the_sun_limiter" );
+    const efftype_id resilience( "effect_vampiric_resilience" );
+    const efftype_id fire( "onfire" );
+    const xedra_timer burn_tick{ effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_CONTINUAL" ),
+                                 "anathema_sun_burn_due" };
+    const xedra_timer daily{ effect_on_condition_id( "EOC_XE_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_AT_SUNRISE" ),
+                             "anathema_sunrise_due" };
+    queued_eocs &global_tasks = g->queued_global_effect_on_conditions;
+    const auto move = [&] {
+        get_event_bus().send<event_type::avatar_moves>( mtype_id::NULL_ID(), here.ter( tile ).id(),
+                move_mode_id( "walk" ), false, tile.z() );
+    };
+
+    SECTION( "outdoors rolls separately for six parts and shelter stops the pending tick" ) {
+        enum class protection { none, resilience, fireproof };
+        const protection active = GENERATE( protection::none, protection::resilience,
+                                             protection::fireproof );
+        const bool resistant = active == protection::resilience;
+        const bool fireproof = active == protection::fireproof;
+        if( resistant ) {
+            player.add_effect( resilience, 1_hours );
+        }
+        if( fireproof ) {
+            player.set_mutation( trait_id( "M_SKIN2" ) );
+            REQUIRE( player.is_immune_effect( fire ) );
+        }
+        const std::array<bodypart_id, 6> parts = {
+            bodypart_id( "arm_l" ), bodypart_id( "arm_r" ), bodypart_id( "leg_l" ),
+            bodypart_id( "leg_r" ), bodypart_id( "torso" ), bodypart_id( "head" )
+        };
+        unsigned int seed = 1;
+        std::array<double, parts.size()> rolls{};
+        for( ; seed < 1000; ++seed ) {
+            rng_set_engine_seed( seed );
+            for( double &roll : rolls ) {
+                roll = rng_float( 0, 1 );
+            }
+            const double smallest = *std::min_element( rolls.begin(), rolls.end() );
+            if( smallest > 1.0 / 120.0 && smallest <= 1.0 / 30.0 ) {
+                break;
+            }
+        }
+        CAPTURE( resistant, fireproof, seed );
+        REQUIRE( seed < 1000 );
+        rng_set_engine_seed( seed );
+        move();
+        REQUIRE( player.has_effect( burning ) );
+        REQUIRE( player.has_effect( limiter ) );
+        CHECK( burn_tick.due( player ) == calendar::turn + 1_turns );
+        for( std::size_t i = 0; i < parts.size(); ++i ) {
+            const bool ignited = !fireproof && rolls[i] <= ( resistant ? 1.0 / 120.0 : 1.0 / 30.0 );
+            CAPTURE( i, ignited );
+            CHECK( player.get_effect_dur( fire, parts[i] ) == ( ignited ? 30_turns : 0_turns ) );
+        }
+
+        move();
+        CHECK( burn_tick.due( player ) == calendar::turn + 1_turns );
+        here.ter_set( tile, ter_id( "t_floor" ) );
+        set_time( calendar::turn );
+        REQUIRE_FALSE( here.is_outside( tile ) );
+        move();
+        CHECK_FALSE( player.has_effect( burning ) );
+        CHECK_FALSE( player.has_effect( limiter ) );
+        CHECK( burn_tick.due( player ) == calendar::turn + 1_turns );
+        calendar::turn += 1_turns;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK_FALSE( burn_tick.due( player ).has_value() );
+    }
+
+    SECTION( "sunrise requeues at the same deadline for the next pass without starting a burn" ) {
+        const time_point at_sunrise = sunrise( calendar::turn );
+        set_time( at_sunrise - 1_turns );
+        effect_on_conditions::load_existing_character( player );
+        CHECK( daily.due( global_tasks ) == at_sunrise );
+        effect_on_conditions::load_existing_character( player );
+        CHECK( daily.due( global_tasks ) == at_sunrise );
+        daily.isolate( global_tasks );
+        player.queued_effect_on_conditions = queued_eocs();
+
+        calendar::turn = at_sunrise;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK_FALSE( player.has_effect( burning ) );
+        CHECK_FALSE( burn_tick.due( player ).has_value() );
+        CHECK( daily.due( global_tasks ) == at_sunrise );
+        calendar::turn += 1_turns;
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( daily.due( global_tasks ) == sunrise( calendar::turn ) + 1_days );
+    }
+
+    SECTION( "old character and world queue entries keep their original deadlines" ) {
+        const time_point next_burn = calendar::turn + 3_turns;
+        const time_point saved_sunrise = calendar::turn + 2_hours;
+        player.add_effect( burning, 1_turns, true );
+        player.add_effect( limiter, 1_turns, true );
+        player.queued_effect_on_conditions.push( { burn_tick.legacy_id, next_burn, {} } );
+        global_tasks.push( { daily.legacy_id, saved_sunrise, {} } );
+
+        reload_xedra_avatar( player );
+        CHECK( burn_tick.due( player ) == next_burn );
+        CHECK( daily.due( global_tasks ) == saved_sunrise );
+        reload_xedra_avatar( player );
+        CHECK( burn_tick.due( player ) == next_burn );
+        CHECK( daily.due( global_tasks ) == saved_sunrise );
+        burn_tick.isolate( player.queued_effect_on_conditions );
+        daily.isolate( global_tasks );
+
+        calendar::turn = next_burn;
+        rng_set_engine_seed( 70731 );
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( burn_tick.due( player ) == next_burn + 1_turns );
+        CHECK( daily.due( global_tasks ) == saved_sunrise );
+    }
+}
 
 TEST_CASE( "xedra_recurring_timers_keep_saved_deadlines_and_reactivate", "[.][mods][xedra_evolved]" )
 {

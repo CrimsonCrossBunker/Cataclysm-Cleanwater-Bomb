@@ -208,6 +208,9 @@ namespace
 // Lua callbacks share the saved character-turn queue with EOCs to keep their
 // due turn and ordering across an upgrade.
 const effect_on_condition_id lua_task_record( "ccb:character_task" );
+const effect_on_condition_id xedra_sunrise_eoc(
+    "EOC_XE_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_AT_SUNRISE" );
+thread_local std::vector<queued_eocs::storage_iter> *avatar_tasks_to_queue = nullptr;
 struct character_task_migration {
     effect_on_condition_id eoc;
     const char *handler;
@@ -215,13 +218,15 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 3> xedra_character_tasks = {{
+const std::array<character_task_migration, 4> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
           "inventor_recipe_due", "inventor_recipe_timer" },
         { effect_on_condition_id( "EOC_VAMPIRE_BLOOD_NUMBER_UI" ),
-          "vampire_blood_display_due", "vampire_blood_display_timer" }
+          "vampire_blood_display_due", "vampire_blood_display_timer" },
+        { effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_CONTINUAL" ),
+          "anathema_sun_burn_due", nullptr }
     }
 };
 
@@ -249,6 +254,31 @@ void cata::lua_platform::queue_character_task( Character &actor, time_point due,
 {
     actor.queued_effect_on_conditions.push( character_task_record( due, mod, handler ) );
 }
+
+void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
+        std::string_view handler )
+{
+    queued_eocs &queue = g->queued_global_effect_on_conditions;
+    const auto pending = std::find_if( queue.list.begin(), queue.list.end(), [&]( const queued_eoc & entry ) {
+        if( entry.eoc != lua_task_record ) {
+            return false;
+        }
+        const auto owner = entry.context.find( "mod" );
+        const auto callback = entry.context.find( "handler" );
+        return owner != entry.context.end() && owner->second.to_string() == mod &&
+               callback != entry.context.end() && callback->second.to_string() == handler;
+    } );
+    if( pending != queue.list.end() ) {
+        return;
+    }
+    const queued_eoc entry = character_task_record( due, mod, handler );
+    if( avatar_tasks_to_queue ) {
+        // A zero-delay repeat is due on the next pass, just like a native recurrence.
+        avatar_tasks_to_queue->push_back( queue.list.insert( queue.list.end(), entry ) );
+    } else {
+        queue.push( entry );
+    }
+}
 #endif
 
 static void process_new_eocs( queued_eocs &eoc_queue,
@@ -260,8 +290,13 @@ static void process_new_eocs( queued_eocs &eoc_queue,
     while( !eoc_queue.empty() ) {
         const queued_eoc &entry = eoc_queue.top();
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-        if( !global_queue && entry.eoc == lua_task_record ) {
+        if( entry.eoc == lua_task_record ) {
             temp_queued_eocs.push( entry );
+            eoc_queue.pop();
+            continue;
+        }
+        if( global_queue && entry.eoc == xedra_sunrise_eoc && !entry.eoc.is_valid() ) {
+            temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved", "anathema_sunrise_due" ) );
             eoc_queue.pop();
             continue;
         }
@@ -376,6 +411,18 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
         return *it;
     }();
 
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+    const bool avatar_queue = g && &eoc_queue == &g->queued_global_effect_on_conditions;
+    const restore_on_out_of_scope restore_avatar_tasks( avatar_tasks_to_queue );
+    if( avatar_queue ) {
+        avatar_tasks_to_queue = &eocs_to_queue;
+    }
+#endif
+    const auto restore_pending_entries = [&] {
+        for( queued_eocs::storage_iter &entry : eocs_to_queue ) {
+            eoc_queue.queue.emplace( entry );
+        }
+    };
     on_out_of_scope cleanup{ [&] {
             --reentrancy_depth;
             eocs_to_queue.clear();
@@ -399,6 +446,9 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
                 const character_action_guard lifetime( actor );
                 cata::lua_platform::invoke_character_task( actor, due, mod_id, handler_id );
                 if( !lifetime ) {
+                    if( avatar_queue ) {
+                        restore_pending_entries();
+                    }
                     return false;
                 }
             }
@@ -428,9 +478,7 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
             eoc_queue.list.erase( it );
         }
     }
-    for( queued_eocs::storage_iter &q_eoc : eocs_to_queue ) {
-        eoc_queue.queue.emplace( q_eoc );
-    }
+    restore_pending_entries();
     return true;
 }
 
