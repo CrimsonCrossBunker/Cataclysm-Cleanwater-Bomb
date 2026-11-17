@@ -112,3 +112,5 @@ require("inline_enchantment_physiology")
 require("attribute_scaling")
 
 require("shared_enchantment_values")
+
+require("overlay_enchantments")
