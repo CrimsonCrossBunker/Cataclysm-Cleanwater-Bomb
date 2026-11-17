@@ -1,13 +1,5 @@
 [
   {
-    "id": "ench_parabolan_blouse",
-    "type": "enchantment",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "values": [ { "value": "DEXTERITY", "add": 2 }, { "value": "BONUS_DODGE", "add": 3 }, { "value": "SOCIAL_LIE", "add": 3 } ],
-    "mutations": [ "MIRROR_DISPLACEMENT" ]
-  },
-  {
     "id": "enchanted_pirate_blouse",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],

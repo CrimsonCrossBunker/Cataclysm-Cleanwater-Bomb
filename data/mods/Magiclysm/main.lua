@@ -40,3 +40,5 @@ require("tool_qualities")
 require("vitamins")
 
 require("snippets")
+
+require("enchantments")

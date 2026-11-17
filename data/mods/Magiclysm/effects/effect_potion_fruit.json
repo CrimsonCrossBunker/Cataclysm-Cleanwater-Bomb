@@ -47,13 +47,6 @@
     "enchantments": [ "enchant_pfruit_thorns" ]
   },
   {
-    "type": "enchantment",
-    "id": "enchant_pfruit_thorns",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_me_effect": [ { "id": "pfruit_aura_thorns", "hit_self": false } ]
-  },
-  {
     "id": "pfruit_aura_thorns",
     "type": "SPELL",
     "name": { "str": "Blackberry fruit aura thorns", "//~": "NO_I18N" },
