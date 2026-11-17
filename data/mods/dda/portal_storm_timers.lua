@@ -38,7 +38,7 @@ local timers = {
 }
 
 local function schedule(timer)
-    tasks.ensure_avatar_turn(services.random.native_int(timer.minimum, timer.maximum), timer.handler)
+    tasks.after_avatar_turn(services.random.native_int(timer.minimum, timer.maximum), timer.handler)
     persistent.set(timer.key, "scheduled")
 end
 
