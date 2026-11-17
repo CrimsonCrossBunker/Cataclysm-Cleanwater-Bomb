@@ -3541,9 +3541,7 @@
       }
     ],
     "enchantments": [
-      {
-        "values": [ { "value": "INTELLIGENCE", "multiply": 1 }, { "value": "PAIN_PENALTY_MOD_INT", "add": { "math": [ "u_pain()/6" ] } } ]
-      }
+      "INLINE_ENCH_INT_SLIME_0"
     ]
   },
   {
@@ -3647,9 +3645,7 @@
     "visibility": 10,
     "ugliness": 10,
     "enchantments": [
-      {
-        "values": [ { "value": "HEARING_MULT", "multiply": { "math": [ "rng(-0.75, 1)" ] } }, { "value": "PERCEPTION", "add": -8 } ]
-      }
+      "INLINE_ENCH_PER_SLIME_0"
     ]
   },
   {
