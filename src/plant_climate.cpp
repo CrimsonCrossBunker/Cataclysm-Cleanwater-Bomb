@@ -188,11 +188,11 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
 
 crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
 {
-    const auto &weather = get_weather_const();
-    const auto &generator = weather.get_cur_weather_gen();
-    const auto cell = snow_climate_cell( project_to<coords::omt>( pos ) );
+    const weather_manager &weather = get_weather_const();
+    const weather_generator &generator = weather.get_cur_weather_gen();
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
     crop_weather_cell &cached = cell_at( cell, generator );
-    const auto start = date - time_past_midnight( date );
+    const time_point start = date - time_past_midnight( date );
     const int day = to_days<int>( start - calendar::turn_zero );
     const auto found = cached.days.find( day );
     if( found != cached.days.end() ) {
@@ -201,7 +201,7 @@ crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
     if( cached.days.size() >= 768 ) {
         cached.days.clear();
     }
-    const auto location = project_to<coords::ms>( cell ) + point( 384, 384 );
+    const tripoint_abs_ms location = project_to<coords::ms>( cell ) + point( 384, 384 );
     const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
     const weather_type_id forced = eternal == "normal" ? weather.weather_override :
                                    weather_type_id( eternal );
@@ -264,7 +264,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         effective = std::max( effective, thresholds[current_stage - 1] );
     }
     start = std::max( start, calendar::turn - crop_history );
-    const auto position = here.get_abs( p );
+    const tripoint_abs_ms position = here.get_abs( p );
     const double rate = growth_speed * furniture.plant->growth_multiplier;
     double temperature_offset = 0;
     if( &here == &get_map() ) {
@@ -327,7 +327,7 @@ int fruit_model_day( time_point when )
 
 bool has_local_fruit_climate( const tripoint_abs_ms &pos )
 {
-    const auto &generator = get_weather_const().get_cur_weather_gen();
+    const weather_generator &generator = get_weather_const().get_cur_weather_gen();
     if( !generator.climate_location( pos ) ) {
         return false;
     }
@@ -339,7 +339,7 @@ std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
         const tripoint_abs_ms &pos )
 {
     const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
-    const auto &generator = get_weather_const().get_cur_weather_gen();
+    const weather_generator &generator = get_weather_const().get_cur_weather_gen();
     crop_weather_cell &cached = cell_at( cell, generator );
     const auto previous = cached.ripening.find( fruit.harvest );
     if( previous != cached.ripening.end() ) {
@@ -349,7 +349,7 @@ std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
     if( !cached.normals ) {
         return std::nullopt;
     }
-    const auto &normals = *cached.normals;
+    const regional_climate::normals &normals = *cached.normals;
     std::array<regional_climate::temperature_normal, model_days> means;
     for( int day = 0; day < model_days; ++day ) {
         means[day] = regional_climate::temperature_for_day( normals, day + 0.5 );
