@@ -1322,6 +1322,8 @@ function MonsterAttackDefinition:on_hit(handler_id) end
 ---@field intensity_decay_tick? integer Non-negative turns per intensity-decay tick.
 ---@field intensity_decay_removes? boolean Whether decay removes the effect.
 ---@field main_parts_only? boolean Whether body-part application targets only main parts.
+---@field pain_sizing? boolean Scale pain by the affected Creature's native body size.
+---@field hurt_sizing? boolean Scale direct damage by the affected Creature's native body size.
 ---@field show_in_info? boolean Whether the effect appears in item/character information.
 ---@field show_intensity? boolean Whether UI displays intensity; defaults to true.
 ---@field part_descriptions? boolean Whether descriptions vary by body part.
@@ -1361,6 +1363,7 @@ function EffectTypeDefinition:removes_effect(id) end
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:blocks_effect(id) end
 
+---Append an enchantment in authored order; repeated references remain repeated.
 ---@param id string Existing or same-transaction Enchantment id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:enchantment(id) end
@@ -1381,8 +1384,8 @@ function EffectTypeDefinition:death_chance(options) end
 ---@field resisted_base? number Base while resisted; defaults to zero.
 ---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
 
----@param kind 'pain'|'cough'
----@param action 'amount'|'minimum'|'maximum'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Cough accepts chance_numerator, chance_denominator and tick only.
+---@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'
+---@param action 'amount'|'minimum'|'maximum'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stat modifiers accept amount only; cough accepts chance_numerator, chance_denominator and tick; hurt excludes maximum_value.
 ---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:modifier(kind, action, options) end

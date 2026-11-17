@@ -407,6 +407,8 @@ struct effect_type_definition_data {
     std::int64_t intensity_decay_tick = 0;
     bool intensity_decay_removes = false;
     bool main_parts_only = false;
+    bool pain_sizing = false;
+    bool hurt_sizing = false;
     bool show_in_info = false;
     bool show_intensity = true;
     bool part_descriptions = false;
@@ -417,7 +419,7 @@ struct effect_type_definition_data {
     std::set<std::string> resist_effects;
     std::set<std::string> removes_effects;
     std::set<std::string> blocks_effects;
-    std::set<std::string> enchantments;
+    std::vector<std::string> enchantments;
     bool registered = false;
 };
 
@@ -1250,7 +1252,12 @@ struct effect_type_definition_handle {
         }
 
         effect_type_definition_handle &enchantment( const std::string &id ) {
-            return insert_id( definition->enchantments, id, "enchantment" );
+            require_building_handle( token, *definition, "effect type" );
+            if( id.empty() ) {
+                throw std::invalid_argument( "effect enchantment id cannot be empty" );
+            }
+            definition->enchantments.push_back( id );
+            return *this;
         }
 
         effect_type_definition_handle &death_chance( const sol::table &options ) {
@@ -1275,6 +1282,11 @@ struct effect_type_definition_handle {
         effect_type_definition_handle &modifier( const std::string &kind,
                 const std::string &action, const sol::table &options ) {
             require_building_handle( token, *definition, "effect type" );
+            static const std::map<std::string, std::string> kinds = {
+                { "pain", "PAIN" }, { "cough", "COUGH" }, { "hurt", "HURT" },
+                { "strength", "STR" }, { "dexterity", "DEX" },
+                { "perception", "PER" }, { "intelligence", "INT" }, { "speed", "SPEED" }
+            };
             static const std::map<std::string, mod_action> actions = {
                 { "amount", mod_action::AMOUNT }, { "minimum", mod_action::MIN },
                 { "maximum", mod_action::MAX }, { "maximum_value", mod_action::MAX_VAL },
@@ -1282,7 +1294,12 @@ struct effect_type_definition_handle {
                 { "chance_denominator", mod_action::CHANCE_BOT }, { "tick", mod_action::TICK }
             };
             const auto found = actions.find( action );
-            if( ( kind != "pain" && kind != "cough" ) || found == actions.end() ||
+            const auto effect = kinds.find( kind );
+            const bool stat = kind == "strength" || kind == "dexterity" ||
+                              kind == "perception" || kind == "intelligence" || kind == "speed";
+            if( effect == kinds.end() || found == actions.end() ||
+                ( stat && action != "amount" ) ||
+                ( kind == "hurt" && action == "maximum_value" ) ||
                 ( kind == "cough" && action != "chance_numerator" &&
                   action != "chance_denominator" && action != "tick" ) ) {
                 throw std::runtime_error( "unsupported effect modifier kind or action" );
@@ -1296,7 +1313,7 @@ struct effect_type_definition_handle {
                 !std::isfinite( value.resisted_base ) || !std::isfinite( value.resisted_per_intensity ) ) {
                 throw std::runtime_error( "effect modifier values must be finite" );
             }
-            definition->modifiers[ { kind == "pain" ? "PAIN" : "COUGH", found->second }] = value;
+            definition->modifiers[ { effect->second, stat ? mod_action::MIN : found->second }] = value;
             return *this;
         }
 
@@ -3178,6 +3195,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->intensity_decay_removes = options.get_or(
                 "intensity_decay_removes", false );
         definition->main_parts_only = options.get_or( "main_parts_only", false );
+        definition->pain_sizing = options.get_or( "pain_sizing", false );
+        definition->hurt_sizing = options.get_or( "hurt_sizing", false );
         definition->show_in_info = options.get_or( "show_in_info", false );
         definition->show_intensity = options.get_or( "show_intensity", true );
         definition->part_descriptions = options.get_or( "part_descriptions", false );
@@ -4770,6 +4789,8 @@ void creatures_content_transaction::impl::apply_effect_type()
         native.int_decay_tick = static_cast<int>( source.intensity_decay_tick );
         native.int_decay_remove = source.intensity_decay_removes;
         native.main_parts_only = source.main_parts_only;
+        native.pain_sizing = source.pain_sizing;
+        native.hurt_sizing = source.hurt_sizing;
         native.show_in_info = source.show_in_info;
         native.show_intensity = source.show_intensity;
         native.part_descs = source.part_descriptions;
@@ -6562,11 +6583,13 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, std::to_string( value.intensity_decay_tick ) );
             hash_part( state, value.intensity_decay_removes ? "decay_removes" : "decay_keeps" );
             hash_part( state, value.main_parts_only ? "main_parts" : "all_parts" );
+            hash_part( state, value.pain_sizing ? "pain_sizing" : "fixed_pain" );
+            hash_part( state, value.hurt_sizing ? "hurt_sizing" : "fixed_hurt" );
             hash_part( state, value.show_in_info ? "show_info" : "hide_info" );
             hash_part( state, value.show_intensity ? "show_intensity" : "hide_intensity" );
             hash_part( state, value.part_descriptions ? "part_descriptions" : "global_descriptions" );
             const auto hash_ids = [&]( const std::string_view kind,
-            const std::set<std::string> &ids ) {
+            const auto &ids ) {
                 for( const std::string &id : ids ) {
                     hash_part( state, kind );
                     hash_part( state, id );
