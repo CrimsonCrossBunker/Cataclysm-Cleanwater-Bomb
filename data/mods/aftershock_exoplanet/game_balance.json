@@ -1,13 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_WARN_OR_CAUSE_RECURRING",
-    "recurrence": [ "10 days", "11 days" ],
-    "global": true,
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_LIEUTENANT_SPAWN_SHADOW",
     "recurrence": [ "15 minutes", "9 hours" ],
     "global": true,

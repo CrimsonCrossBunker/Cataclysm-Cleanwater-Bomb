@@ -138,3 +138,7 @@ require("portal_storm_scenarios")
 require("portal_storm_interactions")
 
 require("portal_storm_timers")
+
+require("portal_storm_cycle")
+
+require("highland_incense")
