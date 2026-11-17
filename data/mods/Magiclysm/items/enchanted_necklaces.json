@@ -22,12 +22,7 @@
     "description": "Previously a common means of displaying wealth through overpriced miscellany, these have now become invaluable after the Cataclysm, where even a single illness could severely endanger your life.  Does nothing against poison, and may not work on more esoteric diseases.",
     "price_postapoc": "9000 USD",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "EFFECTIVE_HEALTH_MOD", "add": 100 } ],
-        "ench_effects": [ { "effect": "effect_periapt_health", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_periapt_health_0" }
     ]
   },
   {
@@ -39,11 +34,7 @@
     "description": "Useful in both the medieval era for traditional poisons and the modern day for allergies.  Does nothing against disease, and may not work on more esoteric poisons.",
     "price_postapoc": "9000 USD",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "effect_periapt_proof_against_poison", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_periapt_proof_against_poison_0" }
     ]
   },
   {
@@ -55,11 +46,7 @@
     "description": "Standard issue at emergency rooms across the country, this is an item that grants preternatural skill at bandaging and disinfecting wounds.  Still takes some basic skill to use with maximum efficacy.",
     "price_postapoc": "9000 USD",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "BANDAGE_BONUS", "multiply": 1 }, { "value": "DISINFECTANT_BONUS", "multiply": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_periapt_wound_closure_0" }
     ]
   }
 ]

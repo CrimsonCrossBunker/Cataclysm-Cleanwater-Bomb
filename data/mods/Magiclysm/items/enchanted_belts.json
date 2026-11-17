@@ -34,7 +34,7 @@
     "copy-from": "mbelt_leather",
     "id": "mbelt_haste",
     "name": { "str": "Belt of Haste", "str_pl": "Belts of Haste" },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": 0.15, "add": 5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mbelt_haste_0" } ]
   },
   {
     "type": "ITEM",
@@ -49,11 +49,7 @@
     "environmental_protection": 20,
     "extend": { "flags": [ "PADDED" ] },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "STRENGTH", "multiply": 1.0 }, { "value": "CARRY_WEIGHT", "add": 50000 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_mbelt_thor_0" }
     ]
   },
   {

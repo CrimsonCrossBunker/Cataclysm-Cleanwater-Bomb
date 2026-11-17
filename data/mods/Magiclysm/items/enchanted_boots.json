@@ -40,7 +40,7 @@
         "coverage": 100
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MOVE_COST", "add": -30 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mboots_sevenleague_0" } ]
   },
   {
     "id": "mboots_haste",
@@ -84,8 +84,8 @@
       }
     ],
     "passive_effects": [
-      { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MOVE_COST", "add": -20 } ] },
-      { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "SPEED", "add": 10 } ] }
+      { "id": "ITEM_ENCH_Magiclysm_mboots_haste_0" },
+      { "id": "ITEM_ENCH_Magiclysm_mboots_haste_1" }
     ]
   },
   {
@@ -175,7 +175,7 @@
         "coverage": 100
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MOVE_COST", "add": -5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mboots_freerunner_0" } ]
   },
   {
     "id": "mboots_grounding",
@@ -218,7 +218,7 @@
         "coverage": 100
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "incoming_damage_mod": [ { "type": "electric", "add": -20 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mboots_grounding_0" } ]
   },
   {
     "id": "boots_of_elvenkind",
@@ -266,24 +266,8 @@
     ],
     "melee_damage": { "bash": 4 },
     "passive_effects": [
-      { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -1 } ] },
-      {
-        "has": "WORN",
-        "condition": {
-          "and": [
-            "u_is_outside",
-            {
-              "or": [
-                { "u_is_on_terrain_with_flag": "SHRUB" },
-                { "u_is_on_terrain_with_flag": "DIGGABLE" },
-                { "u_is_on_terrain_with_flag": "YOUNG" }
-              ]
-            },
-            { "not": { "u_near_om_location": "road", "range": 1 } }
-          ]
-        },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_boots_of_elvenkind_0" },
+      { "id": "ITEM_ENCH_Magiclysm_boots_of_elvenkind_1" }
     ]
   }
 ]

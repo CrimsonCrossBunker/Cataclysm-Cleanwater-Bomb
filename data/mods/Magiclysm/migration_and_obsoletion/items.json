@@ -27,12 +27,7 @@
     ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "MAX_MANA", "add": 0 } ],
-        "ench_effects": [ { "effect": "effect_item_protection_water", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_aura_druid_waterwalk_0" }
     ]
   },
   {
@@ -188,7 +183,7 @@
         "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "BONUS_DODGE", "add": 2 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_obfuscating_aura_0" } ]
   },
   {
     "id": "shape_of_dust",
@@ -205,13 +200,7 @@
     "flags": [ "AURA", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "OVERSIZE", "UNBREAKABLE", "ALLOWS_NATURAL_ATTACKS" ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "ench_effects": [ { "effect": "invisibility", "intensity": 1 } ],
-        "emitter": "emit_eshaper_dust",
-        "values": [ { "value": "BONUS_DODGE", "add": 2 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_shape_of_dust_0" }
     ]
   },
   {
@@ -289,7 +278,7 @@
     "material": [ "magical_material" ],
     "flags": [ "AURA", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "OVERSIZE", "UNBREAKABLE", "ALLOWS_NATURAL_ATTACKS" ],
     "max_worn": 1,
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "hit_me_effect": [ { "id": "thorns_zap" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_thorns_electric_0" } ]
   },
   {
     "id": "warg_food",
@@ -415,6 +404,6 @@
       "INTEGRATED"
     ],
     "max_worn": 1,
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "NUMB", "PSYCHOPATH" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_item_kelvinist_frozen_heart_0" } ]
   }
 ]

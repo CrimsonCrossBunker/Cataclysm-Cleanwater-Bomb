@@ -120,7 +120,7 @@
     "flags": [ "OVERSIZE", "WATERPROOF", "ROLLER_QUAD", "BELTED", "UNRESTRICTED" ],
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "foot_l", "foot_r" ] } ],
     "melee_damage": { "bash": 6 },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MOVE_COST", "add": -5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_ice_gliders_0" } ]
   },
   {
     "type": "ITEM",
@@ -203,7 +203,7 @@
     "flags": [ "REACH_ATTACK", "REACH3", "WHIP", "STURDY", "TRADER_AVOID", "UNBREAKABLE_MELEE", "NO_REPAIR", "MAGIC_FOCUS" ],
     "category": "weapons",
     "melee_damage": { "cut": 30 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "UGLINESS", "add": 3 } ] } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_tentacle_whip_0" } ],
     "weapon_category": [ "WHIPS" ]
   },
   {
@@ -267,7 +267,7 @@
     ],
     "max_worn": 1,
     "armor": [ { "encumbrance": [ 5, 10 ], "coverage": 40, "covers": [ "torso" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "UGLINESS", "add": 5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_fleshpouch_0" } ]
   },
   {
     "id": "bonespear",
@@ -286,7 +286,7 @@
     "volume": "2500 ml",
     "longest_side": "183 cm",
     "melee_damage": { "bash": 16, "stab": 36 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "UGLINESS", "add": 3 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_bonespear_0" } ]
   },
   {
     "id": "druid_recurve",
@@ -494,7 +494,7 @@
         "covers": [ "head", "mouth", "eyes", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ]
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "hit_me_effect": [ { "id": "armor_frost_counterattack" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_armor_frost_0" } ]
   },
   {
     "id": "aura_stoneskin",
@@ -670,37 +670,8 @@
     "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "intermittent_activation": {
-          "effects": [ { "frequency": "2 minutes", "spell_effects": [ { "id": "pfruit_regeneration_spell", "hit_self": true } ] } ]
-        }
-      },
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "STRENGTH", "add": 3 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "INTELLIGENCE", "add": -6 },
-          { "value": "PERCEPTION", "add": 3 }
-        ],
-        "mutations": [
-          "LUPINE_FUR",
-          "CLAWS",
-          "ADRENALINE",
-          "PADDED_FEET",
-          "TAIL_FLUFFY",
-          "PRED4",
-          "LUPINE_EARS",
-          "MUZZLE",
-          "PAWS",
-          "SHOUT3",
-          "GOODCARDIO",
-          "ANIMALDISCORD2",
-          "MUTE",
-          "LARGE_OK"
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_aura_werewolf_0" },
+      { "id": "ITEM_ENCH_Magiclysm_aura_werewolf_1" }
     ]
   },
   {
@@ -727,11 +698,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "hit_me_effect": [ { "id": "dragon_shell_retaliation_black", "hit_self": false } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_dragon_shell_black_0" }
     ]
   },
   {
@@ -793,7 +760,7 @@
         "covers": [ "head", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ]
       }
     ],
-    "passive_effects": [ { "id": "ench_armor_spirit" }, { "has": "WORN", "condition": "ALWAYS", "mutations": [ "well_distributed" ] } ]
+    "passive_effects": [ { "id": "ench_armor_spirit" }, { "id": "ITEM_ENCH_Magiclysm_item_armor_magus_mage_conjured_armor_1" } ]
   },
   {
     "id": "jar_3l_force",
@@ -1323,7 +1290,7 @@
     "weapon_category": [ "POLEARMS", "SPEARS" ],
     "price": "1 cent",
     "qualities": [ [ "COOK", 1 ] ],
-    "passive_effects": [ { "has": "WIELD", "hit_you_effect": [ { "id": "bramble_spear_slow", "hit_self": false } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_druid_bramble_spear_item_0" } ]
   },
   {
     "id": "druid_thorn_skin_item",
@@ -1359,18 +1326,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "hit_me_effect": [ { "id": "druid_thorn_skin_attacked", "hit_self": false, "once_in": 2 } ],
-        "melee_damage_bonus": [ { "type": "stab", "add": 3 } ],
-        "incoming_damage_mod": [ { "type": "heat", "multiply": 0.6 } ],
-        "values": [
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "STRENGTH", "add": 1 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 20 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_druid_thorn_skin_item_0" }
     ]
   },
   {
@@ -1391,7 +1347,7 @@
     "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 5 ], [ "BUTCHER", 14 ] ],
     "melee_damage": { "stab": 12 },
     "passive_effects": [
-      { "has": "WORN", "condition": { "not": "u_has_weapon" }, "values": [ { "value": "ATTACK_SPEED", "multiply": -0.1 } ] }
+      { "id": "ITEM_ENCH_Magiclysm_item_biomancer_scalpel_fingers_0" }
     ]
   },
   {
@@ -1431,12 +1387,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "MAX_MANA", "add": 0 } ],
-        "ench_effects": [ { "effect": "effect_item_protection_water", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_aura_druid_breathing_water_0" }
     ]
   },
   {
@@ -1632,11 +1583,7 @@
     "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "ZERO_WEIGHT", "NO_TAKEOFF", "INTEGRATED", "NONCONDUCTIVE" ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "mutations": [ "HEAVYSLEEPER2", "FAT", "URSINE_FUR", "SMELLY2", "STRONGER_RESISTCHILL", "HIBERNATE" ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_aura_bearmantle_0" }
     ]
   },
   {

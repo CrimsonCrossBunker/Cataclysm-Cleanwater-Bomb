@@ -49,16 +49,7 @@
     "material_thickness": 6,
     "flags": [ "OUTER", "STURDY", "BLOCK_WHILE_WORN" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -2 },
-          { "type": "stab", "add": -2 },
-          { "type": "cut", "add": -2 },
-          { "type": "bullet", "add": -1 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_mbracer_defense_lesser_0" }
     ]
   },
   {
@@ -72,16 +63,7 @@
     "material_thickness": 6,
     "flags": [ "OUTER", "STURDY", "BLOCK_WHILE_WORN" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -4 },
-          { "type": "stab", "add": -4 },
-          { "type": "cut", "add": -4 },
-          { "type": "bullet", "add": -2 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_mbracer_defense_greater_0" }
     ]
   },
   {
@@ -97,7 +79,7 @@
     "flags": [ "OUTER", "STURDY", "BLOCK_WHILE_WORN", "NO_UNLOAD", "NO_RELOAD" ],
     "use_action": { "type": "cast_spell", "spell_id": "jolt", "no_fail": true, "level": 15, "need_worn": true },
     "charge_info": { "recharge_type": "periodic", "time": "24 h", "regenerate_ammo": true },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "incoming_damage_mod": [ { "type": "electric", "add": -5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mbracer_lightning_lesser_0" } ]
   },
   {
     "copy-from": "mbracer_steel_single",
@@ -112,7 +94,7 @@
     "flags": [ "OUTER", "STURDY", "BLOCK_WHILE_WORN", "NO_UNLOAD", "NO_RELOAD" ],
     "use_action": { "type": "cast_spell", "spell_id": "lightning_bolt", "no_fail": true, "level": 15, "need_worn": true },
     "charge_info": { "recharge_type": "periodic", "time": "24 h", "regenerate_ammo": true },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "incoming_damage_mod": [ { "type": "electric", "add": -10 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mbracer_lightning_greater_0" } ]
   },
   {
     "copy-from": "vambrace_larmor",
@@ -123,12 +105,7 @@
     "price_postapoc": "750 USD",
     "description": "A set of leather bracers worked with images of arrows in flight and scenes of hunting parties.  Bows you wield will be more accurate and do more damage while you wear these, and you can shoot your arrows farther as well.",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": { "u_has_wielded_with_flag": "SHEATH_BOW" },
-        "values": [ { "value": "RANGE", "multiply": 0.2 }, { "value": "WEAPON_DISPERSION", "multiply": -0.33 } ],
-        "ench_effects": [ { "effect": "effect_plus_two_to_hit", "intensity": 1 }, { "effect": "archerybracers", "intensity": 1 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_mbracer_archery_0" }
     ]
   },
   {
@@ -143,6 +120,6 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "holster": true, "ammo_restriction": { "crystallized_mana": 3 } } ],
     "use_action": { "type": "cast_spell", "spell_id": "mbracer_blinding_strike_spell", "no_fail": true, "level": 0, "need_worn": true },
     "charge_info": { "recharge_type": "periodic", "time": "8 h", "regenerate_ammo": true },
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "ATTACK_SPEED", "multiply": -0.15 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mbracer_blinding_strike_0" } ]
   }
 ]

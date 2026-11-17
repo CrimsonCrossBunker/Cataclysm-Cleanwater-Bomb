@@ -210,20 +210,7 @@
     "environmental_protection": 3,
     "flags": [ "BELTED", "OVERSIZE", "NONCONDUCTIVE", "WATER_FRIENDLY", "RAINPROOF" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": {
-          "or": [
-            { "u_is_on_terrain_with_flag": "SHRUB" },
-            { "u_is_on_terrain": "t_tree_young" },
-            { "u_is_on_terrain": "t_bamboo_tall" },
-            { "u_is_on_terrain": "t_grass_long" },
-            { "u_at_om_location": "forest" },
-            { "u_at_om_location": "forest_thick" }
-          ]
-        },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 60 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_cloak_of_elvenkind_0" }
     ]
   }
 ]

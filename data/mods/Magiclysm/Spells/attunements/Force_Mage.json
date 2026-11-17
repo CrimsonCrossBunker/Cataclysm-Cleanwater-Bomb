@@ -48,16 +48,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.3 },
-          { "type": "stab", "multiply": -0.3 },
-          { "type": "cut", "multiply": -0.3 },
-          { "type": "bullet", "multiply": -0.3 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_force_magical_armor_0" }
     ]
   },
   {

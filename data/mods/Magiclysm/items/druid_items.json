@@ -234,7 +234,7 @@
     "sub": "sewing_kit",
     "description": "You never thought you'd see the day when a wildwood entity would be so playful and docile.  This weaver is ready to serve you, and can be used to repair clothing or create a shelter.",
     "copy-from": "mag_adult_weaver",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "skills": [ { "value": "tailor", "add": 1 } ] } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_mag_awoken_weaver_0" } ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "watertight": true, "ammo_restriction": { "mag_awakened_water": 250 } } ],
     "charges_per_use": 1,
     "use_action": [

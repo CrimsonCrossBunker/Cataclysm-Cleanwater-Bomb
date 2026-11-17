@@ -37,21 +37,7 @@
     "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "mutations": [
-          "DEMON_HORNS",
-          "DEMON_HOOVES",
-          "DEMON_POSSES",
-          "DEMON_CLAWS",
-          "DEMON_SKIN",
-          "DEMON_TAIL",
-          "DEMON_HUGE",
-          "NOPAIN",
-          "FACIAL_HAIR_GOATEE"
-        ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_demon_possession_aura_0" }
     ]
   },
   {

@@ -726,7 +726,7 @@
     "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
     "flags": [ "DURABLE_MELEE", "SHEATH_SPEAR", "TRADER_AVOID", "MAGIC_FOCUS", "SPELLCASTING_AID" ],
     "melee_damage": { "bash": 34 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "REGEN_MANA", "multiply": 0.75 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_rune_magus_weapon_adept_0" } ]
   },
   {
     "id": "rune_druid_nature_staff",
@@ -741,33 +741,7 @@
     "material": [ "wood" ],
     "symbol": "/",
     "passive_effects": [
-      {
-        "has": "WIELD",
-        "condition": {
-          "and": [
-            "u_is_outside",
-            {
-              "or": [
-                { "u_is_on_terrain_with_flag": "SHRUB" },
-                { "u_is_on_terrain_with_flag": "DIGGABLE" },
-                { "u_is_on_terrain_with_flag": "YOUNG" }
-              ]
-            },
-            { "not": { "u_near_om_location": "road_curved", "range": 2 } },
-            { "not": { "u_near_om_location": "road_four_way", "range": 2 } },
-            { "not": { "u_near_om_location": "road_tee", "range": 2 } },
-            { "not": { "u_near_om_location": "road_straight", "range": 2 } },
-            { "not": { "u_near_om_location": "road_end", "range": 2 } },
-            { "not": { "u_near_om_location": "road_sw", "range": 2 } },
-            { "not": { "u_near_om_location": "road_ne", "range": 2 } },
-            { "not": { "u_near_om_location": "road_ew", "range": 2 } },
-            { "not": { "u_near_om_location": "road_ns", "range": 2 } },
-            { "not": { "u_near_om_location": "road_nesw", "range": 2 } },
-            { "not": { "u_near_om_location": "road", "range": 2 } }
-          ]
-        },
-        "values": [ { "value": "REGEN_MANA", "multiply": 0.75 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_rune_druid_nature_staff_0" }
     ],
     "color": "green",
     "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
@@ -829,7 +803,7 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "holster": true, "rigid": true, "ammo_restriction": { "crystallized_mana": 3 } } ],
     "charges_per_use": 1,
     "charge_info": { "recharge_type": "periodic", "time": "24 h", "regenerate_ammo": true },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "hit_you_effect": [ { "id": "chilling_touch" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_rune_kelvinist_ice_adept_weapon_0" } ]
   },
   {
     "id": "rune_stormshaper_weapon",
@@ -934,7 +908,7 @@
     "flags": [ "SHEATH_KNIFE", "MAGIC_FOCUS", "SPELLCASTING_AID", "TRADER_AVOID" ],
     "faults": [ { "fault_group": "handle_short" }, { "fault_group": "blade_general", "weight_mult": 5 } ],
     "melee_damage": { "bash": 7, "stab": 30 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "PAIN", "multiply": -0.3 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_rune_animist_weapon_adept_0" } ]
   },
   {
     "type": "ITEM",

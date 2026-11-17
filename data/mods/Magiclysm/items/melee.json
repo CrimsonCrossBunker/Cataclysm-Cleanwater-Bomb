@@ -100,7 +100,7 @@
     "volume": "3250 ml",
     "price": "2 kUSD",
     "melee_damage": { "bash": 10, "cut": 35 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "hit_you_effect": [ { "id": "wolfsbane" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_wolfsbane_0" } ]
   },
   {
     "id": "longsword_mithril",

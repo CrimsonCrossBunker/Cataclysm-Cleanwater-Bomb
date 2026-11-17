@@ -38,11 +38,7 @@
     "material_thickness": 0.5,
     "flags": [ "VARSIZE", "WATER_FRIENDLY", "RAINPROOF", "STURDY", "TRADER_KEEP_EQUIPPED", "COSPLAY_COSTUME" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "stab", "add": -3 }, { "type": "cut", "add": -3 }, { "type": "bullet", "add": -8 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_parabolan_enchanted_breeches_0" }
     ]
   },
   {
@@ -405,7 +401,7 @@
     "name": { "str_sp": "enchanted lab coat" },
     "looks_like": "coat_lab",
     "description": "A long white coat with several large pockets, with a pentagram on the lapel and a few orichalcum threads sewn into the seams.  Perfect for the stylish-but-effective academic mage.",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "REGEN_MANA", "multiply": 0.4 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_coat_lab_plus_one_0" } ]
   },
   {
     "id": "coat_lab_plus_two",
@@ -416,11 +412,7 @@
     "looks_like": "coat_lab",
     "description": "A long white coat with several large pockets, with a pentagram on the lapel and orichalcum and mithril threads sewn into the seams.  A director of thaumaturgical research would have worn this or something like this before the Cataclysm.",
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [ { "value": "REGEN_MANA", "multiply": 0.5 }, { "value": "MAX_MANA", "add": 500 } ]
-      }
+      { "id": "ITEM_ENCH_Magiclysm_coat_lab_plus_two_0" }
     ]
   }
 ]

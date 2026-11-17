@@ -40,7 +40,7 @@
     "material": [ "magical_material" ],
     "flags": [ "AURA", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE", "OVERSIZE", "UNBREAKABLE", "ALLOWS_NATURAL_ATTACKS" ],
     "max_worn": 1,
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "emitter": "emit_cold_energy_strong" } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_aura_cold_energy_0" } ]
   },
   {
     "id": "permafrost_mage_ice_age",
