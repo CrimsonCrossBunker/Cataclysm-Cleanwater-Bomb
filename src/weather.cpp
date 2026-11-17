@@ -1101,6 +1101,12 @@ const weather_generator &weather_manager::get_cur_weather_gen() const
     return om.get_settings().get_settings_weather();
 }
 
+void weather_manager::reset_room_heat()
+{
+    heated_rooms.clear();
+    heat_dimension.reset();
+}
+
 void weather_manager::on_game_start()
 {
     clear_plant_climate_cache();
@@ -1108,8 +1114,6 @@ void weather_manager::on_game_start()
     historical_weather_dimension.reset();
     last_weather_turn.reset();
     indoor_reference_time.reset();
-    heated_rooms.clear();
-    heat_dimension.reset();
     regional_climate::set_calendar_location( std::nullopt );
     if( get_option<std::string>( "ETERNAL_WEATHER" ) != "normal" ) {
         weather_override = static_cast<weather_type_id>

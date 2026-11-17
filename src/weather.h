@@ -227,6 +227,7 @@ class weather_manager
         weather_manager();
         // sets weather_override
         void on_game_start();
+        void reset_room_heat();
         const weather_generator &get_cur_weather_gen() const;
         // Updates the temperature and weather patten
         void update_solar_location();

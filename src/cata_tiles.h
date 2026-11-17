@@ -1785,6 +1785,7 @@ class cata_tiles
         // Drop the scratch silhouette mask target so the next tinted ortho
         // draw reallocates it against the live renderer.
         void reset_tint_mask();
+        void reset_snow_texture();
 
         // Draw caches persist data between draws and are only recalculated when dirty
         void set_draw_cache_dirty();
