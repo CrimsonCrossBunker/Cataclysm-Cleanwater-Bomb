@@ -762,6 +762,8 @@ struct weather_type_definition_data {
     std::vector<std::string> required_weathers;
     std::vector<weather_passive_effect_definition_data> passive_effects;
     std::string condition_handler;
+    std::string debug_enter_handler;
+    std::string debug_leave_handler;
     bool registered = false;
 };
 
@@ -2239,6 +2241,13 @@ struct weather_type_definition_handle {
     weather_type_definition_handle &condition( const std::string &handler_id ) {
         require_building_handle( token, *definition, "weather type" );
         definition->condition_handler = handler_id;
+        return *this;
+    }
+
+    weather_type_definition_handle &debug_actions( const sol::table &options ) {
+        require_building_handle( token, *definition, "weather type" );
+        definition->debug_enter_handler = options.get_or( "enter_handler", std::string() );
+        definition->debug_leave_handler = options.get_or( "leave_handler", std::string() );
         return *this;
     }
 
@@ -3770,7 +3779,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "tint", &weather_type_definition_handle::tint,
         "requires", &weather_type_definition_handle::requires,
         "passive_effect", &weather_type_definition_handle::passive_effect,
-        "condition", &weather_type_definition_handle::condition );
+        "condition", &weather_type_definition_handle::condition,
+        "debug_actions", &weather_type_definition_handle::debug_actions );
     ccb.new_usertype<event_transformation_definition_handle>(
         "EventTransformationDefinition", sol::no_constructor,
         "id", sol::property( &event_transformation_definition_handle::id ),
@@ -6239,6 +6249,13 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "weather type '" + definition.id +
                                           "' references missing condition handler '" +
                                           definition.condition_handler + "'" );
+            }
+            for( const std::string *handler : { &definition.debug_enter_handler,
+                                               &definition.debug_leave_handler } ) {
+                if( !handler->empty() && owner_runtime.handlers.count( *handler ) == 0 ) {
+                    throw std::runtime_error( "weather type '" + definition.id +
+                                              "' references missing debug action handler '" + *handler + "'" );
+                }
             }
             std::set<std::string> required;
             for( const std::string &weather : definition.required_weathers ) {
@@ -11426,6 +11443,8 @@ std::string content_transaction::fingerprint() const
             }
         }
         hash_part( state, value.condition_handler );
+        hash_part( state, value.debug_enter_handler );
+        hash_part( state, value.debug_leave_handler );
     }
     for( const event_transformation_registration &entry : pimpl_->event_transformations ) {
         hash_part( state, "event_transformation" );
@@ -11799,6 +11818,22 @@ bool content_transaction::find_weather_type_handler(
     return true;
 }
 
+bool content_transaction::find_weather_debug_handler(
+    const std::string_view weather_type_id_value, const bool entering, std::string &handler_id ) const
+{
+    const auto found = std::find_if(
+                           pimpl_->weather_types.rbegin(), pimpl_->weather_types.rend(),
+    [weather_type_id_value]( const weather_type_registration & entry ) {
+        return entry.definition->id == weather_type_id_value;
+    } );
+    if( found == pimpl_->weather_types.rend() ) {
+        return false;
+    }
+    handler_id = entering ? found->definition->debug_enter_handler :
+                 found->definition->debug_leave_handler;
+    return true;
+}
+
 bool content_transaction::find_end_screen_handler(
     const std::string_view end_screen_id_value, std::string &handler_id ) const
 {
@@ -12152,6 +12187,12 @@ bool content_transaction::find_weather_type_handler( std::string_view,
     handler_id.clear();
     return false;
 }
+bool content_transaction::find_weather_debug_handler( std::string_view, bool,
+        std::string &handler_id ) const
+{
+    handler_id.clear();
+    return false;
+}
 bool content_transaction::find_end_screen_handler( std::string_view,
         std::string &handler_id ) const
 {
@@ -12375,6 +12416,11 @@ std::optional<bool> invoke_weather_type_handler( std::string_view, const w_point
         std::optional<bool> )
 {
     return std::nullopt;
+}
+
+bool invoke_weather_debug_handler( std::string_view, bool, Character & )
+{
+    return false;
 }
 
 std::optional<bool> invoke_end_screen_handler( std::string_view, const Character & )

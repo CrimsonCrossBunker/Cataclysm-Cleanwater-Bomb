@@ -4171,6 +4171,45 @@ std::optional<bool> invoke_weather_type_handler(
     return std::nullopt;
 }
 
+bool invoke_weather_debug_handler( const std::string_view weather_type_id_value,
+                                   const bool entering, Character &character )
+{
+    for( auto iterator = detail::active_runtime_values().rbegin();
+         iterator != detail::active_runtime_values().rend(); ++iterator ) {
+        const std::shared_ptr<runtime> owner = *iterator;
+        if( !owner ) {
+            continue;
+        }
+        std::string handler_id;
+        if( !owner->content.find_weather_debug_handler( weather_type_id_value, entering,
+                handler_id ) ) {
+            continue;
+        }
+        if( handler_id.empty() ) {
+            return true;
+        }
+        const auto handler = owner->handlers.find( handler_id );
+        if( !owner->world_is_ready || handler == owner->handlers.end() ||
+            owner->callback_depth >= 16 ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first weather debug action unavailable for '"
+                                        << owner->mod_id << ':' << handler_id << "'";
+            return true;
+        }
+        sol::table payload = owner->lua->create_table();
+        payload["weather_type_id"] = std::string( weather_type_id_value );
+        payload["phase"] = entering ? "enter" : "leave";
+        payload["character"] = platform_creature_handle( *owner, character );
+        sol::protected_function callback = handler->second.callback;
+        callback_scope scope( *owner, &character );
+        const sol::protected_function_result result = callback( payload );
+        if( !result.valid() ) {
+            report_callback_error( *owner, handler_id, result );
+        }
+        return true;
+    }
+    return false;
+}
+
 std::optional<bool> invoke_end_screen_handler(
     const std::string_view end_screen_id_value, const Character &character )
 {

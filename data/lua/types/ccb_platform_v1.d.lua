@@ -2550,6 +2550,15 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 ---@field turn integer
 ---@field location CcbPlatformAbsoluteMapSquarePayload Detached absolute map-square sample location.
 
+---@class WeatherDebugActionsOptions
+---@field enter_handler? string Named callback invoked before forcing this weather from the debug menu.
+---@field leave_handler? string Named callback invoked before leaving this weather from the debug menu.
+
+---@class WeatherDebugActionPayload
+---@field weather_type_id string
+---@field phase 'enter'|'leave'
+---@field character GameHandle Character using the debug menu.
+
 ---@class WeatherTypeDefinition
 ---@field id string
 local WeatherTypeDefinition = {}
@@ -2579,6 +2588,12 @@ function WeatherTypeDefinition:passive_effect(options) end
 ---@param handler_id string Named callback registered with ccb.runtime.handler; it must return one boolean.
 ---@return WeatherTypeDefinition self
 function WeatherTypeDefinition:condition(handler_id) end
+
+---Runs only for explicit selections in the debug weather menu, in leave-then-enter order.
+---Normal weather changes do not invoke these actions. Callback errors are reported without falling through to legacy actions.
+---@param options WeatherDebugActionsOptions
+---@return WeatherTypeDefinition self
+function WeatherTypeDefinition:debug_actions(options) end
 
 ---@class ScoreDefinitionOptions
 ---@field id string Stable score id.

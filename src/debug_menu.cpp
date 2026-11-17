@@ -91,6 +91,7 @@
 #include "localized_comparator.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
+#include "lua_platform_runtime.h"
 #include "magic.h"
 #include "map.h"
 #include "map_extras.h"
@@ -3625,11 +3626,13 @@ static void change_weather()
     if( weather_menu.ret >= 0 &&
         static_cast<size_t>( weather_menu.ret ) < wgen.sorted_weather.size() ) {
         const weather_type_id selected_weather = wgen.sorted_weather[weather_menu.ret]->id;
-        if( weather.weather_id->debug_leave_eoc.has_value() ) {
+        if( !cata::lua_platform::invoke_weather_debug_handler( weather.weather_id.str(), false,
+                get_avatar() ) && weather.weather_id->debug_leave_eoc.has_value() ) {
             dialogue d( get_talker_for( get_avatar() ), nullptr );
             effect_on_condition_id( weather.weather_id->debug_leave_eoc.value() )->activate( d );
         }
-        if( selected_weather->debug_cause_eoc.has_value() ) {
+        if( !cata::lua_platform::invoke_weather_debug_handler( selected_weather.str(), true,
+                get_avatar() ) && selected_weather->debug_cause_eoc.has_value() ) {
             dialogue d( get_talker_for( get_avatar() ), nullptr );
             effect_on_condition_id( selected_weather->debug_cause_eoc.value() )->activate( d );
         }
