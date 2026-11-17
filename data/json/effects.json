@@ -629,14 +629,8 @@
           { "value": "SPEED", "add": { "math": [ "u_effect_intensity('grown_of_fuse') * 0.06" ] } }
         ]
       },
-      {
-        "condition": { "u_has_effect": "absorbed_electric" },
-        "incoming_damage_mod": [ { "type": "electric", "multiply": -1 } ]
-      },
-      {
-        "condition": { "u_has_effect": "absorbed_acidic" },
-        "incoming_damage_mod": [ { "type": "acid", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_grown_of_fuse_1",
+      "INLINE_ENCH_grown_of_fuse_2"
     ]
   },
   {

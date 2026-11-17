@@ -69,13 +69,10 @@
           { "value": "LEARNING_FOCUS", "add": { "math": [ "clamp( ( ( (u_val('focus') - 15) * -1) ), -200, 0)" ] } }
         ]
       },
-      {
-        "condition": { "not": { "u_has_any_trait": [ "SLOWHEALER", "SLOWHEALER2", "SLOWHEALER3" ] } },
-        "values": [ { "value": "REGEN_HP", "multiply": -0.9 } ]
-      },
-      { "condition": { "u_has_trait": "SLOWHEALER" }, "values": [ { "value": "REGEN_HP", "multiply": -0.65 } ] },
-      { "condition": { "u_has_trait": "SLOWHEALER2" }, "values": [ { "value": "REGEN_HP", "multiply": -0.23 } ] },
-      { "condition": { "u_has_trait": "SLOWHEALER3" }, "values": [ { "value": "REGEN_HP", "multiply": -0.05 } ] }
+      "INLINE_ENCH_super_soldier_serum_main_1",
+      "INLINE_ENCH_super_soldier_serum_main_2",
+      "INLINE_ENCH_super_soldier_serum_main_3",
+      "INLINE_ENCH_super_soldier_serum_main_4"
     ],
     "flags": [ "CANNOT_GAIN_WEARINESS", "HUNGER_DISRUPTION" ]
   },

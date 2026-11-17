@@ -572,7 +572,7 @@
     "visibility": 6,
     "ugliness": 3,
     "integrated_armor": [ "integrated_chitin2" ],
-    "enchantments": [ { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "bash", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CHITIN2_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 2 },
       { "part": "leg_l", "ignored": 9 },
@@ -628,7 +628,7 @@
     "ugliness": 5,
     "integrated_armor": [ "integrated_chitin3", "integrated_chitin3_claws" ],
     "enchantments": [
-      { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "bash", "add": 4 } ] },
+      "INLINE_ENCH_CHITIN3_0",
       "INLINE_ENCH_CHITIN3_1"
     ],
     "wet_protection": [
