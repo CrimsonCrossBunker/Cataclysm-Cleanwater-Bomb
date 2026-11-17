@@ -11,15 +11,7 @@
     "threshold": true,
     "//3": "An umbrella cannot protect you because this is a mystical weakness.",
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "STRENGTH", "add": -1 },
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "INTELLIGENCE", "add": -1 },
-          { "value": "PERCEPTION", "add": -1 }
-        ]
-      },
+      "INLINE_ENCH_THRESH_LILIN_0",
       {
         "condition": { "and": [ "is_day", "u_is_outside", { "or": [ { "is_weather": "sunny" }, { "is_weather": "clear" } ] } ] },
         "values": [
@@ -183,7 +175,7 @@
     "points": 2,
     "description": "You were born to walk the night, and have a much easier time sleeping during the day.",
     "category": [ "LILIN" ],
-    "enchantments": [ { "condition": "is_day", "values": [ { "value": "SLEEPY", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LILIN_SLEEP_EASY_DURING_DAY_0" ]
   },
   {
     "type": "mutation",
@@ -467,10 +459,7 @@
         },
         "melee_damage_bonus": [ { "type": "biological", "add": { "math": [ "1 + (u_vitamin('lilin_ruach_vitamin') / 3000)" ] } } ]
       },
-      {
-        "condition": { "and": [ { "not": "u_has_weapon" }, { "not": { "and": [ "is_day", "u_is_outside" ] } } ] },
-        "melee_damage_bonus": [ { "type": "biological", "add": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_UNARMED_EXTRA_DAMAGE_4"
     ]
   },
   {
@@ -927,10 +916,7 @@
     "threshreq": [ "THRESH_LILIN" ],
     "//": "This enchantment removes the effect if the Lilit is outside at day.",
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "ench_effects": [ { "effect": "effect_lilin_lose_incremental_speed_boost", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_INCREMENTAL_SPEED_BOOST_0"
     ]
   },
   {

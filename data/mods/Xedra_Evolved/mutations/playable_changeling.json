@@ -708,10 +708,7 @@
     "changes_to": [ "BROWNIE_EASY_OVERLOOK2" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_effect": "effect_brownie_attacked_someone" } },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 25 } ]
-      }
+      "INLINE_ENCH_BROWNIE_EASY_OVERLOOK_0"
     ]
   },
   {
@@ -725,10 +722,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_effect": "effect_brownie_attacked_someone" } },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ]
-      }
+      "INLINE_ENCH_BROWNIE_EASY_OVERLOOK2_0"
     ]
   },
   {
@@ -1099,13 +1093,7 @@
       ]
     ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [ { "or": [ { "u_has_move_mode": "crouch" }, { "u_has_move_mode": "run" } ] }, { "not": "u_can_drop_weapon" } ]
-        },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.5 }, { "value": "CARRY_WEIGHT", "multiply": 0.35 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_POOKA_QUADRUPED_TRAITS_0"
     ]
   },
   {
@@ -1665,10 +1653,7 @@
       }
     ],
     "enchantments": [
-      {
-        "condition": { "or": [ { "u_is_on_terrain_with_flag": "DEEP_WATER" }, { "u_is_on_terrain_with_flag": "SWIMMABLE" } ] },
-        "values": [ { "value": "SLEEPINESS_REGEN", "multiply": 0.25 } ]
-      }
+      "INLINE_ENCH_SELKIE_WATERSLEEP_0"
     ]
   },
   {

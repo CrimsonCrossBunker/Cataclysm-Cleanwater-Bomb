@@ -778,8 +778,8 @@
     "desc": [ "" ],
     "enchantments": [
       "INLINE_ENCH_effect_dhampir_resist_disease_poison_infection_0",
-      { "condition": { "not": { "u_has_trait": "DISIMMUNE" } }, "mutations": [ "DISRESISTANT" ] },
-      { "condition": { "not": { "u_has_trait": "INFIMMUNE" } }, "mutations": [ "INFRESIST" ] }
+      "INLINE_ENCH_effect_dhampir_resist_disease_poison_infection_1",
+      "INLINE_ENCH_effect_dhampir_resist_disease_poison_infection_2"
     ]
   },
   {
@@ -2956,11 +2956,7 @@
     "remove_message": "The flames on your weapon go out.",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": "u_has_weapon",
-        "values": [ { "value": "LUMINATION", "add": 25 } ],
-        "hit_you_effect": [ { "id": "changeling_noble_burning_weapon_fire_damage" }, { "id": "changeling_noble_burning_weapon_anti_nether" } ]
-      }
+      "INLINE_ENCH_effect_changeling_noble_burning_weapon_0"
     ]
   },
   {
@@ -3419,10 +3415,7 @@
           { "value": "RANGE_DODGE", "add": { "math": [ "0.25 + (u_has_trait('THRESH_LILIN') * 0.25)" ] } }
         ]
       },
-      {
-        "condition": { "not": { "u_has_trait": "TURN_INTO_OWL_TRAITS" } },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_effect_lilin_speed_boost_1"
     ]
   },
   {
@@ -3590,10 +3583,7 @@
         "condition": { "u_has_trait": "TURN_INTO_OWL_TRAITS" },
         "values": [ { "value": "EVASION", "add": { "math": [ "0.4 + (u_vitamin('lilin_ruach_vitamin') / 18000)" ] } } ]
       },
-      {
-        "condition": { "and": [ { "u_has_trait": "TURN_INTO_OWL_TRAITS" }, { "not": "is_day" } ] },
-        "values": [ { "value": "PHASE_DISTANCE", "add": 1 } ]
-      }
+      "INLINE_ENCH_effect_lilin_owl_form_pass_through_walls_1"
     ]
   },
   {
@@ -4281,11 +4271,8 @@
     "rating": "bad",
     "base_mods": { "dodge_mod": [ -1 ] },
     "enchantments": [
-      { "condition": { "or": [ "is_day", { "not": "u_is_outside" } ] }, "values": [ { "value": "LUMINATION", "add": 20 } ] },
-      {
-        "condition": { "and": [ "u_is_outside", { "not": "is_day" } ] },
-        "values": [ { "value": "LUMINATION", "add": 45 } ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_illuminate_target_0",
+      "INLINE_ENCH_effect_xe_werewolf_illuminate_target_1"
     ]
   },
   {
@@ -4321,10 +4308,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "WOLF_VAMPIRE_WOLF_FORM_TRAITS" } },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 10 } ]
-      },
+      "INLINE_ENCH_effect_xe_werewolf_camouflage_as_wolf_0",
       {
         "condition": { "u_has_trait": "WOLF_VAMPIRE_WOLF_FORM_TRAITS" },
         "values": [
@@ -4347,10 +4331,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "not": "u_has_weapon" },
-        "values": [ { "value": "ATTACK_SPEED", "multiply": -0.1 }, { "value": "PAIN", "multiply": -0.25 } ]
-      }
+      "INLINE_ENCH_effect_xe_werewolf_redhanded_rage_0"
     ]
   },
   {

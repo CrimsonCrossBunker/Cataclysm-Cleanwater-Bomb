@@ -242,7 +242,7 @@
     "points": 1,
     "visibility": 4,
     "ugliness": 1,
-    "enchantments": [ { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "cut", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SHADE_SHARP_NAILS_0" ],
     "category": [ "GRACKEN" ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ]
   },

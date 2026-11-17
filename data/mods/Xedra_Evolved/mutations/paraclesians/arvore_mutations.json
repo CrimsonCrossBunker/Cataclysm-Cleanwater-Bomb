@@ -122,27 +122,7 @@
     "leads_to": [ "ARVORE_DEX_BONUS" ],
     "changes_to": [ "GREENSTRIDE_UPGRADE" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_is_on_terrain": "t_tree_young" },
-            { "u_is_on_terrain": "t_mega_fern" },
-            { "u_is_on_terrain": "t_fungus_colony" },
-            { "u_is_on_terrain_with_flag": "SHRUB" },
-            { "u_is_on_terrain": "t_bamboo_long" },
-            { "u_is_on_terrain": "t_bamboo_tall" },
-            { "u_is_on_terrain": "t_grass_tall" },
-            { "u_is_on_terrain": "t_grass_long" },
-            { "u_is_on_terrain": "t_bamboo" },
-            { "u_is_on_terrain": "t_bamboo_harvested" },
-            { "u_is_on_terrain": "t_grass" },
-            { "u_is_on_terrain": "t_grass_white" },
-            { "u_is_on_terrain": "t_moss" },
-            { "u_is_on_terrain": "t_forestfloor" }
-          ]
-        },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ]
-      }
+      "INLINE_ENCH_GREENSTRIDE_0"
     ]
   },
   {
@@ -158,27 +138,7 @@
     "prereqs": [ "ARVORE_DEX_BONUS" ],
     "prereqs2": [ "ARVORE_FOREST_DETECT_AND_OVERMAP" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_is_on_terrain": "t_tree_young" },
-            { "u_is_on_terrain": "t_mega_fern" },
-            { "u_is_on_terrain": "t_fungus_colony" },
-            { "u_is_on_terrain_with_flag": "SHRUB" },
-            { "u_is_on_terrain": "t_bamboo_long" },
-            { "u_is_on_terrain": "t_bamboo_tall" },
-            { "u_is_on_terrain": "t_grass_tall" },
-            { "u_is_on_terrain": "t_grass_long" },
-            { "u_is_on_terrain": "t_bamboo" },
-            { "u_is_on_terrain": "t_bamboo_harvested" },
-            { "u_is_on_terrain": "t_grass" },
-            { "u_is_on_terrain": "t_grass_white" },
-            { "u_is_on_terrain": "t_moss" },
-            { "u_is_on_terrain": "t_forestfloor" }
-          ]
-        },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ]
-      },
+      "INLINE_ENCH_GREENSTRIDE_UPGRADE_0",
       {
         "condition": { "or": [ { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST" }, { "u_at_om_location": "forest_trail" } ] },
         "values": [ { "value": "PHASE_DISTANCE", "add": 5 } ]
@@ -457,10 +417,7 @@
     "category": [ "ARVORE", "ARVORE_ALCHEMY" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "WOODEN_WEAPON" },
-        "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.25 }, { "value": "RANGED_DAMAGE", "multiply": 0.25 } ]
-      }
+      "INLINE_ENCH_ARVORE_WOOD_WEAPON_DAMAGE_0"
     ]
   },
   {
@@ -513,15 +470,7 @@
     "types": [ "METABOLISM" ],
     "changes_to": [ "ARVORE_SUN_NUTRIENTS_AND_MANA" ],
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 },
-          { "value": "MENDING_MODIFIER", "multiply": 1 }
-        ],
-        "ench_effects": [ { "effect": "effect_arvore_vitamin_bonus", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ARVORE_SUN_NUTRIENTS_0"
     ],
     "//": "No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough."
   },
@@ -539,16 +488,7 @@
     "prereqs": [ "ARVORE_SUN_NUTRIENTS" ],
     "changes_to": [ "ARVORE_SUN_MANA_BONUS" ],
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 },
-          { "value": "REGEN_MANA", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 1 }
-        ],
-        "ench_effects": [ { "effect": "effect_arvore_vitamin_bonus", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ARVORE_SUN_NUTRIENTS_AND_MANA_0"
     ],
     "//": "No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough."
   },
@@ -1180,17 +1120,7 @@
     "prereqs": [ "ARVORE_SUN_NUTRIENTS_AND_MANA" ],
     "changes_to": [ "ARVORE_SUN_POWER_MANA_STATS" ],
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 },
-          { "value": "REGEN_MANA", "multiply": 0.5 },
-          { "value": "MAX_MANA", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 1 }
-        ],
-        "ench_effects": [ { "effect": "effect_arvore_vitamin_bonus", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ARVORE_SUN_MANA_BONUS_0"
     ],
     "//": "No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough."
   },
@@ -1208,21 +1138,7 @@
     "types": [ "METABOLISM" ],
     "prereqs": [ "ARVORE_SUN_MANA_BONUS" ],
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 },
-          { "value": "REGEN_MANA", "multiply": 0.5 },
-          { "value": "MAX_MANA", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 1 },
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "INTELLIGENCE", "add": 2 },
-          { "value": "PERCEPTION", "add": 2 }
-        ],
-        "ench_effects": [ { "effect": "effect_arvore_vitamin_bonus", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ARVORE_SUN_POWER_MANA_STATS_0"
     ],
     "//": "No messages so you aren't constantly spammed while you're walking in and out of buildings.  Being a fae spirit, the arvore doesn't need uncovered arms or head or anything--simply being in the sun is enough."
   }

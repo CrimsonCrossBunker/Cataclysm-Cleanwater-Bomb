@@ -106,3 +106,5 @@ require("martial_enchantments")
 require("effect_enchantments")
 
 require("mutation_enchantments")
+
+require("inline_enchantment_conditions")

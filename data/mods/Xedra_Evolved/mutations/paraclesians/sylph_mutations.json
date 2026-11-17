@@ -313,7 +313,7 @@
     "prereqs": [ "PUSHING_WIND" ],
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "condition": "u_is_outside", "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_SPEED_INCREASE_0" ]
   },
   {
     "type": "mutation",
@@ -327,10 +327,7 @@
     "category": [ "SYLPH" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": "u_is_outside",
-        "values": [ { "value": "MOVE_COST", "multiply": -0.1 }, { "value": "SPEED", "multiply": 0.1 } ]
-      }
+      "INLINE_ENCH_SYLPH_SPEED_INCREASE2_0"
     ]
   },
   {
