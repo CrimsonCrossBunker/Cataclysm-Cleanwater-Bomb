@@ -43,10 +43,7 @@
           }
         ]
       },
-      {
-        "condition": { "math": [ "u_val('strength') >= 25" ] },
-        "ench_effects": [ { "effect": "effect_psi_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_biokin_physical_1"
     ]
   },
   {
@@ -489,10 +486,7 @@
           }
         ]
       },
-      {
-        "condition": { "math": [ "u_val('strength') >= 20" ] },
-        "ench_effects": [ { "effect": "effect_psi_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_biokin_combat_dance_9"
     ]
   },
   {

@@ -288,14 +288,7 @@
     "base_mods": { "str_mod": [ -2 ], "dex_mod": [ -2 ] },
     "scaling_mods": { "str_mod": [ -1.2 ], "dex_mod": [ -1.2 ] },
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MELEE_STAMINA_CONSUMPTION",
-            "multiply": { "math": [ "-0.15 - ( u_vitamin('vitamin_psionic_drain') * -0.01)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_biokin_overload_0"
     ],
     "limb_score_mods": [
       { "limb_score": "lift", "modifier": 0.9, "resist_modifier": 1.0, "scaling": -0.05, "resist_scaling": -0.00125 },
@@ -343,7 +336,7 @@
     "apply_message": "Your limbs twitch involuntarily!",
     "remove_message": "The twitching stops",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "SLEEPY", "add": { "math": [ "-0.1 * ( u_vitamin('vitamin_psionic_drain'))" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_electrokin_overload_0" ],
     "limb_score_mods": [
       { "limb_score": "reaction", "modifier": 0.8, "scaling": -0.2 },
       { "limb_score": "grip", "modifier": 0.8 },
@@ -359,7 +352,7 @@
     "apply_message": "",
     "remove_message": "The glow from your skin fades.",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": { "math": [ "50 + ( u_vitamin('vitamin_psionic_drain'))" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_photokin_lumination_overload_0" ]
   },
   {
     "type": "effect_type",
@@ -401,9 +394,7 @@
     "rating": "bad",
     "base_mods": { "per_mod": [ -2 ], "health_min": [ -1 ], "health_chance": [ 25 ] },
     "enchantments": [
-      {
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": { "math": [ "-15 - ( u_vitamin('vitamin_psionic_drain') / 10)" ] } } ]
-      },
+      "INLINE_ENCH_effect_pyrokin_overload_0",
       "INLINE_ENCH_effect_pyrokin_overload_1"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.7 } ],
@@ -471,9 +462,7 @@
     "base_mods": { "sleepiness_tick": [ 300 ], "sleepiness_min": [ 1 ], "health_min": [ -1 ], "health_tick": [ 400 ] },
     "scaling_mods": { "sleepiness_min": [ 1 ], "health_min": [ -1 ] },
     "enchantments": [
-      {
-        "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "-0.125 - ( u_vitamin('vitamin_psionic_drain') * -0.0035)" ] } } ]
-      },
+      "INLINE_ENCH_effect_vitakin_overload_0",
       "INLINE_ENCH_effect_vitakin_overload_1"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.8 }, { "limb_score": "manip", "modifier": 0.8 } ],
