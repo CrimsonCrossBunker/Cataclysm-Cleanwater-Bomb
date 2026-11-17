@@ -867,6 +867,8 @@ bool game::reload_active_save( const save_t &save_file )
 
     zone_manager::get_manager().clear();
 
+    // These are world-level and not reset by reset_game_state(); the full
+    // main-menu reload clears them via teardown, so do it here too.
     MAPBUFFER.clear();
     overmap_buffer.clear();
 

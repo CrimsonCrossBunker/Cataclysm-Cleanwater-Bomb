@@ -377,6 +377,7 @@ TEST_CASE( "fun_for_gourmand", "[fun_for][food][gourmand]" )
 TEST_CASE( "fun_for_food_eaten_too_often", "[fun_for][food][monotony]" )
 {
     avatar dummy;
+    dummy.set_body();
     std::pair<int, int> actual_fun;
 
     // A big box of tasty toast-ems

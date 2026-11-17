@@ -927,8 +927,13 @@ TEST_CASE( "lua_platform_npc_mission_provider_lifecycle_is_generation_safe",
     const auto compare_selected_generic_rewards = [&]() {
         reward_dialogue.actor( true )->select_mission(
             provider->chatbin.mission_selected );
-        const bool native_result = native_generic_rewards_condition(
-                                       reward_dialogue );
+        const bool has_selection = reward_dialogue.const_actor( true )->selected_mission() != nullptr;
+        bool native_result = false;
+        const std::string diagnostic = capture_debugmsg_during( [&]() {
+            native_result = native_generic_rewards_condition( reward_dialogue );
+        } );
+        CHECK( diagnostic == ( has_selection ? "" :
+                               "mission_has_generic_rewards: mission_selected == nullptr" ) );
         const bool platform_result = boolean_from(
                                          selected_has_generic_rewards(
                                              provider_handle ) );

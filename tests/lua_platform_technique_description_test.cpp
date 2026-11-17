@@ -683,7 +683,7 @@ ccb.content.add(technique)
 }
 
 TEST_CASE( "lua_core_position_techniques_execute_real_plans",
-           "[lua][platform][martial_arts][position_technique]" )
+           "[lua][platform][core_content][martial_arts][position_technique]" )
 {
     clear_avatar();
     clear_map();
@@ -778,7 +778,7 @@ TEST_CASE( "lua_core_position_techniques_execute_real_plans",
 }
 
 TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
-           "[lua][platform][martial_arts][technique_library]" )
+           "[lua][platform][core_content][martial_arts][technique_library]" )
 {
     clear_avatar();
     clear_map();
@@ -855,7 +855,7 @@ TEST_CASE( "lua_core_combat_library_has_distinct_bonuses_and_target_rules",
 }
 
 TEST_CASE( "lua_core_punch_combinations_resolve_as_single_attacks",
-           "[lua][platform][martial_arts][technique_library]" )
+           "[lua][platform][core_content][martial_arts][technique_library]" )
 {
     const bool double_jab = GENERATE( true, false );
     const matec_id technique = double_jab ? tec_lua_boxing_double_jab : tec_lua_wingchun_chain;

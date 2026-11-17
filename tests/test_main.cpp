@@ -30,6 +30,7 @@
 #include "avatar.h"
 #include "cached_options.h"
 #include "calendar.h"
+#include "climate_seasons.h"
 #include "cata_allocator.h"
 #include "cata_assert.h"
 #include "cata_scope_helpers.h"
@@ -168,6 +169,8 @@ static void init_global_game_state( const std::vector<mod_id> &mods,
     get_avatar() = avatar();
     get_avatar().create( character_type::NOW );
     get_avatar().setID( g->assign_npc_id(), false );
+    get_avatar().ensure_player_id();
+    g->bind_local_player_control();
 
     get_map() = map();
 
@@ -236,17 +239,21 @@ struct CataListener : Catch::TestEventListenerBase {
     void testCaseStarting( Catch::TestCaseInfo const &testInfo ) override {
         const bool platform_test = std::find( testInfo.tags.begin(), testInfo.tags.end(),
                                               "platform" ) != testInfo.tags.end();
-        if( game_initialized && platform_catalog_dirty && !platform_test ) {
+        const bool core_content_test = std::find( testInfo.tags.begin(), testInfo.tags.end(),
+                                       "core_content" ) != testInfo.tags.end();
+        if( game_initialized && platform_catalog_dirty && ( !platform_test || core_content_test ) ) {
             cata::lua_platform::shutdown();
             g->reset_game_state();
-            get_avatar() = avatar();
             get_map() = map();
             MAPBUFFER.clear();
             overmap_buffer.clear();
             g->load_core_data();
             g->load_world_modfiles();
+            get_avatar() = avatar();
             get_avatar().create( character_type::NOW );
             get_avatar().setID( g->assign_npc_id(), false );
+            get_avatar().ensure_player_id();
+            g->bind_local_player_control();
             overmap_buffer.init_region_layout();
             overmap_special_batch empty_specials( point_abs_om{} );
             overmap_buffer.create_custom_overmap( point_abs_om{}, empty_specials );
@@ -258,6 +265,7 @@ struct CataListener : Catch::TestEventListenerBase {
         if( platform_test ) {
             platform_catalog_dirty = true;
         }
+        regional_climate::set_calendar_location( std::nullopt );
         if( !game_initialized && !fail_to_init_game_state ) {
             bool is_nogame = std::find( testInfo.tags.begin(), testInfo.tags.end(),
                                         "nogame" ) != testInfo.tags.end();
@@ -330,6 +338,7 @@ struct CataListener : Catch::TestEventListenerBase {
         weather.forced_temperature.reset(); // NOLINT(cata-tests-must-restore-global-state)
         weather.set_nextweather( calendar::turn );
         weather.clear_temp_cache();
+        regional_climate::set_calendar_location( std::nullopt );
     }
 
     bool assertionEnded( Catch::AssertionStats const &assertionStats ) override {

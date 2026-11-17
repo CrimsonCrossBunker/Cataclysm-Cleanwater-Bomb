@@ -119,12 +119,12 @@ class TransifexInstallTest(unittest.TestCase):
             binary_dir.mkdir()
             sudo = binary_dir / "sudo"
             sudo.write_text("""#!/usr/bin/env python3
-import os, sys
+import os, subprocess, sys
 args = sys.argv[1:]
 assert args[0] == "tar"
 assert args[args.index("-C") + 1] == "/usr/bin"
 args[args.index("-C") + 1] = os.environ["TEST_INSTALL_DIR"]
-os.execvp(args[0], args)
+sys.exit(subprocess.call(args))
 """)
             sudo.chmod(0o755)
             server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)

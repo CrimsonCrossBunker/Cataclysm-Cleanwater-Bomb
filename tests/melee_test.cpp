@@ -380,19 +380,20 @@ TEST_CASE( "Melee_skill_training_caps", "[melee], [melee_training_cap], [skill]"
         CHECK( zed.type->melee_training_cap == 6 );
     }
 
-    SECTION( "Attacking a monster above its training level still grants experience" ) {
+    SECTION( "Attacking a monster when above its traing cap will not cause further skill gain" ) {
         dude.melee_attack_abstract( dummy_1, false, matec_id( "" ) );
         CHECK( level.knowledgeLevel() == 4 );
-        CHECK( level.knowledgeExperience( true ) > 0 );
+        CHECK( level.knowledgeExperience( true ) == 0 );
     }
-    SECTION( "Attacking a monster continues training above its difficulty" ) {
+    SECTION( "Attacking a monster when below the traing cap will train the skill up to the cap" ) {
         dude.melee_attack_abstract( zed, false, matec_id( "" ) );
         CHECK( level.knowledgeLevel() == 4 );
         CHECK( level.knowledgeExperience( true ) > 0 );
+        // Training stops if we get above the cap
         dude.set_skill_level( skill_melee, 7 );
         int prev_xp = level.knowledgeExperience( true );
         dude.melee_attack_abstract( zed, false, matec_id( "" ) );
-        CHECK( level.knowledgeExperience( true ) > prev_xp );
+        CHECK( level.knowledgeExperience( true ) == prev_xp );
     }
     SECTION( "Using a monster as a training dummy will not cause further skill gain" ) {
         zed.times_combatted_player = 101;

@@ -1326,13 +1326,14 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
     npc interlocutor;
     interlocutor.normalize();
     interlocutor.setID( character_id( 1223 ), true );
-    interlocutor.op_of_u.anger = interlocutor.hostile_anger_level() - 1;
-    CHECK_FALSE( interlocutor.turned_hostile() );
-    owner_lua.set_function( "native_interlocutor_trust", [&interlocutor]() {
-        return interlocutor.op_of_u.trust;
+    interlocutor.opinion_of( speaker.getID() ).anger = interlocutor.hostile_anger_level(
+                speaker.getID() ) - 1;
+    CHECK_FALSE( interlocutor.turned_hostile( speaker.getID() ) );
+    owner_lua.set_function( "native_interlocutor_trust", [&interlocutor, &speaker]() {
+        return interlocutor.opinion_of( speaker.getID() ).trust;
     } );
-    owner_lua.set_function( "native_interlocutor_hostile", [&interlocutor]() {
-        return interlocutor.turned_hostile();
+    owner_lua.set_function( "native_interlocutor_hostile", [&interlocutor, &speaker]() {
+        return interlocutor.turned_hostile( speaker.getID() );
     } );
     owner_lua.script( R"(
         action_events = {}
@@ -1430,8 +1431,8 @@ TEST_CASE( "lua_platform_declarative_response_action_runs_before_opinion_and_on_
 
     const talk_topic native_success_topic = success_response.success.apply( conversation );
     CHECK( native_success_topic.id == "TALK_DONE" );
-    CHECK( interlocutor.op_of_u.trust == 7 );
-    CHECK( interlocutor.turned_hostile() );
+    CHECK( interlocutor.opinion_of( speaker.getID() ).trust == 7 );
+    CHECK( interlocutor.turned_hostile( speaker.getID() ) );
     const talk_topic selected_topic =
         cata::lua_platform::dialogue::apply_response_callback(
             conversation, *success_response.lua_response_id,

@@ -401,9 +401,11 @@ end
     const shopkeeper_whitelist &whitelist = class_id->get_shopkeeper_whitelist();
 
     npc trader;
+    trader.normalize();
     trader.myclass = class_id;
     REQUIRE_FALSE( trader.will_exchange_items_freely() );
     npc seller;
+    seller.normalize();
     const auto check_acceptance = [&]( const item &candidate, const bool expected ) {
         CAPTURE( candidate.typeId().str(), expected );
         const icg_entry *legacy = whitelist.matches( candidate, trader );

@@ -1914,7 +1914,7 @@ TEST_CASE( "bt_camp_resident_goals", "[npc][behavior]" )
         CHECK( bt_goal( guy ) != "free_time" );
     }
     SECTION( "away from camp: return_to_camp" ) {
-        guy.setpos( here, tripoint_bub_ms( 50 + SEEX * 4, 50, 0 ) );
+        guy.setpos( project_to<coords::ms>( camp_omt + tripoint( 2, 0, 0 ) ) );
         REQUIRE( guy.pos_abs_omt() != *guy.assigned_camp );
         REQUIRE_FALSE( ( *bcp )->point_within_camp( guy.pos_abs_omt() ) );
         CHECK( bt_goal( guy ) == "return_to_camp" );

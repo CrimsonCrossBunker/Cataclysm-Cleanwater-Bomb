@@ -409,7 +409,8 @@ TEST_CASE( "carried_item_snapshot_preserves_identity_and_rejects_partial_input",
         JsonValue value = json_loader::from_string( before );
         const auto rng_before = rng_get_engine(); // The listener reseeds at each SECTION.
         who.load_carried_items( value.get_object() );
-        CHECK_FALSE( old_weapon );
+        REQUIRE( old_weapon );
+        CHECK( old_weapon == who.get_wielded_item() );
         CHECK( snapshot() == before );
         CHECK( who.charges_of( itype_id( "nail" ) ) == 7 );
         CHECK( who.weight_carried() == weight );

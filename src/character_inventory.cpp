@@ -2693,6 +2693,7 @@ void Character::on_item_takeoff( const item &it )
 
 void Character::on_item_acquire( const item &it )
 {
+    invalidate_crafting_inventory();
     bool check_for_zoom = is_avatar();
     bool update_overmap_seen = false;
 

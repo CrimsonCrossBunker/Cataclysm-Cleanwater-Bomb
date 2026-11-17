@@ -1925,6 +1925,8 @@ TEST_CASE( "gun_or_other_ranged_weapon_attributes", "[iteminfo][weapon][gun]" )
         CHECK( item_info_str( compbow, { iteminfo_parts::DESCRIPTION_GUN_MODS } ) ==
                "--\n"
                "<color_c_white>Mods</color>:\n"
+               "<color_cyan># </color>bipod:\n"
+               "    <color_dark_gray>[-empty-]</color>\n"
                "<color_cyan># </color>dampening:\n"
                "    <color_dark_gray>[-empty-]</color>\n"
                "<color_cyan># </color>sights:\n"
@@ -2796,8 +2798,8 @@ TEST_CASE( "disassembly_time_and_yield", "[iteminfo][disassembly]" )
            // i do not understand why clang yells two spaces are needed for `and 59in. copper`
            // but i cannot figure how to fix it properly
            //NOLINTNEXTLINE(cata-text-style)
-           " yield</color>: 2 electronic scraps, 1 copper, 50g,1 scrap metal, and 150cm,5 copper"
-           " wires.\n" );
+           " yield</color>: 2 electronic scrap, 1 copper, 50g,1 scrap metal, and 150cm,5 copper"
+           " wire.\n" );
 
     CHECK( item_info_str( metal, disassemble ) ==
            "--\n"

@@ -46,6 +46,8 @@ static void finish_toolmod_installation( avatar &you, const item_location &tool,
     actor.finish( activity, you );
 }
 
+
+
 TEST_CASE( "activating_installed_toolmod_does_not_obtain_it", "[item][toolmod][regression]" )
 {
     clear_avatar();

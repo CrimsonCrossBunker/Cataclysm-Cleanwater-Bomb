@@ -1396,7 +1396,7 @@ number_sci_notation TextJsonIn::get_any_number()
     if( ch == '0' ) {
         // allow a single leading zero in front of a '.' or 'e'/'E'
         stream->get( ch );
-        if( ch >= '0' && ch <= '9' ) {
+        if( *stream && ch >= '0' && ch <= '9' ) {
             error( -1, "leading zeros not allowed" );
         }
     }

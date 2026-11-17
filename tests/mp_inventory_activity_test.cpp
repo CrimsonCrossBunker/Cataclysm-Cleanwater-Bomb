@@ -1666,8 +1666,9 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
     owner.set_stamina( 1234 );
     owner.set_thirst( 42 );
     owner.magic->set_mana( 456 );
-    owner.add_effect( efftype_id( "bleed" ), 10_minutes, bodypart_id( "arm_l" ), 2 );
+    owner.add_effect( efftype_id( "bleed" ), 10_minutes, bodypart_id( "arm_l" ), false, 2 );
     owner.add_effect( efftype_id( "sleep" ), 3_hours );
+    owner.set_pain( 80 );
     const auto snapshot = [&]() {
         std::ostringstream encoded;
         JsonOut out( encoded );
@@ -1713,6 +1714,8 @@ TEST_CASE( "authoritative_character_turn_frames_preserve_replica_ownership",
     CHECK( replica.get_effect( efftype_id( "sleep" ) ).get_duration() == 3_hours );
     CHECK( replica.get_effect( efftype_id( "bleed" ), bodypart_id( "arm_l" ) ).get_duration() ==
            10_minutes );
+    CHECK( replica.get_effect( efftype_id( "bleed" ), bodypart_id( "arm_l" ) ).get_intensity() ==
+           owner.get_effect( efftype_id( "bleed" ), bodypart_id( "arm_l" ) ).get_intensity() );
     CHECK_FALSE( replica.has_effect( efftype_id( "poison" ) ) );
     CHECK( replica.has_trait_flag( json_character_flag( "CARNIVORE_DIET" ) ) );
     CHECK( replica.getID() == identity );
@@ -9666,6 +9669,7 @@ namespace
 struct owned_turret_fixture : vehicle_control_fixture {
     vehicle &rig( Character &who, units::angle direction = 0_degrees ) {
         map &here = get_map();
+        who.setpos( here, tripoint_bub_ms( 55, 55, 0 ) );
         vehicle *car = here.add_vehicle( vproto_id( "test_turret_rig" ),
                                          tripoint_bub_ms( 60, 60, 0 ), direction, 0,
                                          veh_spawn_status::PRISTINE, false, true );
@@ -9676,6 +9680,7 @@ struct owned_turret_fixture : vehicle_control_fixture {
         car->charge_battery( here, 1000, false );
         who.setpos( here, car->bub_part_pos( here, 0 ) );
         who.set_moves( 100 );
+        REQUIRE_FALSE( who.is_dead_state() );
         return *car;
     }
     int install( vehicle &car, const point_rel_ms &mount = point_rel_ms::zero ) {
@@ -9759,10 +9764,10 @@ TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
     vehicle &car = fixture.rig( who );
     const int first = fixture.install( car );
     const std::string operation = GENERATE( "aim_manual", "aim_single" );
+    const int second = operation == "aim_manual" ?
+                       fixture.install( car, point_rel_ms( 1, 0 ) ) : -1;
     auto choice = fixture.choice( who, car, first, operation );
-    int second = -1;
-    if( operation == "aim_manual" ) {
-        second = fixture.install( car, point_rel_ms( 1, 0 ) );
+    if( second >= 0 ) {
         choice.turret->turrets.push_back( capture_vehicle_turret( car, car.part( second ) ) );
     }
     get_avatar().set_mutation( trait_id( "GUNSHY" ) );
@@ -9770,6 +9775,8 @@ TEST_CASE( "owned_console_turrets_bill_the_operator_and_selected_vehicle_once",
     const auto host_target = get_avatar().last_target_pos;
     const int battery = car.battery_left( get_map() );
     const auto wire = control_request( fixture, who, choice );
+    REQUIRE( valid_vehicle_turret_control( who, get_map(), car, *choice.turret ) );
+    REQUIRE( vehicle_control_accessible( who, get_map(), car, choice.position, choice.action ) );
     fixture.run( who, wire );
     CHECK( who.get_moves() == 0 );
     const int consumed = 15 - car.part( first ).get_base().ammo_remaining() +
@@ -11575,6 +11582,7 @@ TEST_CASE( "zone_editor_projection_and_request_replay_keep_world_authority",
     } );
     const auto rng_before = rng_get_engine();
     const JsonObject response = json_loader::from_string( fixture.run( who, query ) ).get_object();
+    response.allow_omitted_members();
     REQUIRE( response.has_object( "zone_editor" ) );
     auto editor = zone_edit_session::read_view( who, response.get_object( "zone_editor" ) );
     REQUIRE( editor );
@@ -11796,6 +11804,7 @@ TEST_CASE( "zone_action_query_and_dispatch_use_the_actual_owner_and_do_not_repla
         out.member( "zone_actions", true );
     } );
     const JsonObject response = json_loader::from_string( fixture.run( who, query ) ).get_object();
+    response.allow_omitted_members();
     REQUIRE( response.get_bool( "zone_actions" ) );
     auto menu = zone_edit_session::read_view( who, response.get_object( "zone_editor" ) );
     REQUIRE( menu );
@@ -14477,6 +14486,7 @@ TEST_CASE( "client_furniture_selection_does_not_mutate_the_replica_or_gameplay_r
     const auto target = who.pos_bub( here ) + tripoint::east;
     here.furn_set( target, furn_str_id( "f_ladder" ) );
     const deployed_furniture_selection choice{ who.pos_abs(), here.get_abs( target ), furn_str_id( "f_ladder" ) };
+    who.set_moves( 100 );
     const auto rng = rng_get_engine();
     cata_mp::set_client_mode( true );
     REQUIRE( cata_mp::client_take_down_furniture( choice ) );
@@ -15310,10 +15320,12 @@ TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_l
     save_reload_activity( who );
     bool success = false;
     bool copy = false;
+    bool replaced_tool = false;
     SECTION( "complete_and_replay" ) {
         success = true;
     }
     SECTION( "same_type_replacement_tool" ) {
+        replaced_tool = true;
         who.remove_weapon();
         who.set_wielded_item( item( itype_id( "lighter" ) ) );
         tool = who.get_wielded_item();
@@ -15342,8 +15354,12 @@ TEST_CASE( "owned_fire_start_keeps_its_operator_source_and_surface_across_save_l
         who.activity.moves_left = 1;
         who.set_moves( 100 );
         const std::string step = fixture.request( who, "step" );
-        fixture.run( who, step );
-        fixture.run( who, step );
+        const std::string errors = capture_debugmsg_during( [&]() {
+            fixture.run( who, step );
+            fixture.run( who, step );
+        } );
+        CHECK( errors == ( replaced_tool ?
+                          "item_location lost its target item during a save/load cycle" : "" ) );
         CHECK_FALSE( who.activity );
     }
     CHECK( static_cast<bool>( here.get_field( target, field_type_id( "fd_fire" ) ) ) == success );
@@ -18378,26 +18394,38 @@ TEST_CASE( "kill_statistics_projection_is_private_and_changes_only_when_needed",
     other.get_kill_statistics().reset( { { killed, 5 } }, {} );
     remote.kill_xp = 33;
     const auto read_count = []( const JsonObject & frame ) {
-        return frame.get_object( "kill_tracker" ).get_object( "kills" ).get_int( "mon_zombie" );
+        const JsonObject tracker = frame.get_object( "kill_tracker" );
+        tracker.allow_omitted_members();
+        return tracker.get_object( "kills" ).get_int( "mon_zombie" );
+    };
+    const auto read_xp = []( const JsonObject &frame ) {
+        const JsonObject turn = frame.get_object( "character_turn" );
+        turn.allow_omitted_members();
+        return turn.get_int( "kill_xp" );
     };
     const JsonObject first_frame = json_loader::from_string(
                                        cata_mp::serialize_remote_player_state( first ) ).get_object();
+    first_frame.allow_omitted_members();
     CHECK( read_count( first_frame ) == 2 );
-    CHECK( first_frame.get_object( "character_turn" ).get_int( "kill_xp" ) == 33 );
+    CHECK( read_xp( first_frame ) == 33 );
     const JsonObject second_frame = json_loader::from_string(
                                         cata_mp::serialize_remote_player_state( second ) ).get_object();
+    second_frame.allow_omitted_members();
     CHECK( read_count( second_frame ) == 5 );
     remote.kill_xp = 34; // Other native effects can award XP without a kill.
     const JsonObject unchanged = json_loader::from_string(
                                      cata_mp::serialize_remote_player_state( first ) ).get_object();
+    unchanged.allow_omitted_members();
     CHECK_FALSE( unchanged.has_member( "kill_tracker" ) );
-    CHECK( unchanged.get_object( "character_turn" ).get_int( "kill_xp" ) == 34 );
+    CHECK( read_xp( unchanged ) == 34 );
     remote.get_kill_statistics().record_monster( killed );
     const JsonObject changed = json_loader::from_string(
                                    cata_mp::serialize_remote_player_state( first ) ).get_object();
+    changed.allow_omitted_members();
     CHECK( read_count( changed ) == 3 );
     const JsonObject other_unchanged = json_loader::from_string(
                                            cata_mp::serialize_remote_player_state( second ) ).get_object();
+    other_unchanged.allow_omitted_members();
     CHECK_FALSE( other_unchanged.has_member( "kill_tracker" ) );
     CHECK( get_avatar().get_kill_statistics().kill_count( killed ) == 8 );
 }
@@ -19107,10 +19135,10 @@ TEST_CASE( "server_owned_seminar_enrolls_only_current_followers_and_charges_the_
     follower.set_skill_level( driving, 0 );
     peer.set_skill_level( driving, 0 );
     teacher.op_of_u.owed = 17000;
-    teacher.opinion_of( remote.getID() ).owed = 9000;
     teacher.opinion_of( follower.getID() ).owed = 23000;
     const int cost = calc_skill_training_cost_char( teacher, follower, driving );
     REQUIRE( cost > 0 );
+    teacher.opinion_of( remote.getID() ).owed = cost + 9000;
 
     // Enter the real native enrollment effect without requiring an overmap safe-space fixture.
     const auto *loaded = get_talk_topic( "TALK_TRAIN_SEMINAR_START" );
@@ -19187,10 +19215,10 @@ TEST_CASE( "server_owned_seminar_enrolls_only_current_followers_and_charges_the_
         CHECK( follower.activity.id() == activity_id( "ACT_TRAIN" ) );
         CHECK_FALSE( remote.activity );
         enroll( rejected, { follower.getID() } );
-        CHECK( teacher.opinion_of( remote.getID() ).owed == 9000 - cost );
+        CHECK( teacher.opinion_of( remote.getID() ).owed == 9000 );
     }
     SECTION( "a follower removed while payment is open cannot start training" ) {
-        teacher.opinion_of( remote.getID() ).owed = 0;
+        teacher.opinion_of( remote.getID() ).owed = cost - 1;
         teacher.opinion_of( remote.getID() ).trust = 100;
         const auto payment = read_prompt( enroll( rejected, { follower.getID() } ) );
         REQUIRE( payment.trade );
@@ -19212,7 +19240,7 @@ TEST_CASE( "server_owned_seminar_enrolls_only_current_followers_and_charges_the_
         CHECK_FALSE( expired.trade->reviewing );
         CHECK_FALSE( teacher.activity );
         CHECK_FALSE( follower.activity );
-        CHECK( teacher.opinion_of( remote.getID() ).owed == 0 );
+        CHECK( teacher.opinion_of( remote.getID() ).owed == cost - 1 );
     }
     CHECK_FALSE( peer.activity );
     CHECK_FALSE( get_avatar().activity );
@@ -19471,27 +19499,28 @@ TEST_CASE( "radio_dialogue_requires_the_requesting_players_contact_and_radio",
     provider.i_add( item( radio ) );
     const auto call = [&]() {
         remote.set_moves( 100 );
-        return json_loader::from_string( fixture.run( remote, fixture.request( remote, "start",
+        const JsonObject reply = json_loader::from_string( fixture.run( remote, fixture.request( remote, "start",
         [&]( JsonOut &out ) {
             out.member( "kind", "dialogue" );
             out.member( "target_npc", provider.getID().get_value() );
             out.member( "radio_contact", true );
             out.member( "is_computer", true );
             out.member( "remote_name", "forged" );
-        } ) ) );
+        } ) ) ).get_object();
+        reply.allow_omitted_members();
+        return reply;
     };
 
     remote.faction_representatives.insert( provider.getID() );
-    CHECK_FALSE( call().get_object().has_object( "dialogue_prompt" ) );
+    CHECK_FALSE( call().has_object( "dialogue_prompt" ) );
     remote.faction_representatives.clear();
     remote.i_add( item( radio ) );
-    const JsonValue denied = call();
-    CHECK_FALSE( denied.get_object().has_object( "dialogue_prompt" ) );
-    CHECK( denied.get_object().get_array( "radio_contacts" ).empty() );
+    const JsonObject denied = call();
+    CHECK_FALSE( denied.has_object( "dialogue_prompt" ) );
+    CHECK( denied.get_array( "radio_contacts" ).empty() );
 
     remote.faction_representatives.insert( provider.getID() );
-    const JsonValue accepted = call();
-    const JsonObject reply = accepted.get_object();
+    const JsonObject reply = call();
     cata_mp::dialogue_view_prompt prompt;
     REQUIRE( reply.read( "dialogue_prompt", prompt ) );
     CHECK_FALSE( prompt.is_computer );
@@ -19502,13 +19531,14 @@ TEST_CASE( "radio_dialogue_requires_the_requesting_players_contact_and_radio",
     CHECK( roster.front().host_id == provider.getID() );
 
     remote.faction_representatives.clear();
-    const JsonValue disconnected = json_loader::from_string( fixture.run( remote,
+    const JsonObject disconnected = json_loader::from_string( fixture.run( remote,
     fixture.request( remote, "choose", [&]( JsonOut &out ) {
         out.member( "dialogue_session", static_cast<int64_t>( prompt.session_id ) );
         out.member( "response_revision", static_cast<int64_t>( prompt.response_revision ) );
         out.member( "response_index", 1 );
-    }, reply.get_string( "activity" ) ) ) );
-    CHECK_FALSE( disconnected.get_object().has_object( "dialogue_prompt" ) );
+    }, reply.get_string( "activity" ) ) ) ).get_object();
+    disconnected.allow_omitted_members();
+    CHECK_FALSE( disconnected.has_object( "dialogue_prompt" ) );
     CHECK( fixture.reload.dialogue_session == nullptr );
 }
 
@@ -19690,7 +19720,11 @@ TEST_CASE( "owned_smash_pulps_the_original_corpse_instead_of_bashing_the_ground"
         REQUIRE( replacement );
     }
     who.set_moves( 100 );
-    fixture.run( who, fixture.request( who, "step" ) );
+    const std::string errors = capture_debugmsg_during( [&]() {
+        fixture.run( who, fixture.request( who, "step" ) );
+    } );
+    CHECK( errors == ( replace ?
+                      "item_location lost its target item during a save/load cycle" : "" ) );
     if( replace ) {
         CHECK_FALSE( corpse );
         CHECK( replacement->damage() == damage );

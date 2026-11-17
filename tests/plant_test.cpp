@@ -318,6 +318,7 @@ TEST_CASE( "plant_effective_growth_time_authority", "[plant][growth]" )
     // Use the test (non-irrigated) plant furniture so sub-day growth stages
     // are processed immediately instead of being deferred to the daily loop.
     item seed( itype_test_seed_simple );
+    REQUIRE_FALSE( seed.type->seed->climate.has_value() );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
     here.furn_set( plot, furn_test_f_plant_seed );
@@ -1932,7 +1933,7 @@ TEST_CASE( "vehicle_farming_uses_the_driver_and_commits_before_callbacks",
     vehicle *machine = here.add_vehicle( vehicle_prototype_oldtractor, origin, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
     REQUIRE( machine );
-    npc &driver = spawn_npc( origin.xy(), "test_talker" );
+    npc &driver = spawn_npc( host.pos_bub().xy(), "test_talker" );
     clear_character( driver, true );
     driver.setpos( here, origin );
     driver.controlling_vehicle = true;
@@ -2502,7 +2503,7 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
         REQUIRE( sub.events.size() == 1 );
         CHECK( event.get<character_id>( "character" ) == remote_id );
         CHECK_FALSE( here.has_furn( flower ) );
-        CHECK( seeds() == 3 );
+        CHECK( seeds() == item( itype_marloss_seed ).count() );
         const auto random_before = rng_get_engine();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK_FALSE( execute_farming_command( host, choice ) );
@@ -2521,7 +2522,7 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
     } );
     CHECK( execute_farming_command( remote, choice ) );
     REQUIRE( sub.events.size() == 1 );
-    CHECK( seeds() == 3 );
+    CHECK( seeds() == item( itype_marloss_seed ).count() );
     CHECK( here.i_at( origin ).size() == 2 );
     CHECK_FALSE( host.activity );
     if( !remove_operator ) {
@@ -2570,7 +2571,7 @@ TEST_CASE( "special_tree_harvest_uses_native_traits_and_tools_of_the_operator",
         const auto random_before = rng_get_engine();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( rng_get_engine() == random_before );
-        remote.wield( remote.i_add( item( itype_id( "shovel" ) ) ) );
+        remote.set_wielded_item( item( itype_id( "shovel" ) ) );
         REQUIRE( remote.has_quality( quality_id( "DIG" ) ) );
         remote.set_moves( 1000 );
         REQUIRE( execute_farming_command( remote, choice ) );
@@ -2660,11 +2661,13 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
     remote.setpos( here, origin );
+    remote.worn.wear_item( remote, item( itype_id( "debug_backpack" ) ), false, false );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
     here.ter_set( tree, ter_str_id( "t_tree_maple" ) );
+    here.i_clear( tree );
     host.i_add( item( itype_id( "hand_drill" ) ) );
     host.i_add( item( itype_id( "hammer" ) ) );
     item_location tap = remote.i_add( item( itype_id( "tree_spile" ) ) );
@@ -2728,11 +2731,13 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
     remote.setpos( here, origin );
     remote.set_moves( 10000 );
     host.set_moves( 10000 );
+    remote.worn.wear_item( remote, item( itype_id( "debug_backpack" ) ), false, false );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
     here.ter_set( tree, ter_str_id( "t_tree_maple_tapped" ) );
+    here.i_clear( tree );
     here.add_item_unprocessed( tree, item( itype_id( "tree_spile" ) ) );
     item bottle( itype_id( "bottle_plastic" ) );
     item sap( itype_id( "maple_sap" ), calendar::turn, 2 );

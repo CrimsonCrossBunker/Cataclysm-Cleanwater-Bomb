@@ -1298,12 +1298,12 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( transferred_charges.front()->is_owned_by( *fixture.buyer ) );
     CHECK( fixture.buyer->op_of_u.owed == debt_before );
 
-    REQUIRE_FALSE( item::count_by_charges( itype_bandages ) );
+    REQUIRE_FALSE( item::count_by_charges( itype_backpack ) );
     fixture.seller.inv->add_item(
-        item( itype_bandages, calendar::turn_zero ), false, false, false );
+        item( itype_backpack, calendar::turn_zero ), false, false, false );
     const sol::protected_function_result item_result = transfer(
                 fixture.seller_handle, fixture.buyer_handle,
-                cata::lua_platform::script_game_id( "item", "bandages" ), 1 );
+                cata::lua_platform::script_game_id( "item", "backpack" ), 1 );
     REQUIRE( item_result.valid() );
     const sol::table item_envelope = item_result.get<sol::table>();
     REQUIRE( item_envelope["ok"].get<bool>() );
@@ -1312,7 +1312,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     CHECK( item_value["kind"].get<std::string>() == "items" );
     const auto transferred_items = fixture.buyer->items_with(
     []( const item & entry ) {
-        return entry.typeId() == itype_bandages;
+        return entry.typeId() == itype_backpack;
     } );
     REQUIRE( transferred_items.size() == 1 );
     CHECK( transferred_items.front()->is_owned_by( *fixture.buyer ) );
@@ -1322,7 +1322,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
     const std::size_t item_count_before_failure = transferred_items.size();
     const sol::protected_function_result missing_result = transfer(
                 fixture.seller_handle, fixture.buyer_handle,
-                cata::lua_platform::script_game_id( "item", "bandages" ), 2 );
+                cata::lua_platform::script_game_id( "item", "backpack" ), 2 );
     REQUIRE( missing_result.valid() );
     const sol::table missing_envelope = missing_result.get<sol::table>();
     REQUIRE( missing_envelope["ok"].get<bool>() );
@@ -1333,7 +1333,7 @@ TEST_CASE( "lua_platform_inventory_transfer_by_type_matches_native_sale_search_a
            std::string::npos );
     CHECK( fixture.live_item->charges == charge_count_before_failure );
     CHECK( fixture.buyer->items_with( []( const item & entry ) {
-        return entry.typeId() == itype_bandages;
+        return entry.typeId() == itype_backpack;
     } ).size() == item_count_before_failure );
 }
 

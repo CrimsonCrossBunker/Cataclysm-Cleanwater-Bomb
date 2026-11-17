@@ -1375,7 +1375,7 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
     data.read( "items_identified", items_identified );
     data.read( "in_vehicle", in_vehicle );
     data.read( "last_sleep_check", last_sleep_check );
-    if( data.read( "id", tmpid ) && tmpid.is_valid() ) {
+    if( data.read( "id", tmpid ) && tmpid.is_valid() && tmpid != getID() ) {
         // Templates have invalid ids, so we only assign here when valid.
         // When the game starts, a new valid id will be assigned if not already
         // present.

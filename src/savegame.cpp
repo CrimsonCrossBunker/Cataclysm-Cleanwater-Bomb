@@ -264,6 +264,7 @@ void game::unserialize( std::string fin )
 void game::unserialize_impl( const JsonObject &data )
 {
     const JsonObject player = data.get_member( "player" ).get_object();
+    player.allow_omitted_members();
     player.get_string( "name" );
     for( const std::string_view name : {
              "str_max", "dex_max", "int_max", "per_max"

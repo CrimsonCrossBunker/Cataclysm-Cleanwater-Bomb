@@ -145,6 +145,21 @@ static const ter_str_id ter_test_t_prying4( "test_t_prying4" );
 
 struct bionic;
 
+TEST_CASE( "clear_character_discards_activity_execution_state", "[activity][character]" )
+{
+    avatar &who = get_avatar();
+    who.activity = player_activity( activity_id( "ACT_WAIT" ), 100 );
+    who.activity.set_execution( GENERATE( activity_execution::authoritative,
+                                          activity_execution::presentation ) );
+    who.activity.values.push_back( 17 );
+
+    clear_character( who );
+
+    CHECK_FALSE( who.activity );
+    CHECK( who.activity.execution() == activity_execution::local );
+    CHECK( who.activity.values.empty() );
+}
+
 TEST_CASE( "safecracking", "[activity][safecracking]" )
 {
     avatar &dummy = get_avatar();
@@ -632,7 +647,10 @@ TEST_CASE( "chopped_wood_is_not_reserved_as_an_activity_tool", "[activity][chop_
 
     player_activity activity;
     activity.placement = here.get_abs( trunk_pos );
-    chop_logs_activity_actor actor( 1, item_location() );
+    player.set_wielded_item( item( itype_id( "ax" ) ) );
+    const item_location tool = player.get_wielded_item();
+    REQUIRE( tool );
+    chop_logs_activity_actor actor( 1, tool );
     actor.finish( activity, player );
 
     REQUIRE_FALSE( here.i_at( trunk_pos ).empty() );
@@ -1791,6 +1809,7 @@ static void update_efiles( std::vector<item_location> &edevice_locs,
 TEST_CASE( "edevice", "[activity][edevice]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.set_skill_level( skill_computer, 1 );
     clear_map_without_vision();
     std::vector<item_location> edevice_locs;

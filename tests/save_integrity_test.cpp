@@ -19,6 +19,7 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "faction.h"
 #include "game.h"
 #include "json.h"
 #include "json_error.h"
@@ -27,6 +28,7 @@
 #include "options_helpers.h"
 #include "overmapbuffer.h"
 #include "path_info.h"
+#include "player_helpers.h"
 #include "power_network.h"
 #include "weather.h"
 #include "worldfactory.h"
@@ -37,8 +39,15 @@ namespace
 void reset_save_test_state()
 {
     g->reset_game_state();
+    g->faction_manager_ptr->create_if_needed();
     get_avatar().setID( g->assign_npc_id(), true );
+    clear_avatar();
+    get_avatar().ensure_player_id();
+    g->bind_local_player_control();
+    CHECK( get_map().inbounds( get_avatar().pos_bub() ) );
 }
+
+
 
 std::string replace_save_member( const std::string &contents, std::string_view name,
                                  const std::optional<std::string> &replacement )

@@ -514,11 +514,16 @@ TEST_CASE( "faucet_offers_cold_water", "[vehicle][vehicle_parts]" )
         REQUIRE( drink_item_it->_enabled == !stomach_should_be_full ); // stomach should be full
         REQUIRE( character.get_morale_level() == ( i != 0 ? 1 : 0 ) ); // bonus morale from cold water
         if( stomach_should_be_full ) {
+            here.unboard_vehicle( character.pos_bub() );
             clear_avatar(); // clear stomach
+            here.board_vehicle( faucet->pos_bub( here ) + tripoint::east, &character );
         }
+        character.set_moves( 100 );
         drink_item_it->_on_submit();
+        REQUIRE( character.activity );
         character.clear_morale();
         process_activity( character );
+        CAPTURE( veh.fuel_left( here, itype_water_clean ) );
         REQUIRE( character.get_morale_level() == 1 );
     }
     REQUIRE( veh.fuel_left( here, itype_water_clean ) == 0 );

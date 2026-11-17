@@ -97,9 +97,15 @@ TEST_CASE( "zzip_long_paths_preserve_compressed_save_contents", "[zzip][save][re
     } );
     CHECK( read_entire_file( plain_path ) == "uncompressed remembered terrain" );
     std::filesystem::path archive_path = directory / std::filesystem::u8path( "terrain.zzip" );
+    const std::filesystem::path original_directory = std::filesystem::current_path();
+    on_out_of_scope restore_directory( [&]() {
+        std::filesystem::current_path( original_directory );
+    } );
     if( relative_path ) {
+        std::filesystem::current_path( root.parent_path() );
         archive_path = std::filesystem::relative( archive_path );
     }
+    CAPTURE( relative_path, archive_path );
     std::optional<zzip> archive = zzip::load( archive_path );
     REQUIRE( archive.has_value() );
     const std::filesystem::path entry = std::filesystem::u8path( "region.json" );

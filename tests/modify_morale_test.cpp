@@ -99,6 +99,7 @@ static const vitamin_id vitamin_human_flesh_vitamin( "human_flesh_vitamin" );
 TEST_CASE( "food_enjoyability", "[food][modify_morale][fun]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
     std::pair<int, int> fun;
 
@@ -246,6 +247,7 @@ TEST_CASE( "dining_with_table_and_chair", "[food][modify_morale][table][chair]" 
 TEST_CASE( "eating_hot_food", "[food][modify_morale][hot]" )
 {
     avatar dummy;
+    dummy.set_body();
     dummy.worn.wear_item( dummy, item( itype_backpack ), false, false );
 
     GIVEN( "some food that tastes better when hot" ) {
@@ -278,6 +280,7 @@ TEST_CASE( "eating_hot_food", "[food][modify_morale][hot]" )
 TEST_CASE( "drugs", "[food][modify_morale][drug]" )
 {
     avatar dummy;
+    dummy.set_body();
     std::pair<int, int> fun;
 
     const std::vector<itype_id> drugs_to_test = {

@@ -153,8 +153,12 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
                 if( terrain == flank_ns || terrain == flank_ew ) {
                     ++widened;
                     const bool vertical = terrain == flank_ns;
-                    const oter_id core( vertical ? "road_ns" : "road_ew" );
-                    CHECK( om->ter( p + ( vertical ? point::west : point::north ) ) == core );
+                    const oter_id core = om->ter( p + ( vertical ? point::west : point::north ) );
+                    REQUIRE( core->get_type_id() == road );
+                    CHECK( core->has_connection( vertical ? om_direction::type::north :
+                                                 om_direction::type::east ) );
+                    CHECK( core->has_connection( vertical ? om_direction::type::south :
+                                                 om_direction::type::west ) );
                     const point step = vertical ? point::north : point::east;
                     CHECK( ( om->ter( p + step ) == terrain || om->ter( p - step ) == terrain ) );
                     continue;

@@ -142,6 +142,34 @@ std::string Json::str() const
     return ret;
 }
 
+JsonValue::operator uint64_t() const
+{
+    if( json_.IsUInt() ) {
+        return json_.AsUInt64();
+    }
+    if( !json_.IsInt() ) {
+        throw_error( "Expected a uint64_t, got " + flexbuffer_type_to_string( json_.GetType() ) );
+    }
+    const int64_t number = json_.AsInt64();
+    if( number < 0 ) {
+        throw_error( "uint64_t value out of range" );
+    }
+    if( number == 0 ) {
+        // The FlexBuffers JSON parser stores unsigned values above INT64_MAX as zero.
+        std::unique_ptr<std::istream> source = root_->get_source_stream();
+        if( source ) {
+            TextJsonIn jsin( *source, get_root_source_path() );
+            JsonPath path;
+            if( parent_path_ ) {
+                path = *parent_path_ + path_index_;
+            }
+            advance_jsin( &jsin, flexbuffer_root_from_storage( root_->get_storage() ), path );
+            return jsin.get_uint64();
+        }
+    }
+    return static_cast<uint64_t>( number );
+}
+
 int JsonValue::get_int_exact() const
 {
     if( !test_int() ) {

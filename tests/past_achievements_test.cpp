@@ -27,6 +27,8 @@ static std::filesystem::path past_records_directory()
     return {};
 }
 
+
+
 TEST_CASE( "past_records_isolate_corrupt_files", "[past_records][nogame]" )
 {
     const std::filesystem::path directory = past_records_directory();

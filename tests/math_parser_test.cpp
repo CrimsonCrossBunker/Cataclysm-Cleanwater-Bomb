@@ -357,6 +357,7 @@ TEST_CASE( "math_parser_parsing", "[math_parser]" )
 TEST_CASE( "math_parser_hunger_and_daily_health", "[math_parser]" )
 {
     avatar you;
+    you.set_body();
     standard_npc other;
     dialogue d( get_talker_for( you ), get_talker_for( &other ) );
     const bool beta = GENERATE( false, true );

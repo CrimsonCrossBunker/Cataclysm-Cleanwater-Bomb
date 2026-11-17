@@ -152,7 +152,7 @@
     "name": "TEST throwing holster",
     "description": "A holster for testing disposal of an item before throwing.",
     "weight": "100 g",
-    "volume": "100 ml",
+    "volume": "200 ml",
     "material": [ "cotton" ],
     "symbol": "[",
     "color": "white",

@@ -2497,17 +2497,15 @@ bool map::displace_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const bool 
         src_submap->vehicles.erase( src_submap_veh_it );
         invalidate_max_populated_zlev( dst.z() );
     }
-    if( need_update ) {
-        g->update_map( player_character );
-    }
     cache_vehicle_parts( veh );
+    if( need_update ) {
+        if( z_change ) {
+            g->vertical_shift( player_character.posz() );
+        }
+        g->update_map( player_character, z_change != 0 );
+    }
 
     if( z_change || src.z() != dst.z() ) {
-        if( z_change ) {
-            g->vertical_move( z_change, true );
-            // vertical moves can flush the caches, so make sure we're still in the cache
-            cache_vehicle_parts( veh );
-        }
         update_vehicle_list( dst_submap, dst.z() );
         // delete the vehicle from the source z-level vehicle cache set if it is no longer on
         // that z-level

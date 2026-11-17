@@ -37,6 +37,7 @@
 #include "imgui/imgui.h"
 #include "json.h"
 #include "line.h"
+#include "lua_platform_handle.h"
 #include "map.h"
 #include "mapgendata.h"
 #include "memory_fast.h"

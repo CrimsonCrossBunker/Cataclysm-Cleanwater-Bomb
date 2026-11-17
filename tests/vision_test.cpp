@@ -91,8 +91,8 @@ TEST_CASE( "monster_infrared_requires_unobstructed_path", "[vision]" )
     here.build_map_cache( 0 );
     CHECK_FALSE( observer->sees( here, you ) );
     const tripoint_bub_ms upstairs{ 60, 60, 1 };
-    you.setpos( here, upstairs );
     here.ter_set( upstairs, ter_t_floor );
+    you.setpos( here, upstairs );
     here.invalidate_map_cache( 1 );
     here.build_map_cache( 1 );
     CHECK_FALSE( observer->sees( here, you ) );

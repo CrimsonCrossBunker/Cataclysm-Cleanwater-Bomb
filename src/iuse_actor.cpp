@@ -2188,11 +2188,11 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     }
 
     // Multi-turn activity.
-    item_location tool_loc( who, &tool );
+    item_location tool_loc = form_loc_recursive( who, tool );
     who.assign_activity( fire_start_activity_actor(
                              here.get_abs( fire_pos ), tool_loc,
                              potential_skill_gain, moves, tinder_consumed ) );
-    return true;
+    return static_cast<bool>( who.activity );
 }
 
 void salvage_actor::load( const JsonObject &obj, const std::string & )
@@ -4110,11 +4110,12 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
     if( roll == SUCCESS && ( action == RT_REPAIR || action == RT_REFIT ||
                              action == RT_DOWNSIZING || action == RT_UPSIZING ) ) {
-        if( !handle_components( pl, *fix, false, false, true, material ) || !lifetime || !fix ) {
+        if( !handle_components( pl, *fix, false, true, true, material ) || !lifetime || !fix ) {
             return AS_CANT;
         }
     }
 
+    // Consuming components can spill and relocate the workpiece, so apply the repair first.
     if( action == RT_REPAIR ) {
         if( roll == SUCCESS ) {
             const std::string startdurability = fix->durability_indicator( true );
@@ -4129,7 +4130,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                 pl.add_msg_if_player( m_good, _( "You repair your %s completely!  ( %s-> %s)" ),
                                       fix->tname( 1, false ), startdurability, resultdurability );
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4144,7 +4145,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
 
                 pl.calc_encumbrance();
             }
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
 
         return AS_RETRY;
@@ -4157,7 +4158,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->set_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }
@@ -4169,7 +4170,7 @@ repair_item_actor::attempt_hint repair_item_actor::repair( Character &pl, item &
                                   fix->tname().c_str() );
             fix->unset_flag( flag_UNDERSIZE );
             pl.calc_encumbrance();
-            return AS_SUCCESS;
+            return handle_components( pl, *fix, false, false, true, material ) ? AS_SUCCESS : AS_CANT;
         }
         return AS_RETRY;
     }

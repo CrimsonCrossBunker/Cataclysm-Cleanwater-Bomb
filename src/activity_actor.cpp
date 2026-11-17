@@ -15344,6 +15344,7 @@ bool vehicle_folding_activity_actor::fold_vehicle( Character &p, bool check_only
     if( !fold_vehicle( p, true ) ) {
         return false;
     }
+    target->unboard_all( here );
     item folded = target->get_folded_item( here );
     // Native insertion here is a source handoff, not a capacity-limited copy:
     // a full pile must not delete the whole vehicle. No drop callback runs

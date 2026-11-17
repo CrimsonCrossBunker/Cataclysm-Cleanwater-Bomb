@@ -34,6 +34,8 @@ static std::filesystem::path file_io_directory()
     return {};
 }
 
+
+
 TEST_CASE( "file_writes_commit_only_on_success", "[utility][file_io][nogame]" )
 {
     const std::filesystem::path directory = file_io_directory();

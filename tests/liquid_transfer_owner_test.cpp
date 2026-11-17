@@ -183,6 +183,7 @@ TEST_CASE( "liquid_transfer_ground_and_keg_keep_quantity_on_invalid_targets",
     map &here = get_map();
     liquid_dest_opt target;
     target.pos = who.pos_bub() + tripoint::east;
+    here.i_clear( target.pos );
     target.dest_opt = LD_GROUND;
     bool valid = true;
     SECTION( "ground" ) {}

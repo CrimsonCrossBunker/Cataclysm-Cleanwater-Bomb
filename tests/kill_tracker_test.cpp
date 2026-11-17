@@ -7,6 +7,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "character.h"
+#include "debug.h"
 #include "event.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -138,7 +139,10 @@ TEST_CASE( "kill_history_load_replaces_records_without_replaying_rewards", "[sav
     owner.serialize( out );
     npc restored;
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
-    restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    const std::string reload_diagnostic = capture_debugmsg_during( [&]() {
+        restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
+    } );
+    CHECK( reload_diagnostic.empty() );
     CHECK( restored.get_kill_statistics().kill_count( mon_zombie ) == 4 );
     CHECK( restored.get_kill_statistics().npc_kill_count() == 2 );
     CHECK( restored.kill_xp == 45 );

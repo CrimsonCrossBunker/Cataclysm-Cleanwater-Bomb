@@ -146,6 +146,7 @@
 #include "value_ptr.h"
 #include "veh_interact.h"
 #include "vehicle.h"
+#include "vehicle_selector.h"
 #include "vehicle_control.h"
 #include "viewer.h"
 #include "vitamin.h"

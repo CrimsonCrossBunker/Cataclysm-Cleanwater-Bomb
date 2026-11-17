@@ -961,8 +961,9 @@ TEST_CASE( "nemesis_materialization_and_death_keep_the_assigned_player", "[missi
         std::ostringstream terminal;
         JsonOut terminal_out( terminal );
         remote_task->serialize( terminal_out );
-        CHECK_FALSE( json_loader::from_string( terminal.str() ).get_object().get_bool(
-                         "nemesis_respawn_pending" ) );
+        const JsonObject terminal_object = json_loader::from_string( terminal.str() ).get_object();
+        terminal_object.allow_omitted_members();
+        CHECK_FALSE( terminal_object.get_bool( "nemesis_respawn_pending" ) );
     } else {
         CHECK( remote_task->is_complete( character_id(), remote ) );
         // Only unbound old monsters use the legacy local mission association.

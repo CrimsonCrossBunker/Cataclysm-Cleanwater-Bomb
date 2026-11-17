@@ -120,7 +120,7 @@ void clear_character( Character &dummy, bool skip_nutrition )
     dummy._skills->clear();
     *dummy.martial_arts_data = character_martial_arts();
     dummy.clear_morale();
-    dummy.activity.set_to_null();
+    dummy.activity = player_activity();
     dummy.backlog.clear();
     dummy.clear_destination();
     dummy.mounted_creature.reset();
