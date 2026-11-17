@@ -1,20 +1,28 @@
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "ammo_effect.h"
 #include "ballistics.h"
+#include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature_tracker.h"
 #include "damage.h"
 #include "dispersion.h"
+#include "effect.h"
 #include "item.h"
 #include "item_location.h"
 #include "itype.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
+#include "monster.h"
 #include "npc.h"
 #include "player_helpers.h"
 #include "pocket_type.h"
@@ -32,6 +40,126 @@ static const itype_id itype_boomer_head( "boomer_head" );
 static const itype_id itype_hazmat_suit( "hazmat_suit" );
 static const itype_id itype_m1a( "m1a" );
 static const itype_id itype_mask_gas( "mask_gas" );
+
+TEST_CASE( "bundled_ammo_effects_preserve_native_explosion_defaults", "[projectile][ammo]" )
+{
+    const ammo_effect_str_id null_effect = ammo_effect_str_id::NULL_ID();
+    REQUIRE( null_effect.is_valid() );
+    CHECK( null_effect.id().id() == null_effect );
+    const ammo_effect_str_id mortar( "EXPLOSIVE_60mmHE" );
+    REQUIRE( mortar.is_valid() );
+    CHECK( mortar->aoe_explosion_data.shrapnel.casing_mass == 500 );
+    CHECK( mortar->aoe_explosion_data.shrapnel.fragment_mass == Approx( 0.005 ) );
+    const ammo_effect_str_id grenade( "EXPLOSIVE_GRENADE" );
+    REQUIRE( grenade.is_valid() );
+    CHECK( grenade->aoe_explosion_data.distance_factor == Approx( 0.75 ) );
+    CHECK( grenade->aoe_explosion_data.shrapnel.fragment_mass == Approx( 0.08 ) );
+}
+
+TEST_CASE( "gene_sting_ammo_mutates_only_a_damaged_character", "[projectile][ammo]" )
+{
+    clear_avatar();
+    clear_map_without_vision();
+    cata::lua_platform::runtime_world_ready( true );
+    Character &target = get_player_character();
+    const tripoint_bub_ms position( 60, 60, 0 );
+    target.setpos( get_map(), position );
+    monster &shooter = spawn_test_monster( "mon_zombie", position + tripoint_rel_ms::east );
+    const ammo_effect_str_id sting( "GENE_STING_BARB" );
+    REQUIRE( sting.is_valid() );
+    const std::vector<trait_id> original = target.get_mutations();
+    rng_set_engine_seed( 70731 );
+    apply_ammo_effects( &shooter, position, { sting }, 0 );
+    CHECK( target.get_mutations() == original );
+    for( int hit = 0; hit < 4; ++hit ) {
+        apply_ammo_effects( &shooter, position, { sting }, 1 );
+    }
+    CHECK( target.get_mutations() != original );
+    clear_avatar();
+}
+
+TEST_CASE( "mindovermatter_ammo_applies_the_original_stun_and_immunity",
+           "[projectile][ammo][mindovermatter]" )
+{
+    const ammo_effect_str_id neural( "NEURAL_STUNGUN" );
+    const ammo_effect_str_id exodii( "EXODII_NEURAL_STUNGUN" );
+    if( !neural.is_valid() ) {
+        return;
+    }
+    REQUIRE( exodii.is_valid() );
+    clear_avatar();
+    clear_map_without_vision();
+    cata::lua_platform::runtime_world_ready( true );
+    Character &target = get_player_character();
+    const tripoint_bub_ms position( 60, 60, 0 );
+    target.setpos( get_map(), position );
+    monster &source = spawn_test_monster( "mon_zombie", position + tripoint_rel_ms::east );
+    const efftype_id paralysis( "effect_electrokin_paralysis" );
+    const efftype_id stunned( "psi_stunned" );
+    const trait_id immune( "NPC_TELEPATHY_IMMUNE" );
+
+    rng_set_engine_seed( 70731 );
+    apply_ammo_effects( &source, position + tripoint_rel_ms::west, { neural }, 0 );
+    apply_ammo_effects( &source, position, { neural }, 0 );
+    REQUIRE( target.has_effect( paralysis ) );
+    CHECK( to_turns<int>( target.get_effect_dur( paralysis ) ) >= 15 );
+    CHECK( to_turns<int>( target.get_effect_dur( paralysis ) ) < 60 );
+    target.set_mutation( immune );
+    apply_ammo_effects( &source, position, { exodii }, 0 );
+    CHECK_FALSE( target.has_effect( stunned ) );
+    target.unset_mutation( immune );
+    apply_ammo_effects( &source, position, { exodii }, 0 );
+    REQUIRE( target.has_effect( stunned ) );
+    CHECK( to_turns<int>( target.get_effect_dur( stunned ) ) >= 15 );
+    CHECK( to_turns<int>( target.get_effect_dur( stunned ) ) < 60 );
+    monster &mindless = spawn_test_monster( "mon_blob", position + tripoint_rel_ms::west );
+    apply_ammo_effects( &source, mindless.pos_bub(), { exodii }, 10 );
+    CHECK_FALSE( mindless.has_effect( stunned ) );
+    clear_avatar();
+}
+
+TEST_CASE( "aftershock_vahagn_retargets_five_monsters_once_per_turn",
+           "[projectile][ammo][aftershock]" )
+{
+    const ammo_effect_str_id vahagn( "VAHAGN" );
+    if( !vahagn.is_valid() ) {
+        return;
+    }
+    clear_avatar();
+    clear_map_without_vision();
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    cata::lua_platform::runtime_world_ready( true );
+    Character &shooter = get_player_character();
+    map &here = get_map();
+    const tripoint_bub_ms position( 60, 60, 0 );
+    shooter.setpos( here, position );
+    const efftype_id marked( "smart_targeted" );
+    const efftype_id fired_at( "vahagan_fired_at" );
+    std::vector<monster *> targets;
+    for( int offset = -3; offset <= 3; ++offset ) {
+        const tripoint_bub_ms tile = position + tripoint_rel_ms( 4, offset, 0 );
+        monster &target = spawn_test_monster( "mon_moxie_scavenger", tile );
+        target.add_effect( marked, 1_minutes );
+        targets.push_back( &target );
+    }
+    set_time( calendar::turn - time_past_midnight( calendar::turn ) + 12_hours );
+    for( const monster *target : targets ) {
+        REQUIRE( target->sees( here, position ) );
+    }
+    const auto hit = [&]() {
+        apply_ammo_effects( &shooter, position + tripoint_rel_ms::west * 5, { vahagn }, 0 );
+        std::vector<bool> retargeted;
+        for( const monster *target : targets ) {
+            retargeted.push_back( target->has_effect( fired_at ) );
+            CHECK( target->has_effect( marked ) != retargeted.back() );
+        }
+        return retargeted;
+    };
+    const std::vector<bool> first = hit();
+    CHECK( std::count( first.begin(), first.end(), true ) == 5 );
+    CHECK( hit() == first );
+    clear_avatar();
+}
 
 TEST_CASE( "recovered_arrow_preserves_stack_identity", "[projectile][ammo][stacking]" )
 {

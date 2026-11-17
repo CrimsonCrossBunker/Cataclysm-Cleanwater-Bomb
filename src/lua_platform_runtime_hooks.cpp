@@ -35,6 +35,7 @@
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_missions.h"
 #include "map.h"
@@ -3283,6 +3284,9 @@ void invoke_ammo_effect_handler( const std::string_view ammo_effect_id,
         sol::table payload = owner->lua->create_table();
         payload["ammo_effect_id"] = std::string( ammo_effect_id );
         payload["dealt_damage"] = dealt_damage;
+        payload["absolute_position"] = script_tripoint_coord::from_native(
+                                           coords::origin::abs, coords::scale::map_square,
+                                           get_map().get_abs( position ).raw() );
         payload["source"] = source ?
                             sol::make_object( *owner->lua,
                                               platform_creature_handle( *owner, *source ) ) :

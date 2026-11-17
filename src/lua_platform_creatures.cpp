@@ -390,9 +390,10 @@ sol::table creature_has_flag(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    if( requested.kind() != "json_flag" || !requested.is_valid() ) {
+    const bool monster_flag = requested.kind() == "monster_flag";
+    if( ( requested.kind() != "json_flag" && !monster_flag ) || !requested.is_valid() ) {
         throw std::invalid_argument(
-            "services.creatures.has_flag requires a valid GameId<json_flag>" );
+            "services.creatures.has_flag requires a valid GameId<json_flag|monster_flag>" );
     }
     sol::state_view state( lua );
     const native_handle_result<Creature> resolved =
@@ -400,6 +401,12 @@ sol::table creature_has_flag(
             runtime_generation, world_generation );
     if( !resolved ) {
         return make_game_error_result( state, *resolved.error );
+    }
+    if( monster_flag ) {
+        const monster *target = resolved.value->as_monster();
+        return make_game_value_result(
+                   state, sol::make_object( state, target != nullptr &&
+                                           target->has_flag( mon_flag_str_id( requested.value() ) ) ) );
     }
     return make_game_value_result(
                state, sol::make_object(
@@ -659,6 +666,31 @@ sol::table creature_at(
                state, sol::make_object(
                    state, make_creature_handle(
                        *creature, runtime_generation, world_generation ) ) );
+}
+
+sol::table monsters_seeing_position(
+    sol::this_state lua, const script_tripoint_coord &position, const int radius,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    if( position.native_origin() != coords::origin::abs ||
+        position.native_scale() != coords::scale::map_square ||
+        radius < 0 || radius > maximum_creature_query_radius ) {
+        throw std::invalid_argument(
+            "services.monsters.seeing_position requires an absolute map-square coordinate "
+            "and a radius between 0 and 1000" );
+    }
+    sol::state_view state( lua );
+    sol::table result = state.create_table();
+    map &here = get_map();
+    const tripoint_bub_ms origin = here.get_bub( tripoint_abs_ms( position.to_native() ) );
+    const std::vector<Creature *> monsters = g->get_creatures_if( [&]( const Creature & candidate ) {
+        return candidate.is_monster() && candidate.posz() == origin.z() &&
+               candidate.sees( here, origin ) && rl_dist( origin, candidate.pos_bub( here ) ) <= radius;
+    } );
+    for( Creature *monster : monsters ) {
+        result.add( make_creature_handle( *monster, runtime_generation, world_generation ) );
+    }
+    return result;
 }
 
 enum class nearby_character_attitude {
@@ -4507,6 +4539,14 @@ void install_creature_api(
     services["creatures"] = std::move( creatures );
 
     sol::table monsters = lua.create_table();
+    monsters.set_function(
+        "seeing_position",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const script_tripoint_coord & position, const int radius ) {
+        require_read();
+        return monsters_seeing_position(
+                   lua_state, position, radius, current_runtime_generation(), current_world_generation() );
+    } );
     monsters.set_function(
         "set_disposition",
         [current_runtime_generation, current_world_generation, require_write](

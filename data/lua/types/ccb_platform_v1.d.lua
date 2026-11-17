@@ -2268,6 +2268,7 @@ function ExplosionLightDefinition:shockwave(options) end
 ---@field source GameHandle|nil Generation-checked source creature when present.
 ---@field target GameHandle|nil Generation-checked target creature when present.
 ---@field position CcbPlatformBubbleMapSquarePayload Detached impact position.
+---@field absolute_position TripointCoord Impact position as an absolute map-square coordinate.
 
 ---@class AmmoEffectDefinition
 ---@field id string
@@ -12599,6 +12600,15 @@ function CcbCreaturesApi.avatar() end
 ---@return CcbResult result `value` is a detached CcbCreatureSnapshot; stale or dead handles fail closed.
 function CcbCreaturesApi.snapshot(handle) end
 
+---@param position TripointCoord Absolute map-square position.
+---@return CcbResult result `value` is the live creature handle at the given position.
+function CcbCreaturesApi.at(position) end
+
+---@param creature GameHandle Exact live Creature handle.
+---@param flag GameId GameId<json_flag|monster_flag>. Monster flags apply to monsters only.
+---@return CcbResult result `value` is the native flag membership.
+function CcbCreaturesApi.has_flag(creature, flag) end
+
 ---@param creature GameHandle Exact live Creature handle.
 ---@param species GameId GameId<species>.
 ---@return CcbResult result `value` is the native species membership.
@@ -12830,6 +12840,13 @@ function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
+
+---Return same-z monsters that can see the tile, in native creature iteration order.
+---@param position TripointCoord Absolute map-square position.
+---@param radius integer Native distance, 0 through 1000.
+---@return GameHandle[] monsters
+function CcbMonstersApi.seeing_position(position, radius) end
+
 ---@param monster GameHandle Exact live monster.
 ---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
 ---@return CcbResult result

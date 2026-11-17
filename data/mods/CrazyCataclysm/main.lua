@@ -14,3 +14,5 @@ definition:entry("mon_zombie_skeltal_minion")
 content.add(definition)
 
 require("speech")
+
+require("ammo_effects")

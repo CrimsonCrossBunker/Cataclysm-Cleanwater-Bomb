@@ -118,6 +118,4 @@ const std::vector<ammo_effect> &get_all();
 
 } // namespace ammo_effects
 
-extern ammo_effect_id AE_NULL;
-
 #endif // CATA_SRC_AMMO_EFFECT_H

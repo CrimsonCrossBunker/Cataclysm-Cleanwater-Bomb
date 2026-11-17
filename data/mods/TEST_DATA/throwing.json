@@ -1,10 +1,5 @@
 [
   {
-    "type": "ammo_effect",
-    "id": "test_sling_payload_explosion",
-    "explosion": { "power": 5 }
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "test_throwing_ammo",

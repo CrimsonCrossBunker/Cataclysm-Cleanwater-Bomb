@@ -48,7 +48,9 @@ const ammo_effect &ammo_effect_str_id::obj() const
 template<>
 int_id<ammo_effect> ammo_effect_str_id::id() const
 {
-    return get_all_ammo_effects().convert( *this, AE_NULL );
+    const generic_factory<ammo_effect> &factory = get_all_ammo_effects();
+    const ammo_effect_id null_id = factory.convert( NULL_ID(), ammo_effect_id( -1 ), false );
+    return factory.convert( *this, null_id );
 }
 
 /** @relates int_id */
@@ -167,5 +169,3 @@ const std::vector<ammo_effect> &ammo_effects::get_all()
 {
     return get_all_ammo_effects().get_all();
 }
-
-ammo_effect_id AE_NULL;
