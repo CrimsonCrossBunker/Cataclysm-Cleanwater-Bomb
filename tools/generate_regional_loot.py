@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-(
-    "Expand the editable North America gameplay profiles into ordinary "
-    "item groups."
-)
+"""Expand the editable North America gameplay profiles into ordinary \
+item groups."""
 
 import argparse
 import copy

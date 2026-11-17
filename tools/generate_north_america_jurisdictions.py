@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-(
-    "Project Natural Earth 1:10m admin-1 boundaries into the North America "
-    "atlas."
-)
+"""Project Natural Earth 1:10m admin-1 boundaries into the North America \
+atlas."""
 
 import argparse
 import json
