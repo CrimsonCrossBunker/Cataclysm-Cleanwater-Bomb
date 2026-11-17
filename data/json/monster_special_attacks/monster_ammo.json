@@ -1,11 +1,5 @@
 [
   {
-    "type": "ammunition_type",
-    "id": "bile",
-    "name": "boomer bile",
-    "default": "boomer_bile"
-  },
-  {
     "id": "boomer_bile",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],

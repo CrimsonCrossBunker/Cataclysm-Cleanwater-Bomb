@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "achievement.h"
+#include "ammo.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -669,6 +670,7 @@ void game::load_packs( const std::string &msg, const std::vector<mod_id> &packs 
 {
     auto canonical_packs = packs;
     canonicalize_mod_list( canonical_packs );
+    ammunition_type::set_mod_load_order( canonical_packs );
     for( const auto &mod : canonical_packs ) {
         // Suppress missing mods the player chose to leave in the modlist
         if( !mod.is_valid() ) {

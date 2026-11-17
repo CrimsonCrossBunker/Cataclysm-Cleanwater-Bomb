@@ -1,21 +1,8 @@
 [
   {
     "type": "ammunition_type",
-    "id": "test_9mm",
-    "name": "test 9x19mm",
-    "default": "test_9mm_ammo"
-  },
-  {
-    "type": "ammunition_type",
-    "id": "test_100mm",
-    "name": "test_100mm",
-    "default": "test_100mm_ammo"
-  },
-  {
-    "type": "ammunition_type",
-    "id": "test_liquid",
-    "name": "test_liquid",
-    "default": "test_napalm"
+    "id": "lua_test_ammunition_overlay",
+    "default": "nail"
   },
   {
     "type": "ITEM",
@@ -36,11 +23,5 @@
     "ammo_type": "test_graphite",
     "container": "bottle_plastic_small",
     "count": 300
-  },
-  {
-    "type": "ammunition_type",
-    "id": "test_graphite",
-    "name": "graphite",
-    "default": "graphite_test_item"
   }
 ]

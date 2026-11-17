@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_AMMO_H
 #define CATA_SRC_AMMO_H
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -34,6 +35,7 @@ class ammunition_type
         ammunition_type();
 
         std::string name() const;
+        static void set_mod_load_order( const std::vector<mod_id> &mods );
 
         const itype_id &default_ammotype() const {
             return default_ammotype_;
@@ -44,10 +46,15 @@ class ammunition_type
 
         translation name_;
         itype_id default_ammotype_;
+        // Legacy JSON can supply either field from a different pack. Keep
+        // its priority when Lua defines this ammunition type after JSON loads.
+        std::size_t json_name_order_ = 0;
+        std::size_t json_default_order_ = 0;
 
         static registry_type &registry();
 
-        static void load_ammunition_type( const JsonObject &jsobj );
+        static std::size_t mod_load_index( const std::string &source );
+        static void load_ammunition_type( const JsonObject &jsobj, const std::string &source );
         static void reset();
         static void check_consistency();
 };

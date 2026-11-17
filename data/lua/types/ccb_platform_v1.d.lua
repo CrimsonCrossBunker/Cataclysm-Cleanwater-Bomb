@@ -6366,6 +6366,10 @@ function CcbPlatformContent.edit_material(id) end
 ---@return AmmunitionTypeDefinition
 function CcbPlatformContent.edit_ammunition_type(id) end
 
+---Registers an ammunition type in Mod load order, preserving fields from later JSON overlays.
+---@param definition AmmunitionTypeDefinition
+function CcbPlatformContent.upsert_ammunition_type(definition) end
+
 ---@param id string Item-category id staged earlier by this Mod.
 ---@return ItemCategoryDefinition
 function CcbPlatformContent.edit_item_category(id) end

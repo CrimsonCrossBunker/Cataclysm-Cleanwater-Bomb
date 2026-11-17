@@ -1,0 +1,1 @@
+require("ammunition_types")

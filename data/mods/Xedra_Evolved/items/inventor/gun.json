@@ -299,12 +299,6 @@
     "color": "light_green"
   },
   {
-    "type": "ammunition_type",
-    "id": "bio_warhead",
-    "name": "bio-warhead",
-    "default": "bio_warhead"
-  },
-  {
     "id": "ion_gun",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

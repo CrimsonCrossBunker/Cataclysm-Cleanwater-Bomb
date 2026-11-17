@@ -78,12 +78,6 @@
     "copy-from": "water"
   },
   {
-    "type": "ammunition_type",
-    "id": "mag_awakened_water",
-    "name": "Awakened Water",
-    "default": "mag_awakened_water"
-  },
-  {
     "id": "mag_awakened_water",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],

@@ -1,23 +1,5 @@
 [
   {
-    "type": "ammunition_type",
-    "id": "mom_pulse_rifle_ammo",
-    "name": "Pulse rifle charge",
-    "default": "mom_pulse_rifle_ammo"
-  },
-  {
-    "type": "ammunition_type",
-    "id": "psionic_charge_power",
-    "name": "matrix charge",
-    "default": "psionic_charge_power"
-  },
-  {
-    "type": "ammunition_type",
-    "id": "noetic_charge_power",
-    "name": "noetic energy",
-    "default": "noetic_charge_power"
-  },
-  {
     "id": "mom_pulse_rifle_ammo",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],

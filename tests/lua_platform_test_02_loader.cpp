@@ -2,6 +2,7 @@
 // NOLINTBEGIN(cata-test-filename)
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 #include "lua_platform_test_support.h"
+#include <ammo.h>
 #include <cata_scope_helpers.h>
 #include <cstdlib>
 #include <flexbuffer_json.h>
@@ -235,6 +236,51 @@ content.replace(content.SpeechPool { id = "lua_test_speech_append" }:line("secon
     CHECK( lines->back().volume == 9 );
     platform::discard_prepared_mods();
     CHECK( platform::detail::speech_registry_find( id ) == nullptr );
+}
+
+TEST_CASE( "lua_platform_ammunition_types_preserve_mixed_mod_load_order",
+           "[lua][platform][loader][regression]" )
+{
+    namespace platform = cata::lua_platform;
+    const platform_lua_test_directory first;
+    const platform_lua_test_directory second;
+    const on_out_of_scope cleanup( []() {
+        platform::discard_prepared_mods();
+    } );
+    first.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+content.upsert_ammunition_type(content.AmmunitionType {
+    id = "lua_test_ammunition_overlay", name = "First ammunition", default_item = "rock",
+})
+)lua" );
+    second.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+content.upsert_ammunition_type(content.AmmunitionType {
+    id = "lua_test_ammunition_overlay", name = "Second ammunition", default_item = "rock",
+})
+)lua" );
+
+    // TEST_DATA supplies only the default item and loads after ccb.
+    const ammotype id( "lua_test_ammunition_overlay" );
+    REQUIRE( id.is_valid() );
+    REQUIRE( id.obj().default_ammotype() == itype_id( "nail" ) );
+    auto sources = std::vector<platform::mod_source>{
+        { "ccb", first.root, first.root / "main.lua" }
+    };
+    const bool same_pack_lua_override = GENERATE( false, true );
+    if( same_pack_lua_override ) {
+        sources.push_back( { "test_data", second.root, second.root / "main.lua" } );
+    }
+
+    std::string error;
+    REQUIRE( platform::prepare_mods( sources, error ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+    CHECK( id.obj().name() == ( same_pack_lua_override ? "Second ammunition" : "First ammunition" ) );
+    CHECK( id.obj().default_ammotype() == itype_id( same_pack_lua_override ? "rock" : "nail" ) );
+    platform::discard_prepared_mods();
+    CHECK( id.obj().name() == "null" );
+    CHECK( id.obj().default_ammotype() == itype_id( "nail" ) );
 }
 
 TEST_CASE( "lua_platform_loader_preserves_file_preambles_and_error_lines",

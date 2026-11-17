@@ -1,11 +1,5 @@
 [
   {
-    "type": "ammunition_type",
-    "id": "test_throwing",
-    "name": "test throwing ammunition",
-    "default": "test_throwing_ammo"
-  },
-  {
     "type": "ammo_effect",
     "id": "test_sling_payload_explosion",
     "explosion": { "power": 5 }

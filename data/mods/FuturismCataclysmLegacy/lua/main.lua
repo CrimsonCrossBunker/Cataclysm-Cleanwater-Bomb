@@ -5,3 +5,5 @@ require("lua.nested_recipes")
 require("lua.flags")
 
 require("lua.speech")
+
+require("lua.ammunition_types")

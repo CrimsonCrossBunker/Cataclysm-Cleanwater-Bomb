@@ -70,11 +70,5 @@
     "stack_size": 57,
     "ammo_type": "nl_chem_thrower_ammo",
     "damage": { "damage_type": "acid", "amount": 6, "armor_penetration": 0 }
-  },
-  {
-    "type": "ammunition_type",
-    "id": "nl_chem_thrower_ammo",
-    "name": "chem charge",
-    "default": "nl_chem_thrower_ammo"
   }
 ]

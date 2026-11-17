@@ -26,12 +26,6 @@
   },
   {
     "id": "mana",
-    "name": "mana energy",
-    "default": "mana",
-    "type": "ammunition_type"
-  },
-  {
-    "id": "mana",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "category": "chems",

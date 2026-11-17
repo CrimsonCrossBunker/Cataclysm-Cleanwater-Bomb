@@ -66,3 +66,5 @@ require("flags")
 require("monster_flags")
 
 require("speech")
+
+require("ammunition_types")

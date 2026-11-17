@@ -3005,6 +3005,15 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             transaction->token
         };
     } );
+    content.set_function( "upsert_ammunition_type", [transaction](
+    const ammunition_type_definition_handle & handle ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot register an ammunition type definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "ammunition type" );
+        handle.definition->registered = true;
+        transaction->ammunition_types.push_back( { definition_operation::upsert, handle.definition } );
+    } );
     content.set_function( "edit_item_category", [transaction, edit_catalog](
     const std::string & id ) {
         return item_category_definition_handle{
@@ -3742,12 +3751,6 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.name.empty() || !ammunition_type_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "ammunition type '" + definition.id +
                                           "' requires a name and one registration per transaction" );
-            }
-            if( !definition.default_item.empty() && definition.default_item != "components" &&
-                definition.default_item != "thrown" && declared_item_ids.count( definition.default_item ) == 0 &&
-                !item::type_is_defined( itype_id( definition.default_item ) ) ) {
-                throw std::runtime_error( "ammunition type '" + definition.id +
-                                          "' references unknown default item '" + definition.default_item + "'" );
             }
             validate_operation( entry.operation, ammotype( definition.id ).is_valid(),
                                 definition.id, "ammunition type" );
@@ -5044,6 +5047,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.subcategories = entry.definition->subcategories;
                     detail::crafting_category_registry().insert( native );
                 }
+                const std::size_t load_index = ammunition_type::mod_load_index( pimpl_->owner );
                 for( const ammunition_type_registration &entry : pimpl_->ammunition_types ) {
                     const ammotype id( entry.definition->id );
                     const auto previous = ammunition_type::registry().find( id );
@@ -5051,8 +5055,16 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, previous == ammunition_type::registry().end() ?
                         std::optional<ammunition_type>() : std::optional<ammunition_type>( previous->second ) );
                     ammunition_type native;
-                    native.name_ = entry.definition->name.native();
-                    native.default_ammotype_ = itype_id( entry.definition->default_item );
+                    if( entry.operation == definition_operation::upsert &&
+                        previous != ammunition_type::registry().end() ) {
+                        native = previous->second;
+                    }
+                    if( load_index >= native.json_name_order_ ) {
+                        native.name_ = entry.definition->name.native();
+                    }
+                    if( load_index >= native.json_default_order_ ) {
+                        native.default_ammotype_ = itype_id( entry.definition->default_item );
+                    }
                     ammunition_type::registry()[id] = std::move( native );
                 }
                 break;
@@ -5729,8 +5741,18 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         }
     }
     for( const ammunition_type_registration &entry : pimpl_->ammunition_types ) {
-        if( !check( ammotype( entry.definition->id ).is_valid(), "ammunition type",
+        const ammotype id( entry.definition->id );
+        if( !check( id.is_valid(), "ammunition type",
                     entry.definition->id ) ) {
+            return false;
+        }
+        // A default item can inherit its definition from a later JSON file or
+        // be defined by another Mod. Check the final overlaid ammunition type.
+        const itype_id &item_id = id->default_ammotype();
+        if( !item_id.is_empty() && item_id.str() != "components" &&
+            item_id.str() != "thrown" && !item::type_is_defined( item_id ) ) {
+            error = "Lua-first ammunition type '" + id.str() +
+                    "' references unknown default item '" + item_id.str() + "'";
             return false;
         }
     }

@@ -2744,12 +2744,6 @@
   },
   {
     "id": "test_gas",
-    "type": "ammunition_type",
-    "name": "heady vapours",
-    "default": "test_gas"
-  },
-  {
-    "id": "test_gas",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "ammo_type": "test_gas",
@@ -6303,12 +6297,6 @@
     "legacy_charges_per_use_factor": 5,
     "pocket_data": [ { "id": "well_a", "magazine_well": "250 ml", "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "glockmag" ] } ],
     "consumption_per_use": [ { "pocket": "well_a", "qty": 1 } ]
-  },
-  {
-    "type": "ammunition_type",
-    "id": "welding_wire",
-    "name": "welding_wire_for_tests_yay",
-    "default": "welding_wire_steel_tests_dupe"
   },
   {
     "id": "welding_wire_steel_tests_dupe",

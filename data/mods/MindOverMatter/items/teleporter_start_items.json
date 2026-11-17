@@ -62,12 +62,6 @@
     "damage": { "damage_type": "heat", "amount": 60, "armor_penetration": 30 }
   },
   {
-    "type": "ammunition_type",
-    "id": "mom_fusion_ammo",
-    "name": "Ch47 fusion shot",
-    "default": "mom_fusion_ammo"
-  },
-  {
     "id": "mom_fifth_sun_stungun_pistol",
     "looks_like": "v29",
     "type": "ITEM",
@@ -127,12 +121,6 @@
     "stack_size": 40,
     "ammo_type": "mom_fifth_sun_stungun_ammo",
     "damage": { "damage_type": "electric", "amount": 3 }
-  },
-  {
-    "type": "ammunition_type",
-    "id": "mom_fifth_sun_stungun_ammo",
-    "name": "M12 neural shot",
-    "default": "mom_fifth_sun_stungun_ammo"
   },
   {
     "id": "mom_lightning_rifle",
@@ -216,13 +204,6 @@
     "stack_size": 120,
     "ammo_type": "mom_lightning_rifle_ammo",
     "damage": { "damage_type": "electric", "amount": 80, "armor_penetration": 15 }
-  },
-  {
-    "type": "ammunition_type",
-    "id": "mom_lightning_rifle_ammo",
-    "name": "tlapetlaniliztli ammo",
-    "//": "Lightning flash",
-    "default": "mom_lightning_rifle_ammo"
   },
   {
     "id": "mom_fifth_sun_eagle_tac_helmet",

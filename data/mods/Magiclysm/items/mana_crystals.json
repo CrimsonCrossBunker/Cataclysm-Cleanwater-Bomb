@@ -1,11 +1,5 @@
 [
   {
-    "type": "ammunition_type",
-    "id": "crystallized_mana",
-    "name": "crystallized mana",
-    "default": "crystallized_mana"
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "crystallized_mana",
