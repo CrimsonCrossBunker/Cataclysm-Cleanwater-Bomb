@@ -7,3 +7,5 @@ require("lua.flags")
 require("lua.speech")
 
 require("lua.ammunition_types")
+
+require("lua.snippets")
