@@ -27,3 +27,5 @@ require("power_enchantments")
 require("iron_arm_enchantment")
 
 require("item_enchantments")
+
+require("xp_progression")

@@ -11,3 +11,5 @@ content.add(definition)
 require("requirements")
 
 require("portal_storm_scenario")
+
+require("xp_progression")

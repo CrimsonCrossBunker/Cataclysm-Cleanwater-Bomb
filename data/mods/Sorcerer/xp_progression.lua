@@ -1,0 +1,328 @@
+local ccb = require("ccb")
+local services = ccb.services
+local variables = services.variables
+
+local function checked(result)
+    if not result.ok then error(result.error.message) end
+    return result.value
+end
+
+local function actor_variables(character)
+    local function number(key)
+        return checked(variables.get_number(character, key)).value or 0
+    end
+    local function set(key, value)
+        checked(variables.set(character, key, value, { include_before = false }))
+    end
+    return number, set
+end
+
+local slots_by_level = {
+    [1] = { 3, 2 },
+    [2] = { 4, 2 },
+    [3] = { 4, 3 },
+    [4] = { 5, 3, 1 },
+    [5] = { 5, 4, 2 },
+    [6] = { 5, 4, 2, 1 },
+    [7] = { 5, 5, 3, 2 },
+    [8] = { 6, 5, 3, 2, 1 },
+    [9] = { 6, 5, 4, 3, 2 },
+    [10] = { 6, 5, 4, 3, 2, 1 },
+    [11] = { 6, 5, 5, 4, 3, 2 },
+    [12] = { 6, 5, 5, 4, 3, 2, 1 },
+    [13] = { 6, 5, 5, 4, 4, 3, 2 },
+    [14] = { 6, 5, 5, 4, 4, 3, 2, 1 },
+    [15] = { 6, 5, 5, 4, 4, 4, 3, 2 },
+    [16] = { 6, 5, 5, 4, 4, 4, 3, 2, 1 },
+    [17] = { 6, 5, 5, 4, 4, 4, 3, 3, 2 },
+    [18] = { 6, 5, 5, 4, 4, 4, 3, 3, 2, 1 },
+    [19] = { 6, 5, 5, 4, 4, 4, 3, 3, 3, 2 },
+    [20] = { 6, 5, 5, 4, 4, 4, 3, 3, 3, 3 },
+}
+local leveled_spells = {
+    "banishment_lesser",
+    "animist_mass_hiding_aoe",
+    "animist_spirit_walking",
+    "biomancer_hyper_regeneration",
+    "classless_disjunction",
+    "cause_rot",
+    "druid_beguile_savage_beast",
+    "druid_thorn_skin",
+    "druid_renew_forest_spell",
+    "druid_create_temporary_spring",
+    "druid_turn_tree_into_treant",
+    "shape_of_dust",
+    "summon_eshaper_golem",
+    "earthshaper_reveal_world_map",
+    "earthshaper_granite_aegis",
+    "earthshaper_sleep_in_earth",
+    "earthshaper_diggable_teleport",
+    "nova_flare",
+    "freezing_touch",
+    "kelvinist_no_emotion_spell",
+    "kelvinist_set_everyone_on_fire",
+    "magus_haste",
+    "focused_bolt",
+    "magus_word_of_recall",
+    "magus_diamond_imbuement",
+    "magus_permanent_light",
+    "magus_cannot_move_attack_or_damage_target",
+    "lightning_storm",
+    "vacuum_decompression",
+    "rupture",
+    "obfuscated_body",
+    "druidic_healing",
+    "magus_mana_blast",
+    "summon_magic_motorcycle",
+    "dominate",
+    "devour",
+    "animist_see_invisibility",
+    "vicious_tentacle",
+    "bio_bonespear",
+    "biomancer_giant_growth",
+    "biomancer_lashing_tentacles",
+    "biomancer_caustic_blood",
+    "megablast",
+    "druidic_regrowth",
+    "summon_wolf_druid",
+    "druid_healing",
+    "druid_whisper_leaves",
+    "druid_summon_tanglevine",
+    "eshaper_melee_damage",
+    "eshaper_crystal_wrap",
+    "kelvinist_summon_freezer_spell",
+    "gravity_well",
+    "magus_slow",
+    "magus_baleful_polymorph",
+    "stormshaper_ionization",
+    "storm_shipwrecker",
+    "storm_superconductor",
+    "summon_teravolt",
+    "stormshaper_heart_of_hurricane",
+    "recover_bionic_power",
+    "animated_blade",
+    "improved_knock",
+    "technomancer_robot_shutdown",
+    "technomancer_conjure_ups",
+    "technomancer_create_ups_connection",
+    "recover_mana",
+    "recover_pain",
+    "summon_undead_swarm",
+    "life_detonation",
+    "animist_add_evasion_spell",
+    "animist_slow_food_rotting_spell",
+    "biomancer_scalpel_fingers",
+    "dark_sight",
+    "recover_sleepiness",
+    "druid_feralform",
+    "druid_natures_commune",
+    "druid_wood_living_tree_spell",
+    "recover_stamina",
+    "eshaper_shardstorm",
+    "eshaper_impalement",
+    "fireball",
+    "cone_cold",
+    "hoary_blast",
+    "kelvinist_extinguish_fire_spell",
+    "magus_mana_bolt",
+    "magus_mana_beam",
+    "magus_escape",
+    "cats_grace",
+    "eagles_sight",
+    "ogres_strength",
+    "foxs_cunning",
+    "magus_teleport_mark",
+    "magus_ranged_increase",
+    "magus_push_nearby_enemies_back",
+    "storm_hammer",
+    "stormfist",
+    "explosive_decompression",
+    "shocking_dash",
+    "toxtricity",
+    "electric_waves",
+    "invisibility",
+    "mirror_image",
+    "holographic_transposition",
+    "summon_floating_disk",
+    "technomancer_knifeshot",
+    "technomancer_recharge_vehicle",
+    "convert_sorcerer",
+    "animist_summon_decaying_boneclub",
+    "animist_luck_bone",
+    "animist_do_psionic_damage_to_head",
+    "bio_grotesque",
+    "biomancer_get_more_blood",
+    "thought_shield",
+    "classless_dispel_magic",
+    "druid_naturebow1",
+    "purify_seed",
+    "druid_healing_herb",
+    "druid_bandage_heal",
+    "druid_summon_brambles",
+    "druid_breathing_underwater",
+    "ice_spike",
+    "frost_armor",
+    "kelvinist_flamebreath",
+    "lightning_bolt",
+    "holy_blade",
+    "spirit_armor",
+    "synaptic_stimulation",
+    "technomancer_welder",
+    "technomancer_far_sight",
+    "animist_summon_watcher",
+    "animist_cast_spells_when_silent",
+    "pain_split",
+    "bio_fleshpouch",
+    "biomancer_coagulant_weave",
+    "biomancer_caustic_aura",
+    "biomancer_swim_frog",
+    "biomancer_carrion_feast",
+    "biomancer_slow_bleeding",
+    "biomancer_eat_tons_of_food",
+    "biomancer_pull_items_from_distance",
+    "protection_aura",
+    "sound_bomb",
+    "druid_veggrasp",
+    "druid_rootstrike",
+    "druid_harvest_hunter",
+    "druid_bramble_spear",
+    "druid_disinfectant",
+    "druid_water_walking",
+    "druid_bearmantle",
+    "druid_goodberry",
+    "seismic_stomp",
+    "eshaper_shardspray",
+    "move_earth",
+    "clairvoyance",
+    "earthshaper_stoneskin",
+    "earthshaper_pillar",
+    "eshaper_spawn_tools",
+    "earthshaper_danger_sense",
+    "earthshaper_fortitude_of_stone",
+    "earthshaper_harden_earth",
+    "earthshaper_repair_metal_stone",
+    "point_flare",
+    "burning_hands",
+    "frost_spray",
+    "glide_ice",
+    "ice_shield",
+    "kelvinist_summon_flamesword",
+    "kelvinist_anti_cold",
+    "kelvinist_anti_heat",
+    "kelvinist_persuasion_spell",
+    "phase_door",
+    "magus_force_jar",
+    "magus_summon_impact_sling",
+    "magus_slowfall",
+    "magus_spiderclimb",
+    "jolt",
+    "windstrike",
+    "windrun",
+    "stormshaper_repelling_arc",
+    "air_bubble",
+    "electric_eye",
+    "stormshaper_cloak_of_fog",
+    "quantum_tunnel_lesser",
+    "knock",
+    "technomancer_gain_electronics_computer_spell",
+    "technomancer_pain_ignore",
+    "smite",
+    "animist_sense_outsiders",
+    "pertifying_touch",
+    "reactive_armor",
+    "lightning_blast",
+    "bless",
+    "laze",
+    "x-ray",
+    "summon_undead",
+    "necrotic_gaze",
+    "disruption_bolt",
+    "summon_wisps",
+    "bleed",
+    "animist_detect_wizards",
+    "light_healing",
+    "bio_acidicspray",
+    "biomancer_paralytic_dart",
+    "biomancer_visceral_projection",
+    "biomancer_cure_disease_minor",
+    "crystallize_mana",
+    "blinding_flash",
+    "ethereal_grasp",
+    "classless_clean_clothing_and_self",
+    "classless_restore_crystal_mana",
+    "druid_tornskin",
+    "druid_growth",
+    "druid_anti_heat",
+    "druid_traverse_the_wilds",
+    "stonefist",
+    "eshaper_piercing_bolt",
+    "earthshaper_boulder",
+    "earthshaper_turning_of_earth",
+    "earthshaper_remove_corpses",
+    "kelvinist_firebolt",
+    "magus_stop_attack_shield",
+    "magus_far_hand_pull",
+    "magus_light_target",
+    "stormshaper_wall_of_fog",
+    "stormshaper_cloak_of_frog",
+    "stormshaper_loud_voice_spell",
+    "create_atomic_lamp",
+    "technomancer_conjure_radio",
+    "create_atomic_light",
+    "classless_watch_spell",
+    "classless_easy_sleep_spell",
+    "druid_woodshaft",
+    "summon_cats",
+    "eshaper_rockbolt",
+    "create_lighter",
+    "chilling_touch",
+    "kelvinist_heat_food",
+    "shadow_field",
+    "magic_missile",
+    "shocking_lash",
+    "electric_arts",
+    "taze",
+    "create_rune_sorcerer",
+}
+local spell_slot_keys = {
+    ["x-ray"] = "used_spell_slot_for_x_ray",
+}
+
+ccb.runtime.handler("sorcerer_check_experience", function(character)
+    local id = services.types.id
+    if not checked(services.mutations.has_id_text(character, "SORCERER")) then return end
+    local number, set = actor_variables(character)
+    local function available()
+        set("available_exp_sorcerer", checked(services.characters.kill_experience(character))
+            + number("bonus_exp") - number("used_exp_sorcerer"))
+    end
+    available()
+    for _ = 1, 100 do
+        if not (number("available_exp_sorcerer") > number("exp_to_sorcerer_level")) then break end
+        set("used_exp_sorcerer", number("used_exp_sorcerer") + number("exp_to_sorcerer_level"))
+        available()
+        set("exp_to_sorcerer_level", number("exp_to_sorcerer_level") + number("exp_per_sorcerer_level"))
+        set("current_sorcerer_level", number("current_sorcerer_level") + 1)
+        if number("current_sorcerer_level") > 1 then set("sorcerer_forget_spell_charge", 1) end
+        local slots = slots_by_level[number("current_sorcerer_level")]
+        if slots then
+            for level, amount in ipairs(slots) do
+                set("sorcerer_level_" .. (level - 1) .. "_spells_known_slots", amount)
+            end
+        end
+        if number("current_sorcerer_level") >= 21 then
+            set("sorcerer_level_9_spells_known_slots", number("sorcerer_level_9_spells_known_slots") + 1)
+        end
+        for _, spell in ipairs(leveled_spells) do
+            if number(spell_slot_keys[spell] or "used_spell_slot_for_" .. spell) > 0 then
+                local current = checked(services.spells.effective_level(character, spell))
+                local level = math.tointeger(math.modf(math.max(number("current_sorcerer_level"), current)))
+                checked(services.spells.set_level(character, id("spell", spell), level))
+            end
+        end
+        checked(services.characters.open_topic(character, "TALK_SORCERER_MENU_MAIN"))
+        local skill = checked(services.skills.level(character, "spellcraft"))
+        local level = math.tointeger(math.modf(math.max(skill, number("current_sorcerer_level"))))
+        checked(services.skills.set_level(character, id("skill", "spellcraft"), level))
+    end
+end)
