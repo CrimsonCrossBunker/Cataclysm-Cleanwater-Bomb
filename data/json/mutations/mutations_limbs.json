@@ -510,7 +510,7 @@
     "visibility": 3,
     "ugliness": 2,
     "integrated_armor": [ "integrated_claws" ],
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_claw_manipulation_penalty", "intensity": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CLAWS_0" ],
     "//": "No Lupine, wolf claws aren't long or sharp enough."
   },
   {
@@ -753,7 +753,7 @@
     "allow_soft_gear": true,
     "allowed_items": [ "ALLOWS_TAIL" ],
     "restricts_gear": [ "leg_hip_l", "leg_hip_r" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "tail_long" } ] } ]
+    "enchantments": [ "INLINE_ENCH_TAIL_LONG_0" ]
   },
   {
     "type": "mutation",
@@ -771,7 +771,7 @@
     "allow_soft_gear": true,
     "allowed_items": [ "ALLOWS_TAIL" ],
     "restricts_gear": [ "leg_hip_l", "leg_hip_r" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "tail_thick" } ] } ]
+    "enchantments": [ "INLINE_ENCH_TAIL_THICK_0" ]
   },
   {
     "type": "mutation",
@@ -787,7 +787,7 @@
     "ugliness": 2,
     "allow_soft_gear": true,
     "allowed_items": [ "ALLOWS_TAIL" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "tail_club" } ] } ]
+    "enchantments": [ "INLINE_ENCH_TAIL_CLUB_0" ]
   },
   {
     "type": "mutation",
@@ -1064,7 +1064,7 @@
     "vitamin_cost": 60,
     "visibility": 1,
     "flags": [ "TOUGH_FEET" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PADDED_FEET_0" ]
   },
   {
     "type": "mutation",
@@ -1360,7 +1360,7 @@
           { "gain": "tentacle_lower_rear_r" }
         ]
       },
-      { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -1 } ] }
+      "INLINE_ENCH_LEG_TENTACLES_2"
     ],
     "wet_protection": [
       { "part": "leg_l", "neutral": 21 },
