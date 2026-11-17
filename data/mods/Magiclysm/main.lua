@@ -29,3 +29,4 @@ require("nested_recipes")
 require("morale_types")
 
 require("flags")
+require("monster_flags")

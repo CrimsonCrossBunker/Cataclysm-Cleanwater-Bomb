@@ -26,3 +26,4 @@ ccb.runtime.on("game:game_start", "initialize_shield_display")
 require("nested_recipes")
 
 require("flags")
+require("monster_flags")
