@@ -3,9 +3,14 @@ local services = ccb.services
 local state = require("raid_state")
 local returning = require("raid_return")
 local sickness = require("raid_sickness")
+local healing = require("raid_healing")
 local warp = require("raid_warp")
 local content = ccb.content
 local id = services.types.id
+
+ccb.runtime.handler("sky_quickheal_pill", function(context)
+    if context.character then healing.full(context.character) end
+end)
 
 local function activation_charge(context)
     if context.item:is_valid()
@@ -122,5 +127,23 @@ do
     item:flag("UNBREAKABLE")
     item:ammunition { type = "components", count = 1, stack_size = 100 }
     item:on_use("sky_waterwalking_stone", content.text("Activate"), content.text("Cross the waters."))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "quickheal",
+        name = content.text("quickheal pill"),
+        description = content.text("This pseudomagical pill will heal all your damaged parts, but only if swallowed while on your sanctuary island.  No reason to bring this into the field."),
+        mass_grams = 15, volume_ml = 5,
+        looks_like = "panacea",
+        symbol = "!",
+        color = "red",
+    }
+    item:material("water", 1)
+    item:flag("ALLOWS_REMOTE_USE")
+    item:comestible { type = "FOOD", calories = 0, charges = 0, stack_size = 0,
+        spoils_in_turns = 24 * 60 * 60, freezing_point_celsius = -1000 }
+    item:on_consume("sky_quickheal_pill")
     content.add(item)
 end

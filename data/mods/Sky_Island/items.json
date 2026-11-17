@@ -1,23 +1,5 @@
 [
   {
-    "id": "quickheal",
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "comestible_type": "FOOD",
-    "consumption_effect_on_conditions": [ "EOC_healall" ],
-    "name": { "str": "quickheal pill" },
-    "description": "This pseudomagical pill will heal all your damaged parts, but only if swallowed while on your sanctuary island.  No reason to bring this into the field.",
-    "weight": "15 g",
-    "volume": "5 ml",
-    "looks_like": "panacea",
-    "material": [ "water" ],
-    "symbol": "!",
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "freezing_point": -1000,
-    "spoils_in": "24 hours",
-    "color": "red"
-  },
-  {
     "id": "starterkit_items",
     "type": "item_group",
     "//": "What you'll find in your starter kit.",
