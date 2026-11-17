@@ -9,21 +9,6 @@
     "max_book_level": 0
   },
   {
-    "type": "enchantment",
-    "id": "ench_vampire_heightened_senses_perception",
-    "condition": "ALWAYS",
-    "values": [
-      {
-        "value": "PERCEPTION",
-        "add": {
-          "math": [
-            "1 + (vampire_total_tier_one_traits() * 0.20) + (vampire_total_tier_two_traits() * 0.3) + (vampire_total_tier_three_traits() * 0.45) + (vampire_total_tier_four_traits_plus_potence() * 0.6)"
-          ]
-        }
-      }
-    ]
-  },
-  {
     "id": "vampire_smell_nearby_blood_spell",
     "type": "SPELL",
     "name": "Scent of Blood",
