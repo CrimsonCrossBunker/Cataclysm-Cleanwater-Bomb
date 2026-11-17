@@ -106,3 +106,5 @@ require("inherited_enchantments")
 require("attribute_scaling")
 
 require("environment_enchantments")
+
+require("overlay_enchantments")

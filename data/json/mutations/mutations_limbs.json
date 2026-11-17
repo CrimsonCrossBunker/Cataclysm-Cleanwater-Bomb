@@ -648,10 +648,7 @@
     "restricts_gear": [ "arm_l", "arm_r", "hand_l", "hand_r" ],
     "allowed_items": [ "ALLOWS_WING_ARMS" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "ARM_BIONIC_BASIC_LEFT" } },
-        "modified_bodyparts": [ { "lose": "arm_l" }, { "lose": "hand_l" }, { "gain": "arm_wing_bird_l" } ]
-      },
+      "INLINE_ENCH_WINGS_BIRD_0",
       "INLINE_ENCH_WINGS_BIRD_1"
     ]
   },

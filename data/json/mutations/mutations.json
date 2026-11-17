@@ -203,7 +203,7 @@
     "points": -4,
     "purifiable": true,
     "vitamin_cost": 240,
-    "enchantments": [ { "condition": { "current_dimension": "default" }, "values": [ { "value": "ARTIFACT_RESONANCE", "add": 1250 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INTERSTICE_RESONANCE_2_0" ]
   },
   {
     "type": "mutation",
@@ -217,7 +217,7 @@
     "points": -5,
     "purifiable": false,
     "vitamin_cost": 300,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "ARTIFACT_RESONANCE", "add": 1250 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INTERSTICE_RESONANCE_3_0" ]
   },
   {
     "type": "mutation",
@@ -4882,10 +4882,7 @@
     "ugliness": 2,
     "encumbrance_covered": [ [ "arm_feathers_l", 4 ], [ "arm_feathers_r", 4 ] ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "ARM_BIONIC_BASIC_LEFT" } },
-        "modified_bodyparts": [ { "lose": "arm_l" }, { "gain": "arm_feathers_l" } ]
-      },
+      "INLINE_ENCH_ARM_FEATHERS_0",
       "INLINE_ENCH_ARM_FEATHERS_1"
     ]
   },
@@ -5079,12 +5076,7 @@
     "allowed_items": [ "ALLOWS_GASTROPOD_FOOT" ],
     "enchantments": [
       "INLINE_ENCH_GASTROPOD_FOOT_0",
-      {
-        "condition": {
-          "and": [ { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } }, { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } } ]
-        },
-        "modified_bodyparts": [ { "lose": "leg_l" }, { "lose": "leg_r" }, { "lose": "foot_r" }, { "lose": "foot_l" }, { "gain": "gastropod_foot" } ]
-      }
+      "INLINE_ENCH_GASTROPOD_FOOT_1"
     ]
   },
   {
@@ -5264,7 +5256,7 @@
     "vitamin_cost": 60,
     "visibility": 8,
     "ugliness": 4,
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_bulging" } ] } ]
+    "enchantments": [ "INLINE_ENCH_EYEBULGE_0" ]
   },
   {
     "type": "mutation",
