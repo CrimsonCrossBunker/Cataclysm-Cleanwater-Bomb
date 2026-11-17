@@ -480,10 +480,7 @@
     "valid": false,
     "description": "You're so good at dodging that almost nothing can touch you as long as you're on your game.  You have passive Uncanny Dodge until you take damage, after which it takes a few minutes for you to recover your poise.",
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_effect": "effect_perk_situational_uncanny_dodge_remover" } },
-        "ench_effects": [ { "effect": "effect_perk_situational_uncanny_dodge", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_perk_situational_uncanny_dodge_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -622,10 +619,7 @@
     "valid": false,
     "description": "You have mastered the ways of the 90s action heroine.  Heels only encumber you as much as normal shoes.",
     "enchantments": [
-      {
-        "condition": { "u_has_worn_with_flag": "HIGH_HEELS" },
-        "encumbrance_modifier": [ { "part": "foot_l", "add": -35 }, { "part": "foot_r", "add": -35 } ]
-      }
+      "INLINE_ENCH_perk_running_in_heels_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -668,7 +662,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Hey, that's against the Geneva Convention!  When completely unarmed, you take -25% reduced damage.",
-    "enchantments": [ { "condition": { "not": "u_has_weapon" }, "values": [ { "value": "ARMOR_ALL", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_non_combatant_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -776,10 +770,7 @@
     "valid": false,
     "description": "So unremarkable that there's no proverb about it.  When in deep water, your stamina regeneration is doubled, and you can swim 25% faster.",
     "enchantments": [
-      {
-        "condition": { "and": [ { "u_is_on_terrain_with_flag": "SWIMMABLE" }, { "u_is_on_terrain_with_flag": "DEEP_WATER" } ] },
-        "values": [ { "value": "REGEN_STAMINA", "multiply": 1 }, { "value": "MOVECOST_SWIM_MOD", "multiply": -0.25 } ]
-      }
+      "INLINE_ENCH_perk_fish_in_water_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -888,10 +879,7 @@
     "valid": false,
     "description": "It's called \"First Aid\", right, so obviously it's better the faster you apply it.  Your bandages are 50% better at stopping bleeding, but only if you apply them within 2 minutes of taking damage.",
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "effect_perk_firstest_aid" },
-        "values": [ { "value": "BLEED_STOP_BONUS", "multiply": 0.5 } ]
-      }
+      "INLINE_ENCH_perk_firstest_aid_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1060,11 +1048,8 @@
     "valid": false,
     "description": "Smoking is bad, but damn it's badass.  You deal more damage and shoot more accurately when you smoke.",
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "cig" },
-        "melee_damage_bonus": [ { "type": "bash", "multiply": 0.25 }, { "type": "stab", "multiply": 0.25 }, { "type": "cut", "multiply": 0.25 } ]
-      },
-      { "condition": { "u_has_effect": "cig" }, "values": [ { "value": "WEAPON_DISPERSION", "multiply": -0.25 } ] }
+      "INLINE_ENCH_perk_chainsmoker_0",
+      "INLINE_ENCH_perk_chainsmoker_1"
     ],
     "flags": [ "PERK" ]
   },
@@ -1175,7 +1160,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You've always had something to say about ripping apart things with chainsaws.  You can swing powered blades faster.",
-    "enchantments": [ { "condition": { "u_has_wielded_with_flag": "MESSY" }, "values": [ { "value": "ATTACK_SPEED", "multiply": -0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_chainsaw_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -1187,7 +1172,7 @@
     "valid": false,
     "description": "You've always had a bit of a fondness for the older firearms.  Post apocalypse, this has translated into a damage boost when using WWII and older weapons.",
     "enchantments": [
-      { "condition": { "u_has_wielded_with_flag": "OLD_GUN" }, "values": [ { "value": "RANGED_DAMAGE", "multiply": 0.25 } ] }
+      "INLINE_ENCH_perk_olde_guns_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1280,12 +1265,9 @@
     "valid": false,
     "description": "Darkness is your ally.  Others have merely adopted the dark, but you were born in it, molded by it.  You gain +2 Perception and +1 Intelligence at night, and have a much easier time sleeping during the day.  However, you also suffer -2 Perception when outdoors during the day and have a harder time sleeping at night.",
     "enchantments": [
-      {
-        "condition": { "not": "is_day" },
-        "values": [ { "value": "PERCEPTION", "add": 2 }, { "value": "INTELLIGENCE", "add": 1 }, { "value": "SLEEPY", "add": -30 } ]
-      },
-      { "condition": "is_day", "values": [ { "value": "SLEEPY", "add": 50 } ] },
-      { "condition": { "and": [ "is_day", "u_is_outside" ] }, "values": [ { "value": "PERCEPTION", "add": -2 } ] }
+      "INLINE_ENCH_perk_nocturnal_0",
+      "INLINE_ENCH_perk_nocturnal_1",
+      "INLINE_ENCH_perk_nocturnal_2"
     ],
     "flags": [ "PERK" ]
   },
@@ -1343,42 +1325,10 @@
           { "value": "SPEED", "add": { "math": [ "clamp(( (u_val('thirst') - 80 ) / 10 ) , 0, 50)" ] } }
         ]
       },
-      {
-        "condition": { "u_has_effect": "hunger_very_hungry" },
-        "values": [
-          { "value": "STRENGTH", "add": 1 },
-          { "value": "DEXTERITY", "add": 1 },
-          { "value": "INTELLIGENCE", "add": 1 },
-          { "value": "PERCEPTION", "add": 1 }
-        ]
-      },
-      {
-        "condition": { "u_has_effect": "hunger_near_starving" },
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "INTELLIGENCE", "add": 2 },
-          { "value": "PERCEPTION", "add": 2 }
-        ]
-      },
-      {
-        "condition": { "u_has_effect": "hunger_starving" },
-        "values": [
-          { "value": "STRENGTH", "add": 3 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "INTELLIGENCE", "add": 3 },
-          { "value": "PERCEPTION", "add": 3 }
-        ]
-      },
-      {
-        "condition": { "u_has_effect": "hunger_famished" },
-        "values": [
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "INTELLIGENCE", "add": 4 },
-          { "value": "PERCEPTION", "add": 4 }
-        ]
-      }
+      "INLINE_ENCH_perk_ascetic_empowerment_1",
+      "INLINE_ENCH_perk_ascetic_empowerment_2",
+      "INLINE_ENCH_perk_ascetic_empowerment_3",
+      "INLINE_ENCH_perk_ascetic_empowerment_4"
     ],
     "flags": [ "PERK" ]
   },
@@ -1401,7 +1351,7 @@
     "purifiable": false,
     "valid": false,
     "description": "People often say that they feel safer when they sleep, but in your case you are literally safer when asleep.  As long as you sleep, most attacks won't injure you.",
-    "enchantments": [ { "condition": { "u_has_effect": "sleep" }, "values": [ { "value": "ARMOR_ALL", "add": -100 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_dream_armor_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -1458,19 +1408,7 @@
     "valid": false,
     "description": "Poisons tend to make you feel numb.  When poisoned, feel 80% less pain.",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_effect": "poison" },
-            { "u_has_effect": "venom_dmg" },
-            { "u_has_effect": "venom_weaken" },
-            { "u_has_effect": "badpoison" },
-            { "u_has_effect": "foodpoison" },
-            { "u_has_effect": "paralyzepoison" }
-          ]
-        },
-        "values": [ { "value": "PAIN", "multiply": -0.8 } ]
-      }
+      "INLINE_ENCH_perk_poison_painkill_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1691,16 +1629,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "SHEATH_BOW" },
-        "values": [
-          { "value": "RANGED_ARMOR_PENETRATION", "add": 4 },
-          { "value": "WEAKPOINT_ACCURACY", "multiply": 1 },
-          { "value": "WEAPON_DISPERSION", "multiply": -0.25 },
-          { "value": "RANGED_DAMAGE", "multiply": 0.25 },
-          { "value": "RANGE", "add": 6 }
-        ]
-      }
+      "INLINE_ENCH_perk_yeoman_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1763,7 +1692,7 @@
     "valid": false,
     "anger_relations": [ [ "MAMMAL", 5 ], [ "BIRD", 5 ] ],
     "enchantments": [
-      { "condition": { "not": { "u_has_effect": "effect_hive_queen_canceller" } }, "mutations": [ "TRAIT_HIVE_QUEEN" ] },
+      "INLINE_ENCH_perk_hive_queen_0",
       "INLINE_ENCH_perk_hive_queen_1"
     ],
     "flags": [ "PERK", "ANIMALDISCORD" ]
