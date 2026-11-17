@@ -5475,12 +5475,19 @@ local RelicProcgenDefinition = {}
 ---@field target_species any
 ---@field target_when fun(self:SpellDefinition, handler:string, failure_message:string|LocalizedText):SpellDefinition
 local SpellDefinition = {}
+---@class TerrainTransformRuleOptions
+---@field inputs? string[] Native input ids for the selected rule kind.
+---@field flags? string[] Input terrain/furniture/trap flags; unavailable for field rules.
+---@field results CcbLuaValue[] Dense native weighted results, such as { { "f_null", 1 } }.
+---@field message? string|LocalizedText Plain strings remain literal; content.text is translated when the transform runs. Plural messages are rejected.
+---@field message_good? boolean Defaults to true.
+
 ---@class TerrainTransformDefinition
----@field field any
----@field furniture any
+---@field field fun(self:TerrainTransformDefinition, rule:TerrainTransformRuleOptions):TerrainTransformDefinition
+---@field furniture fun(self:TerrainTransformDefinition, rule:TerrainTransformRuleOptions):TerrainTransformDefinition
 ---@field id any
----@field terrain any
----@field trap any
+---@field terrain fun(self:TerrainTransformDefinition, rule:TerrainTransformRuleOptions):TerrainTransformDefinition
+---@field trap fun(self:TerrainTransformDefinition, rule:TerrainTransformRuleOptions):TerrainTransformDefinition
 local TerrainTransformDefinition = {}
 ---@class VehiclePlacementDefinition
 ---@field id any
@@ -13458,6 +13465,16 @@ function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
+
+---@class CcbMonsterDeathOptions
+---@field remove_corpse? boolean Native death_drops policy; true disables native death drops. Omission preserves the Monster's existing policy.
+---@field suppress_message? boolean Native quiet_death policy. Omission preserves the existing policy.
+
+---Enter native Monster death, including its native death callbacks and events. Storage is retained until the detached result is produced, even if a death callback removes it from the scene.
+---@param monster GameHandle Exact live Monster owned by the active game.
+---@param options? CcbMonsterDeathOptions
+---@return CcbResult result value contains dead, changed and the explicitly requested flags; no removed Monster handle is fabricated.
+function CcbMonstersApi.die(monster, options) end
 
 ---Return same-z monsters that can see the tile, in native creature iteration order.
 ---@param position TripointCoord Absolute map-square position.

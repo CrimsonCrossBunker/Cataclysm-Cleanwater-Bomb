@@ -3185,19 +3185,18 @@ sol::table cast_spell_character(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-struct character_die_options {
+struct creature_death_options {
     std::optional<bool> remove_corpse;
     std::optional<bool> suppress_message;
 };
 
-character_die_options read_character_die_options(
-    const sol::optional<sol::table> &requested )
+creature_death_options read_creature_death_options(
+    const sol::optional<sol::table> &requested, const std::string_view api_name )
 {
-    character_die_options result;
+    creature_death_options result;
     if( !requested ) {
         return result;
     }
-    constexpr std::string_view api_name = "services.characters.die";
     reject_unknown_combat_options(
         *requested, api_name,
     { "remove_corpse", "suppress_message", "supress_message" } );
@@ -3213,7 +3212,7 @@ character_die_options read_character_die_options(
         combat_boolean_option( suppress, api_name, "suppress_message", false ) !=
         combat_boolean_option( legacy_suppress, api_name, "supress_message", false ) ) {
         throw std::invalid_argument(
-            "services.characters.die received conflicting suppress_message options" );
+            std::string( api_name ) + " received conflicting suppress_message options" );
     }
     if( combat_option_present( suppress ) ) {
         result.suppress_message = combat_boolean_option(
@@ -3231,8 +3230,8 @@ sol::table die_character(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    const character_die_options options = read_character_die_options(
-            requested_options );
+    const creature_death_options options = read_creature_death_options(
+            requested_options, "services.characters.die" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -3279,6 +3278,46 @@ sol::table die_character(
     }
     return make_game_value_result(
                state, sol::make_object( state, std::move( value ) ) );
+}
+
+sol::table die_monster(
+    sol::this_state lua, const game_handle &handle,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const creature_death_options options = read_creature_death_options(
+            requested_options, "services.monsters.die" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    monster *entry = resolve_exact_monster( handle, runtime_generation, world_generation, error );
+    if( !entry ) {
+        return make_game_error_result( state, *error );
+    }
+    const shared_ptr_fast<monster> retained = g->shared_from( *entry );
+    if( !retained ) {
+        return make_game_error_result( state, {
+            "inactive_monster", "The death target is not owned by the active game"
+        } );
+    }
+    if( options.remove_corpse ) {
+        retained->death_drops = !*options.remove_corpse;
+    }
+    if( options.suppress_message ) {
+        retained->quiet_death = *options.suppress_message;
+    }
+    const bool was_dead = retained->is_dead();
+    retained->die( &get_map(), nullptr );
+    sol::table value = state.create_table();
+    value["dead"] = retained->is_dead();
+    value["changed"] = !was_dead && retained->is_dead();
+    if( options.remove_corpse ) {
+        value["remove_corpse"] = *options.remove_corpse;
+    }
+    if( options.suppress_message ) {
+        value["suppress_message"] = *options.suppress_message;
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table prevent_death_character(
@@ -4653,6 +4692,15 @@ void install_creature_api(
                    lua_state, origin, read_optional_table( groups, "services.monsters.count_groups_nearby groups" ),
                    options,
                    nearby_monster_filter_kind::group );
+    } );
+    monsters.set_function(
+        "die",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        return die_monster( lua_state, handle, options,
+                            current_runtime_generation(), current_world_generation() );
     } );
     services["monsters"] = std::move( monsters );
 

@@ -1015,7 +1015,7 @@ struct terrain_transform_rule_definition_data {
     std::vector<std::string> inputs;
     std::vector<std::string> flags;
     std::vector<std::pair<std::string, std::int64_t>> results;
-    std::string message;
+    detail::authored_text message;
     bool message_good = true;
 };
 
@@ -1086,7 +1086,7 @@ struct terrain_transform_definition_handle {
         value.kind = kind;
         value.inputs = string_array( options, "inputs" );
         value.flags = string_array( options, "flags" );
-        value.message = options.get_or( "message", std::string() );
+        value.message = detail::read_singular_text( options["message"], {}, "terrain transform message" );
         value.message_good = options.get_or( "message_good", true );
         const sol::optional<sol::table> results =
             options.get<sol::optional<sol::table>>( "results" );
@@ -7635,8 +7635,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
                     ( rule.inputs.empty() && rule.flags.empty() ) || rule.results.empty() ||
                     rule.results.size() > 1024 || rule.inputs.size() > 1024 ||
                     rule.flags.size() > 1024 ||
-                    rule.message.size() > 16384 ||
-                    rule.message.find( '\0' ) != std::string::npos ||
+                    rule.message.raw.size() > 16384 ||
+                    rule.message.raw.find( '\0' ) != std::string::npos ||
                     ( rule.kind == "field" && !rule.flags.empty() ) ) {
                     throw std::runtime_error( "terrain transform '" + definition.id +
                                               "' has an invalid " + rule.kind + " rule" );
@@ -9659,7 +9659,7 @@ bool content_transaction::apply( std::string &error )
             for( const terrain_transform_rule_definition_data &rule : entry.definition->rules ) {
                 if( rule.kind == "terrain" ) {
                     ter_furn_data<ter_str_id> result;
-                    result.message = no_translation( rule.message );
+                    result.message = rule.message.native();
                     result.message_good = rule.message_good;
                     for( const auto &[result_id, weight] : rule.results ) {
                         result.list.add( ter_str_id( result_id ), static_cast<int>( weight ) );
@@ -9672,7 +9672,7 @@ bool content_transaction::apply( std::string &error )
                     }
                 } else if( rule.kind == "furniture" ) {
                     ter_furn_data<furn_str_id> result;
-                    result.message = no_translation( rule.message );
+                    result.message = rule.message.native();
                     result.message_good = rule.message_good;
                     for( const auto &[result_id, weight] : rule.results ) {
                         result.list.add( furn_str_id( result_id ), static_cast<int>( weight ) );
@@ -9685,7 +9685,7 @@ bool content_transaction::apply( std::string &error )
                     }
                 } else if( rule.kind == "field" ) {
                     ter_furn_data<field_type_id> result;
-                    result.message = no_translation( rule.message );
+                    result.message = rule.message.native();
                     result.message_good = rule.message_good;
                     for( const auto &[result_id, weight] : rule.results ) {
                         result.list.add( field_type_id( result_id ), static_cast<int>( weight ) );
@@ -9695,7 +9695,7 @@ bool content_transaction::apply( std::string &error )
                     }
                 } else {
                     ter_furn_data<trap_str_id> result;
-                    result.message = no_translation( rule.message );
+                    result.message = rule.message.native();
                     result.message_good = rule.message_good;
                     for( const auto &[result_id, weight] : rule.results ) {
                         result.list.add( trap_str_id( result_id ), static_cast<int>( weight ) );
@@ -11774,7 +11774,12 @@ std::string content_transaction::fingerprint() const
                 hash_part( state, result );
                 hash_part( state, std::to_string( weight ) );
             }
-            hash_part( state, rule.message );
+            hash_part( state, rule.message.raw );
+            hash_part( state, rule.message.translated ? "translated" : "literal" );
+            if( rule.message.translated && rule.message.translated->context ) {
+                hash_part( state, "message_context" );
+                hash_part( state, *rule.message.translated->context );
+            }
             hash_part( state, rule.message_good ? "good" : "bad" );
         }
     }
