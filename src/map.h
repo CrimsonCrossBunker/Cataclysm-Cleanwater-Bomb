@@ -189,6 +189,8 @@ struct bash_params {
      * have a roof either.
     */
     bool bashing_from_above = false;
+    // Did the bash change terrain, furniture, items, fields or vehicle parts?
+    bool did_damage = false;
 };
 
 /** Draw parameters used by map::drawsq() and similar methods. */
@@ -840,7 +842,7 @@ class map
         void clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles );
         void idle_vehicles( std::unordered_set<int64_t> *advanced,
                             const map_simulation_regions *regions );
-        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicles,
+        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
                          const std::unordered_set<int64_t> *assigned );
     public:
 
@@ -1465,7 +1467,7 @@ class map
         // from a sealed adjacent rack to the operator's tile.
         int unload_furniture_item( item_location source, Character &who, item_location *placed = nullptr );
         // The same operation can place a selected portion at another reachable tile.
-        int unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+        int unload_furniture_item( const tripoint_bub_ms &destination, const item_location &source,
                                    item portion, Character &who, item_location *placed = nullptr );
         // Machinery already owns the operation at this tile. Only a root item
         // at pos may be settled; the operator need not be within walking reach.

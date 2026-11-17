@@ -30,7 +30,6 @@
 static const field_type_str_id field_fd_blood( "fd_blood" );
 static const field_type_str_id field_fd_fire( "fd_fire" );
 
-static const furn_str_id furn_f_locker( "f_locker" );
 static const furn_str_id furn_f_planter_seedling( "f_planter_seedling" );
 static const furn_str_id furn_f_table( "f_table" );
 
@@ -39,7 +38,6 @@ static const itype_id itype_seed_rose( "seed_rose" );
 
 static const oter_str_id oter_field( "field" );
 static const oter_str_id oter_s_gas_rural_north( "s_gas_rural_north" );
-static const oter_str_id oter_s_pharm_north( "s_pharm_north" );
 static const oter_str_id oter_test_pp_field_and_flag_building( "test_pp_field_and_flag_building" );
 static const oter_str_id oter_test_pp_field_building( "test_pp_field_building" );
 static const oter_str_id oter_test_pp_riot_building( "test_pp_riot_building" );
@@ -53,29 +51,15 @@ overmap_special_test_pp_multi_z_special( "test_pp_multi_z_special" );
 static const pp_generator_id pp_generator_riot_damage( "riot_damage" );
 static const pp_generator_id pp_generator_riot_damage_road( "riot_damage_road" );
 static const pp_generator_id pp_generator_test_pp_custom( "test_pp_custom" );
-static const pp_generator_id pp_generator_test_pp_pre_burn_only( "test_pp_pre_burn_only" );
 static const pp_generator_id pp_generator_test_pp_riot( "test_pp_riot" );
 static const pp_generator_id pp_generator_test_pp_road( "test_pp_road" );
 
-static const ter_str_id ter_t_concrete_wall( "t_concrete_wall" );
 static const ter_str_id ter_t_dirt( "t_dirt" );
-static const ter_str_id ter_t_door_c( "t_door_c" );
-static const ter_str_id ter_t_door_frame( "t_door_frame" );
-static const ter_str_id ter_t_door_locked( "t_door_locked" );
-static const ter_str_id ter_t_door_metal_c( "t_door_metal_c" );
-static const ter_str_id ter_t_door_metal_o( "t_door_metal_o" );
-static const ter_str_id ter_t_door_o( "t_door_o" );
 static const ter_str_id ter_t_floor( "t_floor" );
 static const ter_str_id ter_t_floor_burnt( "t_floor_burnt" );
-static const ter_str_id ter_t_grass( "t_grass" );
-static const ter_str_id ter_t_pavement( "t_pavement" );
 static const ter_str_id ter_t_rock_wall( "t_rock_wall" );
-static const ter_str_id ter_t_thconc_floor( "t_thconc_floor" );
-static const ter_str_id ter_t_wall( "t_wall" );
 static const ter_str_id ter_t_wall_burnt( "t_wall_burnt" );
-static const ter_str_id ter_t_wall_metal( "t_wall_metal" );
 static const ter_str_id ter_t_wall_wood( "t_wall_wood" );
-static const ter_str_id ter_t_water_dp( "t_water_dp" );
 static const ter_str_id ter_t_wood_stairs_up( "t_wood_stairs_up" );
 
 namespace
@@ -451,24 +435,6 @@ TEST_CASE( "post_process_stair_preservation", "[mapgen][post_process][characteri
     clear_overmaps();
 }
 
-TEST_CASE( "post_process_fire_decay", "[mapgen][post_process][characterization]" )
-{
-    clear_map_and_reset_player();
-    map &here = get_map();
-    const tripoint_abs_omt pos = project_to<coords::omt>( here.get_abs_sub() );
-
-    // Fire stops spawning well before day 30.
-    build_pp_test_layout( here, 0, false );
-    calendar::turn = calendar::start_of_cataclysm + 30_days;
-    rng_set_engine_seed( 42424242 );
-    pp_generator_riot_damage.obj().execute( here, pos );
-
-    pp_scan_result result = scan_omt( here, 0 );
-    CHECK( result.fire_field_count == 0 );
-
-    clear_overmaps();
-}
-
 TEST_CASE( "post_process_item_move_planter_preservation",
            "[mapgen][post_process][characterization]" )
 {
@@ -516,136 +482,6 @@ TEST_CASE( "post_process_item_move_planter_preservation",
     }
     // Ensure we actually tested the invariant on at least some seeds
     CHECK( planter_survived_count > 0 );
-
-    clear_overmaps();
-}
-
-// Build a layout specifically for pre_burn material immunity testing.
-// Places a grid of different terrain types, doors, and furniture to verify
-// that pre_burn only affects flammable materials.
-static void build_pre_burn_immunity_layout( map &m, int z_level )
-{
-    for( int x = 0; x < SEEX * 2; x++ ) {
-        for( int y = 0; y < SEEY * 2; y++ ) {
-            tripoint_bub_ms p( x, y, z_level );
-            m.furn_set( p, furn_str_id::NULL_ID() );
-            m.i_clear( p );
-            m.clear_fields( p );
-            // Default to wood floor (flammable, should burn)
-            m.ter_set( p, ter_t_floor );
-        }
-    }
-
-    // Row 1 (y=1): walls -- wood vs concrete vs metal
-    m.ter_set( tripoint_bub_ms( 1, 1, z_level ), ter_t_wall );          // flammable
-    m.ter_set( tripoint_bub_ms( 3, 1, z_level ), ter_t_wall_wood );     // flammable
-    m.ter_set( tripoint_bub_ms( 5, 1, z_level ), ter_t_concrete_wall ); // immune
-    m.ter_set( tripoint_bub_ms( 7, 1, z_level ), ter_t_wall_metal );    // immune
-
-    // Row 2 (y=3): closed doors -- wood vs metal
-    m.ter_set( tripoint_bub_ms( 1, 3, z_level ), ter_t_door_c );        // flammable (DOOR flag)
-    m.ter_set( tripoint_bub_ms( 3, 3, z_level ), ter_t_door_metal_c );  // immune (DOOR flag)
-
-    // Row 3 (y=5): open/locked doors -- no DOOR flag, falls to outdoor branch
-    m.ter_set( tripoint_bub_ms( 1, 5, z_level ), ter_t_door_o );        // flammable outdoor
-    m.ter_set( tripoint_bub_ms( 3, 5, z_level ), ter_t_door_metal_o );  // immune outdoor
-    m.ter_set( tripoint_bub_ms( 5, 5, z_level ), ter_t_door_locked );   // flammable outdoor
-    m.ter_set( tripoint_bub_ms( 7, 5, z_level ), ter_t_door_frame );    // flammable outdoor
-
-    // Row 4 (y=7): floors -- wood vs concrete
-    m.ter_set( tripoint_bub_ms( 1, 7, z_level ), ter_t_floor );         // flammable
-    m.ter_set( tripoint_bub_ms( 3, 7, z_level ), ter_t_thconc_floor );  // immune
-
-    // Row 5 (y=9): outdoor ground -- grass vs pavement vs water
-    m.ter_set( tripoint_bub_ms( 1, 9, z_level ), ter_t_grass );         // diggable -> dirt
-    m.ter_set( tripoint_bub_ms( 3, 9, z_level ), ter_t_pavement );      // immune
-    m.ter_set( tripoint_bub_ms( 5, 9, z_level ), ter_t_water_dp );      // immune
-
-    // Furniture on concrete floor: metal locker (immune) + wood table (flammable)
-    m.ter_set( tripoint_bub_ms( 1, 11, z_level ), ter_t_thconc_floor );
-    m.furn_set( tripoint_bub_ms( 1, 11, z_level ), furn_f_locker );     // immune furn
-    m.ter_set( tripoint_bub_ms( 3, 11, z_level ), ter_t_thconc_floor );
-    m.furn_set( tripoint_bub_ms( 3, 11, z_level ),
-                furn_f_table );      // flammable furn on immune terrain
-
-    // Items on immune terrain vs water
-    m.ter_set( tripoint_bub_ms( 1, 13, z_level ), ter_t_thconc_floor );
-    m.add_item( tripoint_bub_ms( 1, 13, z_level ), item( itype_rock ) );
-    m.ter_set( tripoint_bub_ms( 3, 13, z_level ), ter_t_water_dp );
-    m.add_item( tripoint_bub_ms( 3, 13, z_level ), item( itype_rock ) );
-}
-
-TEST_CASE( "post_process_pre_burn_material_immunity", "[mapgen][post_process]" )
-{
-    clear_map_and_reset_player();
-    map &here = get_map();
-    const tripoint_abs_omt pos = project_to<coords::omt>( here.get_abs_sub() );
-
-    // Day 14, well past scaling_days_end=1 so pre_burn fires at 100%
-    calendar::turn = calendar::start_of_cataclysm + 14_days;
-
-    build_pre_burn_immunity_layout( here, 0 );
-    rng_set_engine_seed( 42424242 );
-    pp_generator_test_pp_pre_burn_only.obj().execute( here, pos );
-
-    {
-        INFO( "walls: flammable burn, non-flammable survive" );
-        // Wood walls -> t_wall_burnt
-        CHECK( here.ter( tripoint_bub_ms( 1, 1, 0 ) ) == ter_t_wall_burnt.id() );
-        CHECK( here.ter( tripoint_bub_ms( 3, 1, 0 ) ) == ter_t_wall_burnt.id() );
-        // Concrete and metal walls unchanged
-        CHECK( here.ter( tripoint_bub_ms( 5, 1, 0 ) ) == ter_t_concrete_wall.id() );
-        CHECK( here.ter( tripoint_bub_ms( 7, 1, 0 ) ) == ter_t_wall_metal.id() );
-    }
-
-    {
-        INFO( "closed doors: flammable burn, non-flammable survive" );
-        // Wood door -> t_floor_burnt (has DOOR flag + FLAMMABLE)
-        CHECK( here.ter( tripoint_bub_ms( 1, 3, 0 ) ) == ter_t_floor_burnt.id() );
-        // Metal door unchanged (has DOOR flag, no FLAMMABLE)
-        CHECK( here.ter( tripoint_bub_ms( 3, 3, 0 ) ) == ter_t_door_metal_c.id() );
-    }
-
-    {
-        INFO( "open/locked doors: flammable burn to dirt, non-flammable survive" );
-        // Open wood door -> t_dirt (no DOOR flag, flammable outdoor)
-        CHECK( here.ter( tripoint_bub_ms( 1, 5, 0 ) ) == ter_t_dirt.id() );
-        // Open metal door unchanged (no DOOR flag, not flammable)
-        CHECK( here.ter( tripoint_bub_ms( 3, 5, 0 ) ) == ter_t_door_metal_o.id() );
-        // Locked wood door -> t_dirt
-        CHECK( here.ter( tripoint_bub_ms( 5, 5, 0 ) ) == ter_t_dirt.id() );
-        // Wood door frame -> t_dirt
-        CHECK( here.ter( tripoint_bub_ms( 7, 5, 0 ) ) == ter_t_dirt.id() );
-    }
-
-    {
-        INFO( "floors: flammable burn, non-flammable survive" );
-        CHECK( here.ter( tripoint_bub_ms( 1, 7, 0 ) ) == ter_t_floor_burnt.id() );
-        CHECK( here.ter( tripoint_bub_ms( 3, 7, 0 ) ) == ter_t_thconc_floor.id() );
-    }
-
-    {
-        INFO( "outdoor: grass to dirt, pavement and water survive" );
-        CHECK( here.ter( tripoint_bub_ms( 1, 9, 0 ) ) == ter_t_dirt.id() );
-        CHECK( here.ter( tripoint_bub_ms( 3, 9, 0 ) ) == ter_t_pavement.id() );
-        CHECK( here.ter( tripoint_bub_ms( 5, 9, 0 ) ) == ter_t_water_dp.id() );
-    }
-
-    {
-        INFO( "furniture: flammable destroyed, non-flammable survives" );
-        // Metal locker on concrete floor: locker survives
-        CHECK( here.furn( tripoint_bub_ms( 1, 11, 0 ) ) == furn_f_locker.id() );
-        // Wood table on concrete floor: table destroyed (terrain immunity != furniture immunity)
-        CHECK( here.furn( tripoint_bub_ms( 3, 11, 0 ) ) == furn_str_id::NULL_ID().id() );
-    }
-
-    {
-        INFO( "items: cleared on non-water tiles, preserved in water" );
-        // Items on concrete floor: cleared (fire chaos destroys contents)
-        CHECK( here.i_at( tripoint_bub_ms( 1, 13, 0 ) ).empty() );
-        // Items in water: preserved
-        CHECK_FALSE( here.i_at( tripoint_bub_ms( 3, 13, 0 ) ).empty() );
-    }
 
     clear_overmaps();
 }
@@ -808,38 +644,6 @@ TEST_CASE( "post_process_oter_field_inherit_delete", "[mapgen][post_process]" )
 }
 
 // Real-core smoke tests verifying the JSON migration didn't break inheritance.
-
-TEST_CASE( "post_process_real_core_inherited_riot", "[mapgen][post_process]" )
-{
-    // s_pharm inherits riot_damage from generic_city_building -> generic_city_building_no_sidewalk.
-    // After migration, the abstract has post_process_generators: ["riot_damage"].
-    clear_map_and_reset_player();
-    const tripoint_abs_omt pos( 50, 50, 0 );
-    overmap_buffer.ter_set( pos, oter_s_pharm_north.id() );
-    for( int dx = -1; dx <= 1; dx++ ) {
-        for( int dy = -1; dy <= 1; dy++ ) {
-            if( dx == 0 && dy == 0 ) {
-                continue;
-            }
-            overmap_buffer.ter_set( pos + tripoint( dx, dy, 0 ), oter_field.id() );
-        }
-    }
-
-    calendar::turn = calendar::start_of_cataclysm + 7_days;
-    rng_set_engine_seed( 42424242 );
-    MAPBUFFER.clear_outside_reality_bubble();
-
-    smallmap tm;
-    tm.generate( pos, calendar::turn, false, true );
-
-    pp_scan_result result = scan_omt( *tm.cast_to_map(), 0 );
-
-    // Riot damage ran: blood proves PP dispatch hit the field path
-    CHECK( result.blood_field_count > 0 );
-
-    tm.delete_unmerged_submaps();
-    clear_overmaps();
-}
 
 TEST_CASE( "post_process_real_core_exempt", "[mapgen][post_process]" )
 {

@@ -992,6 +992,18 @@ std::vector<pp_resolved_generator> *overmapbuffer::pp_decisions( const tripoint_
     return om_loc.om->pp_decisions( om_loc.local );
 }
 
+bool overmapbuffer::has_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    return om_loc.om->has_riot_damage( om_loc.local );
+}
+
+void overmapbuffer::set_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    om_loc.om->set_riot_damage( om_loc.local );
+}
+
 std::string *overmapbuffer::join_used_at( const std::pair<tripoint_abs_omt, cube_direction> &p )
 {
     const overmap_with_local_coords om_loc = get_om_global( p.first );
@@ -2239,6 +2251,9 @@ std::string overmapbuffer::get_description_at( const tripoint_abs_sm &where, boo
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         return draw_origin ? ter_name + "\n" + get_origin( oter->get_type_id()->src ) : ter_name;
     }
@@ -2315,6 +2330,9 @@ void overmapbuffer::display_description_at( const tripoint_abs_sm &where, bool d
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         cataimgui::TextColoredParagraph( ter_color, ter_name );
         draw_origin_line();
