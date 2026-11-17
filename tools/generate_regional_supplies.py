@@ -67,15 +67,15 @@ def armory_groups(policy):
         return item(weapon, **fields)
 
     groups = [
-        group("regional_military_reserve_ammo", [
-            reference("ammo_can_300_full"),
-        ]),
-        group("regional_military_surplus_firearms", [
-            reference("guns_common"),
-        ]),
-        group("regional_military_surplus_magazines", [
-            reference("mags_common"),
-        ]),
+        group(
+            "regional_military_reserve_ammo", [reference("ammo_can_300_full")]
+        ),
+        group(
+            "regional_military_surplus_firearms", [reference("guns_common")]
+        ),
+        group(
+            "regional_military_surplus_magazines", [reference("mags_common")]
+        ),
     ]
     for country, equipment in policy["armories"].items():
         guns = {}
@@ -83,9 +83,10 @@ def armory_groups(policy):
         cases = []
         magazines = []
         reserve = []
-        for role, weight in (("sidearm", 20), ("rifle", 55), ("secondary", 10),
-                             ("support", 10), ("medium_support", 5),
-                             ("sniper", 5)):
+        for role, weight in (
+            ("sidearm", 20), ("rifle", 55), ("secondary", 10),
+            ("support", 10), ("medium_support", 5), ("sniper", 5),
+        ):
             if role not in equipment:
                 continue
             weapon, mag, ammo = equipment[role]
@@ -93,11 +94,10 @@ def armory_groups(policy):
             case_name = f"regional_service_case_{role}-{country}"
             guns[role] = weapon_entry(weapon, charges=[0, 8])
             groups.append(group(
-                kit_name, [weapon_entry(weapon), item(mag)], "collection",
+                kit_name, [weapon_entry(weapon), item(mag)], "collection"
             ))
             groups.append(group(
-                case_name, [reference(kit_name), reference(ammo)],
-                "collection",
+                case_name, [reference(kit_name), reference(ammo)], "collection"
             ))
             kits.append(reference(kit_name, weight))
             cases.append(reference(case_name, weight))
@@ -122,32 +122,32 @@ def armory_groups(policy):
             equipment["police_field_rifle"]
         )
         pistol_in_field = weapon_entry(
-            police_pistol, charges=[0, 8], damage=[0, 3],
+            police_pistol, charges=[0, 8], damage=[0, 3]
         )
         rifle_in_field = weapon_entry(
-            police_rifle, charges=[0, 15], damage=[0, 3],
+            police_rifle, charges=[0, 15], damage=[0, 3]
         )
         police_magazines = [
-            item(police_pistol_mag), item(police_rifle_mag), item("mp5mag"),
+            item(police_pistol_mag), item(police_rifle_mag), item("mp5mag")
         ]
         issue_rifles = [
-            {**guns["rifle"], "prob": 85}, {**guns["secondary"], "prob": 15},
+            {**guns["rifle"], "prob": 85}, {**guns["secondary"], "prob": 15}
         ]
         rifle_guns = [
-            *issue_rifles, weapon_entry(equipment["sniper"][0], prob=5),
+            *issue_rifles, weapon_entry(equipment["sniper"][0], prob=5)
         ]
         support_guns = [
-            guns[role] for role in ("support", "medium_support")
-            if role in guns
+            guns[role]
+            for role in ("support", "medium_support") if role in guns
         ]
         variants = {
             "police_armory_any_pistol": pistol_groups,
             "police_armory_any_assaultrifle": [
-                reference(regional_patrol_kit, 60), *patrol_groups,
+                reference(regional_patrol_kit, 60), *patrol_groups
             ],
             "police_armory_any_smg": [reference("police_armory_mp5")],
             "police_armory_any_sniperrifle": [
-                reference(f"regional_service_case_sniper-{country}"),
+                reference(f"regional_service_case_sniper-{country}")
             ],
             "police_armory_any_shotgun": [
                 reference("police_armory_shotgun_pick1"),
@@ -155,7 +155,7 @@ def armory_groups(policy):
             ],
             "sidearms_cop": [pistol_in_field],
             "sidearms_cop_in_field": [
-                pistol_in_field, reference(spare_pistol),
+                pistol_in_field, reference(spare_pistol)
             ],
             "sidearms_cop_in_field_no_gun": [reference(spare_pistol)],
             "longguns_cop": [rifle_in_field],
@@ -164,9 +164,12 @@ def armory_groups(policy):
             "longguns_cop_in_field_no_gun": [reference(spare_rifle)],
             "guns_swat": [
                 reference(f"longguns_cop_in_field-{country}", 85),
-                {"collection": [
-                    item("hk_mp5", charges=[0, 8]), item("mp5mag"),
-                ], "prob": 15},
+                {
+                    "collection": [
+                        item("hk_mp5", charges=[0, 8]), item("mp5mag")
+                    ],
+                    "prob": 15,
+                },
             ],
             "mags_cop": police_magazines,
             "mags_swat": police_magazines,
@@ -176,7 +179,7 @@ def armory_groups(policy):
             "military_standard_lmgs": support_guns,
             "military_standard_sniper_rifles": [guns["sniper"]],
             "military_standard_shotguns": [
-                weapon_entry(equipment["shotgun"], charges=[0, 4]),
+                weapon_entry(equipment["shotgun"], charges=[0, 4])
             ],
             "guns_rifle_milspec": rifle_guns,
             "guns_pistol_milspec": [guns["sidearm"]],
@@ -187,10 +190,10 @@ def armory_groups(policy):
             "milspec_arsenal_group_guns": kits,
             "milspec_arsenal_group_ammo_full": reserve,
             "regional_military_reserve_ammo": [
-                reference(equipment["sniper"][2]),
+                reference(equipment["sniper"][2])
             ],
             "regional_military_surplus_firearms": rifle_guns + [
-                weapon_entry(equipment["sidearm"][0], prob=30),
+                weapon_entry(equipment["sidearm"][0], prob=30)
             ],
             "regional_military_surplus_magazines": magazines,
         }
@@ -216,11 +219,15 @@ def validate_references(generated, existing, items):
     def check(value, context):
         if isinstance(value, dict):
             for key, entry in value.items():
-                if (key == "item" and isinstance(entry, str) and
-                        entry not in items):
+                if (
+                    key == "item" and isinstance(entry, str) and
+                    entry not in items
+                ):
                     raise ValueError(f"{context}: unknown item {entry}")
-                if (key == "group" and isinstance(entry, str) and
-                        entry not in ids and entry not in existing):
+                if (
+                    key == "group" and isinstance(entry, str) and
+                    entry not in ids and entry not in existing
+                ):
                     raise ValueError(f"{context}: unknown group {entry}")
                 if isinstance(entry, (dict, list)):
                     check(entry, context)
@@ -243,7 +250,7 @@ def build():
     return {
         path / "regional_supplies_north_america.json": render(groups) + "\n"
         for path, groups in (
-            (FOOD, food), (APPAREL, apparel), (SERVICE, service),
+            (FOOD, food), (APPAREL, apparel), (SERVICE, service)
         )
     }
 

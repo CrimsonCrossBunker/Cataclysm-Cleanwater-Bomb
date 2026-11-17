@@ -2054,12 +2054,13 @@ static void reset_context_minimaps()
     } );
 }
 
-// silhouette mask targets and smooth lighting map only go stale on device reset
-// or loss, not a target reset
+// Silhouette masks, snow textures and the lightmap go stale on device reset
+// or loss, not a target reset.
 static void reset_context_tint_masks()
 {
     for_each_unique_tile_context( []( cata_tiles & c ) {
         c.reset_tint_mask();
+        c.reset_snow_texture();
     } );
     reset_shared_lightmap();
 }

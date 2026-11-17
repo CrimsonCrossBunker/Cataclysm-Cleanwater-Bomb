@@ -23,8 +23,9 @@ def districts(urban_areas, atlas):
     project = Transformer.from_crs(
         "EPSG:4326",
         CRS.from_proj4(
-            f"+proj=aeqd +lat_0={LATITUDE} "
-            f"+lon_0={LONGITUDE} +R={RADIUS} +units=m"),
+            f"+proj=aeqd +lat_0={LATITUDE} +lon_0={LONGITUDE} "
+            f"+R={RADIUS} +units=m"
+        ),
         always_xy=True,
     )
     centers = [
@@ -48,8 +49,11 @@ def districts(urban_areas, atlas):
                 if not polygon.covers(center):
                     continue
                 closest = min(
-                    nearby, key=lambda
-                    candidate: centers[candidate][1].distance(center))
+                    nearby,
+                    key=lambda candidate: centers[candidate][1].distance(
+                        center
+                    ),
+                )
                 sampled[col, row] = centers[closest][0]
     return [[x, y, city] for (x, y), city in sorted(sampled.items())]
 
@@ -57,7 +61,8 @@ def districts(urban_areas, atlas):
 def render(urban_areas, atlas):
     entries = ",\n".join(
         "    " + json.dumps(district)
-        for district in districts(urban_areas, atlas))
+        for district in districts(urban_areas, atlas)
+    )
     return (
         f'{{\n  "version": 1,\n  "district_size": {DISTRICT_SIZE},\n'
         f'  "districts": [\n{entries}\n  ]\n}}\n'

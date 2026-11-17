@@ -21,7 +21,9 @@ FORMS = {
 def ground_cover():
     original = json.loads(
         (TERRAIN / "terrain-north-america-soils.json").read_text(
-            encoding="utf-8"))
+            encoding="utf-8"
+        )
+    )
     variants = []
     for soil in original:
         if soil["copy-from"] != "t_dirt":
@@ -45,7 +47,7 @@ def permafrost_grid(source):
     import shapefile
     import shapely
     from pyproj import CRS, Transformer
-    from shapely.geometry import shape as geometry_shape
+    from shapely.geometry import shape
 
     with shapefile.Reader(str(source), encoding="latin1") as shape_file:
         polygons, values = [], []
@@ -54,14 +56,14 @@ def permafrost_grid(source):
             # NSIDC categories 1 to 20 repeat continuous, discontinuous,
             # sporadic and isolated. Glaciers and open water are excluded.
             if 1 <= category <= 20 and record.shape.points:
-                polygons.append(geometry_shape(record.shape.__geo_interface__))
+                polygons.append(shape(record.shape.__geo_interface__))
                 values.append((category - 1) % 4 + 1)
 
     west, north, step = -180, 84, 0.5
     width, height = 264, 100
     source_crs = CRS.from_wkt(
-        source.with_suffix(".prj").read_text(
-            encoding="ascii"))
+        source.with_suffix(".prj").read_text(encoding="ascii")
+    )
     transform = Transformer.from_crs("EPSG:4326", source_crs, always_xy=True)
     longitude, latitude = numpy.meshgrid(
         west + (numpy.arange(width) + 0.5) * step,
@@ -70,9 +72,10 @@ def permafrost_grid(source):
     x, y = transform.transform(longitude.ravel(), latitude.ravel())
     cells = numpy.zeros(width * height, dtype="uint8")
     centers, shapes = shapely.STRtree(polygons).query(
-        shapely.points(x, y), predicate="within")
-    for center, shape in zip(centers, shapes):
-        value = values[shape]
+        shapely.points(x, y), predicate="within"
+    )
+    for center, polygon_index in zip(centers, shapes):
+        value = values[polygon_index]
         if not cells[center] or value < cells[center]:
             cells[center] = value
     rows = [
@@ -80,11 +83,8 @@ def permafrost_grid(source):
         for row in cells.reshape(height, width)
     ]
     data = {
-        "version": 1,
-        "west": west,
-        "north": north,
-        "step": step,
-        "rows": rows}
+        "version": 1, "west": west, "north": north, "step": step, "rows": rows
+    }
     return json.dumps(data, indent=2) + "\n"
 
 
@@ -100,21 +100,19 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--permafrost", type=Path,
-        help="NSIDC permaice.shp with its accompanying files")
+        help="NSIDC permaice.shp with its accompanying files",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     write_output(
-        TERRAIN /
-        "terrain-north-america-ground-cover.json",
-        ground_cover(),
-        args.check)
+        TERRAIN / "terrain-north-america-ground-cover.json",
+        ground_cover(), args.check,
+    )
     if args.permafrost:
         write_output(
-            ROOT /
-            "data/raw/north_america.permafrost",
-            permafrost_grid(
-                args.permafrost),
-            args.check)
+            ROOT / "data/raw/north_america.permafrost",
+            permafrost_grid(args.permafrost), args.check,
+        )
 
 
 if __name__ == "__main__":

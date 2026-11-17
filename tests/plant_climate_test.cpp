@@ -1,8 +1,14 @@
-#include "cata_catch.h"
+#include <optional>
 
 #include "calendar.h"
+#include "cata_catch.h"
 #include "plant_climate.h"
+#include "type_id.h"
 #include "weather.h"
+
+static const itype_id itype_seed_corn( "seed_corn" );
+static const itype_id itype_seed_potato_raw( "seed_potato_raw" );
+static const itype_id itype_seed_red_winter_wheat( "seed_red_winter_wheat" );
 
 TEST_CASE( "crop_heat_units_account_for_cold_and_heat_stress", "[farming][weather]" )
 {
@@ -27,4 +33,34 @@ TEST_CASE( "closed_windows_and_walls_retain_heat_longer", "[weather]" )
     CHECK( closed_window > open_window );
     CHECK( indoor_heat_retention( 0.21, 1, 20 ) < open_window );
     CHECK( indoor_heat_retention( 0.28, 0, 20 ) == Approx( masonry ) );
+}
+
+
+TEST_CASE( "regional_field_calendar_tracks_pre_cataclysm_sowing", "[farming][weather]" )
+{
+    const field_crop spring{ itype_seed_potato_raw, 116, 294 };
+    const field_crop winter{ itype_seed_red_winter_wheat, 275, 200 };
+    const time_duration year = calendar::year_length();
+    const time_point new_year = calendar::turn_zero - calendar::turn_zero_offset();
+    const time_point may = new_year + year * ( 139.0 / 365 );
+    const time_point march = new_year + year * ( 80.0 / 365 );
+    CHECK_FALSE( spring.sowing_date( march ) );
+    REQUIRE( spring.sowing_date( may ) );
+    CHECK( *spring.sowing_date( may ) < may );
+    REQUIRE( winter.sowing_date( may ) );
+    CHECK( *winter.sowing_date( may ) < new_year );
+    CHECK_FALSE( spring.sowing_date( new_year + year * ( 310.0 / 365 ) ) );
+}
+
+TEST_CASE( "regional_farms_select_distinct_local_mix", "[farming][north_america]" )
+{
+    const auto iowa = regional_field_crop( "US-IA", 0 );
+    const auto maine = regional_field_crop( "US-ME", 0 );
+    const auto sinaloa = regional_field_crop( "MX-SIN", 0 );
+    REQUIRE( iowa );
+    REQUIRE( maine );
+    REQUIRE( sinaloa );
+    CHECK( iowa->seed == itype_seed_corn );
+    CHECK( maine->seed == itype_seed_potato_raw );
+    CHECK( sinaloa->planting_day > sinaloa->harvest_day );
 }

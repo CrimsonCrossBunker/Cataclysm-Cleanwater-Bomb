@@ -72,6 +72,7 @@ class pixel_minimap;
 class tile_lookup_frame;
 class vehicle;
 struct sprite_screen_bounds;
+enum class snow_cover : uint8_t;
 struct tile_tint;
 struct tint_sprite_record;
 struct tile_render_info;
@@ -796,6 +797,12 @@ class cata_tiles
         const texture *ui_sprite( const std::string &id ) const;
         // 3D-only cache identity. Holding the shared_ptr also prevents address
         // reuse from making a reloaded tileset look like the previous one.
+        static constexpr int snow_tile_pixels = 32;
+        static constexpr int snow_sheet_width = 16 * snow_tile_pixels;
+        static constexpr int snow_sheet_height = 12 * snow_tile_pixels;
+        const SDL_Texture_Ptr &get_snow_texture();
+        static SDL_Rect snow_sprite( snow_cover depth, const point_abs_ms &pos );
+
         const std::shared_ptr<const tileset> &get_tileset_3d() const {
             return tileset_ptr;
         }
@@ -1537,6 +1544,9 @@ class cata_tiles
 
         // Scratch render target for the ortho silhouette mask tint path. Sized
         // to fit the largest batched sprite region; reused across tiles/frames.
+        SDL_Texture_Ptr snow_texture;
+        bool tried_snow_texture = false;
+
         SDL_Texture_Ptr tint_mask_tex;
         int tint_mask_w = 0;
         int tint_mask_h = 0;
@@ -1775,6 +1785,7 @@ class cata_tiles
         // Drop the scratch silhouette mask target so the next tinted ortho
         // draw reallocates it against the live renderer.
         void reset_tint_mask();
+        void reset_snow_texture();
 
         // Draw caches persist data between draws and are only recalculated when dirty
         void set_draw_cache_dirty();

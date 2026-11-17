@@ -45,6 +45,7 @@ static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bandages( "bandages" );
+static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_rock( "rock" );
 
 TEST_CASE( "lua_platform_allowance_quote_rejects_nonactive_avatar",
@@ -999,7 +1000,7 @@ TEST_CASE( "lua_platform_trade_commit_preserves_compatible_destination_stacks",
     REQUIRE( commit_envelope["ok"].get<bool>() );
     const sol::table transferred_line =
         commit_envelope["value"].get<sol::table>()["lines"].get<sol::table>()[1];
-    const auto transferred_uid = transferred_line["transferred_item_uid"].get<lua_Integer>();
+    const lua_Integer transferred_uid = transferred_line["transferred_item_uid"].get<lua_Integer>();
     CHECK( transferred_uid != blocker_uid );
     item *received = find_platform_trade_item( *fixture.buyer, transferred_uid );
     REQUIRE( received != nullptr );

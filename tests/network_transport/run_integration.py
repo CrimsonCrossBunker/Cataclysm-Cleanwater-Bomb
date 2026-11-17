@@ -336,10 +336,12 @@ def main():
             if number + 1 in checkpoints:
                 for recipient in guests:
                     assert recipient.command(
-                        'send ' + json.dumps(action)) == 'OK'
+                        'send ' + json.dumps(action)
+                    ) == 'OK'
                     assert expanded.command('next').startswith('EVENT 2 ')
                 results.append(
-                    f'{number + 1}_player_room_admission_and_actions')
+                    f'{number + 1}_player_room_admission_and_actions'
+                )
         excess = start('expanded-full', 'client', port,
                        'extra-player', '口令"\\', 'abc')
         response = excess.read()

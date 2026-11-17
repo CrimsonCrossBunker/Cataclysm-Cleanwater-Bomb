@@ -16,13 +16,13 @@ def read(relative):
 class NorthAmericaInfrastructureTest(unittest.TestCase):
     def test_all_region_maps_are_discoverable_from_local_stock(self):
         regions = {
-            record[0] for record in
-            read("raw/north_america.jurisdictions")["polygons"]
+            record[0]
+            for record in read("raw/north_america.jurisdictions")["polygons"]
         }
         charts = read("json/items/book/atlas_road_maps.json")
         stock = {
-            entry["id"]: entry for entry in
-            read("json/itemgroups/atlas_road_maps.json")
+            entry["id"]: entry
+            for entry in read("json/itemgroups/atlas_road_maps.json")
         }
         self.assertEqual(
             regions,
@@ -33,13 +33,14 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
             region = chart["use_action"]["atlas_jurisdiction"]
             entries = stock[f"roadmap_stock-{region}"]["entries"]
             self.assertEqual(
-                max(entries, key=lambda entry: entry["prob"])["item"],
-                chart["id"],
+                max(entries, key=lambda e: e["prob"])["item"], chart["id"]
             )
 
     def test_every_surface_preserves_its_base_and_grass_transitions(self):
-        path = (DATA / "json/furniture_and_terrain" /
-                "terrain-north-america-ground-cover.json")
+        path = DATA / (
+            "json/furniture_and_terrain/"
+            "terrain-north-america-ground-cover.json"
+        )
         self.assertEqual(path.read_text(encoding="utf-8"), ground_cover())
         variants = {entry["id"]: entry for entry in json.loads(ground_cover())}
         soils = read("raw/north_america.soils")["types"]
@@ -50,7 +51,7 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
                 self.assertEqual(terrain["copy-from"], base)
                 if next_cover:
                     self.assertEqual(
-                        terrain["transforms_into"], f"{prefix}_{next_cover}",
+                        terrain["transforms_into"], f"{prefix}_{next_cover}"
                     )
                     self.assertIn(terrain["transforms_into"], variants)
 
@@ -62,7 +63,8 @@ class NorthAmericaInfrastructureTest(unittest.TestCase):
             self.assertLess((x1, y1), (x2, y2))
             self.assertLessEqual(max(abs(x2 - x1), abs(y2 - y1)), 126)
         self.assertTrue(any(
-            lanes == 12 and -30_000 <= x1 <= -27_000 and -7_000 <= y1 <= -5_000
+            lanes == 12 and -30_000 <= x1 <= -27_000 and
+            -7_000 <= y1 <= -5_000
             for lanes, x1, y1, _, _ in roads
         ))
 

@@ -119,7 +119,7 @@ std::optional<int> granade_act( Character *, item *it, const tripoint_bub_ms & )
 std::optional<int> grenade_inc_act( Character *p, item *, const tripoint_bub_ms & );
 std::optional<int> gun_repair( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> gunmod_attach( Character *, item *, const tripoint_bub_ms & );
-std::optional<int> hacksaw( Character *, item *, const tripoint_bub_ms &it_pnt );
+std::optional<int> hacksaw( Character *, item *, const tripoint_bub_ms &position );
 std::optional<int> hairkit( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> hand_crank( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> heat_food( Character *, item *, const tripoint_bub_ms & );
@@ -204,7 +204,7 @@ std::optional<int> calories_intake_tracker( Character *p, item *, const tripoint
 std::optional<int> radiocar( Character *, item *, const tripoint_bub_ms & );
 std::optional<int> radiocontrol( Character *, item *, const tripoint_bub_ms & );
 int query_radiocontrol( const item &controller );
-std::optional<int> radiocontrol_action( Character *who, item *controller, int choice );
+std::optional<int> radiocontrol_action( Character *, item *, int choice );
 std::optional<int> radiocontrol_tick( Character *, item *, const tripoint_bub_ms & );
 
 std::optional<int> multicooker( Character *, item *, const tripoint_bub_ms & );
@@ -266,7 +266,7 @@ struct heater {
     void serialize( JsonOut &jsout ) const;
     void deserialize( const JsonValue &jsin );
 };
-drop_locations query_heating_targets( Character &who, const item &tool, const heater &source,
+drop_locations query_heating_targets( Character &who, const item &tool, const heater &heater_data,
                                       bool liquid_items, bool solid_items );
 heater find_heater( Character *, item *, bool force_use_it );
 heater find_vehicle_heater( const tripoint_bub_ms &position, const item &tool );

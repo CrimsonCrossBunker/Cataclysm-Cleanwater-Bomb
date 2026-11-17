@@ -3097,16 +3097,18 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                 const tile_tone tone = tone_for( cache, p, ll );
 
                 const snow_cover snow = get_weather_const().get_surface_snow_cover( here, p );
-                if( snow != snow_cover::none ) {
-                    // Leave parts of the surface visible in light and medium snow.
-                    const float width = snow == snow_cover::deep ? 1.0f :
-                                        snow == snow_cover::medium ? 0.85f : 0.52f;
-                    const float edge = ( 1.0f - width ) * 0.5f;
-                    std::vector<float> &layer = bucket_for( MODE_FLATQUAD, nullptr );
-                    const float light = ll == lit_level::LOW ? 0.55f : 0.92f;
-                    push_instance( layer, dx + edge, dy + edge, wz + 0.006f, width, width, 1.0f,
-                                   sprite_info{}, light, light, std::min( 1.0f, light + 0.05f ),
-                                   false, 0, false, -1.0f, ghost, 1.0f );
+                if( snow != snow_cover::none && tiles->get_snow_texture() ) {
+                    const SDL_Rect rect = cata_tiles::snow_sprite( snow, here.get_abs( p ).xy() );
+                    sprite_info sprite;
+                    sprite.atlas = tiles->get_snow_texture().get();
+                    sprite.u0 = static_cast<float>( rect.x ) / cata_tiles::snow_sheet_width;
+                    sprite.u1 = static_cast<float>( rect.x + rect.w ) / cata_tiles::snow_sheet_width;
+                    sprite.v0 = static_cast<float>( rect.y ) / cata_tiles::snow_sheet_height;
+                    sprite.v1 = static_cast<float>( rect.y + rect.h ) / cata_tiles::snow_sheet_height;
+                    std::vector<float> &layer = bucket_for( MODE_FLATQUAD_DECAL, sprite.atlas );
+                    push_instance( layer, dx, dy, wz + 0.006f, 1.0f, 1.0f, 1.0f, sprite,
+                                   tone.shade, tone.shade, tone.shade, false, 0, false,
+                                   -1.0f, ghost, tone.sat, false, true );
                     ++count;
                 }
 

@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_WEATHER_H
 #define CATA_SRC_WEATHER_H
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -11,6 +12,8 @@
 #include "color.h"
 #include "coordinates.h"
 #include "pimpl.h"
+#include "point.h"
+#include "regional_climate.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
@@ -224,6 +227,7 @@ class weather_manager
         weather_manager();
         // sets weather_override
         void on_game_start();
+        void reset_room_heat();
         const weather_generator &get_cur_weather_gen() const;
         // Updates the temperature and weather patten
         void update_solar_location();
@@ -231,7 +235,7 @@ class weather_manager
         // Incrementally update snow depth at the player's current OMT
         void update_snow_depth();
         // Snow depth in mm at a given OMT (0 if no data)
-        double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
+        double get_snow_depth_mm( const tripoint_abs_omt &location ) const;
         snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         snow_cover get_surface_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature
@@ -268,6 +272,9 @@ class weather_manager
         * radiative and convective sources, such as fires or hot air from heaters.
         */
         units::temperature get_temperature( const tripoint_bub_ms &location );
+        // Coarse regional outdoor samples for aging items over long absences.
+        units::temperature get_historical_temperature( const tripoint_abs_ms &location,
+                time_point when );
         /*
         * Returns temperature of given OMT. Does not include any modifications from local sourecs,
         * this is essentially the "natural" temperature.
@@ -278,6 +285,29 @@ class weather_manager
         static void unserialize_all( const JsonObject &w );
 
     private:
+        struct room_heat {
+            double excess = 0;
+            double equilibrium = 0;
+            double time_constant = 1;
+        };
+        struct room_heat_layer {
+            tripoint_abs_ms origin;
+            time_point sampled_at;
+            std::unordered_map<tripoint_abs_ms, std::size_t> assignments;
+            std::vector<room_heat> rooms;
+        };
+        std::unordered_map<int, room_heat_layer> heated_rooms;
+        std::optional<dimension_id> heat_dimension;
+        units::temperature_delta get_room_heat( const map &here, const tripoint_bub_ms &location,
+                                                const tripoint_bub_ms &player );
+
+        struct historical_weather_cell {
+            std::optional<regional_climate::normals> normals;
+            std::unordered_map<int, units::temperature> samples;
+        };
+        std::unordered_map<tripoint_abs_omt, historical_weather_cell> historical_weather;
+        std::optional<dimension_id> historical_weather_dimension;
+
         std::optional<time_point> last_weather_turn;
         std::optional<time_point> indoor_reference_time;
         units::temperature indoor_reference_temperature;

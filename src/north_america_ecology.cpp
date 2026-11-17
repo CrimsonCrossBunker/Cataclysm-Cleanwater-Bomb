@@ -4,6 +4,8 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <limits>
 #include <map>
 #include <string>
@@ -12,10 +14,13 @@
 #include <utility>
 #include <vector>
 
+#include "cata_path.h"
 #include "cata_utility.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "line.h"
 #include "map.h"
+#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "mapgendata.h"
 #include "north_america.h"
@@ -24,6 +29,11 @@
 #include "rng.h"
 #include "type_id.h"
 #include "weighted_list.h"
+
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_grass( "t_grass" );
+static const ter_str_id ter_t_grass_long( "t_grass_long" );
+static const ter_str_id ter_t_grass_tall( "t_grass_tall" );
 
 namespace north_america
 {
@@ -111,15 +121,14 @@ struct ecology_atlas {
             const auto fill_runs = [&]( const JsonArray & runs, auto & dest, int limit ) {
                 for( const JsonValue entry : runs ) {
                     const JsonArray run = entry.get_array();
-                    const int x = run.get_int( 0 );
-                    const int y = run.get_int( 1 );
+                    const point start( run.get_int( 0 ), run.get_int( 1 ) );
                     const int length = run.get_int( 2 );
                     const int index = run.get_int( 3 );
-                    if( x < 0 || y < 0 || x >= width || y >= height ||
-                        length < 1 || length > width - x || index < 1 || index >= limit ) {
+                    if( start.x < 0 || start.y < 0 || start.x >= width || start.y >= height ||
+                        length < 1 || length > width - start.x || index < 1 || index >= limit ) {
                         run.throw_error( "Invalid North America ecology atlas run" );
                     }
-                    std::fill_n( dest.begin() + y * width + x, length, index );
+                    std::fill_n( dest.begin() + start.y * width + start.x, length, index );
                 }
             };
             fill_runs( root.get_array( "runs" ), cells, profiles.size() );
@@ -148,6 +157,11 @@ const ecology_atlas &get_ecology()
     static const ecology_atlas data;
     return data;
 }
+
+constexpr std::array<point, 8> district_neighbors{{
+        point::north, point::east, point::south, point::west,
+        point::north_east, point::south_east, point::south_west, point::north_west
+    }};
 
 struct urban_atlas {
     int step = 1;
@@ -286,6 +300,16 @@ struct urban_atlas {
             }
             land_use[index] = plan_city( city, centers[index] );
         }
+        for( auto &entry : overmaps ) {
+            for( urban_district &district : entry.second ) {
+                const point grid = divide_xy_round_to_minus_infinity( district.center.raw(), step );
+                for( std::size_t i = 0; i < district_neighbors.size(); ++i ) {
+                    if( !footprints.count( grid + district_neighbors[i] ) ) {
+                        district.open_edges |= 1U << i;
+                    }
+                }
+            }
+        }
     }
 };
 
@@ -306,12 +330,11 @@ const ecology_profile *profile_at( point_abs_omt pos )
         return &data.profiles[data.cells[i]];
     }
     // The coarse cell center can be offshore even when a map tile is on land.
-    const int x = i % data.width;
-    const int y = i / data.width;
+    const point origin( i % data.width, i / data.width );
     for( const point &delta : {
-             point( 0, -1 ), point( -1, 0 ), point( 1, 0 ), point( 0, 1 )
+             point::north, point::west, point::east, point::south
          } ) {
-        const point neighbor = point( x, y ) + delta;
+        const point neighbor = origin + delta;
         if( neighbor.x < 0 || neighbor.x >= data.width || neighbor.y < 0 || neighbor.y >= data.height ) {
             continue;
         }
@@ -360,10 +383,53 @@ const std::array<city_zone_center, 4> &city_zone_centers( std::size_t city_index
     return city_index < zones.size() ? zones[city_index] : empty;
 }
 
-bool in_urban_footprint( point_abs_omt pos )
+bool in_urban_footprint( point_abs_omt pos, int margin )
 {
     const urban_atlas &atlas = get_urban_atlas();
-    return atlas.footprints.count( divide_xy_round_to_minus_infinity( pos.raw(), atlas.step ) ) != 0;
+    const point offset( margin, margin );
+    const point lo = divide_xy_round_to_minus_infinity( pos.raw() - offset, atlas.step );
+    const point hi = divide_xy_round_to_minus_infinity( pos.raw() + offset, atlas.step );
+    for( int y = lo.y; y <= hi.y; ++y ) {
+        for( int x = lo.x; x <= hi.x; ++x ) {
+            if( atlas.footprints.count( point( x, y ) ) ) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+int urban_density( const urban_district &district, point_abs_omt pos )
+{
+    if( !district.open_edges ) {
+        return 100;
+    }
+    const int step = urban_district_size();
+    const point p = pos.raw() - district.center.raw() + point( step / 2, step / 2 );
+    const std::array<int, 4> distance{{ p.y, step - 1 - p.x, step - 1 - p.y, p.x }};
+    constexpr int fringe = 20;
+    int depth = fringe + 5;
+    for( int i = 0; i < 4; ++i ) {
+        const int next = ( i + 1 ) % 4;
+        const bool open = district.open_edges & ( 1U << i );
+        if( open ) {
+            depth = std::min( depth, distance[i] );
+        }
+        if( open && ( district.open_edges & ( 1U << next ) ) ) {
+            // Cut back the square corners where two exposed sides meet.
+            depth = std::min( depth, ( distance[i] + distance[next] - 14 ) * 3 / 4 );
+        }
+        if( district.open_edges & ( 1U << ( i + 4 ) ) ) {
+            depth = std::min( depth, ( distance[i] + distance[next] ) * 3 / 4 );
+        }
+    }
+    // A low-frequency edge varies at neighborhood scale and is continuous at district seams.
+    const auto wave = []( int coordinate, int period ) {
+        const int phase = modulo( coordinate, period );
+        return std::min( phase, period - phase );
+    };
+    const int variation = ( wave( pos.x(), 39 ) + wave( pos.y(), 53 ) ) / 4 - 5;
+    return std::clamp( ( depth + variation - 2 ) * 100 / fringe, 0, 100 );
 }
 
 int population_band( point_abs_omt pos )
@@ -450,11 +516,9 @@ void place_native_vegetation( mapgendata &dat )
             ( p.shrub ? shrubs : trees ).add( p.terrain.id(), p.weight );
         }
     }
-    static const ter_str_id grass( "t_grass" );
-    static const ter_str_id grass_long( "t_grass_long" );
-    static const ter_str_id grass_tall( "t_grass_tall" );
-    static const ter_str_id dirt( "t_dirt" );
-    const std::array<ter_id, 4> ground{ grass.id(), grass_long.id(), grass_tall.id(), dirt.id() };
+    const std::array<ter_id, 4> ground{
+        ter_t_grass.id(), ter_t_grass_long.id(), ter_t_grass_tall.id(), ter_t_dirt.id()
+    };
     const ter_id groundcover = profile->biome.groundcover.id();
     const ter_id null_terrain = ter_str_id::NULL_ID().id();
     const bool keep_eastern_harvests = profile->ecoregion == "5.3" || profile->ecoregion == "8.1";

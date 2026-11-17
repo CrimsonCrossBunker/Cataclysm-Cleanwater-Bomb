@@ -10,13 +10,11 @@ class UrbanAtlasTest(unittest.TestCase):
     def setUpClass(cls):
         raw = Path(__file__).resolve().parents[1] / "data" / "raw"
         cls.atlas = json.loads(
-            (raw /
-             "north_america.atlas").read_text(
-                encoding="utf-8"))
+            (raw / "north_america.atlas").read_text(encoding="utf-8")
+        )
         cls.urban = json.loads(
-            (raw /
-             "north_america.urban").read_text(
-                encoding="utf-8"))
+            (raw / "north_america.urban").read_text(encoding="utf-8")
+        )
 
     def test_cells_are_unique_and_reference_large_centers(self):
         self.assertEqual(self.urban["version"], 1)

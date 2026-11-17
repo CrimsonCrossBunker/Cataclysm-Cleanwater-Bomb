@@ -86,6 +86,7 @@
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
+#include "item_source.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
 #include "iteminfo_query.h"
@@ -148,18 +149,18 @@
 #include "vehicle.h"
 #include "vehicle_selector.h"
 #include "vehicle_control.h"
+#include "vehicle_selector.h"
 #include "viewer.h"
 #include "vitamin.h"
 #include "vpart_position.h"
-#include "vpart_range.h"
+#include "vehicle_power_connection.h"
+#include "visitable.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
 
 static const activity_id ACT_JACKHAMMER( "ACT_JACKHAMMER" );
 static const activity_id ACT_PICKAXE( "ACT_PICKAXE" );
-
-static const addiction_id addiction_nicotine( "nicotine" );
 
 static const ammotype ammo_battery( "battery" );
 
@@ -176,6 +177,16 @@ static const crafting_category_id crafting_category_CC_FOOD( "CC_FOOD" );
 
 static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
+
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_BERRY_CONSUME( "EOC_MARLOSS_BERRY_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_GEL_CONSUME( "EOC_MARLOSS_GEL_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_SEED_CONSUME( "EOC_MARLOSS_SEED_CONSUME" );
+static const effect_on_condition_id
+effect_on_condition_EOC_MARLOSS_WINE_CONSUME( "EOC_MARLOSS_WINE_CONSUME" );
+static const effect_on_condition_id effect_on_condition_EOC_MYCUS_CONSUME( "EOC_MYCUS_CONSUME" );
 
 static const efftype_id effect_adrenaline( "adrenaline" );
 static const efftype_id effect_antibiotic( "antibiotic" );
@@ -268,8 +279,6 @@ static const flag_id json_flag_NO_MANUAL_ACTIVATION( "NO_MANUAL_ACTIVATION" );
 
 static const furn_str_id furn_f_translocator_buoy( "f_translocator_buoy" );
 
-static const gun_mode_id gun_mode_DEFAULT( "DEFAULT" );
-
 static const itype_id itype_advanced_ecig( "advanced_ecig" );
 static const itype_id itype_afs_atompot( "afs_atompot" );
 static const itype_id itype_apparatus( "apparatus" );
@@ -301,7 +310,6 @@ static const itype_id itype_hygrometer( "hygrometer" );
 static const itype_id itype_joint( "joint" );
 static const itype_id itype_joint_lit( "joint_lit" );
 static const itype_id itype_liquid_soap( "liquid_soap" );
-static const itype_id itype_log( "log" );
 static const itype_id itype_mask_h20survivor_on( "mask_h20survivor_on" );
 static const itype_id itype_mininuke_act( "mininuke_act" );
 static const itype_id itype_multi_cooker( "multi_cooker" );
@@ -335,6 +343,7 @@ static const itype_id itype_water_murky( "water_murky" );
 static const itype_id itype_water_purifying_active( "water_purifying_active" );
 static const itype_id itype_wax( "wax" );
 static const itype_id itype_weather_reader( "weather_reader" );
+static const itype_id itype_wine_marloss( "wine_marloss" );
 
 static const json_character_flag json_flag_CANNOT_USE_COMPUTERS( "CANNOT_USE_COMPUTERS" );
 static const json_character_flag json_flag_ENHANCED_VISION( "ENHANCED_VISION" );
@@ -386,8 +395,6 @@ static const ter_str_id ter_t_pit_glass( "t_pit_glass" );
 static const ter_str_id ter_t_pit_shallow( "t_pit_shallow" );
 static const ter_str_id ter_t_pit_spiked( "t_pit_spiked" );
 static const ter_str_id ter_t_pit_spiked_covered( "t_pit_spiked_covered" );
-static const ter_str_id ter_t_stump( "t_stump" );
-static const ter_str_id ter_t_trunk( "t_trunk" );
 static const ter_str_id ter_t_utility_light( "t_utility_light" );
 
 static const trait_id trait_ACIDBLOOD( "ACIDBLOOD" );
@@ -404,7 +411,6 @@ static const trait_id trait_THRESH_LUPINE( "THRESH_LUPINE" );
 static const trait_id trait_THRESH_PLANT( "THRESH_PLANT" );
 static const trait_id trait_TOLERANCE( "TOLERANCE" );
 static const trait_id trait_VAMPIRE( "VAMPIRE" );
-static const trait_id trait_WAYFARER( "WAYFARER" );
 
 static const trap_str_id tr_goo( "tr_goo" );
 static const trap_str_id tr_portal( "tr_portal" );
@@ -515,26 +521,25 @@ static std::optional<int> activate_legacy_marloss( Character *person, item *food
 
 std::optional<int> iuse::marloss( Character *person, item *food, const tripoint_bub_ms & )
 {
-    const effect_on_condition_id effect( food != nullptr &&
-                                         food->typeId() == itype_id( "wine_marloss" ) ?
-                                         "EOC_MARLOSS_WINE_CONSUME" : "EOC_MARLOSS_BERRY_CONSUME" );
+    const effect_on_condition_id &effect = food != nullptr && food->typeId() == itype_wine_marloss ?
+                                           effect_on_condition_EOC_MARLOSS_WINE_CONSUME : effect_on_condition_EOC_MARLOSS_BERRY_CONSUME;
     return activate_legacy_marloss( person, food, effect );
 }
 
 std::optional<int> iuse::marloss_seed( Character *person, item *food, const tripoint_bub_ms & )
 {
     return activate_legacy_marloss( person, food,
-                                    effect_on_condition_id( "EOC_MARLOSS_SEED_CONSUME" ) );
+                                    effect_on_condition_EOC_MARLOSS_SEED_CONSUME );
 }
 
 std::optional<int> iuse::marloss_gel( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MARLOSS_GEL_CONSUME" ) );
+    return activate_legacy_marloss( person, food, effect_on_condition_EOC_MARLOSS_GEL_CONSUME );
 }
 
 std::optional<int> iuse::mycus( Character *person, item *food, const tripoint_bub_ms & )
 {
-    return activate_legacy_marloss( person, food, effect_on_condition_id( "EOC_MYCUS_CONSUME" ) );
+    return activate_legacy_marloss( person, food, effect_on_condition_EOC_MYCUS_CONSUME );
 }
 
 std::optional<int> iuse::sewage( Character *p, item *, const tripoint_bub_ms & )

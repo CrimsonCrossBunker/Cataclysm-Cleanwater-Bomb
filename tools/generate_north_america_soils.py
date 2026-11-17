@@ -56,13 +56,12 @@ def render(source):
             continue
         shapes.append((feature["geometry"], codes[SOIL_TYPES[label]]))
     cells = rasterize(
-        shapes, out_shape=(
-            HEIGHT, WIDTH), dtype="uint8", transform=from_origin(
-            WEST, NORTH, STEP, STEP), fill=ord("."))
+        shapes, out_shape=(HEIGHT, WIDTH), dtype="uint8",
+        transform=from_origin(WEST, NORTH, STEP, STEP), fill=ord("."),
+    )
     rows = ",\n".join(
-        "    " +
-        json.dumps(
-            row.tobytes().decode("ascii")) for row in cells)
+        "    " + json.dumps(row.tobytes().decode("ascii")) for row in cells
+    )
     return (
         '{\n  "version": 1,\n'
         f'  "west": {WEST},\n  "north": {NORTH},\n  "step": {STEP},\n'
@@ -73,9 +72,8 @@ def render(source):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "source",
-        type=Path,
-        help="USDA Global Soil Regions GeoJSON export")
+        "source", type=Path, help="USDA Global Soil Regions GeoJSON export"
+    )
     parser.add_argument("output", type=Path)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()

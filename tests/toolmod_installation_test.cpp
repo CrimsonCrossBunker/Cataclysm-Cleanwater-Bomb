@@ -1,16 +1,23 @@
+#include <cstddef>
+#include <functional>
+#include <list>
 #include <optional>
 #include <set>
 #include <sstream>
 #include <string>
+#include <vector>
 
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "avatar.h"
 #include "avatar_action.h"
 #include "calendar.h"
 #include "cata_catch.h"
-#include "character.h"
+#include "clone_ptr.h"
 #include "coordinates.h"
 #include "debug.h"
+#include "enums.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "item_contents.h"
 #include "item_location.h"
@@ -26,6 +33,7 @@
 #include "point.h"
 #include "ret_val.h"
 #include "type_id.h"
+#include "units.h"
 #include "vehicle.h"
 #include "vehicle_selector.h"
 #include "vpart_position.h"
@@ -45,8 +53,6 @@ static void finish_toolmod_installation( avatar &you, const item_location &tool,
     player_activity activity;
     actor.finish( activity, you );
 }
-
-
 
 TEST_CASE( "activating_installed_toolmod_does_not_obtain_it", "[item][toolmod][regression]" )
 {
@@ -166,7 +172,7 @@ TEST_CASE( "toolmod_installation_revalidates_target", "[item][toolmod][activity]
         mod->convert( itype_light_battery_cell );
     }
     const std::set<itype_id> batteries = tool->magazine_compatible();
-    const size_t mod_count = tool->toolmods().size();
+    const std::size_t mod_count = tool->toolmods().size();
 
     actor.finish( activity, you );
 

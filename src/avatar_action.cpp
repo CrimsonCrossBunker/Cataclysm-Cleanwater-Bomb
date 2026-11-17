@@ -1689,6 +1689,14 @@ void avatar_action::use_item( avatar &you, item_location &loc, std::string const
         }
     }
 
+    if( loc->is_toolmod() && ( method.empty() || method == "TOOLMOD_ATTACH" ) ) {
+        const ret_val<void> source_check = iuse::can_attach_toolmod( loc );
+        if( !source_check.success() ) {
+            you.add_msg_if_player( m_info, "%s", source_check.str() );
+            return;
+        }
+    }
+
     if( loc->is_gun() && !loc->is_gunmod() && method.empty() ) {
         bool manage = true;
         if( loc->type->has_use() || loc->has_relic_activation() ) {

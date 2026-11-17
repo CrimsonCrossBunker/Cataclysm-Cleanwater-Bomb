@@ -3,9 +3,18 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
+#include <memory>
+#include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
+#include "calendar.h"
+#include "cata_path.h"
+#include "cata_utility.h"
 #include "climate_seasons.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "iexamine.h"
@@ -15,9 +24,16 @@
 #include "mapdata.h"
 #include "north_america_soil.h"
 #include "options.h"
+#include "overmap_ui.h"
+#include "path_info.h"
+#include "point.h"
+#include "regional_climate.h"
+#include "type_id.h"
 #include "units.h"
+#include "value_ptr.h"
 #include "weather.h"
 #include "weather_gen.h"
+#include "weather_type.h"
 
 crop_climate_profile crop_climate_profile::load( const JsonObject &jo )
 {
@@ -46,6 +62,94 @@ double crop_climate_profile::heat_units( double low, double high ) const
     const double mean = std::min( ( low + high ) / 2, optimum_c );
     const double heat_stress = 1 - std::max( 0.0, high - optimum_c ) / ( max_c - optimum_c );
     return std::max( 0.0, mean - base_c ) * heat_stress;
+}
+
+std::optional<time_point> field_crop::sowing_date( time_point when ) const
+{
+    constexpr double days_in_calendar = 365;
+    const time_duration year = calendar::year_length();
+    const time_duration date = ( time_past_new_year( when ) + year ) % year;
+    time_point planted = when - date + year * ( planting_day / days_in_calendar );
+    if( planted > when ) {
+        planted -= year;
+    }
+    const int field_season = ( harvest_day - planting_day + 365 ) % 365 + 1;
+    return when - planted < year * ( field_season / days_in_calendar ) ?
+           std::optional<time_point>( planted ) : std::nullopt;
+}
+
+namespace
+{
+struct weighted_crop {
+    field_crop crop;
+    unsigned weight;
+};
+
+int crop_calendar_day( const JsonValue &value )
+{
+    static constexpr std::array<int, 12> month_lengths{{
+            31, 28, 31, 30, 31, 30,
+            31, 31, 30, 31, 30, 31
+        }};
+    const int encoded = value.get_int();
+    const int month = encoded / 100;
+    const int day = encoded % 100;
+    if( month < 1 || month > 12 || day < 1 || day > month_lengths[month - 1] ) {
+        value.throw_error( "Expected a planting or harvest date in MMDD form" );
+    }
+    int result = day - 1;
+    for( int i = 0; i < month - 1; ++i ) {
+        result += month_lengths[i];
+    }
+    return result;
+}
+} // namespace
+
+std::optional<field_crop> regional_field_crop( std::string_view region, unsigned field_roll )
+{
+    static const auto profiles = [] {
+        std::unordered_map<std::string, std::vector<weighted_crop>> result;
+        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_field_crops.json",
+                             [&]( const JsonValue & data )
+        {
+            const JsonObject root = data.get_object();
+            root.allow_omitted_members();
+            for( const JsonMember entry : root.get_object( "regions" ) ) {
+                std::vector<weighted_crop> &options = result[entry.name()];
+                for( const JsonValue row : entry.get_array() ) {
+                    const JsonArray values = row.get_array();
+                    const int weight = values.get_int( 1 );
+                    if( weight <= 0 || weight > 100 ) {
+                        row.throw_error( "Field crop weights must be between 1 and 100" );
+                    }
+                    options.push_back( {
+                        {
+                            itype_id( values.get_string( 0 ) ), crop_calendar_day( values[2] ),
+                            crop_calendar_day( values[3] )
+                        },
+                        static_cast<unsigned>( weight )
+                    } );
+                }
+            }
+        } );
+        return result;
+    }();
+    const auto options = profiles.find( std::string( region ) );
+    if( options == profiles.end() || options->second.empty() ) {
+        return std::nullopt;
+    }
+    unsigned total = 0;
+    for( const weighted_crop &choice : options->second ) {
+        total += choice.weight;
+    }
+    unsigned roll = field_roll % total;
+    for( const weighted_crop &choice : options->second ) {
+        if( roll < choice.weight ) {
+            return choice.crop;
+        }
+        roll -= choice.weight;
+    }
+    return std::nullopt;
 }
 
 fruit_climate_profile fruit_climate_profile::load( const JsonObject &jo )
@@ -96,11 +200,11 @@ crop_weather_cell &cell_at( const tripoint_abs_omt &cell, const weather_generato
 
 crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
 {
-    const auto &weather = get_weather_const();
-    const auto &generator = weather.get_cur_weather_gen();
-    const auto cell = snow_climate_cell( project_to<coords::omt>( pos ) );
+    const weather_manager &weather = get_weather_const();
+    const weather_generator &generator = weather.get_cur_weather_gen();
+    const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
     crop_weather_cell &cached = cell_at( cell, generator );
-    const auto start = date - time_past_midnight( date );
+    const time_point start = date - time_past_midnight( date );
     const int day = to_days<int>( start - calendar::turn_zero );
     const auto found = cached.days.find( day );
     if( found != cached.days.end() ) {
@@ -109,7 +213,7 @@ crop_day sample_day( const tripoint_abs_ms &pos, time_point date )
     if( cached.days.size() >= 768 ) {
         cached.days.clear();
     }
-    const auto location = project_to<coords::ms>( cell ) + point( 384, 384 );
+    const tripoint_abs_ms location = project_to<coords::ms>( cell ) + point( 384, 384 );
     const std::string eternal = get_option<std::string>( "ETERNAL_WEATHER" );
     const weather_type_id forced = eternal == "normal" ? weather.weather_override :
                                    weather_type_id( eternal );
@@ -172,7 +276,7 @@ time_duration update_crop_climate( const map &here, const tripoint_bub_ms &p, it
         effective = std::max( effective, thresholds[current_stage - 1] );
     }
     start = std::max( start, calendar::turn - crop_history );
-    const auto position = here.get_abs( p );
+    const tripoint_abs_ms position = here.get_abs( p );
     const double rate = growth_speed * furniture.plant->growth_multiplier;
     double temperature_offset = 0;
     if( &here == &get_map() ) {
@@ -235,7 +339,7 @@ int fruit_model_day( time_point when )
 
 bool has_local_fruit_climate( const tripoint_abs_ms &pos )
 {
-    const auto &generator = get_weather_const().get_cur_weather_gen();
+    const weather_generator &generator = get_weather_const().get_cur_weather_gen();
     if( !generator.climate_location( pos ) ) {
         return false;
     }
@@ -247,7 +351,7 @@ std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
         const tripoint_abs_ms &pos )
 {
     const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( pos ) );
-    const auto &generator = get_weather_const().get_cur_weather_gen();
+    const weather_generator &generator = get_weather_const().get_cur_weather_gen();
     crop_weather_cell &cached = cell_at( cell, generator );
     const auto previous = cached.ripening.find( fruit.harvest );
     if( previous != cached.ripening.end() ) {
@@ -257,7 +361,7 @@ std::optional<int> local_fruit_ripe_day( const fruit_climate_profile &fruit,
     if( !cached.normals ) {
         return std::nullopt;
     }
-    const auto &normals = *cached.normals;
+    const regional_climate::normals &normals = *cached.normals;
     std::array<regional_climate::temperature_normal, model_days> means;
     for( int day = 0; day < model_days; ++day ) {
         means[day] = regional_climate::temperature_for_day( normals, day + 0.5 );

@@ -811,6 +811,7 @@ void game::reset_game_state()
     weather.weather_id = WEATHER_CLEAR;
     weather.climate_origin.reset();
     weather.climate_precipitation_mm_per_hour.reset();
+    weather.reset_room_heat();
     // Weather shift in 30
     weather.nextweather = calendar::start_of_game + 30_minutes;
 
@@ -981,21 +982,29 @@ bool game::start_game()
             break;
         }
 #endif
-        if( select_starting_city && !north_america::active() && !city::get_all().empty() ) {
-            if( !u.starting_city.has_value() ) {
-                u.starting_city = random_entry( city::get_all() );
-                u.world_origin = u.starting_city->pos_om;
+        const bool use_legacy_city = select_starting_city && !north_america::active() &&
+                                     !city::get_all().empty();
+        if( use_legacy_city && !u.starting_city ) {
+            u.starting_city = random_entry( city::get_all() );
+            u.world_origin = u.starting_city->pos_om;
+        }
+        const point_abs_om origin = u.world_origin.value_or( point_abs_om() );
+        if( u.start_outskirts ) {
+            std::tie( omtstart, associated_parameters ) =
+                start_loc.find_player_initial_location_on_outskirts( origin );
+            if( omtstart.is_invalid() ) {
+                if( !query_yn(
+                        _( "No valid far-outskirts start was found for %s. Use the regular starting location?" ),
+                        start_loc.name() ) ) {
+                    return false;
+                }
+                u.start_outskirts = false;
             }
-            auto ret = u.start_outskirts ?
-                       start_loc.find_player_initial_location( u.starting_city->pos_om, true ) :
-                       start_loc.find_player_initial_location( *u.starting_city );
-            omtstart = ret.first;
-            associated_parameters = ret.second;
-        } else {
-            auto ret = start_loc.find_player_initial_location( u.world_origin.value_or( point_abs_om() ),
-                       u.start_outskirts );
-            omtstart = ret.first;
-            associated_parameters = ret.second;
+        }
+        if( !u.start_outskirts ) {
+            std::tie( omtstart, associated_parameters ) = use_legacy_city ?
+                    start_loc.find_player_initial_location( *u.starting_city ) :
+                    start_loc.find_player_initial_location( origin );
         }
         if( omtstart.is_invalid() ) {
 
