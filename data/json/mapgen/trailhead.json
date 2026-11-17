@@ -265,36 +265,5 @@
     "type": "mapgen",
     "nested_mapgen_id": "trailhead_sub_graffiti_snippet",
     "object": { "mapgensize": [ 1, 1 ], "place_graffiti": [ { "snippet": "trailhead_graffiti", "x": 0, "y": 0 } ] }
-  },
-  {
-    "type": "snippet",
-    "category": "trailhead",
-    "text": [
-      "Leave No Trace.",
-      "Plan Ahead and Prepare.",
-      "Travel and Camp on Durable Surfaces.",
-      "Dispose of Waste Properly.",
-      "Leave What You Find.",
-      "Minimize Campfire Impacts.",
-      "Respect Wildlife.",
-      "Be Considerate of Other Visitors.",
-      "WARNING!  BEAR COUNTRY.",
-      "For hiking, skiing, and enjoying nature.",
-      "Please stay on trail.",
-      "No motorized vehicles.",
-      "DANGER.  HIGH FIRE HAZARD AREA.  NO OPEN FIRE.  NO SMOKING.",
-      "Please don't feed the wildlife.",
-      "No Overnight Camping."
-    ]
-  },
-  {
-    "type": "snippet",
-    "category": "trailhead_graffiti",
-    "text": [
-      "I left my wallet in <city>",
-      "<given_name> + <given_name> forever",
-      "N = R x fp x ne x fl x fi x fc x L  drake was right",
-      "kilroy was here"
-    ]
   }
 ]

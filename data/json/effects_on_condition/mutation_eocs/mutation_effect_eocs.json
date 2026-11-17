@@ -639,23 +639,6 @@
     ]
   },
   {
-    "type": "snippet",
-    "category": "<radiation_category>",
-    "//": "Radiation will only mutate you inside your class ie Mammalia",
-    "text": [
-      { "text": { "str": "URSINE", "//~": "NO_I18N" } },
-      { "text": { "str": "CHIROPTERAN", "//~": "NO_I18N" } },
-      { "text": { "str": "LUPINE", "//~": "NO_I18N" } },
-      { "text": { "str": "RAT", "//~": "NO_I18N" } },
-      { "text": { "str": "MOUSE", "//~": "NO_I18N" } },
-      { "text": { "str": "HUMAN", "//~": "NO_I18N" } },
-      { "text": { "str": "RABBIT", "//~": "NO_I18N" } },
-      { "text": { "str": "FELINE", "//~": "NO_I18N" } },
-      { "text": { "str": "CATTLE", "//~": "NO_I18N" } },
-      { "text": { "str": "TROGLOBITE", "//~": "NO_I18N" } }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_ink_grand_spray",
     "//": "will cast 'ink_gland_spray' spell when player has stored ink charges",

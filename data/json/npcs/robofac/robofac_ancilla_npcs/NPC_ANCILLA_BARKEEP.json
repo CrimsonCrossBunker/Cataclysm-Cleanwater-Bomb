@@ -71,21 +71,6 @@
     ]
   },
   {
-    "type": "snippet",
-    "category": "<ANCILLA_barkeep_suggestion>",
-    "text": [
-      "Ahh but if you want suggestions and are one for craft beers, I certainly suggest having some old world brew before it all goes flat or sour.",
-      "Speaking off, Cranberry here brought me a whole cask of Cabernet a few days ago.  So if red wines are your thing I can offer that by the gallon.",
-      "Just bought some of this new \"Free Whiskey\" from the caravaneer up above.  It's vile if you ask me, but it packs a good punch.  A real drink of the apocalypse I suppose.",
-      "The water I boiled from a pool by the rails, so I don't suggest you get some.",
-      "And you can also try chatting with some of the other patrons if networking is your thing.",
-      "Also have some old world sodas if alcohol isn't your kind of thing.",
-      "Not much fruit juice to make fancy drinks, but I can scrounge up some still.",
-      "Can also sell some dry foods if you want to stock for a trip somewhere.",
-      "Also good for a chat if you don't want anything."
-    ]
-  },
-  {
     "id": [ "TALK_ANCILLA_BARKEEP", "TALK_ANCILLA_BEM_HUMAN_SAMPLE_REWARD" ],
     "type": "talk_topic",
     "dynamic_line": {

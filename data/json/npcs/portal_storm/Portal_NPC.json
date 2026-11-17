@@ -12,11 +12,6 @@
     "faction": "no_faction"
   },
   {
-    "type": "snippet",
-    "category": "<end_talking_bye_portal_person>",
-    "text": [ "Pfum." ]
-  },
-  {
     "type": "npc_class",
     "id": "NC_PORTAL_PERSON",
     "name": { "str": "No class" },
