@@ -30,10 +30,7 @@
     "activated_eocs": [ "EOC_MOUNTAIN_TWO_ON" ],
     "deactivated_eocs": [ "EOC_MOUNTAIN_TWO_OFF" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "math": [ "u_mountain_tattoo_two_active", "==", "1" ] }, { "not": "u_has_weapon" } ] },
-        "melee_damage_bonus": [ { "type": "bash", "add": { "math": [ "4 + (u_mountain_tattoo_count * 2)" ] } } ]
-      }
+      "BIONIC_ENCH_mountain_tattoo_two_0"
     ]
   },
   {
@@ -58,11 +55,7 @@
     "required_bionic": "mountain_tattoo_two",
     "flags": [ "BIONIC_TOGGLED" ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [ { "value": "KNOCKBACK_RESIST", "add": 100 }, { "value": "KNOCKDOWN_RESIST", "add": 100 } ],
-        "ench_effects": [ { "effect": "effect_mountain_tattoo_three", "intensity": 1 } ]
-      }
+      "BIONIC_ENCH_mountain_tattoo_three_0"
     ]
   },
   {
@@ -83,10 +76,7 @@
       [ "foor_r", { "bash": 4, "cut": 2 } ]
     ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z')", "<=", "-1" ] } ] },
-        "values": [ { "value": "POWER_TRICKLE", "add": { "math": [ "u_val('pos_z') * -10" ] } } ]
-      }
+      "BIONIC_ENCH_mountain_tattoo_four_0"
     ]
   },
   {
@@ -101,8 +91,8 @@
     "required_bionic": "mountain_tattoo_four",
     "flags": [ "BIONIC_TOGGLED" ],
     "enchantments": [
-      { "condition": "ALWAYS", "values": [ { "value": "CARDIO_MULTIPLIER", "multiply": 0.5 } ] },
-      { "condition": "ACTIVE", "values": [ { "value": "REGEN_STAMINA", "multiply": 4 } ] }
+      "BIONIC_ENCH_mountain_tattoo_five_0",
+      "BIONIC_ENCH_mountain_tattoo_five_1"
     ]
   },
   {
@@ -118,7 +108,7 @@
     "flags": [ "BIONIC_TOGGLED" ],
     "activated_eocs": [ "EOC_MOUNTAIN_SIX_ON" ],
     "deactivated_eocs": [ "EOC_MOUNTAIN_SIX_OFF" ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "SPEED", "multiply": -0.1 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_mountain_tattoo_six_0" ]
   },
   {
     "type": "effect_on_condition",
