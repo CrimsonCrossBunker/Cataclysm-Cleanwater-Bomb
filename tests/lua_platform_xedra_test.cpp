@@ -7,12 +7,14 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "event_subscriber.h"
 #include "faction.h"
 #include "flag.h"
 #include "game.h"
@@ -37,6 +39,7 @@
 #include "monster.h"
 #include "npc.h"
 #include "npc_opinion.h"
+#include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "recipe.h"
 #include "rng.h"
@@ -477,6 +480,28 @@ TEST_CASE( "xedra_vampire_ascension_uses_native_kill_and_dialogue", "[.][mods][x
     }
 }
 
+static bool sky_island_test_mod_active()
+{
+    const auto &mods = world_generator->active_world->active_mod_order;
+    return std::any_of( mods.begin(), mods.end(), []( const mod_id & active ) {
+        return active.str() == "skyisland";
+    } );
+}
+
+static avatar &ready_sky_island_test_avatar()
+{
+    clear_avatar();
+    clear_map();
+    avatar &player = get_avatar();
+    // The generic test world is not a Sky Island character-creation scenario.
+    for( const bodypart_id &part : player.get_all_body_parts() ) {
+        player.set_part_hp_cur( part, player.get_part_hp_max( part ) );
+    }
+    REQUIRE_FALSE( player.is_dead_state() );
+    cata::lua_platform::runtime_world_ready( true );
+    return player;
+}
+
 // Run with --mods xedra_evolved,skyisland for active interaction coverage.
 TEST_CASE( "xedra_sky_island_amplifiers_use_native_items_and_recipes",
            "[.][mods][xedra_evolved][skyisland]" )
@@ -486,30 +511,18 @@ TEST_CASE( "xedra_sky_island_amplifiers_use_native_items_and_recipes",
     const itype_id amplifier( name );
     const recipe_id craft( name );
     CAPTURE( name );
-    const bool sky_active = std::any_of( world_generator->active_world->active_mod_order.begin(),
-    world_generator->active_world->active_mod_order.end(), []( const mod_id & active ) {
-        return active.str() == "skyisland";
-    } );
-    if( !sky_active ) {
+    if( !sky_island_test_mod_active() ) {
         CHECK_FALSE( amplifier.is_valid() );
         CHECK_FALSE( craft.is_valid() );
         return;
     }
     REQUIRE( amplifier.is_valid() );
     REQUIRE( craft.is_valid() );
-    clear_avatar();
-    clear_map();
+    avatar &player = ready_sky_island_test_avatar();
     const on_out_of_scope cleanup( []() {
         Messages::clear_messages();
         clear_avatar();
     } );
-    avatar &player = get_avatar();
-    // The generic test world is not a Sky Island character-creation scenario.
-    for( const bodypart_id &part : player.get_all_body_parts() ) {
-        player.set_part_hp_cur( part, player.get_part_hp_max( part ) );
-    }
-    REQUIRE_FALSE( player.is_dead_state() );
-    cata::lua_platform::runtime_world_ready( true );
     REQUIRE( player.wear_item( item( itype_id( "backpack" ) ), false ) );
     item_location held = player.i_add( item( amplifier ), false );
     REQUIRE( held );
@@ -603,6 +616,143 @@ TEST_CASE( "xedra_sky_island_amplifiers_use_native_items_and_recipes",
                             ? "vampire_virus_post_mortal" : "vampire_virus_ascendant" ) );
     CHECK( potency.get_intensity() == 1 );
     CHECK( potency.is_permanent() );
+}
+
+TEST_CASE( "xedra_sky_island_vampire_recipe_unlocks_and_repair",
+           "[.][mods][xedra_evolved][skyisland]" )
+{
+    const recipe_id tier_four( "upgradekey_vampire4" );
+    const recipe_id tier_five( "upgradekey_vampire5" );
+    const recipe_id knowledge( "upgradekey_bloodgift_research" );
+    const itype_id key( knowledge.str() );
+    if( !sky_island_test_mod_active() ) {
+        CHECK_FALSE( knowledge.is_valid() );
+        CHECK_FALSE( key.is_valid() );
+        return;
+    }
+    REQUIRE( knowledge.is_valid() );
+    REQUIRE( key.is_valid() );
+    avatar &player = ready_sky_island_test_avatar();
+    const on_out_of_scope cleanup( []() {
+        Messages::clear_messages();
+        clear_avatar();
+    } );
+
+    SECTION( "only the real island core unlocks each tier and writes its saved marker" ) {
+        const tripoint_abs_omt position = player.pos_abs_omt();
+        const oter_id original = overmap_buffer.ter( position );
+        const on_out_of_scope restore_terrain( [&]() {
+            overmap_buffer.ter_set( position, original );
+        } );
+        struct observer : event_subscriber {
+            using event_subscriber::notify;
+
+            std::vector<std::pair<std::string, std::string>> changes;
+            void notify( const cata::event &event ) override {
+                if( event.type() != event_type::u_var_changed ) {
+                    return;
+                }
+                const std::string var = event.get<cata_variant_type::string>( "var" );
+                if( var == "know_tier_4_recipes" || var == "know_tier_5_recipes" ) {
+                    changes.emplace_back( var, event.get<cata_variant_type::string>( "value" ) );
+                }
+            }
+        } writes;
+        get_event_bus().subscribe( &writes );
+        const oter_id core( "sky_island_core_north" );
+        const auto enter = [&]() {
+            get_event_bus().send<event_type::avatar_enters_omt>( position.raw(), core );
+        };
+        const trait_id thirst( "VAMPIRE3" );
+        player.set_mutation( thirst );
+        overmap_buffer.ter_set( position, oter_id( "sky_island_subcore_north" ) );
+        enter();
+        CHECK_FALSE( player.knows_recipe( &tier_four.obj() ) );
+        CHECK( writes.changes.empty() );
+
+        overmap_buffer.ter_set( position, core );
+        rng_set_engine_seed( 70731 );
+        enter();
+        CHECK( player.knows_recipe( &tier_four.obj() ) );
+        CHECK_FALSE( player.knows_recipe( &tier_five.obj() ) );
+        CHECK_FALSE( player.knows_recipe( &knowledge.obj() ) );
+        CHECK( player.get_value( "know_tier_4_recipes" ).str() == "yes" );
+        REQUIRE( writes.changes.size() == 1 );
+        CHECK( writes.changes[0] == std::make_pair( std::string( "know_tier_4_recipes" ),
+               std::string( "yes" ) ) );
+        const int next_after_unlock = rng( 0, 1000000 );
+        rng_set_engine_seed( 70731 );
+        rng( 0, 0 );
+        CHECK( next_after_unlock == rng( 0, 1000000 ) );
+
+        player.forget_recipe( &tier_four.obj() );
+        enter();
+        CHECK_FALSE( player.knows_recipe( &tier_four.obj() ) );
+        CHECK( writes.changes.size() == 1 );
+
+        player.unset_mutation( thirst );
+        player.set_mutation( trait_id( "VAMPIRE4" ) );
+        enter();
+        CHECK( player.knows_recipe( &tier_five.obj() ) );
+        CHECK( player.knows_recipe( &knowledge.obj() ) );
+        CHECK( player.get_value( "know_tier_5_recipes" ).str() == "yes" );
+        REQUIRE( writes.changes.size() == 2 );
+        CHECK( writes.changes[1] == std::make_pair( std::string( "know_tier_5_recipes" ),
+               std::string( "yes" ) ) );
+        player.forget_recipe( &knowledge.obj() );
+        enter();
+        CHECK_FALSE( player.knows_recipe( &knowledge.obj() ) );
+        CHECK( writes.changes.size() == 2 );
+    }
+
+    const recipe_id gifts( "xe_vampire_blood_gift_research" );
+    const recipe_id refinement( "xe_vampire_blood_gift_refinement_research" );
+    const recipe_id reshuffle( "xe_vampire_blood_weaknesses_reshuffle" );
+    SECTION( "using the key consumes all copies and teaches all three research recipes" ) {
+        REQUIRE( player.wear_item( item( itype_id( "backpack" ) ), false ) );
+        item_location held = player.i_add( item( key ), false );
+        REQUIRE( held );
+        REQUIRE( player.i_add( item( key ), false ) );
+        REQUIRE( player.has_amount( key, 2 ) );
+        CHECK( held->type->longest_side == 90_mm );
+        CHECK( held->type_name() == "Key of Vampiric Knowledge" );
+        player.learn_recipe( &knowledge.obj() );
+        REQUIRE( player.knows_recipe( &knowledge.obj() ) );
+        CHECK( held->type->invoke( &player, *held, &get_map(), player.pos_bub() ) == 0 );
+        CHECK_FALSE( player.has_amount( key, 1 ) );
+        CHECK_FALSE( player.knows_recipe( &knowledge.obj() ) );
+        CHECK( player.knows_recipe( &gifts.obj() ) );
+        CHECK( player.knows_recipe( &refinement.obj() ) );
+        CHECK( player.knows_recipe( &reshuffle.obj() ) );
+    }
+
+    SECTION( "reading an older character repairs only the missing reshuffle recipe" ) {
+        player.learn_recipe( &gifts.obj() );
+        REQUIRE_FALSE( player.knows_recipe( &reshuffle.obj() ) );
+        Messages::clear_messages();
+        const std::string diagnostic = capture_debugmsg_during( []() {
+            get_event_bus().send<event_type::game_load>( "test" );
+        } );
+        if( effect_on_condition_id( "EOC_UPDATE_KNOWN_RECIPES" ).is_valid() ) {
+            CHECK( diagnostic.find( "Invalid message type." ) != std::string::npos );
+        } else {
+            CHECK( diagnostic.empty() );
+        }
+        CHECK( player.knows_recipe( &reshuffle.obj() ) );
+        CHECK_FALSE( player.knows_recipe( &refinement.obj() ) );
+        const auto messages = Messages::recent_messages( 10 );
+        CHECK( std::any_of( messages.begin(), messages.end(), []( const auto &entry ) {
+            return entry.second == "You can now reshuffle your weaknesses.";
+        } ) );
+    }
+
+    SECTION( "new vampires receive permanent starting infection" ) {
+        player.set_mutation( trait_id( "START_AS_VAMPIRE" ) );
+        get_event_bus().send<event_type::game_start>( "test" );
+        const effect &infection = player.get_effect( efftype_id( "vampire_virus" ) );
+        CHECK( infection.get_intensity() == 1 );
+        CHECK( infection.is_permanent() );
+    }
 }
 
 TEST_CASE( "xedra_lua_interrupts_the_queued_combat_blood_reward", "[.][mods][xedra_evolved]" )

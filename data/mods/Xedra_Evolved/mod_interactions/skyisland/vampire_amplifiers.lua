@@ -14,9 +14,9 @@ local function value(result)
     return result.value
 end
 
-local function spend_amplifier(character, amplifier)
-    value(services.inventory.remove_type(character, id("item", amplifier)))
-    value(services.recipes.forget(character, id("recipe", amplifier)))
+local function use_up_recipe_item(character, item_id)
+    value(services.inventory.remove_type(character, id("item", item_id)))
+    value(services.recipes.forget(character, id("recipe", item_id)))
 end
 
 ccb.runtime.handler("use_sky_island_ascendant_amplifier", function(context)
@@ -36,7 +36,7 @@ ccb.runtime.handler("use_sky_island_ascendant_amplifier", function(context)
         return 0
     end
 
-    spend_amplifier(character, "upgradekey_vampire4")
+    use_up_recipe_item(character, "upgradekey_vampire4")
     value(services.mutations.replace(character, id("mutation", "VAMPIRE4")))
     cleanup.remove_dream_magic(character)
     remove_drowned_morals(character)
@@ -51,10 +51,97 @@ ccb.runtime.handler("use_sky_island_post_mortal_amplifier", function(context)
     if not character then
         return 0
     end
-    spend_amplifier(character, "upgradekey_vampire5")
+    use_up_recipe_item(character, "upgradekey_vampire5")
     value(services.mutations.replace(character, id("mutation", "BLOOD_DRINKER")))
     weaknesses.grant(character, 2)
     ascension.gain_post_mortal_potency(character)
+    return 0
+end)
+
+local function has_trait(character, trait)
+    return value(services.mutations.has_id_text(character, trait))
+end
+
+local function learn(character, recipe)
+    value(services.recipes.learn(character, id("recipe", recipe)))
+end
+
+local function knows(character, recipe)
+    return value(services.recipes.knows(character, id("recipe", recipe)))
+end
+
+local function should_unlock(character, key, trait)
+    return value(services.variables.get_string(character, key)).value ~= "yes"
+        and has_trait(character, trait)
+end
+
+local function remember_unlock(character, key)
+    -- The original variable write drew from the shared stream even for a single value.
+    services.random.native_int(0, 0)
+    value(services.variables.set(character, key, "yes", { include_before = false }))
+    services.native_events.emit("u_var_changed", { key, "yes" })
+end
+
+local function notify_unlock(message)
+    ccb.presentation.notice(message)
+    services.activities.offer_interruption("")
+    services.messages.add(message, "neutral")
+end
+
+local function at_island_core(character)
+    local position = value(services.creatures.snapshot(character)).position
+    local omt = services.coords.project_to(position, "omt")
+    return services.overmap.matches_location(omt, "sky_island_core")
+end
+
+ccb.runtime.handler("unlock_sky_island_vampire_recipes", function()
+    local character = services.characters.avatar()
+    if should_unlock(character, "know_tier_4_recipes", "VAMPIRE3") and at_island_core(character) then
+        notify_unlock(ccb.services.translate("Your potent vampirism has been noticed.  The island has given you the knowledge to push your vampirism even further, should you want to.\n\nBe warned that once you use this item, you will remain a vampire forevermore."))
+        learn(character, "upgradekey_vampire4")
+        remember_unlock(character, "know_tier_4_recipes")
+    end
+    if should_unlock(character, "know_tier_5_recipes", "VAMPIRE4") and at_island_core(character) then
+        learn(character, "upgradekey_vampire5")
+        learn(character, "upgradekey_bloodgift_research")
+        notify_unlock(ccb.services.translate("You have decided to embrace your new condition, and the island has responded by giving you the knowledge to reach the apex of vampirism, should you find the required components."))
+        remember_unlock(character, "know_tier_5_recipes")
+    end
+end)
+ccb.runtime.on("game:avatar_enters_omt", "unlock_sky_island_vampire_recipes")
+
+ccb.runtime.handler("restore_sky_island_vampire_reshuffle_recipe", function()
+    local character = services.characters.avatar()
+    if knows(character, "xe_vampire_blood_gift_research")
+        and not knows(character, "xe_vampire_blood_weaknesses_reshuffle") then
+        learn(character, "xe_vampire_blood_weaknesses_reshuffle")
+        services.messages.add(ccb.services.translate("You can now reshuffle your weaknesses."), "neutral")
+    end
+end)
+ccb.runtime.on("game:game_load", "restore_sky_island_vampire_reshuffle_recipe")
+
+ccb.runtime.handler("start_sky_island_vampire", function()
+    local character = services.characters.avatar()
+    if has_trait(character, "START_AS_VAMPIRE") then
+        local result = services.effects.add(character, id("effect", "vampire_virus"),
+            services.time.duration(1, "turn"), { intensity = 1, permanent = true })
+        if not result.ok and result.error.code ~= "rejected" then
+            error(result.error.message)
+        end
+    end
+end)
+ccb.runtime.on("game:game_start", "start_sky_island_vampire")
+
+ccb.runtime.handler("use_sky_island_vampire_knowledge", function(context)
+    local character = context.character
+    if not character then
+        return 0
+    end
+    use_up_recipe_item(character, "upgradekey_bloodgift_research")
+    learn(character, "xe_vampire_blood_gift_research")
+    learn(character, "xe_vampire_blood_gift_refinement_research")
+    learn(character, "xe_vampire_blood_weaknesses_reshuffle")
+    context:message(ccb.services.translate("You learn how to expand your blood gifts and reshuffle your weaknesses."), "good")
     return 0
 end)
 
@@ -132,3 +219,44 @@ content.add(content.Recipe {
     :component("ruby_silver_bracelet", 1)
     :component("ruby_silver_pendant_necklace", 1)
     :component("ruby_silver_cufflinks", 1))
+
+content.add(content.Item {
+    id = "upgradekey_bloodgift_research",
+    name = ccb.content.text("Key of Vampiric Knowledge"),
+    description = ccb.content.text("This strange metaphysical artifact will allow you to spend your blood to obtain new blood gifts and reshuffle your weaknesses.\n\nAs per the previous vampiric amplificator, you have to decide to use the crafted item for its effect to apply."),
+    category = "spare_parts",
+    mass_grams = 150,
+    volume_ml = 250,
+    longest_side_mm = 90,
+    symbol = "V",
+    color = "white",
+}:material("stone", 1)
+    :on_use("use_sky_island_vampire_knowledge", ccb.content.text("Activate"), ccb.content.text("Empower your vampirism.")))
+
+-- Books about blood and things made from blood.
+content.add(content.Recipe {
+    id = "upgradekey_bloodgift_research",
+    result = "upgradekey_bloodgift_research",
+    category = "CC_WARP",
+    subcategory = "CSC_WARP_UPGRADES",
+    skill = "survival",
+    difficulty = 0,
+    duration_moves = 90000,
+    activity_level = 1,
+    flags = { "SECRET", "BLIND_EASY" },
+    reversible = false,
+}:tool("fakeitem_statue", 1)
+    :component("warptoken", 20)
+    :component_any {
+        { id = "blood", count = 10 },
+        { id = "demihuman_blood", count = 10 },
+        { id = "mutant_human_blood", count = 10 },
+        { id = "fae_blood", count = 10 },
+    }
+    :component("paperback_romance_diodes", 1)
+    :component("cookbook_bloodforgood", 1)
+    :component("blood_pancakes", 1)
+    :component("blood_rice_pudding", 1)
+    :component("blutwurst_sausage", 1)
+    :component("drink_bloody_mary_blood", 1)
+    :component("soup_blood", 1))
