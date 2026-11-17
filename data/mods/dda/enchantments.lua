@@ -163,3 +163,7 @@ content.add(content.Enchantment { id = "robofac_XM_BACK_on", has = "WORN", condi
     :value("WEAPON_DISPERSION", { multiply = -0.05 })
     :value("THROW_STR", { multiply = 0.05 })
     :value("THROW_DAMAGE", { multiply = 0.05 }))
+
+-- Mind Over Matter overrides these when that Mod is loaded.
+content.add(content.Enchantment { id = "ench_mom_incense_nether_attunement", has = "HELD" })
+content.add(content.Enchantment { id = "ench_mom_incense_nether_attunement_major", has = "HELD" })

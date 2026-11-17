@@ -5449,6 +5449,11 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_overmap_terrain? table<string, boolean> Each requested search runs on access, including the actor's tile.
 ---@field temperature_kelvin? number
 
+---@class CcbEnchantmentMonsterCountQuery
+---@field radius? integer Maximum distance from the actor in map tiles. Defaults to 1000.
+---@field attitude? "hostile"|"friendly"|"both" Defaults to native non-friendly monsters.
+---@field species? string[] Restrict the count to monsters in any listed species.
+
 ---@class CcbEnchantmentCharacterInputs
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
 ---@field traits? string[] Trait IDs queried on the condition's speaker.
@@ -5471,6 +5476,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field radiation? boolean Request current radiation.
 ---@field kill_xp? boolean Request current experience from kills.
 ---@field environment? CcbEnchantmentEnvironmentInputs
+---@field body_part_effects? table<string, string[]> Body part IDs mapped to the effect IDs to test on each part.
+---@field spell_school_counts? string[] School IDs whose number of known spells is requested.
+---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field effects table<string, boolean>
@@ -5484,7 +5492,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field character_flags table<string, boolean>
 ---@field proficiency_percentages table<string, number> Practice percentages are on the 0–100 scale.
 ---@field spell_levels table<string, integer> Unknown spells have level -1.
----@field spell_school_levels table<string, integer> Schools with no known spells have level -1.
+---@field spell_school_levels table<string, integer> Level -1 when the speaker lacks the school trait or knows no spells in it.
 ---@field spell_school_level_sums table<string, integer> Schools with no known spells have sum 0.
 ---@field move_mode? string
 ---@field armed? boolean
@@ -5494,6 +5502,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field radiation? integer
 ---@field kill_xp? integer
 ---@field environment? CcbEnchantmentEnvironmentSnapshot
+---@field body_part_effects? table<string, table<string, boolean>>
+---@field spell_school_counts table<string, integer>
+---@field nearby_monsters? table<string, integer>
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
@@ -5503,11 +5514,13 @@ function CcbPlatformContent.Bionic(options) end
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
----@field load_character_inputs? CcbEnchantmentCharacterInputs Enables named activation and numeric callbacks during save reconstruction with detached inputs.
+---@field load_character_inputs? CcbEnchantmentCharacterInputs Enables activation, modifier and vision distance callbacks during save reconstruction.
+---@field native_modifier_order? boolean Invoke modifier handlers in the engine’s normal stat and damage slot order.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription
 ---@field text string|LocalizedText
+---@field target_inputs? CcbEnchantmentVisionTargetInputs Optional inputs specific to this description.
 ---@field [string] any
 
 ---@class CcbFakeSpellOptions
@@ -5517,13 +5530,53 @@ function CcbPlatformContent.Bionic(options) end
 ---@field npc_trigger_message? string|LocalizedText
 ---@field [string] any
 
+---@class CcbEnchantmentVisionTargetInputs
+---@field species? string[]
+---@field flags? string[] Target creature or character flags to test.
+---@field traits? string[]
+---@field effects? string[] Whole-body effects to test.
+---@field line_of_sight? boolean Request map line of sight from the observer, independent of light.
+---@field warm? boolean Request whether the target radiates heat.
+---@field size? boolean Request native size from 1 (tiny) to 5 (huge).
+---@field npc? boolean Request whether the target is an NPC.
+---@field character? boolean Request whether the target is a character.
+---@field hostile? boolean Request whether the target considers the player an enemy.
+---@field anger? boolean Request target anger.
+---@field spell_count? boolean Request the target's count of known spells.
+
+---@class CcbEnchantmentVisionTargetSnapshot
+---@field species? table<string, boolean>
+---@field flags? table<string, boolean>
+---@field traits? table<string, boolean>
+---@field effects? table<string, boolean>
+---@field line_of_sight? boolean
+---@field warm? boolean
+---@field size? integer
+---@field npc? boolean
+---@field character? boolean
+---@field hostile? boolean
+---@field anger? integer
+---@field spell_count? integer
+
+---@class CcbEnchantmentVisionContext: CcbEnchantmentCharacterContext
+---@field target_inputs? CcbEnchantmentVisionTargetSnapshot Requested facts for the detection and description handlers.
+---@field interlocutor? GameHandle Available only after world_ready.
+
 ---@class CcbEnchantmentVisionOptions
+---@field distance? number Detection range in map tiles.
+---@field distance_handler? string Registered handler whose numeric result sets the range.
+---@field condition_handler? string Registered handler deciding whether the vision detects the target.
+---@field target_inputs? CcbEnchantmentVisionTargetInputs Inputs for the condition and description handlers.
 ---@field descriptions? CcbEnchantmentVisionDescription[]
 ---@field [string] any
 
 ---@param options EnchantmentDefinitionOptions
 ---@return EnchantmentDefinition
 function CcbPlatformContent.Enchantment(options) end
+
+---Add or replace an enchantment in active Mod load order.
+---@param definition EnchantmentDefinition
+function CcbPlatformContent.upsert_enchantment(definition) end
 ---@param options CcbLuaValue
 ---@return any
 function CcbPlatformContent.EventStatistic(options) end
@@ -12462,13 +12515,13 @@ function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) en
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
----Draw through the native global game RNG. This advances the shared game random sequence.
+---Draw through the native global game RNG during a runtime or save-reconstruction enchantment modifier callback.
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
----Draw through native rng_float on the shared game RNG during an active world callback.
+---Draw through native rng_float during a runtime or save-reconstruction enchantment modifier callback.
 ---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
 ---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
 ---@param minimum number Native floating-point range endpoint.

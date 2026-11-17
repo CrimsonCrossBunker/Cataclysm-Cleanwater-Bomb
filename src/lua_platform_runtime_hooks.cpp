@@ -41,6 +41,7 @@
 #include "item.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
+#include "lua_platform_creatures.h"
 #include "lua_platform_missions.h"
 #include "map.h"
 #include "map_iterator.h"
@@ -944,6 +945,42 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     []( const const_talker & actor, const std::string & id ) {
         return actor.get_spell_sum( trait_id( id ), 0 );
     } );
+    collect( "spell_school_counts", requested.spell_school_counts, 0,
+    []( const const_talker & actor, const std::string & id ) {
+        return actor.get_spell_count( trait_id( id ) );
+    } );
+    if( !requested.body_part_effects.empty() ) {
+        sol::table body_part_effects = owner.lua->create_table(
+                                           0, static_cast<int>( requested.body_part_effects.size() ) );
+        for( const auto &[id, effects] : requested.body_part_effects ) {
+            sol::table values = owner.lua->create_table( 0, static_cast<int>( effects.size() ) );
+            const bodypart_id body_part( id );
+            for( const std::string &effect : effects ) {
+                values[effect] = speaker && !speaker->get_effect( efftype_id( effect ), body_part ).is_null();
+            }
+            body_part_effects[id] = std::move( values );
+        }
+        inputs["body_part_effects"] = std::move( body_part_effects );
+    }
+    if( !requested.nearby_monsters.empty() ) {
+        sol::table counts = owner.lua->create_table(
+                                0, static_cast<int>( requested.nearby_monsters.size() ) );
+        for( const auto &[key, query] : requested.nearby_monsters ) {
+            std::vector<species_id> species;
+            species.reserve( query.species.size() );
+            for( const std::string &id : query.species ) {
+                species.emplace_back( id );
+            }
+            counts[key] = speaker ? count_native_nearby_monsters(
+            speaker->pos_abs(), query.radius, query.attitude, [&]( const monster &candidate ) {
+                return species.empty() || std::any_of( species.begin(), species.end(),
+                [&]( const species_id & id ) {
+                    return candidate.in_species( id );
+                } );
+            } ) : 0;
+        }
+        inputs["nearby_monsters"] = std::move( counts );
+    }
     inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
                                     requested.character_variables );
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
@@ -978,14 +1015,76 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     return inputs;
 }
 
+static sol::table collect_enchantment_vision_target( sol::state &lua, const const_dialogue &dialogue,
+        const enchantment_vision_target_inputs &requested )
+{
+    sol::table inputs = lua.create_table();
+    if( !dialogue.has_beta ) {
+        return inputs;
+    }
+    const const_talker &target = *dialogue.const_actor( true );
+    const auto collect = [&]( const char *key, const std::vector<std::string> &ids, const auto &predicate ) {
+        if( ids.empty() ) {
+            return;
+        }
+        sol::table values = lua.create_table( 0, static_cast<int>( ids.size() ) );
+        for( const std::string &id : ids ) {
+            values[id] = predicate( id );
+        }
+        inputs[key] = std::move( values );
+    };
+    collect( "species", requested.species, [&]( const std::string &id ) {
+        return target.has_species( species_id( id ) );
+    } );
+    collect( "flags", requested.flags, [&]( const std::string &id ) {
+        return target.has_flag( json_character_flag( id ) );
+    } );
+    collect( "traits", requested.traits, [&]( const std::string &id ) {
+        return target.has_trait( trait_id( id ) );
+    } );
+    collect( "effects", requested.effects, [&]( const std::string &id ) {
+        return !target.get_effect( efftype_id( id ), bodypart_str_id::NULL_ID() ).is_null();
+    } );
+    if( requested.line_of_sight ) {
+        const Creature *observer = dialogue.has_alpha ?
+                                   dialogue.const_actor( false )->get_const_creature() : nullptr;
+        const Creature *creature = target.get_const_creature();
+        inputs["line_of_sight"] = observer && creature &&
+                                  get_map().sees( observer->pos_bub(), creature->pos_bub(), MAX_VIEW_DISTANCE );
+    }
+    if( requested.warm ) {
+        inputs["warm"] = target.is_warm();
+    }
+    if( requested.size ) {
+        inputs["size"] = target.get_size();
+    }
+    if( requested.npc ) {
+        inputs["npc"] = target.get_const_npc() != nullptr;
+    }
+    if( requested.character ) {
+        inputs["character"] = target.get_const_character() != nullptr;
+    }
+    if( requested.hostile ) {
+        inputs["hostile"] = target.is_enemy();
+    }
+    if( requested.anger ) {
+        inputs["anger"] = target.get_anger();
+    }
+    if( requested.spell_count ) {
+        inputs["spell_count"] = target.get_spell_count( trait_id::NULL_ID() );
+    }
+    return inputs;
+}
+
 std::optional<bool> invoke_enchantment_condition_handler(
     const std::string_view mod_id, const std::string_view enchantment,
     const std::string_view scope, const std::string_view target,
     const std::string_view handler_id, const const_dialogue &dialogue,
-    const std::optional<enchantment_character_inputs> &load_character_inputs )
+    const std::optional<enchantment_character_inputs> &load_character_inputs,
+    const std::optional<enchantment_vision_target_inputs> &target_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || ( !owner->world_is_ready && !load_character_inputs ) ) {
+    if( !owner || ( !owner->world_is_ready && !load_character_inputs && !target_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -1000,6 +1099,9 @@ std::optional<bool> invoke_enchantment_condition_handler(
     if( load_character_inputs ) {
         payload["character_inputs"] = collect_enchantment_character_inputs( *owner, dialogue,
                                       *load_character_inputs );
+    }
+    if( target_inputs ) {
+        payload["target_inputs"] = collect_enchantment_vision_target( *owner->lua, dialogue, *target_inputs );
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
@@ -1064,7 +1166,7 @@ std::optional<double> invoke_enchantment_number_handler(
                                       *load_character_inputs );
     }
     sol::protected_function callback = handler->second.callback;
-    callback_scope callback_guard( *owner );
+    callback_scope callback_guard( *owner, load_inputs );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );

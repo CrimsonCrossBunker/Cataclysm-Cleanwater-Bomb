@@ -162,3 +162,115 @@ content.add(content.Enchantment {
     condition_handler = "salamander_warmth_active",
     load_character_inputs = salamander_heat,
 }:value("CRAFTING_SPEED_MULTIPLIER", { multiply = 0.15 }))
+
+ccb.runtime.handler("eater_sixth_sense_range", function(ctx)
+    return ctx.character_inputs.spell_school_counts.EATER
+end)
+
+ccb.runtime.handler("eater_sixth_sense_detects_target", function(ctx)
+    local species = ctx.target_inputs.species
+    return species.HORROR or species.NETHER or species.nether_player_hate
+end)
+
+content.add(content.Enchantment {
+    id = "EATER_SIXTH_SENSE",
+    condition = "ALWAYS",
+    load_character_inputs = { spell_school_counts = { "EATER" } },
+}:vision {
+    distance_handler = "eater_sixth_sense_range",
+    condition_handler = "eater_sixth_sense_detects_target",
+    target_inputs = { species = { "HORROR", "NETHER", "nether_player_hate" } },
+    descriptions = { {
+        id = "moving_creature", symbol = "?", color = "c_white",
+        text = content.text("You sense an otherworldy danger here."),
+    } },
+})
+
+ccb.runtime.handler("arvore_sight_range", function(ctx)
+    return ctx.stats.perception + ctx.stats.intelligence
+end)
+
+local natural_species = {
+    "MAMMAL", "BIRD", "REPTILE", "PLANT", "AMPHIBIAN", "FISH", "INSECT", "CENTIPEDE",
+    "SPIDER", "INSECT_FLYING", "MOLLUSK", "ARVORE",
+}
+local unnatural_species = {
+    "ZOMBIE", "FUNGUS", "MIGO", "NETHER", "NETHER_BURROWING", "VAMPIRE", "NIGHTMARE", "HORROR", "ABERRATION",
+}
+local function any_species(species, kinds)
+    for _, kind in ipairs(kinds) do
+        if species[kind] then
+            return true
+        end
+    end
+    return false
+end
+
+ccb.runtime.handler("arvore_sight_detects_humans", function(ctx)
+    local target = ctx.target_inputs
+    local species = target.species
+    return not species.ZOMBIE and (target.npc or species.FERAL or species.HUMAN or species.RENFIELD
+        or target.flags.HUMAN)
+end)
+
+ccb.runtime.handler("arvore_sight_detects_natural_creatures", function(ctx)
+    local species = ctx.target_inputs.species
+    return not species.ZOMBIE and any_species(species, natural_species)
+end)
+
+ccb.runtime.handler("arvore_sight_detects_unnatural_creatures", function(ctx)
+    return any_species(ctx.target_inputs.species, unnatural_species)
+end)
+
+local natural_vision_inputs = { "ZOMBIE" }
+for _, kind in ipairs(natural_species) do
+    natural_vision_inputs[#natural_vision_inputs + 1] = kind
+end
+
+content.add(content.Enchantment {
+    id = "arvore_forest_detect_enemies",
+    condition_handler = "arvore_overmap_sight_active",
+    load_character_inputs = { environment = forest_environment, traits = { "ARVORE_TREE_FORM_TRAITS" } },
+}
+    :vision {
+        distance_handler = "arvore_sight_range",
+        condition_handler = "arvore_sight_detects_humans",
+        target_inputs = { species = { "ZOMBIE", "FERAL", "HUMAN", "RENFIELD" }, flags = { "HUMAN" }, npc = true },
+        descriptions = { {
+            id = "human_sense", symbol = "@", color = "c_white",
+            text = content.text("The forest nervously whispers to you about the presence of humans."),
+        } },
+    }
+    :vision {
+        distance_handler = "arvore_sight_range",
+        condition_handler = "arvore_sight_detects_natural_creatures",
+        target_inputs = { species = natural_vision_inputs },
+        descriptions = { {
+            id = "infrared_creature_medium", symbol = "?", color = "c_green",
+            text = content.text("The forest gently whispers to you about the creatures of nature."),
+        } },
+    }
+    :vision {
+        distance_handler = "arvore_sight_range",
+        condition_handler = "arvore_sight_detects_unnatural_creatures",
+        target_inputs = { species = unnatural_species },
+        descriptions = { {
+            id = "alien_being_sense", symbol = "?", color = "c_red",
+            text = content.text("The forest whispers warnings of unnatural creatures nearby."),
+        } },
+    })
+
+content.add(content.Enchantment {
+    id = "ench_arvore_tree_form",
+    condition = "ALWAYS",
+    load_character_inputs = {},
+}
+    :vision {
+        distance_handler = "arvore_sight_range",
+        descriptions = { {
+            id = "moving_creature", symbol = "?", color = "c_white",
+            text = content.text("You sense something moving here."),
+        } },
+    }
+    :value("SLEEPY", { add = 150 })
+    :value("CLIMATE_CONTROL_HEAT", { add = 150 }))

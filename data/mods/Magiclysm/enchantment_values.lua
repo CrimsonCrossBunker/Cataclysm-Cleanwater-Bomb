@@ -230,3 +230,59 @@ content.add(content.Enchantment {
         add_handler = "enchantment_ench_technomancer_far_sight_lens_overmap_sight_add",
         load_spell_levels = { "technomancer_far_sight", "technomancer_far_sight_plus" },
     }))
+
+local native_random = ccb.services.random
+ccb.runtime.handler("stormglove_unarmed", function(ctx)
+    return not ctx.character_inputs.armed
+end)
+
+ccb.runtime.handler("stormglove_electric_damage", function(ctx)
+    local spells = ctx.spell_levels
+    local limit = 5 + spells.stormfist + spells.stormfist_plus
+    return native_random.native_int(math.min(0, limit), math.max(0, limit))
+end)
+
+content.add(content.Enchantment {
+    id = "ench_stormglove",
+    has = "WORN",
+    name = content.text("Stormglove"),
+    description = content.text("A coating of lighting on your hand and lower arm."),
+    condition_handler = "stormglove_unarmed",
+    load_character_inputs = { armed = true },
+}:melee_damage("electric", {
+    add_handler = "stormglove_electric_damage", load_spell_levels = { "stormfist", "stormfist_plus" },
+}))
+
+ccb.runtime.handler("luck_bone_resistance", function()
+    return -native_random.native_int(0, 3)
+end)
+ccb.runtime.handler("luck_bone_defense", function()
+    return native_random.native_int(0, 5) * 0.01
+end)
+ccb.runtime.handler("luck_bone_focus", function()
+    return native_random.native_int(0, 5)
+end)
+ccb.runtime.handler("luck_bone_regeneration", function()
+    return native_random.native_int(0, 10) * 0.01
+end)
+
+local luck_bone = content.Enchantment {
+    id = "ench_luck_bone",
+    has = "HELD",
+    name = content.text("Luck Bone"),
+    description = content.text("The spirits within are giving you their blessing."),
+    -- The native maps determine which modifier receives each game RNG draw.
+    native_modifier_order = true,
+    load_character_inputs = {},
+}
+    :value("FORCEFIELD", { add_handler = "luck_bone_defense" })
+    :value("EVASION", { add_handler = "luck_bone_defense" })
+    :value("LEARNING_FOCUS", { add_handler = "luck_bone_focus" })
+    :value("PAIN", { add_handler = "luck_bone_resistance" })
+    :value("REGEN_HP", { multiply_handler = "luck_bone_regeneration" })
+    :value("REGEN_MANA", { multiply_handler = "luck_bone_regeneration" })
+    :value("REGEN_STAMINA", { multiply_handler = "luck_bone_regeneration" })
+for _, damage in ipairs({ "bash", "cut", "stab", "bullet", "acid", "electric", "heat", "cold", "biological" }) do
+    luck_bone:incoming_damage(damage, { add_handler = "luck_bone_resistance" })
+end
+content.add(luck_bone)

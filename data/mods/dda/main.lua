@@ -90,3 +90,5 @@ require("enchantments")
 require("enchantment_variables")
 
 require("quadruped_enchantments")
+
+require("vision_enchantments")

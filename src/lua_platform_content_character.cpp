@@ -96,6 +96,7 @@ using detail::read_singular_text;
 using detail::invoke_enchantment_condition_handler;
 using detail::invoke_enchantment_number_handler;
 using detail::enchantment_character_inputs;
+using detail::enchantment_vision_target_inputs;
 using detail::invoke_mission_condition_handler;
 using detail::invoke_mission_deadline_handler;
 using detail::invoke_mission_phase_handler;
@@ -110,7 +111,7 @@ using detail::widget_custom_handler_result;
 namespace
 {
 
-enum class definition_operation : int { add, replace, edit };
+enum class definition_operation : int { add, replace, edit, upsert };
 enum class handle_lifecycle : int { building, committed, discarded };
 
 std::size_t require_dense_array( const sol::table &values,
@@ -193,6 +194,8 @@ const char *operation_name( const definition_operation operation )
             return "replace";
         case definition_operation::edit:
             return "edit";
+        case definition_operation::upsert:
+            return "upsert";
     }
     return "unknown";
 }
@@ -414,12 +417,56 @@ struct enchantment_fake_spell_definition_data {
     authored_text npc_trigger_message;
 };
 
+static std::vector<std::string> read_enchantment_id_array( const sol::table &list,
+        const char *field )
+{
+    const std::size_t count = require_dense_array( list, field, 0, 256 );
+    std::vector<std::string> result;
+    result.reserve( count );
+    for( std::size_t i = 1; i <= count; ++i ) {
+        result.push_back( list.raw_get<std::string>( i ) );
+    }
+    return result;
+}
+
+static std::vector<std::string> read_enchantment_ids( const sol::table &table, const char *field )
+{
+    if( const auto list = table.get<sol::optional<sol::table>>( field ) ) {
+        return read_enchantment_id_array( *list, field );
+    }
+    return {};
+}
+
+static std::optional<enchantment_vision_target_inputs> read_enchantment_vision_target_inputs(
+    const sol::table &table )
+{
+    const auto request = table.get<sol::optional<sol::table>>( "target_inputs" );
+    if( !request ) {
+        return std::nullopt;
+    }
+    enchantment_vision_target_inputs inputs;
+    inputs.species = read_enchantment_ids( *request, "species" );
+    inputs.flags = read_enchantment_ids( *request, "flags" );
+    inputs.traits = read_enchantment_ids( *request, "traits" );
+    inputs.effects = read_enchantment_ids( *request, "effects" );
+    inputs.line_of_sight = request->get_or( "line_of_sight", false );
+    inputs.warm = request->get_or( "warm", false );
+    inputs.size = request->get_or( "size", false );
+    inputs.npc = request->get_or( "npc", false );
+    inputs.character = request->get_or( "character", false );
+    inputs.hostile = request->get_or( "hostile", false );
+    inputs.anger = request->get_or( "anger", false );
+    inputs.spell_count = request->get_or( "spell_count", false );
+    return inputs;
+}
+
 struct enchantment_vision_description_definition_data {
     std::string id = "infrared_creature";
     std::string color = "red";
     std::string symbol = "?";
     authored_text text;
     std::string condition_handler;
+    std::optional<enchantment_vision_target_inputs> target_inputs;
 };
 
 struct enchantment_vision_definition_data {
@@ -428,6 +475,7 @@ struct enchantment_vision_definition_data {
     std::string condition_handler;
     bool precise = false;
     bool ignores_aiming_cone = false;
+    std::optional<enchantment_vision_target_inputs> target_inputs;
     std::vector<enchantment_vision_description_definition_data> descriptions;
 };
 
@@ -439,6 +487,7 @@ struct enchantment_definition_data {
     std::string condition = "ALWAYS";
     std::string condition_handler;
     std::optional<enchantment_character_inputs> load_character_inputs;
+    bool native_modifier_order = false;
     std::string emitter;
     std::vector<std::pair<std::string, std::int64_t>> effects;
     std::vector<std::pair<std::string, std::string>> modified_bodyparts;
@@ -1331,6 +1380,7 @@ struct enchantment_definition_handle {
                                        "condition_handler", std::string() ) );
         vision.precise = options.get_or( "precise", false );
         vision.ignores_aiming_cone = options.get_or( "ignores_aiming_cone", false );
+        vision.target_inputs = read_enchantment_vision_target_inputs( options );
         if( const sol::optional < sol::table > descriptions =
                 options.get < sol::optional < sol::table>>( "descriptions" ) ) {
             const std::size_t count = require_dense_array(
@@ -1351,6 +1401,7 @@ struct enchantment_definition_handle {
                                        item.get < sol::object > ( "text" ), {}, "enchantment vision description" );
                 description.condition_handler = item.get_or(
                                                     "condition", item.get_or( "condition_handler", std::string() ) );
+                description.target_inputs = read_enchantment_vision_target_inputs( item );
                 vision.descriptions.push_back( std::move( description ) );
             }
         }
@@ -2442,6 +2493,14 @@ void character_content_transaction::impl::install_widget( sol::table &content )
 
 void character_content_transaction::impl::install_enchantment( sol::table &content )
 {
+    content.set_function( "upsert_enchantment", [this]( const enchantment_definition_handle & handle ) {
+        if( handle.token != token ) {
+            throw std::runtime_error( "cannot register an enchantment definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "enchantment" );
+        handle.definition->registered = true;
+        enchantments.push_back( { definition_operation::upsert, handle.definition } );
+    } );
     content.set_function( "Enchantment", [this]( const sol::table & options ) {
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -2458,16 +2517,7 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                                             "condition_handler", std::string() );
         if( const sol::optional<sol::table> activation = options.get<sol::optional<sol::table>>(
                     "load_character_inputs" ) ) {
-            const auto ids = []( const sol::table & table, const char *field ) {
-                std::vector<std::string> result;
-                if( const auto list = table.get<sol::optional<sol::table>>( field ) ) {
-                    const std::size_t count = require_dense_array( *list, field, 0, 256 );
-                    for( std::size_t i = 1; i <= count; ++i ) {
-                        result.push_back( list->raw_get<std::string>( i ) );
-                    }
-                }
-                return result;
-            };
+            const auto &ids = read_enchantment_ids;
             definition->load_character_inputs = enchantment_character_inputs{
                 ids( *activation, "effects" ), ids( *activation, "traits" ),
                 ids( *activation, "worn_items" ), ids( *activation, "worn_flags" ),
@@ -2480,8 +2530,36 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 activation->get_or( "armed", false ), activation->get_or( "pain", false ),
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
                 activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false ),
-                std::nullopt
+                std::nullopt, {}, ids( *activation, "spell_school_counts" ), {}
             };
+            if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
+                for( const auto &[key, raw] : *queries ) {
+                    if( key.get_type() != sol::type::string || !raw.is<sol::table>() ) {
+                        throw std::runtime_error( "nearby_monsters requires names and query tables" );
+                    }
+                    const sol::table query = raw.as<sol::table>();
+                    const std::int64_t radius = query.get_or<std::int64_t>( "radius", 1000 );
+                    const std::string attitude = query.get_or( "attitude", std::string( "hostile" ) );
+                    if( radius < 0 || !fits_native_int( radius ) ||
+                        ( attitude != "hostile" && attitude != "friendly" && attitude != "both" ) ) {
+                        throw std::runtime_error( "nearby_monsters has an invalid radius or attitude" );
+                    }
+                    definition->load_character_inputs->nearby_monsters.emplace( key.as<std::string>(),
+                            detail::enchantment_monster_count_query{
+                                static_cast<int>( radius ), attitude, ids( query, "species" )
+                            } );
+                }
+            }
+            if( const auto parts = activation->get<sol::optional<sol::table>>( "body_part_effects" ) ) {
+                for( const auto &[part, raw] : *parts ) {
+                    if( part.get_type() != sol::type::string || !raw.is<sol::table>() ) {
+                        throw std::runtime_error( "body_part_effects requires body part IDs and effect arrays" );
+                    }
+                    const std::string id = part.as<std::string>();
+                    definition->load_character_inputs->body_part_effects.emplace( id,
+                            read_enchantment_id_array( raw.as<sol::table>(), "body_part_effects" ) );
+                }
+            }
             if( const auto environment = activation->get<sol::optional<sol::table>>( "environment" ) ) {
                 auto &inputs = definition->load_character_inputs->environment.emplace();
                 inputs.terrain_flags = ids( *environment, "terrain_flags" );
@@ -2508,6 +2586,7 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
             }
         }
         definition->emitter = options.get_or( "emitter", std::string() );
+        definition->native_modifier_order = options.get_or( "native_modifier_order", false );
         enchantment_definition_handle handle{ definition, this->token };
         if( !definition->condition_handler.empty() ) {
             handle.active_when( definition->condition_handler );
@@ -4207,17 +4286,39 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 definition.modifiers.end(), []( const enchantment_modifier_definition_data & modifier ) {
                     return !modifier.add_handler.empty() || !modifier.multiply_handler.empty();
                 } );
-                if( definition.condition_handler.empty() && !has_numeric_handler ) {
-                    throw std::runtime_error( "enchantment load_character_inputs requires a condition or numeric handler" );
+                const bool has_distance_handler = std::any_of( definition.visions.begin(),
+                definition.visions.end(), []( const enchantment_vision_definition_data &vision ) {
+                    return !vision.distance_handler.empty();
+                } );
+                if( definition.condition_handler.empty() && !has_numeric_handler && !has_distance_handler ) {
+                    throw std::runtime_error( "enchantment load_character_inputs requires an activation, modifier or vision distance handler" );
                 }
                 const enchantment_character_inputs &inputs = *definition.load_character_inputs;
                 for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags,
                                         &inputs.wielded_flags, &inputs.effect_intensities,
                                         &inputs.character_variables, &inputs.global_variables,
                                         &inputs.character_flags, &inputs.spell_levels,
-                                        &inputs.spell_school_levels, &inputs.spell_school_level_sums } ) {
+                                        &inputs.spell_school_levels, &inputs.spell_school_level_sums,
+                                        &inputs.spell_school_counts } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
+                    }
+                }
+                for( const auto &[name, query] : inputs.nearby_monsters ) {
+                    require_valid_id( name, "enchantment nearby monster request" );
+                    for( const std::string &species : query.species ) {
+                        require_valid_id( species, "enchantment monster species" );
+                    }
+                }
+                for( const auto &[part, effects] : inputs.body_part_effects ) {
+                    require_valid_id( part, "enchantment effect body part" );
+                    if( check_engine_state && !staged_body_part( part ) &&
+                        !bodypart_str_id( part ).is_valid() ) {
+                        throw std::runtime_error( "enchantment '" + definition.id +
+                                                  "' references unknown body part '" + part + "'" );
+                    }
+                    for( const std::string &effect : effects ) {
+                        require_valid_id( effect, "enchantment body part effect" );
                     }
                 }
                 if( inputs.environment ) {
@@ -4391,6 +4492,18 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
                 validate_enchantment_handler( definition.id, vision.distance_handler );
                 validate_enchantment_handler( definition.id, vision.condition_handler );
+                const auto validate_target_inputs = [&]( const auto &inputs ) {
+                    if( !inputs ) {
+                        return;
+                    }
+                    for( const auto *ids : { &inputs->species, &inputs->flags, &inputs->traits,
+                                            &inputs->effects } ) {
+                        for( const std::string &id : *ids ) {
+                            require_valid_id( id, "enchantment vision target input" );
+                        }
+                    }
+                };
+                validate_target_inputs( vision.target_inputs );
                 std::set < std::string > description_ids;
                 for( const enchantment_vision_description_definition_data &description :
                      vision.descriptions ) {
@@ -4401,9 +4514,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                         throw std::runtime_error( "enchantment '" + definition.id +
                                                   "' has an invalid vision description" );
                     }
-                    validate_enchantment_handler(
-
-                        definition.id, description.condition_handler );
+                    validate_enchantment_handler( definition.id, description.condition_handler );
+                    validate_target_inputs( description.target_inputs );
                 }
             }
             validate_operation( entry.operation,
@@ -6144,104 +6256,79 @@ void character_content_transaction::impl::apply_enchantment()
             native.mutations.emplace_back( mutation );
         }
         for( const enchantment_modifier_definition_data &modifier : source.modifiers ) {
-            const auto static_value = []( const std::optional < double > &number,
-            auto & map, const auto & key ) {
-                if( number ) {
-                    map.emplace( key, dbl_or_var( *number ) );
+            using numeric_callback = std::function<double( const const_dialogue & )>;
+            const auto callback = [&]( const std::string &handler, const char *operation ) -> numeric_callback {
+                if( handler.empty() ) {
+                    return {};
+                }
+                return [owner = this->owner, enchantment = source.id, scope = modifier.kind + operation,
+                        target = modifier.target, part = modifier.part, handler,
+                        load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels,
+                        load_character_inputs = source.load_character_inputs]( const const_dialogue &dialogue ) {
+                    return invoke_enchantment_number_handler( owner, enchantment, scope, target, part,
+                            handler, dialogue, load_skills, load_spell_levels, load_character_inputs ).value_or( 0.0 );
+                };
+            };
+            numeric_callback add = callback( modifier.add_handler, ":add" );
+            numeric_callback multiply = callback( modifier.multiply_handler, ":multiply" );
+            const auto native_value = [&]( const std::optional<double> number,
+            const numeric_callback &evaluate ) -> std::optional<dbl_or_var> {
+                if( source.native_modifier_order && evaluate ) {
+                    dbl_or_var value;
+                    value.min.val = runtime_dbl_provider{
+                        [evaluate, number]( const const_dialogue &dialogue ) {
+                            return number.value_or( 0.0 ) + evaluate( dialogue );
+                        }
+                    };
+                    return value;
+                }
+                return number ? std::make_optional( dbl_or_var( *number ) ) : std::nullopt;
+            };
+            std::optional<dbl_or_var> native_add = native_value( modifier.add, add );
+            std::optional<dbl_or_var> native_multiply = native_value( modifier.multiply, multiply );
+            const auto bind_values = [&]( auto &add_map, auto &multiply_map, const auto &key ) {
+                if( native_add ) {
+                    add_map.emplace( key, std::move( *native_add ) );
+                }
+                if( native_multiply ) {
+                    multiply_map.emplace( key, std::move( *native_multiply ) );
                 }
             };
             if( modifier.kind == "value" ) {
                 const enchant_vals::mod key =
-                    *io::string_to_enum_optional < enchant_vals::mod > ( modifier.target );
-                static_value( modifier.add, native.values_add, key );
-                static_value( modifier.multiply, native.values_multiply, key );
+                    *io::string_to_enum_optional<enchant_vals::mod>( modifier.target );
+                bind_values( native.values_add, native.values_multiply, key );
             } else if( modifier.kind == "skill" ) {
-                static_value( modifier.add, native.skill_values_add,
-                              skill_id( modifier.target ) );
-                static_value( modifier.multiply, native.skill_values_multiply,
-                              skill_id( modifier.target ) );
+                bind_values( native.skill_values_add, native.skill_values_multiply, skill_id( modifier.target ) );
             } else if( modifier.kind == "custom" ) {
-                static_value( modifier.add, native.custom_values_add, modifier.target );
-                static_value( modifier.multiply, native.custom_values_multiply,
-                              modifier.target );
+                bind_values( native.custom_values_add, native.custom_values_multiply, modifier.target );
             } else if( modifier.kind == "encumbrance" ) {
-                static_value( modifier.add, native.encumbrance_values_add,
-                              bodypart_str_id( modifier.target ) );
-                static_value( modifier.multiply, native.encumbrance_values_multiply,
-                              bodypart_str_id( modifier.target ) );
+                bind_values( native.encumbrance_values_add, native.encumbrance_values_multiply,
+                             bodypart_str_id( modifier.target ) );
             } else if( modifier.kind == "max_hp" ) {
-                static_value( modifier.add, native.max_hp_values_add,
-                              bodypart_str_id( modifier.target ) );
-                static_value( modifier.multiply, native.max_hp_values_multiply,
-                              bodypart_str_id( modifier.target ) );
+                bind_values( native.max_hp_values_add, native.max_hp_values_multiply,
+                             bodypart_str_id( modifier.target ) );
             } else if( modifier.kind == "limb_score" ) {
-                enchantment::limb_score_mod_bp value;
-                value.score = limb_score_id( modifier.target );
-                value.part = modifier.part.empty() ? bodypart_str_id::NULL_ID() :
-                             bodypart_str_id( modifier.part );
-                if( modifier.add ) {
-                    value.add = *modifier.add;
-                }
-                if( modifier.multiply ) {
-                    value.mult = *modifier.multiply;
-                }
-                native.limb_score_mods.push_back( std::move( value ) );
-            } else {
-                std::map < damage_type_id, dbl_or_var > *add_map = nullptr;
-                std::map < damage_type_id, dbl_or_var > *multiply_map = nullptr;
-                if( modifier.kind == "melee_damage" ) {
-                    add_map = &native.damage_values_add;
-                    multiply_map = &native.damage_values_multiply;
-                } else if( modifier.kind == "incoming_damage" ) {
-                    add_map = &native.armor_values_add;
-                    multiply_map = &native.armor_values_multiply;
-                } else if( modifier.kind == "post_armor_damage" ) {
-                    add_map = &native.extra_damage_add;
-                    multiply_map = &native.extra_damage_multiply;
-                }
-                if( add_map != nullptr ) {
-                    static_value( modifier.add, *add_map,
-                                  damage_type_id( modifier.target ) );
-                    static_value( modifier.multiply, *multiply_map,
-                                  damage_type_id( modifier.target ) );
-                }
+                native.limb_score_mods.push_back( {
+                    limb_score_id( modifier.target ),
+                    modifier.part.empty() ? bodypart_str_id::NULL_ID() : bodypart_str_id( modifier.part ),
+                    native_add.value_or( dbl_or_var( 0.0 ) ),
+                    native_multiply.value_or( dbl_or_var( 0.0 ) )
+                } );
+            } else if( modifier.kind == "melee_damage" ) {
+                bind_values( native.damage_values_add, native.damage_values_multiply,
+                             damage_type_id( modifier.target ) );
+            } else if( modifier.kind == "incoming_damage" ) {
+                bind_values( native.armor_values_add, native.armor_values_multiply,
+                             damage_type_id( modifier.target ) );
+            } else if( modifier.kind == "post_armor_damage" ) {
+                bind_values( native.extra_damage_add, native.extra_damage_multiply,
+                             damage_type_id( modifier.target ) );
             }
-            if( !modifier.add_handler.empty() || !modifier.multiply_handler.empty() ) {
-                enchantment::platform_modifier value;
-                value.kind = modifier.kind;
-                value.target = modifier.target;
-                value.part = modifier.part;
-                const std::string owner = this->owner;
-                const std::string enchantment_name = source.id;
-                if( !modifier.add_handler.empty() ) {
-                    const std::string handler = modifier.add_handler;
-                    const std::string kind = modifier.kind;
-                    const std::string target = modifier.target;
-                    const std::string part = modifier.part;
-                    value.add = [owner, enchantment_name, kind, target, part, handler,
-                                 load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels,
-                                 load_character_inputs = source.load_character_inputs](
-                    const const_dialogue & dialogue ) {
-                        return invoke_enchantment_number_handler(
-                                   owner, enchantment_name, kind + ":add", target, part,
-                                   handler, dialogue, load_skills, load_spell_levels, load_character_inputs ).value_or( 0.0 );
-                    };
-                }
-                if( !modifier.multiply_handler.empty() ) {
-                    const std::string handler = modifier.multiply_handler;
-                    const std::string kind = modifier.kind;
-                    const std::string target = modifier.target;
-                    const std::string part = modifier.part;
-                    value.multiply = [owner, enchantment_name, kind, target, part, handler,
-                                      load_skills = modifier.load_skills, load_spell_levels = modifier.load_spell_levels,
-                                      load_character_inputs = source.load_character_inputs](
-                    const const_dialogue & dialogue ) {
-                        return invoke_enchantment_number_handler(
-                                   owner, enchantment_name, kind + ":multiply", target, part,
-                                   handler, dialogue, load_skills, load_spell_levels, load_character_inputs ).value_or( 0.0 );
-                    };
-                }
-                native.platform_modifiers.push_back( std::move( value ) );
+            if( !source.native_modifier_order && ( add || multiply ) ) {
+                native.platform_modifiers.push_back( {
+                    modifier.kind, modifier.target, modifier.part, std::move( add ), std::move( multiply )
+                } );
             }
         }
 
@@ -6279,21 +6366,22 @@ void character_content_transaction::impl::apply_enchantment()
                 };
             } else {
                 const std::string handler = vision.condition_handler;
-                value.condition = [owner, enchantment_name, handler](
+                value.condition = [owner, enchantment_name, handler, target_inputs = vision.target_inputs](
                 const const_dialogue & dialogue ) {
                     return invoke_enchantment_condition_handler(
                                owner, enchantment_name, "vision", std::string_view(),
-                               handler, dialogue ).value_or( false );
+                               handler, dialogue, std::nullopt, target_inputs ).value_or( false );
                 };
             }
             if( !vision.distance_handler.empty() ) {
                 const std::string handler = vision.distance_handler;
-                value.platform_range = [owner, enchantment_name, handler](
+                value.platform_range = [owner, enchantment_name, handler,
+                                        load_character_inputs = source.load_character_inputs](
                 const const_dialogue & dialogue ) {
                     return std::max( 0.0, invoke_enchantment_number_handler(
                                          owner, enchantment_name, "vision_range",
                                          std::string_view(), std::string_view(), handler,
-                                         dialogue ).value_or( 0.0 ) );
+                                         dialogue, std::nullopt, std::nullopt, load_character_inputs ).value_or( 0.0 ) );
                 };
             }
             for( const enchantment_vision_description_definition_data &description :
@@ -6312,11 +6400,12 @@ void character_content_transaction::impl::apply_enchantment()
                 } else {
                     const std::string handler = description.condition_handler;
                     const std::string description_id = description.id;
-                    result.condition = [owner, enchantment_name, handler, description_id](
+                    result.condition = [owner, enchantment_name, handler, description_id,
+                                       target_inputs = description.target_inputs ? description.target_inputs : vision.target_inputs](
                     const const_dialogue & dialogue ) {
                         return invoke_enchantment_condition_handler(
                                    owner, enchantment_name, "vision_description",
-                                   description_id, handler, dialogue ).value_or( false );
+                                   description_id, handler, dialogue, std::nullopt, target_inputs ).value_or( false );
                     };
                 }
                 value.special_vision_descriptions_vector.push_back( std::move( result ) );
@@ -7479,6 +7568,9 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.has );
                 hash_part( state, value.condition );
                 hash_part( state, value.condition_handler );
+                if( value.native_modifier_order ) {
+                    hash_part( state, "native_modifier_order" );
+                }
                 if( value.load_character_inputs ) {
                     hash_part( state, "load_character_inputs" );
                     const auto hash_ids = [&]( const char *key, const std::vector<std::string> & ids ) {
@@ -7501,6 +7593,17 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "spell_levels", value.load_character_inputs->spell_levels );
                     hash_ids( "spell_school_levels", value.load_character_inputs->spell_school_levels );
                     hash_ids( "spell_school_level_sums", value.load_character_inputs->spell_school_level_sums );
+                    hash_ids( "spell_school_counts", value.load_character_inputs->spell_school_counts );
+                    hash_part( state, std::to_string( value.load_character_inputs->nearby_monsters.size() ) );
+                    for( const auto &[name, query] : value.load_character_inputs->nearby_monsters ) {
+                        hash_ids( name.c_str(), query.species );
+                        hash_part( state, query.attitude );
+                        hash_part( state, std::to_string( query.radius ) );
+                    }
+                    hash_part( state, std::to_string( value.load_character_inputs->body_part_effects.size() ) );
+                    for( const auto &[part, effects] : value.load_character_inputs->body_part_effects ) {
+                        hash_ids( part.c_str(), effects );
+                    }
                     hash_part( state, value.load_character_inputs->move_mode ? "move_mode" : "no_move_mode" );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
@@ -7595,6 +7698,28 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, std::to_string( vision.distance ) );
                     hash_part( state, vision.distance_handler );
                     hash_part( state, vision.condition_handler );
+                    const auto hash_target_inputs = [&]( const auto &inputs ) {
+                        if( !inputs ) {
+                            return;
+                        }
+                        hash_part( state, "target_inputs" );
+                        for( const auto *ids : { &inputs->species, &inputs->flags, &inputs->traits,
+                                                &inputs->effects } ) {
+                            hash_part( state, std::to_string( ids->size() ) );
+                            for( const std::string &id : *ids ) {
+                                hash_part( state, id );
+                            }
+                        }
+                        hash_part( state, inputs->line_of_sight ? "line_of_sight" : "no_line_of_sight" );
+                        hash_part( state, inputs->warm ? "warm" : "no_warm" );
+                        hash_part( state, inputs->size ? "size" : "no_size" );
+                        hash_part( state, inputs->npc ? "npc" : "no_npc" );
+                        hash_part( state, inputs->character ? "character" : "no_character" );
+                        hash_part( state, inputs->hostile ? "hostile" : "no_hostile" );
+                        hash_part( state, inputs->anger ? "anger" : "no_anger" );
+                        hash_part( state, inputs->spell_count ? "spell_count" : "no_spell_count" );
+                    };
+                    hash_target_inputs( vision.target_inputs );
                     hash_part( state, vision.precise ? "precise" : "imprecise" );
                     hash_part( state, vision.ignores_aiming_cone ?
                                "ignores_aiming_cone" : "uses_aiming_cone" );
@@ -7606,6 +7731,7 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, description.symbol );
                         hash_part( state, description.text );
                         hash_part( state, description.condition_handler );
+                        hash_target_inputs( description.target_inputs );
                     }
                 }
             }

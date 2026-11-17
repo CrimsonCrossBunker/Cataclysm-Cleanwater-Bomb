@@ -7,8 +7,11 @@
 #include <string_view>
 #include <vector>
 
+#include "coordinates.h"
 #include "lua_platform_sol.h"
 #include "type_id.h"
+
+class monster;
 
 namespace cata::lua_platform
 {
@@ -17,6 +20,8 @@ class game_handle_runtime;
 
 namespace detail
 {
+std::size_t count_native_nearby_monsters( const tripoint_abs_ms &origin, int radius,
+        std::string_view attitude, const std::function<bool( const monster & )> &matches );
 std::vector<matec_id> read_technique_blacklist( const sol::object &value,
         std::string_view api_name );
 } // namespace detail
