@@ -361,10 +361,7 @@
     "valid": false,
     "description": "You've gotten pretty good at sneaking up on people.  When you have no allies within 20 squares, enemies' vision detection range is reduced by 15%.",
     "enchantments": [
-      {
-        "condition": { "math": [ "u_characters_nearby('radius': 20, 'attitude': 'allies') == 0" ] },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 15 } ]
-      }
+      "INLINE_ENCH_perk_ghost_stealth_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1211,22 +1208,9 @@
     "valid": false,
     "description": "Conventional wisdom says it's not healthy to be fat, but you're nothing if not unconventional.  Your natural padding acts as a ballistic vest, and the fatter you are, the more protection you'll get.  You must be at least Obese to receive any benefit.",
     "enchantments": [
-      {
-        "condition": {
-          "and": [ { "math": [ "u_calories('format': 'percent') >= 200" ] }, { "math": [ "u_calories('format': 'percent') < 300" ] } ]
-        },
-        "mutations": [ "perk_kevlard_obese" ]
-      },
-      {
-        "condition": {
-          "and": [ { "math": [ "u_calories('format': 'percent') >= 300" ] }, { "math": [ "u_calories('format': 'percent') < 400" ] } ]
-        },
-        "mutations": [ "perk_kevlard_veryobese" ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_calories('format': 'percent') >= 400" ] } ] },
-        "mutations": [ "perk_kevlard_morbidlyobese" ]
-      }
+      "INLINE_ENCH_perk_kevlard_0",
+      "INLINE_ENCH_perk_kevlard_1",
+      "INLINE_ENCH_perk_kevlard_2"
     ],
     "flags": [ "PERK" ]
   },
@@ -1332,19 +1316,7 @@
     "valid": false,
     "description": "You know how to leverage your allies' presence when talking with others, granting you a small boost to lying, persuading and intimidating for each nearby ally.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "SOCIAL_LIE", "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] } },
-          {
-            "value": "SOCIAL_PERSUADE",
-            "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] }
-          },
-          {
-            "value": "SOCIAL_INTIMIDATE",
-            "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_perk_peer_pressure_0"
     ],
     "flags": [ "PERK" ]
   },

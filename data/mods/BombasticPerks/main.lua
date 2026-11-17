@@ -17,3 +17,5 @@ require("inline_enchantment_values")
 require("environment_enchantments")
 
 require("inline_special_vision")
+
+require("body_enchantments")
