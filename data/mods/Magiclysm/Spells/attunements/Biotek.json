@@ -26,11 +26,6 @@
     "energy_source": "BIONIC"
   },
   {
-    "id": "jury_rig",
-    "type": "requirement",
-    "components": [ [ [ "e_scrap", 2 ], [ "scrap", 1 ] ] ]
-  },
-  {
     "id": "biotek_healing",
     "type": "SPELL",
     "name": "Jury Rig",

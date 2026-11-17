@@ -1,11 +1,6 @@
 [
   {
     "id": "spy_wasp",
-    "type": "requirement",
-    "components": [ [ [ "e_scrap", 2 ] ] ]
-  },
-  {
-    "id": "spy_wasp",
     "type": "SPELL",
     "name": "Spy Wasp",
     "description": "Sends out a partly magical, partly electronic spy drone shaped like a wasp that reveals terrain in a line in front of you.  The wasp can travel through walls.",

@@ -50,21 +50,6 @@
     ]
   },
   {
-    "id": "mag_green_roughage",
-    "type": "requirement",
-    "components": [
-      [
-        [ "young_leaves", 2 ],
-        [ "leaves", 2 ],
-        [ "grape_leaves", 2 ],
-        [ "fiddlehead_raw", 2 ],
-        [ "cattail_rhizome", 2 ],
-        [ "raw_dandelion", 2 ],
-        [ "juniper", 2 ]
-      ]
-    ]
-  },
-  {
     "type": "item_group",
     "id": "mushroom_collection",
     "subtype": "distribution",

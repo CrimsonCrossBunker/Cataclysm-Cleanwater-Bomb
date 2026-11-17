@@ -1,10 +1,5 @@
 [
   {
-    "id": "summon_golem",
-    "type": "requirement",
-    "components": [ [ [ "golemcore", 1 ] ] ]
-  },
-  {
     "id": "summon_golem_clay",
     "type": "SPELL",
     "spell_class": "GOLEMANCER",

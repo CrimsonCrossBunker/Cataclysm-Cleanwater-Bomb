@@ -47,17 +47,6 @@
     ]
   },
   {
-    "id": "spell_components_mana_upgrade_efficiency_01",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 1 }, { "id": "MANA_FOCUS", "level": 1 } ],
-    "components": [
-      [ [ "mana_energy_weak", 5, "LIST" ] ],
-      [ [ "mercury", 100 ] ],
-      [ [ "crystallized_mana", 25 ] ],
-      [ [ "copper", 250 ], [ "scrap_copper", 5 ] ]
-    ]
-  },
-  {
     "id": "mana_upgrade_efficiency_02",
     "type": "SPELL",
     "name": { "str": "Second Circle: Mana Efficiency" },
@@ -108,18 +97,6 @@
       {
         "u_message": "You intone the final words of the spell, but without the proper conditions being fulfilled it has no effect."
       }
-    ]
-  },
-  {
-    "id": "spell_components_mana_upgrade_efficiency_02",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 2 }, { "id": "MANA_FOCUS", "level": 2 } ],
-    "components": [
-      [ [ "mana_energy_strong", 5, "LIST" ] ],
-      [ [ "mercury", 250 ] ],
-      [ [ "mana_infused_blood", 10 ] ],
-      [ [ "crystallized_mana", 75 ] ],
-      [ [ "silver_small", 250 ] ]
     ]
   },
   {
@@ -179,17 +156,6 @@
       {
         "u_message": "You intone the final words of the spell, but without the proper conditions being fulfilled it has no effect."
       }
-    ]
-  },
-  {
-    "id": "spell_components_mana_upgrade_regeneration_01",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 1 }, { "id": "MANA_FOCUS", "level": 1 } ],
-    "components": [
-      [ [ "mana_energy_weak", 5, "LIST" ] ],
-      [ [ "mercury", 100 ] ],
-      [ [ "crystallized_mana", 25 ] ],
-      [ [ "mana_potion_lesser", 40 ], [ "mana_potion", 10 ], [ "mana_potion_greater", 2 ] ]
     ]
   },
   {
@@ -264,18 +230,6 @@
     ]
   },
   {
-    "id": "spell_components_mana_upgrade_regeneration_02",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 2 }, { "id": "MANA_FOCUS", "level": 2 } ],
-    "components": [
-      [ [ "mana_energy_strong", 5, "LIST" ] ],
-      [ [ "mercury", 250 ] ],
-      [ [ "mana_infused_blood", 10 ] ],
-      [ [ "crystallized_mana", 75 ] ],
-      [ [ "mana_potion_lesser", 200 ], [ "mana_potion", 50 ], [ "mana_potion_greater", 10 ] ]
-    ]
-  },
-  {
     "id": "mana_upgrade_sensitivity_01",
     "type": "SPELL",
     "name": { "str": "First Circle: Lesser Mana Sensitivity" },
@@ -333,17 +287,6 @@
     ]
   },
   {
-    "id": "spell_components_mana_upgrade_sensitivity_01",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 1 }, { "id": "MANA_FOCUS", "level": 1 } ],
-    "components": [
-      [ [ "mana_energy_weak", 5, "LIST" ] ],
-      [ [ "mercury", 100 ] ],
-      [ [ "crystallized_mana", 25 ] ],
-      [ [ "precious_gemstones", 5, "LIST" ], [ "semiprecious_gemstones", 25, "LIST" ] ]
-    ]
-  },
-  {
     "id": "mana_upgrade_sensitivity_02",
     "type": "SPELL",
     "name": { "str": "Second Circle: Mana Sensitivity" },
@@ -398,18 +341,6 @@
       {
         "u_message": "You intone the final words of the spell, but without the proper conditions being fulfilled it has no effect."
       }
-    ]
-  },
-  {
-    "id": "spell_components_mana_upgrade_sensitivity_02",
-    "type": "requirement",
-    "qualities": [ { "id": "MANA_INFUSE", "level": 2 }, { "id": "MANA_FOCUS", "level": 2 } ],
-    "components": [
-      [ [ "mana_energy_strong", 5, "LIST" ] ],
-      [ [ "mercury", 250 ] ],
-      [ [ "mana_infused_blood", 10 ] ],
-      [ [ "crystallized_mana", 75 ] ],
-      [ [ "precious_gemstones", 25, "LIST" ], [ "semiprecious_gemstones", 150, "LIST" ] ]
     ]
   }
 ]

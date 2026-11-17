@@ -21,11 +21,5 @@
     "max_range": 1,
     "base_casting_time": 10,
     "targeted_monster_species": [ "WARG" ]
-  },
-  {
-    "id": "spell_components_goblin_warg_taming",
-    "type": "requirement",
-    "//": "meat for Warg-Friend",
-    "components": [ [ [ "meat", 1 ], [ "meat_scrap", 9 ], [ "poultry", 1 ], [ "poultry_scrap", 9 ] ] ]
   }
 ]
