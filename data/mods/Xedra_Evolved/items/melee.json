@@ -52,7 +52,7 @@
     "description": "Green shoots entwine around this sword and it seems to move of its own volition in your hands.",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "relative": { "melee_damage": { "biological": 9 } },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "ATTACK_SPEED", "add": -20 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_spring_lord_estoc_0" } ]
   },
   {
     "id": "summer_lord_estoc",
@@ -64,7 +64,7 @@
     "description": "The air around this sword shimmers like the space over asphalt in summer and it seems to move of its own volition in your hands.",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "relative": { "melee_damage": { "heat": 9 } },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "ATTACK_SPEED", "add": -20 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_summer_lord_estoc_0" } ]
   },
   {
     "id": "autumn_lord_estoc",
@@ -76,7 +76,7 @@
     "description": "This sword is surrounded by falling brown leaves and seems to move of its own volition in your hands.",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "relative": { "melee_damage": { "withering_damage": 9 } },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "ATTACK_SPEED", "add": -20 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_autumn_lord_estoc_0" } ]
   },
   {
     "id": "winter_lord_estoc",
@@ -87,7 +87,7 @@
     "description": "This sword is covered in shifting frost and seems to move of its own volition in your hands.",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "relative": { "melee_damage": { "cold": 9 } },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "ATTACK_SPEED", "add": -20 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_winter_lord_estoc_0" } ]
   },
   {
     "id": "wild_huntsman_hunting_blade",
@@ -105,15 +105,7 @@
     "delete": { "flags": "CONDUCTIVE" },
     "relative": { "melee_damage": { "biological": 5 } },
     "passive_effects": [
-      {
-        "has": "WIELD",
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "BONUS_BLOCK", "add": 1 },
-          { "value": "ATTACK_SPEED", "add": -10 },
-          { "value": "WEAKPOINT_ACCURACY", "multiply": 1 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_wild_huntsman_hunting_blade_0" }
     ]
   },
   {
@@ -124,7 +116,7 @@
     "copy-from": "mace",
     "description": "A giant bloodstained club, barely human wieldable with two hands.  You see shadowy tendrils of blood whenever it connects with an enemy, sticking to whatever it hits and burning like acid.",
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "BELT_CLIP", "ALWAYS_TWOHAND" ],
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "hit_you_effect": [ { "id": "blood_tendrils" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_redcap_club_0" } ]
   },
   {
     "id": "blood_tendrils",
@@ -150,7 +142,7 @@
     "longest_side": "60 cm",
     "material": [ "moon_tears" ],
     "weapon_category": [ "SHORT_SWORDS" ],
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "hit_you_effect": [ { "id": "distant_thunder" } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_pooka_gladius_0" } ]
   },
   {
     "type": "ITEM",

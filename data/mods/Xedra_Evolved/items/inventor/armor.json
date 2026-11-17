@@ -53,7 +53,7 @@
     "techniques": [ "WBLOCK_1" ],
     "flags": [ "MORPHIC", "WATERPROOF", "STURDY", "PADDED", "TRADER_AVOID", "PSYSHIELD_PARTIAL", "MUNDANE", "INVENTOR_CRAFTED" ],
     "tool_ammo": [ "battery" ],
-    "passive_effects": [ { "has": "WORN", "condition": "ACTIVE", "values": [ { "value": "INTELLIGENCE", "add": 5 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_helmet_inventor_0" } ]
   },
   {
     "id": "helmet_inventor_on",
@@ -210,7 +210,7 @@
       }
     ],
     "tool_ammo": "battery",
-    "passive_effects": [ { "has": "WORN", "condition": "ACTIVE", "values": [ { "value": "CARRY_WEIGHT", "add": 35000 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_inventor_leg_weight_0" } ]
   },
   {
     "id": "inventor_leg_weight_on",
@@ -337,16 +337,7 @@
     "flags": [ "MORPHIC", "WATERPROOF", "STURDY", "SOFT", "TRADER_AVOID", "BELTED", "MUNDANE", "INVENTOR_CRAFTED" ],
     "tool_ammo": [ "battery" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.5 },
-          { "type": "stab", "multiply": -0.5 },
-          { "type": "cut", "multiply": -0.5 },
-          { "type": "bullet", "multiply": -0.5 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_aura_force_0" }
     ]
   },
   {
@@ -426,29 +417,7 @@
     "armor": [ { "coverage": 10, "encumbrance": 1, "covers": [ "head" ], "specifically_covers": [ "head_crown" ] } ],
     "tool_ammo": [ "battery" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "distance": 30,
-            "descriptions": [
-              {
-                "id": "moving_creature",
-                "symbol": "?",
-                "color": "c_white",
-                "text": "Your halo register potential hazard from this direction."
-              }
-            ]
-          }
-        ],
-        "values": [
-          { "value": "BONUS_DODGE", "add": 1 },
-          { "value": "PERCEPTION", "add": 2 },
-          { "value": "RANGED_DAMAGE", "multiply": 0.33 },
-          { "value": "WEAPON_DISPERSION", "multiply": -0.33 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_vision_halo_0" }
     ]
   },
   {
@@ -616,7 +585,7 @@
     "armor": [ { "encumbrance": 4, "coverage": 45, "covers": [ "arm_l", "arm_r" ] } ],
     "tool_ammo": [ "battery" ],
     "passive_effects": [
-      { "has": "WORN", "condition": "ACTIVE", "hit_you_effect": [ { "id": "inventor_electric_fist_spell", "once_in": 6 } ] }
+      { "id": "ITEM_ENCH_Xedra_Evolved_inventor_electric_fist_0" }
     ]
   },
   {
@@ -687,7 +656,7 @@
       }
     ],
     "tool_ammo": [ "battery" ],
-    "passive_effects": [ { "has": "WORN", "condition": "ACTIVE", "values": [ { "value": "REGEN_STAMINA", "multiply": 0.6 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_wolf_mask_0" } ]
   },
   {
     "id": "wolf_mask_act",
@@ -768,7 +737,7 @@
     ],
     "flags": [ "MORPHIC", "BELTED", "ALLOWS_NATURAL_ATTACKS", "WATER_FRIENDLY", "OVERSIZE", "ELECTRONIC", "INVENTOR_CRAFTED" ],
     "faults": [ { "fault_group": "electronic_general" } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ACTIVE", "mutations": [ "CRAFTING_ASSISTANT_ARMS" ] } ],
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_crafting_assistant_0" } ],
     "armor": [ { "coverage": 50, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
     "tool_ammo": [ "battery" ]
   },

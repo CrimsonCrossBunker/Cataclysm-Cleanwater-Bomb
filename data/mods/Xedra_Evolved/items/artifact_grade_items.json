@@ -45,7 +45,7 @@
     "material": [ "silver" ],
     "symbol": "[",
     "color": "light_gray",
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MAX_MANA", "add": 0 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_dream_attuning_necklace_0" } ]
   },
   {
     "id": "mana_recharge_sphere",

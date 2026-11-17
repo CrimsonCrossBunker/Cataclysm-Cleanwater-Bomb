@@ -17,7 +17,7 @@
     "material_thickness": 2,
     "flags": [ "BELTED" ],
     "armor": [ { "encumbrance": [ 2, 25 ], "coverage": 60, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "STRENGTH", "add": 1 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_banner_dark_forest_0" } ]
   },
   {
     "id": "banner_butterfly_knight",
@@ -37,7 +37,7 @@
     "material_thickness": 2,
     "flags": [ "BELTED" ],
     "armor": [ { "encumbrance": [ 2, 25 ], "coverage": 60, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "DEXTERITY", "add": 1 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_banner_butterfly_knight_0" } ]
   },
   {
     "id": "banner_angry_darkness",
@@ -57,7 +57,7 @@
     "material_thickness": 2,
     "flags": [ "BELTED" ],
     "armor": [ { "encumbrance": [ 2, 25 ], "coverage": 60, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "PERCEPTION", "add": 1 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_banner_angry_darkness_0" } ]
   },
   {
     "id": "banner_starry_wisdom",
@@ -77,7 +77,7 @@
     "material_thickness": 2,
     "flags": [ "BELTED" ],
     "armor": [ { "encumbrance": [ 2, 25 ], "coverage": 60, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "skills": [ { "value": "gramarye", "add": 1 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_banner_starry_wisdom_0" } ]
   },
   {
     "id": "banner_thunderous_rush",
@@ -108,16 +108,7 @@
     "looks_like": "gown_gossamer",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -10 },
-          { "type": "cut", "add": -20 },
-          { "type": "stab", "add": -30 },
-          { "type": "bullet", "multiply": -0.75 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_gown_gossamer_boann_unique_0" }
     ]
   }
 ]

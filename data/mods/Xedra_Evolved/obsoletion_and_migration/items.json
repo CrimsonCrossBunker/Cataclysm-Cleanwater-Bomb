@@ -46,6 +46,6 @@
         "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "MAX_MANA", "add": 0 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_aura_ward_off_rain_0" } ]
   }
 ]

@@ -9,12 +9,7 @@
     "description": "Shimmering like a beam of moonlight, this sword seems to minutely shift its position when not looked at directly.  It exerts a slight pull on your hand when you hold it, moving your body to the proper position.",
     "extend": { "flags": [ "RELIC_PINK" ] },
     "passive_effects": [
-      {
-        "has": "WIELD",
-        "condition": "ALWAYS",
-        "hit_you_effect": [ { "id": "boann_unique_weapon_sword_onhit_blind", "once_in": 3 } ],
-        "values": [ { "value": "ATTACK_SPEED", "add": -25 }, { "value": "MELEE_DAMAGE", "multiply": 0.15 } ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_boann_unique_weapon_sword_0" }
     ]
   },
   {

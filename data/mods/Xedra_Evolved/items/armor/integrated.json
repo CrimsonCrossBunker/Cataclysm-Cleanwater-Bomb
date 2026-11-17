@@ -383,7 +383,7 @@
     "flags": [ "PERSONAL", "PADDED", "UNBREAKABLE", "INTEGRATED", "SEMITANGIBLE", "ZERO_WEIGHT", "NO_DROP" ],
     "qualities": [ [ "BLOW_HOT_AIR", 1 ] ],
     "use_action": [ { "type": "HEAT_FOOD" } ],
-    "passive_effects": [ { "has": "HELD", "condition": "ALWAYS", "values": [ { "value": "MAX_MANA", "add": 0 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_item_salamander_cooking_heat_0" } ]
   },
   {
     "id": "integrated_gelatinous_skin",

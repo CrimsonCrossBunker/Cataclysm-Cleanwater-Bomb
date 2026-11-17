@@ -89,16 +89,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "REGEN_STAMINA", "multiply": 0.2 },
-          { "value": "REGEN_HP", "multiply": 0.2 },
-          { "value": "SOCIAL_INTIMIDATE", "add": 4 },
-          { "value": "HUNGER", "add": 40 }
-        ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_bloody_cap_0" }
     ]
   }
 ]

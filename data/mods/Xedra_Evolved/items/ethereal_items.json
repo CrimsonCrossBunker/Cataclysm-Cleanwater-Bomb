@@ -29,7 +29,7 @@
         "covers": [ "leg_l", "leg_r", "torso", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "mouth", "eyes" ]
       }
     ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "values": [ { "value": "BONUS_DODGE", "add": 2 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_blurred_aura_0" } ]
   },
   {
     "id": "aura_futuresight",
@@ -63,12 +63,7 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "mutations": [ "FUTURESIGHT" ],
-        "values": [ { "value": "BONUS_DODGE", "add": 2 } ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_aura_futuresight_0" }
     ]
   },
   {
@@ -163,17 +158,7 @@
     "flags": [ "PERSONAL", "SEMITANGIBLE", "OVERSIZE", "TRADER_AVOID", "NO_TAKEOFF", "NONCONDUCTIVE" ],
     "max_worn": 1,
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "STRENGTH", "add": 3 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "INTELLIGENCE", "add": -6 },
-          { "value": "PERCEPTION", "add": -3 }
-        ],
-        "mutations": [ "DRUNKEN", "GOODCARDIO" ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_aura_drunken_master_0" }
     ]
   },
   {
@@ -204,7 +189,7 @@
       }
     ],
     "melee_damage": { "bash": 30 },
-    "passive_effects": [ { "has": "WIELD", "condition": "ALWAYS", "values": [ { "value": "MAX_MANA", "multiply": -1 } ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_xe_oneiric_hammer_0" } ]
   },
   {
     "type": "ITEM",
@@ -411,20 +396,8 @@
       }
     ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "ATTACK_SPEED", "multiply": -0.2 },
-          { "value": "FORCEFIELD", "add": 0.1 },
-          { "value": "PAIN_REMOVE", "add": 45 }
-        ]
-      },
-      {
-        "has": "WORN",
-        "condition": { "not": "u_has_weapon" },
-        "melee_damage_bonus": [ { "type": "bash", "add": 10 } ]
-      }
+      { "id": "ITEM_ENCH_Xedra_Evolved_item_ierde_iron_armor_0" },
+      { "id": "ITEM_ENCH_Xedra_Evolved_item_ierde_iron_armor_1" }
     ]
   },
   {
