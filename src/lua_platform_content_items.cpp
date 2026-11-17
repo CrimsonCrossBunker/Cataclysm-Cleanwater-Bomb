@@ -97,7 +97,7 @@ authored_text read_text_option( const sol::table &options, const char *key,
     return detail::read_singular_text_or( options.get<sol::object>( key ), fallback, field );
 }
 
-enum class definition_operation : int { add, replace, edit, extend };
+enum class definition_operation : int { add, replace, edit, extend, upsert };
 enum class handle_lifecycle : int { building, committed, discarded };
 
 std::size_t require_dense_array( const sol::table &values,
@@ -2079,6 +2079,7 @@ std::string operation_name( const definition_operation operation )
 {
     return operation == definition_operation::add ? "add" :
            operation == definition_operation::replace ? "replace" :
+           operation == definition_operation::upsert ? "upsert" :
            operation == definition_operation::extend ? "extend" : "edit";
 }
 
@@ -2971,6 +2972,15 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         return json_flag_definition_handle{
             edit_catalog( id, transaction->json_flags, "json_flag" ), transaction->token
         };
+    } );
+    content.set_function( "upsert_json_flag", [transaction]( const json_flag_definition_handle &
+    handle ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot register a JSON flag definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "JSON flag" );
+        handle.definition->registered = true;
+        transaction->json_flags.push_back( { definition_operation::upsert, handle.definition } );
     } );
     content.set_function( "edit_math_function", [transaction, edit_catalog](
     const std::string & id ) {

@@ -6350,6 +6350,10 @@ function CcbPlatformContent.edit_vitamin(id) end
 ---@return JsonFlagDefinition
 function CcbPlatformContent.edit_json_flag(id) end
 
+---Registers a shared flag, replacing an earlier Mod's definition if present.
+---@param definition JsonFlagDefinition
+function CcbPlatformContent.upsert_json_flag(definition) end
+
 ---@param id string Damage type id staged earlier by this Mod.
 ---@return DamageTypeDefinition
 function CcbPlatformContent.edit_damage_type(id) end
