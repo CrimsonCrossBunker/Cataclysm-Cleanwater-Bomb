@@ -9,3 +9,5 @@ require("inline_enchantment_conditions")
 require("weather_generators")
 
 require("portal_storm_cycle")
+
+require("raid_obelisk")

@@ -222,7 +222,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 19> migrated_character_tasks = {{
+const std::array<character_task_migration, 26> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -260,7 +260,21 @@ const std::array<character_task_migration, 19> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_MOVE_PORTAL_STORM" ),
           "portal_weather_move_due", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_STORM_WARN_OR_CAUSE_RECURRING" ),
-          "portal_storm_cycle_due", nullptr, true, "ccb" }
+          "portal_storm_cycle_due", nullptr, true, "ccb" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_horde_chase_warning" ),
+          "sky_raid_horde_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_megacity_dimension_warning" ),
+          "sky_raid_city_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_hot_dimension_warning" ),
+          "sky_raid_hot_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_cold_dimension_warning" ),
+          "sky_raid_cold_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_reduced_pulselength_warning" ),
+          "sky_raid_short_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_raid_challenge_mode_slow_effect_warning" ),
+          "sky_raid_slow_warning", nullptr, false, "skyisland" },
+        { effect_on_condition_id( "EOC_SI_START_PORTAL_STORM" ),
+          "sky_raid_storm_due", nullptr, false, "skyisland" }
     }
 };
 

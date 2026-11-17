@@ -77,32 +77,6 @@
     }
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_SKY_ISLAND_RANDOM_MERCHANTS_LEAVE",
-    "effect": [
-      {
-        "mapgen_update": "nest_sky_island_exodii_merchant_remove",
-        "om_terrain": "sky_island_edge_north",
-        "target_var": { "global_val": "OM_island_n" }
-      },
-      {
-        "mapgen_update": "nest_sky_island_ammo_merchant_remove",
-        "om_terrain": "sky_island_edge_north",
-        "target_var": { "global_val": "OM_island_n" }
-      },
-      {
-        "mapgen_update": "nest_sky_island_triffid_decor_merchant_remove",
-        "om_terrain": "sky_island_edge_north",
-        "target_var": { "global_val": "OM_island_n" }
-      },
-      {
-        "mapgen_update": "nest_sky_island_merchants_itemt_remove",
-        "om_terrain": "sky_island_edge_north",
-        "target_var": { "global_val": "OM_island_n" }
-      }
-    ]
-  },
-  {
     "type": "mapgen",
     "update_mapgen_id": "nest_sky_island_exodii_merchant_remove",
     "object": { "remove_npcs": [ { "class": "si_exodii_cbm_merchant", "x": 12, "y": 10, "unique_id": "si_exodii_cbm_merchant" } ] }
