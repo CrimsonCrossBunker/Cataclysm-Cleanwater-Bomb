@@ -345,3 +345,21 @@ ccb.runtime.handler("grant_blood_on_vampire_infection", function(event)
     end
 end, 1)
 ccb.runtime.on("game:character_gains_effect", "grant_blood_on_vampire_infection")
+
+local feeding_activity = "ACT_VAMPIRE_DRINKING_BLOOD"
+ccb.content.add(ccb.content.ActivityType {
+    id = feeding_activity,
+    verb = ccb.content.text("drinking blood"),
+    based_on = "time",
+    activity_level = 1,
+    can_resume = false,
+})
+
+ccb.runtime.handler("interrupt_blood_feeding", function(event)
+    if event.data.activity == feeding_activity and event.data.canceled then
+        local character = event.actors.character or services.characters.avatar()
+        message(character, ccb.services.translate("You cancelled drinking blood and thus get no blood."), "debug")
+        value(services.effects.remove(character, id("effect", "effect_vampire_blood_drinking")))
+    end
+end, 1)
+ccb.runtime.on("game:character_finished_activity", "interrupt_blood_feeding")

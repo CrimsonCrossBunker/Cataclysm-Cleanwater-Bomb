@@ -2,8 +2,10 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "dialogue.h"
 #include "effect.h"
+#include "effect_on_condition.h"
 #include "enums.h"
 #include "item.h"
 #include "lua_platform_hooks.h"
@@ -65,7 +67,10 @@ static const itype_id itype_vampire_blood( "vampire_blood" );
 static const efftype_id effect_anathema_need_vampire_blood( "effect_anathema_need_vampire_blood" );
 static const efftype_id effect_feed_from_recently( "feed_from_recently" );
 static const efftype_id effect_recent_vampire_drink( "effect_recent_vampire_drink" );
+static const efftype_id effect_vampire_blood_drinking( "effect_vampire_blood_drinking" );
 static const efftype_id effect_vampire_virus( "vampire_virus" );
+static const activity_id ACT_VAMPIRE_DRINKING_BLOOD( "ACT_VAMPIRE_DRINKING_BLOOD" );
+static const effect_on_condition_id eoc_combat_blood_reward( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" );
 static const morale_type morale_drank_blood( "morale_drank_blood" );
 static const trait_id trait_ANATHEMA_WEAKNESS_MIND_CHAOS( "ANATHEMA_WEAKNESS_MIND_CHAOS" );
 static const trait_id trait_ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD( "ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD" );
@@ -212,5 +217,34 @@ TEST_CASE( "xedra_lua_living_blood_through_item_and_dialogue", "[.][mods][xedra_
                ( friend_donor ? "TALK_NONE" : "TALK_FRIEND" ) );
         cata::lua_platform::end_dialogue_session( conversation );
     }
+}
+
+TEST_CASE( "xedra_lua_interrupts_the_queued_combat_blood_reward", "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const bool interrupted = GENERATE( false, true );
+    clear_avatar();
+    avatar &player = get_avatar();
+    cata::lua_platform::runtime_world_ready( true );
+    player.set_mutation( trait_VAMPIRE );
+    player.vitamin_set( vitamin_human_blood_vitamin, 0 );
+    player.add_effect( effect_vampire_blood_drinking, 4_turns );
+    effect_on_conditions::queue_effect_on_condition( 2_turns, eoc_combat_blood_reward, player, {} );
+    player.assign_activity( ACT_VAMPIRE_DRINKING_BLOOD, to_moves<int>( 3_turns ) );
+    REQUIRE( player.has_activity( ACT_VAMPIRE_DRINKING_BLOOD ) );
+
+    if( interrupted ) {
+        player.cancel_activity();
+        CHECK_FALSE( player.has_activity( ACT_VAMPIRE_DRINKING_BLOOD ) );
+        CHECK( player.backlog.empty() );
+    }
+    CHECK( player.has_effect( effect_vampire_blood_drinking ) == !interrupted );
+
+    calendar::turn += 2_turns;
+    effect_on_conditions::process_effect_on_conditions( player );
+    const int blood = player.vitamin_get( vitamin_human_blood_vitamin );
+    CHECK( blood >= ( interrupted ? 0 : 400 ) );
+    CHECK( blood <= ( interrupted ? 0 : 500 ) );
+    clear_avatar();
 }
 #endif

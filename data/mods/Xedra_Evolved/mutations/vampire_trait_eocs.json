@@ -262,22 +262,6 @@
     ]
   },
   {
-    "id": "EOC_VAMPIRE_DRINK_BLOOD_INTERRUPTED_CHECK",
-    "type": "effect_on_condition",
-    "eoc_type": "EVENT",
-    "required_event": "character_finished_activity",
-    "condition": {
-      "and": [
-        { "compare_string": [ "ACT_VAMPIRE_DRINKING_BLOOD", { "context_val": "activity" } ] },
-        { "math": [ "_canceled == true" ] }
-      ]
-    },
-    "effect": [
-      { "u_message": "You cancelled drinking blood and thus get no blood.", "type": "debug" },
-      { "u_lose_effect": "effect_vampire_blood_drinking" }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_BLOOD_NUMBER_UI",
     "//": "Until the day UI widgets can directly access vitamin levels, this will have to be.",

@@ -58,14 +58,6 @@
   },
   {
     "type": "activity_type",
-    "id": "ACT_VAMPIRE_DRINKING_BLOOD",
-    "activity_level": "NO_EXERCISE",
-    "verb": "drinking blood",
-    "based_on": "time",
-    "can_resume": false
-  },
-  {
-    "type": "activity_type",
     "id": "ACT_WEREWOLF_LEARNING_MOON_GIFT",
     "activity_level": "NO_EXERCISE",
     "verb": "learning a new gift",
