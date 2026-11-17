@@ -15,10 +15,7 @@
     "description": "Your presence is so dangerous you can freeze everything around yourself.",
     "activation_msg": "Everything around you is covered in frost!",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "boreal_mage_cold_damage" } ] } ] }
-      }
+      "INLINE_ENCH_BOREAL_MAGE_COLD_AURA_0"
     ],
     "active_flags": [ "NO_BODY_HEAT" ]
   },
@@ -59,9 +56,7 @@
     "points": 0,
     "description": "Your presence is so dangerous living creatures nearby are smashed.",
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "glacier_mage_bash_damage" } ] } ] }
-      }
+      "INLINE_ENCH_FROZEN_PRESSURE_ON_0"
     ],
     "transform": { "target": "FROZEN_PRESSURE_OFF", "msg_transform": "You suppress your frozen pressure.", "active": false, "moves": 10 }
   },
@@ -88,9 +83,7 @@
     "points": 0,
     "description": "You can perceive radiation being emitted in your surroundings with sufficient precision to see while totally blind.",
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "1 seconds", "spell_effects": [ { "id": "radiation_mage_clairvoyance" } ] } ] }
-      }
+      "INLINE_ENCH_CLAIRVOYANCE_ON_0"
     ],
     "transform": { "target": "CLAIRVOYANCE_OFF", "msg_transform": "You suppress your rad senses.", "active": false, "moves": 10 }
   },
@@ -132,16 +125,8 @@
           }
         ]
       },
-      {
-        "values": [
-          { "value": "SOCIAL_INTIMIDATE", "add": 20 },
-          { "value": "SOCIAL_LIE", "add": 20 },
-          { "value": "SOCIAL_PERSUADE", "add": 20 }
-        ]
-      },
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "mind_read" } ] } ] }
-      }
+      "INLINE_ENCH_MIND_READ_ON_1",
+      "INLINE_ENCH_MIND_READ_ON_2"
     ],
     "transform": { "target": "MIND_READ_OFF", "msg_transform": "You suppress your mind abilities.", "active": false, "moves": 10 }
   },
@@ -173,9 +158,7 @@
     "points": -1,
     "description": "Your presence is so dangerous you can burn living creatures around you.",
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "soul_pressure" } ] } ] }
-      }
+      "INLINE_ENCH_SOUL_PRESSURE_ON_0"
     ],
     "transform": { "target": "SOUL_PRESSURE_OFF", "msg_transform": "You suppress your soul pressure.", "active": false, "moves": 10 }
   },
@@ -202,9 +185,7 @@
     "points": 0,
     "description": "Your body emits a large amount of cold energy, which freezes all enemies near you.",
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "tundra_mage_aoe" } ] } ] }
-      }
+      "INLINE_ENCH_FREEZING_AURA_ON_0"
     ],
     "transform": { "target": "FREEZING_AURA_OFF", "msg_transform": "You suppress your freezing aura.", "active": false, "moves": 10 }
   },
@@ -231,9 +212,7 @@
     "points": 0,
     "description": "Your body can emit an aura of deadly toxins.",
     "enchantments": [
-      {
-        "intermittent_activation": { "effects": [ { "frequency": "5 seconds", "spell_effects": [ { "id": "wither_mage_bio_damage" } ] } ] }
-      }
+      "INLINE_ENCH_TOXIC_AURA_ON_0"
     ],
     "transform": { "target": "TOXIC_AURA_OFF", "msg_transform": "You suppress your toxic aura.", "active": false, "moves": 10 }
   }

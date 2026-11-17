@@ -24,21 +24,7 @@
     "purifiable": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": 2 },
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "STRENGTH", "add": 10 },
-          { "value": "NIGHT_VIS", "add": 5 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.4 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 25 },
-          { "value": "PAIN", "multiply": -0.4 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "FANGS", "MUZZLE_BEAR", "TAIL_STUB", "PAWS_LARGE", "URSINE_FUR", "URSINE_EARS", "PRED3" ]
-      },
+      "INLINE_ENCH_DRUID_SHIFTER_BEAR_FORM_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
@@ -83,20 +69,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "NIGHT_VIS", "add": 11 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.2 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 25 },
-          { "value": "FOOTSTEP_NOISE", "multiply": -0.6 },
-          { "value": "MOVECOST_OBSTACLE_MOD", "multiply": -0.5 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "FANGS", "TAIL_LONG", "PAWS", "FELINE_FUR", "FELINE_EARS", "PRED3", "WHISKERS", "FELINE_LEAP" ]
-      },
+      "INLINE_ENCH_DRUID_SHIFTER_COUGAR_FORM_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
@@ -133,19 +106,7 @@
     "purifiable": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": 0.1 },
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "MOVE_COST", "multiply": -0.5 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "NIGHT_VIS", "add": 6 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "skills": [ { "value": "dodge", "add": 2 } ],
-        "mutations": [ "ANTLERS", "HOOVES" ]
-      },
+      "INLINE_ENCH_DRUID_SHIFTER_DEER_FORM_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
@@ -168,16 +129,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": -0.75 },
-          { "value": "MELEE_DAMAGE", "multiply": -0.95 },
-          { "value": "METABOLISM", "multiply": -0.333 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 40 }
-        ]
-      },
+      "INLINE_ENCH_DRUID_SHIFTER_FISH_FORM_TRAITS_0",
       {
         "condition": { "not": { "u_is_on_terrain_with_flag": "SWIMMABLE" } },
         "ench_effects": [ { "effect": "effect_druid_shifter_fish_form_cant_move", "intensity": 1 } ]
@@ -246,20 +198,7 @@
     "player_display": false,
     "bodytemp_modifiers": [ 300, 800 ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": -0.75 },
-          { "value": "SPEED", "multiply": 0.1 },
-          { "value": "MELEE_DAMAGE", "multiply": -0.95 },
-          { "value": "DEXTERITY", "add": 8 },
-          { "value": "PERCEPTION", "add": 4 },
-          { "value": "NIGHT_VIS", "add": 4 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "skills": [ { "value": "dodge", "add": 6 } ],
-        "mutations": [ "BIRD_EYE", "DOWN", "EAGLEEYED", "LIGHTEATER" ]
-      },
+      "INLINE_ENCH_DRUID_SHIFTER_RAVEN_FORM_TRAITS_0",
       {
         "condition": {
           "and": [
@@ -294,7 +233,7 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "MAX_MANA", "multiply": -1000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRUID_SHIFTER_MANA_REDUCER_0" ]
   },
   {
     "type": "mutation",
@@ -349,13 +288,7 @@
     "mixed_effect": true,
     "points": 0,
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.5 }
-        ]
-      }
+      "INLINE_ENCH_DEMON_POSSES_0"
     ],
     "flags": [ "NO_SPELLCASTING" ]
   },
@@ -375,13 +308,7 @@
     "description": "Your cardiovascular system has caught up with your muscular physique, so who needs pathetic human cars?  Strength +4.",
     "types": [ "SIZE" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_DEMON_HUGE_0"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "destroys_gear": true
@@ -444,14 +371,7 @@
       [ "head", 50 ]
     ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "SPEED", "multiply": -0.25 },
-          { "value": "DEXTERITY", "add": -6 },
-          { "value": "CARRY_WEIGHT", "multiply": -0.5 }
-        ],
-        "ench_effects": [ { "effect": "effect_biomancer_npc_wretch_polymorph", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_BIOMANCER_NPC_WRETCH_POLYMORPH_0"
     ],
     "flags": [ "MUTE", "HYPEROPIC", "MYOPIC_SUPERNATURAL", "NO_SPELLCASTING", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
     "override_look": { "id": "mon_baleful_polymorph_crawler", "tile_category": "monster" }

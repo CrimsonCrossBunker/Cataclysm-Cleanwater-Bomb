@@ -48,3 +48,5 @@ require("enchantment_values")
 require("school_enchantments")
 
 require("effect_enchantments")
+
+require("mutation_enchantments")

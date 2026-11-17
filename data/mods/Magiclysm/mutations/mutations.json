@@ -59,7 +59,7 @@
     "category": [ "DRAGON_BLACK", "MANATOUCHED", "SPECIES_ELF", "SPECIES_RAVENFOLK" ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 500 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_ADD1_0" ]
   },
   {
     "type": "mutation",
@@ -74,7 +74,7 @@
     "starting_trait": true,
     "prereqs": [ "MANA_ADD1" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 1000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_ADD2_0" ]
   },
   {
     "type": "mutation",
@@ -88,7 +88,7 @@
     "changes_to": [ "MANA_ADD_MANATOUCHED" ],
     "prereqs": [ "MANA_ADD2" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 2000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_ADD3_0" ]
   },
   {
     "type": "mutation",
@@ -101,7 +101,7 @@
     "category": [ "SPECIES_DWARF", "SPECIES_GOBLIN" ],
     "types": [ "MANA_ADD" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": -500 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_SUB1_0" ]
   },
   {
     "type": "mutation",
@@ -114,7 +114,7 @@
     "types": [ "MANA_ADD" ],
     "prereqs": [ "MANA_SUB1" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": -1000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_SUB2_0" ]
   },
   {
     "type": "mutation",
@@ -126,7 +126,7 @@
     "types": [ "MANA_ADD" ],
     "prereqs": [ "MANA_SUB2" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": -2000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_SUB3_0" ]
   },
   {
     "type": "mutation",
@@ -140,7 +140,7 @@
     "category": [ "FISH", "ELFA", "ALPHA", "PLANT", "CEPHALOPOD", "MANATOUCHED", "DRAGON_BLACK", "SPECIES_ELF", "SPECIES_LIZARDFOLK" ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_REGEN1_0" ]
   },
   {
     "type": "mutation",
@@ -155,7 +155,7 @@
     "category": [ "FISH", "ELFA", "PLANT", "MANATOUCHED", "DRAGON_BLACK", "SPECIES_ELF" ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_REGEN2_0" ]
   },
   {
     "type": "mutation",
@@ -169,7 +169,7 @@
     "threshreq": [ "THRESH_PLANT", "THRESH_MANA", "THRESH_DRAGON_BLACK", "THRESH_SPECIES_ELF" ],
     "category": [ "PLANT", "DRAGON_BLACK", "SPECIES_ELF" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_REGEN3_0" ]
   },
   {
     "type": "mutation",
@@ -183,7 +183,7 @@
     "category": [ "LIZARD", "BEAST", "LUPINE", "URSINE", "CATTLE", "SLIME", "MEDICAL", "CHIMERA", "SPECIES_GOBLIN" ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_REGEN1_0" ]
   },
   {
     "type": "mutation",
@@ -197,7 +197,7 @@
     "types": [ "MANA_REGEN" ],
     "category": [ "BEAST", "CATTLE", "SLIME", "MEDICAL", "CHIMERA" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": -0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_REGEN2_0" ]
   },
   {
     "type": "mutation",
@@ -210,7 +210,7 @@
     "types": [ "MANA_REGEN" ],
     "category": [ "BEAST", "MEDICAL" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_REGEN3_0" ]
   },
   {
     "type": "mutation",
@@ -239,7 +239,7 @@
     ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_MULT1_0" ]
   },
   {
     "type": "mutation",
@@ -254,7 +254,7 @@
     "prereqs": [ "MANA_MULT1" ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.9 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_MULT2_0" ]
   },
   {
     "type": "mutation",
@@ -268,7 +268,7 @@
     "category": [ "SLIME", "CATTLE", "CEPHALOPOD", "MANATOUCHED", "DRAGON_BLACK" ],
     "prereqs": [ "MANA_MULT2" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 1.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_MULT3_0" ]
   },
   {
     "type": "mutation",
@@ -295,7 +295,7 @@
     ],
     "starting_trait": true,
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": -0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_MULT1_0" ]
   },
   {
     "type": "mutation",
@@ -309,7 +309,7 @@
     "category": [ "BEAST", "INSECT", "TROGLOBITE", "MOUSE", "MEDICAL", "CHIMERA", "RAPTOR", "SPECIES_DWARF" ],
     "prereqs": [ "BAD_MANA_MULT1" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": -0.35 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_MULT2_0" ]
   },
   {
     "type": "mutation",
@@ -322,7 +322,7 @@
     "category": [ "INSECT", "MEDICAL", "CHIMERA" ],
     "prereqs": [ "BAD_MANA_MULT2" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": -0.65 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BAD_MANA_MULT3_0" ]
   },
   {
     "type": "mutation",
@@ -400,7 +400,7 @@
     "starting_trait": true,
     "types": [ "MANA_ADD", "MANA_REGEN", "MANA_MULT" ],
     "flags": [ "NO_SPELLCASTING" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": -1 }, { "value": "MAX_MANA", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MAGIC_EMPTY_0" ]
   },
   {
     "type": "mutation",
