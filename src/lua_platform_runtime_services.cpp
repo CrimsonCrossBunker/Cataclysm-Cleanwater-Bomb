@@ -3644,6 +3644,11 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         // and draw count instead of advancing the Mod's isolated stream.
         return rng_float( minimum, maximum );
     } );
+    random.set_function( "native_probability", [require_random_runtime]( const double numerator,
+    const double denominator ) {
+        static_cast<void>( require_random_runtime( true ) );
+        return x_in_y( numerator, denominator );
+    } );
     random.set_function( "weighted_index", [require_random_runtime]( const sol::table & weights ) {
         const std::vector<int> native_weights = platform_random_weights( weights );
         static_cast<void>( require_random_runtime() );

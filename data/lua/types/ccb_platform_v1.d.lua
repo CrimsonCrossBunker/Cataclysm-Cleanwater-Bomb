@@ -12599,19 +12599,26 @@ function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) en
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
----Draw through the native global game RNG during a runtime or save-reconstruction enchantment modifier callback.
+---Draw through the native global game RNG during a runtime or save-reconstruction enchantment callback.
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
----Draw through native rng_float during a runtime or save-reconstruction enchantment modifier callback.
+---Draw through native rng_float during a runtime or save-reconstruction enchantment callback.
 ---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
 ---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
 ---@param minimum number Native floating-point range endpoint.
 ---@param maximum number Native floating-point range endpoint.
 ---@return number
 function CcbPlatformRandomApi.native_float(minimum, maximum) end
+
+---Draw through native x_in_y using the shared game RNG, including in save-reconstruction enchantment callbacks.
+---Always consumes one native floating-point draw and compares it to numerator / denominator.
+---@param numerator number Native operand, passed through without clamping.
+---@param denominator number Native operand, passed through without clamping.
+---@return boolean
+function CcbPlatformRandomApi.native_probability(numerator, denominator) end
 
 ---Pick an original 1-based row using native weighted_int_list semantics and the shared game RNG.
 ---Rows with nonpositive weights are ignored. Dense rows are limited only by the

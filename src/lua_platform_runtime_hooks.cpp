@@ -1313,7 +1313,7 @@ std::optional<bool> invoke_enchantment_condition_handler(
         payload["target_inputs"] = collect_enchantment_vision_target( *owner->lua, dialogue, *target_inputs );
     }
     sol::protected_function callback = handler->second.callback;
-    callback_scope callback_guard( *owner );
+    callback_scope callback_guard( *owner, load_character_inputs.has_value() || target_inputs.has_value() );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
