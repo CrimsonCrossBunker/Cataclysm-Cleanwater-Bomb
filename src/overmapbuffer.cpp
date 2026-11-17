@@ -2252,7 +2252,7 @@ std::string overmapbuffer::get_description_at( const tripoint_abs_sm &where, boo
     }
 
     if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
-        ter_name = string_format( _( "%s (riot damage)" ), ter_name );
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
     }
     if( where.z() != 0 ) {
         return draw_origin ? ter_name + "\n" + get_origin( oter->get_type_id()->src ) : ter_name;
@@ -2331,7 +2331,7 @@ void overmapbuffer::display_description_at( const tripoint_abs_sm &where, bool d
     }
 
     if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
-        ter_name = string_format( _( "%s (riot damage)" ), ter_name );
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
     }
     if( where.z() != 0 ) {
         cataimgui::TextColoredParagraph( ter_color, ter_name );
