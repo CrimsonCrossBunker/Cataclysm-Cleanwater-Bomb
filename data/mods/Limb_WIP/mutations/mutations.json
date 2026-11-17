@@ -43,7 +43,7 @@
     "visibility": 8,
     "ugliness": 4,
     "description": "Your eyes bulge out several inches from your skull.  This does not affect your vision in any way.",
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_bulging" } ] } ],
+    "enchantments": [ "INLINE_ENCH_EYEBULGE_0" ],
     "leads_to": [ "MEMBRANE", "PRE_EYES_INSECT" ],
     "changes_to": [ "EYES_INSECT", "COMPOUND_EYES", "EYESTALKS1", "CEPH_EYES", "FROG_EYES" ],
     "category": [ "BATRACHIAN", "INSECT", "GASTROPOD", "FISH", "CEPHALOPOD", "CRUSTACEAN" ]
@@ -110,7 +110,7 @@
     "threshreq": [ "THRESH_GASTROPOD" ],
     "leads_to": [ "GASTROPOD_BALANCE" ],
     "flags": [ "SLUDGE_IMMUNE" ],
-    "enchantments": [ "ENCH_GASTROPOD_FOOT", { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -0.75 } ] } ],
+    "enchantments": [ "ENCH_GASTROPOD_FOOT", "INLINE_ENCH_GASTROPOD_FOOT_1" ],
     "visibility": 8,
     "ugliness": 9,
     "encumbrance_always": [ [ "leg_l", 10 ], [ "leg_r", 10 ], [ "foot_l", 10 ], [ "foot_r", 10 ] ],
@@ -150,10 +150,7 @@
     "processed_eocs": [ "EOC_ARM_FEATHERS" ],
     "vitamin_cost": 150,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "modified_bodyparts": [ { "lose": "arm_l" }, { "lose": "arm_r" }, { "gain": "arm_feathers_l" }, { "gain": "arm_feathers_r" } ]
-      }
+      "INLINE_ENCH_ARM_FEATHERS_0"
     ]
   },
   {
@@ -166,17 +163,7 @@
     "description": "Your arms have mostly transformed into a huge pair of feathered wings.  Though you retain a few fingers, your fine manipulation is greatly hampered.  On the other hand, you can glide from ledges and will take less damage if you fall, provided you're healthy and unburdened.",
     "types": [ "ARMS", "HANDS" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "lose": "hand_l" },
-          { "gain": "arm_wing_bird_l" },
-          { "gain": "arm_wing_bird_r" }
-        ]
-      }
+      "INLINE_ENCH_WINGS_BIRD_0"
     ],
     "prereqs": [ "ARM_FEATHERS" ],
     "prereqs2": [ "HOLLOW_BONES" ],
