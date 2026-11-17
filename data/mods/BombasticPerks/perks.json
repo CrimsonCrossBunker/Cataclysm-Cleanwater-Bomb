@@ -1205,16 +1205,7 @@
     "valid": false,
     "description": "Far from being terrified or even unnerved by the creatures of the Nether, their presence fills you with atavistic killing fury.  You do +35% melee damage when in melee combat with Nether beings and take 15% less damage from all sources, but if you attack any other target when there is a Nether-beast to slay, you suffer a large penalty to your accuracy.",
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "test_eoc": "EOC_perk_rage_against_the_unnatural_nether_list" },
-            { "not": { "u_has_effect": "effect_perk_rage_against_the_unnatural_penalty" } }
-          ]
-        },
-        "melee_damage_bonus": [ { "type": "bash", "multiply": 0.35 }, { "type": "stab", "multiply": 0.35 }, { "type": "cut", "multiply": 0.35 } ],
-        "values": [ { "value": "ARMOR_ALL", "multiply": -0.15 } ]
-      }
+      "INLINE_ENCH_perk_rage_against_unnatural_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1306,25 +1297,7 @@
     "valid": false,
     "description": "People talk about getting a high from fasting and for you that's true on a more visceral level.  You gain bonuses to all stats that scale with how hungry, thirsty, and tired you are.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "STRENGTH", "add": { "math": [ "clamp(((u_val('thirst')/120) + (u_val('sleepiness')/150)), 0, 50)" ] } },
-          {
-            "value": "DEXTERITY",
-            "add": { "math": [ "clamp(((u_val('thirst')/120) + (u_val('sleepiness')/150)), 0, 50)" ] }
-          },
-          {
-            "value": "INTELLIGENCE",
-            "add": { "math": [ "clamp(((u_val('thirst')/120) + (u_val('sleepiness')/150)), 0, 50)" ] }
-          },
-          {
-            "value": "PERCEPTION",
-            "add": { "math": [ "clamp(((u_val('thirst')/120) + (u_val('sleepiness')/150)), 0, 50)" ] }
-          },
-          { "value": "SPEED", "add": { "math": [ "clamp(( (u_val('thirst') - 80 ) / 10 ) , 0, 50)" ] } }
-        ]
-      },
+      "INLINE_ENCH_perk_ascetic_empowerment_0",
       "INLINE_ENCH_perk_ascetic_empowerment_1",
       "INLINE_ENCH_perk_ascetic_empowerment_2",
       "INLINE_ENCH_perk_ascetic_empowerment_3",

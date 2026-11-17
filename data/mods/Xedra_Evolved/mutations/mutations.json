@@ -355,15 +355,7 @@
     "valid": false,
     "enchantments": [
       "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SENSITIVITY_0",
-      {
-        "condition": { "and": [ "is_day", "u_is_outside", { "or": [ { "is_weather": "sunny" }, { "is_weather": "clear" } ] } ] },
-        "values": [
-          { "value": "STRENGTH", "add": -2 },
-          { "value": "DEXTERITY", "add": -2 },
-          { "value": "INTELLIGENCE", "add": -2 },
-          { "value": "PERCEPTION", "add": -2 }
-        ]
-      }
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SENSITIVITY_1"
     ]
   },
   {
@@ -731,10 +723,7 @@
     "vitamin_rates": [ [ "human_blood_vitamin", 720 ], [ "mutagen", 300 ], [ "mutagenic_slurry", 1 ] ],
     "flags": [ "CANNIBAL", "HEMOVORE" ],
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
-        "ench_effects": [ { "effect": "effect_vampire_albino", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE2_0"
     ],
     "spells_learned": [ [ "vampire_drink_blood_with_fangs_spell", 1 ] ]
   },
@@ -900,10 +889,7 @@
     "enchantments": [
       "INLINE_ENCH_VAMPIRE3_0",
       "INLINE_ENCH_VAMPIRE3_1",
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
-        "ench_effects": [ { "effect": "effect_vampire_burn_under_sunlight", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE3_2"
     ]
   },
   {
@@ -1051,10 +1037,7 @@
       "INLINE_ENCH_VAMPIRE4_3",
       "INLINE_ENCH_VAMPIRE4_4",
       "INLINE_ENCH_VAMPIRE4_5",
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
-        "ench_effects": [ { "effect": "effect_vampire_burn_to_death_in_sunlight", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE4_6"
     ]
   },
   {
@@ -1251,10 +1234,7 @@
           { "value": "STAMINA_REGEN_MOD", "multiply": -0.333 }
         ]
       },
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
-        "ench_effects": [ { "effect": "effect_vampire_burn_to_death_in_sunlight", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_BLOOD_DRINKER_1"
     ]
   },
   {

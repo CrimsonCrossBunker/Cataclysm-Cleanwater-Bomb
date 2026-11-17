@@ -116,3 +116,11 @@ require("inline_enchantment_values")
 require("inline_enchantment_physiology")
 
 require("inherited_enchantments")
+
+require("attribute_scaling")
+
+require("shared_enchantment_values")
+
+require("environment_enchantments")
+
+require("overlay_enchantments")

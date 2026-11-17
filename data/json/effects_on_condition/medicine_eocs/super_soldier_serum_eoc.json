@@ -53,22 +53,7 @@
       "blood_pressure_max_val": [ 2500 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 5 },
-          { "value": "DEXTERITY", "add": 5 },
-          { "value": "REGEN_STAMINA", "multiply": 2 },
-          { "value": "PAIN", "multiply": -0.25 },
-          { "value": "METABOLISM", "multiply": 0.4 },
-          { "value": "PAIN_PENALTY_MOD_STR", "multiply": -0.6 },
-          { "value": "PAIN_PENALTY_MOD_DEX", "multiply": -0.6 },
-          { "value": "PAIN_PENALTY_MOD_INT", "multiply": -0.6 },
-          { "value": "PAIN_PENALTY_MOD_PER", "multiply": -0.6 },
-          { "value": "PAIN_PENALTY_MOD_SPEED", "multiply": -0.6 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": -0.5 },
-          { "value": "LEARNING_FOCUS", "add": { "math": [ "clamp( ( ( (u_val('focus') - 15) * -1) ), -200, 0)" ] } }
-        ]
-      },
+      "INLINE_ENCH_super_soldier_serum_main_0",
       "INLINE_ENCH_super_soldier_serum_main_1",
       "INLINE_ENCH_super_soldier_serum_main_2",
       "INLINE_ENCH_super_soldier_serum_main_3",
@@ -90,18 +75,7 @@
       "blood_pressure_max_val": [ -2500 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "REGEN_STAMINA", "multiply": -0.5 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": -0.5 },
-          { "value": "PAIN_PENALTY_MOD_STR", "multiply": 1 },
-          { "value": "PAIN_PENALTY_MOD_DEX", "multiply": 1 },
-          { "value": "PAIN_PENALTY_MOD_INT", "multiply": 1 },
-          { "value": "PAIN_PENALTY_MOD_PER", "multiply": 1 },
-          { "value": "PAIN_PENALTY_MOD_SPEED", "multiply": 1 },
-          { "value": "LEARNING_FOCUS", "add": { "math": [ "clamp( ( ( (u_val('focus') - 15) * -1) ), -200, 0)" ] } }
-        ]
-      }
+      "INLINE_ENCH_super_soldier_serum_crash_0"
     ]
   }
 ]

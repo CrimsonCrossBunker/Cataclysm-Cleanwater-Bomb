@@ -6,6 +6,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -804,6 +805,18 @@ static sol::table collect_enchantment_environment( sol::state &lua, const const_
     if( requested.daylight ) {
         environment["daylight"] = !is_night( calendar::turn );
     }
+    if( requested.season ) {
+        static constexpr std::array<const char *, 4> seasons = {
+            "spring", "summer", "autumn", "winter"
+        };
+        environment["season"] = seasons[season_of_year( calendar::turn )];
+    }
+    if( requested.weather ) {
+        environment["weather"] = get_weather().weather_id.str();
+    }
+    if( requested.dimension ) {
+        environment["dimension"] = g->get_dimension_prefix().str();
+    }
     if( requested.temperature_kelvin ) {
         environment["temperature_kelvin"] = units::to_kelvin( get_weather().weather_precise->temperature );
     }
@@ -1014,6 +1027,15 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.physiology ) {
+            inputs["physiology"] = owner.lua->create_table_with(
+                                       "hunger", speaker->get_hunger(), "thirst", speaker->get_thirst(),
+                                       "sleepiness", speaker->get_sleepiness(), "focus", speaker->focus_cur(),
+                                       "perceived_pain", speaker->perceived_pain_cur(), "body_size", speaker->get_size() );
+        }
+        if( requested.fine_detail_vision ) {
+            inputs["fine_detail_vision"] = speaker->get_fine_detail_vision_mod();
+        }
         if( requested.stats ) {
             inputs["stats"] = owner.lua->create_table_with(
                                   "strength", speaker->str_cur(), "dexterity", speaker->dex_cur(),
@@ -1868,6 +1890,58 @@ void install_runtime_callback_api(
         } ).second ) {
             throw std::runtime_error( "duplicate handler id '" + id + "'" );
         }
+    } );
+    runtime_api.set_function( "call_number", [weak]( const std::string &id,
+    const sol::variadic_args &arguments ) -> double {
+        const std::shared_ptr<runtime> caller = weak.lock();
+        if( !caller || caller->callback_depth <= 0 ||
+            find_active_runtime( caller->mod_id ) != caller ) {
+            throw std::runtime_error( "runtime.call_number requires an active runtime callback" );
+        }
+        std::vector<double> numbers;
+        numbers.reserve( arguments.size() );
+        for( const auto argument : arguments ) {
+            if( argument.get_type() != sol::type::number ) {
+                throw std::runtime_error( "runtime.call_number accepts only finite numbers" );
+            }
+            const double number = argument.get<double>();
+            if( !std::isfinite( number ) ) {
+                throw std::runtime_error( "runtime.call_number accepts only finite numbers" );
+            }
+            numbers.push_back( number );
+        }
+        // Resolve on each call so Mod order, rollback and hot reload all use
+        // the same live owners as the other named runtime callbacks.
+        for( auto entry = active_runtimes.rbegin(); entry != active_runtimes.rend(); ++entry ) {
+            const std::shared_ptr<runtime> provider = *entry;
+            if( !provider ) {
+                continue;
+            }
+            const auto handler = provider->handlers.find( id );
+            if( handler == provider->handlers.end() ) {
+                continue;
+            }
+            if( provider->callback_depth >= 16 ) {
+                throw std::runtime_error( "runtime.call_number recursion limit reached for '" + id + "'" );
+            }
+            sol::protected_function callback = handler->second.callback;
+            callback_scope scope( *provider, caller->native_enchantment_random );
+            const sol::protected_function_result result = callback( sol::as_args( numbers ) );
+            if( !result.valid() ) {
+                const sol::error error = result;
+                throw std::runtime_error( "runtime.call_number '" + provider->mod_id + ":" +
+                                          id + "' failed: " + error.what() );
+            }
+            if( result.return_count() != 1 || result.get_type() != sol::type::number ) {
+                throw std::runtime_error( "runtime.call_number '" + id + "' must return one finite number" );
+            }
+            const double number = result.get<double>();
+            if( !std::isfinite( number ) ) {
+                throw std::runtime_error( "runtime.call_number '" + id + "' must return one finite number" );
+            }
+            return number;
+        }
+        throw std::runtime_error( "runtime.call_number references missing handler '" + id + "'" );
     } );
     runtime_api.set_function( "character_recurring", [weak](
                                   const std::string & effect_handler,

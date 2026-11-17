@@ -7,10 +7,7 @@
     "apply_message": "You yawn as you step through the hidden path.  Best to make your stay here brief.",
     "rating": "bad",
     "enchantments": [
-      {
-        "condition": { "current_dimension": "dimension_perk_closetland" },
-        "values": [ { "value": "SLEEPINESS", "multiply": 25 } ]
-      }
+      "INLINE_ENCH_effect_perk_closetland_sleepiness_0"
     ]
   },
   {

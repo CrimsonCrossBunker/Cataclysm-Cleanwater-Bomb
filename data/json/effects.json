@@ -584,16 +584,7 @@
     "rating": "bad",
     "show_intensity": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": { "math": [ "Nemesis_iteration * -1" ] } },
-          { "type": "stab", "add": { "math": [ "Nemesis_iteration * -1" ] } },
-          { "type": "cut", "add": { "math": [ "Nemesis_iteration * -1" ] } },
-          { "type": "bullet", "add": { "math": [ "Nemesis_iteration * -1" ] } }
-        ],
-        "values": [ { "value": "SPEED", "multiply": { "math": [ "Nemesis_iteration * 0.01" ] } } ]
-      }
+      "INLINE_ENCH_nemesis_buff_0"
     ]
   },
   {
@@ -5758,10 +5749,7 @@
     "show_in_info": true,
     "blood_analysis_description": "Unknown Contaminant",
     "enchantments": [
-      {
-        "condition": { "math": [ "u_val('fine_detail_vision_mod') <= 3" ] },
-        "ench_effects": [ { "effect": "effect_hunting_horror_poison_light_sensitive", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_hunting_horror_poison_0"
     ],
     "flags": [ "SUNBURN", "SUNBURN_SUPERNATURAL" ]
   },

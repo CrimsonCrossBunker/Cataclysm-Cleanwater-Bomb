@@ -561,10 +561,7 @@
     "category": [ "UNDINE" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_CHECK_UNDINE_IN_WATER" },
-        "values": [ { "value": "REGEN_MANA", "multiply": 0.5 } ]
-      }
+      "INLINE_ENCH_UNDINE_MORE_MANA_REGEN_0"
     ]
   },
   {
@@ -581,10 +578,7 @@
     "category": [ "UNDINE" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_CHECK_UNDINE_IN_WATER" },
-        "values": [ { "value": "REGEN_MANA", "multiply": 0.5 }, { "value": "MAX_MANA", "multiply": 0.5 } ]
-      }
+      "INLINE_ENCH_UNDINE_MORE_MANA_REGEN_AND_MANA_0"
     ]
   },
   {
@@ -600,14 +594,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_UNDINE" ],
     "enchantments": [
-      {
-        "condition": { "test_eoc": "EOC_CONDITION_CHECK_UNDINE_IN_WATER" },
-        "values": [
-          { "value": "REGEN_MANA", "multiply": 0.5 },
-          { "value": "MAX_MANA", "multiply": 0.5 },
-          { "value": "REGEN_STAMINA", "multiply": 1 }
-        ]
-      }
+      "INLINE_ENCH_UNDINE_MORE_MANA_REGEN_AND_MANA_AND_STAMINA_0"
     ]
   },
   {

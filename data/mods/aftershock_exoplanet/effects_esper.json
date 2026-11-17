@@ -223,18 +223,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MOTION_ALARM",
-            "add": {
-              "math": [
-                "max( ( ( 3 + ( u_spell_level('afs_precog_danger_sense') * 0.5  ) * (scaling_factor(u_val('intelligence') ) ) ) ), 25)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_precog_danger_sense_0"
     ]
   },
   {
@@ -258,22 +247,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "RANGE",
-            "add": { "math": [ "(1 + ( u_spell_level('afs_precog_ranged_enhance') * 0.25 ) * scaling_factor(u_val('intelligence') ) )" ] }
-          },
-          {
-            "value": "WEAPON_DISPERSION",
-            "multiply": {
-              "math": [ "max((( ( u_spell_level('afs_precog_ranged_enhance') * -0.025) * scaling_factor(u_val('intelligence') ) ) ),-0.6)" ]
-            }
-          },
-          { "value": "MOVE_COST", "multiply": 0.1 },
-          { "value": "DODGE_CHANCE", "add": -3 }
-        ]
-      },
+      "INLINE_ENCH_effect_afs_precog_ranged_enhance_0",
       {
         "condition": {
           "or": [
@@ -305,15 +279,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": 3 },
-          {
-            "value": "CRAFTING_SPEED_MULTIPLIER",
-            "multiply": { "math": [ "( 0.04 + ( u_spell_level('afs_precog_craft_bonus') * 0.01 ) * scaling_factor(u_val('intelligence') ) )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_precog_craft_bonus_0"
     ],
     "flags": [ "MYOPIC", "CRAFT_IN_DARKNESS" ]
   },
@@ -335,22 +301,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "RANGE_DODGE",
-            "add": {
-              "math": [ "min(((0.25 + ( u_spell_level('afs_precog_dodge_bonus') * 0.015) * scaling_factor(u_val('intelligence') ) ) ), 0.7)" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [ "min((( ( u_spell_level('afs_precog_dodge_bonus') * 0.5) * scaling_factor(u_val('intelligence') ) ) ), 10)" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_precog_dodge_bonus_0"
     ],
     "flags": [ "HARDTOHIT" ]
   },
@@ -364,26 +315,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MELEE_TO_HIT",
-            "add": { "math": [ "(1 + ( u_spell_level('afs_precog_ranged_enhance') * 0.25 ) * scaling_factor(u_val('intelligence') ) )" ] }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": { "math": [ "(1 + ( u_spell_level('afs_precog_ranged_enhance') * 0.25 ) * scaling_factor(u_val('intelligence') ) )" ] }
-          },
-          {
-            "value": "MELEE_DAMAGE",
-            "add": {
-              "math": [ "(0.1 + ( u_spell_level('afs_precog_ranged_enhance') * 0.05 ) * scaling_factor(u_val('intelligence') ) )" ]
-            }
-          },
-          { "value": "FREE_DODGES", "add": 1 },
-          { "value": "BONUS_DODGE", "add": 1 }
-        ]
-      },
+      "INLINE_ENCH_effect_afs_precog_melee_enhance_0",
       {
         "condition": {
           "or": [
@@ -417,40 +349,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          {
-            "type": "bash",
-            "multiply": { "math": [ "( u_spell_level('afs_telekinetic_momentum') * -0.01 ) * scaling_factor(u_val('intelligence') )" ] }
-          },
-          {
-            "type": "stab",
-            "multiply": { "math": [ "( u_spell_level('afs_telekinetic_momentum') * -0.005 ) * scaling_factor(u_val('intelligence') )" ] }
-          },
-          {
-            "type": "cut",
-            "multiply": { "math": [ "( u_spell_level('afs_telekinetic_momentum') * -0.005 ) * scaling_factor(u_val('intelligence') ) " ] }
-          },
-          {
-            "type": "bullet",
-            "multiply": { "math": [ "( u_spell_level('afs_telekinetic_momentum') * -0.02 ) * scaling_factor(u_val('intelligence') )" ] }
-          }
-        ],
-        "values": [
-          {
-            "value": "MOVE_COST",
-            "multiply": {
-              "math": [
-                "max( ( ( ( u_spell_level('afs_telekinetic_momentum') * -0.005 ) * scaling_factor(u_val('intelligence') ) ) ), -0.15)"
-              ]
-            }
-          },
-          {
-            "value": "ATTACK_SPEED",
-            "multiply": { "math": [ "( u_spell_level('afs_telekinetic_momentum') * -0.01 ) * scaling_factor(u_val('intelligence') )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_telekinetic_momentum_0"
     ],
     "flags": [ "MUSCLE_VEH_BOOST" ]
   },
@@ -504,22 +403,7 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SOCIAL_INTIMIDATE",
-            "add": { "math": [ "( (u_spell_level('afs_telepathic_suggestion') * 2.5) + 3) * (scaling_factor(u_val('intelligence') ) ) " ] }
-          },
-          {
-            "value": "SOCIAL_LIE",
-            "add": { "math": [ "( (u_spell_level('afs_telepathic_suggestion') * 2.5) + 3) * (scaling_factor(u_val('intelligence') ) ) " ] }
-          },
-          {
-            "value": "SOCIAL_PERSUADE",
-            "add": { "math": [ "( (u_spell_level('afs_telepathic_suggestion') * 2.5) + 3) * (scaling_factor(u_val('intelligence') ) ) " ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_telepathic_suggestion_0"
     ]
   },
   {

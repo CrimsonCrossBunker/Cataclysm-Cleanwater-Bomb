@@ -614,14 +614,8 @@
     "activation_msg": "The mortal sentiments in your thoughts fade away.",
     "enchantments": [
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_0",
-      {
-        "condition": { "math": [ "u_pain('type': 'perceived')", ">=", "50" ] },
-        "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_val('sleepiness')", ">=", "200" ] },
-        "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_1",
+      "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_2",
       {
         "condition": { "u_has_any_effect": [ "formication", "visuals", "hallu", "bite", "infected" ] },
         "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
@@ -1672,14 +1666,7 @@
     "prereqs": [ "PAINRESIST_TROW", "PAINRESIST_TROW2" ],
     "category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z') <= -1" ] } ] },
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "THIRST", "multiply": -0.5 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 50 }
-        ]
-      }
+      "INLINE_ENCH_TROW_LESS_METABOLISM_UNDERGROUND_0"
     ]
   },
   {
@@ -1706,24 +1693,7 @@
     "prereqs": [ "IERDE_SKIN_2" ],
     "category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            {
-              "or": [
-                { "u_is_on_terrain": "t_stone_masonry_floor_balcony" },
-                { "u_is_on_terrain": "t_stone_masonry_floor" },
-                { "u_is_on_terrain": "t_rock_floor_no_roof" },
-                { "u_is_on_terrain": "t_rock_floor" },
-                { "u_is_on_terrain": "t_marble_floor" },
-                { "u_is_on_terrain": "t_railroad_rubble" }
-              ]
-            },
-            { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z') <= -1" ] } ] }
-          ]
-        },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 25 } ]
-      }
+      "INLINE_ENCH_TROW_STEALTH_UNDERGROUND_ON_ROCK_0"
     ]
   },
   {
@@ -1745,10 +1715,7 @@
     "changes_to": [ "PAINRESIST_TROW2" ],
     "category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z') <= -1" ] } ] },
-        "values": [ { "value": "PAIN", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_PAINRESIST_TROW_0"
     ]
   },
   {
@@ -1773,10 +1740,7 @@
     "category": [ "FAIR_FOLK_COMMONER_TROW" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_TROW" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z') <= -1" ] } ] },
-        "values": [ { "value": "PAIN", "multiply": -0.5 } ]
-      },
+      "INLINE_ENCH_PAINRESIST_TROW2_0",
       "INLINE_ENCH_PAINRESIST_TROW2_1"
     ]
   },

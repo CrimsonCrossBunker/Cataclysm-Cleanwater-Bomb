@@ -2531,7 +2531,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
                 activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false ),
                 std::nullopt, {}, ids( *activation, "spell_school_counts" ), {},
-                activation->get_or( "stats", false ), ids( *activation, "vitamins" )
+                activation->get_or( "stats", false ), ids( *activation, "vitamins" ),
+                activation->get_or( "physiology", false ), activation->get_or( "fine_detail_vision", false )
             };
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
@@ -2572,6 +2573,9 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 inputs.divable = environment->get_or( "divable", false );
                 inputs.overmap_terrain = environment->get_or( "overmap_terrain", false );
                 inputs.temperature_kelvin = environment->get_or( "temperature_kelvin", false );
+                inputs.season = environment->get_or( "season", false );
+                inputs.weather = environment->get_or( "weather", false );
+                inputs.dimension = environment->get_or( "dimension", false );
                 if( const auto nearby = environment->get<sol::optional<sol::table>>( "nearby_overmap_terrain" ) ) {
                     for( const auto &[key, value] : *nearby ) {
                         if( key.get_type() != sol::type::string || !value.is<lua_Integer>() ) {
@@ -7609,6 +7613,8 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, value.load_character_inputs->move_mode ? "move_mode" : "no_move_mode" );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
                     hash_part( state, value.load_character_inputs->stats ? "stats" : "no_stats" );
+                    hash_part( state, value.load_character_inputs->physiology ? "physiology" : "no_physiology" );
+                    hash_part( state, value.load_character_inputs->fine_detail_vision ? "fine_detail_vision" : "no_fine_detail_vision" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
                     hash_part( state, value.load_character_inputs->morale ? "morale" : "no_morale" );
                     hash_part( state, value.load_character_inputs->max_mana ? "max_mana" : "no_max_mana" );
@@ -7630,6 +7636,9 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, environment->divable ? "divable" : "no_divable" );
                         hash_part( state, environment->overmap_terrain ? "overmap_terrain" : "no_overmap_terrain" );
                         hash_part( state, environment->temperature_kelvin ? "temperature_kelvin" : "no_temperature_kelvin" );
+                        hash_part( state, environment->season ? "season" : "no_season" );
+                        hash_part( state, environment->weather ? "weather" : "no_weather" );
+                        hash_part( state, environment->dimension ? "dimension" : "no_dimension" );
                     }
                 }
                 hash_part( state, value.emitter );

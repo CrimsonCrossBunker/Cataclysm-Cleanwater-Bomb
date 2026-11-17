@@ -71,19 +71,7 @@
     },
     "scaling_mods": { "heart_rate_min": [ 1 ] },
     "enchantments": [
-      {
-        "values": [
-          { "value": "PERCEPTION", "add": { "math": [ "3 + min( (u_effect_intensity('learning_serum_main') ), 5)" ] } },
-          { "value": "LEARNING_FOCUS", "add": { "math": [ "u_val('focus') < 60 ? ( 60 - u_val('focus') ) : 0" ] } },
-          {
-            "value": "THEORETICAL_SKILL_CATCHUP_BONUS",
-            "multiply": { "math": [ "0.5 + min( (u_effect_intensity('learning_serum_main') * 0.1 ), 1)" ] }
-          },
-          { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.2 },
-          { "value": "SLEEPY", "add": -1000 },
-          { "value": "METABOLISM", "multiply": 0.2 }
-        ]
-      },
+      "INLINE_ENCH_learning_serum_main_0",
       "INLINE_ENCH_learning_serum_main_1",
       {
         "condition": {

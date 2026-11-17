@@ -83,13 +83,7 @@
     "removes_effects": [ "blind", "deaf" ],
     "//": "VISION_RANGE enchant is a proxy for perception, which monsters do not have",
     "enchantments": [
-      {
-        "values": [
-          { "value": "VISION_RANGE", "multiply": 0.2 },
-          { "value": "SPEED", "multiply": 0.35 },
-          { "value": "RANGE_DODGE", "add": 0.15 }
-        ]
-      }
+      "INLINE_ENCH_effect_monster_heightened_reflex_enhanced_0"
     ]
   },
   {
@@ -113,7 +107,7 @@
     "rating": "bad",
     "max_duration": "5 m",
     "base_mods": { "dodge_mod": [ -1 ] },
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 35 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_photokinetic_illuminate_enemy_0" ]
   },
   {
     "type": "effect_type",

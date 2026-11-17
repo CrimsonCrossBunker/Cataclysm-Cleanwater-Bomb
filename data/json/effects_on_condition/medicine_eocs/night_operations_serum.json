@@ -60,10 +60,7 @@
     },
     "enchantments": [
       "INLINE_ENCH_night_ops_serum_main_0",
-      {
-        "condition": { "math": [ "u_val('fine_detail_vision_mod') >= 4" ] },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ]
-      },
+      "INLINE_ENCH_night_ops_serum_main_1",
       "INLINE_ENCH_night_ops_serum_main_2"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.9 } ],

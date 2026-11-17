@@ -1806,16 +1806,7 @@
     "remove_message": "You were just on the cusp of something as your enhanced focus fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "LEARNING_FOCUS",
-            "add": {
-              "math": [ "( ( u_spell_level('homullus_add_learning_focus_spell') * 1.5 ) + 5 ) * scaling_factor(u_val('intelligence') )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_homullus_add_learning_focus_0"
     ]
   },
   {
@@ -1901,10 +1892,7 @@
     "show_in_info": true,
     "removes_effects": [ "onfire", "blisters" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "heat", "add": -1000 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 1000 } ]
-      }
+      "INLINE_ENCH_effect_flame_immunity_0"
     ]
   },
   {
@@ -2006,16 +1994,7 @@
     "remove_message": "Your movements gradually slow.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SPEED",
-            "add": {
-              "math": [ "( ( 5 + ( u_spell_level('salamander_increase_speed_spell') * 1.5 ) ) ) * (scaling_factor(u_val('strength') ) )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_salamander_increase_speed_0"
     ]
   },
   {
@@ -2101,16 +2080,7 @@
     "remove_message": "Your blows no longer split the air itself.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MELEE_RANGE_MODIFIER",
-            "add": {
-              "math": [ "( (u_spell_level('sylph_bonus_melee_range_spell') * 0.25 ) + 1 ) * scaling_factor( u_val('dexterity') )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_sylph_bonus_melee_range_0"
     ]
   },
   {
@@ -2216,58 +2186,8 @@
     "remove_message": "Your enhanced dodging ability fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "and": [ "u_is_outside", { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * scaling_factor(u_val('perception') )" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1)"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": {
-          "or": [
-            { "and": [ { "not": "u_is_outside" }, { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "not": { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" } }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * scaling_factor(u_val('perception') ) * 0.5" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1) * 0.5"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_1_0",
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_1_1"
     ]
   },
   {
@@ -2281,58 +2201,8 @@
     "remove_message": "Your enhanced dodging ability fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "and": [ "u_is_outside", { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * (scaling_factor(u_val('perception') ) )" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1)"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": {
-          "or": [
-            { "and": [ { "not": "u_is_outside" }, { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "not": { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" } }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * scaling_factor(u_val('perception') ) * 0.5" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1) * 0.5"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_2_0",
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_2_1"
     ],
     "flags": [ "UNCANNY_DODGE" ]
   },
@@ -2347,58 +2217,8 @@
     "remove_message": "Your enhanced dodging ability fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "and": [ "u_is_outside", { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * (scaling_factor(u_val('perception') ) )" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1)"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": {
-          "or": [
-            { "and": [ { "not": "u_is_outside" }, { "u_has_trait": "SYLPH" } ] },
-            {
-              "and": [ { "not": { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_ON_NATURAL_TERRAIN" } }, { "u_has_trait": "ARVORE" } ]
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "BONUS_DODGE",
-            "add": {
-              "math": [ "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 10 ) ) ) * scaling_factor(u_val('perception') ) * 0.5" ]
-            }
-          },
-          {
-            "value": "DODGE_CHANCE",
-            "add": {
-              "math": [
-                "( ( 1 + ( u_spell_level('paraclesian_spell_dodge_bonus') / 4 ) ) ) * scaling_factor(u_val('perception') ) * (u_has_trait('SYLPH') ? 1.2 : 1) * 0.5"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_3_0",
+      "INLINE_ENCH_effect_paraclesian_dodge_bonus_3_1"
     ],
     "flags": [ "UNCANNY_DODGE", "HARDTOHIT" ]
   },

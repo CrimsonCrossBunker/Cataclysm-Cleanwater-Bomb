@@ -12,15 +12,7 @@
     "//3": "An umbrella cannot protect you because this is a mystical weakness.",
     "enchantments": [
       "INLINE_ENCH_THRESH_LILIN_0",
-      {
-        "condition": { "and": [ "is_day", "u_is_outside", { "or": [ { "is_weather": "sunny" }, { "is_weather": "clear" } ] } ] },
-        "values": [
-          { "value": "STRENGTH", "add": -2 },
-          { "value": "DEXTERITY", "add": -2 },
-          { "value": "INTELLIGENCE", "add": -2 },
-          { "value": "PERCEPTION", "add": -2 }
-        ]
-      },
+      "INLINE_ENCH_THRESH_LILIN_1",
       "INLINE_ENCH_THRESH_LILIN_2"
     ]
   },

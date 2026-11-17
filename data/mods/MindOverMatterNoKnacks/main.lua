@@ -22,3 +22,5 @@ definition:entry("mon_feral_human_porter2")
 definition:entry("mon_feral_human_porter3")
 definition:entry("mon_feral_human_vita3")
 content.add(definition)
+
+require("attribute_scaling")

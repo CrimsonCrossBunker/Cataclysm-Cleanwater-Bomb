@@ -161,42 +161,10 @@
     "max_duration": 200,
     "show_in_info": true,
     "enchantments": [
-      {
-        "condition": { "math": [ "u_val('size')<= 1" ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-30 + (u_ethereal_grasp_affected_level * -4) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "math": [ "u_val('size')== 2" ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-20 + (u_ethereal_grasp_affected_level * -3) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "math": [ "u_val('size')== 3" ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-10 + (u_ethereal_grasp_affected_level * -2) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "math": [ "u_val('size')== 4" ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-5 + (u_ethereal_grasp_affected_level * -1) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
+      "INLINE_ENCH_effect_ethereal_grasp_0",
+      "INLINE_ENCH_effect_ethereal_grasp_1",
+      "INLINE_ENCH_effect_ethereal_grasp_2",
+      "INLINE_ENCH_effect_ethereal_grasp_3",
       {
         "condition": { "and": [ { "math": [ "u_val('size')>= 5" ] }, { "math": [ "u_ethereal_grasp_affected_level >= 15" ] } ] },
         "values": [
@@ -218,11 +186,11 @@
     "apply_message": "Ethereal arms shoot out of the ground and grab onto you!",
     "remove_message": "The ghostly arms fade away.",
     "enchantments": [
-      { "condition": { "math": [ "u_val('size')== 1" ] }, "values": [ { "value": "SPEED", "add": -60 } ] },
-      { "condition": { "math": [ "u_val('size')== 2" ] }, "values": [ { "value": "SPEED", "add": -40 } ] },
-      { "condition": { "math": [ "u_val('size')== 3" ] }, "values": [ { "value": "SPEED", "add": -30 } ] },
-      { "condition": { "math": [ "u_val('size')== 4" ] }, "values": [ { "value": "SPEED", "add": -15 } ] },
-      { "condition": { "math": [ "u_val('size')== 5" ] }, "values": [ { "value": "SPEED", "add": -5 } ] }
+      "INLINE_ENCH_effect_ethereal_grasp_monster_0",
+      "INLINE_ENCH_effect_ethereal_grasp_monster_1",
+      "INLINE_ENCH_effect_ethereal_grasp_monster_2",
+      "INLINE_ENCH_effect_ethereal_grasp_monster_3",
+      "INLINE_ENCH_effect_ethereal_grasp_monster_4"
     ]
   },
   {
@@ -275,42 +243,10 @@
     "remove_message": "The roots and vines wither up and die.",
     "enchantments": [
       "INLINE_ENCH_entangled_0",
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 1" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-20 + (u_vegetative_grasp_affected_level * -4) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 2" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-15 + (u_vegetative_grasp_affected_level * -3) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 3" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-5 + (u_vegetative_grasp_affected_level * -2) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 4" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "( (u_vegetative_grasp_affected_level * -1) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_entangled_1",
+      "INLINE_ENCH_entangled_2",
+      "INLINE_ENCH_entangled_3",
+      "INLINE_ENCH_entangled_4"
     ],
     "flags": [ "EFFECT_IMPEDING" ]
   },
@@ -327,22 +263,10 @@
     "apply_message": "Roots and vines burst from the ground and entangle you!",
     "remove_message": "The roots and vines wither up and die.",
     "enchantments": [
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 1" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [ { "value": "SPEED", "add": -40 } ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 2" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [ { "value": "SPEED", "add": -30 } ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 3" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [ { "value": "SPEED", "add": -20 } ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_val('size')== 4" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
-        "values": [ { "value": "SPEED", "add": -10 } ]
-      }
+      "INLINE_ENCH_entangled_monster_0",
+      "INLINE_ENCH_entangled_monster_1",
+      "INLINE_ENCH_entangled_monster_2",
+      "INLINE_ENCH_entangled_monster_3"
     ],
     "flags": [ "EFFECT_IMPEDING" ]
   },
@@ -437,7 +361,7 @@
     "rating": "good",
     "max_duration": 480,
     "removes_effects": [ "magic_slowed" ],
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": -0.7 }, { "value": "ATTACK_SPEED", "multiply": -0.7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_haste_0" ]
   },
   {
     "type": "effect_type",
@@ -1620,7 +1544,7 @@
     "show_in_info": true,
     "blocks_effects": [ "blisters" ],
     "removes_effects": [ "onfire" ],
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_flame_immunity_0" ],
     "flags": [ "HEAT_IMMUME" ]
   },
   {

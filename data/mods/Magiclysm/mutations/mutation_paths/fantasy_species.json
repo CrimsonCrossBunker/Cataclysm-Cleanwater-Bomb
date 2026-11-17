@@ -297,11 +297,7 @@
     "types": [ "EYES" ],
     "category": [ "SPECIES_ELF" ],
     "enchantments": [
-      {
-        "condition": { "and": [ "u_is_outside", { "or": [ { "is_weather": "clear" }, { "is_weather": "sunny" } ] } ] },
-        "values": [ { "value": "NIGHT_VIS", "add": 20 }, { "value": "OVERMAP_SIGHT", "add": 6 } ],
-        "ench_effects": [ { "effect": "effect_magiclysm_craft_in_darkness", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_ELVEN_SIGHT_0",
       {
         "condition": {
           "and": [
@@ -324,11 +320,7 @@
         },
         "values": [ { "value": "NIGHT_VIS", "add": 2 } ]
       },
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('fine_detail_vision_mod') <= 7" ] } ] },
-        "values": [ { "value": "NIGHT_VIS", "add": 6 } ],
-        "ench_effects": [ { "effect": "effect_magiclysm_craft_in_darkness", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ELVEN_SIGHT_3"
     ]
   },
   {
@@ -601,8 +593,8 @@
     "category": [ "SPECIES_LIZARDFOLK" ],
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "enchantments": [
-      { "condition": { "u_has_trait": "SLIT_NOSTRILS" }, "encumbrance_modifier": [ { "part": "mouth", "add": -10 } ] },
-      { "condition": { "u_has_trait": "SCALES" }, "encumbrance_modifier": [ { "part": "mouth", "add": -1 } ] },
+      "INLINE_ENCH_LIZARDFOLK_BUILD_0",
+      "INLINE_ENCH_LIZARDFOLK_BUILD_1",
       "INLINE_ENCH_LIZARDFOLK_BUILD_2"
     ],
     "flags": [ "HERITAGE", "LARGE" ]
@@ -655,7 +647,7 @@
     "category": [ "SPECIES_LIZARDFOLK" ],
     "types": [ "PREDATION" ],
     "flags": [ "PRED2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "COMBAT_CATCHUP", "multiply": 1.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PRED_LIZ_0" ]
   },
   {
     "type": "mutation",
@@ -701,7 +693,7 @@
     "restricts_gear": [ "mouth" ],
     "social_modifiers": { "intimidate": 10 },
     "integrated_armor": [ "integrated_lizardfolk_teeth" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "mouth" }, { "gain": "muzzle_long" } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUZZLE_LONG_LIZ_0" ]
   },
   {
     "type": "mutation",

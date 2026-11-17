@@ -55,10 +55,7 @@
     "show_in_info": true,
     "enchantments": [
       "INLINE_ENCH_effect_monster_viridian_cuirass_0",
-      {
-        "condition": { "not": { "is_season": "autumn" } },
-        "incoming_damage_mod": [ { "type": "cold", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_effect_monster_viridian_cuirass_1"
     ]
   },
   {
