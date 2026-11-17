@@ -14,3 +14,5 @@ require("flags")
 require("vitamins")
 
 require("snippets")
+
+require("weather_generators")
