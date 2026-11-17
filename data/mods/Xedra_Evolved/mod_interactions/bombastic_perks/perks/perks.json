@@ -76,10 +76,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "MAX_MANA", "add": { "math": [ "( 16 - clamp(u_val('intelligence'), 8, 16) ) * 62.5" ] } } ]
-      }
+      "INLINE_ENCH_perk_LOW_INT_MANA_0"
     ]
   },
   {
@@ -93,25 +90,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "u_has_wielded_with_flag": "WHIP" },
-            {
-              "or": [
-                { "math": [ "u_mon_species_nearby('RENFIELD', 'radius': 3, 'attitude': 'both') >= 1" ] },
-                { "math": [ "u_mon_species_nearby('VAMPIRE', 'radius': 3, 'attitude': 'both') >= 1" ] }
-              ]
-            }
-          ]
-        },
-        "melee_damage_bonus": [
-          { "type": "bash", "add": { "math": [ "rng(2,10)" ] } },
-          { "type": "cut", "add": { "math": [ "rng(25,35)" ] } },
-          { "type": "heat", "add": { "math": [ "rand(1)" ] } }
-        ],
-        "values": [ { "value": "WEAKPOINT_ACCURACY", "multiply": 2.5 } ]
-      }
+      "INLINE_ENCH_perk_xe_vampire_killer_0"
     ]
   },
   {
