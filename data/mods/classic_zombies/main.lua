@@ -27,3 +27,5 @@ ccb.runtime.handler("initialize_dialogue_flag", function()
     end
 end, 1)
 ccb.runtime.on("game:game_begin", "initialize_dialogue_flag")
+
+require("speech")

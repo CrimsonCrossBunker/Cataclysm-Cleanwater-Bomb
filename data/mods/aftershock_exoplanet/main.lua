@@ -27,3 +27,5 @@ require("nested_recipes")
 
 require("flags")
 require("monster_flags")
+
+require("speech")

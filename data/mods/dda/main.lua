@@ -68,3 +68,5 @@ require("morale_types")
 require("flags")
 require("vehicle_part_flags")
 require("monster_flags")
+
+require("speech")

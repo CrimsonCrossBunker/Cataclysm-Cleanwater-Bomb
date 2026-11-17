@@ -12,3 +12,5 @@ definition:entry("mon_bear_smoky")
 definition:entry("mon_zombie_skeltal")
 definition:entry("mon_zombie_skeltal_minion")
 content.add(definition)
+
+require("speech")
