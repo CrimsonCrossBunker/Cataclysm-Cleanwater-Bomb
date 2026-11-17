@@ -411,69 +411,12 @@
     "rating": "good",
     "max_duration": "7 days",
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_any_effect": [ "hallu", "datura", "taint", "hallucination_attacks", "visuals", "fearparalyze" ] } },
-        "values": [
-          {
-            "value": "PERCEPTION",
-            "add": {
-              "math": [
-                "( ( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) / 3) + 1 ) * psionic_power_modifiers()"
-              ]
-            }
-          },
-          {
-            "value": "OVERMAP_SIGHT",
-            "add": {
-              "math": [
-                "( ( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) / 5) + 1 ) * psionic_power_modifiers()"
-              ]
-            }
-          },
-          {
-            "value": "HEARING_MULT",
-            "multiply": {
-              "math": [
-                "( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) * 0.25) * psionic_power_modifiers()"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": {
-          "math": [
-            "( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) * psionic_power_modifiers() ) >= 6"
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_clair_better_senses_eye_membrane", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "math": [
-            "( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) * psionic_power_modifiers() )>= 8"
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_clair_better_senses_see_sleep", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "math": [
-            "( (u_spell_level('clair_better_senses') + u_spell_level('clair_better_senses_knack') ) * psionic_power_modifiers() ) >= 10"
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_clair_better_senses_safecracking", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_effect_clair_better_senses_0",
+      "INLINE_ENCH_effect_clair_better_senses_1",
+      "INLINE_ENCH_effect_clair_better_senses_2",
+      "INLINE_ENCH_effect_clair_better_senses_3",
       "INLINE_ENCH_effect_clair_better_senses_4",
-      {
-        "condition": {
-          "or": [
-            { "u_has_any_trait": [ "PER_SLIME" ] },
-            { "u_has_any_effect": [ "hallu", "datura", "taint", "hallucination_attacks", "visuals", "fearparalyze" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_clair_better_senses_pain", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_clair_better_senses_5"
     ]
   },
   {
@@ -522,17 +465,7 @@
     "max_duration": "7 days",
     "enchantments": [
       "INLINE_ENCH_effect_clair_night_eyes_0",
-      {
-        "condition": {
-          "and": [
-            { "u_has_effect": "effect_clair_better_senses" },
-            { "not": { "u_has_effect": "effect_clair_better_senses_pain" } },
-            { "math": [ "(u_spell_level('clair_better_senses') * psionic_power_modifiers() ) >= 8" ] },
-            { "math": [ "u_val('fine_detail_vision_mod') <= 7" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_clair_craft_in_darkness", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_clair_night_eyes_1"
     ]
   },
   {
@@ -1153,247 +1086,18 @@
     "removes_effects": [ "effect_pyrokinetic_aura_damage" ],
     "enchantments": [
       "INLINE_ENCH_effect_pyrokinetic_aura_0",
-      {
-        "condition": {
-          "math": [
-            "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-            "<=",
-            "3"
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_1"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "3"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "6"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_2"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "6"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "9"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_3"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "9"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "12"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_4"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "12"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "15"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_5"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "15"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "18"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_6"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "18"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "21"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_7"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "21"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "24"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_8"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "24"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "27"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_9"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "27"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "30"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_10"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "30"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "33"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_11"
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                ">",
-                "33"
-              ]
-            },
-            {
-              "math": [
-                "(u_spell_level('pyrokinetic_aura') + u_spell_level('pyrokinetic_aura_knack') ) * psionic_power_modifiers()",
-                "<=",
-                "36"
-              ]
-            }
-          ]
-        },
-        "emitter": "emit_pyrokinetic_aura_12"
-      }
+      "INLINE_ENCH_effect_pyrokinetic_aura_1",
+      "INLINE_ENCH_effect_pyrokinetic_aura_2",
+      "INLINE_ENCH_effect_pyrokinetic_aura_3",
+      "INLINE_ENCH_effect_pyrokinetic_aura_4",
+      "INLINE_ENCH_effect_pyrokinetic_aura_5",
+      "INLINE_ENCH_effect_pyrokinetic_aura_6",
+      "INLINE_ENCH_effect_pyrokinetic_aura_7",
+      "INLINE_ENCH_effect_pyrokinetic_aura_8",
+      "INLINE_ENCH_effect_pyrokinetic_aura_9",
+      "INLINE_ENCH_effect_pyrokinetic_aura_10",
+      "INLINE_ENCH_effect_pyrokinetic_aura_11",
+      "INLINE_ENCH_effect_pyrokinetic_aura_12"
     ],
     "flags": [ "RAIN_IMMUNE", "SNOWWALKING" ]
   },
@@ -1437,10 +1141,7 @@
     "enchantments": [
       "INLINE_ENCH_effect_telekinetic_momentum_0",
       "INLINE_ENCH_effect_telekinetic_momentum_1",
-      {
-        "condition": { "math": [ "( u_spell_level('telekinetic_momentum') * psionic_power_modifiers() ) >= 30" ] },
-        "ench_effects": [ { "effect": "effect_psi_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_telekinetic_momentum_2"
     ],
     "flags": [ "MUSCLE_VEH_BOOST" ]
   },
@@ -1514,10 +1215,7 @@
     "flags": [ "TELEKIN_SHIELD" ],
     "enchantments": [
       "INLINE_ENCH_effect_telekinetic_armor_0",
-      {
-        "condition": { "math": [ "( u_spell_level('telekinetic_shield') * psionic_power_modifiers() ) >= 25" ] },
-        "ench_effects": [ { "effect": "effect_psi_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_telekinetic_armor_1"
     ]
   },
   {
