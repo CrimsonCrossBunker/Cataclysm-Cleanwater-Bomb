@@ -31,3 +31,5 @@ ccb.runtime.on("game:game_begin", "initialize_dialogue_flag")
 require("speech")
 
 require("snippets")
+
+require("weather_generators")

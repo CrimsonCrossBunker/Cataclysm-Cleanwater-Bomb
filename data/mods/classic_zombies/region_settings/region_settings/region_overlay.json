@@ -43,16 +43,6 @@
     }
   },
   {
-    "type": "weather_generator",
-    "id": "default",
-    "copy-from": "default",
-    "base_temperature": 5.5,
-    "base_humidity": 50.0,
-    "base_pressure": 1015,
-    "base_wind": 4.4,
-    "weather_black_list": [ "early_portal_storm", "portal_storm" ]
-  },
-  {
     "type": "region_settings",
     "id": "default",
     "copy-from": "default",
