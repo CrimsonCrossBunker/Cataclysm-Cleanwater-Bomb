@@ -19,7 +19,7 @@
     "flags": [ "LEG_PROSTHETIC", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_r", "leg_prosthetic_r", "foot_prosthetic_r" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "RIGHT_PROSTHETIC_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_right_leg_prosthetic_0" } ]
   },
   {
     "id": "left_leg_prosthetic",
@@ -41,7 +41,7 @@
     "flags": [ "LEG_PROSTHETIC", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_l", "leg_prosthetic_l", "foot_prosthetic_l" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "LEFT_PROSTHETIC_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_left_leg_prosthetic_0" } ]
   },
   {
     "id": "right_peg_leg_old",
@@ -63,7 +63,7 @@
     "flags": [ "LEG_PROSTHETIC", "FRAGILE", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_r", "leg_peg_r" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "RIGHT_PEG_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_right_peg_leg_old_0" } ]
   },
   {
     "id": "left_peg_leg_old",
@@ -85,7 +85,7 @@
     "flags": [ "LEG_PROSTHETIC", "FRAGILE", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_l", "leg_peg_l" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "LEFT_PEG_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_left_peg_leg_old_0" } ]
   },
   {
     "id": "right_leg_prosthetic_steel_old",
@@ -107,7 +107,7 @@
     "flags": [ "LEG_PROSTHETIC", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_r", "leg_prosthetic_r", "foot_prosthetic_r" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "RIGHT_PROSTHETIC_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_right_leg_prosthetic_steel_old_0" } ]
   },
   {
     "id": "left_leg_prosthetic_steel_old",
@@ -129,6 +129,6 @@
     "flags": [ "LEG_PROSTHETIC", "PADDED", "MUNDANE" ],
     "max_worn": 1,
     "armor": [ { "encumbrance": 0, "coverage": 100, "covers": [ "leg_stub_l", "leg_prosthetic_l", "foot_prosthetic_l" ] } ],
-    "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "mutations": [ "LEFT_PROSTHETIC_LEG" ] } ]
+    "passive_effects": [ { "id": "ITEM_ENCH_Limb_WIP_left_leg_prosthetic_steel_old_0" } ]
   }
 ]
