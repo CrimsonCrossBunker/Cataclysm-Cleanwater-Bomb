@@ -1044,10 +1044,7 @@
     "valid": false,
     "description": "You've always been a bit of a bull in a china shop; people used to call you heavy handed but now they aren't saying much at all.  You deal extra damage based on how protective your right arm is.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "melee_damage_bonus": [ { "type": "bash", "add": { "math": [ "min( 15, u_armor('bash', 'arm_r') * u_attack_speed() / 200 )" ] } } ]
-      }
+      "INLINE_ENCH_perk_jugg_0"
     ],
     "flags": [ "PERK" ]
   },

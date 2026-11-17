@@ -23,3 +23,5 @@ require("body_enchantments")
 require("contextual_enchantments")
 
 require("power_enchantments")
+
+require("iron_arm_enchantment")
