@@ -454,6 +454,8 @@ do
     content.upsert(weather)
 end
 
+require("portal_weather")
+
 -- data/json/weather_type.json
 do
     local weather = content.WeatherType {
@@ -514,6 +516,8 @@ do
     weather:tint { red = 110, green = 0, blue = 0, strength = 1.0 }
     content.upsert(weather)
 end
+
+require("scarlet_weather")
 
 -- data/json/effects_on_condition/scenario_specific_eocs.json
 do
