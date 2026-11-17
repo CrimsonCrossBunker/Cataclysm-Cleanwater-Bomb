@@ -1,1 +1,3 @@
 require("vitamins")
+
+require("snippets")
