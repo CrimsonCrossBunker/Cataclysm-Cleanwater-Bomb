@@ -10,17 +10,6 @@
   },
   {
     "type": "enchantment",
-    "id": "ench_vampire_heightened_senses_hearing",
-    "condition": "ALWAYS",
-    "values": [
-      {
-        "value": "HEARING_MULT",
-        "multiply": { "math": [ "0.25 + (u_has_trait('VAMPIRE2') * 0.25) + (u_has_trait('VAMPIRE3') * 0.5)" ] }
-      }
-    ]
-  },
-  {
-    "type": "enchantment",
     "id": "ench_vampire_heightened_senses_perception",
     "condition": "ALWAYS",
     "values": [

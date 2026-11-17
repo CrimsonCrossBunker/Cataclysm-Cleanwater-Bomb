@@ -27,27 +27,6 @@
   },
   {
     "type": "enchantment",
-    "id": "MAX_MANA_STR",
-    "condition": "ALWAYS",
-    "//": "proof of concept",
-    "values": [ { "value": "STRENGTH", "add": { "math": [ "u_val('mana_max') / 4" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "PAIN_STR",
-    "condition": "ALWAYS",
-    "//": "proof of concept",
-    "values": [ { "value": "STRENGTH", "add": { "math": [ "u_pain() / 4" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "DREAM_DAGGER",
-    "has": "WIELD",
-    "condition": "ALWAYS",
-    "melee_damage_bonus": [ { "type": "cut", "add": { "math": [ "u_val('mana_max')/100" ] } } ]
-  },
-  {
-    "type": "enchantment",
     "id": "SALAMANDER_SUMMON_WHIP",
     "has": "WIELD",
     "condition": "ALWAYS",

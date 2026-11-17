@@ -142,13 +142,6 @@
   },
   {
     "type": "enchantment",
-    "id": "ench_jagged_claws_faster_attack",
-    "has": "WORN",
-    "condition": { "not": "u_has_weapon" },
-    "values": [ { "value": "ATTACK_SPEED", "add": -10 } ]
-  },
-  {
-    "type": "enchantment",
     "id": "ench_arvore_forest_stealth",
     "condition": {
       "and": [
