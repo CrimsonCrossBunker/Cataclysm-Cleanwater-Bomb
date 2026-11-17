@@ -9102,6 +9102,28 @@ function CcbSpellsApi.forget(character, spell) end
 ---@class CcbRelocationApi
 local CcbRelocationApi = {}
 
+---@class CcbCharacterTeleportOptions: CcbAvatarTeleportOptions
+
+---@class CcbCharacterTeleportValue
+---@field accepted boolean Native teleport_to_point return value; a rejected attempt may still unboard the Character.
+---@field changed boolean True when native accepted the operation or position/boarded state changed.
+---@field scope 'avatar'|'npc'
+---@field handle GameHandle Exact Character handle after the attempt.
+---@field position TripointCoord Current absolute map-square position.
+---@field overmap_terrain TripointCoord Current absolute overmap-terrain position.
+
+---@class CcbCharacterTeleportResult: CcbResult
+---@field value? CcbCharacterTeleportValue Present when the exact Character resolved and the request was well-formed.
+---@field error? CcbPlatformResultError Present for unsupported, stale or invalid handles; malformed options or coordinates raise errors.
+
+---Use native safe teleport rules for the exact Avatar or NPC, including force policies and linked-item translation on acceptance.
+---Native target loading/recentering rules are retained. No teleglow or internal success/failure messages are added.
+---@param character GameHandle Exact live Avatar or NPC; other subtypes return unsupported.
+---@param position TripointCoord Absolute map-square destination within native map-load coordinate bounds.
+---@param options? CcbCharacterTeleportOptions
+---@return CcbCharacterTeleportResult
+function CcbRelocationApi.teleport_character(character, position, options) end
+
 ---@param avatar GameHandle Exact live Avatar handle; NPCs, Monsters, generic Characters, Vehicles, Items, and Zones are unsupported.
 ---@param position TripointCoord Absolute map-square target; local, relative, and overmap coordinates are rejected.
 ---@param options? CcbAvatarTeleportOptions Optional native `force`/`force_safe` policy; omitted means both false.
