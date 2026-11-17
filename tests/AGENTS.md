@@ -17,6 +17,6 @@ make -j2 tests
 
 # other notes
 
-- Not all changes require testing, please do not add unnecessary testing for behaviors such as document updates or JSON data changes that have no intersection with the testing system before.
+- Not all changes require testing, please do not add unnecessary testing for behaviors such as some changes and updates about document or JSON data which have no intersection with the testing system before.
 - It is generally recommended to use or incorporate dedicated test data from `TEST_DATA` when testing new features and systems, rather than directly using core or first party loadable mod data that may still be continuously adjusted. (Not an absolute requirement.)
 - Scripts in `tests/` can't block releases or the final game; issues found there during code review should not be flagged as critical errors.
