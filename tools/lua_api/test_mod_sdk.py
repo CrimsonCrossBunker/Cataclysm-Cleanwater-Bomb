@@ -262,7 +262,7 @@ class ModSdkTest(unittest.TestCase):
             def diagnose(command, **kwargs):
                 log = next(part.split("=", 1)[1] for part in command
                            if part.startswith("--logpath="))
-                uri = "file:///c%3A/path%20with%20spaces/percent%2520.lua"
+                uri = "file:///C%3A/path%20with%20spaces/percent%2520.lua"
                 report = {uri: [{
                     "range": {"start": {"line": 1, "character": 2}},
                     "code": "undefined-global", "message": "test"}]}
@@ -496,12 +496,14 @@ ccb.runtime.handler()
             report = "\n".join(
                 mod_sdk.check_mod(mod, os.environ["CCB_LUALS"])
             )
-            self.assertIn(str(invalid) + ":2:", report)
+            filename = os.path.normcase(str(invalid))
+            locations = os.path.normcase(report)
+            self.assertIn(filename + ":2:", locations)
             self.assertIn("param-type-mismatch", report)
             self.assertIn("fun(payload: any):any", report)
-            self.assertIn(str(invalid) + ":3:", report)
+            self.assertIn(filename + ":3:", locations)
             self.assertIn("nonexistent_api", report)
-            self.assertIn(str(invalid) + ":5:", report)
+            self.assertIn(filename + ":5:", locations)
             self.assertIn("missing-parameter", report)
             result = subprocess.run(
                 [sys.executable, str(ROOT / "tools/lua_api/mod_sdk.py"),
