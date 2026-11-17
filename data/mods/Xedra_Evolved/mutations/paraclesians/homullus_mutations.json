@@ -521,18 +521,7 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "REGEN_STAMINA",
-            "multiply": {
-              "math": [
-                "(u_characters_nearby('radius': 30, 'attitude': 'any') + u_mon_species_nearby('FERAL', 'radius': 30, 'attitude': 'both')) * (0.05 * paraclesian_post_threshold_doubler(1))"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_HOMULLUS_REGEN_STAMINA_0"
     ]
   },
   {

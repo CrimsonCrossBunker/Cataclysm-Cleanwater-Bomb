@@ -328,25 +328,7 @@
     "apply_message": "You're fired up and ready for battle.",
     "remove_message": "The energy of the sun leaves you.",
     "enchantments": [
-      {
-        "condition": {
-          "or": [ { "math": [ "u_monsters_nearby('radius': 1) > 0" ] }, { "math": [ "u_characters_nearby('radius': 1) > 0" ] } ]
-        },
-        "values": [
-          {
-            "value": "REGEN_STAMINA",
-            "add": {
-              "math": [
-                "( (u_monsters_nearby('radius': 1) + u_characters_nearby('radius': 1) ) * 75) * (global_what_is_the_season == 4 ? 0.6 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "BONUS_DODGE",
-            "add": { "math": [ "max( ( (u_monsters_nearby('radius': 1) + u_characters_nearby('radius': 1) ) / 3), 1)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_summer_bonus_stamina_near_enemies_0"
     ]
   },
   {
