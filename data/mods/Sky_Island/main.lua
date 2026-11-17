@@ -16,6 +16,8 @@ require("raid_return")
 
 require("raid_rewards")
 
+require("raid_warp")
+
 require("recipes")
 
 if require("ccb").content.is_mod_active("magiclysm") then
