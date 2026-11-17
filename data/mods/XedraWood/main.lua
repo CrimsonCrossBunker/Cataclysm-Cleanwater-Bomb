@@ -43,3 +43,5 @@ ccb.runtime.on("game:game_start", "initialize_character")
 require("flags")
 
 require("tool_qualities")
+
+require("effect_enchantments")

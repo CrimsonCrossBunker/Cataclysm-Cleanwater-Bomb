@@ -9,7 +9,7 @@
     "apply_message": "",
     "remove_message": "Your spirit has recovered from your quest.",
     "rating": "mixed",
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": -999 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_xedrawood_hedge_magic_spirit_quest_completed_0" ],
     "flags": [ "NO_HEDGE_MAGICK" ]
   },
   {
