@@ -1257,9 +1257,6 @@ void Character::load( const JsonObject &data, const JsonObject *legacy_kills )
 
     set_wielded_item( item() );
     data.read( "weapon", weapon );
-    if( !weapon.is_null() && weapon.relic_data && weapon.type->relic_data ) {
-        weapon.relic_data = weapon.type->relic_data;
-    }
     data.read( "move_mode", move_mode );
 
     if( has_effect( effect_riding ) ) {
@@ -4377,6 +4374,10 @@ void item::io( Archive &archive, item_load_context context )
 
     static const cata::value_ptr<relic> null_relic_ptr = nullptr;
     archive.io( "relic_data", relic_data, null_relic_ptr );
+    if( Archive::is_input::value && context == item_load_context::saved_game &&
+        relic_data && type->relic_data ) {
+        relic_data->restore_template_behaviors( *type->relic_data );
+    }
     static const cata::value_ptr<link_data> null_link_ptr = nullptr;
     archive.io( "link_data", link_, null_link_ptr );
     if( Archive::is_input::value && has_link_data() ) {

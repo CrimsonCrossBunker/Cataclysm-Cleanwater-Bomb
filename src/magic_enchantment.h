@@ -2,6 +2,7 @@
 #ifndef CATA_SRC_MAGIC_ENCHANTMENT_H
 #define CATA_SRC_MAGIC_ENCHANTMENT_H
 
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <optional>
@@ -219,6 +220,7 @@ class enchantment
         // shows total conditional values, so only use this when Character is not available
         bool active_wield() const;
         enchantment_id id;
+        bool item_instance = false;
         // NOLINTNEXTLINE(cata-serialize)
         std::vector<std::pair<enchantment_id, mod_id>> src;
 
@@ -430,6 +432,8 @@ class enchant_cache : public enchantment
                                     const std::string &type_key, const std::map<TKey, double> &add_map,
                                     const std::map<TKey, double> &mult_map ) const;
 
+        static enchant_cache from_item_definition( const enchantment &definition );
+        void restore_template_behavior( const enchant_cache &prototype );
         void serialize( JsonOut &jsout ) const;
         void add_value_add( enchant_vals::mod value, float add_value );
 
@@ -452,6 +456,8 @@ class enchant_cache : public enchantment
             double range;
             bool precise = false;
             bool ignores_aiming_cone = false;
+            enchantment_id definition_source;
+            std::size_t definition_index = 0;
             bool is_empty() const {
                 return range <= 0;
             }
@@ -465,6 +471,7 @@ class enchant_cache : public enchantment
             const enchant_cache::special_vision &vision_struct, const_dialogue &d ) const;
 
     private:
+        enchantment_id behavior_source;
         std::map<enchant_vals::mod, double> values_add; // NOLINT(cata-serialize)
         // values that get multiplied to the base value
         // multipliers add to each other instead of multiply against themselves

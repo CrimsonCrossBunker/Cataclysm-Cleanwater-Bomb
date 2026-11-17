@@ -257,6 +257,7 @@ class relic
         void add_passive_effect( const enchantment &ench );
         void add_active_effect( const fake_spell &sp, enchantment::has req );
 
+        void restore_template_behaviors( const relic &prototype );
         std::vector<enchant_cache> get_proc_enchantments() const;
         std::vector<enchantment> get_defined_enchantments() const;
 

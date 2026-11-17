@@ -5,6 +5,7 @@
 #include <magic.h>
 #include <translation.h>
 #include <type_id.h>
+#include <algorithm>
 #include <memory>
 #include <set>
 #include <string>
@@ -664,10 +665,76 @@ void enchantment::load( const JsonObject &jo, std::string_view,
     }
 }
 
+enchant_cache enchant_cache::from_item_definition( const enchantment &definition )
+{
+    enchant_cache result;
+    result.active_conditions = definition.active_conditions;
+    result.dialog_condition = definition.dialog_condition;
+    result.name = definition.name;
+    result.description = definition.description;
+    result.behavior_source = definition.id;
+    result.force_add( definition );
+    return result;
+}
+
+void enchant_cache::restore_template_behavior( const enchant_cache &prototype )
+{
+    // Old saves retain the instance values, but have no serialized callback identity.
+    if( behavior_source.is_empty() && active_conditions.second == condition::DIALOG_CONDITION &&
+        !prototype.behavior_source.is_empty() ) {
+        behavior_source = prototype.behavior_source;
+        dialog_condition = prototype.dialog_condition;
+        name = prototype.name;
+        description = prototype.description;
+    }
+    for( special_vision &vision : special_vision_vector ) {
+        if( !vision.definition_source.is_empty() ) {
+            continue;
+        }
+        const special_vision *match = nullptr;
+        bool ambiguous = false;
+        for( const special_vision &source : prototype.special_vision_vector ) {
+            if( source.definition_source.is_empty() || !float_equals( vision.range, source.range ) ||
+                vision.special_vision_descriptions_vector.size() != source.special_vision_descriptions_vector.size() ||
+                !std::equal( vision.special_vision_descriptions_vector.begin(),
+                             vision.special_vision_descriptions_vector.end(),
+                             source.special_vision_descriptions_vector.begin(),
+            []( const special_vision_descriptions &saved, const special_vision_descriptions &current ) {
+                return saved.id == current.id;
+            } ) ) {
+                continue;
+            }
+            if( match != nullptr ) {
+                ambiguous = true;
+                break;
+            }
+            match = &source;
+        }
+        if( match && !ambiguous ) {
+            vision.definition_source = match->definition_source;
+            vision.definition_index = match->definition_index;
+            vision.condition = match->condition;
+            vision.special_vision_descriptions_vector = match->special_vision_descriptions_vector;
+            vision.precise = match->precise;
+            vision.ignores_aiming_cone = match->ignores_aiming_cone;
+        }
+    }
+}
+
 void enchant_cache::load( const JsonObject &jo, std::string_view,
                           const std::optional<std::string> &inline_id )
 {
     enchantment::load( jo, "", inline_id, true );
+    behavior_source = enchantment_id( jo.get_string( "behavior_source", "" ) );
+    if( !behavior_source.is_empty() ) {
+        if( !behavior_source.is_valid() ) {
+            jo.throw_error_at( "behavior_source", "Unknown item enchantment definition" );
+        }
+        active_conditions.second = behavior_source->active_conditions.second;
+        dialog_condition = behavior_source->dialog_condition;
+        name = behavior_source->name;
+        description = behavior_source->description;
+    }
     if( jo.has_array( "values" ) ) {
 
         // enchantments to be silently skipped for recent obsoletion purposes
@@ -761,6 +828,19 @@ void enchant_cache::load( const JsonObject &jo, std::string_view,
             read_condition( vision_obj, "condition", _vision.condition, true );
             optional( vision_obj, was_loaded, "precise", _vision.precise );
             optional( vision_obj, was_loaded, "ignores_aiming_cone", _vision.ignores_aiming_cone );
+            _vision.definition_source = enchantment_id( vision_obj.get_string( "definition_source", "" ) );
+            if( !_vision.definition_source.is_empty() ) {
+                const int index = vision_obj.get_int( "definition_index" );
+                if( !_vision.definition_source.is_valid() || index < 0 ||
+                    static_cast<std::size_t>( index ) >= _vision.definition_source->special_vision_vector.size() ) {
+                    vision_obj.throw_error_at( "definition_source", "Unknown item vision definition" );
+                }
+                _vision.definition_index = static_cast<std::size_t>( index );
+                const enchantment::special_vision &source =
+                    _vision.definition_source->special_vision_vector[_vision.definition_index];
+                _vision.condition = source.condition;
+                _vision.special_vision_descriptions_vector = source.special_vision_descriptions_vector;
+            }
             special_vision_vector.emplace_back( _vision );
         }
     }
@@ -770,6 +850,15 @@ void enchant_cache::serialize( JsonOut &jsout ) const
 {
     jsout.start_object();
 
+    if( !behavior_source.is_empty() ) {
+        jsout.member( "behavior_source", behavior_source );
+    }
+    if( !name.empty() ) {
+        jsout.member( "name", name );
+    }
+    if( !description.empty() ) {
+        jsout.member( "description", description );
+    }
     jsout.member( "has", io::enum_to_string<enchantment::has>( active_conditions.first ) );
     jsout.member( "condition", io::enum_to_string<enchantment::condition>( active_conditions.second ) );
     if( emitter ) {
@@ -934,12 +1023,24 @@ void enchant_cache::serialize( JsonOut &jsout ) const
     for( const special_vision &struc : special_vision_vector ) {
         jsout.start_object();
         jsout.member( "distance", struc.range );
+        jsout.member( "precise", struc.precise );
+        jsout.member( "ignores_aiming_cone", struc.ignores_aiming_cone );
+        if( !struc.definition_source.is_empty() ) {
+            jsout.member( "definition_source", struc.definition_source );
+            jsout.member( "definition_index", struc.definition_index );
+        }
         jsout.member( "descriptions" );
         jsout.start_array();
         for( const special_vision_descriptions &struc_desc : struc.special_vision_descriptions_vector ) {
             jsout.start_object();
             jsout.member( "id", struc_desc.id );
-            jsout.member( "text", struc_desc.text );
+            jsout.member( "color", string_from_color( struc_desc.color ) );
+            jsout.member( "symbol", struc_desc.symbol );
+            if( struc_desc.description.empty() ) {
+                jsout.member( "text", struc_desc.text );
+            } else {
+                jsout.member( "text", struc_desc.description );
+            }
             jsout.end_object();
         }
         jsout.end_array();
@@ -1269,10 +1370,11 @@ void enchant_cache::force_add_with_dialogue( const enchantment &rhs, const const
             extra_damage_multiply[damage_type_id( modifier.target )] += multiply;
         }
     }
-    for( const enchantment::special_vision &struc : rhs.special_vision_vector ) {
+    for( std::size_t index = 0; index < rhs.special_vision_vector.size(); ++index ) {
+        const enchantment::special_vision &struc = rhs.special_vision_vector[index];
         special_vision_vector.emplace_back( special_vision{
             struc.special_vision_descriptions_vector, struc.condition, struc.range_value( d ),
-            struc.precise, struc.ignores_aiming_cone } );
+            struc.precise, struc.ignores_aiming_cone, rhs.id, index } );
     }
 
     hit_me_effect.insert( hit_me_effect.end(), rhs.hit_me_effect.begin(), rhs.hit_me_effect.end() );
@@ -1853,6 +1955,18 @@ bool enchant_cache::operator==( const enchant_cache &rhs ) const
         }
         iter_mult++;
         iter_mult2++;
+    }
+    if( active_conditions != rhs.active_conditions ||
+        ( active_conditions.second == condition::DIALOG_CONDITION && behavior_source != rhs.behavior_source ) ||
+        special_vision_vector.size() != rhs.special_vision_vector.size() ) {
+        return false;
+    }
+    for( std::size_t index = 0; index < special_vision_vector.size(); ++index ) {
+        const special_vision &left = special_vision_vector[index];
+        const special_vision &right = rhs.special_vision_vector[index];
+        if( left.definition_source != right.definition_source || left.definition_index != right.definition_index ) {
+            return false;
+        }
     }
     return this->id == rhs.id &&
            this->get_mutations() == rhs.get_mutations();

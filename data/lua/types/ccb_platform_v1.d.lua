@@ -5604,6 +5604,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field speaker? GameHandle Available only after world_ready.
 
 ---@class EnchantmentDefinitionOptions
+---@field item_instance? boolean Store constant modifiers in each relic item instance. Numeric and distance handlers are rejected; activation and vision predicates stay linked across saves.
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText

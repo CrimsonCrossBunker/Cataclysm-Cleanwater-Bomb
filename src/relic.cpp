@@ -453,8 +453,13 @@ void relic::finalize()
 {
     // add the enchantments that we couldn't earlier in the load
     for( const enchantment_id &ench : passive_enchant_ids ) {
-        add_passive_effect( ench.obj() );
+        if( ench->item_instance ) {
+            add_passive_effect( enchant_cache::from_item_definition( ench.obj() ) );
+        } else {
+            add_passive_effect( ench.obj() );
+        }
     }
+    passive_enchant_ids.clear();
 }
 
 void relic::deserialize( const JsonObject &jobj )
@@ -666,6 +671,18 @@ void relic::overwrite_charge( const relic_charge_info &info )
 std::string relic::name() const
 {
     return item_name_override.translated();
+}
+
+void relic::restore_template_behaviors( const relic &prototype )
+{
+    for( enchant_cache &saved : proc_passive_effects ) {
+        for( const enchant_cache &current : prototype.proc_passive_effects ) {
+            if( saved.stacks_with( current ) ) {
+                saved.restore_template_behavior( current );
+                break;
+            }
+        }
+    }
 }
 
 std::vector<enchant_cache> relic::get_proc_enchantments() const

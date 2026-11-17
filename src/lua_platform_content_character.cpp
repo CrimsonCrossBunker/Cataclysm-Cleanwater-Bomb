@@ -498,6 +498,7 @@ struct enchantment_definition_data {
     std::string condition_handler;
     std::optional<enchantment_character_inputs> load_character_inputs;
     bool native_modifier_order = false;
+    bool item_instance = false;
     std::string emitter;
     std::vector<std::pair<std::string, std::int64_t>> effects;
     std::vector<std::pair<std::string, std::string>> modified_bodyparts;
@@ -2670,6 +2671,7 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
         }
         definition->emitter = options.get_or( "emitter", std::string() );
         definition->native_modifier_order = options.get_or( "native_modifier_order", false );
+        definition->item_instance = options.get_or( "item_instance", false );
         enchantment_definition_handle handle{ definition, this->token };
         if( !definition->condition_handler.empty() ) {
             handle.active_when( definition->condition_handler );
@@ -4508,6 +4510,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 "limb_score", "melee_damage", "incoming_damage", "post_armor_damage"
             };
             for( const enchantment_modifier_definition_data &modifier : definition.modifiers ) {
+                if( definition.item_instance && ( !modifier.add_handler.empty() || !modifier.multiply_handler.empty() ) ) {
+                    throw std::runtime_error( "item instance enchantment '" + definition.id +
+                                              "' requires constant numeric modifiers" );
+                }
                 if( modifier_kinds.count( modifier.kind ) == 0 || modifier.target.empty() ||
                     ( !modifier.add && !modifier.multiply && modifier.add_handler.empty() &&
                       modifier.multiply_handler.empty() ) ||
@@ -4601,6 +4607,10 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 validate_fake_spell( definition.id, spell );
             }
             for( const enchantment_vision_definition_data &vision : definition.visions ) {
+                if( definition.item_instance && !vision.distance_handler.empty() ) {
+                    throw std::runtime_error( "item instance enchantment '" + definition.id +
+                                              "' requires a constant vision distance" );
+                }
                 if( !std::isfinite( vision.distance ) || vision.distance < 0.0 ||
                     ( vision.descriptions.empty() && vision.condition_handler.empty() ) ) {
                     throw std::runtime_error( "enchantment '" + definition.id +
@@ -6345,6 +6355,7 @@ void character_content_transaction::impl::apply_enchantment()
         const enchantment_definition_data &source = *entry.definition;
         enchantment native;
         native.id = id;
+        native.item_instance = source.item_instance;
         native.was_loaded = true;
         native.src.emplace_back( id, mod_id( this->owner ) );
         native.name = source.name.native();
@@ -7699,6 +7710,9 @@ void character_content_transaction::append_fingerprint(
                 hash_part( state, value.condition_handler );
                 if( value.native_modifier_order ) {
                     hash_part( state, "native_modifier_order" );
+                }
+                if( value.item_instance ) {
+                    hash_part( state, "item_instance" );
                 }
                 if( value.load_character_inputs ) {
                     hash_part( state, "load_character_inputs" );
