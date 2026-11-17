@@ -148,3 +148,5 @@ definition:entry("mon_zoose_thorny")
 definition:entry("mon_zombeaver")
 definition:entry("mon_zoose")
 content.add(definition)
+
+require("requirements")
