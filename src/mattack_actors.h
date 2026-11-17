@@ -169,6 +169,8 @@ class melee_actor : public mattack_actor
         bool spread_damage = false;
 
         std::vector<effect_on_condition_id> eoc;
+        std::string lua_hit_owner;
+        std::string lua_hit_handler;
 
         /**
          * If empty, regular melee roll body part selection is used.
@@ -202,7 +204,7 @@ class melee_actor : public mattack_actor
         /** Message for throwing a non-player. */
         translation throw_msg_npc;
 
-        melee_actor() = default;
+        melee_actor();
         ~melee_actor() override = default;
 
         virtual Creature *find_target( monster &z ) const;

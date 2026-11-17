@@ -18,11 +18,16 @@
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
+#include "map.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
+#include "mattack_actors.h"
 #include "math_parser_diag_value.h"
+#include "monster.h"
 #include "npc.h"
 #include "npc_opinion.h"
 #include "player_helpers.h"
+#include "rng.h"
 #include "talker.h"
 #include "type_id.h"
 
@@ -34,6 +39,62 @@ static const efftype_id effect_hedge_cure_cold_or_flu( "effect_hedge_cure_cold_o
 static const efftype_id effect_xe_hydrating_gout( "xe_hydrating_gout" );
 static const trait_id trait_HOMULLUS_EXPANDED_MUTATIONS( "HOMULLUS_EXPANDED_MUTATIONS" );
 static const trait_id trait_HOMULLUS_NO_DOLL_MUTATIONS( "HOMULLUS_NO_DOLL_MUTATIONS" );
+
+TEST_CASE( "xedra_warping_poison_uses_native_melee_and_only_mutates_on_damage",
+           "[.][mods][xedra_evolved]" )
+{
+    clear_avatar();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        clear_creatures();
+        clear_avatar();
+    } );
+    const restore_on_out_of_scope restore_turn( calendar::turn );
+    cata::lua_platform::runtime_world_ready( true );
+
+    avatar &player = get_avatar();
+    map &here = get_map();
+    const tripoint_bub_ms player_tile( 60, 60, 0 );
+    player.setpos( here, player_tile );
+    monster &warper = spawn_test_monster( "mon_mi_go_stalking_warper",
+                                        player_tile + tripoint_rel_ms::east );
+    warper.set_dest( player.pos_abs() );
+    set_time( calendar::turn - time_past_midnight( calendar::turn ) + 12_hours );
+    REQUIRE( warper.attack_target() == &player );
+
+    const auto found = warper.type->special_attacks.find( "inject_warping_poison" );
+    REQUIRE( found != warper.type->special_attacks.end() );
+    const auto *attack = dynamic_cast<const melee_actor *>( found->second.get() );
+    REQUIRE( attack != nullptr );
+    CHECK( attack->cooldown.evaluate( {} ) == 25 );
+    CHECK( attack->move_cost == 150 );
+    CHECK( attack->hitsize_min == 4 );
+    CHECK( attack->dodgeable );
+    CHECK( attack->blockable );
+    REQUIRE( attack->damage_max_instance.damage_units.size() == 1 );
+    const damage_unit &stab = attack->damage_max_instance.damage_units.front();
+    CHECK( stab.type == damage_type_id( "stab" ) );
+    CHECK( stab.amount == 15 );
+    CHECK( stab.res_pen == 8 );
+    CHECK( stab.res_mult == Approx( 0.5 ) );
+    CHECK( attack->hit_dmg_u.translated() == "%1$s bites and injects poison into your %2$s!" );
+
+    const bool prevent_damage = GENERATE( false, true );
+    CAPTURE( prevent_damage );
+    if( prevent_damage ) {
+        player.set_mutation( trait_id( "DEBUG_NODMG" ) );
+    }
+    const auto before = player.get_mutations();
+    const int moves = warper.get_moves();
+    rng_set_engine_seed( 70731 );
+    REQUIRE( attack->call( warper ) );
+    CHECK( warper.get_moves() == moves - 150 );
+    if( prevent_damage ) {
+        CHECK( player.get_mutations() == before );
+    } else {
+        CHECK( player.get_mutations() != before );
+    }
+}
 
 // Run explicitly with --mods xedra_evolved.
 TEST_CASE( "xedra_lua_consumables_apply_native_effects", "[.][mods][xedra_evolved]" )

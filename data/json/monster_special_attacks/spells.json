@@ -608,51 +608,6 @@
     "max_field_intensity": 2
   },
   {
-    "type": "effect_on_condition",
-    "id": "EOC_random_mutate",
-    "condition": { "and": [ { "math": [ "_proj_damage + _damage > 0" ] }, "has_beta", "npc_is_character" ] },
-    "effect": [
-      { "set_string_var": "<random_category>", "target_var": { "context_val": "dart_mutation_category" }, "parse_tags": true },
-      {
-        "npc_mutate_category": { "context_val": "dart_mutation_category" },
-        "use_vitamins": false,
-        "true_random": true
-      }
-    ]
-  },
-  {
-    "type": "snippet",
-    "category": "<random_category>",
-    "text": [
-      { "text": { "str": "CHIMERA", "//~": "NO_I18N" }, "weight": 6 },
-      { "text": { "str": "INSECT", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "ALPHA", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "URSINE", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "CHIROPTERAN", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "BIRD", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "MEDICAL", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "LUPINE", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "RAT", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "SLIME", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "PLANT", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "BATRACHIAN", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "RAPTOR", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "MOUSE", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "CEPHALOPOD", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "ELFA", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "FISH", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "HUMAN", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "RABBIT", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "GASTROPOD", "//~": "NO_I18N" }, "weight": 2 },
-      { "text": { "str": "BEAST", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "FELINE", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "CATTLE", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "LIZARD", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "TROGLOBITE", "//~": "NO_I18N" }, "weight": 1 },
-      { "text": { "str": "CRUSTACEAN", "//~": "NO_I18N" }, "weight": 1 }
-    ]
-  },
-  {
     "type": "SPELL",
     "id": "base_portal",
     "name": { "str": "Base characteristics of portal spells", "//~": "NO_I18N" },

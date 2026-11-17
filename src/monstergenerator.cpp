@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -62,6 +63,28 @@ static const spell_id spell_pseudo_dormant_trap_setup( "pseudo_dormant_trap_setu
 namespace
 {
 generic_factory<mon_flag> mon_flags( "monster flags" );
+
+// JSON monsters can name attacks that their Mod registers in the Lua content phase.
+class deferred_monster_attack final : public mattack_actor
+{
+    public:
+        deferred_monster_attack( const std::string &id, const JsonValue &reference,
+                                 std::string_view source ) :
+            mattack_actor( id ), reference( reference ), source( source ) {}
+
+        [[noreturn]] bool call( monster & ) const override {
+            throw std::logic_error( "Unresolved monster attack: " + id );
+        }
+
+        std::unique_ptr<mattack_actor> clone() const override {
+            return std::make_unique<deferred_monster_attack>( *this );
+        }
+
+        void load_internal( const JsonObject &, const std::string & ) override {}
+
+        const JsonValue reference;
+        const std::string source;
+};
 } // namespace
 
 generic_factory<mon_flag> &cata::lua_platform::detail::monster_flag_registry()
@@ -427,6 +450,24 @@ void MonsterGenerator::finalize_mtypes()
     std::vector<mtype> extra_mtypes;
     for( const mtype &elem : mon_templates->get_all() ) {
         mtype &mon = const_cast<mtype &>( elem );
+
+        for( auto &[id, attack] : mon.special_attacks ) {
+            const auto *deferred = dynamic_cast<const deferred_monster_attack *>( attack.get() );
+            if( deferred == nullptr ) {
+                continue;
+            }
+            const auto prototype = attack_map.find( id );
+            if( prototype == attack_map.end() ) {
+                deferred->reference.throw_error( "Unknown monster attack '" + id + "'" );
+            }
+            if( deferred->reference.test_object() ) {
+                attack = create_actor( deferred->reference.get_object(), deferred->source );
+            } else {
+                auto actor = prototype->second->clone();
+                actor->cooldown.deserialize( deferred->reference.get_array()[1] );
+                attack = mtype_special_attack( std::move( actor ) );
+            }
+        }
 
         if( !mon.default_faction.is_valid() ) {
             debugmsg( "Monster type '%s' has invalid default_faction: '%s'. "
@@ -985,22 +1026,36 @@ struct special_attacks_reader : generic_typed_reader<special_attacks_reader> {
             return std::make_pair( name, mtype_special_attack( std::make_unique<invalid_mattack_actor>() ) );
         }
         if( jv.test_object() ) {
-            mtype_special_attack new_attack = gen.create_actor( jv.get_object(), std::string( src ) );
+            JsonObject object = jv.get_object();
+            const std::string type = object.get_string( "type", "monster_attack" );
+            if( type == "monster_attack" && object.get_string( "attack_type", type ) == type &&
+                object.has_string( "id" ) ) {
+                const std::string name = object.get_string( "id" );
+                if( gen.attack_map.count( name ) == 0 ) {
+                    report_double_def( name, jv );
+                    names.push_back( name );
+                    object.allow_omitted_members();
+                    return { name, mtype_special_attack(
+                            std::make_unique<deferred_monster_attack>( name, jv, src ) ) };
+                }
+            }
+            mtype_special_attack new_attack = gen.create_actor( object, std::string( src ) );
             report_double_def( new_attack->id, jv );
             names.push_back( new_attack->id );
             return std::make_pair( new_attack->id, new_attack );
         }
         JsonArray inner = jv.get_array();
         std::string name = inner.get_string( 0 );
+        report_double_def( name, jv );
+        names.push_back( name );
         const auto iter = gen.attack_map.find( name );
         if( iter == gen.attack_map.end() ) {
-            inner.throw_error( "Invalid special_attacks" );
+            return { name, mtype_special_attack(
+                    std::make_unique<deferred_monster_attack>( name, jv, src ) ) };
         }
-        report_double_def( name, jv );
 
         mtype_special_attack new_attack = mtype_special_attack( iter->second );
         new_attack.actor->cooldown.deserialize( inner[1] );
-        names.push_back( name );
         return std::make_pair( name, new_attack );
     }
 };

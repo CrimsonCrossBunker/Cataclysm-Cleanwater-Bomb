@@ -1222,6 +1222,32 @@ function BehaviorDefinition:score_native(predicate_id, argument) end
 ---@field attacker GameHandle Generation-safe attacking monster handle.
 ---@field target GameHandle|nil Generation-safe current target when one exists.
 
+---@class MonsterAttackResultPayload
+---@field monster_type_id string Native monster type id.
+---@field attack_id string Native attack id.
+---@field attacker GameHandle Generation-safe attacking monster.
+---@field target GameHandle|nil Generation-safe target.
+---@field total_damage integer Native damage after armor and blocks.
+
+---@class MonsterMeleeAttackDamage
+---@field type string Native damage type id.
+---@field amount? number Non-negative maximum damage before multipliers.
+---@field armor_penetration? number Non-negative flat armor penetration.
+---@field armor_multiplier? number Non-negative multiplier applied to armor. Defaults to one.
+
+---@class MonsterMeleeAttackOptions
+---@field move_cost? integer Non-negative cost in moves. Defaults to 100.
+---@field minimum_hit_size? integer Minimum body-part hit size. Defaults to -1 for unrestricted.
+---@field dodgeable? boolean Defaults to true, including uncanny dodge.
+---@field blockable? boolean Defaults to true.
+---@field damage? MonsterMeleeAttackDamage[] Native maximum damage. Omit for the engine's default.
+---@field avatar_hit? string|LocalizedText Message for a damaging hit against the avatar.
+---@field avatar_miss? string|LocalizedText Message when the avatar dodges.
+---@field avatar_no_damage? string|LocalizedText Message for a hit without damage against the avatar.
+---@field npc_hit? string|LocalizedText Message for a damaging hit against a non-player character.
+---@field npc_miss? string|LocalizedText Message when a non-player character dodges.
+---@field npc_no_damage? string|LocalizedText Message for a hit without damage against a non-player character.
+
 ---@class MonsterAttackDefinition
 ---@field id string
 local MonsterAttackDefinition = {}
@@ -1229,6 +1255,16 @@ local MonsterAttackDefinition = {}
 ---@param handler_id string Named handler receiving MonsterAttackPolicyPayload and returning one boolean.
 ---@return MonsterAttackDefinition self
 function MonsterAttackDefinition:policy(handler_id) end
+
+---Configure a native melee attack with engine targeting and damage resolution.
+---@param options MonsterMeleeAttackOptions
+---@return MonsterAttackDefinition self
+function MonsterAttackDefinition:melee(options) end
+
+---Register a named callback for a resolved native melee hit, including hits that dealt zero damage.
+---@param handler_id string Handler receiving MonsterAttackResultPayload.
+---@return MonsterAttackDefinition self
+function MonsterAttackDefinition:on_hit(handler_id) end
 
 ---@class EffectTypeDefinitionOptions
 ---@field id string Stable native effect-type id.

@@ -421,10 +421,37 @@ struct effect_type_definition_data {
     bool registered = false;
 };
 
+constexpr std::array melee_message_fields = {
+    std::pair{ "avatar_hit", &melee_actor::hit_dmg_u },
+    std::pair{ "avatar_miss", &melee_actor::miss_msg_u },
+    std::pair{ "avatar_no_damage", &melee_actor::no_dmg_msg_u },
+    std::pair{ "npc_hit", &melee_actor::hit_dmg_npc },
+    std::pair{ "npc_miss", &melee_actor::miss_msg_npc },
+    std::pair{ "npc_no_damage", &melee_actor::no_dmg_msg_npc }
+};
+
+struct monster_melee_damage_definition {
+    std::string type;
+    double amount;
+    double armor_penetration;
+    double armor_multiplier;
+};
+
+struct monster_melee_definition {
+    std::int64_t move_cost;
+    std::int64_t minimum_hit_size;
+    bool dodgeable;
+    bool blockable;
+    std::optional<std::vector<monster_melee_damage_definition>> damage;
+    std::array<std::optional<authored_text>, melee_message_fields.size()> messages;
+};
+
 struct monster_attack_definition_data {
     std::string id;
     double cooldown = 1.0;
     std::string handler;
+    std::optional<monster_melee_definition> melee;
+    std::string hit_handler;
     bool registered = false;
 };
 
@@ -1308,6 +1335,44 @@ struct monster_attack_definition_handle {
             throw std::runtime_error( "monster attack policy cannot be empty" );
         }
         definition->handler = handler;
+        return *this;
+    }
+
+    monster_attack_definition_handle &melee( const sol::table &options ) {
+        require_building_handle( token, *definition, "monster attack" );
+        monster_melee_definition melee{};
+        melee.move_cost = options.get_or<std::int64_t>( "move_cost", 100 );
+        melee.minimum_hit_size = options.get_or<std::int64_t>( "minimum_hit_size", -1 );
+        melee.dodgeable = options.get_or( "dodgeable", true );
+        melee.blockable = options.get_or( "blockable", true );
+        if( const auto damage = options.get<sol::optional<sol::table>>( "damage" ) ) {
+            melee.damage.emplace();
+            const std::size_t count = require_dense_array( *damage, "monster melee damage", 0, 4096 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::table unit = damage->get<sol::table>( index );
+                melee.damage->push_back( {
+                    unit.get_or( "type", std::string() ), unit.get_or( "amount", 0.0 ),
+                    unit.get_or( "armor_penetration", 0.0 ), unit.get_or( "armor_multiplier", 1.0 )
+                } );
+            }
+        }
+        for( std::size_t index = 0; index < melee_message_fields.size(); ++index ) {
+            const char *key = melee_message_fields[index].first;
+            const sol::object value = options[key];
+            if( value.valid() && value.get_type() != sol::type::nil ) {
+                melee.messages[index] = read_singular_text( value, {}, key );
+            }
+        }
+        definition->melee = std::move( melee );
+        return *this;
+    }
+
+    monster_attack_definition_handle &on_hit( const std::string &handler ) {
+        require_building_handle( token, *definition, "monster attack" );
+        if( handler.empty() ) {
+            throw std::runtime_error( "monster attack hit handler cannot be empty" );
+        }
+        definition->hit_handler = handler;
         return *this;
     }
 
@@ -2870,7 +2935,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
         "id", sol::property( &monster_attack_definition_handle::id ),
-        "policy", &monster_attack_definition_handle::policy );
+        "policy", &monster_attack_definition_handle::policy,
+        "melee", &monster_attack_definition_handle::melee,
+        "on_hit", &monster_attack_definition_handle::on_hit );
     ccb.new_usertype<weakpoint_set_definition_handle>(
         "WeakpointSetDefinition", sol::no_constructor,
         "id", sol::property( &weakpoint_set_definition_handle::id ),
@@ -3975,6 +4042,33 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
             if( !definition.handler.empty() && owner_runtime.handlers.count( definition.handler ) == 0 ) {
                 throw std::runtime_error( "monster attack '" + definition.id +
                                           "' references missing handler '" + definition.handler + "'" );
+            }
+            if( !definition.hit_handler.empty() && ( !definition.melee ||
+                    owner_runtime.handlers.count( definition.hit_handler ) == 0 ) ) {
+                throw std::runtime_error( "monster attack '" + definition.id +
+                                          "' needs a melee attack and a registered hit handler" );
+            }
+            if( definition.melee ) {
+                const monster_melee_definition &melee = *definition.melee;
+                if( !definition.handler.empty() || melee.move_cost < 0 ||
+                    melee.move_cost > std::numeric_limits<int>::max() || melee.minimum_hit_size < -1 ||
+                    melee.minimum_hit_size > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "monster attack '" + definition.id +
+                                              "' has invalid melee options" );
+                }
+                const auto nonnegative_float = []( const double value ) {
+                    return value >= 0.0 && value <= std::numeric_limits<float>::max();
+                };
+                if( melee.damage ) {
+                    for( const monster_melee_damage_definition &unit : *melee.damage ) {
+                        if( !damage_exists( unit.type ) || !nonnegative_float( unit.amount ) ||
+                            !nonnegative_float( unit.armor_penetration ) ||
+                            !nonnegative_float( unit.armor_multiplier ) ) {
+                            throw std::runtime_error( "monster attack '" + definition.id +
+                                                      "' has invalid melee damage" );
+                        }
+                    }
+                }
             }
         }
         for( const auto &entry : pimpl_->weakpoint_sets ) {
@@ -5085,8 +5179,39 @@ void creatures_content_transaction::impl::apply_monster_attack()
         this->monster_attack_undo.emplace_back(
             source.id, previous == nullptr ? std::optional<mtype_special_attack>() :
             std::optional<mtype_special_attack>( *previous ) );
-        auto actor = std::make_unique<lua_monster_attack_actor>(
-                         source.id, source.cooldown, this->owner, source.handler );
+        std::unique_ptr<mattack_actor> actor;
+        if( source.melee ) {
+            const monster_melee_definition &melee = *source.melee;
+            auto native = std::make_unique<melee_actor>();
+            native->id = source.id;
+            native->cooldown = source.cooldown;
+            native->was_loaded = true;
+            native->move_cost = static_cast<int>( melee.move_cost );
+            native->hitsize_min = static_cast<int>( melee.minimum_hit_size );
+            native->dodgeable = melee.dodgeable;
+            native->uncanny_dodgeable = melee.dodgeable;
+            native->blockable = melee.blockable;
+            native->lua_hit_owner = this->owner;
+            native->lua_hit_handler = source.hit_handler;
+            if( melee.damage ) {
+                native->damage_max_instance.clear();
+                for( const monster_melee_damage_definition &unit : *melee.damage ) {
+                    native->damage_max_instance.add_damage( damage_type_id( unit.type ),
+                            static_cast<float>( unit.amount ), static_cast<float>( unit.armor_penetration ),
+                            static_cast<float>( unit.armor_multiplier ) );
+                }
+            }
+            for( std::size_t index = 0; index < melee.messages.size(); ++index ) {
+                if( melee.messages[index] ) {
+                    const auto field = melee_message_fields[index].second;
+                    native.get()->*field = melee.messages[index]->native();
+                }
+            }
+            actor = std::move( native );
+        } else {
+            actor = std::make_unique<lua_monster_attack_actor>(
+                        source.id, source.cooldown, this->owner, source.handler );
+        }
         detail::monster_attack_registry_set( mtype_special_attack( std::move( actor ) ) );
     }
     this->next_apply_phase = creatures_content_apply_phase::weakpoint_set;
@@ -6798,6 +6923,30 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, entry.definition->id );
             hash_part( state, std::to_string( entry.definition->cooldown ) );
             hash_part( state, entry.definition->handler );
+            if( entry.definition->melee ) {
+                const monster_melee_definition &melee = *entry.definition->melee;
+                hash_part( state, "melee" );
+                hash_part( state, entry.definition->hit_handler );
+                hash_part( state, std::to_string( melee.move_cost ) );
+                hash_part( state, std::to_string( melee.minimum_hit_size ) );
+                hash_part( state, melee.dodgeable ? "dodgeable" : "unavoidable" );
+                hash_part( state, melee.blockable ? "blockable" : "unblockable" );
+                if( melee.damage ) {
+                    hash_part( state, "explicit_damage" );
+                    for( const monster_melee_damage_definition &unit : *melee.damage ) {
+                        hash_part( state, unit.type );
+                        hash_part( state, std::to_string( unit.amount ) );
+                        hash_part( state, std::to_string( unit.armor_penetration ) );
+                        hash_part( state, std::to_string( unit.armor_multiplier ) );
+                    }
+                }
+                for( const auto &message : melee.messages ) {
+                    hash_part( state, message ? "custom_message" : "default_message" );
+                    if( message ) {
+                        hash_part( state, *message );
+                    }
+                }
+            }
         }
     } else if( phase == creatures_content_fingerprint_phase::weakpoint_set ) {
         for( const auto &entry : pimpl_->weakpoint_sets ) {

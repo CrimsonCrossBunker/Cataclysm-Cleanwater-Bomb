@@ -445,11 +445,23 @@ void grab::load_grab( const JsonObject &jo )
     was_loaded = true;
 }
 
+melee_actor::melee_actor() :
+    damage_max_instance( damage_bash, 9 ),
+    miss_msg_u( to_translation( "%s lunges at you, but you dodge!" ) ),
+    no_dmg_msg_u( to_translation( "%1$s bites your %2$s, but fails to penetrate armor!" ) ),
+    hit_dmg_u( to_translation( "%1$s bites your %2$s!" ) ),
+    throw_msg_u( to_translation( "%s hits you with such a force that it sends you flying!" ) ),
+    miss_msg_npc( to_translation( "%s lunges at <npcname>, but they dodge!" ) ),
+    no_dmg_msg_npc( to_translation( "%1$s bites <npcname>'s %2$s, but fails to penetrate armor!" ) ),
+    hit_dmg_npc( to_translation( "%1$s bites <npcname>'s %2$s!" ) ),
+    throw_msg_npc( to_translation( "%s hits <npcname> with such a force that it sends them flying!" ) )
+{
+}
+
 void melee_actor::load_internal( const JsonObject &obj, const std::string & )
 {
     // Optional:
-    optional( obj, was_loaded, "damage_max_instance", damage_max_instance,
-              damage_instance( damage_bash, 9 ) ); // FIXME: Hardcoded damage type
+    optional( obj, was_loaded, "damage_max_instance", damage_max_instance, damage_max_instance );
     optional( obj, was_loaded, "accuracy", accuracy, INT_MIN );
     optional( obj, was_loaded, "min_mul", min_mul, 0.5f );
     optional( obj, was_loaded, "max_mul", max_mul, 1.0f );
@@ -471,22 +483,14 @@ void melee_actor::load_internal( const JsonObject &obj, const std::string & )
     optional( obj, was_loaded, "hitsize_max", hitsize_max, -1 );
     optional( obj, was_loaded, "attack_upper", attack_upper, true );
 
-    optional( obj, was_loaded, "miss_msg_u", miss_msg_u,
-              to_translation( "%s lunges at you, but you dodge!" ) );
-    optional( obj, was_loaded, "no_dmg_msg_u", no_dmg_msg_u,
-              to_translation( "%1$s bites your %2$s, but fails to penetrate armor!" ) );
-    optional( obj, was_loaded, "hit_dmg_u", hit_dmg_u,
-              to_translation( "%1$s bites your %2$s!" ) );
-    optional( obj, was_loaded, "miss_msg_npc", miss_msg_npc,
-              to_translation( "%s lunges at <npcname>, but they dodge!" ) );
-    optional( obj, was_loaded, "no_dmg_msg_npc", no_dmg_msg_npc,
-              to_translation( "%1$s bites <npcname>'s %2$s, but fails to penetrate armor!" ) );
-    optional( obj, was_loaded, "hit_dmg_npc", hit_dmg_npc,
-              to_translation( "%1$s bites <npcname>'s %2$s!" ) );
-    optional( obj, was_loaded, "throw_msg_u", throw_msg_u,
-              to_translation( "%s hits you with such a force that it sends you flying!" ) );
-    optional( obj, was_loaded, "throw_msg_npc", throw_msg_npc,
-              to_translation( "%s hits <npcname> with such a force that it sends them flying!" ) );
+    optional( obj, was_loaded, "miss_msg_u", miss_msg_u, miss_msg_u );
+    optional( obj, was_loaded, "no_dmg_msg_u", no_dmg_msg_u, no_dmg_msg_u );
+    optional( obj, was_loaded, "hit_dmg_u", hit_dmg_u, hit_dmg_u );
+    optional( obj, was_loaded, "miss_msg_npc", miss_msg_npc, miss_msg_npc );
+    optional( obj, was_loaded, "no_dmg_msg_npc", no_dmg_msg_npc, no_dmg_msg_npc );
+    optional( obj, was_loaded, "hit_dmg_npc", hit_dmg_npc, hit_dmg_npc );
+    optional( obj, was_loaded, "throw_msg_u", throw_msg_u, throw_msg_u );
+    optional( obj, was_loaded, "throw_msg_npc", throw_msg_npc, throw_msg_npc );
 
     if( obj.has_member( "condition" ) ) {
         read_condition( obj, "condition", condition, false );
@@ -1171,6 +1175,8 @@ bool melee_actor::call( monster &z ) const
         write_var_value( var_type::context, "damage", &d, damage_total );
         eoc->activate( d );
     }
+    cata::lua_platform::invoke_monster_attack_result_handler(
+        z.type->id.str(), id, lua_hit_owner, lua_hit_handler, z, target, damage_total );
     const auto handler = z.type->lua_platform_attack_handlers.find( id );
     if( handler != z.type->lua_platform_attack_handlers.end() ) {
         cata::lua_platform::invoke_monster_attack_result_handler(
