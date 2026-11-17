@@ -6617,6 +6617,10 @@ function CcbPlatformContent.edit_zone_type(id) end
 ---@return SpeechPoolDefinition
 function CcbPlatformContent.edit_speech_pool(id) end
 
+---Appends lines in Mod load order, retaining repeated lines as separate entries.
+---@param definition SpeechPoolDefinition
+function CcbPlatformContent.append_speech_pool(definition) end
+
 ---@param id string End-screen id staged earlier by this Mod.
 ---@return EndScreenDefinition
 function CcbPlatformContent.edit_end_screen(id) end

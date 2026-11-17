@@ -57,7 +57,8 @@ namespace
 enum class definition_operation : int {
     add,
     replace,
-    edit
+    edit,
+    append
 };
 
 enum class handle_lifecycle : int {
@@ -460,6 +461,8 @@ std::string operation_name( const definition_operation operation )
             return "replace";
         case definition_operation::edit:
             return "edit";
+        case definition_operation::append:
+            return "append";
     }
     return "unknown";
 }
@@ -819,6 +822,15 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         return speech_pool_definition_handle{
             edit_catalog( id, transaction->speech_pools, "speech_pool" ), transaction->token
         };
+    } );
+    content.set_function( "append_speech_pool", [transaction]( const speech_pool_definition_handle &
+    handle ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot register a speech pool owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "speech pool" );
+        handle.definition->registered = true;
+        transaction->speech_pools.push_back( { definition_operation::append, handle.definition } );
     } );
     content.set_function( "edit_end_screen", [transaction, edit_catalog]( const std::string & id ) {
         return end_screen_definition_handle{
@@ -1359,7 +1371,10 @@ bool presentation_content_transaction::apply( std::string &error )
                 source.id, previous == nullptr ? std::nullopt :
                 std::optional<std::vector<SpeechBubble>>( *previous ) );
             std::vector<SpeechBubble> native;
-            native.reserve( source.lines.size() );
+            if( entry.operation == definition_operation::append && previous != nullptr ) {
+                native = *previous;
+            }
+            native.reserve( native.size() + source.lines.size() );
             for( const auto &[text, volume] : source.lines ) {
                 native.push_back( SpeechBubble{ text.native(),
                                                 static_cast<int>( volume ) } );

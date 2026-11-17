@@ -11,6 +11,7 @@
 #include <lua_platform_runtime.h>
 #include <options.h>
 #include <path_info.h>
+#include <speech.h>
 #include <worldfactory.h>
 #include <filesystem>
 #include <string>
@@ -182,6 +183,43 @@ assert(not content.is_mod_active("inactive"))
     platform::commit_prepared_mods();
     platform::runtime_world_ready( true );
     REQUIRE( platform::reload_active_mods( error ) );
+}
+
+TEST_CASE( "lua_platform_appends_speech_in_mod_load_order",
+           "[lua][platform][loader]" )
+{
+    namespace platform = cata::lua_platform;
+    const platform_lua_test_directory first;
+    const platform_lua_test_directory second;
+    const on_out_of_scope cleanup( []() {
+        platform::discard_prepared_mods();
+    } );
+    first.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+content.append_speech_pool(content.SpeechPool { id = "lua_test_speech_append" }
+    :line("first", 4):line("first", 4))
+)lua" );
+    second.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+content.append_speech_pool(content.SpeechPool { id = "lua_test_speech_append" }:line("second", 9))
+)lua" );
+    const std::string id = "lua_test_speech_append";
+    REQUIRE( platform::detail::speech_registry_find( id ) == nullptr );
+    std::string error;
+    REQUIRE( platform::prepare_mods( {
+        { "speech_first", first.root, first.root / "main.lua" },
+        { "speech_second", second.root, second.root / "main.lua" },
+    }, error ) );
+    REQUIRE( platform::apply_prepared_content( error ) );
+    const std::vector<SpeechBubble> *const lines = platform::detail::speech_registry_find( id );
+    REQUIRE( lines != nullptr );
+    REQUIRE( lines->size() == 3 );
+    CHECK( ( *lines )[0].text.translated() == "first" );
+    CHECK( ( *lines )[1].text.translated() == "first" );
+    CHECK( ( *lines )[2].text.translated() == "second" );
+    CHECK( ( *lines )[2].volume == 9 );
+    platform::discard_prepared_mods();
+    CHECK( platform::detail::speech_registry_find( id ) == nullptr );
 }
 
 TEST_CASE( "lua_platform_loader_preserves_file_preambles_and_error_lines",
