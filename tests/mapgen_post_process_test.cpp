@@ -666,6 +666,7 @@ TEST_CASE( "post_process_pre_burn_item_protection", "[mapgen][post_process]" )
     const tripoint_bub_ms intact( 12, 15, 0 );
     const tripoint_bub_ms safe( 14, 15, 0 );
     const tripoint_bub_ms containers( 16, 15, 0 );
+    const tripoint_bub_ms jars( 18, 15, 0 );
     here.ter_set( intact, ter_t_thconc_floor );
     here.furn_set( safe, furn_str_id( "f_safe_c" ) );
     for( int i = 0; i < 100; ++i ) {
@@ -676,6 +677,9 @@ TEST_CASE( "post_process_pre_burn_item_protection", "[mapgen][post_process]" )
         item bag( itype_id( "bag_plastic" ) );
         REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
         here.add_item( containers, bag );
+        item jar( itype_id( "jar_glass_sealed" ) );
+        REQUIRE( jar.put_in( paper, pocket_type::CONTAINER ).success() );
+        here.add_item( jars, jar );
     }
     calendar::turn = calendar::start_of_cataclysm + 14_days;
     rng_set_engine_seed( 42424242 );
@@ -688,6 +692,11 @@ TEST_CASE( "post_process_pre_burn_item_protection", "[mapgen][post_process]" )
     CHECK_FALSE( here.i_at( containers ).empty() );
     for( const item &it : here.i_at( containers ) ) {
         CHECK( it.typeId() == itype_rock );
+    }
+    CHECK_FALSE( here.i_at( jars ).empty() );
+    for( const item &jar : here.i_at( jars ) ) {
+        REQUIRE( jar.all_items_top().size() == 1 );
+        CHECK( jar.all_items_top().front()->charges == 1 );
     }
     clear_overmaps();
 }

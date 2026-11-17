@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_utility.h"
@@ -33,6 +34,8 @@
 
 static const field_type_str_id field_fd_blood( "fd_blood" );
 static const field_type_str_id field_fd_fire( "fd_fire" );
+
+static const flag_id json_flag_NO_UNLOAD( "NO_UNLOAD" );
 
 static const furn_str_id furn_f_wreckage( "f_wreckage" );
 
@@ -555,6 +558,9 @@ static bool pre_burn_item( item &it, std::vector<item> &remains )
     for( int turn = 0; turn < 20; ++turn ) {
         fire_data fire( 3 );
         if( it.burn( fire ) ) {
+            if( it.has_flag( json_flag_NO_UNLOAD ) ) {
+                return true;
+            }
             for( const item *content : it.all_items_top() ) {
                 if( content->is_irremovable() ) {
                     continue;
