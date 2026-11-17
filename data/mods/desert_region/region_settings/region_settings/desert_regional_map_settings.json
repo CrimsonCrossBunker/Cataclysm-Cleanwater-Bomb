@@ -50,26 +50,6 @@
     "trailheads": [ [ "trailhead_basic", 1 ], [ "trailhead_outhouse", 1 ], [ "trailhead_shack", 1 ] ]
   },
   {
-    "type": "weather_generator",
-    "id": "default",
-    "copy-from": "default",
-    "base_temperature": 11.0,
-    "base_humidity": 20.0,
-    "base_pressure": 1025.0,
-    "base_wind": 5.7,
-    "base_wind_distrib_peaks": 20,
-    "base_wind_season_variation": 0,
-    "summer_temp_manual_mod": 25,
-    "spring_temp_manual_mod": 15,
-    "autumn_temp_manual_mod": 15,
-    "winter_temp_manual_mod": 7,
-    "spring_humidity_manual_mod": 10,
-    "summer_humidity_manual_mod": 0,
-    "autumn_humidity_manual_mod": 10,
-    "winter_humidity_manual_mod": 15,
-    "weather_black_list": [ "flurries", "snowing", "snowstorm" ]
-  },
-  {
     "type": "map_extra_collection",
     "id": "forest",
     "chance": 120,
