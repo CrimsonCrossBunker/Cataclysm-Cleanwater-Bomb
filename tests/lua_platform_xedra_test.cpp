@@ -84,6 +84,7 @@ TEST_CASE( "xedra_lua_vampire_diet_preserves_blood_effects", "[.][mods][xedra_ev
         REQUIRE( player.has_effect( effect_vampire_virus ) );
         CHECK( player.get_effect_int( effect_vampire_virus ) == 1 );
         CHECK( player.get_effect( effect_vampire_virus ).is_permanent() );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == 1200 );
         CHECK( player.vitamin_get( vitamin_vampire_blood_vitamin ) == 0 );
     }
 

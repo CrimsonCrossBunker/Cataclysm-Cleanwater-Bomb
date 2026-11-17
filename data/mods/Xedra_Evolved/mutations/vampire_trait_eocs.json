@@ -642,15 +642,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_GAIN_BLOOD_BECOME_A_VAMPIRE",
-    "eoc_type": "EVENT",
-    "required_event": "character_gains_effect",
-    "condition": { "compare_string": [ "vampire_virus", { "context_val": "effect" } ] },
-    "//": "Adds blood on becoming a vampire so you don't instantly start withering",
-    "effect": [ { "math": [ "u_vitamin('human_blood_vitamin') += 1200" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_EYEGLEAM_activated",
     "condition": { "not": { "u_has_effect": "eyegleam" } },
     "effect": [

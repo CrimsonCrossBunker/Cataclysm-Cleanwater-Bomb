@@ -130,3 +130,12 @@ ccb.runtime.handler("apply_vampire_diet", function(event)
     end
 end, 1)
 ccb.runtime.on("game:character_eats_item", "apply_vampire_diet")
+
+-- New vampires receive enough blood to avoid immediate withdrawal.
+ccb.runtime.handler("grant_blood_on_vampire_infection", function(event)
+    if event.data.effect == "vampire_virus" then
+        local character = event.actors.character or services.characters.avatar()
+        value(services.needs.modify_vitamin(character, id("vitamin", "human_blood_vitamin"), 1200))
+    end
+end, 1)
+ccb.runtime.on("game:character_gains_effect", "grant_blood_on_vampire_infection")
