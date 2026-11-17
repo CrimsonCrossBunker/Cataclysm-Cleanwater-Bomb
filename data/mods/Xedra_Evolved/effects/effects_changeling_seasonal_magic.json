@@ -417,19 +417,7 @@
     "remove_message": "Your awareness of sorcerers fades away.",
     "rating": "good",
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [ { "npc_has_flag": "MAGIC_USER" }, { "and": [ "npc_is_character", { "math": [ "n_spell_count() >= 6" ] } ] } ]
-            },
-            "distance": {
-              "math": [ "min( ( 3 + (u_spell_count('school': 'CHANGELING_SEASONAL_MAGIC_AUTUMN') * 0.2) + (u_skill('gramarye') * 0.5)), 25)" ]
-            },
-            "descriptions": [ { "id": "wizard_sense", "symbol": "?", "color": "cyan", "text": "You sense a sorcerer here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_autumn_detect_magic_user_0"
     ]
   },
   {

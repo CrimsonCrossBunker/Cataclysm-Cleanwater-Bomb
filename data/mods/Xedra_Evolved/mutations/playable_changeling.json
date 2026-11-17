@@ -840,23 +840,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_brownie_sense_intruders != 0" ] } ] },
-        "special_vision": [
-          {
-            "distance": { "math": [ "u_val('perception') + u_brownie_homebody_speed_bonus" ] },
-            "descriptions": [
-              {
-                "id": "moving_creature",
-                "//": "prooly need to separate unagressive creatures, TODO",
-                "symbol": "?",
-                "color": "c_white",
-                "text": "Intruder!"
-              }
-            ]
-          }
-        ]
-      }
+      "INLINE_ENCH_BROWNIE_SENSE_INTRUDERS_0"
     ]
   },
   {

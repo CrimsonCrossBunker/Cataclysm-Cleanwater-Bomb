@@ -195,26 +195,7 @@
     "activated_is_setup": true,
     "activation_msg": "You open your senses to the presence of the night-hunters.",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "condition": { "npc_has_species": "RENFIELD" },
-            "distance": { "math": [ "u_val('perception') * 1.5" ] },
-            "descriptions": [ { "id": "vampire_sense", "text": "You sense one of the vampires' servants here.", "symbol": "R", "color": "red" } ]
-          },
-          {
-            "condition": {
-              "or": [
-                { "npc_has_any_trait": [ "VAMPIRE", "VAMPIRE2", "VAMPIRE3", "VAMPIRE4", "BLOOD_DRINKER" ] },
-                { "npc_has_species": "VAMPIRE" }
-              ]
-            },
-            "distance": { "math": [ "u_val('perception') * 1.5" ] },
-            "descriptions": [ { "id": "vampire_sense", "text": "You sense a vampire here.", "symbol": "V", "color": "red" } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_DHAMPIR_DETECT_VAMPIRES_0"
     ]
   },
   {
@@ -588,42 +569,7 @@
     "enchantments": [
       "ench_vampire_heightened_senses_hearing",
       "ench_vampire_heightened_senses_perception",
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "and": [
-                { "math": [ "vampire_total_tier_three_traits() >= 1" ] },
-                { "math": [ "u_val('perception') >= 16" ] },
-                {
-                  "or": [
-                    { "npc_has_effect": "bleed" },
-                    {
-                      "and": [
-                        "npc_is_character",
-                        {
-                          "or": [
-                            { "npc_has_effect": "bleed", "bodypart": "head" },
-                            { "npc_has_effect": "bleed", "bodypart": "torso" },
-                            { "npc_has_effect": "bleed", "bodypart": "arm_l" },
-                            { "npc_has_effect": "bleed", "bodypart": "arm_r" },
-                            { "npc_has_effect": "bleed", "bodypart": "leg_l" },
-                            { "npc_has_effect": "bleed", "bodypart": "leg_r" }
-                          ]
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            "distance": { "math": [ "u_val('perception') * 2" ] },
-            "descriptions": [
-              { "id": "infrared_creature_medium", "symbol": "?", "color": "c_red", "text": "You can smell something bleeding here." }
-            ]
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_HEIGHTENED_SENSES_2"
     ]
   },
   {
@@ -690,24 +636,7 @@
     "activated_is_setup": true,
     "activation_msg": "You open your senses to the children of the night.",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "condition": { "npc_has_species": "NIGHT_CREATURE" },
-            "distance": { "math": [ "u_val('perception') * 3" ] },
-            "ignores_aiming_cone": true,
-            "descriptions": [
-              {
-                "id": "night_creature_sense",
-                "text": "You sense one of the creatures of the night.",
-                "symbol": "N",
-                "color": "white"
-              }
-            ]
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_SENSE_CHILDREN_OF_THE_NIGHT_0"
     ]
   },
   {
@@ -1564,22 +1493,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "special_vision": [
-          {
-            "condition": {
-              "or": [
-                { "npc_has_any_trait": [ "VAMPIRE", "VAMPIRE2", "VAMPIRE3", "VAMPIRE4", "BLOOD_DRINKER" ] },
-                { "npc_has_species": "VAMPIRE" }
-              ]
-            },
-            "distance": { "math": [ "u_val('perception') * 3" ] },
-            "precise": true,
-            "ignores_aiming_cone": true,
-            "descriptions": [ { "id": "vampire_sense", "text": "You detect a vampire here.", "symbol": "V", "color": "red" } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_DETECT_VAMPIRES_0"
     ]
   },
   {

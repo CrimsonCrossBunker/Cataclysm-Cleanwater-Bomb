@@ -144,16 +144,7 @@
     "active": true,
     "activated_is_setup": true,
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "condition": { "or": [ { "npc_has_species": "HUMAN" }, { "npc_has_species": "FERAL" }, { "npc_has_species": "RENFIELD" } ] },
-            "distance": { "math": [ "u_val('perception') * 1.5" ] },
-            "descriptions": [ { "id": "human_sense", "text": "You sense a human here.", "symbol": "@", "color": "c_white" } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_SENSE_THE_TOOLMAKERS_0"
     ]
   },
   {
