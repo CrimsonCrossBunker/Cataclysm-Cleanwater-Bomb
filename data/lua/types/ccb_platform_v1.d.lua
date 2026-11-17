@@ -775,7 +775,10 @@ function ItemDefinition:on_consume(handler_id, label) end
 
 ---@class RecipeDefinitionOptions
 ---@field id string Stable recipe id.
----@field result string Stable result item id.
+---@field result? string Stable result item id. Omit for a named recipe with a completion handler and no item output.
+---@field name? string|LocalizedText Display name. Required when the recipe has no item output.
+---@field description? string|LocalizedText Recipe description.
+---@field flags? string[] Native recipe flags.
 ---@field category? string Native crafting category id.
 ---@field subcategory? string Native crafting subcategory id.
 ---@field skill? string Primary skill id.

@@ -31,6 +31,7 @@
 #include "npc.h"
 #include "npc_opinion.h"
 #include "player_helpers.h"
+#include "recipe.h"
 #include "rng.h"
 #include "talker.h"
 #include "type_id.h"
@@ -616,6 +617,115 @@ TEST_CASE( "xedra_anathema_sunlight_preserves_burn_and_sunrise_deadlines",
         effect_on_conditions::process_effect_on_conditions( player );
         CHECK( burn_tick.due( player ) == next_burn + 1_turns );
         CHECK( daily.due( global_tasks ) == saved_sunrise );
+    }
+}
+
+TEST_CASE( "xedra_weakness_reshuffle_preserves_crafting_and_saved_attempts",
+           "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [] {
+        effect_on_conditions::clear( get_avatar() );
+        clear_avatar();
+    } );
+    clear_avatar();
+    clear_map();
+    avatar &player = get_avatar();
+    effect_on_conditions::clear( player );
+    cata::lua_platform::runtime_world_ready( true );
+    player.setpos( get_map(), tripoint_bub_ms( 60, 60, 0 ) );
+    set_time( calendar::turn_zero + 12_hours );
+
+    const recipe_id reshuffle_recipe( "xe_vampire_blood_weaknesses_reshuffle" );
+    const activity_id reshuffle_activity( "ACT_VAMPIRE_RESHUFFLING_WEAKNESSES" );
+    const effect_on_condition_id old_attempt( "EOC_XE_VAMPIRE_WEAKNESS_RESHUFFLE_SWITCHER" );
+    const xedra_timer attempt{ old_attempt, "vampire_weakness_reshuffle_due" };
+    const efftype_id reshuffling( "effect_vampire_reshuffling_weaknesses" );
+    const efftype_id recently_reshuffled( "effect_vampire_recently_reshuffled_weaknesses" );
+    REQUIRE( reshuffle_recipe.is_valid() );
+    REQUIRE( reshuffle_activity.is_valid() );
+    CHECK( reshuffle_recipe->result().is_null() );
+    CHECK( reshuffle_recipe->result_name() == "reshuffle vampiric weaknesses" );
+    CHECK( reshuffle_recipe->has_flag( "NO_BENCH" ) );
+    CHECK( reshuffle_recipe->has_flag( "NO_ENCHANTMENT" ) );
+
+    SECTION( "craft spends blood, starts an eight-hour activity, and cancellation stops the attempt" ) {
+        const int blood = GENERATE( 2999, 3000 );
+        player.vitamin_set( vitamin_human_blood_vitamin, blood );
+        player.learn_recipe( &reshuffle_recipe.obj() );
+        player.make_craft( reshuffle_recipe, 1 );
+        REQUIRE( player.activity.id() == activity_id( "ACT_CRAFT" ) );
+        for( int turn = 0; turn < 120 && player.activity.id() == activity_id( "ACT_CRAFT" ); ++turn ) {
+            player.set_moves( 100 );
+            player.activity.do_turn( player );
+        }
+        REQUIRE( player.activity.id() != activity_id( "ACT_CRAFT" ) );
+        if( blood == 2999 ) {
+            CHECK_FALSE( player.activity );
+            CHECK_FALSE( player.has_effect( reshuffling ) );
+            CHECK_FALSE( attempt.due( player ).has_value() );
+            CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == 2999 );
+        } else {
+            REQUIRE( player.activity.id() == reshuffle_activity );
+            CHECK( player.activity.moves_left == to_moves<int>( 8_hours ) );
+            CHECK( player.get_effect_dur( reshuffling ) == 8_hours );
+            CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) == 0 );
+            const std::optional<time_point> due = attempt.due( player );
+            REQUIRE( due.has_value() );
+            CHECK( *due >= calendar::turn + 120_minutes );
+            CHECK( *due <= calendar::turn + 180_minutes );
+
+            player.cancel_activity();
+            CHECK_FALSE( player.has_effect( reshuffling ) );
+            attempt.isolate( player );
+            calendar::turn = *due;
+            effect_on_conditions::process_effect_on_conditions( player );
+            CHECK_FALSE( attempt.due( player ).has_value() );
+            CHECK_FALSE( player.has_effect( recently_reshuffled ) );
+        }
+    }
+
+    SECTION( "a restored original attempt preserves its due turn and retries or replaces weaknesses" ) {
+        const bool succeeds = GENERATE( false, true );
+        player.set_mutation( trait_id( "VAMPIRE3" ) );
+        player.set_mutation( trait_id( "VAMPIRE_WEAKNESS_NO_FUN" ) );
+        int seed = 1;
+        if( !succeeds ) {
+            rng_set_engine_seed( seed );
+            while( rng( 0, 9 ) + rng( 0, 9 ) + 2 + player.get_int() / 2.0 >= 17 ) {
+                rng_set_engine_seed( ++seed );
+            }
+        } else {
+            player.set_skill_level( skill_id( "deduction" ), 20 );
+        }
+        player.add_effect( reshuffling, 8_hours );
+        const time_point deadline = calendar::turn + 5_turns;
+        player.queued_effect_on_conditions.push( { old_attempt, deadline, {} } );
+        reload_xedra_avatar( player );
+        CHECK( attempt.due( player ) == deadline );
+        attempt.isolate( player );
+
+        calendar::turn = deadline;
+        rng_set_engine_seed( seed );
+        effect_on_conditions::process_effect_on_conditions( player );
+        CHECK( player.has_effect( reshuffling ) == !succeeds );
+        CHECK( player.get_effect_dur( recently_reshuffled ) == ( succeeds ? 5_days : 0_turns ) );
+        if( succeeds ) {
+            CHECK_FALSE( attempt.due( player ).has_value() );
+            std::vector<std::string> new_weaknesses;
+            for( const trait_id &trait : player.get_mutations() ) {
+                if( trait.str().find( "VAMPIRE_WEAKNESS_" ) == 0 ) {
+                    new_weaknesses.push_back( trait.str() );
+                }
+            }
+            CAPTURE( new_weaknesses );
+            CHECK( new_weaknesses.size() == 1 );
+        } else {
+            CHECK( player.has_trait( trait_id( "VAMPIRE_WEAKNESS_NO_FUN" ) ) );
+            REQUIRE( attempt.due( player ).has_value() );
+            CHECK( *attempt.due( player ) >= deadline + 90_minutes );
+            CHECK( *attempt.due( player ) <= deadline + 150_minutes );
+        }
     }
 }
 

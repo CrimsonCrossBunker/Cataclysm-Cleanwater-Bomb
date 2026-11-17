@@ -223,6 +223,7 @@ struct recipe_definition_data {
     authored_text description;
     std::string category = "CC_OTHER";
     std::string subcategory = "CSC_OTHER_OTHER";
+    std::set<std::string> flags;
     double activity_level = NO_EXERCISE;
     std::map<std::string, bool> nested_recipes;
     std::string skill;
@@ -2794,6 +2795,18 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto definition = std::make_shared<recipe_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->result = options.get_or( "result", std::string() );
+        definition->name = read_text_option( options, "name", {}, "recipe name" );
+        definition->description = read_text_option( options, "description", {}, "recipe description" );
+        if( const sol::optional<sol::table> flags = options.get<sol::optional<sol::table>>( "flags" ) ) {
+            const std::size_t count = require_dense_array( *flags, "recipe flags", 0, 256 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const std::string flag = flags->raw_get<std::string>( index );
+                if( flag.empty() ) {
+                    throw std::runtime_error( "recipe flag cannot be empty" );
+                }
+                definition->flags.insert( flag );
+            }
+        }
         definition->category = options.get_or( "category", std::string( "CC_OTHER" ) );
         definition->subcategory = options.get_or(
                                       "subcategory", std::string( "CSC_OTHER_OTHER" ) );
@@ -4324,7 +4337,13 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
                 continue;
             }
-            if( definition.result.empty() || definition.time_moves <= 0 ||
+            if( definition.result.empty() &&
+                ( definition.name.empty() || definition.result_handler.empty() || definition.uncraft ||
+                  definition.reversible || definition.result_charges ) ) {
+                throw std::runtime_error( "recipe '" + definition.id +
+                                          "' without an item result requires a name and completion handler, and cannot supply disassembly or result charges" );
+            }
+            if( definition.time_moves <= 0 ||
                 definition.difficulty < 0 || definition.difficulty > MAX_SKILL ||
                 !finite_native_float( definition.activity_level ) || definition.activity_level <= 0.0 ) {
                 throw std::runtime_error( "recipe '" + definition.id +
@@ -5595,7 +5614,12 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         recipe_dict.recipes[id] = std::move( native );
                         continue;
                     }
-                    native.result_ = itype_id( entry.definition->result );
+                    if( !entry.definition->result.empty() ) {
+                        native.result_ = itype_id( entry.definition->result );
+                    }
+                    native.name_ = entry.definition->name.native();
+                    native.description = entry.definition->description.native();
+                    native.flags = entry.definition->flags;
                     if( entry.definition->result_charges ) {
                         native.charges = static_cast<int>( *entry.definition->result_charges );
                     }

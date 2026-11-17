@@ -218,7 +218,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 4> xedra_character_tasks = {{
+const std::array<character_task_migration, 5> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -226,7 +226,9 @@ const std::array<character_task_migration, 4> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_BLOOD_NUMBER_UI" ),
           "vampire_blood_display_due", "vampire_blood_display_timer" },
         { effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_CONTINUAL" ),
-          "anathema_sun_burn_due", nullptr }
+          "anathema_sun_burn_due", nullptr },
+        { effect_on_condition_id( "EOC_XE_VAMPIRE_WEAKNESS_RESHUFFLE_SWITCHER" ),
+          "vampire_weakness_reshuffle_due", nullptr }
     }
 };
 
