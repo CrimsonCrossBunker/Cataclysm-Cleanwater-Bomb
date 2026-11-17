@@ -6411,6 +6411,9 @@ void character_content_transaction::impl::apply_enchantment()
             numeric_callback multiply = callback( modifier.multiply_handler, ":multiply" );
             const auto native_value = [&]( const std::optional<double> number,
             const numeric_callback &evaluate ) -> std::optional<dbl_or_var> {
+                if( source.item_instance && number && *number == 0.0 ) {
+                    return std::nullopt;
+                }
                 if( source.native_modifier_order && evaluate ) {
                     dbl_or_var value;
                     value.min.val = runtime_dbl_provider{
