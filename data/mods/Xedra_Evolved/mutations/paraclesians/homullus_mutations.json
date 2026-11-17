@@ -25,7 +25,7 @@
     "purifiable": false,
     "prereqs": [ "HOMULLUS_SKIN_1" ],
     "changes_to": [ "HOMULLUS_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_SKIN_2_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 2 },
       { "part": "leg_l", "ignored": 5 },
@@ -54,7 +54,7 @@
     "threshreq": [ "THRESH_HOMULLUS" ],
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_SKIN_3_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 5 },
       { "part": "leg_l", "ignored": 16 },
@@ -80,7 +80,7 @@
     "types": [ "EYES" ],
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "fae_eyes_homullus" } ] } ]
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_EYES_0" ]
   },
   {
     "type": "mutation",
@@ -382,7 +382,7 @@
     "visibility": 0,
     "ugliness": 0,
     "description": "Your leylines have begun adapting to electronic interference.  Halves the mana penalty caused by stored bionic power.",
-    "enchantments": [ { "values": [ { "value": "BIONIC_MANA_PENALTY", "multiply": -0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_CBM_MANA_1_0" ],
     "prereqs": [ "HOMULLUS_CBM_INSTALL" ],
     "changes_to": "HOMULLUS_CBM_MANA_2",
     "category": [ "HOMULLUS" ]
@@ -396,7 +396,7 @@
     "visibility": 0,
     "ugliness": 0,
     "description": "Your leylines have fully adapted to electronic interference.  You no longer suffer any mana penalty for stored bionic power.",
-    "enchantments": [ { "values": [ { "value": "BIONIC_MANA_PENALTY", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_CBM_MANA_2_0" ],
     "prereqs": [ "HOMULLUS_CBM_MANA_1" ],
     "threshreq": [ "THRESH_HOMULLUS" ],
     "category": [ "HOMULLUS" ]
@@ -443,7 +443,7 @@
     "threshreq": [ "THRESH_HOMULLUS" ],
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "condition": { "u_has_worn_with_flag": "STURDY" } }, { "values": [ { "value": "ARMOR_ALL", "multiply": -0.4 } ] } ]
+    "enchantments": [ { "condition": { "u_has_worn_with_flag": "STURDY" } }, "INLINE_ENCH_HOMULLUS_ARMOR_MULT_2_1" ]
   },
   {
     "type": "mutation",
@@ -456,7 +456,7 @@
     "changes_to": "HOMULLUS_DURABILITY_MULT_2",
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_DURABILITY_MULT_1_0" ]
   },
   {
     "type": "mutation",
@@ -470,7 +470,7 @@
     "threshreq": [ "THRESH_HOMULLUS" ],
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -0.66 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_DURABILITY_MULT_2_0" ]
   },
   {
     "type": "mutation",
@@ -539,7 +539,7 @@
     "changes_to": [ "HOMULLUS_THE_HUNTER2" ],
     "category": [ "HOMULLUS" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "MAX_STAMINA", "multiply": 0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_THE_HUNTER_0" ]
   },
   {
     "type": "mutation",
@@ -587,10 +587,7 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 15 }, { "value": "CLIMATE_CONTROL_HEAT", "add": 15 } ]
-      }
+      "INLINE_ENCH_HOMULLUS_TEMPERATURE_TOLERANCE_0"
     ]
   },
   {
@@ -774,7 +771,7 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "threshreq": [ "THRESH_HOMULLUS" ],
-    "enchantments": [ { "values": [ { "value": "MAX_STAMINA", "multiply": 0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HOMULLUS_THE_HUNTER2_0" ]
   },
   {
     "type": "mutation",
@@ -815,19 +812,7 @@
     "valid": false,
     "override_look": { "id": "mon_hallu_mannequin", "tile_category": "monster" },
     "enchantments": [
-      {
-        "skills": [ { "value": "dodge", "add": -5 } ],
-        "values": [
-          { "value": "METABOLISM", "multiply": -1.0 },
-          { "value": "HUNGER", "multiply": -1.0 },
-          { "value": "THIRST", "multiply": -1.0 },
-          { "value": "REGEN_HP", "multiply": -1.0 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.4 },
-          { "value": "ATTACK_SPEED", "multiply": 0.8 },
-          { "value": "MENDING_MODIFIER", "multiply": -1.0 },
-          { "value": "EQUIPMENT_DAMAGE_CHANCE", "multiply": -1 }
-        ]
-      },
+      "INLINE_ENCH_HOMULLUS_DOLL_FORM_TRAITS_0",
       {
         "condition": { "not": { "u_is_on_terrain_with_flag": "ROAD" } },
         "values": [ { "value": "MOVE_COST", "multiply": 2.5 } ]

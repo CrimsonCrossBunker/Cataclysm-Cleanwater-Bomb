@@ -1318,7 +1318,7 @@
     "purifiable": false,
     "valid": false,
     "description": "<color_green>Nothing can slow you down</color>, and your <color_red>pain</color> sensations are dull.",
-    "enchantments": [ { "values": [ { "value": "PAIN", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_eater_unbreakable_0" ],
     "flags": [ "STEADY" ]
   },
   {

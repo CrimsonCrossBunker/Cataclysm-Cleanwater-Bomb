@@ -104,3 +104,5 @@ require("location_enchantments")
 require("martial_enchantments")
 
 require("effect_enchantments")
+
+require("mutation_enchantments")

@@ -37,7 +37,7 @@
       { "part": "hand_r", "ignored": 1 },
       { "part": "torso", "ignored": 10 }
     ],
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": -0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SYLPH_SKIN_2_0" ],
     "integrated_armor": [ "integrated_cloud_skin" ]
   },
   {
@@ -66,7 +66,7 @@
       { "part": "hand_r", "ignored": 4 },
       { "part": "torso", "ignored": 30 }
     ],
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": -0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SYLPH_SKIN_3_0" ],
     "integrated_armor": [ "integrated_storm_skin" ]
   },
   {
@@ -91,7 +91,7 @@
     "description": "Upon gaining this ability the Sylph's eyes begin reflecting their mood with lightning and storms when angry and clear skies when happy.  Glare no longer impacts them, and they have much better daytime vision and much faster reaction times.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "fae_eyes_sylph" } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_EYES_0" ]
   },
   {
     "type": "mutation",
@@ -103,7 +103,7 @@
     "description": "The Sylph's ears are longer and pointed, like a wisp of cloud trailing across the sky.  They can hear better and no matter how loud the thunder, their ears will not ring from it.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "HEARING_MULT", "multiply": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SYLPH_EARS_0" ],
     "flags": [ "IMMUNE_HEARING_DAMAGE" ]
   },
   {
@@ -209,7 +209,7 @@
     "changes_to": [ "SYLPH_GLIDING" ],
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": -0.05 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SLOWFALL_0" ],
     "flags": [ "FEATHER_FALL" ]
   },
   {
@@ -253,11 +253,7 @@
     "description": "The Sylph gains a resistance to cold and cold based damage.",
     "changes_to": "SLYPH_RESIST_COLD2",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "cold", "add": -10 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 15 } ]
-      }
+      "INLINE_ENCH_SLYPH_RESIST_COLD_0"
     ],
     "category": [ "SYLPH" ]
   },
@@ -272,11 +268,7 @@
     "description": "The Sylph gains a resistance to cold and cold based damage.",
     "changes_to": "SLYPH_RESIST_COLD3",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "cold", "multiply": -0.75 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 45 } ]
-      }
+      "INLINE_ENCH_SLYPH_RESIST_COLD2_0"
     ],
     "category": [ "SYLPH" ]
   },
@@ -293,11 +285,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_SYLPH" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "cold", "multiply": -0.75 } ],
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 150 } ]
-      }
+      "INLINE_ENCH_SLYPH_RESIST_COLD3_0"
     ]
   },
   {
@@ -504,7 +492,7 @@
     "description": "The Sylph's moves like the wind.  +2 Dexterity.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_DEX_BONUS_1_0" ]
   },
   {
     "type": "mutation",
@@ -518,7 +506,7 @@
     "description": "The Sylph's moves like a sudden burst of wind.  +5 Dexterity.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_DEX_BONUS_2_0" ]
   },
   {
     "type": "mutation",
@@ -532,7 +520,7 @@
     "description": "The Sylph's mind has the clarity of pure frozen water.  +2 Intelligence.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_INT_BONUS_1_0" ]
   },
   {
     "type": "mutation",
@@ -545,7 +533,7 @@
     "description": "The Sylph's thoughts move as quickly as a bolt of lightning.  +4 Intelligence.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SYLPH_INT_BONUS_2_0" ]
   },
   {
     "type": "mutation",
@@ -558,7 +546,7 @@
     "description": "Like a bird soaring on the wind, the Sylph's keen eyes take in their surroundings.  +3 Perception.",
     "category": [ "SYLPH" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SYLPH_PER_BONUS_1_0" ],
     "flags": [ "ENHANCED_VISION" ]
   },
   {
@@ -583,7 +571,7 @@
     "category": [ "SYLPH" ],
     "purifiable": false,
     "threshreq": [ "THRESH_SYLPH" ],
-    "enchantments": [ "sylph_fast_cast2", { "values": [ { "value": "WEIGHT", "multiply": -0.1 } ] } ]
+    "enchantments": [ "sylph_fast_cast2", "INLINE_ENCH_SYLPH_FAST_CAST2_1" ]
   },
   {
     "type": "mutation",
@@ -659,11 +647,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_SYLPH" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "WEIGHT", "multiply": -0.05 } ],
-        "ench_effects": [ { "effect": "effect_sylph_cannot_be_slowed", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_SYLPH_CANNOT_BE_SLOWED_OR_STOPPED_0"
     ],
     "flags": [ "STEADY", "SLUDGE_IMMUNE", "WEB_WALKER" ]
   },
@@ -680,9 +664,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_SYLPH" ],
     "enchantments": [
-      {
-        "values": [ { "value": "PAIN_PENALTY_MOD_SPEED", "multiply": -1 }, { "value": "PAIN_PENALTY_MOD_DEX", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_SYLPH_PAIN_DOESNT_AFFECT_DEX_SPEED_0"
     ]
   }
 ]

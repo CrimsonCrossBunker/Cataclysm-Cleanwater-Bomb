@@ -24,7 +24,7 @@
     "purifiable": false,
     "prereqs": [ "ARVORE_SKIN_1" ],
     "changes_to": [ "ARVORE_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": -0.3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_ARVORE_SKIN_2_0" ],
     "integrated_armor": [ "integrated_vegital_cuticle" ],
     "flags": [ "TOUGH_FEET" ]
   },
@@ -80,7 +80,7 @@
     "visibility": 5,
     "ugliness": 3,
     "bodytemp_modifiers": [ 250, 600 ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_ARVORE_MOSS_0" ],
     "wet_protection": [
       { "part": "head", "neutral": 4, "good": 5 },
       { "part": "leg_l", "neutral": 8, "good": 15 },
@@ -610,7 +610,7 @@
     "prereqs2": [ "ARVORE_NURTURING_THE_GREEN" ],
     "category": [ "ARVORE", "ARVORE_ALCHEMY" ],
     "purifiable": false,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PAIN", "multiply": -0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_PAIN_RESISTANCE_0" ]
   },
   {
     "type": "mutation",
@@ -658,7 +658,7 @@
     "player_display": false,
     "valid": false,
     "integrated_armor": [ "integrated_arvore_claws" ],
-    "enchantments": [ { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_WOOD_CLAWS_active_0" ]
   },
   {
     "type": "mutation",
@@ -728,7 +728,7 @@
     "category": [ "ARVORE" ],
     "purifiable": false,
     "types": [ "DEX" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_DEX_BONUS_0" ]
   },
   {
     "type": "mutation",
@@ -742,7 +742,7 @@
     "category": [ "ARVORE" ],
     "purifiable": false,
     "types": [ "STR" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_STR_BONUS_1_0" ]
   },
   {
     "type": "mutation",
@@ -758,7 +758,7 @@
     "category": [ "ARVORE" ],
     "purifiable": false,
     "types": [ "STR" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_STR_BONUS_2_0" ]
   },
   {
     "type": "mutation",
@@ -774,7 +774,7 @@
     "purifiable": false,
     "types": [ "STR" ],
     "enchantments": [
-      { "values": [ { "value": "STRENGTH", "add": 5 } ] },
+      "INLINE_ENCH_ARVORE_STR_BONUS_3_0",
       {
         "condition": {
           "and": [
@@ -802,7 +802,7 @@
     "category": [ "ARVORE" ],
     "purifiable": false,
     "types": [ "PER" ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_PER_BONUS_0" ]
   },
   {
     "type": "mutation",
@@ -828,7 +828,7 @@
     "category": [ "ARVORE", "ARVORE_ALCHEMY" ],
     "purifiable": false,
     "types": [ "EYES" ],
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "fae_eyes_arvore" } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_EYES_0" ]
   },
   {
     "type": "mutation",
@@ -870,7 +870,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_ARVORE" ],
     "types": [ "BLOOD" ],
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.333 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ARVORE_BLOOD_2_0" ]
   },
   {
     "type": "mutation",
@@ -886,7 +886,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_ARVORE" ],
     "types": [ "BLOOD" ],
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.333 } ] } ],
+    "enchantments": [ "INLINE_ENCH_ARVORE_BLOOD_3_0" ],
     "flags": [ "PARAIMMUNE", "INFECTION_IMMUNE" ]
   },
   {
@@ -903,7 +903,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_ARVORE" ],
     "types": [ "BLOOD" ],
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.666 } ] } ],
+    "enchantments": [ "INLINE_ENCH_ARVORE_BLOOD_4_0" ],
     "flags": [ "PARAIMMUNE", "INFECTION_IMMUNE", "MYCUS_IMMUNE" ]
   },
   {
@@ -1162,17 +1162,7 @@
     ],
     "//2": "NETHER_EMANATION missing from the above list is deliberate--they hone in on mental activity and the transformed Arvore still thinks.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "SLEEPINESS_REGEN", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 15 },
-          { "value": "REGEN_HP", "multiply": 1.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.8 },
-          { "value": "SLEEPY", "add": 150 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 150 }
-        ]
-      }
+      "INLINE_ENCH_ARVORE_TREE_FORM_TRAITS_0"
     ]
   },
   {

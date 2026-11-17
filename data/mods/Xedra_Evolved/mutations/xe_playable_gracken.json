@@ -54,7 +54,7 @@
     "empathize_with": [ "GRACKEN" ],
     "no_empathize_with": [ "HUMAN" ],
     "flags": [ "HERITAGE", "NO_CBM_INSTALLATION" ],
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_GRACKEN_0" ]
   },
   {
     "type": "mutation",
@@ -80,7 +80,7 @@
     "ugliness": 1,
     "category": [ "GRACKEN" ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "gracken_eyes" } ] } ]
+    "enchantments": [ "INLINE_ENCH_SHADE_EYES_0" ]
   },
   {
     "type": "mutation",
@@ -125,7 +125,7 @@
     "description": "Your legs have decreased in length providing you with a lower center of gravity and a slight improvement to agility.",
     "//": "This is the first stage short legs mutation.",
     "types": [ "LEGS" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SHADE_SHORT_LEGS_0" ],
     "purifiable": false,
     "mixed_effect": true,
     "points": 1,
@@ -148,7 +148,7 @@
     "ugliness": 1,
     "category": [ "GRACKEN" ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ],
-    "enchantments": [ { "values": [ { "value": "MOVECOST_FLATGROUND_MOD", "multiply": -0.12 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SHADE_LONG_LEGS_0" ]
   },
   {
     "type": "mutation",
@@ -188,7 +188,7 @@
     "description": "Your arms have begun bulking up and become stronger.  +1 Strength",
     "//": "This is the first stage strong arms mutation.",
     "types": [ "ARMS" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SHADE_STRONG_ARMS_0" ],
     "purifiable": false,
     "mixed_effect": true,
     "points": 1,
@@ -258,7 +258,7 @@
     "points": 1,
     "visibility": 4,
     "ugliness": 1,
-    "enchantments": [ { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SHADE_DEXTROUS_HANDS_0" ],
     "category": [ "GRACKEN" ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ]
   },
@@ -286,13 +286,7 @@
     "mixed_effect": true,
     "points": 1,
     "enchantments": [
-      {
-        "values": [
-          { "value": "KCAL", "multiply": -1 },
-          { "value": "METABOLISM", "multiply": -0.8 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 30 }
-        ]
-      }
+      "INLINE_ENCH_SHADE_STOMACH_0"
     ],
     "category": [ "GRACKEN" ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ]
@@ -324,13 +318,7 @@
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ],
     "flags": [ "CARNIVORE_DIET" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 1 },
-          { "value": "METABOLISM", "multiply": 0.8 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "add": 500 }
-        ]
-      }
+      "INLINE_ENCH_SHADE_CARNIVORE_0"
     ],
     "vitamin_rates": [ [ "vitC", -1200 ] ]
   },
@@ -347,13 +335,7 @@
     "category": [ "GRACKEN" ],
     "flags": [ "HERBIVORE_DIET" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "KCAL", "multiply": 1.3 },
-          { "value": "DODGE_CHANCE", "add": 3 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "add": 1000 }
-        ]
-      }
+      "INLINE_ENCH_SHADE_HERBIVORE_0"
     ],
     "threshreq": [ "THRESH_SPECIES_GRACKEN" ]
   },

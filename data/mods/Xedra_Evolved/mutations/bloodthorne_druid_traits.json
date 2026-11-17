@@ -51,10 +51,7 @@
     "activation_msg": "A vine erupts from your arm and wraps around your wrist before snugly fitting itself into your hand.",
     "activated_is_setup": true,
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [ { "value": "METABOLISM", "multiply": 0.2 }, { "value": "THIRST", "multiply": 0.2 } ]
-      }
+      "INLINE_ENCH_BLOODTHORNE_DRUID_SYMBIOTIC_PLANT_WHIP_0"
     ]
   },
   {
@@ -202,22 +199,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": 0.25 },
-          { "value": "THIRST", "multiply": 0.25 },
-          { "value": "BONUS_BLOCK", "add": 2 },
-          { "value": "MOTION_ALARM", "add": 6 }
-        ],
-        "hit_me_effect": [
-          {
-            "id": "bloodthorne_druid_aura_of_vines_retaliate",
-            "once_in": 3,
-            "message": "Your vines whip out at your attacker.",
-            "npc_message": "%1$s's vines whip out at their attacker."
-          }
-        ]
-      }
+      "INLINE_ENCH_BLOODTHORNE_DRUID_AURA_OF_VINES_TRAIT_0"
     ],
     "flags": [ "SUBTLE_SPELL", "VINE_RAPPEL" ]
   },
@@ -249,7 +231,7 @@
     "description": "The sap that flows through your veins has thickened, and your heartvines do their keep to keep it in your body.  You bleed more slowly.",
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.333 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BLOODTHORNE_DRUID_SLOWER_BLEEDING_0" ]
   },
   {
     "type": "mutation",

@@ -40,10 +40,7 @@
     ],
     "flags": [ "MEND_ALL", "HERITAGE", "NO_CBM_INSTALLATION" ],
     "enchantments": [
-      {
-        "values": [ { "value": "REGEN_HP", "multiply": 0.25 }, { "value": "REGEN_HP_AWAKE", "multiply": 0.1 } ],
-        "ench_effects": [ { "effect": "effect_xe_nonhuman_super_soldier_serum_immune", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_NATIVE_SHAPESHIFTER_0"
     ],
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR", "CHAOTIC", "CHAOTIC_BAD" ],
     "chargen_allow_npc": false
@@ -95,25 +92,7 @@
     "purifiable": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "encumbrance_modifier": [ { "part": "hand_r", "add": -10 }, { "part": "hand_l", "add": -10 } ],
-        "values": [
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "STRENGTH", "add": 6 },
-          { "value": "NIGHT_VIS", "add": 8 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.8 },
-          { "value": "STAMINA_REGEN_MOD", "add": 0.2 },
-          { "value": "MELEE_STAMINA_CONSUMPTION", "multiply": -0.33 },
-          { "value": "SOCIAL_PERSUADE", "add": -50 },
-          { "value": "SOCIAL_INTIMIDATE", "add": 40 },
-          { "value": "METABOLISM", "multiply": 4 },
-          { "value": "LEARNING_FOCUS", "add": -10 },
-          { "value": "OBTAIN_COST_MULTIPLIER", "multiply": 2 }
-        ],
-        "mutations": [ "WEREWOLF_HEAD", "TAIL_FLUFFY", "LUPINE_FUR", "ANIMAL_FEET", "LUPINE_EARS", "PERSISTENCE_HUNTER2", "PRED3" ]
-      },
+      "INLINE_ENCH_WEREWOLF_HYBRID_FORM_TRAITS_0",
       {
         "condition": { "and": [ { "not": "is_day" }, { "math": [ "moon_phase() == 4" ] } ] },
         "values": [
