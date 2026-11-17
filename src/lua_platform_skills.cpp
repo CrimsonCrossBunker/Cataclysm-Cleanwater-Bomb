@@ -681,6 +681,28 @@ void install_skill_api(
                    current_world_generation() );
     } );
     skills.set_function(
+        "set_level",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & id, const std::int64_t level ) {
+        require_write();
+        require_skill_id( id, "services.skills.set_level" );
+        if( level < std::numeric_limits<int>::min() || level > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "Skill level must fit the native signed integer range" );
+        }
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        const skill_id native_id( id.value() );
+        character->set_skill_level( native_id, static_cast<int>( level ) );
+        return make_game_value_result( state,
+                                       sol::make_object( state, character->get_skill_level( native_id ) ) );
+    } );
+    skills.set_function(
         "set_training",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,

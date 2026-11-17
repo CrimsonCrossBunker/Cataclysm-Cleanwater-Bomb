@@ -8880,6 +8880,18 @@ function CcbCharactersApi.damage(character, damage_type, amount, options) end
 ---@return CcbHealingResult
 function CcbCharactersApi.heal(character, body_part, amount) end
 
+---@param character GameHandle Exact live Character.
+---@param body_part GameId GameId<body_part> present on the Character.
+---@return CcbResult result value is the body's native current HP.
+function CcbCharactersApi.hp(character, body_part) end
+
+---Assign raw HP directly without healing, affliction removal or a maximum-HP clamp.
+---@param character GameHandle Exact live Character.
+---@param body_part GameId GameId<body_part> present on the Character.
+---@param hp integer Native signed-int HP value.
+---@return CcbResult result value contains body_part, before, after, maximum and changed.
+function CcbCharactersApi.set_hp(character, body_part, hp) end
+
 ---Read the native raw HP sum for all, major or minor body parts.
 ---@param character GameHandle Exact live Character.
 ---@param group 'ALL'|'ALL_MAJOR'|'ALL_MINOR'
@@ -8989,6 +9001,17 @@ function CcbCharactersApi.intimidation(character) end
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
 
+---@param character GameHandle Exact live Character.
+---@return CcbResult result value is the Character's native signed kill-experience counter.
+function CcbCharactersApi.kill_experience(character) end
+
+---Open a native topic-only conversation for the exact Avatar. NPC Characters keep the native no-op behavior.
+---No dialogue participant or Avatar fallback is inferred for a stale or invalid handle.
+---@param character GameHandle Exact live Character.
+---@param topic string Nonempty native dialogue-topic id, with no extra byte limit.
+---@return CcbResult result value is true when the topic conversation opened, false for a non-Avatar Character.
+function CcbCharactersApi.open_topic(character, topic) end
+
 ---@param character GameHandle Exact live Character handle.
 ---@param flag GameId GameId<json_flag>. MUTATION_THRESHOLD checks the native threshold state.
 ---@return CcbResult result `value` is the native flag membership.
@@ -9059,6 +9082,13 @@ local CcbSpellsApi = {}
 ---@param raw_spell_id string Raw Native spell id text.
 ---@return CcbResult result `value` is the Native effective level.
 function CcbSpellsApi.effective_level(character, raw_spell_id) end
+
+---Assign a native spell level without granting its spell-school trait. Nonnegative levels can learn an unknown spell; negative levels forget it.
+---@param character GameHandle Exact live Character.
+---@param spell GameId GameId<spell>.
+---@param level integer Native signed-int level, retained without an additional Platform cap.
+---@return CcbResult result value contains before and after snapshots, each absent when the spell is not known at that point.
+function CcbSpellsApi.set_level(character, spell, level) end
 
 ---Forget a known spell through native level removal.
 ---@param character GameHandle Exact live Character handle.
@@ -9146,6 +9176,32 @@ function CcbRelocationApi.teleport_character(character, position, options) end
 ---@param options? CcbAvatarTeleportOptions Optional native `force`/`force_safe` policy; omitted means both false.
 ---@return CcbAvatarTeleportResult result Uses native `teleport_to_point` with safe=true, no teleglow, and no internal messages. It may load/recenter the active map; requires an active Platform write callback.
 function CcbRelocationApi.teleport_avatar(avatar, position, options) end
+
+---@class CcbItemRelocationValue
+---@field accepted boolean Whether the destination accepted the copied item.
+---@field changed boolean Whether the source was moved or removed.
+---@field source_removed boolean Whether the original item was removed.
+---@field before TripointCoord Original absolute map-square position.
+---@field requested TripointCoord Requested absolute map-square destination.
+---@field after? TripointCoord Destination on acceptance; original position for a rejected item_at move, absent for a consumed rejected teleport.
+---@field handle? GameHandle Fresh destination identity when still in the active map; absent for remote placement or a consumed identity.
+---@field remote? boolean Whether acceptance used a detached destination map.
+---@field reason? string Native rejection reason.
+
+---Move one top-level loaded map item, including contents and linked-item offsets.
+---Preserves separate stacks and retains the source if placement is rejected.
+---@param item GameHandle Exact live top-level map Item handle.
+---@param position TripointCoord Explicit absolute map-square destination; distant destinations load a temporary map.
+---@return CcbResult result value is CcbItemRelocationValue.
+function CcbRelocationApi.item_at(item, position) end
+
+---Teleport one top-level loaded map item through native add_item_or_charges semantics.
+---Merges charge stacks and always removes the source after the placement attempt, including native destination rejection.
+---Contents and linked-item offsets move together. A remote result does not fabricate a live destination handle.
+---@param item GameHandle Exact live top-level map Item handle.
+---@param position TripointCoord Explicit absolute map-square destination.
+---@return CcbResult result value is CcbItemRelocationValue; inspect accepted and source_removed separately.
+function CcbRelocationApi.teleport_item(item, position) end
 
 ---@param entity GameHandle Exact live Monster, Avatar, NPC, or Vehicle GameHandle; generic Character and other unsupported subtypes return `unsupported`.
 ---@param target MapTileToken Exact token for the target map square; raw coordinates and implicit/fallback target lookup are unsupported.
@@ -10656,6 +10712,15 @@ function CcbItemsApi.transfer(item_handle, source_holder, destination_holder, qu
 ---@param continuation? CcbItemPageContinuation Single-use cursor returned by the prior page; holder/options must match exactly.
 ---@return CcbResult result `value` is a CcbItemPageResult; no total is claimed unless `complete` is true.
 function CcbItemsApi.page(holder, options, continuation) end
+
+---Capture all top-level loaded map items in native map::points_in_radius and map-stack order.
+---Search is a same-z square clipped to the active map; the minimum exclusion uses native game distance.
+---Nested contents are part of their container item, not separate returned handles. No snapshot or page limit applies.
+---@param center TripointCoord Explicit absolute map-square search center.
+---@param minimum integer Non-negative native signed-int minimum game distance.
+---@param maximum integer Non-negative native signed-int square radius.
+---@return CcbResult result value is a dense GameHandle array captured before caller mutations.
+function CcbItemsApi.on_map(center, minimum, maximum) end
 ---@param handle GameHandle Exact live item handle.
 ---@param relation_limit? integer
 ---@return CcbResult result `value` is a detached bounded item snapshot.
@@ -11972,6 +12037,13 @@ local CcbSkillsApi = {}
 ---@param id string Raw skill ID text; empty, embedded NUL and long strings follow native ID lookup.
 ---@return CcbResult result `value` is the effective numeric level from Character:get_skill_level.
 function CcbSkillsApi.level(character, id) end
+
+---Assign through native Character::set_skill_level, including its practical/theory bookkeeping and native clamping.
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<skill>.
+---@param level integer Native signed-int level; no additional Platform level cap.
+---@return CcbResult result value is the resulting effective skill level.
+function CcbSkillsApi.set_level(character, id, level) end
 
 ---Skills the teacher can teach this student, using the student's knowledge level.
 ---@param teacher GameHandle Character handle.

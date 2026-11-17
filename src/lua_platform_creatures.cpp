@@ -72,6 +72,8 @@ extern "C" {
 #include "profession.h"
 #include "rng.h"
 #include "safe_reference.h"
+#include "talker_character.h"
+#include "talker_topic.h"
 #include "translation.h"
 #include "uilist.h"
 #include "units.h"
@@ -1363,11 +1365,6 @@ sol::table set_character_hp(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    if( requested_hp < -maximum_character_healing ||
-        requested_hp > maximum_character_healing ) {
-        throw std::invalid_argument(
-            "services.characters.set_hp value must be within -10000..10000" );
-    }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -4775,6 +4772,44 @@ void install_creature_api(
         return make_game_value_result( state, sol::make_object( state, character->intimidation() ) );
     } );
     characters.set_function(
+        "kill_experience",
+        [current_runtime_generation, current_world_generation, require_read](
+    sol::this_state lua_state, const game_handle & handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        return make_game_value_result( state,
+                                       sol::make_object( state, get_talker_for( character )->get_kill_xp() ) );
+    } );
+    characters.set_function(
+        "open_topic",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & topic ) {
+        require_write();
+        if( topic.empty() ) {
+            throw std::invalid_argument( "services.characters.open_topic requires a topic" );
+        }
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        const bool opened = character->is_avatar();
+        if( opened ) {
+            get_avatar().talk_to( get_talker_for( std::vector<std::string>{ topic } ),
+                                  false, false, true );
+        }
+        return make_game_value_result( state, sol::make_object( state, opened ) );
+    } );
+    characters.set_function(
         "snapshot",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
@@ -4979,6 +5014,24 @@ void install_creature_api(
                    lua_state, handle, body_part, amount,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    characters.set_function(
+        "hp",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & body_part ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        const Character *character = resolve_exact_character( handle, current_runtime_generation(),
+                                     current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        const bodypart_id part = character_body_part( *character, body_part,
+                                 "services.characters.hp" );
+        return make_game_value_result( state,
+                                       sol::make_object( state, character->get_part_hp_cur( part ) ) );
     } );
     characters.set_function(
         "set_hp",

@@ -962,7 +962,7 @@ sol::table adjust_spell(
         maximum_spell_gain;
     const int minimum =
         setting_experience || setting_level ? 0 : 1;
-    if( amount < minimum || amount > maximum ) {
+    if( !setting_level && ( amount < minimum || amount > maximum ) ) {
         throw std::invalid_argument(
             api_name + " amount is outside its limit" );
     }
@@ -976,7 +976,7 @@ sol::table adjust_spell(
     }
     const spell_id id( requested_id.value() );
     known_magic &magic = *character->magic;
-    if( !magic.knows_spell( id ) ) {
+    if( !setting_level && !magic.knows_spell( id ) ) {
         return make_game_error_result(
         state, game_handle_error{
             "not_known",
@@ -984,27 +984,28 @@ sol::table adjust_spell(
             id.str() + "'"
         } );
     }
-    sol::table before = snapshot_known_spell(
-                            state, *character, id );
-    spell &known = magic.get_spell( id );
+    sol::object before = magic.knows_spell( id ) ?
+                         sol::make_object( state, snapshot_known_spell( state, *character, id ) ) :
+                         sol::make_object( state, sol::nil );
     switch( adjustment ) {
         case spell_adjustment::set_experience:
             magic.set_spell_exp( id, amount, character );
             break;
         case spell_adjustment::gain_experience:
-            known.gain_exp( *character, amount );
+            magic.get_spell( id ).gain_exp( *character, amount );
             break;
         case spell_adjustment::set_level:
             magic.set_spell_level( id, amount, character );
             break;
         case spell_adjustment::gain_levels:
-            known.gain_levels( *character, amount );
+            magic.get_spell( id ).gain_levels( *character, amount );
             break;
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
-    value["after"] = snapshot_known_spell(
-                         state, *character, id );
+    value["after"] = magic.knows_spell( id ) ?
+                     sol::make_object( state, snapshot_known_spell( state, *character, id ) ) :
+                     sol::make_object( state, sol::nil );
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );

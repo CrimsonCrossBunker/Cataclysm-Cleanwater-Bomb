@@ -75,6 +75,7 @@ extern "C" {
 #include "itype.h"
 #include "json.h"
 #include "json_loader.h"
+#include "line.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -1177,6 +1178,40 @@ bool same_query_holder_descriptor(
            same_handle( lhs.container, rhs.container ) &&
            same_handle( lhs.vehicle, rhs.vehicle ) &&
            same_handle( lhs.part, rhs.part );
+}
+
+sol::table items_on_map(
+    sol::this_state lua, const script_tripoint_coord &center,
+    const std::int64_t minimum, const std::int64_t maximum,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    if( center.native_origin() != coords::origin::abs ||
+        center.native_scale() != coords::scale::map_square ) {
+        throw std::invalid_argument( "services.items.on_map requires an absolute map-square Tripoint" );
+    }
+    if( minimum < 0 || maximum < 0 || minimum > std::numeric_limits<int>::max() ||
+        maximum > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( "services.items.on_map radii must be nonnegative native integers" );
+    }
+    map &here = get_map();
+    const tripoint_bub_ms local = here.get_bub( tripoint_abs_ms( center.to_native() ) );
+    sol::state_view state( lua );
+    sol::table handles = state.create_table();
+    lua_Integer count = 0;
+    for( const tripoint_bub_ms &position : here.points_in_radius( local,
+            static_cast<std::size_t>( maximum ) ) ) {
+        if( rl_dist( local, position ) < minimum || !here.inbounds( position ) ) {
+            continue;
+        }
+        const map_tile_token tile( here.get_abs( position ), runtime_generation, world_generation );
+        for( item &entry : here.i_at( position ) ) {
+            game_handle_locator locator = map_item_locator( tile );
+            locator.stable_id = entry.uid().get_value();
+            handles[++count] = game_handle::from_item( entry, std::move( locator ),
+                               runtime_generation, world_generation );
+        }
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( handles ) ) );
 }
 
 sol::table item_page(
@@ -7521,6 +7556,15 @@ void install_item_api(
                    destination_holder, quantity,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    items.set_function(
+        "on_map",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const script_tripoint_coord & center,
+    const std::int64_t minimum, const std::int64_t maximum ) {
+        require_read();
+        return items_on_map( lua_state, center, minimum, maximum,
+                             current_runtime_generation(), current_world_generation() );
     } );
     items.set_function(
         "page",

@@ -2340,10 +2340,10 @@ sol::table relocate_item(
     sol::this_state lua, const game_handle &handle,
     const script_tripoint_coord &requested_position,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool teleport = false )
 {
-    constexpr std::string_view api_name =
-        "services.relocation.item_at";
+    const std::string_view api_name = teleport ?
+                                      "services.relocation.teleport_item" : "services.relocation.item_at";
     map &here = require_active_map( api_name );
     const tripoint_abs_ms destination = require_absolute_ms(
                                             requested_position,
@@ -2372,6 +2372,7 @@ sol::table relocate_item(
         map_bubble_position_if_representable( here, destination );
     const bool target_is_loaded = target_local && here.inbounds( *target_local );
     item moved = **source;
+    const item *const source_item = &**source;
     require_relocated_linked_item_targets_fit(
         moved, relocation_offset, api_name );
     translate_relocated_linked_items(
@@ -2383,32 +2384,43 @@ sol::table relocate_item(
             coords::origin::abs,
             coords::scale::map_square,
             before.raw() );
+    value["source_removed"] = false;
     value["before"] = before_value;
     value["requested"] = requested_position;
 
     if( target_is_loaded ) {
-        item &placed = here.add_item(
-                           *target_local,
-                           std::move( moved ) );
+        item &placed = teleport ? here.add_item_or_charges( *target_local, moved ) :
+                       here.add_item( *target_local, std::move( moved ) );
         if( placed.is_null() ) {
+            if( teleport ) {
+                source->remove_item();
+            }
             value["accepted"] = false;
-            value["changed"] = false;
+            value["changed"] = teleport;
+            value["source_removed"] = teleport;
             value["reason"] = "blocked";
-            value["after"] = before_value;
+            value["after"] = teleport ? sol::make_object( state, sol::nil ) :
+                             sol::make_object( state, before_value );
             return make_game_value_result(
                        state, sol::make_object(
                            state, std::move( value ) ) );
         }
+        const bool target_is_source = &placed == source_item;
         source->remove_item();
+        value["source_removed"] = true;
         value["accepted"] = true;
         value["changed"] = true;
         value["remote"] = false;
         value["reason"] = sol::nil;
         value["after"] = requested_position;
-        value["handle"] = make_relocated_item_handle(
-                              placed, destination,
-                              runtime_generation,
-                              world_generation );
+        if( target_is_source ) {
+            value["handle"] = sol::nil;
+        } else {
+            value["handle"] = make_relocated_item_handle(
+                                  placed, destination,
+                                  runtime_generation,
+                                  world_generation );
+        }
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
@@ -2422,21 +2434,27 @@ sol::table relocate_item(
             target_omt, target_bay.cast_to_map()->getmapsize(), api_name );
         target_bay.load( target_omt, false );
         swap_map swap( *target_bay.cast_to_map() );
-        item &remote_item = target_bay.add_item(
-                                target_bay.get_omt( destination ),
-                                std::move( moved ) );
+        item &remote_item = teleport ?
+                            target_bay.add_item_or_charges( target_bay.get_omt( destination ), moved ) :
+                            target_bay.add_item( target_bay.get_omt( destination ), std::move( moved ) );
         placed = !remote_item.is_null();
     }
     if( !placed ) {
+        if( teleport ) {
+            source->remove_item();
+        }
         value["accepted"] = false;
-        value["changed"] = false;
+        value["changed"] = teleport;
+        value["source_removed"] = teleport;
         value["reason"] = "blocked";
-        value["after"] = before_value;
+        value["after"] = teleport ? sol::make_object( state, sol::nil ) :
+                         sol::make_object( state, before_value );
         return make_game_value_result(
                    state, sol::make_object(
                        state, std::move( value ) ) );
     }
     source->remove_item();
+    value["source_removed"] = true;
     value["accepted"] = true;
     value["changed"] = true;
     value["remote"] = true;
@@ -2931,6 +2949,20 @@ void install_game_world_service_api(
                    lua, handle, position,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    relocation.set_function(
+        "teleport_item",
+        [authorize_relocation, current_runtime_generation,
+                               current_world_generation, require_write](
+            sol::this_state lua, const game_handle & handle,
+    const script_tripoint_coord & position ) {
+        require_write();
+        authorize_relocation(
+            "services.relocation.teleport_item" );
+        return relocate_item(
+                   lua, handle, position,
+                   current_runtime_generation(),
+                   current_world_generation(), true );
     } );
     relocation.set_function(
         "travel_to_dimension",
