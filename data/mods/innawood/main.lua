@@ -9,3 +9,5 @@ definition:category("MAN_MADE")
 content.add(definition)
 
 require("requirements")
+
+require("portal_storm_scenario")

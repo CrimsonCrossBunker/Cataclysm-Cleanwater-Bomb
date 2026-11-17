@@ -218,10 +218,11 @@ struct character_task_migration {
     const char *handler;
     const char *timer_key;
     bool global = false;
+    const char *mod = "xedra_evolved";
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 12> xedra_character_tasks = {{
+const std::array<character_task_migration, 16> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -245,17 +246,25 @@ const std::array<character_task_migration, 12> xedra_character_tasks = {{
         { effect_on_condition_id( "EOC_XE_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_AT_SUNRISE" ),
           "anathema_sunrise_due", nullptr, true },
         { effect_on_condition_id( "EOC_VAMPIRES" ),
-          "avatar_vampire_infection_due", nullptr, true }
+          "avatar_vampire_infection_due", nullptr, true },
+        { effect_on_condition_id( "scenario_strong_portal_storm_base" ),
+          "portal_scenario_strength_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "scenario_strong_portal_storm" ),
+          "portal_scenario_strong_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "scenario_quick_portal_storm" ),
+          "portal_scenario_frequency_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "scenario_portal_dependent" ),
+          "portal_scenario_dependent_due", nullptr, false, "ccb" }
     }
 };
 
-const character_task_migration *find_xedra_task( const effect_on_condition_id &id, bool global )
+const character_task_migration *find_migrated_task( const effect_on_condition_id &id, bool global )
 {
-    const auto found = std::find_if( xedra_character_tasks.begin(), xedra_character_tasks.end(),
+    const auto found = std::find_if( migrated_character_tasks.begin(), migrated_character_tasks.end(),
     [&]( const character_task_migration & entry ) {
         return entry.global == global && entry.eoc == id;
     } );
-    return found != xedra_character_tasks.end() && !id.is_valid() ? &*found : nullptr;
+    return found != migrated_character_tasks.end() && !id.is_valid() ? &*found : nullptr;
 }
 
 queued_eoc character_task_record( time_point due, std::string_view mod, std::string_view handler )
@@ -329,12 +338,12 @@ static void process_new_eocs( queued_eocs &eoc_queue,
             eoc_queue.pop();
             continue;
         }
-        if( const character_task_migration *migration = find_xedra_task( entry.eoc, global_queue ) ) {
-            temp_queued_eocs.push( character_task_record( entry.time, "xedra_evolved",
+        if( const character_task_migration *migration = find_migrated_task( entry.eoc, global_queue ) ) {
+            temp_queued_eocs.push( character_task_record( entry.time, migration->mod,
                                    migration->handler ) );
             if( actor && migration->timer_key ) {
                 cata::lua_platform::assign_persistent_value(
-                    actor->lua_character_state.for_mod( "xedra_evolved" ), migration->timer_key,
+                    actor->lua_character_state.for_mod( migration->mod ), migration->timer_key,
                     std::string( "scheduled" ) );
             }
             eoc_queue.pop();
@@ -353,9 +362,9 @@ static void process_new_eocs( queued_eocs &eoc_queue,
          eoc != eoc_vector.end(); ) {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         if( actor ) {
-            if( const character_task_migration *migration = find_xedra_task( *eoc, false );
+            if( const character_task_migration *migration = find_migrated_task( *eoc, false );
                 migration && migration->timer_key ) {
-                auto &state = actor->lua_character_state.for_mod( "xedra_evolved" );
+                auto &state = actor->lua_character_state.for_mod( migration->mod );
                 if( state.count( migration->timer_key ) == 0 ) {
                     cata::lua_platform::assign_persistent_value(
                         state, migration->timer_key, std::string( "dormant" ) );

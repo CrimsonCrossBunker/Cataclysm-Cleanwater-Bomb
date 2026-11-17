@@ -132,3 +132,5 @@ require("item_enchantments")
 require("weather_generators")
 
 require("weather_types")
+
+require("portal_storm_scenarios")
