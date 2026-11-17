@@ -43,3 +43,5 @@ require("snippets")
 require("conditional_enchantments")
 
 require("enchantments")
+
+require("enchantment_variables")
