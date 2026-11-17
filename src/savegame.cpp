@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <fstream>
 #include <map>
 #include <sstream>
@@ -1900,7 +1901,8 @@ void weather_manager::unserialize_all( const JsonObject &w )
             room_heat_layer layer;
             layer_data.read( "origin", layer.origin );
             layer_data.read( "sampled_at", layer.sampled_at );
-            layer_data.read( "assignments", layer.assignments );
+            std::unordered_map<tripoint_abs_ms, uint64_t> assignments;
+            layer_data.read( "assignments", assignments );
             for( JsonObject room_data : layer_data.get_array( "rooms" ) ) {
                 room_heat room;
                 room.excess = room_data.get_float( "excess" );
@@ -1911,10 +1913,11 @@ void weather_manager::unserialize_all( const JsonObject &w )
                 }
                 layer.rooms.push_back( room );
             }
-            for( const std::pair<const tripoint_abs_ms, std::size_t> &assignment : layer.assignments ) {
+            for( const std::pair<const tripoint_abs_ms, uint64_t> &assignment : assignments ) {
                 if( assignment.second >= layer.rooms.size() ) {
                     layer_data.throw_error( "Invalid room heat assignment" );
                 }
+                layer.assignments.emplace( assignment.first, static_cast<std::size_t>( assignment.second ) );
             }
             weather.heated_rooms.emplace( layer_data.get_int( "z" ), std::move( layer ) );
         }
