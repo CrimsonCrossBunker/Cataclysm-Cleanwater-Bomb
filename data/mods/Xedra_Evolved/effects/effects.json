@@ -1806,16 +1806,7 @@
     "remove_message": "You were just on the cusp of something as your enhanced focus fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "LEARNING_FOCUS",
-            "add": {
-              "math": [ "( ( u_spell_level('homullus_add_learning_focus_spell') * 1.5 ) + 5 ) * scaling_factor(u_val('intelligence') )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_homullus_add_learning_focus_0"
     ]
   },
   {
@@ -2006,16 +1997,7 @@
     "remove_message": "Your movements gradually slow.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SPEED",
-            "add": {
-              "math": [ "( ( 5 + ( u_spell_level('salamander_increase_speed_spell') * 1.5 ) ) ) * (scaling_factor(u_val('strength') ) )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_salamander_increase_speed_0"
     ]
   },
   {
@@ -2101,16 +2083,7 @@
     "remove_message": "Your blows no longer split the air itself.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MELEE_RANGE_MODIFIER",
-            "add": {
-              "math": [ "( (u_spell_level('sylph_bonus_melee_range_spell') * 0.25 ) + 1 ) * scaling_factor( u_val('dexterity') )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_sylph_bonus_melee_range_0"
     ]
   },
   {
