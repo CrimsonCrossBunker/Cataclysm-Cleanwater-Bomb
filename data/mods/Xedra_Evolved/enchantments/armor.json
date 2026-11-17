@@ -11,27 +11,6 @@
     "flags": [ "SILENT", "NO_EXPLOSION_SFX" ]
   },
   {
-    "type": "enchantment",
-    "id": "BERSERKER_STR",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "values": [ { "value": "STRENGTH", "add": { "math": [ "BERSERKER / 3" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "BERSERKER_SPEED",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "values": [ { "value": "SPEED", "add": { "math": [ "BERSERKER" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "BERSERKER_REGEN_STAMINA",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "values": [ { "value": "REGEN_STAMINA", "multiply": { "math": [ "BERSERKER / 5" ] } } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "INCREASE_BERSERKER",
     "condition": { "u_has_items": { "item": "dreamforged_knuckle_berserk", "count": 1 } },

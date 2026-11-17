@@ -20,13 +20,6 @@
   },
   {
     "type": "enchantment",
-    "id": "EXP_BASH",
-    "has": "WIELD",
-    "condition": "ALWAYS",
-    "melee_damage_bonus": [ { "type": "bash", "add": { "math": [ "( u_val('exp') + u_bonus_exp ) / 750" ] } } ]
-  },
-  {
-    "type": "enchantment",
     "id": "SALAMANDER_SUMMON_WHIP",
     "has": "WIELD",
     "condition": "ALWAYS",
