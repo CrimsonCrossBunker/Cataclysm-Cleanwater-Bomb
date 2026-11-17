@@ -99,9 +99,7 @@
     "purifiable": false,
     "types": [ "Cyberframe", "Cybernetic" ],
     "enchantments": [
-      {
-        "values": [ { "value": "MAX_HP", "add": 250 }, { "value": "STRENGTH", "add": 12 }, { "value": "DEXTERITY", "add": 12 } ]
-      }
+      "INLINE_ENCH_EXODII_BODY_9_0"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "armor": [

@@ -92,3 +92,5 @@ require("quadruped_enchantments")
 require("vision_enchantments")
 
 require("effect_enchantments")
+
+require("mutation_enchantments")
