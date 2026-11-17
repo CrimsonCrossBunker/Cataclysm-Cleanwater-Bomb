@@ -63,14 +63,6 @@
     "max_range": 1
   },
   {
-    "type": "enchantment",
-    "id": "enchant_electrokin_electric_strikes",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_you_effect": [ { "id": "electrokin_zap_attack", "hit_self": false, "once_in": 2 } ],
-    "incoming_damage_mod": [ { "type": "electric", "add": { "math": [ "u_spell_level('electrokinetic_melee_attacks') * -1" ] } } ]
-  },
-  {
     "id": "electrokin_zap_attack",
     "type": "SPELL",
     "name": { "str": "Electrokinetic melee attacks", "//~": "NO_I18N" },
