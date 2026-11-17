@@ -39,34 +39,6 @@
   },
   {
     "type": "enchantment",
-    "id": "iso_ench_backup",
-    "name": { "str": "The Backup" },
-    "description": "We have a situation here.",
-    "condition": { "u_has_effect": "iso_eff_backup" },
-    "values": [ { "value": "MOVE_COST", "add": -50 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "iso_ench_hypo_o",
-    "name": { "str": "Hypocrite's Oath" },
-    "description": "OH you aren't getting away with that.",
-    "condition": { "u_has_effect": "iso_eff_hypo_o" },
-    "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.5 }, { "value": "RANGED_DAMAGE", "multiply": 0.5 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "iso_ench_geas_buff",
-    "name": { "str": "Ancient vow" },
-    "description": "Lightless monster!  I give you oblivion!\n\n Deal 15% more damage and regen 100% more stamina per turn when fighting high danger enemies.",
-    "condition": { "u_has_effect": "iso_eff_geas_buff" },
-    "values": [
-      { "value": "RANGED_DAMAGE", "multiply": 0.15 },
-      { "value": "MELEE_DAMAGE", "multiply": 0.15 },
-      { "value": "STAMINA_REGEN_MOD", "add": 1 }
-    ]
-  },
-  {
-    "type": "enchantment",
     "id": "iso_bionic_vampire_buff",
     "name": { "str": "Assassin's Drive" },
     "description": "Hey man, it's just business.",
