@@ -282,10 +282,10 @@ queued_eoc character_task_record( time_point due, std::string_view mod, std::str
 
 void queue_turn_task( queued_eocs &queue, const queued_eoc &entry )
 {
-    const auto active = std::find_if( active_turn_queues.rbegin(), active_turn_queues.rend(),
+    const auto active = std::find_if( active_turn_queues.begin(), active_turn_queues.end(),
     [&]( const active_turn_queue & scope ) { return scope.queue == &queue; } );
-    if( active != active_turn_queues.rend() ) {
-        // A callback can schedule into an outer queue during a nested turn pass.
+    if( active != active_turn_queues.end() ) {
+        // Wait for the outermost pass even when a callback reenters this same queue.
         active->pending->push_back( queue.list.insert( queue.list.end(), entry ) );
     } else {
         queue.push( entry );
