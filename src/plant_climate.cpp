@@ -3,12 +3,18 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
+#include "calendar.h"
 #include "cata_path.h"
+#include "cata_utility.h"
 #include "climate_seasons.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "iexamine.h"
@@ -18,10 +24,16 @@
 #include "mapdata.h"
 #include "north_america_soil.h"
 #include "options.h"
+#include "overmap_ui.h"
 #include "path_info.h"
+#include "point.h"
+#include "regional_climate.h"
+#include "type_id.h"
 #include "units.h"
+#include "value_ptr.h"
 #include "weather.h"
 #include "weather_gen.h"
+#include "weather_type.h"
 
 crop_climate_profile crop_climate_profile::load( const JsonObject &jo )
 {

@@ -1,7 +1,9 @@
-#include "cata_catch.h"
+#include <optional>
 
 #include "calendar.h"
+#include "cata_catch.h"
 #include "plant_climate.h"
+#include "type_id.h"
 #include "weather.h"
 
 static const itype_id itype_seed_corn( "seed_corn" );
