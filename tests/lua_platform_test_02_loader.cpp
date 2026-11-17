@@ -199,10 +199,20 @@ local content = require("ccb").content
 content.append_speech_pool(content.SpeechPool { id = "lua_test_speech_append" }
     :line("first", 4):line("first", 4))
 )lua" );
-    second.write( std::filesystem::u8path( "main.lua" ), R"lua(
+    bool replaces = false;
+    SECTION( "a later Mod appends its line" ) {
+        second.write( std::filesystem::u8path( "main.lua" ), R"lua(
 local content = require("ccb").content
 content.append_speech_pool(content.SpeechPool { id = "lua_test_speech_append" }:line("second", 9))
 )lua" );
+    }
+    SECTION( "a later Mod replaces the pool" ) {
+        replaces = true;
+        second.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local content = require("ccb").content
+content.replace(content.SpeechPool { id = "lua_test_speech_append" }:line("second", 9))
+)lua" );
+    }
     const std::string id = "lua_test_speech_append";
     REQUIRE( platform::detail::speech_registry_find( id ) == nullptr );
     std::string error;
@@ -211,13 +221,18 @@ content.append_speech_pool(content.SpeechPool { id = "lua_test_speech_append" }:
         { "speech_second", second.root, second.root / "main.lua" },
     }, error ) );
     REQUIRE( platform::apply_prepared_content( error ) );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
     const std::vector<SpeechBubble> *const lines = platform::detail::speech_registry_find( id );
     REQUIRE( lines != nullptr );
-    REQUIRE( lines->size() == 3 );
-    CHECK( ( *lines )[0].text.translated() == "first" );
-    CHECK( ( *lines )[1].text.translated() == "first" );
-    CHECK( ( *lines )[2].text.translated() == "second" );
-    CHECK( ( *lines )[2].volume == 9 );
+    if( replaces ) {
+        REQUIRE( lines->size() == 1 );
+    } else {
+        REQUIRE( lines->size() == 3 );
+        CHECK( ( *lines )[0].text.translated() == "first" );
+        CHECK( ( *lines )[1].text.translated() == "first" );
+    }
+    CHECK( lines->back().text.translated() == "second" );
+    CHECK( lines->back().volume == 9 );
     platform::discard_prepared_mods();
     CHECK( platform::detail::speech_registry_find( id ) == nullptr );
 }

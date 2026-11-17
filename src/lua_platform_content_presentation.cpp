@@ -1590,19 +1590,11 @@ bool presentation_content_transaction::validate_finalized( std::string &error ) 
     for( const speech_pool_registration &entry : pimpl_->speech_pools ) {
         const std::vector<SpeechBubble> *const found =
             detail::speech_registry_find( entry.definition->id );
-        if( found == nullptr || found->size() != entry.definition->lines.size() ) {
+        // Later Mods can append to or replace the same pool before finalization.
+        if( found == nullptr || found->empty() ) {
             error = "Lua-first speech pool '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
-        }
-        for( std::size_t index = 0; index < found->size(); ++index ) {
-            if( !( ( *found )[index].text ==
-                   entry.definition->lines[index].first.native() ) ||
-                ( *found )[index].volume != entry.definition->lines[index].second ) {
-                error = "Lua-first speech pool '" + entry.definition->id +
-                        "' changed during global finalization";
-                return false;
-            }
         }
     }
     for( const end_screen_registration &entry : pimpl_->end_screens ) {
