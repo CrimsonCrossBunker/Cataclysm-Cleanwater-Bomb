@@ -12,13 +12,6 @@
   },
   {
     "type": "enchantment",
-    "id": "arvore_resist_chill",
-    "condition": "ALWAYS",
-    "//": "No cold armor here--trees are very vulnerable to ice breaking their limbs",
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 40 } ]
-  },
-  {
-    "type": "enchantment",
     "id": "arvore_forest_detect_enemies",
     "condition": {
       "and": [
@@ -153,18 +146,6 @@
     "has": "WORN",
     "condition": { "not": "u_has_weapon" },
     "values": [ { "value": "ATTACK_SPEED", "add": -10 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "arvore_ignore_chill",
-    "condition": "ALWAYS",
-    "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 150 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_arvore_thorns_mut",
-    "condition": "ALWAYS",
-    "hit_me_effect": [ { "id": "spell_arvore_thorns_mut_counter", "hit_self": false, "once_in": 3 } ]
   },
   {
     "type": "enchantment",

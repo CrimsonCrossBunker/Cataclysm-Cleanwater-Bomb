@@ -12,19 +12,6 @@
   },
   {
     "type": "enchantment",
-    "id": "ench_salamander_wings_flame",
-    "condition": "ACTIVE",
-    "values": [ { "value": "LUMINATION", "add": 150 } ],
-    "modified_bodyparts": [ { "gain": "salamander_wing_r" }, { "gain": "salamander_wing_l" } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_salamander_reduced_move",
-    "condition": "ALWAYS",
-    "values": [ { "value": "MOVE_COST", "multiply": -0.1 }, { "value": "ATTACK_SPEED", "multiply": -0.1 } ]
-  },
-  {
-    "type": "enchantment",
     "id": "ench_salamander_heat_healing",
     "condition": {
       "or": [

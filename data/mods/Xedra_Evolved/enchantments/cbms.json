@@ -1,8 +1,0 @@
-[
-  {
-    "type": "enchantment",
-    "id": "ENCH_DATA_SHUNT_BP",
-    "condition": "ALWAYS",
-    "modified_bodyparts": [ { "gain": "data_shunt" } ]
-  }
-]

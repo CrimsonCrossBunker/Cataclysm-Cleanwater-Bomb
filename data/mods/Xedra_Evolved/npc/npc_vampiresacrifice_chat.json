@@ -199,14 +199,6 @@
     "enchantments": [ "sacrificial_marked" ]
   },
   {
-    "type": "enchantment",
-    "id": "sacrificial_marked",
-    "name": { "str": "Absolute best friend" },
-    "description": "This person considers you their absolute best friend, the best person in the entire world.",
-    "condition": "ALWAYS",
-    "hit_me_effect": [ { "id": "sacrificial_marked" } ]
-  },
-  {
     "type": "SPELL",
     "id": "sacrificial_marked",
     "name": "sacrificial marked",

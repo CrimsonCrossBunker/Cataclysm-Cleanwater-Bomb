@@ -1,11 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "ENCHANTMENT_VAMPIRISM",
-    "has": "WIELD",
-    "hit_you_effect": [ { "id": "xedra_weak_healing", "hit_self": true, "once_in": 15 } ]
-  },
-  {
     "id": "xedra_weak_healing",
     "type": "SPELL",
     "name": { "str": "Weak healing", "//~": "NO_I18N" },

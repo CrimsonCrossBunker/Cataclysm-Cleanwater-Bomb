@@ -59,13 +59,6 @@
     "enchantments": [ "ench_goblin_fruit_thorns" ]
   },
   {
-    "type": "enchantment",
-    "id": "ench_goblin_fruit_thorns",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_me_effect": [ { "id": "goblin_fruit_aura_thorns", "hit_self": false, "once_in": 4 } ]
-  },
-  {
     "id": "goblin_fruit_aura_thorns",
     "type": "SPELL",
     "name": { "str": "Goblin fruit aura thorns", "//~": "NO_I18N" },

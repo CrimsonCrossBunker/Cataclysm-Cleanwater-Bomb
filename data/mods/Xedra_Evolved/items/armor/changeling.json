@@ -80,12 +80,6 @@
     "passive_effects": [ { "has": "WORN", "condition": "ALWAYS", "skills": [ { "value": "gramarye", "add": 1 } ] } ]
   },
   {
-    "type": "enchantment",
-    "id": "thunder_rush",
-    "condition": "ACTIVE",
-    "values": [ { "value": "FOOTSTEP_NOISE", "multiply": 1.5 }, { "value": "SPEED", "add": 10 } ]
-  },
-  {
     "id": "banner_thunderous_rush",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
