@@ -26,8 +26,8 @@
     "messages": [
       "No Hope adds 3 difficulties that allow you to pick between increasingly more harsh multipliers to spawn rates split by item category intended to make basic survival less trivial and progression slower and in turn require more exploration leading to greater risk while less powerful without decreasing the spawn rates of items such as mutagens and bionics that are intended as rewards for exploring more dangerous locations and are already rare and as such shouldn't be punished.",
       "The difficulty options can be used alongside the regular item spawn rate setting if desired with expected results.",
-      "For exact numerical breakdowns of the options see difficulty_options.json along with DIFFICULTY_OPTIONS.md for a barebones breakdown of which categories are affected and why.",
-      "If you wish to change the selected option on an existing save you can do so by binding the debug menu then navigating to debug menu -> Game -> Activate EOC -> EOC_NH_set_difficulty.  This notably won't change already generated item spawns anywhere that your reality bubble has touched."
+      "For exact numerical breakdowns of the options see difficulty.lua along with DIFFICULTY_OPTIONS.md for a barebones breakdown of which categories are affected and why.",
+      "To change the selected option on an existing save, open Debug menu -> Console -> Lua, select No Hope, and run require(\"difficulty\").choose().  This notably won't change already generated item spawns anywhere that your reality bubble has touched."
     ]
   }
 ]
