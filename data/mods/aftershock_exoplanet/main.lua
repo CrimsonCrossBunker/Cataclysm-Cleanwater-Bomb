@@ -41,3 +41,9 @@ require("vitamins")
 require("snippets")
 
 require("requirements")
+
+require("conditional_enchantments")
+
+require("enchantments")
+
+require("enchantment_variables")

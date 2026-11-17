@@ -1,27 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "ench_ierde_no_mind_problems",
-    "has": "HELD",
-    "condition": "ALWAYS",
-    "ench_effects": [ { "effect": "effect_ierde_no_mind_problems", "intensity": 1 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_ierde_stone_form",
-    "has": "HELD",
-    "condition": "ALWAYS",
-    "skills": [ { "value": "dodge", "multiply": -1 } ],
-    "incoming_damage_mod": [ { "type": "bash", "multiply": -0.5 }, { "type": "cut", "multiply": -0.66 } ],
-    "values": [
-      { "value": "ATTACK_SPEED", "multiply": 2 },
-      { "value": "MOVE_COST", "multiply": 1 },
-      { "value": "BONUS_DODGE", "multiply": -1 },
-      { "value": "FOOTSTEP_NOISE", "multiply": 4 },
-      { "value": "WEIGHT", "multiply": 5 }
-    ]
-  },
-  {
     "id": "ierde_stomp_ground_smash_spell",
     "type": "SPELL",
     "name": "Earthquake Stomp",

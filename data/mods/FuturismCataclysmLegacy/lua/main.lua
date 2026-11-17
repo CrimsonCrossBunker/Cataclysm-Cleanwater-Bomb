@@ -11,3 +11,5 @@ require("lua.ammunition_types")
 require("lua.snippets")
 
 require("lua.requirements")
+
+require("lua.enchantments")

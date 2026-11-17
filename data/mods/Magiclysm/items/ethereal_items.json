@@ -530,11 +530,6 @@
     "base_mods": { "pain_amount": [ 20 ] }
   },
   {
-    "id": "ench_overcharge_burn_scar",
-    "type": "enchantment",
-    "ench_effects": [ { "effect": "burn_scar", "intensity": 1 } ]
-  },
-  {
     "id": "overcharge_burn_scar",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],

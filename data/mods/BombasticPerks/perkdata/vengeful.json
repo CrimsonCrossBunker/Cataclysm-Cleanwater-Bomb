@@ -8,14 +8,6 @@
     "show_in_info": true
   },
   {
-    "type": "enchantment",
-    "id": "perk_ench_vengeful",
-    "name": { "str": "Vengeful" },
-    "description": "Oh, you aren't getting away with that.",
-    "condition": { "u_has_effect": "effect_perk_vengeful" },
-    "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.15 }, { "value": "RANGED_DAMAGE", "multiply": 0.15 } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_VENGEFUL_TAKE_DAMAGE",
     "eoc_type": "EVENT",

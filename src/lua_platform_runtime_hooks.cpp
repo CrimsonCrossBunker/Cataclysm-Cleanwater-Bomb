@@ -17,9 +17,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "avatar.h"
+#include "bodypart.h"
 #include "calendar.h"
 #include "cata_variant.h"
 #include "character.h"
@@ -27,11 +29,13 @@
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "effect.h"
 #include "effect_source.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
+#include "field.h"
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
@@ -39,7 +43,10 @@
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_missions.h"
 #include "map.h"
+#include "map_iterator.h"
 #include "mapdata.h"
+#include "math_parser_diag_value.h"
+#include "math_parser_type.h"
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
@@ -47,12 +54,16 @@
 #include "mtype.h"
 #include "move_mode.h"
 #include "npc.h"
+#include "overmap.h"
+#include "overmapbuffer.h"
 #include "player_activity.h"
 #include "profession.h"
+#include "proficiency.h"
 #include "scenario.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
+#include "weather.h"
 #include "weakpoint.h"
 #include <character_id.h>
 #include <coordinates.h>
@@ -739,13 +750,242 @@ static sol::table enchantment_handler_payload( runtime &owner,
     } );
 }
 
+static sol::table capture_enchantment_numbers( sol::state &lua, const const_dialogue &dialogue,
+        const var_type scope, const std::vector<std::string> &keys )
+{
+    sol::table values = lua.create_table( 0, static_cast<int>( keys.size() ) );
+    std::map<std::string, diag_value> legacy;
+    std::map<std::string, std::string> errors;
+    for( const std::string &key : keys ) {
+        const diag_value *const value = maybe_read_var_value( var_info( scope, key ), dialogue );
+        if( !value ) {
+            values[key] = 0.0;
+        } else if( std::holds_alternative<diag_value::legacy_value>( value->data ) ) {
+            legacy.emplace( key, *value );
+        } else {
+            try {
+                values[key] = value->dbl( dialogue );
+            } catch( const math::exception &error ) {
+                errors.emplace( key, error.what() );
+            }
+        }
+    }
+    if( !legacy.empty() || !errors.empty() ) {
+        // Legacy conversions can log. Delay conversion and type errors until
+        // Lua actually uses the operand, including inside short-circuit conditions.
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [legacy = std::move( legacy ), errors = std::move( errors )](
+        sol::this_state state, const sol::table &, const std::string & key ) -> sol::object {
+            const auto old = legacy.find( key );
+            if( old != legacy.end() ) {
+                return sol::make_object( state, old->second.dbl( const_dialogue{} ) );
+            }
+            const auto invalid = errors.find( key );
+            if( invalid != errors.end() ) {
+                throw std::runtime_error( "Invalid enchantment variable '" + key + "': " + invalid->second );
+            }
+            return sol::make_object( state, sol::nil );
+        } );
+        values[sol::metatable_key] = meta;
+    }
+    return values;
+}
+
+static sol::table collect_enchantment_environment( sol::state &lua, const const_talker &speaker,
+        const enchantment_environment_inputs &requested )
+{
+    sol::table environment = lua.create_table();
+    if( requested.position_z ) {
+        environment["position_z"] = speaker.posz();
+    }
+    if( requested.daylight ) {
+        environment["daylight"] = !is_night( calendar::turn );
+    }
+    if( requested.temperature_kelvin ) {
+        environment["temperature_kelvin"] = units::to_kelvin( get_weather().weather_precise->temperature );
+    }
+    if( requested.outside ) {
+        const Creature *creature = speaker.get_const_creature();
+        environment["outside"] = creature && is_creature_outside( *creature );
+    }
+    if( requested.divable || requested.terrain || !requested.terrain_flags.empty() ||
+        !requested.fields.empty() ) {
+        const map &here = get_map();
+        const tripoint_bub_ms local_pos = speaker.pos_bub( here );
+        if( requested.divable ) {
+            environment["divable"] = here.is_divable( local_pos );
+        }
+        if( requested.terrain || !requested.terrain_flags.empty() ) {
+            const ter_id tile = here.ter( local_pos );
+            if( requested.terrain ) {
+                environment["terrain"] = tile.id().str();
+            }
+            sol::table flags = lua.create_table( 0, static_cast<int>( requested.terrain_flags.size() ) );
+            for( const std::string &flag : requested.terrain_flags ) {
+                flags[flag] = tile->has_flag( flag );
+            }
+            environment["terrain_flags"] = std::move( flags );
+        }
+        if( !requested.fields.empty() ) {
+            const field &tile = here.field_at( local_pos );
+            sol::table fields = lua.create_table( 0, static_cast<int>( requested.fields.size() ) );
+            for( const std::string &id : requested.fields ) {
+                fields[id] = tile.find_field( field_type_id( id ), false ) != nullptr;
+            }
+            environment["fields"] = std::move( fields );
+        }
+    }
+    if( !requested.overmap_terrain && requested.nearby_overmap_terrain.empty() ) {
+        return environment;
+    }
+    const tripoint_abs_omt overmap_pos = speaker.pos_abs_omt();
+    const std::size_t world = runtime_world_generation_storage();
+    // A lookup can generate an overmap. Do it only when the Lua condition
+    // actually reads the operand, and keep the original actor position.
+    if( requested.overmap_terrain ) {
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [overmap_pos, world]( sol::this_state state, const sol::table &,
+        const std::string & key ) -> sol::object {
+            if( key != "overmap_terrain" || runtime_world_generation_storage() != world ) {
+                return sol::make_object( state, sol::nil );
+            }
+            return sol::make_object( state, std::string( oter_no_dir_or_connections(
+                                         overmap_buffer.ter( overmap_pos ) ) ) );
+        } );
+        environment[sol::metatable_key] = meta;
+    }
+    if( !requested.nearby_overmap_terrain.empty() ) {
+        sol::table nearby = lua.create_table();
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [overmap_pos, world, queries = requested.nearby_overmap_terrain](
+        sol::this_state state, const sol::table &, const std::string & key ) -> sol::object {
+            const auto found = queries.find( key );
+            if( found == queries.end() || runtime_world_generation_storage() != world ) {
+                return sol::make_object( state, sol::nil );
+            }
+            const int radius = found->second;
+            const auto axis_fits = [radius]( const int coordinate ) {
+                return static_cast<std::int64_t>( coordinate ) - radius >= std::numeric_limits<int>::min() &&
+                       static_cast<std::int64_t>( coordinate ) + radius < std::numeric_limits<int>::max();
+            };
+            if( !axis_fits( overmap_pos.x() ) || !axis_fits( overmap_pos.y() ) ) {
+                throw std::runtime_error( "enchantment overmap search radius exceeds coordinate range" );
+            }
+            for( const tripoint_abs_omt &position : points_in_radius( overmap_pos, radius ) ) {
+                if( oter_no_dir_or_connections( overmap_buffer.ter( position ) ) == key ) {
+                    return sol::make_object( state, true );
+                }
+            }
+            return sol::make_object( state, false );
+        } );
+        nearby[sol::metatable_key] = meta;
+        environment["nearby_overmap_terrain"] = std::move( nearby );
+    }
+    return environment;
+}
+
+static sol::table collect_enchantment_character_inputs( runtime &owner,
+        const const_dialogue &dialogue, const enchantment_character_inputs &requested )
+{
+    sol::table inputs = owner.lua->create_table();
+    const const_talker *speaker = dialogue.has_alpha ? dialogue.const_actor( false ) : nullptr;
+    const auto collect = [&]( const char *key, const std::vector<std::string> &ids,
+    const auto fallback, const auto & predicate ) {
+        sol::table values = owner.lua->create_table( 0, static_cast<int>( ids.size() ) );
+        for( const std::string &id : ids ) {
+            values[id] = speaker ? predicate( *speaker, id ) : fallback;
+        }
+        inputs[key] = std::move( values );
+    };
+    const bodypart_id whole_body = bodypart_str_id::NULL_ID();
+    collect( "effects", requested.effects, false, [&]( const const_talker & actor,
+    const std::string & id ) {
+        return !actor.get_effect( efftype_id( id ), whole_body ).is_null();
+    } );
+    collect( "effect_intensities", requested.effect_intensities, -1, [&]( const const_talker & actor,
+    const std::string & id ) {
+        const effect current = actor.get_effect( efftype_id( id ), whole_body );
+        return current.is_null() ? -1 : current.get_intensity();
+    } );
+    collect( "traits", requested.traits, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.has_trait( trait_id( id ) );
+    } );
+    collect( "worn_items", requested.worn_items, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.is_wearing( itype_id( id ) );
+    } );
+    collect( "worn_flags", requested.worn_flags, false, [&]( const const_talker & actor,
+    const std::string & id ) {
+        return actor.worn_with_flag( flag_id( id ), whole_body );
+    } );
+    collect( "wielded_flags", requested.wielded_flags, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.wielded_with_flag( flag_id( id ) );
+    } );
+    collect( "character_flags", requested.character_flags, false, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.has_flag( json_character_flag( id ) );
+    } );
+    collect( "proficiency_percentages", requested.proficiency_percentages, 0.0,
+    []( const const_talker & actor, const std::string & id ) {
+        const proficiency_id prof( id );
+        return actor.proficiency_practiced_time( prof ) * 100.0 / prof->time_to_learn();
+    } );
+    collect( "spell_levels", requested.spell_levels, -1, []( const const_talker & actor,
+    const std::string & id ) {
+        return actor.get_spell_level( spell_id( id ) );
+    } );
+    collect( "spell_school_levels", requested.spell_school_levels, -1,
+    []( const const_talker & actor, const std::string & id ) {
+        return actor.get_spell_level( trait_id( id ) );
+    } );
+    collect( "spell_school_level_sums", requested.spell_school_level_sums, 0,
+    []( const const_talker & actor, const std::string & id ) {
+        return actor.get_spell_sum( trait_id( id ), 0 );
+    } );
+    inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
+                                    requested.character_variables );
+    inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
+                                 requested.global_variables );
+    if( speaker ) {
+        if( requested.environment ) {
+            inputs["environment"] = collect_enchantment_environment( *owner.lua, *speaker,
+                                    *requested.environment );
+        }
+        if( requested.move_mode ) {
+            inputs["move_mode"] = speaker->get_move_mode().str();
+        }
+        if( requested.armed ) {
+            inputs["armed"] = !speaker->unarmed_attack();
+        }
+        if( requested.pain ) {
+            inputs["pain"] = speaker->pain_cur();
+        }
+        if( requested.morale ) {
+            inputs["morale"] = speaker->morale_cur();
+        }
+        if( requested.max_mana ) {
+            inputs["max_mana"] = speaker->mana_max();
+        }
+        if( requested.radiation ) {
+            inputs["radiation"] = speaker->get_rad();
+        }
+        if( requested.kill_xp ) {
+            inputs["kill_xp"] = speaker->get_kill_xp();
+        }
+    }
+    return inputs;
+}
+
 std::optional<bool> invoke_enchantment_condition_handler(
     const std::string_view mod_id, const std::string_view enchantment,
     const std::string_view scope, const std::string_view target,
-    const std::string_view handler_id, const const_dialogue &dialogue )
+    const std::string_view handler_id, const const_dialogue &dialogue,
+    const std::optional<enchantment_character_inputs> &load_character_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || !owner->world_is_ready ) {
+    if( !owner || ( !owner->world_is_ready && !load_character_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -755,7 +995,12 @@ std::optional<bool> invoke_enchantment_condition_handler(
         return std::nullopt;
     }
     sol::table payload = enchantment_handler_payload(
-                             *owner, dialogue, enchantment, scope, target, std::string_view() );
+                             *owner, dialogue, enchantment, scope, target, std::string_view(),
+                             owner->world_is_ready );
+    if( load_character_inputs ) {
+        payload["character_inputs"] = collect_enchantment_character_inputs( *owner, dialogue,
+                                      *load_character_inputs );
+    }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );
     const sol::protected_function_result result = callback( payload );
@@ -777,10 +1022,13 @@ std::optional<double> invoke_enchantment_number_handler(
     const std::string_view scope, const std::string_view target,
     const std::string_view part, const std::string_view handler_id,
     const const_dialogue &dialogue,
-    const std::optional<std::vector<std::string>> &load_skills )
+    const std::optional<std::vector<std::string>> &load_skills,
+    const std::optional<std::vector<std::string>> &load_spell_levels,
+    const std::optional<enchantment_character_inputs> &load_character_inputs )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || ( !owner->world_is_ready && !load_skills ) ) {
+    const bool load_inputs = load_skills || load_spell_levels || load_character_inputs;
+    if( !owner || ( !owner->world_is_ready && !load_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -791,16 +1039,29 @@ std::optional<double> invoke_enchantment_number_handler(
     }
     sol::table payload = enchantment_handler_payload( *owner, dialogue, enchantment, scope,
                          target, part, owner->world_is_ready );
-    if( load_skills && dialogue.has_alpha ) {
+    if( load_inputs && dialogue.has_alpha ) {
         const const_talker &speaker = *dialogue.const_actor( false );
         payload["stats"] = owner->lua->create_table_with(
                                "strength", speaker.str_cur(), "dexterity", speaker.dex_cur(),
                                "intelligence", speaker.int_cur(), "perception", speaker.per_cur() );
-        sol::table skills = owner->lua->create_table( 0, static_cast<int>( load_skills->size() ) );
-        for( const std::string &skill : *load_skills ) {
-            skills[skill] = speaker.get_skill_level( skill_id( skill ) );
+        if( load_skills ) {
+            sol::table skills = owner->lua->create_table( 0, static_cast<int>( load_skills->size() ) );
+            for( const std::string &skill : *load_skills ) {
+                skills[skill] = speaker.get_skill_level( skill_id( skill ) );
+            }
+            payload["skills"] = std::move( skills );
         }
-        payload["skills"] = std::move( skills );
+        if( load_spell_levels ) {
+            sol::table levels = owner->lua->create_table( 0, static_cast<int>( load_spell_levels->size() ) );
+            for( const std::string &spell : *load_spell_levels ) {
+                levels[spell] = speaker.get_spell_level( spell_id( spell ) );
+            }
+            payload["spell_levels"] = std::move( levels );
+        }
+    }
+    if( load_character_inputs ) {
+        payload["character_inputs"] = collect_enchantment_character_inputs( *owner, dialogue,
+                                      *load_character_inputs );
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );

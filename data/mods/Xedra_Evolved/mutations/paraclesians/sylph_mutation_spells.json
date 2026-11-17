@@ -15,48 +15,6 @@
     ]
   },
   {
-    "type": "enchantment",
-    "id": "ench_sylph_fulgurating_strikes_advanced",
-    "condition": {
-      "or": [
-        { "math": [ "u_spell_level('sylph_call_lightning') >= 10" ] },
-        { "math": [ "u_spell_level('sylph_crash_of_lightning') >= 5" ] }
-      ]
-    },
-    "hit_you_effect": [ { "id": "sylph_fulgurating_strikes_lightning_fields", "hit_self": false, "once_in": 3 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_sylph_louder_shouting",
-    "condition": "ACTIVE",
-    "values": [ { "value": "SHOUT_NOISE", "multiply": { "math": [ " 1 + (u_spell_level_sum('school': 'SYLPH') / 20)" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "sylph_extra_dodges",
-    "condition": "ALWAYS",
-    "values": [ { "value": "BONUS_DODGE", "add": { "math": [ "1 + u_has_trait('THRESH_SYLPH')" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "sylph_wind_weapons",
-    "condition": "ALWAYS",
-    "values": [ { "value": "RANGE", "multiply": { "math": [ "0.1 + (u_has_trait('THRESH_SYLPH') * 0.1)" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "sylph_fast_cast",
-    "condition": "u_is_outside",
-    "values": [ { "value": "CASTING_TIME_MULTIPLIER", "multiply": -0.15 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "sylph_fast_cast2",
-    "condition": "u_is_outside",
-    "values": [ { "value": "CASTING_TIME_MULTIPLIER", "multiply": -0.15 } ],
-    "ench_effects": [ { "effect": "effect_subtle_spell_flag", "intensity": 1 } ]
-  },
-  {
     "id": "zap_electrical_emission",
     "type": "SPELL",
     "name": "Zap",

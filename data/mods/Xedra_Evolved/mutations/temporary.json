@@ -24,12 +24,6 @@
     ]
   },
   {
-    "type": "enchantment",
-    "id": "ench_giant_growth_size_bonuses",
-    "condition": "ALWAYS",
-    "values": [ { "value": "MAX_HP", "multiply": 0.4 }, { "value": "STRENGTH", "add": 6 } ]
-  },
-  {
     "type": "mutation",
     "id": "GOBLIN_FRUIT_MUSIC",
     "name": { "str": "The fruit's song" },

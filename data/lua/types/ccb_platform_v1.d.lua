@@ -5231,9 +5231,10 @@ function ComputerAccessContext:remove_value(key) end
 ---@param key string
 ---@param value any Nil deletes the key; services.types.null stores an explicit empty value, including inside arrays.
 function ComputerAccessContext:set_value(key, value) end
----@class CcbEnchantmentNumericInputs
+---@class CcbEnchantmentNumericInputs: CcbEnchantmentCharacterContext
 ---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer } Detached current stats of the native speaker, when present.
 ---@field skills? table<string, integer> Detached effective skill levels requested via load_skills, truncated as in native dialogue.
+---@field spell_levels? table<string, integer> Detached effective levels requested via load_spell_levels, with -1 for an unknown spell.
 
 ---@class CcbEnchantmentValueModifierOptions
 ---@field add? number
@@ -5241,6 +5242,7 @@ function ComputerAccessContext:set_value(key, value) end
 ---@field add_handler? string Named callback returning a finite additive modifier.
 ---@field multiply_handler? string Named callback returning a finite multiplicative modifier.
 ---@field load_skills? string[] Enables numeric evaluation during save reconstruction. Use an empty array for stats only. Before world_ready the callback uses detached stats and skills and world services are unavailable.
+---@field load_spell_levels? string[] Enables numeric evaluation during save reconstruction with detached stats and the requested spell levels.
 
 ---@class EnchantmentDefinition
 ---@field active_when any
@@ -5423,10 +5425,85 @@ local WidgetDefinition = {}
 ---@return BionicDefinition
 function CcbPlatformContent.Bionic(options) end
 
+---@class CcbEnchantmentEnvironmentInputs
+---@field position_z? boolean Request the actor's world z level.
+---@field daylight? boolean Request whether the current game time is outside night hours.
+---@field outside? boolean Request whether the actor is outdoors.
+---@field terrain? boolean Request the actor's local terrain ID.
+---@field terrain_flags? string[] Flags to test on the actor's local terrain only.
+---@field fields? string[] Field IDs to test on the actor's tile.
+---@field divable? boolean Request whether the actor's tile has swimmable deep water.
+---@field overmap_terrain? boolean Request the actor's overmap terrain ID without direction or connections.
+---@field nearby_overmap_terrain? table<string, integer> Overmap terrain IDs without direction or connections, mapped to a nonnegative radius in overmap tiles.
+---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
+
+---@class CcbEnchantmentEnvironmentSnapshot
+---@field position_z? integer
+---@field daylight? boolean
+---@field outside? boolean
+---@field terrain? string
+---@field terrain_flags? table<string, boolean>
+---@field fields? table<string, boolean>
+---@field divable? boolean
+---@field overmap_terrain? string Read from the actor's captured overmap position on access.
+---@field nearby_overmap_terrain? table<string, boolean> Each requested search runs on access, including the actor's tile.
+---@field temperature_kelvin? number
+
+---@class CcbEnchantmentCharacterInputs
+---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
+---@field traits? string[] Trait IDs queried on the condition's speaker.
+---@field worn_items? string[] Worn item type IDs queried on the condition's speaker.
+---@field worn_flags? string[] Flags queried on the condition's worn items.
+---@field wielded_flags? string[] Flags queried on the speaker's wielded item.
+---@field effect_intensities? string[] Whole-body effects whose intensity is requested.
+---@field character_variables? string[] Numeric variables saved on the speaker, using keys without a scope prefix.
+---@field global_variables? string[] Numeric variables saved in the world.
+---@field character_flags? string[] Character flags queried on the speaker.
+---@field proficiency_percentages? string[] Proficiency IDs whose practice percentage is requested.
+---@field spell_levels? string[] Spell IDs whose current effective level is requested.
+---@field spell_school_levels? string[] School IDs whose highest effective spell level is requested.
+---@field spell_school_level_sums? string[] School IDs whose nonnegative effective spell levels are summed.
+---@field move_mode? boolean Request the speaker's movement mode ID.
+---@field armed? boolean Request whether the speaker has a weapon.
+---@field pain? boolean Request raw pain before painkiller reduction.
+---@field morale? boolean Request current morale.
+---@field max_mana? boolean Request current maximum mana.
+---@field radiation? boolean Request current radiation.
+---@field kill_xp? boolean Request current experience from kills.
+---@field environment? CcbEnchantmentEnvironmentInputs
+
+---@class CcbEnchantmentCharacterSnapshot
+---@field effects table<string, boolean>
+---@field traits table<string, boolean>
+---@field worn_items table<string, boolean>
+---@field worn_flags table<string, boolean>
+---@field wielded_flags table<string, boolean>
+---@field effect_intensities table<string, integer> Missing effects have intensity -1.
+---@field character_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
+---@field global_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
+---@field character_flags table<string, boolean>
+---@field proficiency_percentages table<string, number> Practice percentages are on the 0–100 scale.
+---@field spell_levels table<string, integer> Unknown spells have level -1.
+---@field spell_school_levels table<string, integer> Schools with no known spells have level -1.
+---@field spell_school_level_sums table<string, integer> Schools with no known spells have sum 0.
+---@field move_mode? string
+---@field armed? boolean
+---@field pain? integer
+---@field morale? integer
+---@field max_mana? integer
+---@field radiation? integer
+---@field kill_xp? integer
+---@field environment? CcbEnchantmentEnvironmentSnapshot
+
+---@class CcbEnchantmentCharacterContext
+---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
+---@field speaker? GameHandle Available only after world_ready.
+
 ---@class EnchantmentDefinitionOptions
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
+---@field load_character_inputs? CcbEnchantmentCharacterInputs Enables named activation and numeric callbacks during save reconstruction with detached inputs.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription

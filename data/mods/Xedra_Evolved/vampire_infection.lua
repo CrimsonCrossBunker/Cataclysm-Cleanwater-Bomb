@@ -65,6 +65,49 @@ local tiers = {
     },
 }
 
+local perception_traits = {}
+local perception_multiplier = { 0.20, 0.30, 0.45, 0.60 }
+for index, tier in ipairs(tiers) do
+    tier.counted = {}
+    for _, mutation in ipairs(tier.powers) do
+        if not tier.excluded or not tier.excluded[mutation] then
+            tier.counted[#tier.counted + 1] = mutation
+        end
+    end
+    for _, mutation in ipairs(tier.additional) do
+        tier.counted[#tier.counted + 1] = mutation
+    end
+    if perception_multiplier[index] then
+        for _, mutation in ipairs(tier.counted) do
+            perception_traits[#perception_traits + 1] = mutation
+        end
+    end
+end
+
+ccb.runtime.handler("vampire_heightened_perception", function(ctx)
+    local traits = ctx.character_inputs.traits
+    local bonus = 1
+    for index, multiplier in ipairs(perception_multiplier) do
+        local count = 0
+        for _, mutation in ipairs(tiers[index].counted) do
+            if traits[mutation] then
+                count = count + 1
+            end
+        end
+        if index == 4 and traits.TRUE_VAMPIRE_POWER then
+            count = count + 5
+        end
+        bonus = bonus + count * multiplier
+    end
+    return bonus
+end)
+
+ccb.content.add(ccb.content.Enchantment {
+    id = "ench_vampire_heightened_senses_perception",
+    condition = "ALWAYS",
+    load_character_inputs = { traits = perception_traits },
+}:value("PERCEPTION", { add_handler = "vampire_heightened_perception" }))
+
 local function value(result)
     if not result.ok then
         error(result.error.message)
@@ -96,12 +139,7 @@ end
 
 local function reached_limit(character, tier)
     local count = 0
-    for _, mutation in ipairs(tier.powers) do
-        if (not tier.excluded or not tier.excluded[mutation]) and has(character, mutation) then
-            count = count + 1
-        end
-    end
-    for _, mutation in ipairs(tier.additional) do
+    for _, mutation in ipairs(tier.counted) do
         if has(character, mutation) then
             count = count + 1
         end

@@ -1522,13 +1522,6 @@
     ]
   },
   {
-    "type": "enchantment",
-    "id": "ench_vampire_no_gorge_issues",
-    "has": "HELD",
-    "condition": "ALWAYS",
-    "ench_effects": [ { "effect": "effect_vampire_no_gorge_issues", "intensity": 1 } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_SHADOW_FORM_activated",
     "condition": { "not": { "u_has_trait": "VAMPIRE_SHADOW_FORM_TRAITS" } },

@@ -14,6 +14,7 @@
 #include "coordinates.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "global_vars.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json_loader.h"
@@ -45,11 +46,14 @@
 #include "lua_platform_canvas.h"
 #include "lua_platform_content.h"
 #include "lua_platform_content_items.h"
+#include "magic.h"
 #include "magic_enchantment.h"
 #include "mapdata.h"
 #include "mtype.h"
 #include "npc_class.h"
 #include "options_helpers.h"
+#include "overmap.h"
+#include "overmapbuffer.h"
 #include "scenario.h"
 #include "shop_cons_rate.h"
 #include "trap.h"
@@ -360,8 +364,12 @@ ccb.runtime.handler("ready_speed", function()
     assert(ccb.services.characters.avatar())
     return 6
 end)
+ccb.runtime.handler("loaded_perception", function(ctx)
+    return ctx.spell_levels.test_spell_pew
+end)
 enchantment:value("STRENGTH", { add_handler = "loaded_strength", load_skills = { "cooking" } })
 enchantment:value("SPEED", { add_handler = "ready_speed" })
+enchantment:value("PERCEPTION", { add_handler = "loaded_perception", load_spell_levels = { "test_spell_pew" } })
 ccb.content.add(enchantment)
 )lua" );
     std::string error;
@@ -375,13 +383,16 @@ ccb.content.add(enchantment)
     restoring_npc.set_skill_level( skill_id( "cooking" ), 4 );
     const enchantment_id id( "ccb_platform_load_enchantment" );
     REQUIRE( id.is_valid() );
-    const auto check_load_values = [&]() {
+    const auto check_load_values = [&]( const int spell_level ) {
         enchant_cache cache;
         cache.force_add( id.obj(), restoring_npc );
         CHECK( cache.get_value_add( enchant_vals::mod::STRENGTH ) == restoring_npc.get_str() + 4 );
         CHECK( cache.get_value_add( enchant_vals::mod::SPEED ) == 0 );
+        CHECK( cache.get_value_add( enchant_vals::mod::PERCEPTION ) == spell_level );
     };
-    check_load_values();
+    check_load_values( -1 );
+    restoring_npc.magic->set_spell_level( spell_id( "test_spell_pew" ), 4, &restoring_npc );
+    check_load_values( 4 );
     bool finished_native_load = false;
     cata::lua_platform::on_world_ready( false, [&]() {
         enchant_cache cache;
@@ -391,7 +402,191 @@ ccb.content.add(enchantment)
     } );
     CHECK( finished_native_load );
     cata::lua_platform::on_world_load_started();
-    check_load_values();
+    check_load_values( 4 );
+}
+
+TEST_CASE( "lua_first_enchantment_activation_reads_loaded_character_inputs",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_load_activation" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("matching_inputs", function(ctx)
+    assert(ctx.speaker == nil)
+    local inputs = ctx.character_inputs
+    return inputs.effects.sleep and inputs.traits.TOUGH
+        and inputs.worn_items.backpack and inputs.worn_flags.WATERPROOF
+        and inputs.character_flags.QUADRUPED_CROUCH and inputs.move_mode == "crouch"
+end)
+ccb.runtime.handler("learning_state", function(ctx)
+    assert(ctx.speaker == nil)
+    local state = ctx.character_inputs
+    local spell = state.spell_levels.test_eoc_spell
+    assert(state.spell_school_levels.test_trait == spell)
+    assert(state.spell_school_level_sums.test_trait == math.max(0, spell))
+    return state.proficiency_percentages.prof_test + spell
+end)
+ccb.runtime.handler("loaded_strength", function(ctx)
+    assert(ctx.speaker == nil)
+    local state = ctx.character_inputs
+    local saved = state.character_variables
+    assert(saved.lua_test_enchantment_missing == 0)
+    if state.pain > 20 then
+        local ok, problem = pcall(function() return saved.lua_test_enchantment_invalid end)
+        assert(not ok and string.find(problem, "Type mismatch", 1, true))
+    end
+    return state.pain + state.effect_intensities.sleep + (state.armed and 10 or 0)
+        + saved.lua_test_enchantment_bonus + state.global_variables.lua_test_enchantment_bonus
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "ccb_platform_load_activation",
+    condition_handler = "matching_inputs",
+    load_character_inputs = {
+        effects = { "sleep" },
+        traits = { "TOUGH" },
+        worn_items = { "backpack" },
+        worn_flags = { "WATERPROOF" },
+        effect_intensities = { "sleep" },
+        character_variables = {
+            "lua_test_enchantment_bonus", "lua_test_enchantment_invalid", "lua_test_enchantment_missing",
+        },
+        global_variables = { "lua_test_enchantment_bonus" },
+        character_flags = { "QUADRUPED_CROUCH" },
+        move_mode = true,
+        proficiency_percentages = { "prof_test" },
+        spell_levels = { "test_eoc_spell" },
+        spell_school_levels = { "test_trait" },
+        spell_school_level_sums = { "test_trait" },
+        pain = true,
+        armed = true,
+    },
+}
+    :value("STRENGTH", { add_handler = "loaded_strength" })
+    :value("PERCEPTION", { add_handler = "learning_state" }))
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_load_activation" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    npc restoring_npc;
+    const enchantment_id id( "ccb_platform_load_activation" );
+    REQUIRE( id.is_valid() );
+    REQUIRE( get_globals().maybe_get_global_value( "lua_test_enchantment_bonus" ) == nullptr );
+    on_out_of_scope restore_global( []() {
+        get_globals().remove_global_value( "lua_test_enchantment_bonus" );
+    } );
+    restoring_npc.set_value( "lua_test_enchantment_invalid", "typed text" );
+    const auto bonus = [&]( const enchant_vals::mod value ) {
+        enchant_cache cache;
+        cache.force_add( id.obj(), restoring_npc );
+        return cache.get_value_add( value );
+    };
+    const auto strength_bonus = [&]() {
+        return bonus( enchant_vals::mod::STRENGTH );
+    };
+    restoring_npc.set_pain( 12 );
+    CHECK( strength_bonus() == 11 );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == -1 );
+    restoring_npc.set_proficiency_practiced_time( proficiency_id( "prof_test" ), 43200 );
+    restoring_npc.magic->set_spell_level( spell_id( "test_eoc_spell" ), 4, &restoring_npc );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == 54 );
+    restoring_npc.set_value( "lua_test_enchantment_bonus",
+                             diag_value( diag_value::legacy_value( "3.5" ) ) );
+    get_globals().set_global_value( "lua_test_enchantment_bonus", 4 );
+    CHECK( strength_bonus() == 18.5 );
+    restoring_npc.set_pain( 25 );
+    CHECK( strength_bonus() == 31.5 );
+    restoring_npc.set_pain( 12 );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.add_effect( efftype_id( "sleep" ), 2_minutes );
+    restoring_npc.set_mutation( trait_id( "TOUGH" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+
+    item backpack( itype_id( "backpack" ) );
+    backpack.set_flag( flag_id( "WATERPROOF" ) );
+    restoring_npc.worn.wear_item( restoring_npc, backpack, false, false );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.set_mutation( trait_id( "PAWS" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    restoring_npc.set_movement_mode( move_mode_id( "crouch" ) );
+    CHECK( id->is_active( restoring_npc, false ) );
+    item rock( itype_rock );
+    REQUIRE( restoring_npc.wield( rock ) );
+    CHECK( strength_bonus() == 29.5 + restoring_npc.get_effect_int( efftype_id( "sleep" ) ) );
+
+    restoring_npc.remove_effect( efftype_id( "sleep" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    CHECK( strength_bonus() == 28.5 );
+}
+
+TEST_CASE( "lua_first_enchantment_reads_tile_and_overmap_during_character_load",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+        clear_map();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_environment_enchantment" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("local_water_and_road", function(ctx)
+    assert(ctx.speaker == nil)
+    local environment = ctx.character_inputs.environment
+    return environment.position_z == 0 and environment.divable
+        and environment.terrain == "t_water_dp" and environment.terrain_flags.SWIMMABLE
+        and environment.fields.fd_smoke and environment.overmap_terrain == "forest"
+        and environment.nearby_overmap_terrain.road
+end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "lua_test_enchantment_environment",
+    condition_handler = "local_water_and_road",
+    load_character_inputs = { environment = {
+        position_z = true, divable = true, terrain = true, terrain_flags = { "SWIMMABLE" },
+        fields = { "fd_smoke" }, overmap_terrain = true, nearby_overmap_terrain = { road = 1 },
+    } },
+})
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_environment_enchantment" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    const enchantment_id id( "lua_test_enchantment_environment" );
+    REQUIRE( id.is_valid() );
+    npc restoring_npc;
+    map &here = get_map();
+    const tripoint_bub_ms where( 60, 60, 0 );
+    restoring_npc.setpos( here, where, false );
+    const tripoint_abs_omt center = restoring_npc.pos_abs_omt();
+    const tripoint_abs_omt diagonal = center + tripoint( 1, 1, 0 );
+    const oter_id saved_center = overmap_buffer.ter( center );
+    const oter_id saved_diagonal = overmap_buffer.ter( diagonal );
+    const on_out_of_scope restore_overmap( [&]() {
+        overmap_buffer.ter_set( center, saved_center );
+        overmap_buffer.ter_set( diagonal, saved_diagonal );
+    } );
+    overmap_buffer.ter_set( center, oter_id( "forest" ) );
+    const oter_id road( "road_nesw" );
+    REQUIRE( oter_no_dir_or_connections( road ) == "road" );
+    overmap_buffer.ter_set( diagonal, road );
+    here.ter_set( where, ter_str_id( "t_floor" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    here.ter_set( where, ter_str_id( "t_water_dp" ) );
+    CHECK_FALSE( id->is_active( restoring_npc, false ) );
+    REQUIRE( here.add_field( where, field_type_id( "fd_smoke" ), 1 ) );
+    CHECK_FALSE( restoring_npc.is_underwater() );
+    CHECK( id->is_active( restoring_npc, false ) );
 }
 
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",

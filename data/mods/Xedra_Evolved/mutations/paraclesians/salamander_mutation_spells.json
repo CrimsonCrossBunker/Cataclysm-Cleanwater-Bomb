@@ -11,43 +11,6 @@
     "failure_chance_formula_id": "xe_fey_elemental_magick_salamander_failure_chance"
   },
   {
-    "type": "enchantment",
-    "id": "ench_salamander_wings_flame",
-    "condition": "ACTIVE",
-    "values": [ { "value": "LUMINATION", "add": 150 } ],
-    "modified_bodyparts": [ { "gain": "salamander_wing_r" }, { "gain": "salamander_wing_l" } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_salamander_reduced_move",
-    "condition": "ALWAYS",
-    "values": [ { "value": "MOVE_COST", "multiply": -0.1 }, { "value": "ATTACK_SPEED", "multiply": -0.1 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_salamander_heat_healing",
-    "condition": {
-      "or": [
-        { "math": [ "weather('temperature') >= from_fahrenheit( 80 )" ] },
-        { "math": [ "u_salamander_near_fire == 1" ] },
-        { "or": [ { "u_is_in_field": "fd_salamander_heat" }, { "u_is_in_field": "fd_migo_atmosphere" } ] }
-      ]
-    },
-    "values": [ { "value": "REGEN_HP", "multiply": 0.4 }, { "value": "MENDING_MODIFIER", "multiply": 3 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "ench_salamander_heat_crafting",
-    "condition": {
-      "or": [
-        { "math": [ "weather('temperature') >= from_fahrenheit( 80 )" ] },
-        { "math": [ "u_salamander_near_fire == 1" ] },
-        { "or": [ { "u_is_in_field": "fd_salamander_heat" }, { "u_is_in_field": "fd_migo_atmosphere" } ] }
-      ]
-    },
-    "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.15 } ]
-  },
-  {
     "id": "salamander_aoe_explosion",
     "type": "SPELL",
     "name": { "str": "Salamander AoE Explosion", "//~": "NO_I18N" },

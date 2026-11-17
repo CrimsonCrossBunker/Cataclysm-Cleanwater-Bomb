@@ -43,14 +43,6 @@
     ]
   },
   {
-    "type": "enchantment",
-    "id": "afs_ench_jetpack_sprint",
-    "name": { "str": "Powered Movement" },
-    "description": "You are using a jetpack to boost your movement speed.",
-    "condition": "ACTIVE",
-    "values": [ { "value": "MOVE_COST", "multiply": -0.5 } ]
-  },
-  {
     "id": "afs_jetpack",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],

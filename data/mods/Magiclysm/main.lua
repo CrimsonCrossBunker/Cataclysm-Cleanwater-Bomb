@@ -42,3 +42,9 @@ require("vitamins")
 require("snippets")
 
 require("requirements")
+
+require("enchantments")
+
+require("enchantment_values")
+
+require("school_enchantments")

@@ -1,12 +1,5 @@
 [
   {
-    "id": "ench_fishform",
-    "type": "enchantment",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "mutations": [ "WILDSHAPE:FISH", "WAYFARER", "DRUID_SHIFTER_FISH_FORM_TRAITS", "BESTIAL_MIND" ]
-  },
-  {
     "id": "wildshape_cloak_fish",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
@@ -68,13 +61,6 @@
     ]
   },
   {
-    "id": "ench_bearform",
-    "type": "enchantment",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "mutations": [ "WILDSHAPE:BEAR", "DRUID_SHIFTER_BEAR_FORM_TRAITS", "BESTIAL_MIND", "BESTIAL_MIND_COMBAT" ]
-  },
-  {
     "id": "wildshape_cloak_bear",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
@@ -134,13 +120,6 @@
         ]
       }
     ]
-  },
-  {
-    "id": "ench_deerform",
-    "type": "enchantment",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "mutations": [ "WILDSHAPE:DEER", "DRUID_SHIFTER_DEER_FORM_TRAITS", "BESTIAL_MIND" ]
   },
   {
     "id": "wildshape_cloak_deer",

@@ -84,3 +84,9 @@ require("vitamins")
 require("snippets")
 
 require("requirements")
+
+require("enchantments")
+
+require("enchantment_variables")
+
+require("quadruped_enchantments")

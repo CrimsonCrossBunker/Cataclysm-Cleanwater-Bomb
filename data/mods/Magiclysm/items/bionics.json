@@ -11,11 +11,6 @@
     "difficulty": 8
   },
   {
-    "type": "enchantment",
-    "id": "ench_bio_sneeze_beam",
-    "values": [ { "value": "MAX_MANA", "add": 500 } ]
-  },
-  {
     "id": "bio_sneeze_beam",
     "copy-from": "bionic_general",
     "type": "ITEM",

@@ -50,3 +50,7 @@ do
     }
     ccb.content.add(category)
 end
+
+-- enchantments.json
+ccb.content.add(ccb.content.Enchantment { id = "ench_bio_psi_range_increaser", has = "WORN", condition = "ACTIVE" }
+    :effect("effect_ench_bio_psi_range_increaser", 1))
