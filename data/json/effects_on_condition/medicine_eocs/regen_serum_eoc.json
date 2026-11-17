@@ -81,12 +81,7 @@
     "apply_message": "",
     "remove_message": "",
     "enchantments": [
-      {
-        "values": [
-          { "value": "CARDIO_MULTIPLIER", "multiply": { "math": [ "(-1 / clamp( spent_to_ingested_ratio(), 0, 0.6 )) / 5" ] } },
-          { "value": "STRENGTH", "multiply": { "math": [ "(-1 / clamp( spent_to_ingested_ratio(), 0, 0.6 )) / 5" ] } }
-        ]
-      }
+      "INLINE_ENCH_regen_serum_crash_cardio_0"
     ]
   },
   {
