@@ -1382,8 +1382,8 @@ void detail::install_runtime_state_task_api(
             throw std::runtime_error( "Character turn task references missing handler '" + handler + "'" );
         }
         const std::int64_t now = to_turn<std::int64_t>( calendar::turn );
-        if( turns <= 0 || turns > std::numeric_limits<int>::max() - now ) {
-            throw std::invalid_argument( "Character turn task delay must be positive and fit the game calendar" );
+        if( turns < 0 || turns > std::numeric_limits<int>::max() - now ) {
+            throw std::invalid_argument( "Character turn task delay must be nonnegative and fit the game calendar" );
         }
         std::optional<game_handle_error> error;
         Character *actor = resolve_exact_character( handle, owner->handle_runtime(),

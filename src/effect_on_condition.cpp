@@ -208,7 +208,11 @@ namespace
 // Lua callbacks share the saved character-turn queue with EOCs to keep their
 // due turn and ordering across an upgrade.
 const effect_on_condition_id lua_task_record( "ccb:character_task" );
-thread_local std::vector<queued_eocs::storage_iter> *avatar_tasks_to_queue = nullptr;
+struct active_turn_queue {
+    queued_eocs *queue;
+    std::vector<queued_eocs::storage_iter> *pending;
+};
+thread_local std::vector<active_turn_queue> active_turn_queues;
 struct character_task_migration {
     effect_on_condition_id eoc;
     const char *handler;
@@ -262,12 +266,24 @@ queued_eoc character_task_record( time_point due, std::string_view mod, std::str
         }
     };
 }
+
+void queue_turn_task( queued_eocs &queue, const queued_eoc &entry )
+{
+    const auto active = std::find_if( active_turn_queues.rbegin(), active_turn_queues.rend(),
+    [&]( const active_turn_queue & scope ) { return scope.queue == &queue; } );
+    if( active != active_turn_queues.rend() ) {
+        // A callback can schedule into an outer queue during a nested turn pass.
+        active->pending->push_back( queue.list.insert( queue.list.end(), entry ) );
+    } else {
+        queue.push( entry );
+    }
+}
 } // namespace
 
 void cata::lua_platform::queue_character_task( Character &actor, time_point due,
         std::string_view mod, std::string_view handler )
 {
-    actor.queued_effect_on_conditions.push( character_task_record( due, mod, handler ) );
+    queue_turn_task( actor.queued_effect_on_conditions, character_task_record( due, mod, handler ) );
 }
 
 bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string_view handler )
@@ -287,14 +303,7 @@ bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string
 void cata::lua_platform::queue_avatar_turn_task( time_point due, std::string_view mod,
         std::string_view handler )
 {
-    queued_eocs &queue = g->queued_global_effect_on_conditions;
-    const queued_eoc entry = character_task_record( due, mod, handler );
-    if( avatar_tasks_to_queue ) {
-        // A zero-delay repeat is due on the next pass, just like a native recurrence.
-        avatar_tasks_to_queue->push_back( queue.list.insert( queue.list.end(), entry ) );
-    } else {
-        queue.push( entry );
-    }
+    queue_turn_task( g->queued_global_effect_on_conditions, character_task_record( due, mod, handler ) );
 }
 
 void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
@@ -431,10 +440,8 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
 
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
     const bool avatar_queue = g && &eoc_queue == &g->queued_global_effect_on_conditions;
-    const restore_on_out_of_scope restore_avatar_tasks( avatar_tasks_to_queue );
-    if( avatar_queue ) {
-        avatar_tasks_to_queue = &eocs_to_queue;
-    }
+    active_turn_queues.push_back( { &eoc_queue, &eocs_to_queue } );
+    on_out_of_scope restore_turn_queue{ [] { active_turn_queues.pop_back(); } };
 #endif
     const auto restore_pending_entries = [&] {
         for( queued_eocs::storage_iter &entry : eocs_to_queue ) {
