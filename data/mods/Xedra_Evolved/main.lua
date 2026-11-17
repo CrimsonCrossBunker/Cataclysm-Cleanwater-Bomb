@@ -144,3 +144,5 @@ require("blood_potency_enchantment")
 require("bionic_enchantments")
 
 require("item_enchantments")
+
+require("weather_types")
