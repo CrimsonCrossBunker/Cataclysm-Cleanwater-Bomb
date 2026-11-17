@@ -874,6 +874,8 @@ function RecipeDefinition:on_complete(handler_id) end
 ---@field category string Native crafting category id.
 ---@field subcategory string Native crafting subcategory id.
 ---@field activity_level? number Positive exertion multiplier; defaults to no exercise.
+---@field skill? string Native primary skill used until a member supplies its own; omitted means none.
+---@field difficulty? integer Native difficulty before member difficulty is derived. Defaults to 0.
 
 ---@class NestedRecipeCategoryDefinition
 ---@field id string
@@ -883,6 +885,11 @@ local NestedRecipeCategoryDefinition = {}
 ---@param optional? boolean Allow the member to be absent after loading the active Mods. Defaults to false.
 ---@return NestedRecipeCategoryDefinition self
 function NestedRecipeCategoryDefinition:recipe(recipe_id, optional) end
+
+---@param skill string Native skill id.
+---@param level integer Minimum level used until a member supplies secondary requirements.
+---@return NestedRecipeCategoryDefinition self
+function NestedRecipeCategoryDefinition:requires_skill(skill, level) end
 
 ---@class RequirementDefinitionOptions
 ---@field id string Stable reusable requirement id.

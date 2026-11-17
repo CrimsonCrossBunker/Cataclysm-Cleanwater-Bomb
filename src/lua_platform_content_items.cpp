@@ -246,6 +246,13 @@ struct recipe_definition_data {
     std::map<std::string, std::int64_t> books;
     std::string result_handler;
     bool registered = false;
+
+    void add_required_skill( const std::string &skill_name, std::int64_t level ) {
+        if( skill_name.empty() || level < 0 || level > MAX_SKILL ) {
+            throw std::runtime_error( "recipe skill requires a non-empty id and non-negative level" );
+        }
+        required_skills[skill_name] = level;
+    }
 };
 
 struct plant_lifecycle_definition_data {
@@ -935,10 +942,7 @@ struct recipe_definition_handle {
 
     recipe_definition_handle &requires_skill( const std::string &id, std::int64_t level ) {
         require_building_handle( token, *definition, "recipe" );
-        if( id.empty() || level < 0 || level > MAX_SKILL ) {
-            throw std::runtime_error( "recipe skill requires a non-empty id and non-negative level" );
-        }
-        definition->required_skills[id] = level;
+        definition->add_required_skill( id, level );
         return *this;
     }
 
@@ -1035,6 +1039,13 @@ struct nested_recipe_category_definition_handle {
             throw std::runtime_error(
                 "nested recipe category requires unique non-empty recipe ids" );
         }
+        return *this;
+    }
+
+    nested_recipe_category_definition_handle &requires_skill( const std::string &id,
+            std::int64_t level ) {
+        require_building_handle( token, *definition, "nested recipe category" );
+        definition->add_required_skill( id, level );
         return *this;
     }
 
@@ -2409,6 +2420,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     ccb.new_usertype<nested_recipe_category_definition_handle>(
         "NestedRecipeCategoryDefinition", sol::no_constructor,
         "id", sol::property( &nested_recipe_category_definition_handle::id ),
+        "requires_skill", &nested_recipe_category_definition_handle::requires_skill,
         "recipe", &nested_recipe_category_definition_handle::recipe );
     ccb.new_usertype<requirement_definition_handle>(
         "RequirementDefinition", sol::no_constructor,
@@ -2831,6 +2843,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->category = options.get_or( "category", std::string() );
         definition->subcategory = options.get_or( "subcategory", std::string() );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
+        definition->skill = options.get_or( "skill", std::string() );
+        definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         return nested_recipe_category_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -4244,6 +4258,20 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
         }
 
+        const auto validate_recipe_skills = [&skill_ids]( const recipe_definition_data & definition ) {
+            if( !definition.skill.empty() && skill_ids.count( definition.skill ) == 0 &&
+                !skill_id( definition.skill ).is_valid() ) {
+                throw std::runtime_error( "recipe '" + definition.id +
+                                          "' references unknown skill '" + definition.skill + "'" );
+            }
+            for( const auto &[skill, level] : definition.required_skills ) {
+                if( ( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
+                    level < 0 || level > MAX_SKILL ) {
+                    throw std::runtime_error( "recipe '" + definition.id +
+                                              "' has an invalid required skill '" + skill + "'" );
+                }
+            }
+        };
         std::set<std::string> recipe_ids;
         for( const recipe_registration &entry : pimpl_->recipes ) {
             const recipe_definition_data &definition = *entry.definition;
@@ -4260,16 +4288,18 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                 definition.nested_category ? "nested recipe category" : "recipe" );
             if( definition.nested_category ) {
                 if( definition.name.empty() || definition.category.empty() || definition.subcategory.empty() ||
-                    definition.nested_recipes.empty() || !finite_native_float( definition.activity_level ) ||
+                    definition.nested_recipes.empty() || definition.difficulty < 0 ||
+                    definition.difficulty > MAX_SKILL || !finite_native_float( definition.activity_level ) ||
                     definition.activity_level <= 0.0 ) {
                     throw std::runtime_error( "nested recipe category '" + definition.id +
-                                              "' has invalid presentation, activity, or members" );
+                                              "' has invalid presentation, difficulty, activity, or members" );
                 }
                 if( crafting_category_ids.count( definition.category ) == 0 &&
                     !crafting_category_id( definition.category ).is_valid() ) {
                     throw std::runtime_error( "nested recipe category '" + definition.id +
                                               "' references unknown category '" + definition.category + "'" );
                 }
+                validate_recipe_skills( definition );
                 if( check_engine_state ) {
                     for( const auto &[member, optional] : definition.nested_recipes ) {
                         if( !optional && declared_recipe_ids.count( member ) == 0 &&
@@ -4292,18 +4322,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' references unknown category '" + definition.category + "'" );
             }
-            if( !definition.skill.empty() && skill_ids.count( definition.skill ) == 0 &&
-                !skill_id( definition.skill ).is_valid() ) {
-                throw std::runtime_error( "recipe '" + definition.id +
-                                          "' references unknown skill '" + definition.skill + "'" );
-            }
-            for( const auto &[skill, level] : definition.required_skills ) {
-                if( ( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
-                    level < 0 || level > MAX_SKILL ) {
-                    throw std::runtime_error( "recipe '" + definition.id +
-                                              "' has an invalid required skill '" + skill + "'" );
-                }
-            }
+            validate_recipe_skills( definition );
             for( const auto &[requirement, multiplier] : definition.external_requirements ) {
                 if( multiplier <= 0 || !native_int( multiplier ) ||
                     ( requirement_ids.count( requirement ) == 0 &&
@@ -5532,6 +5551,12 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         std::optional<recipe>( previous->second ) );
                     recipe native;
                     native.id = id;
+                    native.difficulty = static_cast<int>( entry.definition->difficulty );
+                    native.skill_used = entry.definition->skill.empty() ? skill_id::NULL_ID() :
+                                        skill_id( entry.definition->skill );
+                    for( const auto &[skill, level] : entry.definition->required_skills ) {
+                        native.required_skills[skill_id( skill )] = static_cast<int>( level );
+                    }
                     if( entry.definition->nested_category ) {
                         native.name_ = entry.definition->name.native();
                         native.description = entry.definition->description.empty() ? translation() :
@@ -5539,7 +5564,6 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.category = crafting_category_id( entry.definition->category );
                         native.subcategory = entry.definition->subcategory;
                         native.exertion = static_cast<float>( entry.definition->activity_level );
-                        native.skill_used = skill_id::NULL_ID();
                         native.never_learn = true;
                         for( const auto &member : entry.definition->nested_recipes ) {
                             native.nested_category_data.emplace( member.first );
@@ -5556,9 +5580,6 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.time = entry.definition->time_moves;
                     native.category = crafting_category_id( entry.definition->category );
                     native.subcategory = entry.definition->subcategory;
-                    native.difficulty = static_cast<int>( entry.definition->difficulty );
-                    native.skill_used = entry.definition->skill.empty() ? skill_id::NULL_ID() :
-                                        skill_id( entry.definition->skill );
                     native.autolearn = entry.definition->autolearn;
                     native.reversible = entry.definition->reversible;
                     native.exertion = static_cast<float>( entry.definition->activity_level );
@@ -5566,9 +5587,6 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.lua_platform_mod = pimpl_->owner;
                     native.lua_platform_result_handler = entry.definition->result_handler;
-                    for( const auto &[skill, level] : entry.definition->required_skills ) {
-                        native.required_skills[skill_id( skill )] = static_cast<int>( level );
-                    }
                     for( const recipe_definition_data::proficiency_data &source : entry.definition->proficiencies ) {
                         recipe_proficiency native_proficiency;
                         native_proficiency.id = proficiency_id( source.id );
