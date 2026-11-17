@@ -64,14 +64,8 @@
     "purifiable": false,
     "mixed_effect": true,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_effect": "sleep" } },
-        "ench_effects": [ { "effect": "effect_scenario_heart_of_fire_awake_attunement_gain", "intensity": 1 } ]
-      },
-      {
-        "condition": { "u_has_effect": "sleep" },
-        "ench_effects": [ { "effect": "effect_scenario_heart_of_fire_asleep_attunement_gain", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_SCEN_HEART_OF_FIRE_0",
+      "INLINE_ENCH_SCEN_HEART_OF_FIRE_1"
     ]
   }
 ]

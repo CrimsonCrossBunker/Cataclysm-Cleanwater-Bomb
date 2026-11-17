@@ -467,10 +467,7 @@
           }
         ]
       },
-      {
-        "condition": { "u_has_effect": "effect_biokin_enhance_mobility" },
-        "mutations": [ "GENERIC_UNCANNY_DODGE_TRAIT" ]
-      },
+      "INLINE_ENCH_effect_biokin_combat_dance_6",
       {
         "condition": { "u_has_effect": "effect_biokin_reflex" },
         "values": [
@@ -2464,11 +2461,7 @@
           }
         ]
       },
-      {
-        "condition": { "u_has_effect": "effect_mom_tindalos_hounds_corrupted_stride" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.05 } ],
-        "ench_effects": [ { "effect": "effect_mom_tindalos_hounds_corrupted_stride_warning", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_teleport_stride_1"
     ],
     "flags": [ "MUSCLE_VEH_BOOST" ]
   },

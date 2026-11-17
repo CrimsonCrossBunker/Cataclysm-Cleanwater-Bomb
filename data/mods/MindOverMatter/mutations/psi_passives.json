@@ -94,10 +94,7 @@
           }
         ]
       },
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "ench_effects": [ { "effect": "effect_clair_passive_sense_protection", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_CLAIR_SENSES_1"
     ]
   },
   {

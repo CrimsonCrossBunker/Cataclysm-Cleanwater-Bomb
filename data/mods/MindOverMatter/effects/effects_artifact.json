@@ -130,10 +130,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "MATRIX_CRYSTAL_TELEPATHY" },
-        "ench_effects": [ { "effect": "effect_mom_artifact_mind_sight", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_mom_artifact_mind_sight_container_0"
     ]
   },
   {
@@ -163,10 +160,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_flag": "MATRIX_CRYSTAL_TELEPATHY" },
-        "ench_effects": [ { "effect": "effect_mom_artifact_telepathic_shield", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_effect_mom_artifact_telepathic_shield_container_0"
     ]
   },
   {
