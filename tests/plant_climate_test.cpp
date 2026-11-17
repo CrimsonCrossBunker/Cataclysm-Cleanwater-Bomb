@@ -43,7 +43,7 @@
 #include "weather_gen.h"
 #include "weather_type.h"
 
-static const activity_id activity_ACT_WAIT( "ACT_WAIT" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
 static const effect_on_condition_id
 effect_on_condition_EOC_TEST_PLANT_GROW( "EOC_TEST_PLANT_GROW" );
 static const furn_str_id furn_f_plant_harvest( "f_plant_harvest" );
@@ -410,7 +410,7 @@ TEST_CASE( "crop_growth_callbacks_revalidate_watering_and_fertilizing_reach",
         ++callbacks;
         who.setpos( crop.here, destination );
         if( replace_activity ) {
-            who.assign_activity( player_activity( activity_ACT_WAIT, 321 ) );
+            who.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     } );
 
@@ -450,7 +450,7 @@ TEST_CASE( "crop_growth_callbacks_revalidate_watering_and_fertilizing_reach",
     CHECK( iexamine::get_plant_water( crop.seed() ) == ( !fertilizing && !out_of_reach ? 50 : 0 ) );
     CHECK( iexamine::is_plant_fertilized( crop.seed() ) == ( fertilizing && !out_of_reach ) );
     if( replace_activity ) {
-        CHECK( who.activity.id() == activity_ACT_WAIT );
+        CHECK( who.activity.id() == ACT_WAIT );
         CHECK( who.activity.moves_left == 321 );
     } else {
         CHECK_FALSE( who.activity );

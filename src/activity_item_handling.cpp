@@ -8,12 +8,12 @@
 #include <item_source.h>
 #include <line.h>
 #include <safe_reference.h>
-#include <stdint.h>
 #include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
+#include <cstdint>
 #include <cstdlib>
 #include <deque>
 #include <functional>
@@ -903,9 +903,9 @@ struct zone_route_cache {
     bool initialized = false;
     safe_reference<map> context;
     time_point turn = calendar::before_time_starts;
-    uint64_t map_revision = 0;
-    uint64_t grab_generation = 0;
-    int64_t vehicle_id = 0;
+    std::uint64_t map_revision = 0;
+    std::uint64_t grab_generation = 0;
+    std::int64_t vehicle_id = 0;
 
     void ensure_valid( const Character &who ) {
         map &here = get_map();
@@ -914,7 +914,7 @@ struct zone_route_cache {
         int cur_arm_str = 0;
         units::mass cur_veh_mass = 0_gram;
         const vehicle *cart = grabbed_cart( who, here );
-        const int64_t current_vehicle = cart ? cart->uid().get_value() : 0;
+        const std::int64_t current_vehicle = cart ? cart->uid().get_value() : 0;
         if( cart ) {
             if( cart->get_points().size() == 1 ) {
                 cur_arm_str = who.get_arm_str();
