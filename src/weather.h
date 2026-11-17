@@ -232,7 +232,7 @@ class weather_manager
         // Incrementally update snow depth at the player's current OMT
         void update_snow_depth();
         // Snow depth in mm at a given OMT (0 if no data)
-        double get_snow_depth_mm( const tripoint_abs_omt &omt_pos ) const;
+        double get_snow_depth_mm( const tripoint_abs_omt &location ) const;
         snow_cover get_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         snow_cover get_surface_snow_cover( const map &here, const tripoint_bub_ms &position ) const;
         // The air temperature
