@@ -8,14 +8,7 @@
     "max_intensity": 20000,
     "int_dur_factor": "6 s",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "ARTIFACT_RESONANCE",
-            "add": { "math": [ "u_effect_intensity('effect_xe_nether_resonance_consequences')" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xe_nether_resonance_consequences_0"
     ]
   },
   {

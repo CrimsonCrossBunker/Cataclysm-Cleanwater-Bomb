@@ -522,16 +522,7 @@
     "//": "Unless you attack them or are the ultimate vampire killer, vampires and renfields won't attack you as your blood holds no interest for them.",
     "enchantments": [
       "INLINE_ENCH_VAMPIRE_0",
-      {
-        "values": [
-          {
-            "value": "NIGHT_VIS",
-            "add": {
-              "math": [ "1 + u_has_trait('VAMPIRE2') + u_has_trait('VAMPIRE3') + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_1"
     ]
   },
   {
@@ -570,18 +561,7 @@
     "activated_eocs": [ "EOC_EYEGLEAM_activated" ],
     "deactivated_eocs": [ "EOC_EYEGLEAM_deactivated" ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "NIGHT_VIS",
-            "add": {
-              "math": [
-                "2 + u_has_trait('VAMPIRE2') + u_has_trait('VAMPIRE3') + (u_has_trait('VAMPIRE4') * 2) + (u_has_trait('BLOOD_DRINKER') * 2)"
-              ]
-            }
-          }
-        ]
-      },
+      "INLINE_ENCH_EYEGLEAM_0",
       "INLINE_ENCH_EYEGLEAM_1"
     ]
   },
@@ -610,17 +590,7 @@
     "activated_eocs": [ "EOC_VAMPIRIC_STRENGTH_activated" ],
     "deactivated_eocs": [ "EOC_VAMPIRIC_STRENGTH_deactivated" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "values": [ { "value": "STRENGTH", "add": { "math": [ "1 + u_has_trait('VAMPIRE4') + (u_has_trait('BLOOD_DRINKER') * 2)" ] } } ]
-      }
+      "INLINE_ENCH_VAMPIRIC_STRENGTH_0"
     ]
   },
   {
@@ -838,17 +808,7 @@
     "activated_eocs": [ "EOC_VAMPIRIC_DODGE_activated" ],
     "deactivated_eocs": [ "EOC_VAMPIRIC_DODGE_deactivate" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "values": [ { "value": "DEXTERITY", "add": { "math": [ "1 + u_has_trait('VAMPIRE4') + (u_has_trait('BLOOD_DRINKER') * 2)" ] } } ]
-      }
+      "INLINE_ENCH_VAMPIRIC_DODGE_0"
     ]
   },
   {
@@ -1044,14 +1004,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "CARDIO_MULTIPLIER",
-            "multiply": { "math": [ "0.25 + (u_has_trait('VAMPIRE4') * 0.25)  + (u_has_trait('BLOOD_DRINKER') * 0.25)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_CARDIO_BONUS_0"
     ]
   },
   {
@@ -1077,15 +1030,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "u_has_trait": "VAMPIRE" },
-        "values": [
-          {
-            "value": "MAX_HP",
-            "multiply": { "math": [ "0.2 + (u_has_trait('VAMPIRE4') * 0.25)  + (u_has_trait('BLOOD_DRINKER') * 0.25)" ] }
-          }
-        ]
-      },
+      "INLINE_ENCH_VAMPIRE_BONUS_HP_0",
       "INLINE_ENCH_VAMPIRE_BONUS_HP_1"
     ]
   },

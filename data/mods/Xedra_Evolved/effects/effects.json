@@ -233,7 +233,7 @@
     "rating": "bad",
     "resist_traits": [ "POISRESIST", "VOMITSTOMACH" ],
     "max_intensity": 3,
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": { "math": [ "u_effect_intensity('foxfire_imbibed') * 50" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_foxfire_imbibed_0" ],
     "base_mods": { "per_mod": [ -1 ], "dex_mod": [ -1 ] },
     "scaling_mods": { "per_mod": [ -1 ], "dex_mod": [ -1 ] }
   },
@@ -823,15 +823,7 @@
           }
         ]
       },
-      {
-        "condition": { "not": "is_day" },
-        "values": [
-          {
-            "value": "OVERMAP_SIGHT",
-            "add": { "math": [ "4 + u_has_trait('VAMPIRE2') + u_has_trait('VAMPIRE3') + (u_has_trait('VAMPIRE4') * 2)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_eyegleam_1"
     ]
   },
   {
@@ -958,14 +950,7 @@
     "max_intensity": 5,
     "max_duration": "20 m",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "CARDIO_MULTIPLIER",
-            "multiply": { "math": [ "0.15 * u_effect_intensity('effect_vampire_stamina_for_blood_cardio_bonus')" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vampire_stamina_for_blood_cardio_bonus_0"
     ]
   },
   {
@@ -997,25 +982,8 @@
     "rating": "good",
     "max_duration": "1 h",
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": { "math": [ "2 + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ] } },
-          {
-            "value": "DEXTERITY",
-            "add": { "math": [ "2 + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ] }
-          }
-        ]
-      },
-      {
-        "condition": { "u_has_trait": "VAMPIRE_BLOOD_TEMPORARY_BOOST_REFINEMENT_MIND_BOOST" },
-        "values": [
-          { "value": "INTELLIGENCE", "add": { "math": [ "2 + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ] } },
-          {
-            "value": "PERCEPTION",
-            "add": { "math": [ "2 + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vampire_drank_blood_power_boost_0",
+      "INLINE_ENCH_effect_vampire_drank_blood_power_boost_1"
     ]
   },
   {
@@ -1200,7 +1168,7 @@
     "rating": "good",
     "//": "+0.2x smamina regen for each level",
     "enchantments": [
-      { "values": [ { "value": "REGEN_STAMINA", "multiply": { "math": [ "u_spell_level('spell_stamina_wonder') / 5" ] } } ] }
+      "INLINE_ENCH_spell_stamina_eff_0"
     ]
   },
   {
@@ -1213,7 +1181,7 @@
     "rating": "good",
     "show_intensity": false,
     "//": "+1 dodge initially, +1 each 6 levels",
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": { "math": [ "(u_spell_level('spell_dodge') / 6 ) + 1" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_dodge_0" ]
   },
   {
     "id": "effect_endurance",
@@ -1225,7 +1193,7 @@
     "rating": "good",
     "show_intensity": false,
     "//": "+1 armor for each lvl",
-    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "add": { "math": [ "-1 * u_spell_level('spell_endurance')" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_endurance_0" ]
   },
   {
     "id": "spell_melee_damage",
@@ -1240,13 +1208,7 @@
     "show_intensity": false,
     "//": "+2 atk speed for each level, +1 dodge each 10 levels, +5% melee damage every level",
     "enchantments": [
-      {
-        "values": [
-          { "value": "ATTACK_SPEED", "add": { "math": [ "u_spell_level('spell_melee_damage') * -2" ] } },
-          { "value": "BONUS_DODGE", "add": { "math": [ "u_spell_level('spell_melee_damage') / 10" ] } },
-          { "value": "MELEE_DAMAGE", "multiply": { "math": [ "u_spell_level('spell_melee_damage') / 20" ] } }
-        ]
-      }
+      "INLINE_ENCH_spell_melee_damage_0"
     ]
   },
   {
@@ -1259,7 +1221,7 @@
     "rating": "good",
     "show_intensity": false,
     "//": "+5 speed for each level",
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "u_spell_level('spell_speed_wonder') * 5" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_spell_speed_eff_0" ]
   },
   {
     "id": "effect_weakening",
@@ -1271,7 +1233,7 @@
     "max_intensity": 2,
     "int_add_val": 1,
     "//": "todo: doesn't do anything, because monster do not have u_spell_level('spell_weak'); solution: store u_spell_level('spell_weak') as monster variable, and use variable in calculations instead",
-    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "add": { "math": [ "10 * u_spell_level('spell_weak')" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_weakening_0" ]
   },
   {
     "type": "effect_type",
@@ -1432,12 +1394,7 @@
       { "limb_score": "vision", "modifier": 1.0, "scaling": -0.06 }
     ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "REGEN_MANA", "multiply": { "math": [ "u_effect_intensity('effect_max_mana_penalty') * -0.04" ] } },
-          { "value": "MAX_MANA", "multiply": { "math": [ "u_effect_intensity('effect_max_mana_penalty') * -0.1" ] } }
-        ]
-      }
+      "INLINE_ENCH_effect_broke_fae_ban_0"
     ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD", "NO_FEY_MAGIC" ]
   },
@@ -2680,19 +2637,7 @@
     "desc": [ "You're starting to get used to being an animal.  Even enjoy it." ],
     "max_intensity": 20,
     "enchantments": [
-      {
-        "values": [
-          { "value": "INTELLIGENCE", "add": { "math": [ "u_effect_intensity('effect_skinchanged_penalties') * -1" ] } },
-          {
-            "value": "PERCEPTION",
-            "add": { "math": [ "u_effect_intensity('effect_skinchanged_penalties') * 0.33" ] }
-          },
-          {
-            "value": "SKILL_RUST_RESIST",
-            "multiply": { "math": [ "max(((u_effect_intensity('effect_skinchanged_penalties') - 3) * 0.8),0)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_skinchanged_penalties_0"
     ]
   },
   {
@@ -3022,42 +2967,7 @@
     "remove_message": "Your athletic prowess fades.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "DODGE_CHANCE",
-            "add": { "math": [ "1 + ( (u_glamoured_changeling_noble_traits * 0.08) + (u_glamoured_deduction_movement_buff * 0.25) )" ] }
-          },
-          {
-            "value": "BONUS_DODGE",
-            "add": { "math": [ "1 + ( (u_glamoured_changeling_noble_traits * 0.05) + (u_glamoured_deduction_movement_buff * 0.2) )" ] }
-          },
-          {
-            "value": "THROW_STR",
-            "add": { "math": [ "1 + ( (u_glamoured_changeling_noble_traits * 0.07) + (u_glamoured_deduction_movement_buff * 0.35) )" ] }
-          },
-          {
-            "value": "RANGE_DODGE",
-            "add": {
-              "math": [
-                "min( (0.33 + ( (u_glamoured_changeling_noble_traits * 0.005) + (u_glamoured_deduction_movement_buff * 0.02) )), 0.98)"
-              ]
-            }
-          },
-          {
-            "value": "MOVE_COST",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_glamoured_changeling_noble_traits * 0.0015) - (u_glamoured_deduction_movement_buff * 0.015) )" ]
-            }
-          },
-          {
-            "value": "ATTACK_SPEED",
-            "multiply": {
-              "math": [ "-0.1 - ( (u_glamoured_changeling_noble_traits * 0.0015) - (u_glamoured_deduction_movement_buff * 0.015) )" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_changeling_noble_movement_buffs_ally_0"
     ],
     "flags": [ "CLIMB_NO_LADDER", "FEATHER_FALL" ]
   },
@@ -3319,26 +3229,7 @@
     },
     "scaling_mods": { "pain_max_val": [ 5 ], "pain_chance": [ -1 ], "pain_tick": [ -6 ], "health_chance": [ -1 ], "health_tick": [ -12 ] },
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "u_effect_intensity('effect_lilin_no_ruach') * 0.05" ] } },
-          { "value": "THIRST", "multiply": { "math": [ "u_effect_intensity('effect_lilin_no_ruach') * 0.05" ] } },
-          { "value": "SLEEPINESS", "multiply": { "math": [ "u_effect_intensity('effect_lilin_no_ruach') * 0.05" ] } },
-          {
-            "value": "REGEN_HP",
-            "multiply": { "math": [ "max((u_effect_intensity('effect_lilin_no_ruach') * -0.04), -1)" ] }
-          },
-          {
-            "value": "REGEN_STAMINA",
-            "multiply": { "math": [ "max((u_effect_intensity('effect_lilin_no_ruach') * -0.04), -0.95)" ] }
-          },
-          {
-            "value": "REGEN_MANA",
-            "multiply": { "math": [ "max((u_effect_intensity('effect_lilin_no_ruach') * -0.04), -0.95)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_lilin_no_ruach_0"
     ],
     "limb_score_mods": [
       { "limb_score": "balance", "modifier": 0.96, "scaling": -0.035 },
@@ -3358,46 +3249,9 @@
     "desc": [ "You are enhancing your physical abilities." ],
     "rating": "good",
     "enchantments": [
-      {
-        "condition": { "u_has_trait": "LILIN_ATTRIBUTE_BONUSES_STRENGTH" },
-        "values": [
-          {
-            "value": "STRENGTH",
-            "add": {
-              "math": [
-                "1 + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_STRENGTH') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_DEXTERITY') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_PERCEPTION') * 1) + (u_has_trait('THRESH_LILIN') * 2)"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": { "u_has_trait": "LILIN_ATTRIBUTE_BONUSES_DEXTERITY" },
-        "values": [
-          {
-            "value": "DEXTERITY",
-            "add": {
-              "math": [
-                "1 + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_STRENGTH') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_DEXTERITY') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_PERCEPTION') * 1) + (u_has_trait('THRESH_LILIN') * 2)"
-              ]
-            }
-          },
-          { "value": "BONUS_DODGE", "add": 1 }
-        ]
-      },
-      {
-        "condition": { "u_has_trait": "LILIN_ATTRIBUTE_BONUSES_PERCEPTION" },
-        "values": [
-          {
-            "value": "PERCEPTION",
-            "add": {
-              "math": [
-                "1 + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_STRENGTH') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_DEXTERITY') * 1) + (u_has_trait('LILIN_ATTRIBUTE_BONUSES_PERCEPTION') * 1) + (u_has_trait('THRESH_LILIN') * 2)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_lilin_attribute_bonuses_0",
+      "INLINE_ENCH_effect_lilin_attribute_bonuses_1",
+      "INLINE_ENCH_effect_lilin_attribute_bonuses_2"
     ]
   },
   {
@@ -3407,14 +3261,7 @@
     "desc": [ "You are moving incredibly quickly." ],
     "rating": "good",
     "enchantments": [
-      {
-        "values": [
-          { "value": "ATTACK_SPEED", "multiply": -0.66 },
-          { "value": "BONUS_DODGE", "add": 1 },
-          { "value": "DODGE_CHANCE", "add": { "math": [ "2 + (u_has_trait('THRESH_LILIN') * 2)" ] } },
-          { "value": "RANGE_DODGE", "add": { "math": [ "0.25 + (u_has_trait('THRESH_LILIN') * 0.25)" ] } }
-        ]
-      },
+      "INLINE_ENCH_effect_lilin_speed_boost_0",
       "INLINE_ENCH_effect_lilin_speed_boost_1"
     ]
   },
@@ -3696,14 +3543,7 @@
     "show_in_info": true,
     "enchantments": [
       "INLINE_ENCH_effect_xedra_chronomancer_destabilizing_strikes_0",
-      {
-        "values": [
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "-max( 1000 - ( 25 * u_spell_level('xedra_chronomancer_destabilizing_strikes') ), 250 )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xedra_chronomancer_destabilizing_strikes_1"
     ]
   },
   {
@@ -3718,14 +3558,7 @@
     "show_in_info": true,
     "flags": [ "STABILIZED_TIMELINE" ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "-max( 500 - ( 12.5 * u_spell_level('xedra_chronomancer_stabilize_timeline') ), 125 )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xedra_chronomancer_stabilize_timeline_0"
     ]
   },
   {
@@ -3739,14 +3572,7 @@
     "max_intensity": 1,
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "-max( 1000 - ( 25 * u_spell_level('xedra_chronomancer_reverse_entropy') ), 250 )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_xedra_chronomancer_reverse_entropy_0"
     ]
   },
   {

@@ -833,7 +833,7 @@
     "prereqs": [ "BROWNIE_EASY_OVERLOOK" ],
     "prereqs2": [ "BROWNIE_CRAFTING_BONUS2", "BROWNIE_CRAFTING_BONUS3" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "u_brownie_homebody_speed_bonus" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_BROWNIE_HOMEBODY_0" ]
   },
   {
     "type": "mutation",
@@ -1445,51 +1445,7 @@
     "prereqs2": [ "WINGS_BIRD", "POOKA_LEAPING_LEGS", "POOKA_QUADRUPED", "TAIL_FLUFFY", "TAIL_LONG" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": "u_can_drop_weapon" },
-            { "not": { "u_has_worn_with_flag": "STURDY" } },
-            {
-              "u_has_any_trait": [
-                "ANTLERS",
-                "HORNS_CURLED",
-                "FANGS",
-                "SABER_TEETH",
-                "CLAWS",
-                "CLAWS_ST",
-                "WINGS_BIRD",
-                "URSINE_FUR",
-                "CHITIN2",
-                "TAIL_FLUFFY",
-                "TAIL_LONG"
-              ]
-            },
-            {
-              "not": {
-                "u_has_any_trait": [
-                  "VAMPIRE_BAT_FORM_TRAITS",
-                  "TURN_INTO_RAVEN_TRAITS",
-                  "TURN_INTO_BEAR_TRAITS",
-                  "TURN_INTO_DEER_TRAITS",
-                  "VAMPIRE_WOLF_FORM_TRAITS",
-                  "TURN_INTO_COUGAR_TRAITS"
-                ]
-              }
-            }
-          ]
-        },
-        "values": [
-          {
-            "value": "SPEED",
-            "add": {
-              "math": [
-                "min( (3 + (u_has_trait('ANTLERS') * 2) + (u_has_trait('HORNS_CURLED') * 2) + (u_has_trait('FANGS') * 2) + (u_has_trait('SABER_TEETH') * 2) + (u_has_trait('CLAWS') * 2) + (u_has_trait('CLAWS_ST') * 2) + (u_has_trait('WINGS_BIRD') * 2) + (u_has_trait('URSINE_FUR') * 2) + (u_has_trait('CHITIN2') * 2) + (u_has_trait('TAIL_FLUFFY') * 2) + (u_has_trait('TAIL_LONG') * 2) ),30)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_POOKA_SPEED_BONUSES_0"
     ]
   },
   {
@@ -1839,7 +1795,7 @@
       "FAIR_FOLK_COMMONER_SELKIE",
       "FAIR_FOLK_COMMONER_TROW"
     ],
-    "enchantments": [ { "values": [ { "value": "NIGHT_VIS", "add": { "math": [ "u_val('perception') * 0.65" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_FAE_NIGHTVISION_0" ]
   },
   {
     "type": "mutation",
@@ -1851,7 +1807,7 @@
     "prereqs": [ "FAE_NIGHTVISION" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA", "FAIR_FOLK_COMMONER_TROW" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_POOKA", "THRESH_FAIR_FOLK_COMMONER_TROW" ],
-    "enchantments": [ { "values": [ { "value": "NIGHT_VIS", "add": { "math": [ "u_val('perception') * 1.3" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_FAE_NIGHTVISION2_0" ]
   },
   {
     "type": "mutation",
