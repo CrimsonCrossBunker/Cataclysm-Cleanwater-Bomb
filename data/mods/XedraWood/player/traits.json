@@ -63,11 +63,8 @@
     "flags": [ "MAGICAL_CBMS", "ATTUNEMENT" ],
     "enchantments": [
       "INLINE_ENCH_TATTOOS_BASIC_TRAIT_0",
-      { "condition": { "u_has_effect": "asleep" }, "values": [ { "value": "POWER_TRICKLE", "add": 1000 } ] },
-      {
-        "condition": { "u_has_effect": "effect_pattern_tattoo_meditation" },
-        "values": [ { "value": "POWER_TRICKLE", "add": 3500 } ]
-      },
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_1",
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_2",
       {
         "condition": "ALWAYS",
         "values": [

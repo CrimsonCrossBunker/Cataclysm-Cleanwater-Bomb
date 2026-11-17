@@ -47,3 +47,5 @@ require("tool_qualities")
 require("effect_enchantments")
 
 require("mutation_enchantments")
+
+require("inline_enchantment_conditions")
