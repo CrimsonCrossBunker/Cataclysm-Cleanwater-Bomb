@@ -1,13 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "DEDUCTION_REGEN_MANA",
-    "has": "WORN",
-    "condition": "ALWAYS",
-    "//": "Increase the mana regen depending on your deduction level. +0.1x for each level, so doubles your mana regen when deduction is 10",
-    "values": [ { "value": "REGEN_MANA", "multiply": { "math": [ "u_skill('deduction') / 10" ] } } ]
-  },
-  {
     "id": "increase_berserking",
     "type": "SPELL",
     "name": { "str": "Berserking", "//~": "NO_I18N" },
