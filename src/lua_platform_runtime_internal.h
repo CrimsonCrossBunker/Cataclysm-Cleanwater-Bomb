@@ -318,6 +318,9 @@ struct enchantment_environment_inputs {
     bool divable = false;
     bool overmap_terrain = false;
     bool temperature_kelvin = false;
+    bool season = false;
+    bool weather = false;
+    bool dimension = false;
 };
 struct enchantment_vision_target_inputs {
     std::vector<std::string> species;
@@ -365,6 +368,8 @@ struct enchantment_character_inputs {
     std::map<std::string, enchantment_monster_count_query> nearby_monsters;
     bool stats = false;
     std::vector<std::string> vitamins;
+    bool physiology = false;
+    bool fine_detail_vision = false;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

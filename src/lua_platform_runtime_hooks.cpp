@@ -6,6 +6,7 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -804,6 +805,18 @@ static sol::table collect_enchantment_environment( sol::state &lua, const const_
     if( requested.daylight ) {
         environment["daylight"] = !is_night( calendar::turn );
     }
+    if( requested.season ) {
+        static constexpr std::array<const char *, 4> seasons = {
+            "spring", "summer", "autumn", "winter"
+        };
+        environment["season"] = seasons[season_of_year( calendar::turn )];
+    }
+    if( requested.weather ) {
+        environment["weather"] = get_weather().weather_id.str();
+    }
+    if( requested.dimension ) {
+        environment["dimension"] = g->get_dimension_prefix().str();
+    }
     if( requested.temperature_kelvin ) {
         environment["temperature_kelvin"] = units::to_kelvin( get_weather().weather_precise->temperature );
     }
@@ -1014,6 +1027,15 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.physiology ) {
+            inputs["physiology"] = owner.lua->create_table_with(
+                                       "hunger", speaker->get_hunger(), "thirst", speaker->get_thirst(),
+                                       "sleepiness", speaker->get_sleepiness(), "focus", speaker->focus_cur(),
+                                       "perceived_pain", speaker->perceived_pain_cur(), "body_size", speaker->get_size() );
+        }
+        if( requested.fine_detail_vision ) {
+            inputs["fine_detail_vision"] = speaker->get_fine_detail_vision_mod();
+        }
         if( requested.stats ) {
             inputs["stats"] = owner.lua->create_table_with(
                                   "strength", speaker->str_cur(), "dexterity", speaker->dex_cur(),

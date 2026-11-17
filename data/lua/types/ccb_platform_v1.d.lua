@@ -5426,6 +5426,9 @@ local WidgetDefinition = {}
 function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentEnvironmentInputs
+---@field season? boolean Request the current season ID.
+---@field weather? boolean Request the current weather type ID.
+---@field dimension? boolean Request the current world dimension ID.
 ---@field position_z? boolean Request the actor's world z level.
 ---@field daylight? boolean Request whether the current game time is outside night hours.
 ---@field outside? boolean Request whether the actor is outdoors.
@@ -5438,6 +5441,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
 
 ---@class CcbEnchantmentEnvironmentSnapshot
+---@field season? "spring"|"summer"|"autumn"|"winter"
+---@field weather? string
+---@field dimension? string
 ---@field position_z? integer
 ---@field daylight? boolean
 ---@field outside? boolean
@@ -5455,6 +5461,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field species? string[] Restrict the count to monsters in any listed species.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field physiology? boolean Request hunger, thirst, sleepiness, focus, perceived pain and body size.
+---@field fine_detail_vision? boolean Request the native integer fine-detail vision modifier.
 ---@field stats? boolean Request the speaker's current strength, dexterity, intelligence and perception.
 ---@field vitamins? string[] Stored vitamin levels on a character, or effective vitamin amounts on a food item.
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
@@ -5483,6 +5491,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field physiology? CcbEnchantmentPhysiologySnapshot
+---@field fine_detail_vision? integer
 ---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
 ---@field vitamins? table<string, integer> Requested vitamin amounts. Reading an unsupported speaker raises an error.
 ---@field effects table<string, boolean>
@@ -5509,6 +5519,14 @@ function CcbPlatformContent.Bionic(options) end
 ---@field body_part_effects? table<string, table<string, boolean>>
 ---@field spell_school_counts table<string, integer>
 ---@field nearby_monsters? table<string, integer>
+
+---@class CcbEnchantmentPhysiologySnapshot
+---@field hunger integer
+---@field thirst integer
+---@field sleepiness integer
+---@field focus integer
+---@field perceived_pain integer Pain after painkiller reduction.
+---@field body_size integer Native creature size value.
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
