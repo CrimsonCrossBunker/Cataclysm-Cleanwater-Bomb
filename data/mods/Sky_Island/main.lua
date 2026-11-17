@@ -22,6 +22,8 @@ require("raid_consumables")
 
 require("raid_death")
 
+require("island_defenses")
+
 require("recipes")
 
 if require("ccb").content.is_mod_active("magiclysm") then
