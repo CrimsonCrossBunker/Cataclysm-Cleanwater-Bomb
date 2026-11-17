@@ -12,3 +12,5 @@ content.add(definition)
 require("flags")
 
 require("vitamins")
+
+require("snippets")
