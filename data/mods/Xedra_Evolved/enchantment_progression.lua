@@ -25,6 +25,31 @@ function progression.post_threshold_bonus(ctx, value)
     return value + count_traits(ctx, post_threshold_bonus_traits)
 end
 
+local werewolf_tier_one_traits = {
+    "WEREWOLF_SMELL_NEARBY_ENEMIES",
+    "WEREWOLF_NO_SCENT",
+    "WEREWOLF_ILLUMINATE_TARGET",
+    "WEREWOLF_FRIEND_TO_ANIMALS",
+    "WEREWOLF_SMASH_TERRAIN",
+    "WEREWOLF_CLIMB_IN_WOLF_FORM",
+}
+
+function progression.werewolf_tier_one(ctx)
+    return count_traits(ctx, werewolf_tier_one_traits)
+end
+
+local werewolf_tier_two_traits = {
+    "WEREWOLF_SENSE_SPIRITS_AND_ALIENS",
+    "WEREWOLF_STUN_MACHINE",
+    "WEREWOLF_EXTRA_WEAKPOINT_HITS",
+    "WEREWOLF_FAR_JUMP",
+    "WEREWOLF_CAMOUFLAGE_COAT",
+}
+
+function progression.werewolf_tier_two(ctx)
+    return count_traits(ctx, werewolf_tier_two_traits)
+end
+
 local werewolf_tier_three_traits = {
     "WEREWOLF_PARTIAL_SHIFT",
     "WEREWOLF_SILVER_CLAWS",

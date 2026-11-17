@@ -139,10 +139,7 @@
     "prereqs2": [ "ARVORE_FOREST_DETECT_AND_OVERMAP" ],
     "enchantments": [
       "INLINE_ENCH_GREENSTRIDE_UPGRADE_0",
-      {
-        "condition": { "or": [ { "test_eoc": "EOC_CONDITION_CHECK_ARVORE_IN_THE_FOREST" }, { "u_at_om_location": "forest_trail" } ] },
-        "values": [ { "value": "PHASE_DISTANCE", "add": 5 } ]
-      }
+      "INLINE_ENCH_GREENSTRIDE_UPGRADE_1"
     ]
   },
   {
@@ -703,18 +700,7 @@
     "types": [ "STR" ],
     "enchantments": [
       "INLINE_ENCH_ARVORE_STR_BONUS_3_0",
-      {
-        "condition": {
-          "and": [
-            "u_is_outside",
-            { "u_has_trait": "THRESH_ARVORE" },
-            {
-              "or": [ { "u_at_om_location": "forest" }, { "u_at_om_location": "forest_trail" }, { "u_at_om_location": "forest_thick" } ]
-            }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_xe_blocking_huge_attacks", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ARVORE_STR_BONUS_3_1"
     ]
   },
   {

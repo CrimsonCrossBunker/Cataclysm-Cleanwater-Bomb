@@ -134,3 +134,7 @@ require("innate_enchantments")
 require("body_enchantments")
 
 require("contextual_enchantments")
+
+require("power_enchantments")
+
+require("world_enchantments")

@@ -5426,6 +5426,8 @@ local WidgetDefinition = {}
 function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentEnvironmentInputs
+---@field furniture? boolean Request the actor's local furniture ID.
+---@field faction_camp? boolean Test for a native camp at the actor's overmap XY position, including legacy camp terrain.
 ---@field moon_phase? boolean Request the native lunar phase.
 ---@field turns_since_midnight? boolean Request elapsed native turns since midnight.
 ---@field temperature_fahrenheit? boolean Request weather temperature converted through the native Kelvin-to-Fahrenheit path.
@@ -5444,6 +5446,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
 
 ---@class CcbEnchantmentEnvironmentSnapshot
+---@field furniture? string
+---@field faction_camp? boolean Queried lazily at the actor's captured overmap position.
 ---@field moon_phase? integer Native lunar phase from 0 (new moon) through 7 (waning crescent).
 ---@field turns_since_midnight? integer
 ---@field temperature_fahrenheit? number
@@ -5472,7 +5476,13 @@ function CcbPlatformContent.Bionic(options) end
 ---@field attitude? "any"|"allies"|"not_allies"|"hostile" Defaults to any. The speaker is excluded by character ID.
 ---@field allow_hallucinations? boolean Defaults to false. A non-character speaker only applies this filter.
 
+---@class CcbEnchantmentCalorieQuery
+---@field day? integer Nonnegative days ago; defaults to zero (today).
+---@field kind? "total"|"spent"|"gained"|"ingested" Defaults to total.
+
 ---@class CcbEnchantmentCharacterInputs
+---@field global_variable_defaults? table<string, number> Finite fallbacks for absent world variables. Present values, including zero, retain their value.
+---@field calorie_history? table<string, CcbEnchantmentCalorieQuery> Native calorie diary reads keyed by name. Non-avatar speakers return zero.
 ---@field species? string[] Native species membership to query on the speaker.
 ---@field wielded_skills? string[] Skills tested against the speaker's wielded weapon.
 ---@field wielded_categories? string[] Weapon categories tested against the speaker's wielded weapon.
@@ -5521,6 +5531,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field calorie_history? table<string, integer>
 ---@field species table<string, boolean>
 ---@field wielded_skills table<string, boolean>
 ---@field wielded_categories table<string, boolean>
@@ -12596,19 +12607,26 @@ function CcbPlatformProgressionApi.grant_random_missing(character, kind, ids) en
 ---@return integer
 function CcbPlatformRandomApi.int(minimum, maximum) end
 
----Draw through the native global game RNG during a runtime or save-reconstruction enchantment modifier callback.
+---Draw through the native global game RNG during a runtime or save-reconstruction enchantment callback.
 ---@param minimum integer Inclusive lower bound in native signed integer range -2147483648..2147483647.
 ---@param maximum integer Inclusive upper bound in native signed integer range -2147483648..2147483647.
 ---@return integer
 function CcbPlatformRandomApi.native_int(minimum, maximum) end
 
----Draw through native rng_float during a runtime or save-reconstruction enchantment modifier callback.
+---Draw through native rng_float during a runtime or save-reconstruction enchantment callback.
 ---Reversed bounds are swapped. Equal finite bounds still consume a native draw.
 ---A NaN or infinite bound emits a native diagnostic and returns zero without drawing.
 ---@param minimum number Native floating-point range endpoint.
 ---@param maximum number Native floating-point range endpoint.
 ---@return number
 function CcbPlatformRandomApi.native_float(minimum, maximum) end
+
+---Draw through native x_in_y using the shared game RNG, including in save-reconstruction enchantment callbacks.
+---Always consumes one native floating-point draw and compares it to numerator / denominator.
+---@param numerator number Native operand, passed through without clamping.
+---@param denominator number Native operand, passed through without clamping.
+---@return boolean
+function CcbPlatformRandomApi.native_probability(numerator, denominator) end
 
 ---Pick an original 1-based row using native weighted_int_list semantics and the shared game RNG.
 ---Rows with nonpositive weights are ignored. Dense rows are limited only by the

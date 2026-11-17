@@ -349,42 +349,9 @@
     "purifiable": false,
     "category": [ "SPECIES_ELF" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_magiclysm_elf_is_in_wilderness == 1" ] },
-            {
-              "or": [
-                "u_is_outside",
-                {
-                  "and": [ { "not": "u_is_outside" }, { "test_eoc": "EOC_CONDITION_MAGICLYSM_ELF_WILDERNESS_EQUIVALENTS" } ]
-                }
-              ]
-            }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_elven_wilderness_bonus_gain_vitamin", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_magiclysm_elf_is_in_wilderness == 0" ] },
-            {
-              "or": [ { "test_eoc": "EOC_CONDITION_MAGICLYSM_ELF_WILDERNESS_EQUIVALENTS" }, { "u_has_effect": "natures_commune" } ]
-            }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_elven_wilderness_bonus_steady_state", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "or": [ { "math": [ "u_magiclysm_elf_is_in_wilderness == 0" ] }, { "math": [ "u_val('pos_z') <= -1" ] } ] },
-            { "not": { "test_eoc": "EOC_CONDITION_MAGICLYSM_ELF_WILDERNESS_EQUIVALENTS" } }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_elven_wilderness_bonus_lose_vitamin", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_ELVEN_NEED_FOR_WILDERNESS_0",
+      "INLINE_ENCH_ELVEN_NEED_FOR_WILDERNESS_1",
+      "INLINE_ENCH_ELVEN_NEED_FOR_WILDERNESS_2"
     ]
   },
   {

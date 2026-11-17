@@ -26,10 +26,7 @@
     "valid": false,
     "description": "Some part of your Metabolic Hyperefficiency is running even when you sleep, or perhaps your wakeful meditations have made the process of sleeping more efficient.  You can stay awake for 20% longer, and sleep is 20% more restorative.",
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_effect": "effect_biokin_metabolism_enhance" } },
-        "values": [ { "value": "SLEEPINESS_REGEN", "multiply": 0.2 }, { "value": "SLEEPINESS", "multiply": -0.2 } ]
-      }
+      "INLINE_ENCH_perk_efficient_slumber_0"
     ]
   },
   {
@@ -41,16 +38,8 @@
     "valid": false,
     "description": "Happy.  In Your Lane.  Focused.  Flourishing.  Your Intelligence is only penalized 66% of the normal amount from pain, and 33% of normal if you're using the Biokinetic power Overcome Pain, the Electrokinetic power Pain Suppression, or the Telepathic power Mood Stabilization.",
     "enchantments": [
-      {
-        "condition": {
-          "not": { "u_has_any_effect": [ "effect_biokin_overcome_pain", "effect_electrokin_reduce_pain", "effect_telepathic_morale" ] }
-        },
-        "values": [ { "value": "PAIN_PENALTY_MOD_INT", "multiply": -0.33 } ]
-      },
-      {
-        "condition": { "u_has_any_effect": [ "effect_biokin_overcome_pain", "effect_electrokin_reduce_pain", "effect_telepathic_morale" ] },
-        "values": [ { "value": "PAIN_PENALTY_MOD_INT", "multiply": -0.66 } ]
-      }
+      "INLINE_ENCH_perk_grace_under_pain_0",
+      "INLINE_ENCH_perk_grace_under_pain_1"
     ]
   },
   {
@@ -70,7 +59,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your control of your own body has given you control of your own genetics, albeit a subconscious one.  You will be less likely to suffer from negative mutations when taking mutagen.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "MUT_INSTABILITY_MOD", "add": -2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_perk_mastery_of_form_0" ]
   },
   {
     "type": "mutation",
@@ -81,7 +70,7 @@
     "valid": false,
     "description": "Your Premonition ability has developed to such a level that you can sense movement around you even when you sleep.",
     "active": true,
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "MOTION_ALARM", "add": 10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_perk_wary_sleeper_0" ]
   },
   {
     "type": "mutation",

@@ -120,3 +120,7 @@ require("innate_enchantments")
 require("body_enchantments")
 
 require("contextual_enchantments")
+
+require("world_enchantments")
+
+require("chance_enchantments")

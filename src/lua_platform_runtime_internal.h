@@ -324,6 +324,8 @@ struct enchantment_environment_inputs {
     bool moon_phase = false;
     bool turns_since_midnight = false;
     bool temperature_fahrenheit = false;
+    bool furniture = false;
+    bool faction_camp = false;
 };
 struct enchantment_vision_target_inputs {
     std::vector<std::string> species;
@@ -350,6 +352,10 @@ struct enchantment_character_count_query {
     int radius;
     std::string attitude;
     bool allow_hallucinations;
+};
+struct enchantment_calorie_query {
+    int day;
+    std::string kind;
 };
 struct enchantment_character_inputs {
     std::vector<std::string> effects;
@@ -398,6 +404,8 @@ struct enchantment_character_inputs {
     bool stat_bonuses = false;
     bool artifact_resonance = false;
     std::map<std::string, std::vector<std::string>> body_part_effect_intensities;
+    std::map<std::string, double> global_variable_defaults;
+    std::map<std::string, enchantment_calorie_query> calorie_history;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
