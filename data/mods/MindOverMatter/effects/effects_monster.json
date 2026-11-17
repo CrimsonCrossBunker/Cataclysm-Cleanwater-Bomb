@@ -355,18 +355,7 @@
     "max_duration": "5 seconds",
     "//": "It is deliberate that even if you kill the whispering amalgamation, the whispers can last a few seconds afterwards. Who, or what, is actually doing the whispering?",
     "enchantments": [
-      {
-        "skills": [
-          {
-            "value": "metaphysics",
-            "add": {
-              "math": [
-                "-3 + u_has_proficiency('prof_concentration_basic') + u_has_proficiency('prof_concentration_intermediate') + u_has_proficiency('prof_concentration_master')"
-              ]
-            }
-          }
-        ]
-      },
+      "INLINE_ENCH_effect_whispering_amalgamation_whispers_0",
       "INLINE_ENCH_effect_whispering_amalgamation_whispers_1"
     ],
     "limb_score_mods": [
