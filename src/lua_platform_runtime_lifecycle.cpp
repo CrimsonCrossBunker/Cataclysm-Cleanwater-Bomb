@@ -1394,8 +1394,8 @@ void detail::install_runtime_state_task_api(
         queue_character_task( *actor, time_point::from_turn( static_cast<int>( now + turns ) ),
                               owner->mod_id, handler );
     } );
-    tasks.set_function( "ensure_avatar_turn", [weak]( const std::int64_t turns,
-    const std::string & handler ) {
+    const auto schedule_avatar_turn = [weak]( const std::int64_t turns,
+    const std::string & handler, const bool ensure ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready || owner->task_migration_active ) {
             throw std::runtime_error( "Avatar turn tasks require an active world" );
@@ -1407,8 +1407,20 @@ void detail::install_runtime_state_task_api(
         if( turns < std::numeric_limits<int>::min() - now || turns > std::numeric_limits<int>::max() - now ) {
             throw std::invalid_argument( "Avatar turn task delay must fit the game calendar" );
         }
-        ensure_avatar_turn_task( time_point::from_turn( static_cast<int>( now + turns ) ),
-                                 owner->mod_id, handler );
+        const time_point due = time_point::from_turn( static_cast<int>( now + turns ) );
+        if( ensure ) {
+            ensure_avatar_turn_task( due, owner->mod_id, handler );
+        } else {
+            queue_avatar_turn_task( due, owner->mod_id, handler );
+        }
+    };
+    tasks.set_function( "after_avatar_turn", [schedule_avatar_turn]( const std::int64_t turns,
+    const std::string & handler ) {
+        schedule_avatar_turn( turns, handler, false );
+    } );
+    tasks.set_function( "ensure_avatar_turn", [schedule_avatar_turn]( const std::int64_t turns,
+    const std::string & handler ) {
+        schedule_avatar_turn( turns, handler, true );
     } );
     tasks.set_function( "has_avatar_turn", [weak]( const std::string & handler ) {
         const std::shared_ptr<runtime> owner = weak.lock();

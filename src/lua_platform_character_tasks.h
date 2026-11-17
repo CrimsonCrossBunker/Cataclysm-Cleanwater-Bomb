@@ -12,6 +12,7 @@ namespace cata::lua_platform
 {
 void queue_character_task( Character &actor, time_point due, std::string_view mod,
                            std::string_view handler );
+void queue_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 void ensure_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 bool has_avatar_turn_task( std::string_view mod, std::string_view handler );
 void invoke_character_task( Character &actor, time_point due, const std::string &mod,

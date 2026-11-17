@@ -284,12 +284,9 @@ bool cata::lua_platform::has_avatar_turn_task( std::string_view mod, std::string
     } );
 }
 
-void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
+void cata::lua_platform::queue_avatar_turn_task( time_point due, std::string_view mod,
         std::string_view handler )
 {
-    if( has_avatar_turn_task( mod, handler ) ) {
-        return;
-    }
     queued_eocs &queue = g->queued_global_effect_on_conditions;
     const queued_eoc entry = character_task_record( due, mod, handler );
     if( avatar_tasks_to_queue ) {
@@ -297,6 +294,14 @@ void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_vi
         avatar_tasks_to_queue->push_back( queue.list.insert( queue.list.end(), entry ) );
     } else {
         queue.push( entry );
+    }
+}
+
+void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_view mod,
+        std::string_view handler )
+{
+    if( !has_avatar_turn_task( mod, handler ) ) {
+        queue_avatar_turn_task( due, mod, handler );
     }
 }
 #endif

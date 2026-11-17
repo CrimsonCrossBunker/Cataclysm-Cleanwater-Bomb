@@ -7539,6 +7539,13 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 ---@param handler_id string Registered handler with payload fields `character` and `due_turn`.
 function CcbPlatformTasks.after_character_turn(character, turns, handler_id) end
 
+---Append a saved callback to the shared avatar-turn queue, after local character tasks.
+---Each call adds an independent entry; an already-due callback runs on the next queue pass.
+---The callback receives the current avatar as character and the original absolute due_turn.
+---@param turns integer Signed delay in turns, within the game calendar.
+---@param handler_id string Registered named handler.
+function CcbPlatformTasks.after_avatar_turn(turns, handler_id) end
+
 ---Keep one saved callback per Mod and handler on the avatar turn, after their local tasks.
 ---An existing callback keeps its deadline. An already-due callback runs on the next global queue pass.
 ---@param turns integer Signed delay in turns, within the game calendar.
