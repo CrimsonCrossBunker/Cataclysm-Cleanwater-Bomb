@@ -12,13 +12,7 @@
     "//en_us_description": "Meridians opened; able to hold qi within the body. The qi cap and qi power grow with each Qi Refining layer.",
     "//": "修士的隐藏载体特性。携带两条 enchantment：qi_max 把炼气层数换算成灵气上限增量（层数×20）;qi_power 把层数换算成灵气强度增量（层数×8,使炼气圆满时强度系数 qi_power/100 约 2.0,法术威力翻倍）。境界靠 add 抬两条线,符合 doc 数值基准（境界走 add、心法/丹药走 multiply）。首次习得境界 spell 时由 EOC_immortal_path_bind_realm_trait 授予。两条线 = 100（基础）+ 本特性 + 任何其它同名来源,引擎自动累加。/ Hidden carrier trait. Two enchantments: qi_max (layer×20 → qi cap) and qi_power (layer×8 → qi power, so a full Qi Refining gives ~2.0× the base, doubling art power). Realm scales both via add; any other same-key source stacks automatically.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "custom": [
-          { "value": "qi_max", "add": { "math": [ "max( 0, u_spell_level('realm_qi_refining') ) * 20" ] } },
-          { "value": "qi_power", "add": { "math": [ "max( 0, u_spell_level('realm_qi_refining') ) * 8" ] } }
-        ]
-      }
+      "INLINE_ENCH_immortal_path_qi_cultivator_0"
     ]
   },
   {
