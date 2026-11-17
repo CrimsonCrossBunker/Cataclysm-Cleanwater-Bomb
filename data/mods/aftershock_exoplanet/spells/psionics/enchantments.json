@@ -1,12 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "enchant_afs_electrokin_zap_enemies",
-    "condition": "ALWAYS",
-    "has": "HELD",
-    "hit_me_effect": [ { "id": "afs_electrokin_zap_attacked", "hit_self": false, "once_in": 2 } ]
-  },
-  {
     "id": "afs_electrokin_zap_attacked",
     "type": "SPELL",
     "name": { "str": "Electrokinetic aura thorns", "//~": "NO_I18N" },
