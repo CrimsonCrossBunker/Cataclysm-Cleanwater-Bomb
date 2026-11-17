@@ -111,6 +111,58 @@ std::size_t detail::count_native_nearby_monsters( const tripoint_abs_ms &origin,
 namespace
 {
 
+enum class nearby_character_attitude {
+    any,
+    allies,
+    not_allies,
+    hostile
+};
+
+bool nearby_character_attitude_matches(
+    const Character &observer, const Character &candidate,
+    const nearby_character_attitude attitude )
+{
+    switch( attitude ) {
+        case nearby_character_attitude::any:
+            return true;
+        case nearby_character_attitude::allies:
+            return candidate.is_ally( observer );
+        case nearby_character_attitude::not_allies:
+            return !candidate.is_ally( observer );
+        case nearby_character_attitude::hostile:
+            return candidate.attitude_to( observer ) ==
+                   Creature::Attitude::HOSTILE ||
+                   ( observer.is_avatar() && candidate.is_npc() &&
+                     candidate.as_npc()->guaranteed_hostile() );
+    }
+    return false;
+}
+
+} // namespace
+
+std::size_t detail::count_native_nearby_characters( const tripoint_abs_ms &origin, const int radius,
+        const std::string_view attitude, const Character *observer, const bool allow_hallucinations )
+{
+    if( g == nullptr ) {
+        return 0;
+    }
+    const nearby_character_attitude filter = attitude == "allies" ? nearby_character_attitude::allies :
+            attitude == "not_allies" ? nearby_character_attitude::not_allies :
+            attitude == "hostile" ? nearby_character_attitude::hostile : nearby_character_attitude::any;
+    return g->get_characters_if( [&]( const Character &candidate ) {
+        if( candidate.is_hallucination() && !allow_hallucinations ) {
+            return false;
+        }
+        // Non-character speakers do not apply the observer-dependent range or attitude filters.
+        return observer == nullptr || ( candidate.getID() != observer->getID() &&
+                                        nearby_character_attitude_matches( *observer, candidate, filter ) &&
+                                        rl_dist( candidate.pos_abs(), origin ) <= radius );
+    } ).size();
+}
+
+namespace
+{
+
 constexpr int default_creature_query_radius = 20;
 constexpr int maximum_creature_query_radius = 1000;
 constexpr int maximum_creature_count_radius = 1000;
@@ -711,13 +763,6 @@ sol::table monsters_seeing_position(
     return result;
 }
 
-enum class nearby_character_attitude {
-    any,
-    allies,
-    not_allies,
-    hostile
-};
-
 struct nearby_character_count_options {
     int radius = maximum_creature_count_radius;
     nearby_character_attitude attitude = nearby_character_attitude::any;
@@ -780,26 +825,6 @@ nearby_character_count_options read_nearby_character_count_options(
         }
     }
     return result;
-}
-
-bool nearby_character_attitude_matches(
-    const Character &observer, const Character &candidate,
-    const nearby_character_attitude attitude )
-{
-    switch( attitude ) {
-        case nearby_character_attitude::any:
-            return true;
-        case nearby_character_attitude::allies:
-            return candidate.is_ally( observer );
-        case nearby_character_attitude::not_allies:
-            return !candidate.is_ally( observer );
-        case nearby_character_attitude::hostile:
-            return candidate.attitude_to( observer ) ==
-                   Creature::Attitude::HOSTILE ||
-                   ( observer.is_avatar() && candidate.is_npc() &&
-                     candidate.as_npc()->guaranteed_hostile() );
-    }
-    return false;
 }
 
 tripoint_abs_ms nearby_count_origin(

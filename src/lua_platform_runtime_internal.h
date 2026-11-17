@@ -345,6 +345,11 @@ struct enchantment_monster_count_query {
     std::string attitude;
     std::vector<std::string> species;
 };
+struct enchantment_character_count_query {
+    int radius;
+    std::string attitude;
+    bool allow_hallucinations;
+};
 struct enchantment_character_inputs {
     std::vector<std::string> effects;
     std::vector<std::string> traits;
@@ -378,6 +383,11 @@ struct enchantment_character_inputs {
     bool base_stats = false;
     bool climate_heat = false;
     std::vector<std::string> category_counts;
+    std::map<std::string, enchantment_character_count_query> nearby_characters;
+    std::vector<std::string> hit_points;
+    std::vector<std::string> max_hit_points;
+    std::vector<std::string> known_proficiencies;
+    bool calorie_reserves = false;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

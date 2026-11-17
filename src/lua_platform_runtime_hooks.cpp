@@ -954,6 +954,27 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.has_flag( json_character_flag( id ) );
     } );
+    collect( "known_proficiencies", requested.known_proficiencies, false,
+    []( const const_talker &actor, const std::string &id ) {
+        return actor.knows_proficiency( proficiency_id( id ) );
+    } );
+    collect( "hit_points", requested.hit_points, 0,
+    []( const const_talker &actor, const std::string &id ) {
+        if( id == "ALL_MAJOR" || id == "ALL_MINOR" ) {
+            const get_body_part_flags parts = id == "ALL_MAJOR" ? get_body_part_flags::only_main :
+                                              get_body_part_flags::only_minor;
+            int total = 0;
+            for( const bodypart_id &part : actor.get_all_body_parts( parts ) ) {
+                total += actor.get_cur_hp( part );
+            }
+            return total;
+        }
+        return actor.get_cur_hp( id == "ALL" ? bodypart_str_id::NULL_ID() : bodypart_id( id ) );
+    } );
+    collect( "max_hit_points", requested.max_hit_points, 0,
+    []( const const_talker &actor, const std::string &id ) {
+        return actor.get_hp_max( bodypart_id( id ) );
+    } );
     collect( "proficiency_percentages", requested.proficiency_percentages, 0.0,
     []( const const_talker & actor, const std::string & id ) {
         const proficiency_id prof( id );
@@ -1021,6 +1042,29 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
             body_part_effects[id] = std::move( values );
         }
         inputs["body_part_effects"] = std::move( body_part_effects );
+    }
+    if( requested.calorie_reserves ) {
+        sol::table values = owner.lua->create_table();
+        if( speaker && speaker->get_const_character() ) {
+            values["stored"] = speaker->get_stored_kcal();
+            values["healthy"] = speaker->get_healthy_kcal();
+        } else {
+            sol::table meta = owner.lua->create_table();
+            meta.set_function( "__index", []( const sol::table &, const std::string & ) -> int {
+                throw std::runtime_error( "Enchantment calorie reserves require a character speaker" );
+            } );
+            values[sol::metatable_key] = meta;
+        }
+        inputs["calorie_reserves"] = std::move( values );
+    }
+    if( !requested.nearby_characters.empty() ) {
+        sol::table counts = owner.lua->create_table(
+                                0, static_cast<int>( requested.nearby_characters.size() ) );
+        for( const auto &[key, query] : requested.nearby_characters ) {
+            counts[key] = speaker ? count_native_nearby_characters( speaker->pos_abs(), query.radius,
+                          query.attitude, speaker->get_const_character(), query.allow_hallucinations ) : 0;
+        }
+        inputs["nearby_characters"] = std::move( counts );
     }
     if( !requested.nearby_monsters.empty() ) {
         sol::table counts = owner.lua->create_table(

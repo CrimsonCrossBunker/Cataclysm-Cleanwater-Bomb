@@ -5466,7 +5466,17 @@ function CcbPlatformContent.Bionic(options) end
 ---@field attitude? "hostile"|"friendly"|"both" Defaults to native non-friendly monsters.
 ---@field species? string[] Restrict the count to monsters in any listed species.
 
+---@class CcbEnchantmentCharacterCountQuery
+---@field radius? integer Native signed maximum distance from a character speaker in map tiles; defaults to 1000.
+---@field attitude? "any"|"allies"|"not_allies"|"hostile" Defaults to any. The speaker is excluded by character ID.
+---@field allow_hallucinations? boolean Defaults to false. A non-character speaker only applies this filter.
+
 ---@class CcbEnchantmentCharacterInputs
+---@field nearby_characters? table<string, CcbEnchantmentCharacterCountQuery> Counts keyed by name.
+---@field hit_points? string[] Body part IDs, or ALL, ALL_MAJOR and ALL_MINOR for native current-HP totals.
+---@field max_hit_points? string[] Body part IDs whose maximum HP is requested.
+---@field known_proficiencies? string[] Proficiencies whose learned state is requested.
+---@field calorie_reserves? boolean Request a character's stored and healthy calories. Unsupported speakers raise an error on access.
 ---@field base_stats? boolean Request native maximum strength, dexterity, intelligence and perception.
 ---@field climate_heat? boolean Request native warmth compensation used by thermal speed calculations.
 ---@field category_counts? string[] Mutation categories whose currently held traits are counted with native ALL semantics.
@@ -5501,6 +5511,11 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field nearby_characters? table<string, integer>
+---@field hit_points table<string, integer>
+---@field max_hit_points table<string, integer>
+---@field known_proficiencies table<string, boolean>
+---@field calorie_reserves? { stored: integer, healthy: integer } Values in kcal, before percentage conversion.
 ---@field base_stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
 ---@field climate_heat? integer
 ---@field category_counts? table<string, integer>

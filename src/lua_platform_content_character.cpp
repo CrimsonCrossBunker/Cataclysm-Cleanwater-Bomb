@@ -2543,8 +2543,27 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 activation->get_or( "stats", false ), ids( *activation, "vitamins" ),
                 activation->get_or( "physiology", false ), activation->get_or( "fine_detail_vision", false ),
                 ids( *activation, "skills" ), activation->get_or( "base_stats", false ),
-                activation->get_or( "climate_heat", false ), ids( *activation, "category_counts" )
+                activation->get_or( "climate_heat", false ), ids( *activation, "category_counts" ),
+                {}, ids( *activation, "hit_points" ), ids( *activation, "max_hit_points" ),
+                ids( *activation, "known_proficiencies" ), activation->get_or( "calorie_reserves", false )
             };
+            if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_characters" ) ) {
+                for( const auto &[key, raw] : *queries ) {
+                    if( key.get_type() != sol::type::string || !raw.is<sol::table>() ) {
+                        throw std::runtime_error( "nearby_characters requires names and query tables" );
+                    }
+                    const sol::table query = raw.as<sol::table>();
+                    const std::int64_t radius = query.get_or<std::int64_t>( "radius", 1000 );
+                    const std::string attitude = query.get_or( "attitude", std::string( "any" ) );
+                    if( !fits_native_int( radius ) || ( attitude != "any" && attitude != "allies" &&
+                            attitude != "not_allies" && attitude != "hostile" ) ) {
+                        throw std::runtime_error( "nearby_characters has an invalid radius or attitude" );
+                    }
+                    definition->load_character_inputs->nearby_characters.emplace( key.as<std::string>(),
+                            detail::enchantment_character_count_query{ static_cast<int>( radius ), attitude,
+                                    query.get_or( "allow_hallucinations", false ) } );
+                }
+            }
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
                     if( key.get_type() != sol::type::string || !raw.is<sol::table>() ) {
@@ -4323,9 +4342,24 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.character_flags, &inputs.spell_levels,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums,
                                         &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills,
-                                        &inputs.category_counts } ) {
+                                        &inputs.category_counts, &inputs.hit_points, &inputs.max_hit_points,
+                                        &inputs.known_proficiencies } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
+                    }
+                }
+                for( const auto &request : inputs.nearby_characters ) {
+                    require_valid_id( request.first, "enchantment nearby character request" );
+                }
+                for( const auto *parts : { &inputs.hit_points, &inputs.max_hit_points } ) {
+                    for( const std::string &part : *parts ) {
+                        const bool aggregate = parts == &inputs.hit_points &&
+                                               ( part == "ALL" || part == "ALL_MAJOR" || part == "ALL_MINOR" );
+                        if( check_engine_state && !aggregate && !staged_body_part( part ) &&
+                            !bodypart_str_id( part ).is_valid() ) {
+                            throw std::runtime_error( "enchantment '" + definition.id +
+                                                      "' references unknown body part '" + part + "'" );
+                        }
                     }
                 }
                 for( const auto &[name, query] : inputs.nearby_monsters ) {
@@ -4356,12 +4390,14 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                         require_valid_id( query.first, "enchantment overmap terrain" );
                     }
                 }
-                for( const std::string &id : inputs.proficiency_percentages ) {
-                    require_valid_id( id, "enchantment proficiency" );
-                    if( check_engine_state && !staged_proficiency( id ) &&
-                        !proficiency_id( id ).is_valid() ) {
-                        throw std::runtime_error( "enchantment '" + definition.id +
-                                                  "' references unknown proficiency '" + id + "'" );
+                for( const auto *ids : { &inputs.proficiency_percentages, &inputs.known_proficiencies } ) {
+                    for( const std::string &id : *ids ) {
+                        require_valid_id( id, "enchantment proficiency" );
+                        if( check_engine_state && !staged_proficiency( id ) &&
+                            !proficiency_id( id ).is_valid() ) {
+                            throw std::runtime_error( "enchantment '" + definition.id +
+                                                      "' references unknown proficiency '" + id + "'" );
+                        }
                     }
                 }
             }
@@ -7625,6 +7661,17 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "vitamins", value.load_character_inputs->vitamins );
                     hash_ids( "skills", value.load_character_inputs->skills );
                     hash_ids( "category_counts", value.load_character_inputs->category_counts );
+                    hash_ids( "hit_points", value.load_character_inputs->hit_points );
+                    hash_ids( "max_hit_points", value.load_character_inputs->max_hit_points );
+                    hash_ids( "known_proficiencies", value.load_character_inputs->known_proficiencies );
+                    hash_part( state, value.load_character_inputs->calorie_reserves ? "calorie_reserves" : "no_calorie_reserves" );
+                    hash_part( state, std::to_string( value.load_character_inputs->nearby_characters.size() ) );
+                    for( const auto &[name, query] : value.load_character_inputs->nearby_characters ) {
+                        hash_part( state, name );
+                        hash_part( state, std::to_string( query.radius ) );
+                        hash_part( state, query.attitude );
+                        hash_part( state, query.allow_hallucinations ? "hallucinations" : "no_hallucinations" );
+                    }
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
                     hash_ids( "character_variables", value.load_character_inputs->character_variables );
                     hash_ids( "global_variables", value.load_character_inputs->global_variables );
