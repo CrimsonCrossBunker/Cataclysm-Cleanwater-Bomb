@@ -10,3 +10,5 @@ definition:species("EUZHVIL")
 content.add(definition)
 
 require("flags")
+
+require("vitamins")

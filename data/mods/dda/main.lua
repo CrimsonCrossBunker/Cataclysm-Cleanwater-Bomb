@@ -78,3 +78,5 @@ require("mutation_snippets")
 require("mutation_artifact")
 
 require("tool_qualities")
+
+require("vitamins")

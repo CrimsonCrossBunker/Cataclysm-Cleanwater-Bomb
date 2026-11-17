@@ -4615,7 +4615,7 @@ function SkillDefinition:companion_rank_factors(combat, survival, industry) end
 ---@field excess? string Effect id used for excess.
 ---@field minimum? integer Lower native accumulation bound.
 ---@field maximum? integer Upper native accumulation bound.
----@field rate_turns? integer Positive turns consumed per unit.
+---@field rate_turns? integer Native interval in turns. Positive consumes a unit, negative generates one, zero leaves it unchanged.
 
 ---@class VitaminDefinition
 ---@field id string
@@ -4636,7 +4636,7 @@ function VitaminDefinition:deficiency_range(start, finish) end
 function VitaminDefinition:excess_range(start, finish) end
 
 ---@param vitamin_id string
----@param rate integer Positive decay proportion.
+---@param rate integer Signed native proportion added to the other vitamin during consumption.
 ---@return VitaminDefinition self
 function VitaminDefinition:decays_into(vitamin_id, rate) end
 

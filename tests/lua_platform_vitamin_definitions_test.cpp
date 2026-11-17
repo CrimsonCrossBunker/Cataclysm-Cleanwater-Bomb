@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "calendar.h"
 #include "cata_catch.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
@@ -26,6 +27,12 @@ TEST_CASE( "lua_platform_vitamin_definition_order", "[lua][vitamins]" )
         return std::size_t{ 1 };
     }, []() {}, []() {} );
     sol::protected_function definitions = services["vitamins"]["definitions"];
+    CHECK( vitamin_id( "blood" )->rate() == -6_seconds );
+    CHECK( vitamin_id( "redcells" )->rate() == -12_seconds );
+    const auto chelator = vitamin_id( "mutagen_chelator" )->decays_into();
+    REQUIRE_FALSE( chelator.empty() );
+    CHECK( chelator.front().first == vitamin_id( "mutagen" ) );
+    CHECK( chelator.front().second == -2 );
     const auto &native = vitamin::all();
     REQUIRE( native.size() > 2 );
     std::vector<std::string> sorted;

@@ -37,17 +37,6 @@
     "threshold": true
   },
   {
-    "id": "mutagen_species_dwarf",
-    "type": "vitamin",
-    "vit_type": "counter",
-    "name": { "str": "Dwarven Purifier" },
-    "excess": "mutagen_species_dwarf",
-    "min": 0,
-    "max": 2500,
-    "rate": "1 h",
-    "disease_excess": [ [ 100, 500 ], [ 501, 2199 ], [ 2200, 2500 ] ]
-  },
-  {
     "type": "mutation_category",
     "id": "SPECIES_ELF",
     "name": "Elf",
@@ -66,17 +55,6 @@
     "valid": false,
     "purifiable": false,
     "threshold": true
-  },
-  {
-    "id": "mutagen_species_elf",
-    "type": "vitamin",
-    "vit_type": "counter",
-    "name": { "str": "Elven Purifier" },
-    "excess": "mutagen_species_elf",
-    "min": 0,
-    "max": 2500,
-    "rate": "1 h",
-    "disease_excess": [ [ 100, 500 ], [ 501, 2199 ], [ 2200, 2500 ] ]
   },
   {
     "type": "mutation_category",
@@ -99,17 +77,6 @@
     "threshold": true
   },
   {
-    "id": "mutagen_species_goblin",
-    "type": "vitamin",
-    "vit_type": "counter",
-    "name": { "str": "Goblin Purifier" },
-    "excess": "mutagen_species_goblin",
-    "min": 0,
-    "max": 2500,
-    "rate": "1 h",
-    "disease_excess": [ [ 100, 500 ], [ 501, 2199 ], [ 2200, 2500 ] ]
-  },
-  {
     "type": "mutation_category",
     "id": "SPECIES_LIZARDFOLK",
     "name": "Lizardfolk",
@@ -130,17 +97,6 @@
     "threshold": true
   },
   {
-    "id": "mutagen_species_lizardfolk",
-    "type": "vitamin",
-    "vit_type": "counter",
-    "name": { "str": "Lizardfolk Purifier" },
-    "excess": "mutagen_species_lizardfolk",
-    "min": 0,
-    "max": 2500,
-    "rate": "1 h",
-    "disease_excess": [ [ 100, 500 ], [ 501, 2199 ], [ 2200, 2500 ] ]
-  },
-  {
     "type": "mutation_category",
     "id": "SPECIES_RAVENFOLK",
     "name": "Ravenfolk",
@@ -159,17 +115,6 @@
     "valid": false,
     "purifiable": false,
     "threshold": true
-  },
-  {
-    "id": "mutagen_species_ravenfolk",
-    "type": "vitamin",
-    "vit_type": "counter",
-    "name": { "str": "Ravenfolk Purifier" },
-    "excess": "mutagen_species_ravenfolk",
-    "min": 0,
-    "max": 2500,
-    "rate": "1 h",
-    "disease_excess": [ [ 100, 500 ], [ 501, 2199 ], [ 2200, 2500 ] ]
   },
   {
     "type": "mutation",

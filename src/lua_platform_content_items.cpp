@@ -1361,8 +1361,9 @@ struct vitamin_definition_handle {
 
     vitamin_definition_handle &decays_into( const std::string &id, std::int64_t rate ) {
         require_building_handle( token, *definition, "vitamin" );
-        if( id.empty() || rate <= 0 || rate > std::numeric_limits<int>::max() ) {
-            throw std::runtime_error( "vitamin decay requires an id and positive native rate" );
+        if( id.empty() || rate < std::numeric_limits<int>::min() ||
+            rate > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "vitamin decay requires an id and a signed native proportion" );
         }
         definition->decays_into.emplace_back( id, rate );
         return *this;
@@ -3427,7 +3428,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' has unknown kind '" + definition.type + "'" );
             }
             if( !native_int( definition.minimum ) || !native_int( definition.maximum ) ||
-                definition.rate_turns <= 0 || !native_int( definition.rate_turns ) ||
+                !native_int( definition.rate_turns ) ||
                 ( definition.weight_micrograms &&
                   ( *definition.weight_micrograms <= 0 || !native_int( *definition.weight_micrograms ) ) ) ) {
                 throw std::runtime_error( "vitamin '" + definition.id +
@@ -3442,15 +3443,18 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "vitamin '" + definition.id +
                                           "' references unknown excess effect '" + definition.excess + "'" );
             }
+            validate_operation( entry.operation, vitamin_id( definition.id ).is_valid(),
+                                definition.id, "vitamin" );
+        }
+        for( const vitamin_registration &entry : pimpl_->vitamins ) {
+            const vitamin_definition_data &definition = *entry.definition;
             for( const auto &[decay_id, rate] : definition.decays_into ) {
-                if( decay_id.empty() || rate <= 0 || !native_int( rate ) ||
+                if( decay_id.empty() || !native_int( rate ) ||
                     ( vitamin_ids.count( decay_id ) == 0 && !vitamin_id( decay_id ).is_valid() ) ) {
                     throw std::runtime_error( "vitamin '" + definition.id +
                                               "' decays into unknown vitamin '" + decay_id + "'" );
                 }
             }
-            validate_operation( entry.operation, vitamin_id( definition.id ).is_valid(),
-                                definition.id, "vitamin" );
         }
 
         std::set<std::string> json_flag_ids;
