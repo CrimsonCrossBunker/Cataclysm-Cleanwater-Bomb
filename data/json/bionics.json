@@ -26,7 +26,7 @@
     "name": { "str": "Alarm System" },
     "description": "A motion-detecting alarm system will notice almost all movement within a fifteen-foot radius, and will silently alert you.  This is very useful during sleep, or if you suspect a cloaked pursuer.",
     "occupied_bodyparts": [ [ "torso", 2 ], [ "head", 1 ] ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "MOTION_ALARM", "add": 5 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_alarm_0" ],
     "flags": [ "BIONIC_TOGGLED", "BIONIC_SLEEP_FRIENDLY" ],
     "act_cost": "1 J",
     "react_cost": "1 J",
@@ -316,10 +316,7 @@
     "time": "1 s",
     "flags": [ "BIONIC_TOGGLED" ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 50 } ]
-      }
+      "BIONIC_ENCH_bio_climate_0"
     ]
   },
   {
@@ -342,7 +339,7 @@
     "act_cost": "30 kJ",
     "react_cost": "30 kJ",
     "time": "1 s",
-    "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "invisibility", "intensity": 1 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_cloak_0" ],
     "flags": [ "BIONIC_TOGGLED" ]
   },
   {
@@ -403,8 +400,8 @@
     "description": "Your reaction time has been greatly enhanced with bionic nerve stimulators, giving you a +2 bonus to dexterity while powered.  However, you will suffer penalties while unpowered.",
     "occupied_bodyparts": [ [ "head", 3 ], [ "torso", 6 ], [ "arm_l", 3 ], [ "arm_r", 3 ], [ "leg_l", 7 ], [ "leg_r", 7 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "DEXTERITY", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "DEXTERITY", "add": -1 } ] }
+      "BIONIC_ENCH_bio_dex_enhancer_0",
+      "BIONIC_ENCH_bio_dex_enhancer_1"
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -418,7 +415,7 @@
     "description": "You have been outfitted with three synthetic stomachs and industrial-grade intestines.  Not only can you extract much more nutrition from food, but you are highly resistant to foodborne illness, and can sometimes eat rotten food.",
     "occupied_bodyparts": [ [ "torso", 20 ] ],
     "flags": [ "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF", "PARAIMMUNE", "IMMUNE_SPOIL" ],
-    "enchantments": [ { "values": [ { "value": "KCAL", "multiply": 0.5 }, { "value": "VITAMIN_ABSORB_MOD", "multiply": 0.5 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_digestion_0" ],
     "cant_remove_reason": "The CBM has replaced the patient's digestive organs and cannot be removed.",
     "canceled_mutations": [
       "WEAKSTOMACH",
@@ -488,7 +485,7 @@
     "act_cost": "400 mJ",
     "react_cost": "400 mJ",
     "time": "1 s",
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "HEARING_MULT", "multiply": 2.5 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_ears_0" ],
     "auto_deactivates": [ "bio_earplugs" ],
     "included_bionics": [ "bio_earplugs" ],
     "activated_on_install": true
@@ -512,7 +509,7 @@
     "name": { "str": "AudioVox" },
     "description": "Hailing from a world choked with neon smog, and appreciated by Exodii artists, the AudioVox implant allows you to change, remodulate, and even autotune your voice.  It also causes vocalizations (such as shouts and singing) to be much louder.  It consists of an electronic voice box, synthetic larynx and multiple speakers implanted throughout your throat.",
     "occupied_bodyparts": [ [ "torso", 3 ], [ "mouth", 2 ] ],
-    "enchantments": [ { "values": [ { "value": "SHOUT_NOISE", "add": 25 }, { "value": "SHOUT_NOISE_STR_MULT", "add": 2 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_voice_b_0" ],
     "canceled_mutations": [ "GROWL", "SNARL", "HISS", "CROAK", "BOOMING_VOICE" ],
     "mutation_conflicts": [ "SCREECH" ]
   },
@@ -578,8 +575,8 @@
     "description": "Your vision is greatly enhanced, giving you a +2 bonus to perception while powered.  However, you suffer penalties while unpowered.",
     "occupied_bodyparts": [ [ "eyes", 1 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "PERCEPTION", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "PERCEPTION", "add": -1 } ] }
+      "BIONIC_ENCH_bio_eye_enhancer_0",
+      "BIONIC_ENCH_bio_eye_enhancer_1"
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -687,7 +684,7 @@
     "react_cost": "500 mJ",
     "time": "1 s",
     "flags": [ "BIONIC_TOGGLED" ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "LUMINATION", "add": 60 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_flashlight_0" ],
     "auto_deactivates": [ "bio_flashlight_highmode" ],
     "included_bionics": [ "bio_flashlight_highmode" ]
   },
@@ -701,7 +698,7 @@
     "time": "1 s",
     "included": true,
     "flags": [ "BIONIC_TOGGLED" ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "LUMINATION", "add": 500 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_flashlight_highmode_0" ],
     "auto_deactivates": [ "bio_flashlight" ]
   },
   {
@@ -713,7 +710,7 @@
     "react_cost": "30 mJ",
     "time": "1 s",
     "flags": [ "BIONIC_TOGGLED" ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "LUMINATION", "add": 5 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_bio_tattoo_led_0" ]
   },
   {
     "id": "bio_glowy",
@@ -748,23 +745,7 @@
     "occupied_bodyparts": [ [ "foot_l", 3 ], [ "foot_r", 3 ] ],
     "flags": [ "BIONIC_TOGGLED" ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "special_vision": [
-          {
-            "condition": { "or": [ { "npc_has_flag": "DIGS" }, { "and": [ "npc_is_underwater", { "npc_has_flag": "CAN_DIG" } ] } ] },
-            "distance": 20,
-            "descriptions": [
-              {
-                "id": "ground_sonar_sense",
-                "symbol": "?",
-                "color": "c_green",
-                "text": "You sense some creature moving underground here."
-              }
-            ]
-          }
-        ]
-      }
+      "BIONIC_ENCH_bio_ground_sonar_0"
     ],
     "act_cost": "200 J",
     "react_cost": "200 J",
@@ -820,7 +801,7 @@
     "description": "While activated, your muscles will be greatly enhanced, increasing  your strength by 10, with a minimum setting to 20.",
     "occupied_bodyparts": [ [ "torso", 10 ], [ "arm_l", 8 ], [ "arm_r", 8 ], [ "leg_l", 10 ], [ "leg_r", 10 ] ],
     "flags": [ "BIONIC_TOGGLED", "BIONIC_NPC_USABLE" ],
-    "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "bio_hydraulics_eff", "intensity": 1 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_hydraulics_0" ],
     "act_cost": "10 kJ",
     "react_cost": "10 kJ",
     "time": "1 s",
@@ -847,8 +828,8 @@
     "cant_remove_reason": "The bionic is now critical to the continued functionality of the user's brain.",
     "occupied_bodyparts": [ [ "head", 6 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "INTELLIGENCE", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "INTELLIGENCE", "add": -1 } ] }
+      "BIONIC_ENCH_bio_int_enhancer_0",
+      "BIONIC_ENCH_bio_int_enhancer_1"
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -891,14 +872,7 @@
     "react_cost": "5 J",
     "time": "1 s",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [
-          { "value": "EFFECTIVE_HEALTH_MOD", "add": 100 },
-          { "value": "MOD_HEALTH", "add": -50 },
-          { "value": "MOD_HEALTH_CAP", "add": -200 }
-        ]
-      }
+      "BIONIC_ENCH_bio_leukocyte_0"
     ]
   },
   {
@@ -949,14 +923,7 @@
     "trigger_cost": "25 J",
     "time": "1 s",
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [
-          { "value": "READING_EXP", "add": 2 },
-          { "value": "SKILL_RUST_RESIST", "add": 20 },
-          { "value": "LEARNING_FOCUS", "add": 10 }
-        ]
-      }
+      "BIONIC_ENCH_bio_memory_0"
     ]
   },
   {
@@ -998,7 +965,7 @@
     "description": "When active, this bionic eliminates all light within a 2 tile radius through destructive interference.",
     "occupied_bodyparts": [ [ "torso", 16 ] ],
     "flags": [ "BIONIC_TOGGLED" ],
-    "enchantments": [ { "condition": "ACTIVE", "emitter": "emit_shadow_field" } ],
+    "enchantments": [ "BIONIC_ENCH_bio_night_0" ],
     "act_cost": "9 kJ",
     "react_cost": "9 kJ",
     "time": "1 s"
@@ -1145,7 +1112,7 @@
     "occupied_bodyparts": [ [ "hand_l", 1 ], [ "hand_r", 1 ] ],
     "passive_pseudo_items": [ "fake_razor" ],
     "flags": [ "BIONIC_NPC_USABLE" ],
-    "enchantments": [ { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "stab", "add": 2 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_bio_razors_0" ]
   },
   {
     "id": "bio_recycler",
@@ -1155,14 +1122,7 @@
     "occupied_bodyparts": [ [ "torso", 15 ] ],
     "flags": [ "BIONIC_NPC_USABLE" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "HUNGER", "multiply": -0.5 },
-          { "value": "THIRST", "multiply": -0.5 },
-          { "value": "METABOLISM", "multiply": -0.5 }
-        ]
-      }
+      "BIONIC_ENCH_bio_recycler_0"
     ]
   },
   {
@@ -1264,7 +1224,7 @@
       [ "foot_l", 2 ],
       [ "foot_r", 2 ]
     ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "SPEED", "multiply": 0.1 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_speed_0" ],
     "act_cost": "10 J",
     "react_cost": "10 J",
     "time": "1 s",
@@ -1294,8 +1254,8 @@
     "description": "Your muscular system has been surgically enhanced with myomer fibers, giving you a +2 bonus to strength while powered.  However, you will suffer penalties if unpowered.",
     "occupied_bodyparts": [ [ "torso", 6 ], [ "arm_l", 4 ], [ "arm_r", 4 ], [ "leg_l", 8 ], [ "leg_r", 8 ] ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "STRENGTH", "add": 2 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "STRENGTH", "add": -1 } ] }
+      "BIONIC_ENCH_bio_str_enhancer_0",
+      "BIONIC_ENCH_bio_str_enhancer_1"
     ],
     "act_cost": "5 J",
     "react_cost": "5 J",
@@ -1336,7 +1296,7 @@
     "cant_remove_reason": "The CBM has replaced the patient's lungs and cannot be removed.",
     "canceled_mutations": [ "GOODCARDIO", "BADCARDIO", "GOODCARDIO2", "PERSISTENCE_HUNTER", "PERSISTENCE_HUNTER2", "ASTHMA" ],
     "enchantments": [
-      { "condition": "ALWAYS", "values": [ { "value": "MOD_HEALTH", "add": -1 }, { "value": "MOD_HEALTH_CAP", "add": -10 } ] }
+      "BIONIC_ENCH_bio_synlungs_0"
     ],
     "active_flags": [ "CARDIO_MIN_GUARANTE" ]
   },
@@ -1347,7 +1307,7 @@
     "description": "Your eyes are surgically equipped with range finders, and their movement is synced with that of your arms, to a degree.  Shots you fire will be much more accurate, particularly at long range.",
     "occupied_bodyparts": [ [ "eyes", 1 ], [ "arm_l", 3 ], [ "arm_r", 3 ], [ "hand_l", 1 ], [ "hand_r", 1 ] ],
     "flags": [ "BIONIC_NPC_USABLE" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "WEAPON_DISPERSION", "multiply": -0.25 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_bio_targeting_0" ]
   },
   {
     "id": "bio_sonar",
@@ -1482,8 +1442,8 @@
     "flags": [ "BIONIC_TOGGLED" ],
     "mutation_conflicts": [ "LEG_TENTACLES", "LEG_TENT_BRACE", "GASTROPOD_FOOT", "GASTROPOD_BALANCE", "AMORPHOUS" ],
     "enchantments": [
-      { "condition": "ACTIVE", "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ] },
-      { "condition": "INACTIVE", "values": [ { "value": "MOVE_COST", "multiply": 0.1 } ] }
+      "BIONIC_ENCH_bio_jointservo_0",
+      "BIONIC_ENCH_bio_jointservo_1"
     ],
     "act_cost": "5 J",
     "trigger_cost": "35 J"
@@ -1573,7 +1533,7 @@
     "name": { "str": "Titanium Skeletal Bracing" },
     "description": "Titanium bracing has been installed onto your elbows, knees, and spine, making them far better at handling strain.  Your carrying capacity is increased by 20 kilograms, or about 44 pounds, and you receive slightly less bashing damage to your arms, legs and torso.",
     "occupied_bodyparts": [ [ "torso", 8 ], [ "arm_l", 3 ], [ "arm_r", 3 ], [ "leg_l", 3 ], [ "leg_r", 3 ] ],
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "add": 20000 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_weight_0" ],
     "flags": [ "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ],
     "protec": [
       [ "torso", { "bash": 2 } ],
@@ -1618,7 +1578,7 @@
     "description": "An electrode has been implanted into your brain's ventrolateral preoptic nucleus.  It turns on whenever you're trying to fall asleep, creating an artificial but effective sensation of sleepiness.",
     "occupied_bodyparts": [ [ "head", 1 ] ],
     "flags": [ "BIONIC_TOGGLED" ],
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "SLEEPY", "add": 30 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_bio_soporific_0" ]
   },
   {
     "id": "bio_faulty_electromagnetic_leak",
@@ -1652,7 +1612,7 @@
     "description": "Reactive shock absorbers installed in your wrists and elbows which greatly reduce felt recoil.",
     "occupied_bodyparts": [ [ "arm_l", 4 ], [ "arm_r", 4 ], [ "hand_l", 2 ], [ "hand_r", 2 ] ],
     "flags": [ "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "RECOIL_MODIFIER", "multiply": -0.35 } ] } ]
+    "enchantments": [ "BIONIC_ENCH_bio_recoil_0" ]
   },
   {
     "id": "bio_sleep_shutdown",
@@ -1669,7 +1629,7 @@
     "description": "A small implantable betavoltaic device.  Utilizing nickel-63 radioisotope decay technology and diamond semiconductors, this CBM achieves a stable conversion of nuclear energy into electrical power.  Its power output is very low, at a mere 1W, but it boasts a stable operational lifespan of up to 50 years, requiring neither charging nor maintenance.  Under the current state of the world, its decommissioning age is longer than the lifespan of most ordinary people.",
     "occupied_bodyparts": [ [ "torso", 2 ] ],
     "dupes_allowed": true,
-    "enchantments": [ { "values": [ { "value": "POWER_TRICKLE", "add": 1000 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_betavoltaic_0" ],
     "flags": [ "BIONIC_POWER_SOURCE", "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ]
   },
   {
@@ -1680,10 +1640,7 @@
     "occupied_bodyparts": [ [ "eyes", 1 ], [ "arm_l", 2 ], [ "arm_r", 2 ], [ "hand_l", 2 ], [ "hand_r", 2 ] ],
     "flags": [ "BIONIC_NPC_USABLE", "BIONIC_SHOCKPROOF" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "THROW_STR", "multiply": 0.5 }, { "value": "THROW_DAMAGE", "multiply": 0.25 } ]
-      }
+      "BIONIC_ENCH_bio_pitch_perfect_0"
     ]
   },
   {
@@ -1775,10 +1732,7 @@
     "occupied_bodyparts": [ [ "head", 1 ] ],
     "flags": [ "BIONIC_TOGGLED" ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.2 }, { "value": "LUMINATION", "add": 10 } ]
-      }
+      "BIONIC_ENCH_bio_nl_laser_reader_0"
     ],
     "act_cost": "2 J",
     "react_cost": "2 J",
@@ -1873,8 +1827,8 @@
     "description": "Your body is integrated into a bulky Exodii Cyberframe.  Your important internal organs, including much of your core skeleton and musculature, are encased in a solid metal core.  While there is clearly a head and torso, it is difficult to tell where one starts and the other ends.  It will be difficult or impossible to squeeze through tight spaces, or to wear normal-sized clothing and armor.  The frame greatly increases your physical dexterity and strength, and is highly protective, but the internal parts of your head and torso are still affected by temperature, you can still feel pain, and internal bleeding can occur with sufficient damage.",
     "cant_remove_reason": "Cyberframes cannot be removed, only swapped via specialized surgery.  Removing it would kill you.",
     "enchantments": [
-      { "values": [ { "value": "STRENGTH", "add": 4 }, { "value": "DEXTERITY", "add": 4 } ] },
-      { "mutations": [ "EXODII_CYBERFRAME_LARGE" ] }
+      "BIONIC_ENCH_bio_exodii_cyberframe_1a_0",
+      "BIONIC_ENCH_bio_exodii_cyberframe_1a_1"
     ],
     "protec": [
       [ "head_bionic_basic", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ],
@@ -1889,7 +1843,7 @@
     "description": "You have a bionic left leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are highly resistant to damage.  Due to their size and armored plating, a heavy-duty 1a-style Cyberframe is necessary for operation.",
     "required_bionic": "bio_exodii_cyberframe_1a",
     "replaced_bodyparts": [ "leg_l", "foot_l" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "leg_bionic_basic_l" }, { "gain": "foot_bionic_basic_l" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_leg_bionic_basic_armored_left_0" ],
     "protec": [
       [ "leg_bionic_basic_l", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ],
       [ "foot_bionic_basic_l", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ]
@@ -1902,7 +1856,7 @@
     "description": "You have a bionic right leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are highly resistant to damage.  Due to their size and armored plating, a heavy-duty 1a-style Cyberframe is necessary for operation.",
     "required_bionic": "bio_exodii_cyberframe_1a",
     "replaced_bodyparts": [ "leg_r", "foot_r" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "leg_bionic_basic_r" }, { "gain": "foot_bionic_basic_r" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_leg_bionic_basic_armored_right_0" ],
     "protec": [
       [ "leg_bionic_basic_r", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ],
       [ "foot_bionic_basic_r", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ]
@@ -1916,8 +1870,8 @@
     "required_bionic": "bio_exodii_cyberframe_1a",
     "replaced_bodyparts": [ "leg_l", "foot_l", "leg_r", "foot_r" ],
     "enchantments": [
-      { "modified_bodyparts": [ { "gain": "bionic_treads_leg" } ] },
-      { "values": [ { "value": "MOVECOST_OBSTACLE_MOD", "multiply": 6 } ] }
+      "BIONIC_ENCH_bio_exodii_leg_bionic_treads_0",
+      "BIONIC_ENCH_bio_exodii_leg_bionic_treads_1"
     ],
     "protec": [ [ "bionic_treads_leg", { "bash": 20, "cut": 20, "bullet": 15, "stab": 20 } ] ]
   },
@@ -1928,7 +1882,7 @@
     "description": "You have a bionic left leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are highly resistant to damage.  Due to their size and armored plating, a heavy-duty 1a-style Cyberframe is necessary for operation.",
     "required_bionic": "bio_exodii_cyberframe_1a",
     "replaced_bodyparts": [ "arm_l", "hand_l" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "arm_bionic_basic_l" }, { "gain": "hand_bionic_basic_l" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_arm_bionic_basic_armored_left_0" ],
     "protec": [
       [ "arm_bionic_basic_l", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ],
       [ "hand_bionic_basic_l", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ]
@@ -1941,7 +1895,7 @@
     "description": "You have a bionic right leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are highly resistant to damage.  Due to their size and armored plating, a heavy-duty 1a-style Cyberframe is necessary for operation.",
     "required_bionic": "bio_exodii_cyberframe_1a",
     "replaced_bodyparts": [ "arm_r", "hand_r" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "arm_bionic_basic_r" }, { "gain": "hand_bionic_basic_r" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_arm_bionic_basic_armored_right_0" ],
     "protec": [
       [ "arm_bionic_basic_r", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ],
       [ "hand_bionic_basic_r", { "bash": 30, "cut": 30, "bullet": 25, "stab": 30 } ]
@@ -1953,7 +1907,7 @@
     "name": { "str": "Cyberframe 1b" },
     "description": "Your body is integrated into a very human-like Exodii Cyberframe.  Your important internal organs, including much of your core skeleton and musculature, are encased in a frame that resembles a robotic human.  The frame increases your physical dexterity and strength, and is modestly protective, but the internal parts of your head and torso are still affected by temperature, you can still feel pain, and internal bleeding can occur with sufficient damage.",
     "cant_remove_reason": "Cyberframes cannot be removed, only swapped via specialized surgery.  Removing it would kill you.",
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 }, { "value": "DEXTERITY", "add": 4 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_cyberframe_1b_0" ],
     "protec": [
       [ "head_bionic_basic", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
       [ "mouth_bionic_basic", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
@@ -1967,7 +1921,7 @@
     "description": "You have a bionic left leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are modestly more sturdy.",
     "required_bionic": "bio_exodii_cyberframe_1b",
     "replaced_bodyparts": [ "leg_l", "foot_l" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "leg_bionic_basic_l" }, { "gain": "foot_bionic_basic_l" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_leg_bionic_basic_left_0" ],
     "protec": [
       [ "leg_bionic_basic_l", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
       [ "foot_bionic_basic_l", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ]
@@ -1980,7 +1934,7 @@
     "description": "You have a bionic right leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are modestly more sturdy.",
     "required_bionic": "bio_exodii_cyberframe_1b",
     "replaced_bodyparts": [ "leg_r", "foot_r" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "leg_bionic_basic_r" }, { "gain": "foot_bionic_basic_r" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_leg_bionic_basic_right_0" ],
     "protec": [
       [ "leg_bionic_basic_r", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
       [ "foot_bionic_basic_r", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ]
@@ -1993,7 +1947,7 @@
     "description": "You have a bionic left leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are modestly more sturdy.",
     "required_bionic": "bio_exodii_cyberframe_1b",
     "replaced_bodyparts": [ "arm_l", "hand_l" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "arm_bionic_basic_l" }, { "gain": "hand_bionic_basic_l" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_arm_bionic_basic_left_0" ],
     "protec": [
       [ "arm_bionic_basic_l", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
       [ "hand_bionic_basic_l", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ]
@@ -2006,7 +1960,7 @@
     "description": "You have a bionic right leg and foot fit for an Exodii Cyberframe.  These bionics mimic the dynamics of normal human limbs, but are immune to temperature and pain, don't bleed, and are modestly more sturdy.",
     "required_bionic": "bio_exodii_cyberframe_1b",
     "replaced_bodyparts": [ "arm_r", "hand_r" ],
-    "enchantments": [ { "modified_bodyparts": [ { "gain": "arm_bionic_basic_r" }, { "gain": "hand_bionic_basic_r" } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_exodii_arm_bionic_basic_right_0" ],
     "protec": [
       [ "arm_bionic_basic_r", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ],
       [ "hand_bionic_basic_r", { "bash": 5, "cut": 5, "bullet": 2, "stab": 5 } ]
