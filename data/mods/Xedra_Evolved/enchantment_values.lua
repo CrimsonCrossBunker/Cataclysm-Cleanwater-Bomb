@@ -86,3 +86,17 @@ content.add(content.Enchantment {
         add_handler = "enchantment_wolf_sledge_bash_add",
         load_skills = { "deduction" },
     }))
+
+ccb.runtime.handler("salamander_flaming_whip_damage", function(ctx)
+    local spell_level = ctx.spell_levels.salamander_flaming_whip_spell
+    return 5 + spell_level * ((ctx.stats.dexterity + 10) / 20)
+end)
+
+content.add(content.Enchantment {
+    id = "SALAMANDER_SUMMON_WHIP",
+    has = "WIELD",
+    condition = "ALWAYS",
+}:melee_damage("heat", {
+    add_handler = "salamander_flaming_whip_damage",
+    load_spell_levels = { "salamander_flaming_whip_spell" },
+}))

@@ -20,18 +20,6 @@
   },
   {
     "type": "enchantment",
-    "id": "SALAMANDER_SUMMON_WHIP",
-    "has": "WIELD",
-    "condition": "ALWAYS",
-    "melee_damage_bonus": [
-      {
-        "type": "heat",
-        "add": { "math": [ "(5 + (u_spell_level('salamander_flaming_whip_spell') * 1) * (scaling_factor(u_val('dexterity') ) ) )" ] }
-      }
-    ]
-  },
-  {
-    "type": "enchantment",
     "id": "BLOODTHORNE_DRUID_HEARTWHIP",
     "has": "WIELD",
     "condition": {
