@@ -11,6 +11,7 @@
 #include <limits>
 #include <list>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <stack>
@@ -69,6 +70,50 @@ static const quality_id qual_SEW( "SEW" );
 static const trait_id trait_DEBUG_HS( "DEBUG_HS" );
 
 static std::map<requirement_id, requirement_data> requirements_all;
+
+namespace
+{
+struct layered_requirement {
+    std::optional<requirement_data> base;
+    std::vector<requirement_source_layer> layers;
+};
+
+std::map<requirement_id, layered_requirement> requirement_layers;
+std::unordered_map<std::string, std::size_t> requirement_mod_indices;
+std::unordered_map<std::string, std::size_t> requirement_companion_indices;
+
+std::tuple<int, std::size_t, std::size_t> requirement_source_order( const std::string &source )
+{
+    if( source == "core" ) {
+        return { 0, 0, {} };
+    }
+    const std::size_t separator = source.find( '#' );
+    const auto owner = requirement_mod_indices.find( source.substr( 0, separator ) );
+    if( owner == requirement_mod_indices.end() ) {
+        return { 3, 0, {} };
+    }
+    if( separator == std::string::npos ) {
+        return { 1, owner->second, {} };
+    }
+    const auto companion = requirement_companion_indices.find( source.substr( separator + 1 ) );
+    return { 2, owner->second, companion == requirement_companion_indices.end() ?
+             requirement_companion_indices.size() : companion->second };
+}
+} // namespace
+
+void requirement_data::set_mod_load_order( const std::vector<mod_id> &mods )
+{
+    requirement_mod_indices.clear();
+    for( std::size_t i = 0; i < mods.size(); ++i ) {
+        requirement_mod_indices.emplace( mods[i].str(), i );
+    }
+    std::vector<mod_id> companions = mods;
+    std::sort( companions.begin(), companions.end() );
+    requirement_companion_indices.clear();
+    for( std::size_t i = 0; i < companions.size(); ++i ) {
+        requirement_companion_indices.emplace( companions[i].str(), i );
+    }
+}
 
 std::map<requirement_id, requirement_data> &requirement_data::registry()
 {
@@ -507,7 +552,7 @@ requirement_data requirement_data::operator+( const std::pair<requirement_id, in
 }
 
 void requirement_data::load_requirement( const JsonObject &jsobj, const requirement_id &id,
-        const bool check_extend, const bool is_abstract )
+        const bool check_extend, const bool is_abstract, const std::string_view source )
 {
     requirement_data req;
     requirement_data ext;
@@ -561,7 +606,11 @@ void requirement_data::load_requirement( const JsonObject &jsobj, const requirem
         jsobj.read( "name", req.name_ );
     }
 
-    save_requirement( req, string_id<requirement_data>::NULL_ID(), &ext );
+    if( source.empty() ) {
+        save_requirement( req, requirement_id::NULL_ID(), &ext );
+    } else {
+        register_requirement_layer( { std::move( req ), std::move( ext ), std::string( source ), false } );
+    }
 }
 
 void requirement_data::save_requirement( const requirement_data &req, const requirement_id &id,
@@ -572,36 +621,87 @@ void requirement_data::save_requirement( const requirement_data &req, const requ
         dup.id_ = id;
     }
 
-    if( requirements_all.count( dup.id_ ) == 0 ) {
-        requirements_all[ dup.id_ ] = dup;
+    requirement_data &target = requirements_all.try_emplace( dup.id_, dup ).first->second;
+    merge_requirement( target, dup, extend );
+}
+
+void requirement_data::merge_requirement( requirement_data &target,
+        const requirement_data &definition, const requirement_data *alternatives )
+{
+    const auto merge = []( auto &current, const auto &replacement, const auto *additions ) {
+        if( !replacement.empty() ) {
+            current = replacement;
+        }
+        if( additions ) {
+            for( std::size_t i = 0; i < std::min( current.size(), additions->size() ); ++i ) {
+                current[i].insert( current[i].end(), ( *additions )[i].begin(), ( *additions )[i].end() );
+            }
+        }
+    };
+    merge( target.components, definition.components, alternatives ? &alternatives->components : nullptr );
+    merge( target.tools, definition.tools, alternatives ? &alternatives->tools : nullptr );
+    merge( target.qualities, definition.qualities, alternatives ? &alternatives->qualities : nullptr );
+}
+
+void requirement_data::register_requirement_layer( requirement_source_layer layer )
+{
+    const requirement_id id = layer.definition.id_;
+    layered_requirement &requirement = requirement_layers[id];
+    if( requirement.layers.empty() ) {
+        const auto original = requirements_all.find( id );
+        if( original != requirements_all.end() ) {
+            requirement.base = original->second;
+        }
     }
 
-    requirement_data &r = requirements_all[ dup.id_ ];
-    if( !dup.components.empty() ) {
-        r.components.clear();
-        r.components.insert( r.components.end(), dup.components.begin(), dup.components.end() );
-    }
-    if( !dup.tools.empty() ) {
-        r.tools.clear();
-        r.tools.insert( r.tools.end(), dup.tools.begin(), dup.tools.end() );
-    }
-    if( !dup.qualities.empty() ) {
-        r.qualities.clear();
-        r.qualities.insert( r.qualities.end(), dup.qualities.begin(), dup.qualities.end() );
-    }
+    requirement.layers.push_back( std::move( layer ) );
+    requirements_all[id] = *resolve_requirement_layers( id, {} );
+}
 
-    if( !!extend ) {
-        for( unsigned i = 0; i < r.components.size() && i < extend->components.size(); i++ ) {
-            r.components[i].insert( r.components[i].end(), extend->components[i].begin(),
-                                    extend->components[i].end() );
+std::optional<requirement_data> requirement_data::resolve_requirement_layers( const requirement_id &id,
+        const std::vector<requirement_source_layer> &pending )
+{
+    std::optional<requirement_data> result;
+    std::vector<const requirement_source_layer *> ordered;
+    const auto authored = requirement_layers.find( id );
+    if( authored != requirement_layers.end() ) {
+        result = authored->second.base;
+        ordered.reserve( authored->second.layers.size() + pending.size() );
+        for( const requirement_source_layer &layer : authored->second.layers ) {
+            ordered.push_back( &layer );
         }
-        for( unsigned i = 0; i < r.tools.size() && i < extend->tools.size(); i++ ) {
-            r.tools[i].insert( r.tools[i].end(), extend->tools[i].begin(), extend->tools[i].end() );
+    } else {
+        const auto existing = requirements_all.find( id );
+        if( existing != requirements_all.end() ) {
+            result = existing->second;
         }
-        for( unsigned i = 0; i < r.qualities.size() && i < extend->qualities.size(); i++ ) {
-            r.qualities[i].insert( r.qualities[i].end(), extend->qualities[i].begin(),
-                                   extend->qualities[i].end() );
+    }
+    for( const requirement_source_layer &layer : pending ) {
+        ordered.push_back( &layer );
+    }
+    // Lua is prepared after JSON. Replay contributions by pack so a legacy
+    // Mod loaded later still extends or overrides earlier Lua definitions.
+    std::stable_sort( ordered.begin(), ordered.end(), []( const requirement_source_layer * lhs,
+    const requirement_source_layer * rhs ) {
+        return requirement_source_order( lhs->source ) < requirement_source_order( rhs->source );
+    } );
+    for( const requirement_source_layer *layer : ordered ) {
+        if( !result || layer->replace ) {
+            result = layer->definition;
         }
+        merge_requirement( *result, layer->definition,
+                           layer->alternatives ? &*layer->alternatives : nullptr );
+    }
+    return result;
+}
+
+void requirement_data::pop_requirement_layer( const requirement_id &id )
+{
+    auto found = requirement_layers.find( id );
+    cata_assert( found != requirement_layers.end() && !found->second.layers.empty() );
+    found->second.layers.pop_back();
+    if( found->second.layers.empty() ) {
+        requirement_layers.erase( found );
     }
 }
 
@@ -842,6 +942,9 @@ void requirement_data::finalize()
 void requirement_data::reset()
 {
     requirements_all.clear();
+    requirement_layers.clear();
+    requirement_mod_indices.clear();
+    requirement_companion_indices.clear();
 }
 
 std::vector<std::string> requirement_data::get_folded_components_list( const Character *actor,

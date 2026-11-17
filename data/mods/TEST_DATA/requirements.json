@@ -4,5 +4,11 @@
     "id": "test_reserve_vehicle_weld",
     "type": "requirement",
     "tools": [ [ [ "welder", -1 ] ] ]
+  },
+  {
+    "type": "requirement",
+    "id": "lua_test_merged_requirement",
+    "tools": [ [ [ "hammer", 2 ] ] ],
+    "extend": { "components": [ [ [ "test_rag", 2 ] ], [ [ "nail", 3 ] ] ] }
   }
 ]

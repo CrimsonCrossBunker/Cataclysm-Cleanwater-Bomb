@@ -920,7 +920,7 @@ local RequirementDefinition = {}
 ---@return RequirementDefinition self
 function RequirementDefinition:component(item_id, count, requirement) end
 
----@param choices RequirementAlternative[] Dense one-based array with at most 128 entries.
+---@param choices RequirementAlternative[] Nonempty dense one-based array.
 ---@return RequirementDefinition self
 function RequirementDefinition:component_any(choices) end
 
@@ -936,7 +936,7 @@ function RequirementDefinition:tool(item_id, count, requirement) end
 ---@return RequirementDefinition self
 function RequirementDefinition:tool_charges(item_id, charges, requirement) end
 
----@param choices RecipeToolAlternative[] Dense one-based array with at most 128 entries.
+---@param choices RecipeToolAlternative[] Nonempty dense one-based array.
 ---@return RequirementDefinition self
 function RequirementDefinition:tool_any(choices) end
 
@@ -946,7 +946,7 @@ function RequirementDefinition:tool_any(choices) end
 ---@return RequirementDefinition self
 function RequirementDefinition:quality(quality_id, level, count) end
 
----@param choices RequirementQualityAlternative[] Dense one-based array with at most 128 entries.
+---@param choices RequirementQualityAlternative[] Nonempty dense one-based array.
 ---@return RequirementDefinition self
 function RequirementDefinition:quality_any(choices) end
 
@@ -6437,6 +6437,14 @@ function CcbPlatformContent.edit_weapon_category(id) end
 ---@param id string Reusable requirement id staged earlier by this Mod.
 ---@return RequirementDefinition
 function CcbPlatformContent.edit_requirement(id) end
+
+---Define or change a crafting requirement in Mod load order. Supplied component,
+---tool and quality lists replace the corresponding groups. The optional second
+---builder has no id or name. Its entries add choices to existing groups by their
+---one-based positions.
+---@param definition RequirementDefinition
+---@param alternatives? RequirementDefinition
+function CcbPlatformContent.merge_requirement(definition, alternatives) end
 
 ---@param id string Recipe-group id staged earlier by this Mod.
 ---@return RecipeGroupDefinition

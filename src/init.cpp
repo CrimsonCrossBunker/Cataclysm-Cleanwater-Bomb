@@ -378,8 +378,8 @@ void DynamicDataLoader::initialize()
     add( "vehicle_color_palette", &VehiclePalette::load );
     add( "named_color", &RGBColor::load_named_color );
 
-    add( "requirement", []( const JsonObject & jo ) {
-        requirement_data::load_requirement( jo, string_id<requirement_data>::NULL_ID(), true );
+    add( "requirement", []( const JsonObject & jo, const std::string & src ) {
+        requirement_data::load_requirement( jo, requirement_id::NULL_ID(), true, false, src );
     } );
     add( "trap", &trap::load_trap );
     add( "trap_migration", &trap_migrations::load );

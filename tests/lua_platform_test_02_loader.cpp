@@ -12,6 +12,7 @@
 #include <lua_platform_runtime.h>
 #include <options.h>
 #include <path_info.h>
+#include <requirements.h>
 #include <speech.h>
 #include <text_snippets.h>
 #include <worldfactory.h>
@@ -348,6 +349,91 @@ content.upsert_ammunition_type(content.AmmunitionType {
     platform::discard_prepared_mods();
     CHECK( id.obj().name() == "null" );
     CHECK( id.obj().default_ammotype() == itype_id( "nail" ) );
+}
+
+TEST_CASE( "lua_platform_requirements_merge_mixed_mods_in_pack_order",
+           "[lua][platform][loader][regression]" )
+{
+    namespace platform = cata::lua_platform;
+    const platform_lua_test_directory files;
+    const on_out_of_scope cleanup( []() {
+        platform::discard_prepared_mods();
+    } );
+    const requirement_id id( "lua_test_merged_requirement" );
+    REQUIRE( id.is_valid() );
+    REQUIRE( id.obj().get_components().empty() );
+    REQUIRE( id.obj().get_tools().size() == 1 );
+    REQUIRE( id.obj().get_tools().front().front().count == 2 );
+
+    files.write( "main.lua", R"lua(
+local content = require("ccb").content
+local key = "lua_test_merged_requirement"
+local choices = {}
+for count = 1, 151 do
+    choices[count] = { id = "rock", count = count }
+end
+content.add(content.Requirement { id = "lua_test_large_requirement_group" }:component_any(choices))
+content.merge_requirement(content.Requirement { id = key, name = "Mixed crafting" }
+    :component("rock", 1):component("test_rag", 1):tool("hammer", 1),
+    content.Requirement {}:component("nail", 2))
+content.merge_requirement(content.Requirement { id = key },
+    content.Requirement {}:component("scrap", 3))
+)lua" );
+
+    std::string error;
+    REQUIRE( platform::prepare_mods( { { "ccb", files.root, files.root / "main.lua" } }, error ) );
+    const bool applied = platform::apply_prepared_content( error );
+    INFO( error );
+    REQUIRE( applied );
+    REQUIRE( platform::validate_finalized_prepared_content( error ) );
+
+    const auto &components = id.obj().get_components();
+    REQUIRE( components.size() == 2 );
+    REQUIRE( components[0].size() == 4 );
+    CHECK( components[0][0].type == itype_id( "rock" ) );
+    CHECK( components[0][1].type == itype_id( "nail" ) );
+    CHECK( components[0][2].type == itype_id( "scrap" ) );
+    CHECK( components[0][3].type == itype_id( "test_rag" ) );
+    CHECK( components[0][3].count == 2 );
+    REQUIRE( components[1].size() == 2 );
+    CHECK( components[1][1].type == itype_id( "nail" ) );
+    CHECK( components[1][1].count == 3 );
+    CHECK( id.obj().get_tools().front().front().count == 2 );
+    CHECK( id.obj().display_name() == "Mixed crafting" );
+
+    const requirement_id large_group_id( "lua_test_large_requirement_group" );
+    REQUIRE( large_group_id.is_valid() );
+    const auto &large_groups = large_group_id.obj().get_components();
+    REQUIRE( large_groups.size() == 1 );
+    REQUIRE( large_groups.front().size() == 151 );
+    CHECK( large_groups.front().back().count == 151 );
+
+    platform::discard_prepared_mods();
+    CHECK( id.obj().get_components().empty() );
+    CHECK( id.obj().get_tools().front().front().count == 2 );
+    CHECK_FALSE( id.obj().has_display_name() );
+    CHECK_FALSE( large_group_id.is_valid() );
+}
+
+TEST_CASE( "lua_platform_requirements_resolve_references_at_content_application",
+           "[lua][platform][loader][regression]" )
+{
+    namespace platform = cata::lua_platform;
+    const platform_lua_test_directory files;
+    const on_out_of_scope cleanup( []() {
+        platform::discard_prepared_mods();
+    } );
+    files.write( "main.lua", R"lua(
+local content = require("ccb").content
+content.add(content.Requirement { id = "lua_test_requirement_reference" }
+    :tool("lua_test_nonexistent_tool", 1))
+)lua" );
+
+    std::string error;
+    REQUIRE( platform::prepare_mods( { { "ccb", files.root, files.root / "main.lua" } }, error ) );
+    CHECK_FALSE( platform::apply_prepared_content( error ) );
+    CHECK( error.find( "references unknown tool 'lua_test_nonexistent_tool'" ) != std::string::npos );
+    CHECK_FALSE( requirement_id( "lua_test_requirement_reference" ).is_valid() );
 }
 
 TEST_CASE( "lua_platform_loader_preserves_file_preambles_and_error_lines",

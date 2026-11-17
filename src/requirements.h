@@ -6,6 +6,7 @@
 #include <functional>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -27,6 +28,7 @@ class item;
 class item_components;
 class nc_color;
 class temp_crafting_inventory;
+struct requirement_source_layer;
 template <typename E> struct enum_traits;
 
 namespace cata::lua_platform
@@ -308,7 +310,10 @@ struct requirement_data {
         static void load_requirement( const JsonObject &jsobj,
                                       const requirement_id &id = requirement_id::NULL_ID(),
                                       bool check_extend = false,
-                                      bool is_abstract = false );
+                                      bool is_abstract = false,
+                                      std::string_view source = {} );
+
+        static void set_mod_load_order( const std::vector<mod_id> &mods );
 
         /**
          * Store requirement data for future lookup
@@ -431,6 +436,12 @@ struct requirement_data {
 
     private:
         static std::map<requirement_id, requirement_data> &registry();
+        static void merge_requirement( requirement_data &target, const requirement_data &definition,
+                                       const requirement_data *alternatives );
+        static void register_requirement_layer( requirement_source_layer layer );
+        static void pop_requirement_layer( const requirement_id &id );
+        static std::optional<requirement_data> resolve_requirement_layers( const requirement_id &id,
+                const std::vector<requirement_source_layer> &pending );
 
         requirement_id id_ = requirement_id::NULL_ID(); // NOLINT(cata-serialize)
         translation name_; // NOLINT(cata-serialize)
@@ -473,6 +484,13 @@ struct requirement_data {
         static void load_obj_list( const JsonArray &jsarr, std::vector< std::vector<T> > &objs );
         template<typename T, typename ID>
         static const T *find_by_type( const std::vector< std::vector<T> > &vec, const ID &type );
+};
+
+struct requirement_source_layer {
+    requirement_data definition;
+    std::optional<requirement_data> alternatives;
+    std::string source;
+    bool replace;
 };
 
 // Sometimes the requirement_data is problematic, because it has overlapping

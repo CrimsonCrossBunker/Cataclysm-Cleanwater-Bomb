@@ -103,7 +103,7 @@ enum class handle_lifecycle : int { building, committed, discarded };
 std::size_t require_dense_array( const sol::table &values,
                                  const std::string_view description,
                                  const std::size_t minimum,
-                                 const std::size_t maximum )
+                                 const std::size_t maximum = std::numeric_limits<std::size_t>::max() )
 {
     const std::size_t count = values.size();
     if( count < minimum || count > maximum ) {
@@ -277,6 +277,8 @@ struct requirement_definition_data {
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::vector<std::vector<quality_requirement_definition>> qualities;
+    std::shared_ptr<const requirement_definition_data> alternatives;
+    bool merge = false;
     bool registered = false;
 };
 
@@ -291,6 +293,54 @@ struct recipe_group_recipe_data {
     authored_text description;
     std::vector<recipe_group_terrain_data> terrains;
 };
+
+requirement_data native_requirement_groups( const requirement_definition_data &source )
+{
+    requirement_data::alter_item_comp_vector components;
+    for( const auto &source_group : source.components ) {
+        std::vector<item_comp> group;
+        group.reserve( source_group.size() );
+        for( const component_requirement &component : source_group ) {
+            item_comp native( itype_id( component.id ), static_cast<int>( component.count ) );
+            native.requirement = component.requirement;
+            group.push_back( std::move( native ) );
+        }
+        components.push_back( std::move( group ) );
+    }
+    requirement_data::alter_tool_comp_vector tools;
+    for( const auto &source_group : source.tools ) {
+        std::vector<tool_comp> group;
+        group.reserve( source_group.size() );
+        for( const component_requirement &tool : source_group ) {
+            tool_comp native( itype_id( tool.id ), static_cast<int>( tool.count ) );
+            native.requirement = tool.requirement;
+            group.push_back( std::move( native ) );
+        }
+        tools.push_back( std::move( group ) );
+    }
+    requirement_data::alter_quali_req_vector qualities;
+    for( const auto &source_group : source.qualities ) {
+        std::vector<quality_requirement> group;
+        group.reserve( source_group.size() );
+        for( const quality_requirement_definition &quality : source_group ) {
+            group.emplace_back( quality_id( quality.id ), static_cast<int>( quality.count ),
+                                static_cast<int>( quality.level ) );
+        }
+        qualities.push_back( std::move( group ) );
+    }
+    return requirement_data( tools, qualities, components );
+}
+
+requirement_source_layer native_requirement_layer( const requirement_definition_data &source,
+        const std::string &owner )
+{
+    return {
+        native_requirement_groups( source ),
+        source.alternatives ? std::make_optional( native_requirement_groups( *source.alternatives ) ) :
+        std::nullopt,
+        owner, !source.merge
+    };
+}
 
 struct recipe_group_definition_data {
     std::string id;
@@ -1081,7 +1131,7 @@ struct requirement_definition_handle {
     requirement_definition_handle &component_any( const sol::table &choices ) {
         require_building_handle( token, *definition, "requirement" );
         const std::size_t count = require_dense_array(
-                                      choices, "requirement component alternatives", 1, 128 );
+                                      choices, "requirement component alternatives", 1 );
         std::vector<component_requirement> group;
         group.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
@@ -1121,7 +1171,7 @@ struct requirement_definition_handle {
     requirement_definition_handle &tool_any( const sol::table &choices ) {
         require_building_handle( token, *definition, "requirement" );
         const std::size_t count = require_dense_array(
-                                      choices, "requirement tool alternatives", 1, 128 );
+                                      choices, "requirement tool alternatives", 1 );
         std::vector<component_requirement> group;
         group.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
@@ -1165,7 +1215,7 @@ struct requirement_definition_handle {
     requirement_definition_handle &quality_any( const sol::table &choices ) {
         require_building_handle( token, *definition, "requirement" );
         const std::size_t count = require_dense_array(
-                                      choices, "requirement quality alternatives", 1, 128 );
+                                      choices, "requirement quality alternatives", 1 );
         std::vector<quality_requirement_definition> group;
         group.reserve( count );
         for( std::size_t index = 1; index <= count; ++index ) {
@@ -2897,6 +2947,28 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->name = read_text_option( options, "name", {}, "requirement name" );
         return requirement_definition_handle{ std::move( definition ), transaction->token };
     } );
+    content.set_function( "merge_requirement", [transaction]( const requirement_definition_handle & handle,
+    const sol::optional<requirement_definition_handle> & alternatives ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot merge a requirement owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "requirement" );
+        if( alternatives ) {
+            if( alternatives->token != transaction->token || alternatives->definition == handle.definition ) {
+                throw std::runtime_error( "requirement alternatives need a separate builder from this Mod" );
+            }
+            require_building_handle( alternatives->token, *alternatives->definition,
+                                     "requirement alternatives" );
+            if( !alternatives->definition->id.empty() || !alternatives->definition->name.empty() ) {
+                throw std::runtime_error( "requirement alternatives cannot have an id or a name" );
+            }
+            alternatives->definition->registered = true;
+            handle.definition->alternatives = alternatives->definition;
+        }
+        handle.definition->merge = true;
+        handle.definition->registered = true;
+        transaction->requirements.push_back( { definition_operation::add, handle.definition } );
+    } );
     content.set_function( "RecipeGroup", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -3798,15 +3870,22 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
 
         std::set<std::string> requirement_ids;
+        std::set<std::string> exclusive_requirement_ids;
         for( const requirement_registration &entry : pimpl_->requirements ) {
             const requirement_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "requirement" );
-            if( definition.components.empty() && definition.tools.empty() && definition.qualities.empty() ) {
+            if( definition.components.empty() && definition.tools.empty() && definition.qualities.empty() &&
+                ( !definition.alternatives || ( definition.alternatives->components.empty() &&
+                    definition.alternatives->tools.empty() && definition.alternatives->qualities.empty() ) ) ) {
                 throw std::runtime_error( "requirement '" + definition.id + "' must contain native requirements" );
             }
-            if( !requirement_ids.insert( definition.id ).second ) {
+            const bool first = requirement_ids.insert( definition.id ).second;
+            if( !first && ( !definition.merge || exclusive_requirement_ids.count( definition.id ) != 0 ) ) {
                 throw std::runtime_error( "requirement '" + definition.id +
                                           "' is registered more than once per transaction" );
+            }
+            if( !definition.merge ) {
+                exclusive_requirement_ids.insert( definition.id );
             }
         }
         const auto validate_requirement_groups = [&]( const std::string & id,
@@ -3822,6 +3901,10 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                         !native_int( component.count ) ) {
                         throw std::runtime_error( "requirement '" + id + "' has an invalid " + kind );
                     }
+                    // Some native definitions are still waiting for copy-from resolution during preparation.
+                    if( !check_engine_state ) {
+                        continue;
+                    }
                     const bool valid = component.requirement ?
                                        requirement_ids.count( component.id ) != 0 ||
                                        requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
@@ -3835,27 +3918,35 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
         };
-        for( const requirement_registration &entry : pimpl_->requirements ) {
-            const requirement_definition_data &definition = *entry.definition;
-            validate_requirement_groups( definition.id, definition.components, "component", false );
-            validate_requirement_groups( definition.id, definition.tools, "tool", true );
-            for( const std::vector<quality_requirement_definition> &group : definition.qualities ) {
+        const auto validate_requirement = [&]( const std::string &id,
+        const requirement_definition_data &groups ) {
+            validate_requirement_groups( id, groups.components, "component", false );
+            validate_requirement_groups( id, groups.tools, "tool", true );
+            for( const std::vector<quality_requirement_definition> &group : groups.qualities ) {
                 if( group.empty() ) {
-                    throw std::runtime_error( "requirement '" + definition.id +
-                                              "' has an empty quality alternative group" );
+                    throw std::runtime_error( "requirement '" + id + "' has an empty quality alternative group" );
                 }
                 for( const quality_requirement_definition &quality : group ) {
                     if( quality.id.empty() || quality.level <= 0 || !native_int( quality.level ) ||
                         quality.count <= 0 || !native_int( quality.count ) ||
-                        ( tool_quality_ids.count( quality.id ) == 0 && !quality_id( quality.id ).is_valid() ) ) {
-                        throw std::runtime_error( "requirement '" + definition.id +
-                                                  "' references an invalid quality" );
+                        ( check_engine_state && tool_quality_ids.count( quality.id ) == 0 &&
+                          !quality_id( quality.id ).is_valid() ) ) {
+                        throw std::runtime_error( "requirement '" + id + "' references an invalid quality" );
                     }
                 }
             }
-            validate_operation( entry.operation,
-                                requirement_data::registry().count( requirement_id( definition.id ) ) != 0,
-                                definition.id, "requirement" );
+        };
+        for( const requirement_registration &entry : pimpl_->requirements ) {
+            const requirement_definition_data &definition = *entry.definition;
+            validate_requirement( definition.id, definition );
+            if( definition.alternatives ) {
+                validate_requirement( definition.id, *definition.alternatives );
+            }
+            if( !definition.merge ) {
+                validate_operation( entry.operation,
+                                    requirement_data::registry().count( requirement_id( definition.id ) ) != 0,
+                                    definition.id, "requirement" );
+            }
         }
 
         std::set<std::string> recipe_group_ids;
@@ -4514,14 +4605,24 @@ bool items_content_transaction::validate_scaled_requirement_set(
                 !ids.insert( id ).second ) {
                 throw std::runtime_error( "has invalid requirement '" + id + "'" );
             }
-            const auto staged = std::find_if(
-                                    pimpl_->requirements.begin(), pimpl_->requirements.end(),
-            [&id]( const requirement_registration & entry ) {
-                return entry.definition->id == id;
-            } );
-            const auto existing = requirement_data::registry().find( requirement_id( id ) );
-            if( staged == pimpl_->requirements.end() &&
-                existing == requirement_data::registry().end() ) {
+            const requirement_id native_id( id );
+            std::vector<requirement_source_layer> pending;
+            for( const requirement_registration &entry : pimpl_->requirements ) {
+                if( entry.definition->id == id ) {
+                    pending.push_back( native_requirement_layer( *entry.definition, pimpl_->owner ) );
+                    pending.back().definition.id_ = native_id;
+                    pending.back().definition.name_ = entry.definition->name.native();
+                }
+            }
+            const auto existing = requirement_data::registry().find( native_id );
+            std::optional<requirement_data> staged;
+            if( !pending.empty() ) {
+                staged = requirement_data::resolve_requirement_layers( native_id, pending );
+            }
+            const requirement_data *effective = staged ? &*staged :
+                                                existing == requirement_data::registry().end() ? nullptr :
+                                                &existing->second;
+            if( !effective ) {
                 throw std::runtime_error( "has invalid requirement '" + id + "'" );
             }
             const auto scaled_counts_fit = [count]( const auto & groups ) {
@@ -4556,45 +4657,23 @@ bool items_content_transaction::validate_scaled_requirement_set(
                     target.push_back( std::move( scaled_group ) );
                 }
             };
-            bool counts_fit = false;
-            if( staged != pimpl_->requirements.end() ) {
-                counts_fit = scaled_counts_fit( staged->definition->components ) &&
-                             scaled_counts_fit( staged->definition->tools );
-                if( counts_fit ) {
-                    append_scaled_groups(
-                        staged->definition->components, scaled_component_groups,
-                    []( const component_requirement & component ) {
-                        return component.id;
-                    }, []( const component_requirement & component ) {
-                        return component.requirement;
-                    } );
-                    append_scaled_groups(
-                        staged->definition->tools, scaled_tool_groups,
-                    []( const component_requirement & component ) {
-                        return component.id;
-                    }, []( const component_requirement & component ) {
-                        return component.requirement;
-                    } );
-                }
-            } else {
-                counts_fit = scaled_counts_fit( existing->second.get_components() ) &&
-                             scaled_counts_fit( existing->second.get_tools() );
-                if( counts_fit ) {
-                    append_scaled_groups(
-                        existing->second.get_components(), scaled_component_groups,
-                    []( const item_comp & component ) {
-                        return component.type.str();
-                    }, []( const item_comp & component ) {
-                        return component.requirement;
-                    } );
-                    append_scaled_groups(
-                        existing->second.get_tools(), scaled_tool_groups,
-                    []( const tool_comp & component ) {
-                        return component.type.str();
-                    }, []( const tool_comp & component ) {
-                        return component.requirement;
-                    } );
-                }
+            const bool counts_fit = scaled_counts_fit( effective->get_components() ) &&
+                                    scaled_counts_fit( effective->get_tools() );
+            if( counts_fit ) {
+                append_scaled_groups(
+                    effective->get_components(), scaled_component_groups,
+                []( const item_comp & component ) {
+                    return component.type.str();
+                }, []( const item_comp & component ) {
+                    return component.requirement;
+                } );
+                append_scaled_groups(
+                    effective->get_tools(), scaled_tool_groups,
+                []( const tool_comp & component ) {
+                    return component.type.str();
+                }, []( const tool_comp & component ) {
+                    return component.requirement;
+                } );
             }
             if( !counts_fit ) {
                 throw std::runtime_error(
@@ -5339,42 +5418,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         id, previous == requirement_data::registry().end() ?
                         std::optional<requirement_data>() : std::optional<requirement_data>( previous->second ) );
                     const requirement_definition_data &source = *entry.definition;
-                    requirement_data::alter_item_comp_vector components;
-                    for( const std::vector<component_requirement> &source_group : source.components ) {
-                        std::vector<item_comp> group;
-                        for( const component_requirement &component : source_group ) {
-                            item_comp native_component( itype_id( component.id ),
-                                                        static_cast<int>( component.count ) );
-                            native_component.requirement = component.requirement;
-                            group.push_back( native_component );
-                        }
-                        components.push_back( std::move( group ) );
-                    }
-                    requirement_data::alter_tool_comp_vector tools;
-                    for( const std::vector<component_requirement> &source_group : source.tools ) {
-                        std::vector<tool_comp> group;
-                        for( const component_requirement &tool : source_group ) {
-                            tool_comp native_tool( itype_id( tool.id ), static_cast<int>( tool.count ) );
-                            native_tool.requirement = tool.requirement;
-                            group.push_back( native_tool );
-                        }
-                        tools.push_back( std::move( group ) );
-                    }
-                    requirement_data::alter_quali_req_vector qualities;
-                    for( const std::vector<quality_requirement_definition> &source_group : source.qualities ) {
-                        std::vector<quality_requirement> group;
-                        group.reserve( source_group.size() );
-                        for( const quality_requirement_definition &quality : source_group ) {
-                            group.emplace_back( quality_id( quality.id ),
-                                                static_cast<int>( quality.count ),
-                                                static_cast<int>( quality.level ) );
-                        }
-                        qualities.push_back( std::move( group ) );
-                    }
-                    requirement_data native( tools, qualities, components );
-                    native.id_ = id;
-                    native.name_ = source.name.native();
-                    requirement_data::registry()[id] = std::move( native );
+                    requirement_source_layer native = native_requirement_layer( source, pimpl_->owner );
+                    native.definition.id_ = id;
+                    native.definition.name_ = source.name.native();
+                    requirement_data::register_requirement_layer( std::move( native ) );
                 }
                 break;
             }
@@ -5992,6 +6039,7 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
             break;
         case items_content_rollback_phase::requirements:
             for( auto it = pimpl_->requirement_undo.rbegin(); it != pimpl_->requirement_undo.rend(); ++it ) {
+                requirement_data::pop_requirement_layer( it->first );
                 requirement_data::registry().erase( it->first );
                 if( it->second ) {
                     requirement_data::registry()[it->first] = *it->second;
@@ -6710,29 +6758,37 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, operation_name( entry.operation ) );
                 hash_part( state, v.id );
                 hash_part( state, v.name );
-                for( const auto &g : v.components ) {
-                    hash_part( state, "components" );
-                    for( const auto &e : g ) {
-                        hash_part( state, e.id );
-                        hash_part( state, std::to_string( e.count ) );
-                        hash_part( state, e.requirement ? "requirement" : "item" );
+                hash_part( state, v.merge ? "merge" : "whole" );
+                const auto hash_groups = [&]( const requirement_definition_data &source ) {
+                    for( const auto &g : source.components ) {
+                        hash_part( state, "components" );
+                        for( const auto &e : g ) {
+                            hash_part( state, e.id );
+                            hash_part( state, std::to_string( e.count ) );
+                            hash_part( state, e.requirement ? "requirement" : "item" );
+                        }
                     }
-                }
-                for( const auto &g : v.tools ) {
-                    hash_part( state, "tools" );
-                    for( const auto &e : g ) {
-                        hash_part( state, e.id );
-                        hash_part( state, std::to_string( e.count ) );
-                        hash_part( state, e.requirement ? "requirement" : "item" );
+                    for( const auto &g : source.tools ) {
+                        hash_part( state, "tools" );
+                        for( const auto &e : g ) {
+                            hash_part( state, e.id );
+                            hash_part( state, std::to_string( e.count ) );
+                            hash_part( state, e.requirement ? "requirement" : "item" );
+                        }
                     }
-                }
-                for( const auto &g : v.qualities ) {
-                    hash_part( state, "qualities" );
-                    for( const auto &e : g ) {
-                        hash_part( state, e.id );
-                        hash_part( state, std::to_string( e.level ) );
-                        hash_part( state, std::to_string( e.count ) );
+                    for( const auto &g : source.qualities ) {
+                        hash_part( state, "qualities" );
+                        for( const auto &e : g ) {
+                            hash_part( state, e.id );
+                            hash_part( state, std::to_string( e.level ) );
+                            hash_part( state, std::to_string( e.count ) );
+                        }
                     }
+                };
+                hash_groups( v );
+                if( v.alternatives ) {
+                    hash_part( state, "alternatives" );
+                    hash_groups( *v.alternatives );
                 }
             }
             break;
