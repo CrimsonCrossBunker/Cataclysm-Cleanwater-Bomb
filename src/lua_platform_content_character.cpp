@@ -7772,6 +7772,7 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, std::to_string( inputs->body_part_effects.size() ) );
                         for( const auto &[part, effects] : inputs->body_part_effects ) {
                             hash_part( state, part );
+                            hash_part( state, std::to_string( effects.size() ) );
                             for( const std::string &effect : effects ) {
                                 hash_part( state, effect );
                             }
