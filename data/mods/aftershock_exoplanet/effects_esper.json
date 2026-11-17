@@ -14,14 +14,7 @@
     "desc": [ "" ],
     "rating": "bad",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "ench_effects": [
-          { "effect": "hallu", "intensity": 1 },
-          { "effect": "visuals", "intensity": 1 },
-          { "effect": "nausea", "intensity": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_esper_tincture_side_effects_0"
     ]
   },
   {
@@ -31,7 +24,7 @@
     "desc": [ "You used the enkindling tincture and something about it seems to be working." ],
     "rating": "mixed",
     "enchantments": [
-      { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_afs_esper_tincture_side_effects", "intensity": 1 } ] }
+      "INLINE_ENCH_effect_afs_esper_tincture_geist_0"
     ]
   },
   {
@@ -41,7 +34,7 @@
     "desc": [ "You used the enkindling tincture and something about it seems to be working." ],
     "rating": "mixed",
     "enchantments": [
-      { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_afs_esper_tincture_side_effects", "intensity": 1 } ] }
+      "INLINE_ENCH_effect_afs_esper_tincture_spark_0"
     ]
   },
   {
@@ -51,7 +44,7 @@
     "desc": [ "You used the enkindling tincture and something about it seems to be working." ],
     "rating": "mixed",
     "enchantments": [
-      { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_afs_esper_tincture_side_effects", "intensity": 1 } ] }
+      "INLINE_ENCH_effect_afs_esper_tincture_sybil_0"
     ]
   },
   {
@@ -61,7 +54,7 @@
     "desc": [ "You used the enkindling tincture and something about it seems to be working." ],
     "rating": "mixed",
     "enchantments": [
-      { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_afs_esper_tincture_side_effects", "intensity": 1 } ] }
+      "INLINE_ENCH_effect_afs_esper_tincture_whisper_0"
     ]
   },
   {
@@ -253,7 +246,7 @@
     "remove_message": "This was it.  You avoided the attack, but can you avoid the next one?",
     "max_duration": "30 minutes",
     "//": "Needs to be FORCEFIELD because it has to check if you get hit to be removed, and if it's EVASION, you'll never get hit.",
-    "enchantments": [ { "values": [ { "value": "FORCEFIELD", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_afs_precog_damage_foresee_0" ]
   },
   {
     "type": "effect_type",

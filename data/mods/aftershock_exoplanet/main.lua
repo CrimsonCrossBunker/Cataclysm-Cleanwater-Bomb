@@ -45,3 +45,5 @@ require("conditional_enchantments")
 require("enchantments")
 
 require("enchantment_variables")
+
+require("effect_enchantments")
