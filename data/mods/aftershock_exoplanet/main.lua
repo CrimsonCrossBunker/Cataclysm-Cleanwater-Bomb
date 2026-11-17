@@ -37,3 +37,5 @@ require("ammo_effects")
 require("tool_qualities")
 
 require("vitamins")
+
+require("snippets")
