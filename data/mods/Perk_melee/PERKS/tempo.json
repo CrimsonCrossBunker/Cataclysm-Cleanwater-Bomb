@@ -47,14 +47,7 @@
     "name": { "str": "Measured Throws" },
     "description": "Your throwing attacks deal 100% more damage for every combat tempo stack you have.",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "THROW_DAMAGE",
-            "multiply": { "math": [ "u_effect_intensity('mabuff:buff_perk_tempo') > 0 ? u_effect_intensity('mabuff:buff_perk_tempo') : 0" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_MELEE_PERK_TEMPO_THROW_0"
     ]
   }
 ]
