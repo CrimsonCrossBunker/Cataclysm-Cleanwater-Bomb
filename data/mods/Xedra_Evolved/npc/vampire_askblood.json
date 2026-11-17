@@ -109,84 +109,6 @@
   },
   {
     "type": "talk_topic",
-    "id": "TALK_FRIEND_FOLLOWER_BLOODFEED_YES",
-    "dynamic_line": {
-      "npc_has_effect": "feed_from_recently",
-      "yes": "It'll have to wait, unfortunately.  If I let you do that too often it'll be very bad for my health.",
-      "no": "Sure!  Anything to help you feel better."
-    },
-    "responses": [
-      {
-        "text": "[Drink from them] Thank you.  Can we talk about something else?",
-        "topic": "TALK_NONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } },
-        "effect": [ { "run_eocs": "EOC_VAMPIRE_DRINK_FROM_HUMAN" }, { "run_eocs": "EOC_NPC_GOT_DRANK_FROM_FRIEND" } ]
-      },
-      {
-        "text": "[Drink from them] Thank you.  See you later.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } },
-        "effect": [ { "run_eocs": "EOC_VAMPIRE_DRINK_FROM_HUMAN" }, { "run_eocs": "EOC_NPC_GOT_DRANK_FROM_FRIEND" } ]
-      },
-      {
-        "text": "I changed my mind.  Keep your blood.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } }
-      },
-      {
-        "text": "Got it.  Can we talk about something else?",
-        "topic": "TALK_NONE",
-        "condition": { "npc_has_effect": "feed_from_recently" }
-      },
-      {
-        "text": "Got it.  See you later.",
-        "topic": "TALK_DONE",
-        "condition": { "npc_has_effect": "feed_from_recently" }
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
-    "id": "TALK_FRIEND_FOLLOWER_BLOODFEED_KINDA",
-    "dynamic_line": {
-      "npc_has_effect": "feed_from_recently",
-      "yes": "I'm not letting you do that this soon after last time.  I need that blood too, you know?",
-      "no": "If you really need to, then sure you can.  Don't make an habit out of it, however."
-    },
-    "responses": [
-      {
-        "text": "[Drink from them] Thank you.  Can we talk about something else?",
-        "topic": "TALK_NONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } },
-        "effect": [ { "run_eocs": "EOC_VAMPIRE_DRINK_FROM_HUMAN" }, { "run_eocs": "EOC_NPC_GOT_DRANK_FROM_ALLY" } ],
-        "opinion": { "trust": -1, "value": -1 }
-      },
-      {
-        "text": "[Drink from them] Thank you.  See you later.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } },
-        "effect": [ { "run_eocs": "EOC_VAMPIRE_DRINK_FROM_HUMAN" }, { "run_eocs": "EOC_NPC_GOT_DRANK_FROM_ALLY" } ],
-        "opinion": { "trust": -1, "value": -1 }
-      },
-      {
-        "text": "I changed my mind.  Keep your blood.",
-        "topic": "TALK_DONE",
-        "condition": { "not": { "npc_has_effect": "feed_from_recently" } }
-      },
-      {
-        "text": "Got it.  Can we talk about something else?",
-        "topic": "TALK_FRIEND",
-        "condition": { "npc_has_effect": "feed_from_recently" }
-      },
-      {
-        "text": "Got it.  See you later.",
-        "topic": "TALK_DONE",
-        "condition": { "npc_has_effect": "feed_from_recently" }
-      }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "TALK_FRIEND_FOLLOWER_BLOODFEED_NOPE",
     "dynamic_line": "Nope.  I'm not going to be your blood bag.  Find someone else for that.",
     "responses": [
@@ -209,36 +131,5 @@
     "name": [ "Gave you blood" ],
     "desc": [ "This person won't accept to let you drink more of their blood for a while." ],
     "max_duration": "100 d"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_DRINK_FROM_HUMAN",
-    "effect": [
-      {
-        "if": "has_beta",
-        "then": { "if": { "npc_has_trait": "FAE_CREATURE" }, "then": { "math": [ "u_vampire_just_drank_fae_blood = 1" ] } }
-      },
-      { "run_eocs": [ "EOC_VAMPIRE_GAIN_BLOOD_VITAMIN", "EOC_DHAMPIR_GAIN_CALORIES_FROM_NON_BAGGED_BLOOD" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_NPC_GOT_DRANK_FROM_FRIEND",
-    "global": false,
-    "effect": [
-      { "npc_add_effect": "feed_from_recently", "duration": "5 d" },
-      { "math": [ "n_vitamin('blood') -= 400 + rand(100)" ] },
-      { "math": [ "n_vitamin('redcells') -= 400 + rand(100)" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_NPC_GOT_DRANK_FROM_ALLY",
-    "global": false,
-    "effect": [
-      { "npc_add_effect": "feed_from_recently", "duration": "10 d" },
-      { "math": [ "n_vitamin('blood') -= 400 + rand(100)" ] },
-      { "math": [ "n_vitamin('redcells') -= 400 + rand(100)" ] }
-    ]
   }
 ]

@@ -103,37 +103,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_VAMPIRE_BLOOD_DRINKING_DIRECTLY",
-    "eoc_type": "EVENT",
-    "required_event": "character_eats_item",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "demihuman_blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "mutant_human_blood", { "context_val": "itype" } ] },
-            { "compare_string": [ "fae_blood", { "context_val": "itype" } ] }
-          ]
-        },
-        { "or": [ { "u_has_any_trait": [ "DHAMPIR_TRAIT", "VAMPIRE" ] }, { "u_has_effect": "vampire_virus" } ] }
-      ]
-    },
-    "effect": [
-      {
-        "if": { "u_has_trait": "DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD" },
-        "then": [ { "math": [ "u_calories('dont_affect_weariness': true) += 350 + rand(150)" ] } ]
-      },
-      {
-        "if": { "compare_string": [ "fae_blood", { "context_val": "itype" } ] },
-        "then": { "math": [ "u_vampire_just_drank_fae_blood = 1" ] }
-      },
-      { "u_lose_morale": "morale_vw_no_fun" },
-      { "run_eocs": "EOC_VAMPIRE_GAIN_BLOOD_VITAMIN" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_DRINK_BLOOD_WITH_FANGS_activated",
     "condition": {
       "or": [

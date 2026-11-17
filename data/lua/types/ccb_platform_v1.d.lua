@@ -9935,6 +9935,13 @@ local CcbNeedsApi = {}
 ---@return CcbResult result `value` contains before and after vitamin levels.
 function CcbNeedsApi.modify_vitamin(character, id, delta) end
 
+---Adjust stored calories through native calorie accounting.
+---@param character GameHandle Exact live Character handle.
+---@param delta integer Kilocalorie change within -1000000..1000000.
+---@param ignore_weariness? boolean Skip the weariness adjustment when true.
+---@return CcbResult result `value` contains before and after needs snapshots and the applied delta.
+function CcbNeedsApi.modify_calories(character, delta, ignore_weariness) end
+
 ---@class CcbFactionsApi
 local CcbFactionsApi = {}
 

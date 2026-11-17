@@ -2,12 +2,17 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_catch.h"
+#include "dialogue.h"
 #include "effect.h"
 #include "enums.h"
 #include "item.h"
+#include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "math_parser_diag_value.h"
+#include "npc.h"
+#include "npc_opinion.h"
 #include "player_helpers.h"
+#include "talker.h"
 #include "type_id.h"
 
 static const itype_id itype_item_hedge_cure_cold_or_flu( "item_hedge_cure_cold_or_flu" );
@@ -55,8 +60,10 @@ TEST_CASE( "xedra_lua_consumables_apply_native_effects", "[.][mods][xedra_evolve
 }
 
 static const itype_id itype_demihuman_blood( "demihuman_blood" );
+static const itype_id itype_fae_blood( "fae_blood" );
 static const itype_id itype_vampire_blood( "vampire_blood" );
 static const efftype_id effect_anathema_need_vampire_blood( "effect_anathema_need_vampire_blood" );
+static const efftype_id effect_feed_from_recently( "feed_from_recently" );
 static const efftype_id effect_recent_vampire_drink( "effect_recent_vampire_drink" );
 static const efftype_id effect_vampire_virus( "vampire_virus" );
 static const morale_type morale_drank_blood( "morale_drank_blood" );
@@ -64,11 +71,16 @@ static const trait_id trait_ANATHEMA_WEAKNESS_MIND_CHAOS( "ANATHEMA_WEAKNESS_MIN
 static const trait_id trait_ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD( "ANATHEMA_WEAKNESS_NEED_VAMPIRE_BLOOD" );
 static const trait_id trait_BLOOD_FUN( "BLOOD_FUN" );
 static const trait_id trait_BLOOD_FUN_UPGRADE( "BLOOD_FUN_UPGRADE" );
+static const trait_id trait_DHAMPIR_TRAIT( "DHAMPIR_TRAIT" );
+static const trait_id trait_DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD( "DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD" );
 static const trait_id trait_VAMPIRE( "VAMPIRE" );
 static const trait_id trait_VAMPIRE_ANATHEMA( "VAMPIRE_ANATHEMA" );
 static const trait_id trait_VAMPIRE_DRINK_VAMPIRE_BLOOD( "VAMPIRE_DRINK_VAMPIRE_BLOOD" );
 static const trait_id trait_VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD( "VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD" );
 static const vitamin_id vitamin_human_blood_vitamin( "human_blood_vitamin" );
+static const vitamin_id vitamin_drank_fae_blood( "drank_fae_blood" );
+static const vitamin_id vitamin_blood( "blood" );
+static const vitamin_id vitamin_redcells( "redcells" );
 static const vitamin_id vitamin_vampire_blood_vitamin( "vampire_blood_vitamin" );
 
 TEST_CASE( "xedra_lua_vampire_diet_preserves_blood_effects", "[.][mods][xedra_evolved]" )
@@ -127,6 +139,78 @@ TEST_CASE( "xedra_lua_vampire_diet_preserves_blood_effects", "[.][mods][xedra_ev
         const int nourishment = player.vitamin_get( vitamin_human_blood_vitamin );
         CHECK( nourishment >= 1150 );
         CHECK( nourishment <= 1300 );
+    }
+}
+
+TEST_CASE( "xedra_lua_living_blood_through_item_and_dialogue", "[.][mods][xedra_evolved]" )
+{
+    const std::string feeding_count = "dhampir_have_ever_drunk_blood";
+    const std::string pending_fae_blood = "vampire_just_drank_fae_blood";
+    clear_avatar();
+    avatar &player = get_avatar();
+    cata::lua_platform::runtime_world_ready( true );
+    player.set_mutation( trait_DHAMPIR_TRAIT );
+    player.set_mutation( trait_DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD );
+    player.vitamin_set( vitamin_human_blood_vitamin, 0 );
+    player.vitamin_set( vitamin_drank_fae_blood, 0 );
+
+    SECTION( "a bag of fae blood feeds the player and advances the dhampir counter" ) {
+        const bool repeated = GENERATE( false, true );
+        player.set_value( feeding_count, diag_value( repeated ? 20000.0 : 0.0 ) );
+        const int kcal_before = player.get_stored_kcal();
+        item blood( itype_fae_blood, calendar::turn, 1 );
+        REQUIRE( player.consume( blood, true, true ) != trinary::NONE );
+        const int gained_kcal = player.get_stored_kcal() - kcal_before;
+        CHECK( gained_kcal >= 350 );
+        CHECK( gained_kcal <= 500 );
+        CHECK( player.get_value( feeding_count ).dbl() == ( repeated ? 1.0 : 2.0 ) );
+        CHECK( player.get_value( pending_fae_blood ).dbl() == 0.0 );
+        CHECK( player.vitamin_get( vitamin_drank_fae_blood ) == 5 );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) >= 250 );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) <= 350 );
+    }
+
+    SECTION( "a friend or ally gives blood once and keeps the original cooldown" ) {
+        const bool friend_donor = GENERATE( false, true );
+        npc donor;
+        donor.normalize();
+        donor.setID( character_id( 2718 ), true );
+        donor.vitamin_set( vitamin_blood, 0 );
+        donor.vitamin_set( vitamin_redcells, 0 );
+        const int trust_before = donor.op_of_u.trust;
+        const int opinion_before = donor.op_of_u.value;
+        const int kcal_before = player.get_stored_kcal();
+
+        const talk_topic topic( friend_donor ?
+                                "TALK_FRIEND_FOLLOWER_BLOODFEED_YES" :
+                                "TALK_FRIEND_FOLLOWER_BLOODFEED_KINDA" );
+        dialogue conversation( get_talker_for( player ), get_talker_for( donor ) );
+        cata::lua_platform::begin_dialogue_session( conversation );
+        conversation.gen_responses( topic );
+        REQUIRE( conversation.responses.size() == 3 );
+        CHECK( conversation.responses.front().success.apply( conversation ).id == "TALK_NONE" );
+
+        const int gained_kcal = player.get_stored_kcal() - kcal_before;
+        CHECK( gained_kcal >= 450 );
+        CHECK( gained_kcal <= 675 );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) >= 250 );
+        CHECK( player.vitamin_get( vitamin_human_blood_vitamin ) <= 350 );
+        CHECK( player.vitamin_get( vitamin_drank_fae_blood ) == 0 );
+        CHECK( player.get_value( feeding_count ).dbl() == 2.0 );
+        CHECK( player.has_morale( morale_drank_blood ) == 45 );
+        CHECK( donor.get_effect_dur( effect_feed_from_recently ) == ( friend_donor ? 5_days : 10_days ) );
+        CHECK( donor.vitamin_get( vitamin_blood ) >= -500 );
+        CHECK( donor.vitamin_get( vitamin_blood ) <= -400 );
+        CHECK( donor.vitamin_get( vitamin_redcells ) >= -500 );
+        CHECK( donor.vitamin_get( vitamin_redcells ) <= -400 );
+        CHECK( donor.op_of_u.trust == trust_before - ( friend_donor ? 0 : 1 ) );
+        CHECK( donor.op_of_u.value == opinion_before - ( friend_donor ? 0 : 1 ) );
+
+        conversation.gen_responses( topic );
+        REQUIRE( conversation.responses.size() == 2 );
+        CHECK( conversation.responses.front().success.next_topic.id ==
+               ( friend_donor ? "TALK_NONE" : "TALK_FRIEND" ) );
+        cata::lua_platform::end_dialogue_session( conversation );
     }
 }
 #endif
