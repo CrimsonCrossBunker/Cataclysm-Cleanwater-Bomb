@@ -16,6 +16,7 @@
 #include "debug.h"
 #include "drawing_primitives.h"
 #include "enum_conversions.h"
+#include "fire.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
 #include "item.h"
@@ -549,6 +550,26 @@ static void execute_add_fire( map &md,
 
 }
 
+static bool pre_burn_item( item &it, std::vector<item> &remains )
+{
+    for( int turn = 0; turn < 20; ++turn ) {
+        fire_data fire( 3 );
+        if( it.burn( fire ) ) {
+            for( const item *content : it.all_items_top() ) {
+                if( content->is_irremovable() ) {
+                    continue;
+                }
+                item survivor = *content;
+                if( !pre_burn_item( survivor, remains ) ) {
+                    remains.push_back( std::move( survivor ) );
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 // Apply pre_burn effects to every tile, skipping the probability gate.
 static void apply_pre_burn_tiles( map &md,
                                   std::list<tripoint_bub_ms> &all_points_in_map )
@@ -560,6 +581,8 @@ static void apply_pre_burn_tiles( map &md,
             continue;
         }
 
+        const ter_id original_terrain = md.ter( current_tile );
+        const furn_id original_furniture = md.furn( current_tile );
         const bool is_flammable_ter =
             md.has_flag_ter( ter_furn_flag::TFLAG_FLAMMABLE, current_tile ) ||
             md.has_flag_ter( ter_furn_flag::TFLAG_FLAMMABLE_ASH, current_tile ) ||
@@ -590,25 +613,37 @@ static void apply_pre_burn_tiles( map &md,
             md.furn_set( current_tile.xy(), furn_str_id::NULL_ID() );
         }
 
-        if( !md.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, current_tile ) &&
-            !md.has_flag_ter( ter_furn_flag::TFLAG_LIQUID, current_tile ) ) {
-            // Mirrors seed preservation in execute_move_items.
-            const bool preserve_seed =
-                md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SEALED, current_tile ) &&
-                md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_CONTAINER, current_tile ) &&
-                md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_PLANT, current_tile );
-            if( preserve_seed ) {
-                map_stack items = md.i_at( current_tile.xy() );
-                for( auto it = items.begin(); it != items.end(); ) {
-                    if( it->is_seed() ) {
-                        ++it;
-                    } else {
-                        it = items.erase( it );
-                    }
+        if( md.has_flag_ter( ter_furn_flag::TFLAG_SWIMMABLE, current_tile ) ||
+            md.has_flag_ter( ter_furn_flag::TFLAG_LIQUID, current_tile ) ||
+            ( md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SEALED, current_tile ) &&
+              !md.has_flag_ter_or_furn( ter_furn_flag::TFLAG_ALLOW_FIELD_EFFECT, current_tile ) ) ) {
+            continue;
+        }
+
+        const bool burned = ( is_flammable_ter && md.ter( current_tile ) != original_terrain ) ||
+                            md.furn( current_tile ) != original_furniture;
+        const int loss_percent = rng( 10, 35 );
+        std::vector<item> remains;
+        map_stack items = md.i_at( current_tile );
+        for( auto it = items.begin(); it != items.end(); ) {
+            if( it->count_by_charges() ) {
+                it->charges -= roll_remainder( it->charges * loss_percent / 100.0 );
+                if( it->charges <= 0 ) {
+                    it = items.erase( it );
+                    continue;
                 }
-            } else {
-                md.i_clear( current_tile.xy() );
+            } else if( x_in_y( loss_percent, 100 ) ) {
+                it = items.erase( it );
+                continue;
             }
+            if( burned && pre_burn_item( *it, remains ) ) {
+                it = items.erase( it );
+            } else {
+                ++it;
+            }
+        }
+        for( item &survivor : remains ) {
+            md.add_item_or_charges( current_tile, std::move( survivor ) );
         }
     }
 }

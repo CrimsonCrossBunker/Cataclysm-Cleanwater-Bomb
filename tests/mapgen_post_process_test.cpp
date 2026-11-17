@@ -575,7 +575,9 @@ static void build_pre_burn_immunity_layout( map &m, int z_level )
 
     // Items on immune terrain vs water
     m.ter_set( tripoint_bub_ms( 1, 13, z_level ), ter_t_thconc_floor );
-    m.add_item( tripoint_bub_ms( 1, 13, z_level ), item( itype_rock ) );
+    for( int i = 0; i < 100; ++i ) {
+        m.add_item( tripoint_bub_ms( 1, 13, z_level ), item( itype_rock ) );
+    }
     m.ter_set( tripoint_bub_ms( 3, 13, z_level ), ter_t_water_dp );
     m.add_item( tripoint_bub_ms( 3, 13, z_level ), item( itype_rock ) );
 }
@@ -645,13 +647,48 @@ TEST_CASE( "post_process_pre_burn_material_immunity", "[mapgen][post_process]" )
     }
 
     {
-        INFO( "items: cleared on non-water tiles, preserved in water" );
-        // Items on concrete floor: cleared (fire chaos destroys contents)
-        CHECK( here.i_at( tripoint_bub_ms( 1, 13, 0 ) ).empty() );
+        INFO( "items: limited random loss on concrete, preserved in water" );
+        CHECK( here.i_at( tripoint_bub_ms( 1, 13, 0 ) ).size() > 0 );
+        CHECK( here.i_at( tripoint_bub_ms( 1, 13, 0 ) ).size() < 100 );
         // Items in water: preserved
         CHECK_FALSE( here.i_at( tripoint_bub_ms( 3, 13, 0 ) ).empty() );
     }
 
+    clear_overmaps();
+}
+
+TEST_CASE( "post_process_pre_burn_item_protection", "[mapgen][post_process]" )
+{
+    clear_map_and_reset_player();
+    map &here = get_map();
+    build_pre_burn_immunity_layout( here, 0 );
+    const tripoint_bub_ms burned( 10, 15, 0 );
+    const tripoint_bub_ms intact( 12, 15, 0 );
+    const tripoint_bub_ms safe( 14, 15, 0 );
+    const tripoint_bub_ms containers( 16, 15, 0 );
+    here.ter_set( intact, ter_t_thconc_floor );
+    here.furn_set( safe, furn_str_id( "f_safe_c" ) );
+    for( int i = 0; i < 100; ++i ) {
+        item paper( itype_id( "paper" ), calendar::turn, 1 );
+        here.add_item( burned, paper );
+        here.add_item( intact, paper );
+        here.add_item( safe, paper );
+        item bag( itype_id( "bag_plastic" ) );
+        REQUIRE( bag.put_in( item( itype_rock ), pocket_type::CONTAINER ).success() );
+        here.add_item( containers, bag );
+    }
+    calendar::turn = calendar::start_of_cataclysm + 14_days;
+    rng_set_engine_seed( 42424242 );
+    pp_generator_test_pp_pre_burn_only.obj().execute(
+        here, project_to<coords::omt>( here.get_abs_sub() ) );
+
+    CHECK( here.i_at( burned ).empty() );
+    CHECK_FALSE( here.i_at( intact ).empty() );
+    CHECK( here.i_at( safe ).size() == 100 );
+    CHECK_FALSE( here.i_at( containers ).empty() );
+    for( const item &it : here.i_at( containers ) ) {
+        CHECK( it.typeId() == itype_rock );
+    }
     clear_overmaps();
 }
 
