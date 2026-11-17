@@ -166,6 +166,16 @@ class item_location::impl
             return !!what;
         }
 
+    protected:
+        bool get_unresolved_reference( int &saved_index, int64_t &saved_uid ) const {
+            if( !needs_unpacking ) {
+                return false;
+            }
+            saved_index = idx;
+            saved_uid = uid_hint;
+            return true;
+        }
+
     private:
         void ensure_unpacked() const {
             if( needs_unpacking ) {
@@ -279,21 +289,27 @@ class item_location::impl::item_on_map : public item_location::impl
         item_on_map( const map_cursor &cur, int idx, int64_t uid ) : impl( idx, uid ), cur( cur ) {}
 
         void serialize( JsonOut &js ) const override {
-            if( !target() ) {
-                item_location::nowhere.serialize( js );
-                return;
-            }
-            int idx = find_index( cur, target() );
-            if( idx < 0 ) {
-                item_location::nowhere.serialize( js );
-                return;
+            int saved_index = -1;
+            int64_t saved_uid = 0;
+            if( !get_unresolved_reference( saved_index, saved_uid ) ) {
+                const item *target_item = target();
+                if( !target_item ) {
+                    item_location::nowhere.serialize( js );
+                    return;
+                }
+                saved_uid = target_item->uid().get_value();
+                saved_index = find_index( cur, target_item );
+                if( saved_index < 0 ) {
+                    item_location::nowhere.serialize( js );
+                    return;
+                }
             }
             js.start_object();
             js.member( "type", "map" );
             js.member( "position", pos_abs() );
-            js.member( "idx", idx );
-            if( target()->uid().is_valid() ) {
-                js.member( "uid", target()->uid().get_value() );
+            js.member( "idx", saved_index );
+            if( saved_uid != 0 ) {
+                js.member( "uid", saved_uid );
             }
             js.end_object();
         }
@@ -1016,7 +1032,7 @@ item_location::item_location( const vehicle_cursor &vc, item *which )
 item_location item_location::from_vehicle_part( const vehicle_cursor &vc )
 {
     item_location result;
-    result.ptr.reset( new impl::item_on_vehicle( vc, -1 ) );
+    result.ptr = std::make_shared<impl::item_on_vehicle>( vc, -1 );
     return result;
 }
 
@@ -1552,7 +1568,7 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     }
 
     map &here = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     map &primary = reality_bubble();
     const bool regional = session.has_regions();
     const auto map_at = [&]( const tripoint_abs_ms & position ) -> map & {
