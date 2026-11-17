@@ -28,12 +28,6 @@
   },
   {
     "type": "enchantment",
-    "id": "melee_perk_ench_undodging",
-    "condition": "ACTIVE",
-    "values": [ { "value": "DODGE_CHANCE", "add": -20000000 } ]
-  },
-  {
-    "type": "enchantment",
     "id": "melee_perk_ench_perfect_tempo",
     "name": { "str": "Perfect Tempo" },
     "description": " +15 quickness as long as you have the maximum number of combat tempo stacks.",
