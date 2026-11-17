@@ -773,6 +773,11 @@ function ItemDefinition:book(options) end
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label, description) end
 
+---Remove inherited native activation actions and any on_use staged before this call.
+---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
+---@return ItemDefinition self
+function ItemDefinition:clear_use_actions() end
+
 ---@param handler_id string
 ---@param label? string
 ---@return ItemDefinition self
@@ -3064,10 +3069,10 @@ function MartialArtDefinition:on(handler_id) end
 
 ---@class TrapDefinitionOptions
 ---@field id string Stable trap id.
----@field name string Player-facing trap name.
+---@field name string|LocalizedText Player-facing trap name.
 ---@field color string Native color name.
 ---@field symbol string Single map symbol character.
----@field visibility? integer Non-negative spotting difficulty; smaller is easier.
+---@field visibility? integer Native signed spotting difficulty; smaller is easier. Negative native values are preserved.
 ---@field avoidance? integer Non-negative dodge difficulty.
 ---@field difficulty? integer Disarm difficulty from zero through 99; zero means always disarmable.
 ---@field action string Native trap action id, such as `spike` or `none`.

@@ -200,6 +200,7 @@ struct item_definition_data {
     std::map<std::string, std::int64_t> magazine_ammo;
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
+    bool clear_use_actions = false;
     std::string use_handler;
     authored_text use_label;
     std::optional<authored_text> use_description;
@@ -848,6 +849,15 @@ struct item_definition_handle {
         value.read_time_turns = options.get_or<std::int64_t>( "read_time_turns", 0 );
         value.fun = options.get_or<std::int64_t>( "fun", 0 );
         definition->book = std::move( value );
+        return *this;
+    }
+
+    item_definition_handle &clear_use_actions() {
+        require_building_handle( token, *definition, "item" );
+        definition->clear_use_actions = true;
+        definition->use_handler.clear();
+        definition->use_label = {};
+        definition->use_description.reset();
         return *this;
     }
 
@@ -2465,6 +2475,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "comestible", &item_definition_handle::comestible,
         "vitamin", &item_definition_handle::vitamin,
         "book", &item_definition_handle::book,
+        "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
         "on_consume", &item_definition_handle::on_consume );
     ccb.new_usertype<recipe_definition_handle>(
@@ -5635,6 +5646,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->pockets.end() );
                         native->pockets.push_back( std::move( pocket ) );
                     }
+                    if( definition.clear_use_actions ) {
+                        native->use_methods.clear();
+                    }
                     if( !definition.use_handler.empty() ) {
                         const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
                                                       definition.use_handler;
@@ -6858,6 +6872,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.default_container ? "container" : "inherit_container" );
                 hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
+                hash_part( state, v.clear_use_actions ? "clear_use_actions" : "inherit_use_actions" );
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );
                 hash_text( v.use_label.translated );

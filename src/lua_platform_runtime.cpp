@@ -835,7 +835,7 @@ struct relic_procgen_definition_data {
 
 struct trap_definition_data {
     std::string id;
-    std::string name;
+    detail::authored_text name;
     std::string color;
     std::string symbol;
     std::int64_t visibility = 1;
@@ -4511,7 +4511,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<trap_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
+        definition->name = detail::read_singular_text( options["name"], {}, "Trap.name" );
         definition->color = options.get_or( "color", std::string() );
         definition->symbol = options.get_or( "symbol", std::string() );
         definition->visibility = options.get_or<std::int64_t>( "visibility", 1 );
@@ -6655,7 +6655,8 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.name.empty() || definition.color.empty() ||
                 definition.symbol.empty() || definition.action.empty() ||
                 !trap_ids.insert( definition.id ).second ||
-                definition.visibility < 0 ||
+                definition.visibility < std::numeric_limits<int>::min() ||
+                definition.visibility > std::numeric_limits<int>::max() ||
                 definition.avoidance < 0 ||
                 definition.difficulty < 0 || definition.difficulty > 99 ||
                 definition.trap_radius < 0 ||
@@ -8598,7 +8599,7 @@ bool content_transaction::apply( std::string &error )
             trap native;
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
-            native.name_ = no_translation( source.name );
+            native.name_ = source.name.native();
             native.color = color_from_string( source.color, report_color_error::no );
             native.sym = static_cast<int>( source.symbol[0] );
             native.visibility = static_cast<int>( source.visibility );

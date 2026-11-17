@@ -2951,11 +2951,6 @@
     "symbol": "[",
     "looks_like": "backpack",
     "color": "yellow",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "description": "Seems like it could calm local conditions.",
-      "effect_on_conditions": [ "EOC_CANCEL_PORTAL_STORM" ]
-    },
     "pocket_data": [
       {
         "rigid": true,
