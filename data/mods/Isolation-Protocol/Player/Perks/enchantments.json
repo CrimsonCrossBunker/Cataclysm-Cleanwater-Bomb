@@ -1,12 +1,6 @@
 [
   {
     "type": "enchantment",
-    "id": "iso_ranged_adjust",
-    "condition": "ALWAYS",
-    "values": [ { "value": "RANGED_DAMAGE", "multiply": -0.25 } ]
-  },
-  {
-    "type": "enchantment",
     "id": "iso_pain_adjust",
     "condition": "ALWAYS",
     "values": [ { "value": "PAIN", "multiply": { "math": [ "u_pain() > 40 ? -1 : -0.4" ] } } ]
@@ -52,12 +46,5 @@
       }
     },
     "values": [ { "value": "POWER_TRICKLE", "add": -5000 } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "iso_eldritch_sorcery_buff",
-    "name": { "str": "Scion of the Dreaming City" },
-    "description": "Your people may be gone, but you survive.",
-    "values": [ { "value": "NIGHT_VIS", "add": 3 }, { "value": "MAX_HP", "multiply": -0.25 } ]
   }
 ]
