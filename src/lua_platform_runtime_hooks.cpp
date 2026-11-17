@@ -2196,7 +2196,8 @@ void install_runtime_callback_api(
             // Cross-state userdata must be rebound to the provider, preserving the exact actor.
             const game_handle argument = platform_creature_handle( *provider, *actor );
             sol::protected_function callback = handler->second.callback;
-            callback_scope scope( *provider, actor );
+            callback_scope scope( *provider, caller->native_enchantment_random );
+            provider->callback_character = argument;
             const sol::protected_function_result result = callback( argument );
             if( !result.valid() ) {
                 const sol::error error = result;
