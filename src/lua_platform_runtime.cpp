@@ -57,6 +57,7 @@ extern "C" {
 #include "addiction.h"
 #include "ascii_art.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "catacharset.h"
 #include "character_modifier.h"
@@ -878,15 +879,17 @@ struct construction_definition_data {
 
 struct furniture_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    detail::authored_text name;
+    detail::authored_text description;
     std::string color;
     std::string symbol;
+    std::string looks_like;
+    std::int64_t coverage = 0;
     std::int64_t movecost = 0;
     std::int64_t required_str = 0;
     std::int64_t light_emitted = 0;
     std::int64_t comfort = 0;
-    std::int64_t max_volume_ml = 0;
+    std::optional<std::int64_t> max_volume_ml;
     std::int64_t mass_grams = 0;
     std::int64_t keg_capacity_ml = 0;
     bool transparent = false;
@@ -4565,15 +4568,20 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<furniture_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = detail::read_singular_text( options["name"], {}, "Furniture.name" );
+        definition->description = detail::read_singular_text( options["description"], {},
+                                  "Furniture.description" );
         definition->color = options.get_or( "color", std::string() );
         definition->symbol = options.get_or( "symbol", std::string() );
+        definition->looks_like = options.get_or( "looks_like", std::string() );
+        definition->coverage = options.get_or<std::int64_t>( "coverage", 0 );
         definition->movecost = options.get_or<std::int64_t>( "move_cost_mod", 0 );
         definition->required_str = options.get_or<std::int64_t>( "required_str", 0 );
         definition->light_emitted = options.get_or<std::int64_t>( "light_emitted", 0 );
         definition->comfort = options.get_or<std::int64_t>( "comfort", 0 );
-        definition->max_volume_ml = options.get_or<std::int64_t>( "max_volume_ml", 0 );
+        if( const sol::optional<std::int64_t> volume = options["max_volume_ml"] ) {
+            definition->max_volume_ml = *volume;
+        }
         definition->mass_grams = options.get_or<std::int64_t>( "mass_grams", 0 );
         definition->keg_capacity_ml = options.get_or<std::int64_t>( "keg_capacity_ml", 0 );
         definition->transparent = options.get_or( "transparent", false );
@@ -6726,8 +6734,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 // Native furniture uses negative movement cost for impassable tiles.
                 definition.movecost < std::numeric_limits<int>::min() ||
                 definition.movecost > std::numeric_limits<int>::max() ||
+                definition.coverage < std::numeric_limits<int>::min() ||
+                definition.coverage > std::numeric_limits<int>::max() ||
                 definition.light_emitted < 0 ||
-                definition.max_volume_ml < 0 ||
+                ( definition.max_volume_ml &&
+                  ( *definition.max_volume_ml < 0 ||
+                    *definition.max_volume_ml > std::numeric_limits<int>::max() ) ) ||
                 definition.mass_grams < 0 ||
                 definition.keg_capacity_ml < 0 ) {
                 throw std::runtime_error( "furniture '" + definition.id +
@@ -8706,17 +8718,20 @@ bool content_transaction::apply( std::string &error )
             const furniture_definition_data &source = *entry.definition;
             furn_t native;
             native.id = id;
-            native.name_ = no_translation( source.name );
-            native.description = no_translation( source.description );
+            native.name_ = source.name.native();
+            native.description = source.description.native();
             native.color_.fill( color_from_string( source.color,
                                                    report_color_error::no ) );
             native.symbol_.fill( static_cast<int>( source.symbol[0] ) );
+            native.looks_like = source.looks_like;
+            native.coverage = static_cast<int>( source.coverage );
             native.movecost = static_cast<int>( source.movecost );
             native.move_str_req = static_cast<int>( source.required_str );
             native.light_emitted = static_cast<int>( source.light_emitted );
             native.comfort = static_cast<int>( source.comfort );
-            native.max_volume = units::from_milliliter(
-                                    static_cast<int>( source.max_volume_ml ) );
+            native.max_volume = source.max_volume_ml ?
+                                units::from_milliliter( static_cast<int>( *source.max_volume_ml ) ) :
+                                default_tile_volume;
             native.mass = units::from_gram(
                               static_cast<int>( source.mass_grams ) );
             native.keg_capacity = units::from_milliliter(
@@ -11018,9 +11033,12 @@ std::string content_transaction::fingerprint() const
         hash_part( state, value.symbol );
         hash_part( state, std::to_string( value.movecost ) );
         hash_part( state, std::to_string( value.required_str ) );
+        hash_part( state, value.looks_like );
+        hash_part( state, std::to_string( value.coverage ) );
         hash_part( state, std::to_string( value.light_emitted ) );
         hash_part( state, std::to_string( value.comfort ) );
-        hash_part( state, std::to_string( value.max_volume_ml ) );
+        hash_part( state, value.max_volume_ml ?
+                   std::to_string( *value.max_volume_ml ) : "default_tile_volume" );
         hash_part( state, std::to_string( value.mass_grams ) );
         hash_part( state, std::to_string( value.keg_capacity_ml ) );
         hash_part( state, value.transparent ? "transparent" : "opaque" );
