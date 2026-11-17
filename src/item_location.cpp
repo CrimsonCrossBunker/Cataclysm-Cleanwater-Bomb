@@ -1032,7 +1032,7 @@ item_location::item_location( const vehicle_cursor &vc, item *which )
 item_location item_location::from_vehicle_part( const vehicle_cursor &vc )
 {
     item_location result;
-    result.ptr.reset( new impl::item_on_vehicle( vc, -1 ) );
+    result.ptr = std::make_shared<impl::item_on_vehicle>( vc, -1 );
     return result;
 }
 
@@ -1568,7 +1568,7 @@ item_location find_item_by_uid( int64_t uid, const item_locator_hint &hint )
     }
 
     map &here = get_map();
-    const auto &session = g->multiplayer_session();
+    const cata_mp::world_session &session = g->multiplayer_session();
     map &primary = reality_bubble();
     const bool regional = session.has_regions();
     const auto map_at = [&]( const tripoint_abs_ms & position ) -> map & {

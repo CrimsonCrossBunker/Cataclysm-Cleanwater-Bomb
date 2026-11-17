@@ -1,24 +1,30 @@
 #include <cstdint>
+#include <functional>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "current_map.h"
 #include "debug.h"
-#include "game.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_uid.h"
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
 #include "map_helpers.h"
-#include "map_helpers_tests.h"
 #include "map_selector.h"
 #include "npc.h"
 #include "point.h"
 #include "type_id.h"
+
+static const itype_id itype_hammer( "hammer" );
+
+static const trait_id trait_TEST_ENCH_MUTATION( "TEST_ENCH_MUTATION" );
 
 TEST_CASE( "npc_save_preserves_unresolved_activity_item_locations",
            "[npc][item_location][save][regression]" )
@@ -27,7 +33,7 @@ TEST_CASE( "npc_save_preserves_unresolved_activity_item_locations",
     map &here = get_map();
     const tripoint_bub_ms position( 60, 60, 0 );
     here.i_clear( position );
-    item &target = here.add_item( position, item( itype_id( "hammer" ) ) );
+    item &target = here.add_item( position, item( itype_hammer ) );
     const int64_t target_uid = target.uid().get_value();
     std::ostringstream saved_item;
     JsonOut item_out( saved_item );
@@ -75,7 +81,7 @@ TEST_CASE( "npc_deserialization_does_not_require_loaded_terrain", "[npc][regress
     // This mutation supplies a passive field emitter, like Magiclysm auras.
     // Rebuilding personality traits must not activate it during deserialization.
     original.personality.aggression = 10;
-    original.set_mutation( trait_id( "TEST_ENCH_MUTATION" ) );
+    original.set_mutation( trait_TEST_ENCH_MUTATION );
     map unloaded;
     original.set_pos_abs_only( unloaded.get_abs( tripoint_bub_ms( 59, 106, -4 ) ) );
     std::ostringstream saved;
