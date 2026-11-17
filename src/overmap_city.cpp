@@ -679,7 +679,7 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
             return false;
         }
         for( const tripoint_om_omt &used : place_special( special, lot.pos, direction,
-                *lot.town, false, false ) ) {
+                *lot.town, false, false, margin ) ) {
             city_tiles.insert( used.xy() );
         }
         if( city_unique ) {

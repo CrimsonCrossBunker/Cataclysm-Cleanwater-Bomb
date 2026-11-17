@@ -3510,11 +3510,11 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
 // checks around the selected point to see if the special can be placed there
 std::vector<tripoint_om_omt> overmap::place_special(
     const overmap_special &special, const tripoint_om_omt &p, om_direction::type dir,
-    const city &cit, const bool must_be_unexplored, const bool force )
+    const city &cit, const bool must_be_unexplored, const bool force, int margin )
 {
     cata_assert( dir != om_direction::type::invalid );
     if( !force ) {
-        cata_assert( can_place_special( special, p, dir, must_be_unexplored ) );
+        cata_assert( can_place_special( special, p, dir, must_be_unexplored, margin ) );
     }
 
     if( special.has_flag( "GLOBALLY_UNIQUE" ) && !allows_atlas_military_base( special ) ) {

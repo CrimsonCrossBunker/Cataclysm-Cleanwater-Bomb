@@ -380,6 +380,25 @@ TEST_CASE( "winnipeg_city_blocks_fill_across_a_whole_overmap", "[north_america][
     CHECK( widened > 0 );
 }
 
+TEST_CASE( "atlas_city_building_can_be_placed_at_an_overmap_edge",
+           "[north_america][worldgen]" )
+{
+    const auto om = std::make_unique<overmap>( point_abs_om::zero );
+    const tripoint_om_omt edge( 0, OMAPY / 2, 0 );
+    const overmap_special_id house( "house_regional_cape_cod" );
+    const city town( "" );
+    const auto facing = om_direction::type::north;
+    REQUIRE( house.is_valid() );
+    om->ter_set( edge, oter_id( "field" ) );
+
+    CHECK_FALSE( om->can_place_special( *house, edge, facing, false ) );
+    REQUIRE( om->can_place_special( *house, edge, facing, false, 0 ) );
+    const auto occupied = om->place_special( *house, edge, facing, town, false, false, 0 );
+    CHECK( occupied.size() == 2 );
+    CHECK( om->ter( edge ) == oter_id( "house_regional_cape_cod_north" ) );
+    CHECK( om->ter( edge + tripoint::above ) == oter_id( "house_regional_cape_cod_roof_north" ) );
+}
+
 TEST_CASE( "atlas_special_placement_does_not_generate_neighbor_overmaps",
            "[north_america][worldgen]" )
 {
