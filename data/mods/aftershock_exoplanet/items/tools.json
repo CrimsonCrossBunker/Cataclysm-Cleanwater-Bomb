@@ -159,13 +159,7 @@
     "power_draw": "600 mW",
     "passive_effects": [
       { "id": "afs_motion_sensor_wield" },
-      {
-        "has": "HELD",
-        "condition": "ALWAYS",
-        "name": { "str": "Passive Motion Detection" },
-        "description": "Passively detects movement at 10 second intervals.",
-        "intermittent_activation": { "effects": [ { "frequency": "10 seconds", "spell_effects": [ { "id": "afs_motion_sensor_spell" } ] } ] }
-      }
+      { "id": "ITEM_ENCH_aftershock_exoplanet_afs_motion_sensor_1" }
     ]
   },
   {
@@ -687,14 +681,7 @@
     },
     "flags": [ "WATCH", "TRADER_AVOID", "SPAWN_ACTIVE" ],
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "name": { "str": "Augmented Reality" },
-        "description": "You are wearing equipment that gives 1 additional perception but causes you to see strange things.",
-        "mutations": [ "PSYCHOPATH", "SCHIZOPHRENIC" ],
-        "values": [ { "value": "PERCEPTION", "add": 1 } ]
-      }
+      { "id": "ITEM_ENCH_aftershock_exoplanet_vr_laptop_holosuite_0" }
     ]
   },
   {

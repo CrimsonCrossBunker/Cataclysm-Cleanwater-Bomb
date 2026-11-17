@@ -459,13 +459,7 @@
     "armor": [ { "encumbrance": 5, "covers": [ "arm_l", "arm_r", "hand_l", "hand_r", "leg_l", "leg_r", "foot_l", "foot_r" ] } ],
     "flags": [ "CANT_WEAR", "EXO_MEDIUM_GADGET" ],
     "passive_effects": [
-      {
-        "name": { "str": "Climbing Assist" },
-        "description": "Additional climbing gear allows you to scale walls.",
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "mutations": [ "exo_climb_mutation" ]
-      }
+      { "id": "ITEM_ENCH_aftershock_exoplanet_exo_climb_0" }
     ]
   },
   {

@@ -142,13 +142,7 @@
     "armor": [ { "encumbrance": 5, "coverage": 100, "covers": [ "hand_l", "hand_r" ] } ],
     "melee_damage": { "bash": 3 },
     "passive_effects": [
-      {
-        "has": "WORN",
-        "condition": "ALWAYS",
-        "melee_damage_bonus": [ { "type": "cold", "add": 17 } ],
-        "name": { "str": "Ice Fists" },
-        "description": "Strikes from this weapon can freeze targets solid."
-      }
+      { "id": "ITEM_ENCH_aftershock_exoplanet_afs_freeze_gauntlet_0" }
     ]
   },
   {

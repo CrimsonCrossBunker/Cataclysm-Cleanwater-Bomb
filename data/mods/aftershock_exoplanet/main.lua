@@ -63,3 +63,5 @@ require("inline_special_vision")
 require("contextual_enchantments")
 
 require("bionic_enchantments")
+
+require("item_enchantments")
