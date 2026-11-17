@@ -1,5 +1,6 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
 
 if content.is_mod_active("classic_zombies") then
     local allowed = content.Blacklist { kind = "monster", whitelist = true, exclusive = true }
@@ -7,7 +8,7 @@ if content.is_mod_active("classic_zombies") then
     content.add(allowed)
 end
 
-local variables = ccb.services.variables
+local variables = services.variables
 
 -- The remaining inventor scripts read these names from the world save.
 local starting_difficulties = {
@@ -43,5 +44,14 @@ ccb.runtime.handler("initialize_inventor_difficulty", function()
     set_starting_variable("XE_INITIALIZATION", 1)
 end, 1)
 ccb.runtime.on("game:game_begin", "initialize_inventor_difficulty")
+
+ccb.runtime.handler("initialize_encounter_timer", function()
+    local result = variables.set(services.characters.avatar(), "timer_xe_RandEnc",
+        services.time_snapshot().turn, { include_before = false })
+    if not result.ok then
+        error(result.error.message)
+    end
+end, 1)
+ccb.runtime.on("game:game_start", "initialize_encounter_timer")
 
 require("nested_recipes")
