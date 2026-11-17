@@ -1,5 +1,7 @@
 #include "north_america.h"
 
+#include "north_america_elevation.h"
+
 #include <algorithm>
 #include <cmath>
 #include <unordered_map>
@@ -165,29 +167,34 @@ const atlas &get_atlas()
     return instance;
 }
 
+bool contains( const feature &area, point p )
+{
+    if( !area.box.intersects( { p, p } ) ) {
+        return false;
+    }
+    const auto edges = area.edges_by_band.find( edge_band( p.y ) );
+    if( edges == area.edges_by_band.end() ) {
+        return false;
+    }
+    bool inside = false;
+    for( const auto &[a, b] : edges->second ) {
+        if( ( a.y > p.y ) == ( b.y > p.y ) ) {
+            continue;
+        }
+        const double x = a.x + static_cast<double>( b.x - a.x ) * ( p.y - a.y ) / ( b.y - a.y );
+        if( p.x < x ) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
 struct jurisdiction_polygon {
     std::string code;
     feature area;
 
     bool contains( point p ) const {
-        if( !area.box.intersects( { p, p } ) ) {
-            return false;
-        }
-        const auto edges = area.edges_by_band.find( edge_band( p.y ) );
-        if( edges == area.edges_by_band.end() ) {
-            return false;
-        }
-        bool inside = false;
-        for( const auto &[a, b] : edges->second ) {
-            if( ( a.y > p.y ) == ( b.y > p.y ) ) {
-                continue;
-            }
-            const double x = a.x + static_cast<double>( b.x - a.x ) * ( p.y - a.y ) / ( b.y - a.y );
-            if( p.x < x ) {
-                inside = !inside;
-            }
-        }
-        return inside;
+        return north_america::contains( area, p );
     }
 };
 
@@ -211,7 +218,8 @@ const jurisdiction_index &jurisdictions()
     static const auto index = [] {
         jurisdiction_index result;
         read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.jurisdictions",
-        [&]( const JsonValue & value ) {
+                             [&]( const JsonValue & value )
+        {
             const JsonObject root = value.get_object();
             if( root.get_int( "version" ) != 1 ) {
                 root.throw_error( "Unknown North America jurisdictions version" );
@@ -251,7 +259,8 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
     static const auto tables = [] {
         std::unordered_map<std::string, regional_loot_table> result;
         read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_loot.json",
-        [&]( const JsonValue & value ) {
+                             [&]( const JsonValue & value )
+        {
             const JsonObject root = value.get_object();
             const JsonArray state_groups = root.get_array( "state_groups" );
             const JsonArray firearm_groups = root.get_array( "firearm_groups" );
@@ -490,8 +499,8 @@ mtype_id regional_monster( const mtype_id &type, point_abs_ms position )
         return type;
     }
     const mtype_id &variant = type == swat ? ( canada ? swat_ca : swat_mx ) :
-                             type == marine ? ( canada ? marine_ca : marine_mx ) :
-                             ( canada ? stalker_ca : stalker_mx );
+                              type == marine ? ( canada ? marine_ca : marine_mx ) :
+                              ( canada ? stalker_ca : stalker_mx );
     return variant.is_valid() && !MonsterGroupManager::monster_is_blacklisted( variant ) ?
            variant : type;
 }
@@ -578,6 +587,123 @@ regional_climate::coordinates location( point_abs_ms position )
     const double longitude = std::atan2( east * sin_arc,
                                          distance * cos_lat * cos_arc - north * sin_lat * sin_arc );
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
+}
+
+std::optional<water_level> water_surface_elevation( point_abs_ms position )
+{
+    struct river_segment {
+        point from;
+        point to;
+        double upstream;
+        double downstream;
+    };
+    constexpr int river_radius = 3 * tile_metres / 2;
+    const atlas &data = get_atlas();
+    const point p = position.raw();
+    for( const feature &lake : data.lakes ) {
+        if( contains( lake, p ) ) {
+            static thread_local std::unordered_map<const feature *, double> heights;
+            const auto [level, insert] = heights.try_emplace( &lake, 0.0 );
+            if( insert ) {
+                std::vector<double> samples;
+                for( const point &vertex : lake.paths.front() ) {
+                    if( const auto elevation = dem_elevation( point_abs_ms( vertex ) ) ) {
+                        samples.push_back( *elevation );
+                    }
+                }
+                if( !samples.empty() ) {
+                    auto median = samples.begin() + samples.size() / 2;
+                    std::nth_element( samples.begin(), median, samples.end() );
+                    level->second = *median;
+                }
+            }
+            return water_level{ level->second, true };
+        }
+    }
+
+    // Fit a downhill profile along each source river line and index only the
+    // segments near the query. A noisy DEM sample cannot make water run uphill.
+    static const auto rivers = [&data] {
+        std::unordered_map<point, std::vector<river_segment>> result;
+        for( const feature &river : data.rivers )
+        {
+            auto path = river.paths.front();
+            const auto height_at = []( point vertex ) {
+                return dem_elevation( point_abs_ms( vertex ) ).value_or( 0.0 );
+            };
+            if( height_at( path.front() ) < height_at( path.back() ) ) {
+                std::reverse( path.begin(), path.end() );
+            }
+            struct average {
+                double sum;
+                std::size_t count;
+            };
+            std::vector<average> profile;
+            for( const point &vertex : path ) {
+                profile.push_back( { height_at( vertex ), 1 } );
+                while( profile.size() > 1 ) {
+                    const average tail = profile.back();
+                    average &earlier = profile[profile.size() - 2];
+                    if( earlier.sum / earlier.count >= tail.sum / tail.count ) {
+                        break;
+                    }
+                    earlier.sum += tail.sum;
+                    earlier.count += tail.count;
+                    profile.pop_back();
+                }
+            }
+            std::vector<double> levels;
+            for( const average &block : profile ) {
+                levels.insert( levels.end(), block.count, block.sum / block.count );
+            }
+            for( std::size_t i = 1; i < path.size(); ++i ) {
+                const point a = path[i - 1];
+                const point b = path[i];
+                const point lo = jurisdiction_cell( { std::min( a.x, b.x ) - river_radius,
+                                                      std::min( a.y, b.y ) - river_radius } );
+                const point hi = jurisdiction_cell( { std::max( a.x, b.x ) + river_radius,
+                                                      std::max( a.y, b.y ) + river_radius } );
+                for( int y = lo.y; y <= hi.y; ++y ) {
+                    for( int x = lo.x; x <= hi.x; ++x ) {
+                        result[point( x, y )].push_back( { a, b, levels[i - 1], levels[i] } );
+                    }
+                }
+            }
+        }
+        return result;
+    }();
+    if( const auto bucket = rivers.find( jurisdiction_cell( p ) ); bucket != rivers.end() ) {
+        double nearest = river_radius * river_radius;
+        std::optional<double> level;
+        for( const river_segment &segment : bucket->second ) {
+            const point offset = p - segment.from;
+            const point delta = segment.to - segment.from;
+            const double dx = delta.x;
+            const double dy = delta.y;
+            const double length_squared = dx * dx + dy * dy;
+            if( length_squared == 0 ) {
+                continue;
+            }
+            const double t = std::clamp( ( offset.x * dx + offset.y * dy ) / length_squared, 0.0, 1.0 );
+            const double x = offset.x - t * dx;
+            const double y = offset.y - t * dy;
+            const double distance = x * x + y * y;
+            if( distance < nearest ) {
+                nearest = distance;
+                level = segment.upstream + t * ( segment.downstream - segment.upstream );
+            }
+        }
+        if( level ) {
+            return water_level{ *level, false };
+        }
+    }
+    if( dem_elevation( position ).value_or( 0.0 ) < 0 &&
+    std::none_of( data.land.begin(), data.land.end(), [p]( const feature & land ) {
+    return contains( land, p );
+    } ) ) {
+        return water_level{ 0.0, true };
+    }
+    return std::nullopt;
 }
 
 std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride, bool chart )

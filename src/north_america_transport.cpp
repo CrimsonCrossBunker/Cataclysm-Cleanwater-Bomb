@@ -213,8 +213,7 @@ struct transport_atlas {
     std::unordered_map<point, std::vector<std::size_t>> buckets;
 
     transport_atlas() {
-        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.transport",
-        [this]( const JsonValue & value ) {
+        const auto load_segments = [this]( const JsonValue & value ) {
             for( const JsonValue row : value.get_array() ) {
                 const JsonArray entry = row.get_array();
                 const road_segment segment{ { entry.get_int( 1 ), entry.get_int( 2 ) },
@@ -230,7 +229,10 @@ struct transport_atlas {
                 }
                 segments.push_back( segment );
             }
-        } );
+        };
+        const cata_path raw = PATH_INFO::datadir_path() / "raw";
+        read_from_file_json( raw / "north_america.transport", load_segments );
+        read_from_file_json( raw / "north_america_nyc.transport", load_segments );
     }
 };
 
@@ -275,7 +277,8 @@ void visit_roads( point from, point to, const Visitor &visit )
 
 } // namespace
 
-std::vector<road_cell> road_network( point_abs_omt origin, int width, int height )
+std::vector<road_cell> road_network( point_abs_omt origin, int width, int height,
+                                     bool include_local_streets )
 {
     std::vector<road_cell> roads( width * height );
     const auto set_link = [&roads, width, height]( point p, point q, unsigned lanes,
@@ -316,6 +319,9 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
             previous = next;
         }
     } );
+    if( !include_local_streets ) {
+        return roads;
+    }
     // Cache ownership across the one-tile halo. Its geometry has to agree with
     // the separately generated overmap on the other side of every seam.
     const int stride = width + 2;

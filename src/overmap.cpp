@@ -1052,7 +1052,13 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
 
     const bool atlas = north_america::active();
     std::vector<north_america::terrain> atlas_water;
+    const bool atlas_transport = settings->place_roads || settings->overmap_highway;
     if( atlas && !place_north_american_water( atlas_water ) ) {
+        // A single crossing can span multiple overmaps with no dry tiles.
+        if( atlas_transport ) {
+            place_atlas_roads( north_america::road_network( global_base_point(), OMAPX, OMAPY, false ),
+                               atlas_water );
+        }
         return;
     }
     std::vector<Highway_path> highway_paths;
@@ -1089,7 +1095,7 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         highway_paths = place_highways( neighbor_overmaps );
     }
     const std::vector<north_america::road_cell> atlas_streets = atlas &&
-            ( settings->place_roads || settings->city_spec ) ?
+            ( atlas_transport || settings->city_spec ) ?
             north_america::road_network( global_base_point(), OMAPX, OMAPY ) :
             std::vector<north_america::road_cell> {};
     if( !atlas_streets.empty() ) {
@@ -2363,8 +2369,12 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                                        settings->get_settings_city().city_size > 0;
     static const oter_type_str_id road( "road" );
     static const oter_type_str_id bridge( "atlas_road_bridge" );
+    const auto atlas_water_at = [&]( const tripoint_om_omt & p ) {
+        const int index = ( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1;
+        return coast[index] != north_america::terrain::land;
+    };
     const auto can_build_street = [&]( const tripoint_om_omt & p ) {
-        return !ter( p )->is_water() && connection->pick_subtype_for( ter( p ) );
+        return !atlas_water_at( p ) && connection->pick_subtype_for( ter( p ) );
     };
     for( int y = 0; y < OMAPY; ++y ) {
         for( int x = 0; x < OMAPX; ++x ) {
@@ -2373,11 +2383,12 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 continue;
             }
             const tripoint_om_omt p( x, y, 0 );
-            const oter_id previous = ter( p );
-            std::size_t links = settings->place_roads ? tile.mapped_connections : 0;
-            if( previous->is_water() && links ) {
+            const bool mapped = settings->place_roads ||
+                                ( settings->overmap_highway && tile.lanes >= 4 );
+            std::size_t links = mapped ? tile.mapped_connections : 0;
+            if( atlas_water_at( p ) && links ) {
                 ter_set( p, bridge->get_linear( links ) );
-            } else if( can_build_street( p ) ) {
+            } else if( links || can_build_street( p ) ) {
                 for( const auto direction : om_direction::all ) {
                     if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
                         om_lines::has_segment( links, direction ) ||
@@ -2389,8 +2400,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                     if( inbounds( next ) ) {
                         land = can_build_street( next );
                     } else {
-                        const int index = ( next.y() + 1 ) * ( OMAPX + 2 ) + next.x() + 1;
-                        land = coast[index] == north_america::terrain::land;
+                        land = !atlas_water_at( next );
                     }
                     if( land ) {
                         links = om_lines::set_segment( links, direction );

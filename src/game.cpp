@@ -204,6 +204,7 @@
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
 #include "overmapbuffer.h"
 #include "panels.h"
 #include "past_achievements_info.h"
@@ -8511,7 +8512,9 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
-    if( !lifetime || !here.inbounds( dest_loc ) ) {
+    if( !lifetime || !here.inbounds( dest_loc ) ||
+        ( north_america::elevation_active() &&
+          !north_america::within_altitude_limits( north_america::altitude_at( here, dest_loc ) ) ) ) {
         return false;
     }
     if( !furniture_move && who.get_grab_type() != object_type::NONE &&
@@ -10650,6 +10653,12 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     map &here = get_map();
     const auto map_context = here.get_context_reference();
     tripoint_bub_ms pos = who.pos_bub( here );
+    if( north_america::elevation_active() &&
+        !north_america::within_altitude_limits(
+            north_america::altitude_at( here, tripoint_bub_ms( pos.xy(), requested_z ) ) ) ) {
+        who.add_msg_if_player( _( "The way is blocked off." ) );
+        return;
+    }
     const optional_vpart_position vehicle_here = here.veh_at( pos );
     const std::optional<tripoint_bub_ms> vehicle_stairs = !force && vehicle_here ?
             vehicle_here->vehicle().deck_transition( here, pos, movez ) : std::nullopt;

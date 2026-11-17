@@ -24,7 +24,8 @@ struct road_cell {
 
 // Connection masks use north, east, south, west. Only the second function
 // downsamples geometry, for the continent-scale map.
-std::vector<road_cell> road_network( point_abs_omt origin, int width, int height );
+std::vector<road_cell> road_network( point_abs_omt origin, int width, int height,
+                                     bool include_local_streets = true );
 std::vector<unsigned> chart_roads( point_abs_omt origin, int width, int height, int stride );
 oter_id avenue_flank( bool north_south );
 bool is_avenue_flank( const oter_id &terrain );

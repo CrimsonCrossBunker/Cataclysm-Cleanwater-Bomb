@@ -23,6 +23,7 @@
 #include "map_iterator.h"
 #include "map_scale_constants.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
 #include "north_america_ecology.h"
 #include "north_america_transport.h"
 #include "omdata.h"
@@ -643,12 +644,28 @@ void overmap::build_atlas_neighborhoods( const overmap_connection &road,
                 footprint->second.push_back( entry.p );
             }
         }
+        const bool use_elevation = north_america::elevation_active();
+        double low = 0;
+        double high = 0;
+        if( use_elevation ) {
+            low = high = north_america::surface_elevation(
+                             project_to<coords::ms>( origin + lot.pos.xy().raw() ) + point( SEEX, SEEY ) );
+        }
         for( const tripoint_rel_omt &offset : footprint->second ) {
             const tripoint_om_omt tile = lot.pos + om_direction::rotate( offset, direction );
             if( !inbounds( tile, 1 ) || overmap_special_placements.count( tile ) ||
                 ( offset.z() == 0 && ( city_tiles.count( tile.xy() ) ||
                                        owners[urban_cell( tile.xy() )] != owners[urban_cell( lot.pos.xy() )] ) ) ) {
                 return false;
+            }
+            if( use_elevation && offset.z() == 0 && tile != lot.pos ) {
+                const double height = north_america::surface_elevation(
+                                          project_to<coords::ms>( origin + tile.xy().raw() ) + point( SEEX, SEEY ) );
+                low = std::min( low, height );
+                high = std::max( high, height );
+                if( high - low > north_america::floor_height_m ) {
+                    return false;
+                }
             }
         }
         if( !can_place_special( special, lot.pos, direction, false ) ) {

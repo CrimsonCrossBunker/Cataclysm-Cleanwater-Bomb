@@ -74,6 +74,7 @@
 #include "map_memory.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "maptile_fwd.h"
 #include "mdarray.h"
 #include "mod_tileset.h"
@@ -1590,7 +1591,9 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         f == &cata_tiles::draw_critter_at ? layer_critter :
                         f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
                     if( f == &cata_tiles::draw_furniture && cur_zlevel >= 0 ) {
-                        bool began_snow = false;
+                        bool drew_snow = false;
+                        bool overlay_ready = false;
+                        const bool draw_relief = cur_zlevel == 0 && north_america::elevation_active();
                         const int base = ( cur_zlevel - center.z() ) * zlevel_height;
                         for( const row_sprite_entry &entry : row_sprites ) {
                             const tile_render_info::sprite &var = std::get<tile_render_info::sprite>( entry.tile->var );
@@ -1598,24 +1601,57 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                 continue;
                             }
                             const tripoint_bub_ms &position = entry.tile->view.pos;
+                            const point slope = draw_relief ?
+                                                north_america::surface_slope( here, position ) : point::zero;
+                            const int shade = std::clamp( slope.x + slope.y, -45, 45 );
                             const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
+                            if( cover == snow_cover::none && std::abs( shade ) < 7 ) {
+                                continue;
+                            }
+                            if( !overlay_ready ) {
+                                if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
+                                    if( !vp->flush() ) {
+                                        display_buffer_scope_signal_recovery_required();
+                                        throw std::runtime_error( "Ground overlay failed to restore renderer state" );
+                                    }
+                                }
+                                overlay_ready = true;
+                            }
+                            const point screen = player_to_screen( position.xy() );
+                            if( std::abs( shade ) >= 7 ) {
+                                const uint8_t gray = shade > 0 ? 255 : 0;
+                                const uint8_t alpha = std::abs( shade ) * ( var.ll == lit_level::LOW ? 1 : 2 );
+                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+                                if( !iso ) {
+                                    SetRenderDrawColor( renderer, gray, gray, gray, alpha );
+                                    const SDL_Rect area{ screen.x, screen.y - base, tile_width, tile_height };
+                                    RenderFillRect( renderer, &area );
+                                } else {
+                                    const float x = screen.x;
+                                    const float width = tile_width;
+                                    const float height = width / 2.0f;
+                                    const float y = screen.y - base + tile_height - height;
+                                    const float tone = gray / 255.0f;
+                                    const SDL_FColor color{ tone, tone, tone, alpha / 255.0f };
+                                    const SDL_Vertex vertices[] = {
+                                        { { x + width / 2, y }, color, { 0, 0 } },
+                                        { { x + width, y + height / 2 }, color, { 0, 0 } },
+                                        { { x + width / 2, y + height }, color, { 0, 0 } },
+                                        { { x, y + height / 2 }, color, { 0, 0 } }
+                                    };
+                                    static constexpr int indices[] = { 0, 1, 2, 0, 2, 3 };
+                                    SDL_RenderGeometry( renderer.get(), nullptr, vertices, 4, indices, 6 );
+                                }
+                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+                            }
                             if( cover == snow_cover::none ) {
                                 continue;
                             }
                             const SDL_Texture_Ptr &texture = get_snow_texture();
                             if( !texture ) {
-                                break;
+                                continue;
                             }
-                            if( !began_snow ) {
-                                if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
-                                    if( !vp->flush() ) {
-                                        display_buffer_scope_signal_recovery_required();
-                                        throw std::runtime_error( "Snow overlay failed to restore renderer state" );
-                                    }
-                                }
-                                began_snow = true;
-                            }
-                            const point screen = player_to_screen( position.xy() );
+                            drew_snow = true;
                             const SDL_Rect source = snow_sprite( cover, here.get_abs( position ).xy() );
                             const uint8_t light = var.ll == lit_level::LOW ? 145 : 255;
                             if( !iso ) {
@@ -1643,7 +1679,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                 SDL_RenderGeometry( renderer.get(), texture.get(), vertices, 4, indices, 6 );
                             }
                         }
-                        if( began_snow && !iso ) {
+                        if( drew_snow && !iso ) {
                             SetTextureColorMod( get_snow_texture(), 255, 255, 255 );
                         }
                     }

@@ -83,6 +83,7 @@
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "mapgen.h"
 #include "material.h"
 #ifdef MP_ENABLED
@@ -3984,6 +3985,10 @@ bool map::valid_move( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
         return false;
     }
 
+    if( north_america::elevation_active() && inbounds( to ) &&
+        !north_america::within_altitude_limits( north_america::altitude_at( *this, to ) ) ) {
+        return false;
+    }
     if( from.z() == to.z() ) {
         // But here we need to, to prevent bashing critters
         return passable( to ) || ( bash && inbounds( to ) );
@@ -9791,6 +9796,15 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     } else {
         memory_sym = sym = curr_ter.symbol();
         tercol = curr_ter.color();
+    }
+
+    if( sym == '.' && north_america::elevation_active() ) {
+        const point slope = north_america::surface_slope( *this, p );
+        if( std::abs( slope.x ) >= 12 || std::abs( slope.y ) >= 12 ) {
+            // Raised arrows indicate the uphill direction on open ground.
+            sym = std::abs( slope.x ) > std::abs( slope.y ) ?
+                  ( slope.x > 0 ? 0x2192 : 0x2190 ) : ( slope.y > 0 ? 0x2193 : 0x2191 );
+        }
     }
 
     avatar &player_character = get_avatar();

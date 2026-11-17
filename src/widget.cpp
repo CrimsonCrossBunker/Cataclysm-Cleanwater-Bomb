@@ -14,6 +14,7 @@
 #include "avatar.h"
 #include "cata_utility.h"
 #include "catacharset.h"
+#include "north_america_elevation.h"
 #include "character.h"
 #include "character_attire.h"
 #include "character_martial_arts.h"
@@ -31,6 +32,7 @@
 #include "lua_platform_content.h"
 #include "magic.h"
 #include "magic_enchantment.h"
+#include "map.h"
 #include "npc.h"
 #include "output.h"
 #include "panels.h"
@@ -1407,6 +1409,10 @@ std::string widget::color_text_function_string( const avatar &ava, unsigned int 
             break;
         case widget_var::overmap_loc_text:
             desc.first = display::overmap_position_text( ava.pos_abs_omt() );
+            if( north_america::elevation_active() ) {
+                desc.first = string_format( _( "%s / %.1f m" ), desc.first,
+                                            north_america::altitude_at( get_map(), ava.pos_bub() ) );
+            }
             break;
         case widget_var::overmap_text:
             desc.first = display::colorized_overmap_text( ava, _width == 0 ? max_width : _width, _height );

@@ -1,3 +1,4 @@
+#include "north_america_elevation.h"
 #include "regional_climate.h"
 
 #include <algorithm>
@@ -82,13 +83,20 @@ coordinates offset_metres( coordinates origin, double east, double north )
                              radians_per_degree, 360.0 ) };
 }
 
-std::optional<normals> at( coordinates location )
+std::optional<normals> at( coordinates location, bool with_elevation )
 {
     if( stations.empty() || !std::isfinite( location.latitude ) ||
         !std::isfinite( location.longitude ) ||
         std::abs( location.latitude ) > 90.0 || std::abs( location.longitude ) > 180.0 ) {
         return std::nullopt;
     }
+    const auto station_with_reference = [with_elevation]( const station & source ) {
+        normals result = source.data;
+        if( with_elevation && !result.reference_elevation_m ) {
+            result.reference_elevation_m = north_america::dem_elevation( source.location );
+        }
+        return result;
+    };
     const cartesian position = on_sphere( location );
     // Blend the closest stations. Taper to zero at the fifth to avoid jumps as neighbours change.
     std::array<std::pair<double, const station *>, 5> closest{};
@@ -98,7 +106,7 @@ std::optional<normals> at( coordinates location )
     for( const auto &entry : stations ) {
         const double d = distance_squared( position, entry.second.position );
         if( d < 1e-16 ) {
-            return entry.second.data;
+            return station_with_reference( entry.second );
         }
         const auto insert = std::find_if( closest.begin(), closest.end(), [d]( const auto & candidate ) {
             return !candidate.second || d < candidate.first;
@@ -111,10 +119,22 @@ std::optional<normals> at( coordinates location )
     const double cutoff = closest.back().first;
     normals result{};
     double total_weight = 0;
+    double elevation_weight = 0;
+    double weighted_elevation = 0;
     for( auto it = closest.begin(); it != closest.end() - 1 && it->second; ++it ) {
         const double relative_weight = ( cutoff - it->first ) / it->first;
         const double weight = relative_weight * relative_weight;
         total_weight += weight;
+        if( with_elevation ) {
+            auto reference = it->second->data.reference_elevation_m;
+            if( !reference ) {
+                reference = north_america::dem_elevation( it->second->location );
+            }
+            if( reference ) {
+                elevation_weight += weight;
+                weighted_elevation += *reference * weight;
+            }
+        }
         for( size_t i = 0; i < result.months.size(); ++i ) {
             const monthly_normal &source = it->second->data.months[i];
             monthly_normal &dest = result.months[i];
@@ -128,7 +148,10 @@ std::optional<normals> at( coordinates location )
         }
     }
     if( total_weight == 0 ) {
-        return closest.front().second->data;
+        return station_with_reference( *closest.front().second );
+    }
+    if( elevation_weight > 0 ) {
+        result.reference_elevation_m = weighted_elevation / elevation_weight;
     }
     for( monthly_normal &dest : result.months ) {
         if( dest.precipitation_mm > 0 ) {
@@ -185,6 +208,13 @@ void load_station( const JsonObject &jo, const std::string & )
     jo.get_string( "source_station" );
     const JsonArray months = jo.get_array( "months" );
     station entry{ location, on_sphere( location ), {} };
+    if( jo.has_member( "elevation_m" ) ) {
+        const double height = jo.get_float( "elevation_m" );
+        if( !north_america::within_altitude_limits( height ) ) {
+            jo.throw_error_at( "elevation_m", "Climate station elevation is out of range" );
+        }
+        entry.data.reference_elevation_m = height;
+    }
     if( months.size() != entry.data.months.size() ) {
         jo.throw_error_at( "months", "Climate stations require twelve monthly normals, January first" );
     }

@@ -15,11 +15,61 @@
 #include "line.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
+#include "north_america_elevation.h"
+#include "regional_climate.h"
 #include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_test_helpers.h"
 #include "overmapbuffer.h"
 #include "rng.h"
+
+TEST_CASE( "atlas_elevation_distinguishes_sea_level_from_local_storeys", "[north_america]" )
+{
+    const auto boston = north_america::dem_elevation( regional_climate::coordinates{ 42.47, -71.2894 } );
+    const auto denver = north_america::dem_elevation( regional_climate::coordinates{ 39.74, -104.99 } );
+    const auto mexico = north_america::dem_elevation( regional_climate::coordinates{ 19.43, -99.13 } );
+    REQUIRE( boston );
+    REQUIRE( denver );
+    REQUIRE( mexico );
+    CHECK( *boston < 100.0 );
+    CHECK( *denver > 1500.0 );
+    CHECK( *mexico > 2100.0 );
+
+    const tripoint_abs_ms ground( 0, 0, 0 );
+    const double elevation = north_america::altitude_at( ground );
+    CHECK( north_america::altitude_at( tripoint_abs_ms( ground.xy(), -3 ) ) ==
+           Approx( elevation - 12.0 ) );
+    CHECK( north_america::altitude_at( tripoint_abs_ms( ground.xy(), 2 ) ) ==
+           Approx( elevation + 8.0 ) );
+    CHECK( north_america::temperature_delta_at_height( *denver, *denver ) == 0 );
+    CHECK( north_america::temperature_delta_at_height( *denver + 1000, *denver ) ==
+           Approx( -6.5 ) );
+    CHECK( north_america::pressure_ratio_at_height( *mexico ) < 0.8 );
+    CHECK( north_america::grade_move_multiplier( 0.03 ) == 1 );
+    CHECK( north_america::grade_move_multiplier( 0.30 ) >
+           north_america::grade_move_multiplier( -0.30 ) );
+}
+
+TEST_CASE( "atlas_george_washington_bridge_crosses_the_water_overmap_seam", "[north_america]" )
+{
+    const point_abs_omt left( -9361, 7354 );
+    constexpr int span = 20;
+    const point_abs_omt origin = left - point( 0, span / 2 );
+    const auto water = north_america::raster( origin, 2, span );
+    const auto west = north_america::road_network( origin, 1, span, false );
+    const auto east = north_america::road_network( origin + point::east, 1, span, false );
+    bool crosses = false;
+    for( int i = 0; i < span; ++i ) {
+        if( west[i].lanes >= 8 && east[i].lanes >= 8 &&
+            water[i * 2] != north_america::terrain::land &&
+            water[i * 2 + 1] != north_america::terrain::land &&
+            om_lines::has_segment( west[i].mapped_connections, om_direction::type::east ) &&
+            om_lines::has_segment( east[i].mapped_connections, om_direction::type::west ) ) {
+            crosses = true;
+        }
+    }
+    CHECK( crosses );
+}
 
 TEST_CASE( "north_america_geographic_vegetation_and_population", "[north_america]" )
 {
