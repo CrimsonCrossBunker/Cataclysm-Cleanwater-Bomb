@@ -39,6 +39,7 @@
 #include "field_type.h"
 #include "game.h"
 #include "item.h"
+#include "item_location.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_creatures.h"
@@ -61,6 +62,7 @@
 #include "profession.h"
 #include "proficiency.h"
 #include "scenario.h"
+#include "stomach.h"
 #include "talker.h"
 #include "type_id.h"
 #include "vehicle.h"
@@ -949,6 +951,32 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     []( const const_talker & actor, const std::string & id ) {
         return actor.get_spell_count( trait_id( id ) );
     } );
+    if( !requested.vitamins.empty() ) {
+        sol::table values = owner.lua->create_table(
+                                0, static_cast<int>( requested.vitamins.size() ) );
+        const Character *character = speaker ? speaker->get_const_character() : nullptr;
+        const item_location *food = speaker ? speaker->get_const_item() : nullptr;
+        if( character ) {
+            for( const std::string &id : requested.vitamins ) {
+                values[id] = character->vitamin_get( vitamin_id( id ) );
+            }
+        } else if( food ) {
+            const nutrients nutrition = default_character_compute_effective_nutrients( *food->get_item() );
+            for( const std::string &id : requested.vitamins ) {
+                const auto found = nutrition.vitamins().find( vitamin_id( id ) );
+                values[id] = found != nutrition.vitamins().end() ? found->second : 0;
+            }
+        } else {
+            // Keep errors behind the read so an unrelated short-circuit branch
+            // can still use this detached snapshot on a non-character speaker.
+            sol::table meta = owner.lua->create_table();
+            meta.set_function( "__index", []( const sol::table &, const std::string & ) -> int {
+                throw std::runtime_error( "Enchantment vitamins require a character or food item speaker" );
+            } );
+            values[sol::metatable_key] = meta;
+        }
+        inputs["vitamins"] = std::move( values );
+    }
     if( !requested.body_part_effects.empty() ) {
         sol::table body_part_effects = owner.lua->create_table(
                                            0, static_cast<int>( requested.body_part_effects.size() ) );
@@ -986,6 +1014,11 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.stats ) {
+            inputs["stats"] = owner.lua->create_table_with(
+                                  "strength", speaker->str_cur(), "dexterity", speaker->dex_cur(),
+                                  "intelligence", speaker->int_cur(), "perception", speaker->per_cur() );
+        }
         if( requested.environment ) {
             inputs["environment"] = collect_enchantment_environment( *owner.lua, *speaker,
                                     *requested.environment );

@@ -363,6 +363,8 @@ struct enchantment_character_inputs {
     std::map<std::string, std::vector<std::string>> body_part_effects;
     std::vector<std::string> spell_school_counts;
     std::map<std::string, enchantment_monster_count_query> nearby_monsters;
+    bool stats = false;
+    std::vector<std::string> vitamins;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
