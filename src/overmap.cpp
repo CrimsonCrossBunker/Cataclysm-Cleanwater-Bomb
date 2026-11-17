@@ -1,7 +1,4 @@
 #include "cube_direction.h" // IWYU pragma: associated
-#include "north_america.h"
-#include "north_america_ecology.h"
-#include "north_america_transport.h"
 #include "omdata.h" // IWYU pragma: associated
 #include "overmap.h" // IWYU pragma: associated
 
@@ -17,6 +14,7 @@
 #include <mapgendata.h>
 #include <mdarray.h>
 #include <memory_fast.h>
+#include <overmap_location.h>
 #include <point.h>
 #include <translation.h>
 #include <type_id.h>
@@ -61,6 +59,9 @@
 #include "mongroup.h"
 #include "monster.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_ecology.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "options.h"
 #include "overmap_connection.h"
