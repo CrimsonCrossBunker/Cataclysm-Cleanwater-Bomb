@@ -2,9 +2,15 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <map>
 #include <set>
 #include <utility>
+#include <vector>
 
+#include "activity_actor.h"
 #include "activity_handlers.h"
 #include "cached_options.h"
 #include "calendar.h"
@@ -13,13 +19,17 @@
 #include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "craft_command.h"
 #include "flag.h"
-#include "game.h"
-#include "game_constants.h"
+#include "flexbuffer_json.h"
 #include "game_inventory.h"
 #include "item.h"
 #include "item_location.h"
+#include "item_repair.h"
+#include "item_source.h"
+#include "item_uid.h"
 #include "itype.h"
+#include "iuse.h"
 #include "iuse_actor.h"
 #include "json.h"
 #include "map.h"
@@ -27,16 +37,21 @@
 #include "mp_client_conn.h"
 #include "player_activity.h"
 #include "rng.h"
-#include "skill.h"
 #include "string_formatter.h"
 #include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "uilist.h"
+#include "value_ptr.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
+#include "vehicle_uid.h"
 #include "veh_type.h"
 #include "vpart_range.h"
 #include "vpart_position.h"
+
+static const activity_id ACT_REPAIR_ITEM( "ACT_REPAIR_ITEM" );
+
+static const ammotype ammo_battery( "battery" );
 
 namespace
 {
@@ -127,7 +142,7 @@ std::optional<prepared_tool> prepare_tool( Character &who, const repair_tool_sou
         } else {
             result.fuel = target->tool_ammo_available( here, type ).first;
             if( target->is_locked && !result.fuel.is_null() &&
-                result.fuel->ammo->type == ammotype( "battery" ) ) {
+                result.fuel->ammo->type == ammo_battery ) {
                 return std::nullopt;
             }
             result.initial_ammo = target->prepare_tool( here, *result.tool );
@@ -248,8 +263,7 @@ void repair_activity_choice::deserialize( const JsonObject &data )
 
 const activity_id &repair_activity_actor::get_type() const
 {
-    static const activity_id id( "ACT_REPAIR_ITEM" );
-    return id;
+    return ACT_REPAIR_ITEM;
 }
 
 void repair_activity_actor::start( player_activity &act, Character & )
@@ -286,7 +300,7 @@ bool repair_activity_actor::apply_choice( Character &who, const repair_activity_
     if( changing ) {
         preferred_target.reset();
     } else if( preferred_target && preferred_target->source.kind == "vehicle_part" ) {
-        auto authorized = *preferred_target;
+        item_repair::repair_target authorized = *preferred_target;
         if( !item_repair::authorize_vehicle_work( who, get_map(), authorized ) ) {
             return false;
         }
@@ -323,10 +337,10 @@ void repair_activity_actor::finish( player_activity &act, Character &who )
     const repair_tool_source saved_source = source;
     const repair_activity_choice selected = *choice;
     const character_action_guard lifetime( who );
-    const auto generation = act.identity_generation();
+    const std::uint64_t generation = act.identity_generation();
     const int old_level = who.get_skill_level( tool->action->used_skill );
-    const auto attempt = tool->action->repair( who, *tool->tool, target,
-                         refitting( selected.repeat ), &selected.material );
+    const repair_item_actor::attempt_hint attempt = tool->action->repair( who, *tool->tool, target,
+            refitting( selected.repeat ), &selected.material );
     if( !lifetime ) {
         return;
     }
@@ -346,7 +360,7 @@ void repair_activity_actor::finish( player_activity &act, Character &who )
                 } else {
                     const int spent = tool->initial_ammo - tool->tool->ammo_remaining_linked( get_map(), nullptr );
                     if( spent > 0 && !tool->fuel.is_null() ) {
-                        if( tool->fuel->ammo->type == ammotype( "battery" ) ) {
+                        if( tool->fuel->ammo->type == ammo_battery ) {
                             current->discharge_battery( get_map(), spent );
                         } else {
                             current->drain( get_map(), tool->fuel, spent );
@@ -372,7 +386,7 @@ void repair_activity_actor::finish( player_activity &act, Character &who )
                        old_level != static_cast<int>( who.get_skill_level( tool->action->used_skill ) );
     const bool can_refit = !cannot_continue && target->has_flag( flag_VARSIZE ) &&
                            !target->has_flag( flag_FIT );
-    const auto mode = static_cast<repair_repeat>( selected.repeat );
+    const repair_repeat mode = static_cast<repair_repeat>( selected.repeat );
     waiting = cannot_continue || mode == repair_repeat::ONCE || mode == repair_repeat::REFIT_ONCE ||
               ( mode == repair_repeat::EVENT && event ) ||
               ( mode == repair_repeat::REFIT_FULL && !can_refit );
@@ -414,6 +428,9 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
         if( !target ) {
             return std::nullopt;
         }
+        if( !tool->action->can_repair_target( who, *target, true, true ) ) {
+            return std::nullopt;
+        }
         const repair_repeat repeat = query_repair_repeat( who, *tool->tool, *target, *tool->action,
                                      previous );
         if( repeat == repair_repeat::CANCEL ) {
@@ -449,7 +466,7 @@ std::optional<repair_activity_choice> repair_activity_actor::query_choice( Chara
 void repair_activity_actor::run_local( Character &who )
 {
     const character_action_guard lifetime( who );
-    const auto generation = who.activity.identity_generation();
+    const std::uint64_t generation = who.activity.identity_generation();
     const auto selected = query_choice( who );
     if( !lifetime || who.activity.identity_generation() != generation ) {
         return;

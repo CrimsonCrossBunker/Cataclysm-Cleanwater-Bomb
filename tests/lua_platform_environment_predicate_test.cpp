@@ -209,6 +209,7 @@ TEST_CASE( "lua_platform_environment_strings_match_native_predicates",
     restore_on_out_of_scope restore_initial_season( calendar::initial_season );
     calendar::initial_season = SPRING;
     calendar::turn = calendar::turn_zero;
+    REQUIRE( season_of_year( calendar::turn ) == SPRING );
     const std::string localized_spring_source = "__ccb_test_environment_spring__";
     lua["wanted"] = localized_spring_source;
     conditional_t localized_spring( json_loader::from_string(
