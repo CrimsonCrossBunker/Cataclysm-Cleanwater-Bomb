@@ -60,6 +60,7 @@ require("vampire_diet")
 require("vampire_weakness_messages")
 require("vampire_weakness_reshuffle")
 require("anathema_sunlight")
+require("anathema_progression")
 
 require("nested_recipes")
 

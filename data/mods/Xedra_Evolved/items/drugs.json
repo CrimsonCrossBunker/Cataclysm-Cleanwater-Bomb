@@ -234,23 +234,5 @@
       "transform_age": 345600,
       "not_ready_msg": "The vampire blood is still devouring itself."
     }
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "COMESTIBLE" ],
-    "comestible_type": "DRINK",
-    "category": "drug",
-    "id": "anathema_blood_catalyst",
-    "looks_like": "vampire_blood",
-    "name": { "str_sp": "blood of the Anathema" },
-    "description": "Vampire blood that been forced to gain the ability to devour vampire blood to survive.  Consuming it will allow you to devour vampire blood to gain power, like that vampire did before you caused their end.",
-    "material": [ "vampire_blood" ],
-    "flags": [ "TRADER_AVOID" ],
-    "weight": "235 g",
-    "color": "red",
-    "symbol": "~",
-    "price_postapoc": "0 cent",
-    "volume": "250 ml",
-    "consumption_effect_on_conditions": [ "EOC_CONSUMED_BLOOD_ANATHEMA" ]
   }
 ]

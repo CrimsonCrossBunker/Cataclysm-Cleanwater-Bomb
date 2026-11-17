@@ -13,6 +13,7 @@
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
+#include "flag.h"
 #include "game.h"
 #include "item.h"
 #include "flexbuffer_json.h"
@@ -726,6 +727,110 @@ TEST_CASE( "xedra_weakness_reshuffle_preserves_crafting_and_saved_attempts",
             CHECK( *attempt.due( player ) >= deadline + 90_minutes );
             CHECK( *attempt.due( player ) <= deadline + 150_minutes );
         }
+    }
+}
+
+TEST_CASE( "xedra_anathema_catalyst_and_progression_preserve_native_outcomes",
+           "[.][mods][xedra_evolved]" )
+{
+    const restore_on_out_of_scope restore_time( calendar::turn );
+    const on_out_of_scope cleanup( [] {
+        effect_on_conditions::clear( get_avatar() );
+        Messages::clear_messages();
+        clear_avatar();
+    } );
+    clear_avatar();
+    avatar &player = get_avatar();
+    effect_on_conditions::clear( player );
+    cata::lua_platform::runtime_world_ready( true );
+
+    const trait_id threshold( "THRESH_VAMPIRE_ANATHEMA" );
+    const vitamin_id blood( "vampire_blood_vitamin" );
+    const efftype_id potency( "effect_player_anathema_potency_boost" );
+    const effect_on_condition_id old_timer( "EOC_VAMPIRE_ANATHEMA_GAIN_POWERS" );
+    const xedra_timer progression{ old_timer, "anathema_progression_due" };
+    const std::array<const char *, 18> powers = {
+        "VAMPIRE_STORE_MORE_BLOOD", "EYEGLEAM_UPGRADE", "VAMPIRE_INSTANT_BLEED",
+        "VAMPIRE_DETECT_VAMPIRES", "VAMPIRE_BIG_STOMACH", "VAMPIRE_SEE_THROUGH_NIGHT_EYES",
+        "BLOOD_FUN_UPGRADE", "VAMPIRE_SILENT_MOVE_UPGRADE", "VAMPIRE_STORE_MORE_BLOOD_UPGRADE",
+        "VAMPIRE_INVISIBLE_IN_DARK", "VAMPIRE_HEAL_IN_DARK", "VAMPIRE_BLOOD_FOR_POTENCY",
+        "VAMPIRE_NO_ILLNESS_UPGRADE", "VAMPIRE_FORM_UPGRADE", "VAMPIRE_LAST_BREATH_MIST_UPGRADE",
+        "VAMPIRE_DRINK_VAMPIRE_BLOOD", "VAMPIRE_GAIN_BLOOD_GIFTS", "VAMPIRE_MASTER_MORTAL_MIND_UPGRADE"
+    };
+    const auto matching = [&]( std::string_view prefix ) {
+        std::vector<std::string> out;
+        for( const trait_id &trait : player.get_mutations() ) {
+            if( trait.str().compare( 0, prefix.size(), prefix ) == 0 ) {
+                out.emplace_back( trait.str() );
+            }
+        }
+        std::sort( out.begin(), out.end() );
+        return out;
+    };
+
+    SECTION( "drinking the catalyst requires tier five and no existing threshold" ) {
+        const int state = GENERATE( 0, 1, 2 );
+        if( state > 0 ) {
+            player.set_mutation( trait_id( "BLOOD_DRINKER" ) );
+        }
+        if( state == 2 ) {
+            player.set_mutation( trait_id( "THRESH_FISH" ) );
+            REQUIRE( player.crossed_threshold() );
+        }
+        item catalyst( itype_id( "anathema_blood_catalyst" ), calendar::turn );
+        CHECK( catalyst.charges == 0 );
+        CHECK( catalyst.tname() == "blood of the Anathema" );
+        CHECK( catalyst.volume() == 250_ml );
+        CHECK( catalyst.weight() == 235_gram );
+        CHECK( catalyst.has_flag( flag_TRADER_AVOID ) );
+        rng_set_engine_seed( 70731 );
+        REQUIRE( player.consume( catalyst, true, true ) != trinary::NONE );
+        const auto weaknesses = matching( "VAMPIRE_WEAKNESS_" );
+        const int next_draw = rng( 0, 1000000 );
+        CAPTURE( state, weaknesses, next_draw );
+        CHECK( player.has_trait( trait_VAMPIRE_ANATHEMA ) == ( state == 1 ) );
+        CHECK( weaknesses.size() == ( state == 1 ? 2 : 0 ) );
+    }
+
+    SECTION( "a saved turn spends blood on initial powers, threshold or potency" ) {
+        const int stage = GENERATE( 0, 1, 2, 3 );
+        player.set_mutation( trait_VAMPIRE_ANATHEMA );
+        if( stage == 2 ) {
+            for( std::size_t n = 0; n < 7; ++n ) {
+                player.set_mutation( trait_id( powers[n] ) );
+            }
+        } else if( stage == 3 ) {
+            player.set_mutation( threshold );
+            for( const char *power : powers ) {
+                player.set_mutation( trait_id( power ) );
+            }
+        }
+        const int stored_blood = stage == 0 ? 599 : 700;
+        player.vitamin_set( blood, stored_blood );
+        CHECK( player.vitamin_get( blood ) == stored_blood );
+        const time_point due = calendar::turn + 5_turns;
+        player.queued_effect_on_conditions.push( { old_timer, due, {} } );
+        reload_xedra_avatar( player );
+        CHECK( progression.due( player ) == due );
+        progression.isolate( player );
+
+        rng_set_engine_seed( 70731 );
+        calendar::turn = due;
+        effect_on_conditions::process_effect_on_conditions( player );
+        const auto weaknesses = matching( "VAMPIRE_WEAKNESS_" );
+        const auto curses = matching( "ANATHEMA_WEAKNESS_" );
+        const auto mutations = player.get_mutations();
+        const int next_draw = rng( 0, 1000000 );
+        CAPTURE( stage, mutations, weaknesses, curses, next_draw );
+        CHECK( player.vitamin_get( blood ) == ( stage == 0 ? 599 : 100 ) );
+        CHECK( player.has_trait( threshold ) == ( stage >= 2 ) );
+        CHECK( weaknesses.size() == ( stage == 2 ? 3 : 0 ) );
+        CHECK( curses.size() == ( stage == 2 ? 1 : 0 ) );
+        CHECK( player.get_effect_int( potency ) == ( stage == 3 ? 1 : 0 ) );
+        REQUIRE( progression.due( player ).has_value() );
+        CAPTURE( *progression.due( player ) - due );
+        CHECK( *progression.due( player ) >= due + 3_hours );
+        CHECK( *progression.due( player ) <= due + 4_hours );
     }
 }
 

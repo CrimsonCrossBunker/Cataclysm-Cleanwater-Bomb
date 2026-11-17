@@ -4168,7 +4168,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
             for( const std::string &flag : definition.flags ) {
-                if( json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) {
+                if( check_engine_state && json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' references unknown flag '" + flag + "'" );
                 }
@@ -4215,8 +4215,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     food.quench > std::numeric_limits<int>::max() ||
                     food.spoils_in_turns < 0 ||
                     food.spoils_in_turns > std::numeric_limits<int>::max() ||
-                    food.charges < ( food.type == "MED" ? 0 : 1 ) || food.charges > std::numeric_limits<int>::max() ||
-                    food.stack_size < ( food.type == "MED" ? 0 : 1 ) ||
+                    food.charges < 0 || food.charges > std::numeric_limits<int>::max() ||
+                    food.stack_size < 0 ||
                     food.stack_size > std::numeric_limits<int>::max() ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' has invalid comestible values" );
@@ -6832,6 +6832,9 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.description );
                 hash_part( state, v.category );
                 hash_part( state, v.subcategory );
+                for( const std::string &flag : v.flags ) {
+                    hash_part( state, flag );
+                }
                 hash_part( state, std::to_string( v.activity_level ) );
                 for( const auto &[id, optional] : v.nested_recipes ) {
                     hash_part( state, id );

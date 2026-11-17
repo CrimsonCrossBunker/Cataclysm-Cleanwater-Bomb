@@ -739,8 +739,8 @@ function ItemDefinition:flag(id) end
 ---@field healthy? integer Health modifier; defaults to zero.
 ---@field quench? integer Thirst modifier; defaults to zero.
 ---@field spoils_in_turns? integer Non-negative shelf life; zero never spoils.
----@field charges? integer Default serving count; defaults to one for food/drink, zero for solid medicine.
----@field stack_size? integer Servings represented by the volume; defaults to charges. Medicine may use zero.
+---@field charges? integer Default serving count; defaults to one for food/drink and zero for medicine. Zero uses the native default for the item type.
+---@field stack_size? integer Servings represented by the volume; defaults to charges. Zero derives the size during native finalization.
 
 ---@param options ComestibleDefinitionOptions
 ---@return ItemDefinition self
@@ -8599,6 +8599,11 @@ function CcbCharactersApi.intimidation(character) end
 ---@param body_part_limit? integer
 ---@return CcbResult result `value` is a detached CcbCharacterSnapshot.
 function CcbCharactersApi.snapshot(character, body_part_limit) end
+
+---@param character GameHandle Exact live Character handle.
+---@param flag GameId GameId<json_flag>. MUTATION_THRESHOLD checks the native threshold state.
+---@return CcbResult result `value` is the native flag membership.
+function CcbCharactersApi.has_flag(character, flag) end
 
 ---@param character GameHandle Exact live Character handle.
 ---@return CcbResult result `value` is the NPC danger-cache safety result; non-NPC Characters return true.

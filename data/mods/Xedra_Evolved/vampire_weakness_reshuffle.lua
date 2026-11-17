@@ -3,23 +3,10 @@ local services = ccb.services
 local id = services.types.id
 local time = services.time
 local random = services.random
+local weaknesses = require("vampire_weaknesses")
 
 local activity = "ACT_VAMPIRE_RESHUFFLING_WEAKNESSES"
 local task = "vampire_weakness_reshuffle_due"
-local weaknesses = {
-    "VAMPIRE_WEAKNESS_MORE_BLOOD",
-    "VAMPIRE_WEAKNESS_GROTESQUE",
-    "VAMPIRE_WEAKNESS_EARTH_SLEEP",
-    "VAMPIRE_WEAKNESS_HOLY_BURN",
-    "VAMPIRE_WEAKNESS_VAST_WATER_BURN",
-    "VAMPIRE_WEAKNESS_ANIMAL_HATE",
-    "VAMPIRE_WEAKNESS_FIRE_VULNERABLE",
-    "VAMPIRE_WEAKNESS_COLD_BLOODED",
-    "VAMPIRE_WEAKNESS_NEED_LIVING_BLOOD",
-    "VAMPIRE_WEAKNESS_NEED_HUMAN_BLOOD",
-    "VAMPIRE_WEAKNESS_BLOOD_CRAVING",
-    "VAMPIRE_WEAKNESS_NO_FUN",
-}
 local tiers = {
     { "VAMPIRE3", 1 },
     { "VAMPIRE4", 1 },
@@ -60,24 +47,13 @@ end
 
 local function replace_weaknesses(character)
     popup(character, ccb.services.translate("Your current weaknesses vanish, but are immediately replaced by new ones."))
-    local candidates = {}
-    for index, weakness in ipairs(weaknesses) do
-        candidates[index] = id("mutation", weakness)
-        value(services.mutations.erase(character, candidates[index]))
-    end
+    weaknesses.clear(character)
     value(services.effects.remove(character, id("effect", "vampire_need_living_blood")))
     value(services.morale.remove(character, id("morale", "morale_vw_no_fun")))
 
     for _, tier in ipairs(tiers) do
         if value(services.mutations.has_id_text(character, tier[1])) then
-            for _ = 1, tier[2] do
-                local grant = value(services.progression.grant_random_missing(character, "mutation", candidates))
-                if grant.granted then
-                    message(character, ccb.services.translate("You gain a new vampiric weakness."), "bad")
-                else
-                    popup(character, ccb.services.translate("The EOC failed to give you a weakness.  Please report this on GitHub."))
-                end
-            end
+            weaknesses.grant(character, tier[2])
         end
     end
 
