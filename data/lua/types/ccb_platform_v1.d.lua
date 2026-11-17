@@ -6439,9 +6439,9 @@ function CcbPlatformContent.edit_weapon_category(id) end
 function CcbPlatformContent.edit_requirement(id) end
 
 ---Define or change a crafting requirement in Mod load order. Supplied component,
----tool and quality lists replace the corresponding groups. The optional second
----builder has no id or name. Its entries add choices to existing groups by their
----one-based positions.
+---tool and quality lists replace the corresponding groups. Omitted lists leave
+---their groups intact. The optional second builder adds choices by group position
+---and has no id or name.
 ---@param definition RequirementDefinition
 ---@param alternatives? RequirementDefinition
 function CcbPlatformContent.merge_requirement(definition, alternatives) end

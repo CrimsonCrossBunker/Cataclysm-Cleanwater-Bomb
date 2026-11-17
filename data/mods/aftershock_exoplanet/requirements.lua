@@ -2,7 +2,7 @@ local content = require("ccb").content
 
 -- options.json
 
--- Anesthetic cost removed in this mod, as autodocs do all the heavy lifting.
+-- The previous empty tool group leaves the existing anesthesia requirement intact.
 content.merge_requirement(
     content.Requirement { id = "anesthetic" }
 )

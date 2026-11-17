@@ -3874,9 +3874,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         for( const requirement_registration &entry : pimpl_->requirements ) {
             const requirement_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "requirement" );
-            if( definition.components.empty() && definition.tools.empty() && definition.qualities.empty() &&
-                ( !definition.alternatives || ( definition.alternatives->components.empty() &&
-                    definition.alternatives->tools.empty() && definition.alternatives->qualities.empty() ) ) ) {
+            if( !definition.merge && definition.components.empty() && definition.tools.empty() &&
+                definition.qualities.empty() ) {
                 throw std::runtime_error( "requirement '" + definition.id + "' must contain native requirements" );
             }
             const bool first = requirement_ids.insert( definition.id ).second;
