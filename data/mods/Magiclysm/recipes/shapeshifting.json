@@ -1,26 +1,5 @@
 [
   {
-    "id": "nested_druidic_shapeshifting",
-    "type": "nested_category",
-    "activity_level": "MODERATE_EXERCISE",
-    "category": "CC_ENCHANTED",
-    "subcategory": "CSC_ENCHANTED_RESEARCH",
-    "name": "druidic shapeshifting",
-    "description": "Recipes related to druidic shapeshifting.",
-    "skill_used": "spellcraft",
-    "nested_category_data": [
-      "prac_druidic_shapeshifting_bear",
-      "druidic_shapeshifting_bear_finalize",
-      "prac_druidic_shapeshifting_cougar",
-      "druidic_shapeshifting_cougar_finalize",
-      "prac_druidic_shapeshifting_deer",
-      "druidic_shapeshifting_deer_finalize",
-      "prac_druidic_shapeshifting_raven",
-      "druidic_shapeshifting_raven_finalize"
-    ],
-    "difficulty": 5
-  },
-  {
     "id": "prac_druidic_shapeshifting_bear",
     "type": "practice",
     "activity_level": "EXTRA_EXERCISE",

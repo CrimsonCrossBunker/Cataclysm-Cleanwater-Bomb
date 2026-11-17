@@ -1,37 +1,5 @@
 [
   {
-    "id": "biokinetic_practice",
-    "//": "Random time to unlock new power is 2 hours + hours equal to the Difficulty +/- 20% each way",
-    "type": "nested_category",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_PRACTICE",
-    "subcategory": "CSC_PRACTICE_METAPHYSICS",
-    "name": "contemplation: biokinesis",
-    "description": "Recipes related to practicing biokinesis.",
-    "skill_used": "metaphysics",
-    "nested_category_data": [
-      "practice_biokin_physical_enhance",
-      "practice_biokin_overcome_pain",
-      "practice_biokin_breathe_skin",
-      "practice_biokin_flexibility",
-      "practice_biokin_dash",
-      "practice_biokin_climate_control",
-      "practice_biokin_enhance_mobility",
-      "practice_biokin_armor_skin",
-      "practice_biokin_adrenaline",
-      "practice_biokin_hammerhand",
-      "practice_biokin_reflex_enhance",
-      "practice_biokin_sealed_system",
-      "practice_biokin_metabolism_enhance",
-      "practice_biokin_vitaminosis",
-      "practice_biokin_guided_evolution",
-      "practice_biokin_combat_dance",
-      "practice_biokin_perfected_motion",
-      "practice_biokin_hurricane_blows"
-    ],
-    "difficulty": 1
-  },
-  {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "name": "contemplation: overcome pain",

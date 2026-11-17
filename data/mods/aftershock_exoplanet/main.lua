@@ -22,3 +22,5 @@ ccb.runtime.handler("initialize_shield_display", function()
     end
 end, 1)
 ccb.runtime.on("game:game_start", "initialize_shield_display")
+
+require("nested_recipes")

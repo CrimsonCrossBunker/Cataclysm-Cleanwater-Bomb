@@ -8842,3 +8842,16 @@ add_group({
     "545_steel_core",
     "50_steel_core",
 })
+
+add_group({
+    id = "nested_microscopic_samples",
+    name = ccb.content.text("microscope samples"),
+    description = ccb.content.text("Recipes related to the production of microscope slides of various samples."),
+    category = "CC_OTHER",
+    subcategory = "CSC_OTHER_OTHER",
+    activity_level = 1,
+    skill = "chemistry",
+}, {
+    "microscope_slide_water_murky",
+    "microscope_slide_soil",
+})

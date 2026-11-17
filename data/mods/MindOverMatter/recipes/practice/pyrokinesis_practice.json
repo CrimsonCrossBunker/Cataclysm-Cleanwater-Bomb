@@ -1,33 +1,5 @@
 [
   {
-    "id": "pyrokinesis_practice",
-    "type": "nested_category",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_PRACTICE",
-    "subcategory": "CSC_PRACTICE_METAPHYSICS",
-    "name": "contemplation: pyrokinesis",
-    "description": "Recipes related to practicing pyrokinesis.",
-    "skill_used": "metaphysics",
-    "nested_category_data": [
-      "practice_pyrokinetic_intensify_flames",
-      "practice_pyrokinetic_flash",
-      "practice_pyrokinetic_eruption",
-      "practice_pyrokinetic_cauterize",
-      "practice_pyrokinetic_call_flames",
-      "practice_pyrokinetic_quell_flames",
-      "practice_pyrokinetic_cloak",
-      "practice_pyrokinetic_thermogenesis",
-      "practice_pyrokinetic_lance",
-      "practice_pyrokinetic_flamethrower",
-      "practice_pyrokinetic_aura",
-      "practice_pyrokinetic_flame_immunity",
-      "practice_pyrokinetic_blast",
-      "practice_pyrokinetic_aoe_blast",
-      "practice_pyrokinetic_incineration"
-    ],
-    "difficulty": 1
-  },
-  {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "name": "contemplation: brilliant flash",

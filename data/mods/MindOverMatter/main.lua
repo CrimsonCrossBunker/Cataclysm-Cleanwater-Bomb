@@ -70,3 +70,5 @@ ccb.runtime.handler("count_starting_attunements", function()
     end
 end, 1)
 ccb.runtime.on("game:game_start", "count_starting_attunements")
+
+require("nested_recipes")

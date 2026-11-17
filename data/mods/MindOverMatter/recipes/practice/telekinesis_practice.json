@@ -1,36 +1,5 @@
 [
   {
-    "id": "telekinesis_practice",
-    "type": "nested_category",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_PRACTICE",
-    "subcategory": "CSC_PRACTICE_METAPHYSICS",
-    "name": "contemplation: telekinesis",
-    "description": "Recipes related to practicing telekinesis.",
-    "skill_used": "metaphysics",
-    "nested_category_data": [
-      "practice_telekinetic_pull",
-      "practice_telekinetic_push",
-      "practice_telekinetic_noise",
-      "practice_telekinetic_slam_down",
-      "practice_telekinetic_momentum",
-      "practice_telekinetic_slowfall",
-      "practice_telekinetic_wave",
-      "practice_telekinetic_water_walking",
-      "practice_telekinetic_lifting_field",
-      "practice_telekinetic_strength",
-      "practice_telekinetic_hammer",
-      "practice_telekinetic_vehicle_lift",
-      "practice_telekinetic_shield",
-      "practice_telekinetic_explosion",
-      "practice_telekinetic_levitation",
-      "practice_telekinetic_move_large_weight",
-      "practice_telekinetic_aegis",
-      "practice_telekinetic_earthshaker"
-    ],
-    "difficulty": 1
-  },
-  {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "name": "contemplation: far hand",

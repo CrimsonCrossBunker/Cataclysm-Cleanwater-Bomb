@@ -1,38 +1,5 @@
 [
   {
-    "id": "cat_arvore_treesinging",
-    "type": "nested_category",
-    "activity_level": "MODERATE_EXERCISE",
-    "category": "CC_XEDRA",
-    "subcategory": "CSC_XEDRA_ELEMENTAL",
-    "name": "treesinging",
-    "description": "Recipes related to turning sung wood into furniture and items.",
-    "skill_used": "gramarye",
-    "nested_category_data": [
-      "create_chair_wood_treesung",
-      "create_wardrobe_wood_treesung",
-      "create_table_wood_treesung",
-      "create_bedframe_wood_treesung",
-      "create_verdant_helm",
-      "create_verdant_cuirass",
-      "create_verdant_gauntlets",
-      "create_verdant_leg_guards",
-      "create_verdant_boots",
-      "create_verdant_cloak",
-      "create_shortbow_treesung",
-      "create_greatbow_treesung",
-      "create_arrow_treesung",
-      "create_spear_treesung",
-      "create_pike_treesung",
-      "create_mace_treesung",
-      "create_q_staff_treesung",
-      "create_warhammer_treesung",
-      "create_naginata_treesung",
-      "create_baselard_treesung"
-    ],
-    "difficulty": 1
-  },
-  {
     "type": "recipe",
     "activity_level": "BRISK_EXERCISE",
     "result": "2x4",

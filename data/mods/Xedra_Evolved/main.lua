@@ -43,3 +43,5 @@ ccb.runtime.handler("initialize_inventor_difficulty", function()
     set_starting_variable("XE_INITIALIZATION", 1)
 end, 1)
 ccb.runtime.on("game:game_begin", "initialize_inventor_difficulty")
+
+require("nested_recipes")
