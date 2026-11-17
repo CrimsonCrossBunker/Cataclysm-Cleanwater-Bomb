@@ -737,6 +737,16 @@ function ItemDefinition:quality(id, level) end
 ---@return ItemDefinition self
 function ItemDefinition:flag(id) end
 
+---@class ItemAmmunitionDefinitionOptions
+---@field type string Native ammunition-type id, including a type staged by this Mod.
+---@field count? integer Positive native signed-int default charges. Omission preserves an inherited slot; a new slot defaults to one.
+---@field stack_size? integer Positive native signed-int charges represented by the volume. Omission preserves an inherited slot; native finalization derives a new slot's size from default charges.
+
+---Create or update the native ammunition slot, preserving all unspecified inherited ballistics and effects.
+---@param options ItemAmmunitionDefinitionOptions
+---@return ItemDefinition self
+function ItemDefinition:ammunition(options) end
+
 ---@class ComestibleDefinitionOptions
 ---@field type "FOOD"|"DRINK"|"MED"
 ---@field calories? integer Fixed kilocalories per serving; required for food/drink, defaults to zero for medicine.
@@ -10874,6 +10884,13 @@ function CcbInventoryApi.choose_many_map(character, candidates, options) end
 ---@param quantity integer
 ---@return CcbResult
 function CcbInventoryApi.resources(character, item_type, quantity) end
+
+---Query ownership of this exact item instance, including nested, worn and wielded items.
+---@param character GameHandle Exact live Character.
+---@param item GameHandle Exact live Item; stale identities return the normal handle error.
+---@return CcbResult result value is the native Character::has_item result.
+function CcbInventoryApi.contains(character, item) end
+
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
 ---@param count integer Non-negative requested item count, at most 1000000000.

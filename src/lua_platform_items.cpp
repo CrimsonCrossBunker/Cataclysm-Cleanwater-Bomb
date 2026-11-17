@@ -7926,6 +7926,27 @@ void install_item_api(
                    current_world_generation() );
     } );
     inventory.set_function(
+        "contains",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & owner,
+    const game_handle & item_handle ) {
+        require_read();
+        sol::state_view state( lua_state );
+        std::optional<game_handle_error> error;
+        Character *character = resolve_exact_character( owner, current_runtime_generation(),
+                               current_world_generation(), error );
+        if( !character ) {
+            return make_game_error_result( state, *error );
+        }
+        const native_handle_result<item> entry = item_handle.resolve_item(
+                current_runtime_generation(), current_world_generation() );
+        if( !entry ) {
+            return make_game_error_result( state, *entry.error );
+        }
+        return make_game_value_result( state,
+                                       sol::make_object( state, character->has_item( *entry.value ) ) );
+    } );
+    inventory.set_function(
         "has_items",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & character,

@@ -149,6 +149,11 @@ struct quality_level {
 };
 
 struct item_definition_data {
+    struct ammunition_data {
+        std::string type;
+        std::optional<std::int64_t> count;
+        std::optional<std::int64_t> stack_size;
+    };
     struct comestible_data {
         std::string type;
         std::int64_t calories = 0;
@@ -208,6 +213,7 @@ struct item_definition_data {
     authored_text use_label;
     std::optional<authored_text> use_description;
     std::string consume_handler;
+    std::optional<ammunition_data> ammunition;
     std::optional<comestible_data> comestible;
     std::optional<book_data> book;
     bool registered = false;
@@ -807,6 +813,20 @@ struct item_definition_handle {
             throw std::runtime_error( "item flag id cannot be empty" );
         }
         definition->flags.insert( id );
+        return *this;
+    }
+
+    item_definition_handle &ammunition( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::ammunition_data value;
+        value.type = options.get_or( "type", std::string() );
+        if( const auto count = options.get<sol::optional<std::int64_t>>( "count" ) ) {
+            value.count = *count;
+        }
+        if( const auto stack_size = options.get<sol::optional<std::int64_t>>( "stack_size" ) ) {
+            value.stack_size = *stack_size;
+        }
+        definition->ammunition = std::move( value );
         return *this;
     }
 
@@ -2504,6 +2524,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "material", &item_definition_handle::material,
         "quality", &item_definition_handle::quality,
         "flag", &item_definition_handle::flag,
+        "ammunition", &item_definition_handle::ammunition,
         "comestible", &item_definition_handle::comestible,
         "vitamin", &item_definition_handle::vitamin,
         "book", &item_definition_handle::book,
@@ -4348,6 +4369,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' has invalid melee damage" );
                 }
             }
+            if( definition.ammunition ) {
+                const item_definition_data::ammunition_data &ammo = *definition.ammunition;
+                if( ammo.type.empty() ||
+                    ( ammunition_type_ids.count( ammo.type ) == 0 && !ammotype( ammo.type ).is_valid() ) ||
+                    ( ammo.count && ( *ammo.count < 1 || !native_int( *ammo.count ) ) ) ||
+                    ( ammo.stack_size && ( *ammo.stack_size < 1 || !native_int( *ammo.stack_size ) ) ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has invalid ammunition values" );
+                }
+            }
             for( const auto &[ammo, capacity] : definition.magazine_ammo ) {
                 if( ammo.empty() || capacity <= 0 || !native_int( capacity ) ||
                     ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
@@ -5651,6 +5681,20 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         } else {
                             native->relic_data->add_passive_effect( id.obj() );
                         }
+                    }
+                    if( definition.ammunition ) {
+                        const item_definition_data::ammunition_data &ammo = *definition.ammunition;
+                        if( !native->ammo ) {
+                            native->ammo = cata::make_value<islot_ammo>();
+                        }
+                        native->ammo->type = ammotype( ammo.type );
+                        if( ammo.count ) {
+                            native->ammo->def_charges = static_cast<int>( *ammo.count );
+                        }
+                        if( ammo.stack_size ) {
+                            native->ammo->stack_size = static_cast<int>( *ammo.stack_size );
+                        }
+                        native->ammo->was_loaded = true;
                     }
                     if( entry.definition->comestible ) {
                         const item_definition_data::comestible_data &source =
@@ -6964,6 +7008,13 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_text( v.use_description->translated );
                 }
                 hash_part( state, v.consume_handler );
+                if( v.ammunition ) {
+                    const item_definition_data::ammunition_data &ammo = *v.ammunition;
+                    hash_part( state, "ammunition" );
+                    hash_part( state, ammo.type );
+                    hash_part( state, ammo.count ? std::to_string( *ammo.count ) : "inherited_count" );
+                    hash_part( state, ammo.stack_size ? std::to_string( *ammo.stack_size ) : "inherited_stack_size" );
+                }
                 if( v.comestible ) {
                     const item_definition_data::comestible_data &food = *v.comestible;
                     hash_part( state, "comestible" );
