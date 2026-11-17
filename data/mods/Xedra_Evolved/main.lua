@@ -112,3 +112,5 @@ require("inline_enchantment_conditions")
 require("inline_enchantment_values")
 
 require("inline_enchantment_physiology")
+
+require("inherited_enchantments")
