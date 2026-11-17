@@ -131,11 +131,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "melee_damage_bonus": [
-          { "type": "electric", "add": { "math": [ "(u_spell_level('storm_elemental_electric_melee') * 0.9) * rng(0.5,1.4)" ] } }
-        ]
-      },
+      "INLINE_ENCH_eff_storm_elemental_electric_melee_0",
       "INLINE_ENCH_eff_storm_elemental_electric_melee_1"
     ]
   }

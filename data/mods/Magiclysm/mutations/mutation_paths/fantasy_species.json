@@ -271,10 +271,7 @@
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "enchantments": [
       "INLINE_ENCH_ELVEN_BUILD_0",
-      {
-        "condition": { "math": [ "u_effect_intensity('effect_vitamin_elven_wilderness') <= 3" ] },
-        "mutations": [ "DISIMMUNE" ]
-      }
+      "INLINE_ENCH_ELVEN_BUILD_1"
     ],
     "flags": [ "HERITAGE" ]
   },
@@ -368,27 +365,7 @@
     "//": "terrains below copied from the druid caster level boost.",
     "category": [ "SPECIES_ELF" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_is_on_terrain": "t_tree_young" },
-            { "u_is_on_terrain": "t_mega_fern" },
-            { "u_is_on_terrain": "t_fungus_colony" },
-            { "u_is_on_terrain_with_flag": "SHRUB" },
-            { "u_is_on_terrain": "t_bamboo_long" },
-            { "u_is_on_terrain": "t_bamboo_tall" },
-            { "u_is_on_terrain": "t_grass_tall" },
-            { "u_is_on_terrain": "t_grass_long" },
-            { "u_is_on_terrain": "t_bamboo" },
-            { "u_is_on_terrain": "t_bamboo_harvested" },
-            { "u_is_on_terrain": "t_grass" },
-            { "u_is_on_terrain": "t_grass_white" },
-            { "u_is_on_terrain": "t_moss" },
-            { "u_is_on_terrain": "t_forestfloor" }
-          ]
-        },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.1 } ]
-      }
+      "INLINE_ENCH_WILDWALKER_0"
     ]
   },
   {
@@ -555,14 +532,8 @@
     "flags": [ "MYOPIC_IN_LIGHT_SUPERNATURAL" ],
     "category": [ "SPECIES_GOBLIN" ],
     "enchantments": [
-      {
-        "condition": { "not": "is_day" },
-        "values": [ { "value": "SLEEPY", "add": -50 }, { "value": "OVERMAP_SIGHT", "add": 6 } ]
-      },
-      {
-        "condition": "is_day",
-        "values": [ { "value": "SLEEPY", "add": 50 }, { "value": "OVERMAP_SIGHT", "add": -2 } ]
-      }
+      "INLINE_ENCH_NOCTURNAL_0",
+      "INLINE_ENCH_NOCTURNAL_1"
     ]
   },
   {

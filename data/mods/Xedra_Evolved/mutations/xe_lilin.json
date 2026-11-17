@@ -11,15 +11,7 @@
     "threshold": true,
     "//3": "An umbrella cannot protect you because this is a mystical weakness.",
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "STRENGTH", "add": -1 },
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "INTELLIGENCE", "add": -1 },
-          { "value": "PERCEPTION", "add": -1 }
-        ]
-      },
+      "INLINE_ENCH_THRESH_LILIN_0",
       {
         "condition": { "and": [ "is_day", "u_is_outside", { "or": [ { "is_weather": "sunny" }, { "is_weather": "clear" } ] } ] },
         "values": [
@@ -169,10 +161,7 @@
     "purifiable": false,
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] } ] },
-        "ench_effects": [ { "effect": "effect_lilin_silent_at_night", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_SILENT_AT_NIGHT_0"
     ]
   },
   {
@@ -183,7 +172,7 @@
     "points": 2,
     "description": "You were born to walk the night, and have a much easier time sleeping during the day.",
     "category": [ "LILIN" ],
-    "enchantments": [ { "condition": "is_day", "values": [ { "value": "SLEEPY", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LILIN_SLEEP_EASY_DURING_DAY_0" ]
   },
   {
     "type": "mutation",
@@ -206,10 +195,7 @@
     "prereqs": [ "PRETTY", "BEAUTIFUL" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "SOCIAL_PERSUADE", "add": { "math": [ "12 + (12 * u_has_trait('THRESH_LILIN') )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_PERSUASION_0"
     ]
   },
   {
@@ -222,10 +208,7 @@
     "prereqs": [ "PRETTY", "BEAUTIFUL" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "SOCIAL_LIE", "add": { "math": [ "12 + (12 * u_has_trait('THRESH_LILIN') )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_LYING_0"
     ]
   },
   {
@@ -262,10 +245,7 @@
     "prereqs": [ "LILIN_ETERNAL_YOUTH" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "ench_effects": [ { "effect": "effect_lilin_steady_speed", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_STEADY_SPEED_0"
     ]
   },
   {
@@ -467,10 +447,7 @@
         },
         "melee_damage_bonus": [ { "type": "biological", "add": { "math": [ "1 + (u_vitamin('lilin_ruach_vitamin') / 3000)" ] } } ]
       },
-      {
-        "condition": { "and": [ { "not": "u_has_weapon" }, { "not": { "and": [ "is_day", "u_is_outside" ] } } ] },
-        "melee_damage_bonus": [ { "type": "biological", "add": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_UNARMED_EXTRA_DAMAGE_4"
     ]
   },
   {
@@ -532,18 +509,9 @@
     "prereqs2": [ "LILIN_THE_EVIL_EYE" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "u_is_outside",
-        "values": [ { "value": "NIGHT_VIS", "add": { "math": [ "u_val('perception') * 1.5" ] } } ]
-      },
-      {
-        "condition": { "not": "u_is_outside" },
-        "values": [ { "value": "NIGHT_VIS", "add": { "math": [ "u_val('perception') * 0.75" ] } } ]
-      },
-      {
-        "condition": { "and": [ "u_is_outside", { "not": "is_day" } ] },
-        "values": [ { "value": "OVERMAP_SIGHT", "add": { "math": [ "6 + (u_val('perception') / 5)" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_NIGHT_VISION_0",
+      "INLINE_ENCH_LILIN_NIGHT_VISION_1",
+      "INLINE_ENCH_LILIN_NIGHT_VISION_2"
     ]
   },
   {
@@ -556,19 +524,7 @@
     "prereqs": [ "LILIN_SLEEP_EASY_DURING_DAY" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "LEARNING_FOCUS",
-            "add": {
-              "math": [
-                "5 + clamp( (u_vitamin('lilin_ruach_vitamin') / 100 ), 0, 10) + clamp( ( (u_vitamin('lilin_ruach_vitamin') - 1000) / 250 ), 0, 10) +  clamp( ( (u_vitamin('lilin_ruach_vitamin') - 3000) / 500 ), 0, 10)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_LILIN_GAIN_MORE_FOCUS_0"
     ]
   },
   {
@@ -582,10 +538,7 @@
     "prereqs2": [ "LILIN_NIGHT_VISION", "LILIN_NIGHT_VISION_UPGRADE" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [ { "value": "WEAKPOINT_ACCURACY", "multiply": { "math": [ "0.5 + (u_vitamin('lilin_ruach_vitamin') / 2000 )" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_EASIER_WEAKPOINT_ATTACKS_0"
     ]
   },
   {
@@ -642,10 +595,7 @@
     "purifiable": false,
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": { "math": [ "15 + (u_vitamin('lilin_ruach_vitamin') / 100)" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_RESIST_COLD_0"
     ]
   },
   {
@@ -662,15 +612,7 @@
     "prereqs2": [ "LILIN_DRAIN_RUACH_DISTANCE", "LILIN_DRAIN_RUACH_LONG_DISTANCE" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "THIRST", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "METABOLISM", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "KCAL", "multiply": -0.333 }
-        ]
-      }
+      "INLINE_ENCH_LILIN_REDUCED_NEEDS_WITH_RUACH_0"
     ]
   },
   {
@@ -684,10 +626,7 @@
     "prereqs": [ "LILIN_SLEEP_EASY_DURING_DAY" ],
     "category": [ "LILIN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "(u_vitamin('lilin_ruach_vitamin') / 250)" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_BONUS_HEALING_0"
     ]
   },
   {
@@ -796,10 +735,7 @@
     "threshreq": [ "THRESH_LILIN" ],
     "enchantments": [
       "INLINE_ENCH_LILIN_NIGHT_VISION_UPGRADE_0",
-      {
-        "condition": { "not": "is_day" },
-        "values": [ { "value": "OVERMAP_SIGHT", "add": { "math": [ "6 + u_val('perception')" ] } } ]
-      }
+      "INLINE_ENCH_LILIN_NIGHT_VISION_UPGRADE_1"
     ],
     "flags": [ "MYOPIC_IN_LIGHT_SUPERNATURAL" ]
   },
@@ -840,10 +776,7 @@
     "category": [ "LILIN" ],
     "threshreq": [ "THRESH_LILIN" ],
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "u_vitamin('lilin_ruach_vitamin') >= 1" ] } ] },
-        "ench_effects": [ { "effect": "effect_lilin_limb_score_bonuses_at_night", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_LIMB_SCORE_BONUSES_AT_NIGHT_0"
     ]
   },
   {
@@ -890,15 +823,7 @@
     "category": [ "LILIN" ],
     "threshreq": [ "THRESH_LILIN" ],
     "enchantments": [
-      {
-        "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin')", ">=", "1" ] },
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "THIRST", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "METABOLISM", "multiply": { "math": [ "-0.15 - (u_vitamin('lilin_ruach_vitamin') / 10000)" ] } },
-          { "value": "KCAL", "multiply": -0.333 }
-        ]
-      }
+      "INLINE_ENCH_LILIN_REDUCED_NEEDS_WITH_RUACH_AND_KCAL_DRAIN_0"
     ]
   },
   {
@@ -927,10 +852,7 @@
     "threshreq": [ "THRESH_LILIN" ],
     "//": "This enchantment removes the effect if the Lilit is outside at day.",
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "ench_effects": [ { "effect": "effect_lilin_lose_incremental_speed_boost", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_LILIN_INCREMENTAL_SPEED_BOOST_0"
     ]
   },
   {

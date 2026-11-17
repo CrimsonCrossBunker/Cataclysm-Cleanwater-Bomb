@@ -46,7 +46,7 @@
     "valid": false,
     "player_display": false,
     "purifiable": false,
-    "enchantments": [ { "condition": { "not": { "u_has_trait": "awayfromhome" } }, "mutations": [ "mut_skyisland_sunblock_real" ] } ]
+    "enchantments": [ "INLINE_ENCH_mut_skyisland_sunblock_0" ]
   },
   {
     "type": "mutation",
@@ -68,7 +68,7 @@
     "valid": false,
     "player_display": false,
     "purifiable": false,
-    "enchantments": [ { "condition": { "not": { "u_has_trait": "awayfromhome" } }, "mutations": [ "mut_skyisland_windblock_real" ] } ]
+    "enchantments": [ "INLINE_ENCH_mut_skyisland_windblock_0" ]
   },
   {
     "type": "mutation",
@@ -91,10 +91,7 @@
     "player_display": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "awayfromhome" } },
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 999 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 999 } ]
-      }
+      "INLINE_ENCH_mut_skyisland_personal_temperature_adaptation_0"
     ]
   },
   {
@@ -107,10 +104,7 @@
     "player_display": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "awayfromhome" } },
-        "ench_effects": [ { "effect": "effect_island_radblock", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_mut_skyisland_radblock_0"
     ]
   },
   {
@@ -123,10 +117,7 @@
     "player_display": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "awayfromhome" } },
-        "ench_effects": [ { "effect": "effect_island_steady", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_mut_skyisland_island_steady_0"
     ]
   },
   {

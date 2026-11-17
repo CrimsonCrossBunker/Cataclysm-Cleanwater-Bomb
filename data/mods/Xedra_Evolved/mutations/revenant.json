@@ -50,10 +50,7 @@
         ]
       },
       "INLINE_ENCH_XE_REVENANT_TRAITS_1",
-      {
-        "condition": { "not": "u_has_weapon" },
-        "melee_damage_bonus": [ { "type": "bash", "add": 4 }, { "type": "cut", "add": 2 } ]
-      }
+      "INLINE_ENCH_XE_REVENANT_TRAITS_2"
     ],
     "flags": [
       "HERITAGE",

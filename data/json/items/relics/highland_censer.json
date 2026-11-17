@@ -319,7 +319,7 @@
     "id": "golden_incense_effect",
     "name": [ "Golden Incense" ],
     "desc": [ "You can't shake off the smell of the golden incense.  It feels like small daggers pressing against your senses." ],
-    "enchantments": [ { "condition": { "not": { "u_has_effect": "effect_tindalos_ignore_cancel" } }, "mutations": [ "TINDALOS_IGNORE" ] } ]
+    "enchantments": [ "INLINE_ENCH_golden_incense_effect_0" ]
   },
   {
     "type": "mutation",

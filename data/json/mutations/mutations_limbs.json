@@ -443,10 +443,7 @@
     "ugliness": 9,
     "restricts_gear": [ "hand_r" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "ARM_BIONIC_BASIC_RIGHT" } },
-        "modified_bodyparts": [ { "lose": "hand_r" }, { "gain": "crustacean_pincer_r" } ]
-      }
+      "INLINE_ENCH_CRUSTACEAN_CLAW_0"
     ]
   },
   {
@@ -616,14 +613,8 @@
     "restricts_gear": [ "arm_l", "arm_r", "hand_l", "hand_r" ],
     "allowed_items": [ "ALLOWS_WING_ARMS" ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "ARM_BIONIC_BASIC_LEFT" } },
-        "modified_bodyparts": [ { "lose": "arm_l" }, { "lose": "hand_l" }, { "gain": "arm_wing_bat_l" } ]
-      },
-      {
-        "condition": { "not": { "u_has_trait": "ARM_BIONIC_BASIC_RIGHT" } },
-        "modified_bodyparts": [ { "lose": "arm_r" }, { "lose": "hand_r" }, { "gain": "arm_wing_bat_r" } ]
-      }
+      "INLINE_ENCH_WINGS_BAT_0",
+      "INLINE_ENCH_WINGS_BAT_1"
     ]
   },
   {
@@ -944,16 +935,8 @@
     "visibility": 2,
     "ugliness": 2,
     "enchantments": [
-      {
-        "condition": { "and": [ { "u_has_move_mode": "crouch" }, { "not": "u_can_drop_weapon" }, { "u_has_trait": "WINGS_BAT" } ] },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.58 }, { "value": "FOOTSTEP_NOISE", "multiply": 0 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 } ]
-      },
-      {
-        "condition": { "and": [ { "u_has_move_mode": "run" }, { "not": "u_can_drop_weapon" }, { "u_has_trait": "WINGS_BAT" } ] },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.2 }, { "value": "FOOTSTEP_NOISE", "multiply": -0.6 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_LEGS_BAT_0",
+      "INLINE_ENCH_LEGS_BAT_1",
       "INLINE_ENCH_LEGS_BAT_2"
     ],
     "triggers": [
@@ -993,14 +976,8 @@
     "enchantments": [
       "ench_quadruped_movement_full",
       "INLINE_ENCH_RABBIT_FEET_1",
-      {
-        "condition": { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } },
-        "modified_bodyparts": [ { "lose": "foot_l" }, { "gain": "animal_paw_rabbit_l" } ]
-      },
-      {
-        "condition": { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } },
-        "modified_bodyparts": [ { "lose": "foot_r" }, { "gain": "animal_paw_rabbit_r" } ]
-      }
+      "INLINE_ENCH_RABBIT_FEET_2",
+      "INLINE_ENCH_RABBIT_FEET_3"
     ],
     "wet_protection": [ { "part": "foot_l", "neutral": 10 }, { "part": "foot_r", "neutral": 10 } ]
   },
@@ -1053,19 +1030,10 @@
     "restricts_gear": [ "foot_l", "foot_r" ],
     "enchantments": [
       "ench_quadruped_movement_full",
-      {
-        "condition": { "and": [ { "u_has_move_mode": "crouch" }, { "not": "u_can_drop_weapon" }, { "u_has_flag": "QUADRUPED_CROUCH" } ] },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.35 } ]
-      },
+      "INLINE_ENCH_ANIMAL_FEET_1",
       "INLINE_ENCH_ANIMAL_FEET_2",
-      {
-        "condition": { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } },
-        "modified_bodyparts": [ { "lose": "foot_l" }, { "gain": "animal_paw_l" } ]
-      },
-      {
-        "condition": { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } },
-        "modified_bodyparts": [ { "lose": "foot_r" }, { "gain": "animal_paw_r" } ]
-      }
+      "INLINE_ENCH_ANIMAL_FEET_3",
+      "INLINE_ENCH_ANIMAL_FEET_4"
     ],
     "triggers": [
       [

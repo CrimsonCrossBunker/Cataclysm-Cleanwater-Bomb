@@ -112,7 +112,7 @@
     "remove_message": "The wind at your back dies down.",
     "rating": "good",
     "max_duration": 1200,
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": { "math": [ "((u_spell_level('windrun') * 2) + 10)" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_enchant_windrun_0" ],
     "base_mods": { "stamina_min": [ 10 ] }
   },
   {
@@ -245,14 +245,7 @@
     "max_duration": 1200,
     "removes_effects": [ "effect_technomancer_arete" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "PERCEPTION", "add": { "math": [ "((u_spell_level('bless') / 8) + 1)" ] } },
-          { "value": "DEXTERITY", "add": { "math": [ "((u_spell_level('bless') / 8) + 1)" ] } },
-          { "value": "STRENGTH", "add": { "math": [ "((u_spell_level('bless') / 8) + 1)" ] } },
-          { "value": "SPEED", "add": { "math": [ "((u_spell_level('bless') ) + 5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_bless_0"
     ]
   },
   {
@@ -266,15 +259,7 @@
     "max_duration": 2400,
     "max_intensity": 4,
     "enchantments": [
-      {
-        "values": [
-          { "value": "PERCEPTION", "add": { "math": [ "((u_spell_level('bio_grotesque') / 10) + 1)" ] } },
-          { "value": "DEXTERITY", "add": { "math": [ "((u_spell_level('bio_grotesque') / 10) + 1)" ] } },
-          { "value": "STRENGTH", "add": { "math": [ "((u_spell_level('bio_grotesque') / 5) + 1)" ] } },
-          { "value": "SPEED", "add": { "math": [ "((u_spell_level('bio_grotesque') / 4) + 5)" ] } },
-          { "value": "UGLINESS", "add": { "math": [ "(u_spell_level('bio_grotesque') / 2) + 2" ] } }
-        ]
-      }
+      "INLINE_ENCH_bio_boost_0"
     ]
   },
   {
@@ -289,14 +274,7 @@
     "apply_message": "Roots and vines burst from the ground and entangle you!",
     "remove_message": "The roots and vines wither up and die.",
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "SPEED",
-            "add": { "math": [ "(-5 + (u_vegetative_grasp_affected_level * -2) ) * u_evocation_spell_affected_proficiency" ] }
-          }
-        ]
-      },
+      "INLINE_ENCH_entangled_0",
       {
         "condition": { "and": [ { "math": [ "u_val('size')== 1" ] }, { "u_is_on_terrain_with_flag": "DIGGABLE" } ] },
         "values": [
@@ -390,7 +368,7 @@
     "remove_message": "The aura of light distortion around you vanishes.",
     "rating": "good",
     "max_duration": 14400,
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": { "math": [ "((u_spell_level('obfuscated_body') / 7) + 1)" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_obfuscating_aura_0" ]
   },
   {
     "type": "effect_type",
@@ -414,9 +392,7 @@
     "rating": "good",
     "max_duration": 14400,
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "acid", "multiply": { "math": [ "((u_spell_level('acid_resistance') * -0.02) - 0.2)" ] } } ]
-      }
+      "INLINE_ENCH_effect_acid_res_aura_0"
     ]
   },
   {
@@ -499,9 +475,7 @@
     "max_duration": 14400,
     "removes_effects": [ "eagles_sight", "cats_grace", "foxs_cunning", "effect_technomancer_arete", "bless" ],
     "enchantments": [
-      {
-        "values": [ { "value": "STRENGTH", "add": { "math": [ "( u_spell_level('technomancer_strength_buff_spell') / 3 ) + 2" ] } } ]
-      }
+      "INLINE_ENCH_ogres_strength_0"
     ]
   },
   {
@@ -526,9 +500,7 @@
     "max_duration": 14400,
     "removes_effects": [ "ogres_strength", "cats_grace", "foxs_cunning", "effect_technomancer_arete", "bless" ],
     "enchantments": [
-      {
-        "values": [ { "value": "PERCEPTION", "add": { "math": [ "( u_spell_level('technomancer_perception_buff_spell') / 3 ) + 2" ] } } ]
-      }
+      "INLINE_ENCH_eagles_sight_0"
     ]
   },
   {
@@ -542,9 +514,7 @@
     "max_duration": 14400,
     "removes_effects": [ "ogres_strength", "eagles_sight", "foxs_cunning", "effect_technomancer_arete", "bless" ],
     "enchantments": [
-      {
-        "values": [ { "value": "DEXTERITY", "add": { "math": [ "( u_spell_level('technomancer_dexterity_buff_spell') / 3 ) + 2" ] } } ]
-      }
+      "INLINE_ENCH_cats_grace_0"
     ]
   },
   {
@@ -558,11 +528,7 @@
     "max_duration": 14400,
     "removes_effects": [ "ogres_strength", "eagles_sight", "cats_grace", "effect_technomancer_arete", "bless" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "INTELLIGENCE", "add": { "math": [ "( u_spell_level('technomancer_intelligence_buff_spell') / 3 ) + 2" ] } }
-        ]
-      }
+      "INLINE_ENCH_foxs_cunning_0"
     ]
   },
   {
@@ -674,9 +640,7 @@
       "stamina_chance": [ 2 ]
     },
     "enchantments": [
-      {
-        "values": [ { "value": "UGLINESS", "add": { "math": [ "( u_spell_level('biomancer_coagulant_weave') / 4 ) + 1" ] } } ]
-      }
+      "INLINE_ENCH_bio_weave_0"
     ]
   },
   {
@@ -878,18 +842,7 @@
     "rating": "good",
     "max_duration": 57600,
     "enchantments": [
-      {
-        "skills": [
-          {
-            "value": "computer",
-            "add": { "math": [ "((u_spell_level('technomancer_gain_electronics_computer_spell') / 7) + 1)" ] }
-          },
-          {
-            "value": "electronics",
-            "add": { "math": [ "((u_spell_level('technomancer_gain_electronics_computer_spell') / 7) + 1)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_technomancer_gain_electronics_computer_0"
     ]
   },
   {
@@ -901,30 +854,7 @@
     "rating": "good",
     "max_duration": 100,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "PAIN_PENALTY_MOD_STR",
-            "multiply": { "math": [ "((u_spell_level('technomancer_pain_ignore') * -0.02) - 0.7)" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_DEX",
-            "multiply": { "math": [ "((u_spell_level('technomancer_pain_ignore') * -0.02) - 0.7)" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_INT",
-            "multiply": { "math": [ "((u_spell_level('technomancer_pain_ignore') * -0.02) - 0.7)" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_PER",
-            "multiply": { "math": [ "((u_spell_level('technomancer_pain_ignore') * -0.02) - 0.7)" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_SPEED",
-            "multiply": { "math": [ "((u_spell_level('technomancer_pain_ignore') * -0.02) - 0.7)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_technomancer_pain_ignore_0"
     ]
   },
   {
@@ -996,14 +926,7 @@
     "show_intensity": false,
     "enchantments": [
       "ELECTRIC_VISION",
-      {
-        "values": [
-          { "value": "BONUS_DODGE", "add": 1 },
-          { "value": "DODGE_CHANCE", "add": { "math": [ "u_spell_level('electric_eye') / 7" ] } },
-          { "value": "DEXTERITY", "add": { "math": [ "u_spell_level('electric_eye') / 10" ] } },
-          { "value": "PERCEPTION", "add": { "math": [ "u_spell_level('electric_eye') / 5" ] } }
-        ]
-      }
+      "INLINE_ENCH_electric_eye_1"
     ]
   },
   {
@@ -1029,7 +952,7 @@
     "max_duration": 230400,
     "show_intensity": false,
     "enchantments": [
-      { "incoming_damage_mod": [ { "type": "electric", "add": { "math": [ "u_spell_level('electric_arts') * -1.5" ] } } ] }
+      "INLINE_ENCH_electric_arts_0"
     ]
   },
   {
@@ -1185,20 +1108,7 @@
     "rating": "good",
     "max_duration": 86400,
     "enchantments": [
-      {
-        "values": [
-          { "value": "HUNGER", "multiply": { "math": [ "(-0.2 - (0.04 * u_spell_level('earthshaper_fortitude_of_stone')))" ] } },
-          {
-            "value": "THIRST",
-            "multiply": { "math": [ "(-0.2 - (0.04 * u_spell_level('earthshaper_fortitude_of_stone')))" ] }
-          },
-          {
-            "value": "METABOLISM",
-            "multiply": { "math": [ "(-0.2 - (0.04 * u_spell_level('earthshaper_fortitude_of_stone')))" ] }
-          },
-          { "value": "REGEN_HP", "multiply": -1.0 }
-        ]
-      }
+      "INLINE_ENCH_earthshaper_fortitude_of_stone_0"
     ]
   },
   {
@@ -1290,9 +1200,7 @@
     "rating": "good",
     "max_duration": 19200,
     "enchantments": [
-      {
-        "values": [ { "value": "EVASION", "add": { "math": [ "(( u_spell_level('animist_add_evasion_spell') * 0.02) + 0.1)" ] } } ]
-      }
+      "INLINE_ENCH_effect_animist_add_evasion_0"
     ]
   },
   {
@@ -1316,9 +1224,7 @@
     "rating": "good",
     "max_duration": 36000,
     "enchantments": [
-      {
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": { "math": [ "(( u_spell_level('druid_anti_heat') * 2.5) + 10)" ] } } ]
-      }
+      "INLINE_ENCH_effect_druid_anti_heat_0"
     ]
   },
   {
@@ -1332,11 +1238,7 @@
     "max_duration": 86400,
     "removes_effects": [ "effect_kelvinist_anti_heat" ],
     "enchantments": [
-      {
-        "emitter": "emit_kelvinist_anti_cold",
-        "incoming_damage_mod": [ { "type": "cold", "add": { "math": [ "( u_spell_level('kelvinist_anti_cold') * -1)" ] } } ],
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 } ]
-      }
+      "INLINE_ENCH_effect_kelvinist_anti_cold_0"
     ]
   },
   {
@@ -1350,11 +1252,7 @@
     "max_duration": 86400,
     "removes_effects": [ "effect_kelvinist_anti_cold" ],
     "enchantments": [
-      {
-        "emitter": "emit_kelvinist_anti_heat",
-        "incoming_damage_mod": [ { "type": "heat", "add": { "math": [ "( u_spell_level('kelvinist_anti_heat') * -1)" ] } } ],
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 50 } ]
-      }
+      "INLINE_ENCH_effect_kelvinist_anti_heat_0"
     ]
   },
   {
@@ -1377,15 +1275,7 @@
     "rating": "good",
     "max_duration": 39600,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SOCIAL_PERSUADE", "add": { "math": [ "( u_spell_level('kelvinist_persuasion_spell') * 1.5) + 3" ] } },
-          {
-            "value": "SOCIAL_INTIMIDATE",
-            "add": { "math": [ "( u_spell_level('kelvinist_persuasion_spell') * 1.5) + 3" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_kelvinist_flames_of_passion_0"
     ]
   },
   {
@@ -1398,9 +1288,7 @@
     "rating": "good",
     "max_duration": 1200,
     "enchantments": [
-      {
-        "values": [ { "value": "FALL_DAMAGE", "multiply": { "math": [ "(( u_spell_level('magus_slowfall') * -0.01) - 0.9 )" ] } } ]
-      }
+      "INLINE_ENCH_effect_magus_slowfall_0"
     ]
   },
   {
@@ -1424,9 +1312,7 @@
     "rating": "good",
     "max_duration": 23040,
     "enchantments": [
-      {
-        "values": [ { "value": "RANGE", "multiply": { "math": [ "(( u_spell_level('magus_ranged_increase') * 0.02) + 0.25 )" ] } } ]
-      }
+      "INLINE_ENCH_effect_magus_ranged_increase_0"
     ]
   },
   {
@@ -1492,11 +1378,7 @@
     "show_intensity": false,
     "scaling_mods": { "speed_mod": [ -25 ], "str_mod": [ -5 ], "dex_mod": [ -5 ], "int_mod": [ -5 ], "per_mod": [ -5 ] },
     "enchantments": [
-      {
-        "values": [
-          { "value": "MUT_INSTABILITY_MOD", "add": { "math": [ "-1 - ( u_spell_level('biomancer_remove_instability') / 5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_effect_biomancer_remove_instability_0"
     ],
     "limb_score_mods": [
       { "limb_score": "manip", "modifier": 1, "scaling": -0.3 },
@@ -1520,11 +1402,7 @@
     "rating": "good",
     "max_duration": 122400,
     "enchantments": [
-      {
-        "values": [
-          { "value": "MUT_ADDITIONAL_OPTIONS", "add": { "math": [ "1 + ( u_spell_level('biomancer_control_mutations') / 5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_effect_biomancer_control_mutations_0"
     ]
   },
   {
@@ -1562,7 +1440,7 @@
     "rating": "good",
     "max_duration": 40000,
     "enchantments": [
-      { "values": [ { "value": "LUMINATION", "add": { "math": [ "( u_spell_level('create_atomic_light') * 2) + 3" ] } } ] }
+      "INLINE_ENCH_effect_classless_magic_light_0"
     ]
   },
   {
@@ -1574,9 +1452,7 @@
     "rating": "good",
     "max_duration": 3600,
     "enchantments": [
-      {
-        "values": [ { "value": "SLEEPY", "add": { "math": [ "( u_spell_level('classless_easy_sleep_spell') * 3) + 15" ] } } ]
-      }
+      "INLINE_ENCH_effect_classless_easy_sleep_0"
     ]
   },
   {
@@ -1619,9 +1495,7 @@
     "rating": "good",
     "max_duration": 35280,
     "enchantments": [
-      {
-        "values": [ { "value": "SHOUT_NOISE", "add": { "math": [ "( u_spell_level('stormshaper_loud_voice_spell') * 3) + 15" ] } } ]
-      }
+      "INLINE_ENCH_effect_stormshaper_loud_voice_0"
     ],
     "flags": [ "IMMUNE_HEARING_DAMAGE" ]
   },
@@ -1675,7 +1549,7 @@
     "desc": [ "" ],
     "max_intensity": 100,
     "enchantments": [
-      { "values": [ { "value": "UGLINESS", "add": { "math": [ "u_effect_intensity('effect_biomancer_disturbing')" ] } } ] }
+      "INLINE_ENCH_effect_biomancer_disturbing_0"
     ]
   },
   {
@@ -1714,12 +1588,7 @@
     "rating": "good",
     "max_duration": 48960,
     "enchantments": [
-      {
-        "values": [
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": { "math": [ "u_spell_level('biomancer_eat_tons_of_food') * 0.5" ] } },
-          { "value": "UGLINESS", "add": 1 }
-        ]
-      }
+      "INLINE_ENCH_effect_biomancer_eat_tons_of_food_0"
     ]
   },
   {
@@ -1859,11 +1728,7 @@
     "show_in_info": true,
     "remove_message": "Nature no longer speeds your movements.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": { "math": [ "((u_spell_level('druid_traverse_the_wilds') * -0.015) - 0.05)" ] } }
-        ]
-      },
+      "INLINE_ENCH_effect_druid_traverse_the_wilds_0",
       {
         "condition": { "math": [ "u_spell_level('druid_traverse_the_wilds') > 7" ] },
         "values": [ { "value": "PHASE_DISTANCE", "add": 2 } ]
@@ -1970,7 +1835,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "WEAKPOINT_ACCURACY", "multiply": { "math": [ "1+((u_skill('archery'))/3)" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_archerybracers_0" ]
   },
   {
     "type": "effect_type",
@@ -2095,9 +1960,7 @@
     "remove_message": "Your leylines finally calm down.",
     "max_intensity": 3,
     "enchantments": [
-      {
-        "values": [ { "value": "REGEN_MANA", "multiply": { "math": [ "-0.3 + (u_effect_intensity('effect_mana_overload') * -0.2)" ] } } ]
-      }
+      "INLINE_ENCH_effect_mana_overload_0"
     ]
   },
   {

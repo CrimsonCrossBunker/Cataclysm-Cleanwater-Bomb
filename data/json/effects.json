@@ -616,27 +616,9 @@
     "scaling_mods": { "hit_mod": [ 0.01 ], "bash_mod": [ 0.08 ], "size_mod": [ 0.004 ] },
     "int_decay_step": 0,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": { "math": [ "u_effect_intensity('grown_of_fuse') / -900" ] } },
-          { "type": "cut", "multiply": { "math": [ "u_effect_intensity('grown_of_fuse') / -1500" ] } },
-          { "type": "stab", "multiply": { "math": [ "u_effect_intensity('grown_of_fuse') / -1500" ] } },
-          { "type": "bullet", "multiply": { "math": [ "u_effect_intensity('grown_of_fuse') / -650" ] } }
-        ],
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "u_effect_intensity('grown_of_fuse') / 32" ] } },
-          { "value": "SPEED", "add": { "math": [ "u_effect_intensity('grown_of_fuse') * 0.06" ] } }
-        ]
-      },
-      {
-        "condition": { "u_has_effect": "absorbed_electric" },
-        "incoming_damage_mod": [ { "type": "electric", "multiply": -1 } ]
-      },
-      {
-        "condition": { "u_has_effect": "absorbed_acidic" },
-        "incoming_damage_mod": [ { "type": "acid", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_grown_of_fuse_0",
+      "INLINE_ENCH_grown_of_fuse_1",
+      "INLINE_ENCH_grown_of_fuse_2"
     ]
   },
   {
@@ -3202,10 +3184,7 @@
     "//": "intensity 1 - one of two lungs is collapsed; intensity 2 - both lungs are collapsed",
     "base_mods": { "hurt_amount": [ 1 ], "hurt_tick": [ 4 ] },
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "SPEED", "multiply": { "math": [ "u_effect_intensity('lung_collapse') * -0.25" ] } } ]
-      }
+      "INLINE_ENCH_lung_collapse_0"
     ],
     "chance_kill": [ [ 0, 1 ], [ 1, 120 ] ],
     "show_in_info": true
@@ -4054,7 +4033,7 @@
     "id": "effect_bio_hydraulics_active",
     "rating": "good",
     "enchantments": [
-      { "values": [ { "value": "STRENGTH", "add": { "math": [ "max( 10, 20 - u_bio_hydraulics_strength_adjustment )" ] } } ] }
+      "INLINE_ENCH_effect_bio_hydraulics_active_0"
     ]
   },
   {
@@ -4480,13 +4459,7 @@
     "base_mods": { "str_mod": [ -1 ], "speed_mod": [ -5 ], "h_mod_min": [ -1 ], "h_mod_min_val": [ 0 ], "h_mod_chance": [ 900 ] },
     "scaling_mods": { "str_mod": [ -1 ], "dex_mod": [ -0.5 ], "speed_mod": [ -10 ], "h_mod_min_val": [ -50 ], "h_mod_chance": [ -200 ] },
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "bash", "multiply": { "math": [ "min( (u_effect_intensity('hypocalcemia') * 0.1 ), 0.3)" ] } } ],
-        "values": [
-          { "value": "CARRY_WEIGHT", "multiply": { "math": [ "max( (-0.08 * u_effect_intensity('hypocalcemia') ), -0.24)" ] } }
-        ]
-      }
+      "INLINE_ENCH_hypocalcemia_0"
     ],
     "blood_analysis_description": "Hypocalcemia"
   },
@@ -5422,14 +5395,7 @@
     "rating": "good",
     "max_intensity": 7,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "INTELLIGENCE",
-            "add": { "math": [ "u_effect_intensity('VITRIFYING') * -1 * (ceil(u_val('intelligence') / 6))" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_VITRIFYING_0"
     ]
   },
   {
@@ -5674,9 +5640,7 @@
     "base_mods": { "vomit_chance": [ 6000 ] },
     "scaling_mods": { "vomit_chance": [ -300 ], "pain_min": [ 1 ], "pain_max_val": [ 4 ] },
     "enchantments": [
-      {
-        "values": [ { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": { "math": [ "u_vitamin('triffid_fiber') / -275" ] } } ]
-      },
+      "INLINE_ENCH_triffid_fiber_indigestion_0",
       "INLINE_ENCH_triffid_fiber_indigestion_1"
     ],
     "rating": "bad"
@@ -5707,21 +5671,7 @@
     "max_intensity": 100,
     "int_add_val": 1,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          {
-            "type": "cold",
-            "add": { "math": [ "max( (1 + (u_effect_intensity('effect_nether_shadow_unnatural_chill') * 0.5) ), 10)" ] }
-          }
-        ],
-        "values": [
-          {
-            "value": "CLIMATE_CONTROL_HEAT",
-            "add": { "math": [ "max( (-2 * u_effect_intensity('effect_nether_shadow_unnatural_chill') ), -50)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_nether_shadow_unnatural_chill_0"
     ]
   },
   {
@@ -5734,10 +5684,7 @@
     "int_add_val": 1,
     "show_in_info": true,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "LUMINATION", "add": { "math": [ "u_effect_intensity('effect_shocker_zombie_charge_up') * 3" ] } } ]
-      }
+      "INLINE_ENCH_effect_shocker_zombie_charge_up_0"
     ]
   },
   {

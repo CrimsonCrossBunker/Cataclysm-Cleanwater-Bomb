@@ -63,20 +63,9 @@
     "flags": [ "MAGICAL_CBMS", "ATTUNEMENT" ],
     "enchantments": [
       "INLINE_ENCH_TATTOOS_BASIC_TRAIT_0",
-      { "condition": { "u_has_effect": "asleep" }, "values": [ { "value": "POWER_TRICKLE", "add": 1000 } ] },
-      {
-        "condition": { "u_has_effect": "effect_pattern_tattoo_meditation" },
-        "values": [ { "value": "POWER_TRICKLE", "add": 3500 } ]
-      },
-      {
-        "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "BIONIC_POWER",
-            "add": { "math": [ "100000000 + (50000000 * ( u_flames_tattoo_count +  u_mountain_tattoo_count + u_forest_tattoo_count ) )" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_1",
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_2",
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_3"
     ],
     "cancels": [ "NO_CBM_INSTALLATION" ]
   },
@@ -90,15 +79,7 @@
     "purifiable": false,
     "profession": true,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          {
-            "value": "MAX_MANA",
-            "add": { "math": [ "( (u_spell_count('school': 'FOREST_MAGIC') ) * 72) + (u_skill('deduction') * 145)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_XEDRAWOOD_THE_WISE_0"
     ]
   },
   {

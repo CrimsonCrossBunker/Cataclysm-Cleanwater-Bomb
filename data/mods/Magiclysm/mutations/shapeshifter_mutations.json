@@ -25,13 +25,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_DRUID_SHIFTER_BEAR_FORM_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_DRUID_SHIFTER_BEAR_FORM_TRAITS_1",
+      "INLINE_ENCH_DRUID_SHIFTER_BEAR_FORM_TRAITS_2",
+      "INLINE_ENCH_DRUID_SHIFTER_BEAR_FORM_TRAITS_3"
     ],
     "flags": [
       "MUTE",
@@ -70,13 +66,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_DRUID_SHIFTER_COUGAR_FORM_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_DRUID_SHIFTER_COUGAR_FORM_TRAITS_1",
+      "INLINE_ENCH_DRUID_SHIFTER_COUGAR_FORM_TRAITS_2",
+      "INLINE_ENCH_DRUID_SHIFTER_COUGAR_FORM_TRAITS_3"
     ],
     "flags": [ "MUTE", "NO_SPELLCASTING", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
     "override_look": { "id": "mon_cougar", "tile_category": "monster" }
@@ -107,12 +99,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_DRUID_SHIFTER_DEER_FORM_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_DRUID_SHIFTER_DEER_FORM_TRAITS_1",
+      "INLINE_ENCH_DRUID_SHIFTER_DEER_FORM_TRAITS_2",
+      "INLINE_ENCH_DRUID_SHIFTER_DEER_FORM_TRAITS_3"
     ],
     "integrated_armor": [ "integrated_feline_fur" ],
     "flags": [ "MUTE", "NO_SPELLCASTING", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
@@ -130,20 +119,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_DRUID_SHIFTER_FISH_FORM_TRAITS_0",
-      {
-        "condition": { "not": { "u_is_on_terrain_with_flag": "SWIMMABLE" } },
-        "ench_effects": [ { "effect": "effect_druid_shifter_fish_form_cant_move", "intensity": 1 } ]
-      },
-      {
-        "condition": { "u_is_on_terrain_with_flag": "SWIMMABLE" },
-        "values": [
-          { "value": "DEXTERITY", "add": 8 },
-          { "value": "PERCEPTION", "add": 4 },
-          { "value": "MOVECOST_SWIM_MOD", "multiply": -0.6 },
-          { "value": "REGEN_STAMINA", "multiply": 10 }
-        ]
-      },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_DRUID_SHIFTER_FISH_FORM_TRAITS_1",
+      "INLINE_ENCH_DRUID_SHIFTER_FISH_FORM_TRAITS_2",
+      "INLINE_ENCH_DRUID_SHIFTER_FISH_FORM_TRAITS_3"
     ],
     "flags": [
       "EYE_MEMBRANE",
@@ -199,17 +177,9 @@
     "bodytemp_modifiers": [ 300, 800 ],
     "enchantments": [
       "INLINE_ENCH_DRUID_SHIFTER_RAVEN_FORM_TRAITS_0",
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_l" } },
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_r" } }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_druid_shifter_raven_form_levitation", "intensity": 1 } ]
-      },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] },
-      { "condition": { "u_is_on_terrain": "t_open_air" }, "values": [ { "value": "MOVE_COST", "multiply": -0.6 } ] }
+      "INLINE_ENCH_DRUID_SHIFTER_RAVEN_FORM_TRAITS_1",
+      "INLINE_ENCH_DRUID_SHIFTER_RAVEN_FORM_TRAITS_2",
+      "INLINE_ENCH_DRUID_SHIFTER_RAVEN_FORM_TRAITS_3"
     ],
     "flags": [
       "LEVITATION",

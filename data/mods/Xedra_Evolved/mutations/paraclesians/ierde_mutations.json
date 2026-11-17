@@ -170,10 +170,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "effect_ierde_sense_nearby_monsters" },
-        "ench_effects": [ { "effect": "effect_ierde_craft_in_darkness", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_IERDE_CRAFT_IN_DARKNESS_0"
     ]
   },
   {
@@ -475,7 +472,7 @@
         "msg_try": { "text": "Encased within the living earth, you drift off to sleep.", "rating": "good" }
       }
     ],
-    "enchantments": [ { "condition": { "u_is_on_terrain": "t_rock" }, "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 300 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_SINK_INTO_EARTH_0" ]
   },
   {
     "type": "mutation",

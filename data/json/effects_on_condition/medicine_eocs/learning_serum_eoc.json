@@ -84,10 +84,7 @@
           { "value": "METABOLISM", "multiply": 0.2 }
         ]
       },
-      {
-        "condition": { "and": [ { "not": { "u_has_worn_with_flag": "SUN_GLASSES" } }, { "and": [ "u_is_outside", "is_day" ] } ] },
-        "ench_effects": [ { "effect": "learning_serum_light_pain", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_learning_serum_main_1",
       {
         "condition": {
           "and": [
@@ -132,10 +129,7 @@
     "remove_message": "",
     "enchantments": [
       "INLINE_ENCH_learning_serum_crash_0",
-      {
-        "condition": { "and": [ { "not": { "u_has_worn_with_flag": "SUN_GLASSES" } }, { "and": [ "u_is_outside", "is_day" ] } ] },
-        "ench_effects": [ { "effect": "learning_serum_light_pain", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_learning_serum_crash_1"
     ],
     "flags": [ "MYOPIC_IN_LIGHT" ]
   },

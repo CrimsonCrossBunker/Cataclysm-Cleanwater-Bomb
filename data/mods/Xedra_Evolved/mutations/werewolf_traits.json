@@ -164,10 +164,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "u_has_trait": "VAMPIRE_WOLF_FORM_TRAITS" },
-        "ench_effects": [ { "effect": "effect_xe_werewolf_climb_in_wolf_form", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_WEREWOLF_CLIMB_IN_WOLF_FORM_0"
     ]
   },
   {
@@ -534,16 +531,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_WEREWOLF_PRIMAL_FORM_TRAITS_0",
-      {
-        "condition": { "and": [ { "not": "u_can_drop_weapon" } ] },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      {
-        "condition": "u_has_weapon",
-        "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 }, { "value": "RANGE", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_WEREWOLF_PRIMAL_FORM_TRAITS_1",
+      "INLINE_ENCH_WEREWOLF_PRIMAL_FORM_TRAITS_2",
+      "INLINE_ENCH_WEREWOLF_PRIMAL_FORM_TRAITS_3"
     ],
     "flags": [ "MUTE", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_HUGE" ],
     "integrated_armor": [ "integrated_werewolf_primal_form_fur", "integrated_werewolf_primal_form_fangs" ],

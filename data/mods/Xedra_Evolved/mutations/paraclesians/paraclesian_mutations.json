@@ -107,22 +107,7 @@
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
       "INLINE_ENCH_ARVORE_2",
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_effect": "effect_arvore_attacked_a_triffid" } },
-            {
-              "and": [
-                { "u_has_trait": "ARVORE_VERDANT_HAIR" },
-                { "u_has_any_trait": [ "ARVORE_SKIN_2", "ARVORE_SKIN_3" ] },
-                { "u_has_any_trait": [ "ARVORE_FLORAL_SCENT", "ARVORE_MIND_CONTROL_POLLEN" ] },
-                { "u_has_any_trait": [ "ARVORE_BLOOD", "ARVORE_BLOOD_2", "ARVORE_BLOOD_3", "ARVORE_BLOOD_4" ] }
-              ]
-            }
-          ]
-        },
-        "mutations": [ "ARVORE_TRIFFID_NEUTRALITY" ]
-      },
+      "INLINE_ENCH_ARVORE_3",
       {
         "condition": { "and": [ "u_is_outside", "is_day", { "math": [ "global_what_is_the_season != 4" ] } ] },
         "ench_effects": [ { "effect": "effect_arvore_is_day_in_the_sun_not_winter", "intensity": 1 } ]

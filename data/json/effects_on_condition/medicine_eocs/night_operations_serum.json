@@ -64,7 +64,7 @@
         "condition": { "math": [ "u_val('fine_detail_vision_mod') >= 4" ] },
         "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ]
       },
-      { "condition": { "not": "is_day" }, "values": [ { "value": "OVERMAP_SIGHT", "add": 6 } ] }
+      "INLINE_ENCH_night_ops_serum_main_2"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.9 } ],
     "//": "Mute is supposed to represent acute laryngitis.  Allowing communication through whispering would be better",

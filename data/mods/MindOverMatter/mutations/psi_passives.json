@@ -29,43 +29,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [
-          {
-            "value": "HUNGER",
-            "multiply": {
-              "math": [
-                "(-0.03 - (0.00075 * u_spell_level_sum('school': 'BIOKINETIC'))) * (u_effect_intensity('effect_nether_attunement_biokinetic_inversion') > 0 ? -1 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "THIRST",
-            "multiply": {
-              "math": [
-                "(-0.03 - (0.00075 * u_spell_level_sum('school': 'BIOKINETIC'))) * (u_effect_intensity('effect_nether_attunement_biokinetic_inversion') > 0 ? -1 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "METABOLISM",
-            "multiply": {
-              "math": [
-                "(-0.03 - (0.00075 * u_spell_level_sum('school': 'BIOKINETIC'))) * (u_effect_intensity('effect_nether_attunement_biokinetic_inversion') > 0 ? -1 : 1)"
-              ]
-            }
-          },
-          {
-            "value": "VITAMIN_ABSORB_MOD",
-            "multiply": {
-              "math": [
-                "(0.03 + (0.00075 * u_spell_level_sum('school': 'BIOKINETIC'))) * (u_effect_intensity('effect_nether_attunement_biokinetic_inversion') > 0 ? -1 : 1)"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_BIOKIN_NEEDS_0"
     ]
   },
   {
@@ -94,10 +58,7 @@
           }
         ]
       },
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "ench_effects": [ { "effect": "effect_clair_passive_sense_protection", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_CLAIR_SENSES_1"
     ]
   },
   {
@@ -110,11 +71,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "incoming_damage_mod": [ { "type": "electric", "add": { "math": [ "u_spell_level_sum('school': 'ELECTROKINETIC') / -0.2" ] } } ],
-        "values": [ { "value": "PAIN", "multiply": { "math": [ "u_spell_level_sum('school': 'ELECTROKINETIC') * -0.00035" ] } } ]
-      }
+      "INLINE_ENCH_ELECTRO_SHIELD_0"
     ]
   },
   {
@@ -137,10 +94,7 @@
     "description": "You naturally heat the air around you slightly, making it more comfortable in the cold.  It also helps prevent you from getting too wet.",
     "bodytemp_modifiers": [ 250, 750 ],
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [ { "value": "BODYTEMP_SLEEP", "add": { "math": [ "0.05 * u_spell_level_sum('school': 'PYROKINETIC')" ] } } ]
-      }
+      "INLINE_ENCH_PYROKIN_ADAPTATION_0"
     ],
     "wet_protection": [
       { "part": "head", "ignored": 10 },
@@ -168,15 +122,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [
-          {
-            "value": "OBTAIN_COST_MULTIPLIER",
-            "multiply": { "math": [ "-0.1 + (u_spell_level_sum('school': 'TELEKINETIC') * -0.00075)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_TELEKINETIC_GRAB_POCKETS_0"
     ]
   },
   {
@@ -189,17 +135,7 @@
     "player_display": true,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [
-          { "value": "SOCIAL_INTIMIDATE", "add": { "math": [ "(5 + (0.075 * u_spell_level_sum('school': 'TELEPATH')))" ] } },
-          { "value": "SOCIAL_LIE", "add": { "math": [ "(5 + (0.075 * u_spell_level_sum('school': 'TELEPATH')))" ] } },
-          {
-            "value": "SOCIAL_PERSUADE",
-            "add": { "math": [ "(5 + (0.075 * u_spell_level_sum('school': 'TELEPATH')))" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_TELEPATHIC_SUGGESTION_0"
     ]
   },
   {
@@ -212,10 +148,7 @@
     "player_display": true,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [ { "value": "EVASION", "add": { "math": [ "(0.01 + (0.00025 * u_spell_level_sum('school': 'TELEPORTER')))" ] } } ]
-      }
+      "INLINE_ENCH_TELEPORTER_PROTECT_0"
     ],
     "flags": [ "TELESTOP" ]
   },
@@ -230,13 +163,8 @@
     "player_display": true,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_flag": "NO_PSIONICS" } },
-        "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "(0.1 + (0.0005 * u_spell_level_sum('school': 'VITAKINETIC')))" ] } } ]
-      },
-      {
-        "values": [ { "value": "MAX_HP", "multiply": { "math": [ "(0.05 + (0.0005 * u_spell_level_sum('school': 'VITAKINETIC')))" ] } } ]
-      }
+      "INLINE_ENCH_VITAKINETIC_HEALTH_0",
+      "INLINE_ENCH_VITAKINETIC_HEALTH_1"
     ],
     "flags": [ "MEND_ALL" ]
   }

@@ -340,7 +340,7 @@
     "prereqs2": [ "BREATH_UNDERWATER" ],
     "category": [ "UNDINE" ],
     "purifiable": false,
-    "enchantments": [ { "condition": "u_is_underwater", "values": [ { "value": "SLEEPY", "add": 40 } ] } ],
+    "enchantments": [ "INLINE_ENCH_UNDINE_SLEEP_WATER_0" ],
     "comfort": [
       {
         "conditions": [ { "type": "terrain", "flag": "DEEP_WATER" } ],
@@ -533,7 +533,7 @@
     "description": "Though the ice over the top grows thick, the water below remains liquid.  The Undine is completely immune to cold temperatures when underwater.",
     "category": [ "UNDINE" ],
     "purifiable": false,
-    "enchantments": [ { "condition": "u_is_underwater", "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 1000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_UNDINE_NO_COLD_UNDERWATER_0" ]
   },
   {
     "type": "mutation",

@@ -5455,6 +5455,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field species? string[] Restrict the count to monsters in any listed species.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field stats? boolean Request the speaker's current strength, dexterity, intelligence and perception.
+---@field vitamins? string[] Stored vitamin levels on a character, or effective vitamin amounts on a food item.
 ---@field effects? string[] Whole-body effect IDs queried on the condition's speaker.
 ---@field traits? string[] Trait IDs queried on the condition's speaker.
 ---@field worn_items? string[] Worn item type IDs queried on the condition's speaker.
@@ -5481,6 +5483,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
+---@field vitamins? table<string, integer> Requested vitamin amounts. Reading an unsupported speaker raises an error.
 ---@field effects table<string, boolean>
 ---@field traits table<string, boolean>
 ---@field worn_items table<string, boolean>

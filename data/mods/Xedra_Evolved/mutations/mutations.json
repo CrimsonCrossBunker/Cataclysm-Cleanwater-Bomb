@@ -171,38 +171,11 @@
     "mixed_effect": true,
     "vitamin_rates": [ [ "mutagen", 600 ], [ "mutagenic_slurry", 1 ] ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_trait": "DHAMPIR_WEAKNESS_SLOWER_BLOOD_GAIN" } },
-            { "not": { "u_has_effect": "effect_dhampir_the_blood_is_the_life" } },
-            { "math": [ "u_vitamin('human_blood_vitamin')", "<", "1799" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_gain", "intensity": 1 } ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "u_has_trait": "DHAMPIR_WEAKNESS_SLOWER_BLOOD_GAIN" },
-            { "not": { "u_has_effect": "effect_dhampir_the_blood_is_the_life" } },
-            { "math": [ "u_vitamin('human_blood_vitamin')", "<", "1799" ] }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_gain_with_weakness", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", ">=", "1800" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_slow_blood_loss", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", "<", "0" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_enervated_blood", "intensity": 1 } ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin')", ">", "0" ] },
-        "ench_effects": [ { "effect": "effect_dhampir_empowered_blood_indicator", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_DHAMPIR_TRAIT_0",
+      "INLINE_ENCH_DHAMPIR_TRAIT_1",
+      "INLINE_ENCH_DHAMPIR_TRAIT_2",
+      "INLINE_ENCH_DHAMPIR_TRAIT_3",
+      "INLINE_ENCH_DHAMPIR_TRAIT_4",
       "INLINE_ENCH_DHAMPIR_TRAIT_5"
     ],
     "//": "Dhampirs not getting Cannibal is deliberate.  The struggle over their own humanity is a core part of the dhampir theme.",
@@ -282,10 +255,7 @@
     "valid": false,
     "description": "Your half-dead flesh is inured to winter's chill.  As long as you have empowered blood in your body, you suffer much less from colder temperatures.",
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "effect_dhampir_empowered_blood_indicator" },
-        "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 25 } ]
-      }
+      "INLINE_ENCH_DHAMPIR_REDUCED_COLD_TEMPS_0"
     ]
   },
   {
@@ -298,10 +268,7 @@
     "valid": false,
     "description": "The deathly energies that course through your veins are inimical to mundane poisons and diseases.  As long as you have empowered blood in your body, you are more resistant to disease, poison, and infection.",
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "effect_dhampir_empowered_blood_indicator" },
-        "ench_effects": [ { "effect": "effect_dhampir_resist_disease_poison_infection", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_DHAMPIR_RESIST_DISEASE_POISON_INFECTION_0"
     ]
   },
   {
@@ -314,11 +281,7 @@
     "valid": false,
     "description": "While unable to ignore gravity like a true vampire, it has less of a hold on you.  You can fall one story without ill effect and take greatly-reduced fall damage as long as you have empowered blood in your body.",
     "enchantments": [
-      {
-        "condition": { "u_has_effect": "effect_dhampir_empowered_blood_indicator" },
-        "values": [ { "value": "FALL_DAMAGE", "multiply": -0.8 } ],
-        "ench_effects": [ { "effect": "effect_dhampir_fall_one_story", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_DHAMPIR_SLOWFALL_0"
     ]
   },
   {
@@ -345,9 +308,7 @@
     "//": "This should prevent permanent damage from wounds, once that's possible.",
     "description": "You are only half-alive now, sustained as much by the energy in your blood as by biological processes.  You age far slower than a mortal, and when your limbs break, they heal more quickly in proportion to how much empowered blood you have.",
     "enchantments": [
-      {
-        "values": [ { "value": "MENDING_MODIFIER", "multiply": { "math": [ "max( (u_vitamin('human_blood_vitamin') / 250), 0)" ] } } ]
-      }
+      "INLINE_ENCH_DHAMPIR_MEND_WOUNDS_FASTER_0"
     ],
     "flags": [ "MEND_ALL" ]
   },
@@ -393,15 +354,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "values": [
-          { "value": "STRENGTH", "add": -1 },
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "INTELLIGENCE", "add": -1 },
-          { "value": "PERCEPTION", "add": -1 }
-        ]
-      },
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SENSITIVITY_0",
       {
         "condition": { "and": [ "is_day", "u_is_outside", { "or": [ { "is_weather": "sunny" }, { "is_weather": "clear" } ] } ] },
         "values": [
@@ -422,15 +375,9 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside", { "not": { "u_has_effect": "sleep" } } ] },
-        "values": [ { "value": "SLEEPINESS", "multiply": 2 } ]
-      },
-      {
-        "condition": { "and": [ "is_day", { "not": { "u_has_effect": "sleep" } } ] },
-        "values": [ { "value": "SLEEPINESS", "multiply": 0.25 } ]
-      },
-      { "condition": "is_day", "values": [ { "value": "SLEEPY", "add": 50 } ] }
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SLEEPINESS_0",
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SLEEPINESS_1",
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SUN_SLEEPINESS_2"
     ]
   },
   {
@@ -442,15 +389,9 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_any_trait": [ "SLOWHEALER", "SLOWHEALER2", "SLOWHEALER3" ] } },
-        "values": [ { "value": "REGEN_HP", "multiply": -0.5 } ]
-      },
-      {
-        "condition": { "u_has_any_trait": [ "SLOWHEALER", "SLOWHEALER2" ] },
-        "values": [ { "value": "REGEN_HP", "multiply": -0.2 } ]
-      },
-      { "condition": { "u_has_trait": "SLOWHEALER3" }, "values": [ { "value": "REGEN_HP", "multiply": -0.05 } ] }
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SLOW_HEALING_0",
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SLOW_HEALING_1",
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_SLOW_HEALING_2"
     ]
   },
   {
@@ -472,22 +413,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "u_has_effect": "wet", "bodypart": "leg_r" },
-            { "u_has_effect": "wet", "bodypart": "leg_l" },
-            {
-              "and": [
-                { "u_is_on_terrain_with_flag": "LIQUID" },
-                { "u_is_on_terrain_with_flag": "CURRENT" },
-                { "u_is_on_terrain_with_flag": "SWIMMABLE" }
-              ]
-            }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_dhampir_water_weakness_pain", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_DHAMPIR_WEAKNESS_WATER_PAIN_0"
     ]
   },
   {
@@ -566,22 +492,8 @@
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR" ],
     "//": "Unless you attack them or are the ultimate vampire killer, vampires and renfields won't attack you as your blood holds no interest for them.",
     "enchantments": [
-      {
-        "condition": {
-          "not": { "or": [ { "u_has_effect": "vampire_attacked_vampire_or_renfield" }, { "u_has_trait": "VAMPIRE_ANATHEMA" } ] }
-        },
-        "mutations": [ "VAMPIRE_TRUCE" ]
-      },
-      {
-        "values": [
-          {
-            "value": "NIGHT_VIS",
-            "add": {
-              "math": [ "1 + u_has_trait('VAMPIRE2') + u_has_trait('VAMPIRE3') + u_has_trait('VAMPIRE4') + u_has_trait('BLOOD_DRINKER')" ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_0",
+      "INLINE_ENCH_VAMPIRE_1"
     ]
   },
   {
@@ -620,22 +532,8 @@
     "activated_eocs": [ "EOC_EYEGLEAM_activated" ],
     "deactivated_eocs": [ "EOC_EYEGLEAM_deactivated" ],
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "NIGHT_VIS",
-            "add": {
-              "math": [
-                "2 + u_has_trait('VAMPIRE2') + u_has_trait('VAMPIRE3') + (u_has_trait('VAMPIRE4') * 2) + (u_has_trait('BLOOD_DRINKER') * 2)"
-              ]
-            }
-          }
-        ]
-      },
-      {
-        "condition": { "and": [ { "not": "is_day" }, "u_is_outside" ] },
-        "values": [ { "value": "OVERMAP_SIGHT", "add": 2 } ]
-      }
+      "INLINE_ENCH_EYEGLEAM_0",
+      "INLINE_ENCH_EYEGLEAM_1"
     ]
   },
   {
@@ -663,17 +561,7 @@
     "activated_eocs": [ "EOC_VAMPIRIC_STRENGTH_activated" ],
     "deactivated_eocs": [ "EOC_VAMPIRIC_STRENGTH_deactivated" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "values": [ { "value": "STRENGTH", "add": { "math": [ "1 + u_has_trait('VAMPIRE4') + (u_has_trait('BLOOD_DRINKER') * 2)" ] } } ]
-      }
+      "INLINE_ENCH_VAMPIRIC_STRENGTH_0"
     ]
   },
   {
@@ -690,31 +578,8 @@
     "activated_eocs": [ "EOC_VAMPIRIC_RESILIENCE_activated" ],
     "deactivated_eocs": [ "EOC_VAMPIRIC_RESILIENCE_deactivated" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.05 },
-          { "type": "stab", "multiply": -0.02 },
-          { "type": "cut", "multiply": -0.03 },
-          { "type": "bullet", "multiply": -0.08 }
-        ]
-      },
-      {
-        "condition": { "u_has_trait": "VAMPIRE4" },
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.05 },
-          { "type": "stab", "multiply": -0.02 },
-          { "type": "cut", "multiply": -0.03 },
-          { "type": "bullet", "multiply": -0.08 }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRIC_RESILIENCE_0",
+      "INLINE_ENCH_VAMPIRIC_RESILIENCE_1"
     ],
     "active_flags": [ "SUNBURN_SUPERNATURAL_REDUCTION" ]
   },
@@ -795,17 +660,7 @@
     "name": { "str": "Silent as Death" },
     "description": "Your movements don't make nearby as much noise as they used to.",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE_SILENT_MOVE_0"
     ]
   },
   {
@@ -924,17 +779,7 @@
     "activated_eocs": [ "EOC_VAMPIRIC_DODGE_activated" ],
     "deactivated_eocs": [ "EOC_VAMPIRIC_DODGE_deactivate" ],
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "u_has_trait": "VAMPIRE" },
-            {
-              "and": [ { "u_has_trait": "DHAMPIR_TRAIT" }, { "not": { "u_has_effect": "effect_dhampir_enervated_blood" } } ]
-            }
-          ]
-        },
-        "values": [ { "value": "DEXTERITY", "add": { "math": [ "1 + u_has_trait('VAMPIRE4') + (u_has_trait('BLOOD_DRINKER') * 2)" ] } } ]
-      }
+      "INLINE_ENCH_VAMPIRIC_DODGE_0"
     ]
   },
   {
@@ -1053,7 +898,7 @@
     "vitamin_rates": [ [ "human_blood_vitamin", 720 ], [ "mutagen", 300 ] ],
     "flags": [ "CANNIBAL", "DAYFEAR", "HEMOVORE" ],
     "enchantments": [
-      { "condition": { "not": "is_day" }, "values": [ { "value": "OVERMAP_SIGHT", "add": 1 } ] },
+      "INLINE_ENCH_VAMPIRE3_0",
       "INLINE_ENCH_VAMPIRE3_1",
       {
         "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
@@ -1130,14 +975,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "CARDIO_MULTIPLIER",
-            "multiply": { "math": [ "0.25 + (u_has_trait('VAMPIRE4') * 0.25)  + (u_has_trait('BLOOD_DRINKER') * 0.25)" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_CARDIO_BONUS_0"
     ]
   },
   {
@@ -1163,16 +1001,8 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "u_has_trait": "VAMPIRE" },
-        "values": [
-          {
-            "value": "MAX_HP",
-            "multiply": { "math": [ "0.2 + (u_has_trait('VAMPIRE4') * 0.25)  + (u_has_trait('BLOOD_DRINKER') * 0.25)" ] }
-          }
-        ]
-      },
-      { "condition": { "u_has_trait": "DHAMPIR_TRAIT" }, "values": [ { "value": "MAX_HP", "multiply": 0.15 } ] }
+      "INLINE_ENCH_VAMPIRE_BONUS_HP_0",
+      "INLINE_ENCH_VAMPIRE_BONUS_HP_1"
     ]
   },
   {
@@ -1216,41 +1046,10 @@
     "flags": [ "CANNIBAL", "DAYFEAR", "HEMOVORE", "MEND_ALL" ],
     "enchantments": [
       "INLINE_ENCH_VAMPIRE4_0",
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin') <= 0" ] },
-        "values": [ { "value": "MENDING_MODIFIER", "multiply": -1 }, { "value": "REGEN_HP", "multiply": -1 } ]
-      },
-      {
-        "condition": {
-          "and": [ { "math": [ "u_vitamin('human_blood_vitamin') > 0" ] }, { "math": [ "u_vitamin('human_blood_vitamin') < 1800" ] } ]
-        },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "5 + (u_vitamin('human_blood_vitamin') / 300)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 2 }
-        ]
-      },
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_vitamin('human_blood_vitamin') >= 1800" ] },
-            { "math": [ "u_vitamin('human_blood_vitamin') < 4400" ] }
-          ]
-        },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "11 + ((u_vitamin('human_blood_vitamin') - 1800 ) / 325)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 6 }
-        ]
-      },
-      {
-        "condition": { "math": [ "u_vitamin('human_blood_vitamin') >= 4400" ] },
-        "values": [
-          { "value": "REGEN_HP", "multiply": { "math": [ "19 + ((u_vitamin('human_blood_vitamin') - 4400 ) / 600)" ] } },
-          { "value": "REGEN_HP_AWAKE", "multiply": 1 },
-          { "value": "MENDING_MODIFIER", "multiply": 12 }
-        ]
-      },
+      "INLINE_ENCH_VAMPIRE4_1",
+      "INLINE_ENCH_VAMPIRE4_2",
+      "INLINE_ENCH_VAMPIRE4_3",
+      "INLINE_ENCH_VAMPIRE4_4",
       "INLINE_ENCH_VAMPIRE4_5",
       {
         "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
@@ -1352,22 +1151,11 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_trait": "VAMPIRE_BAT_FORM_REFINEMENT_SWARM" } },
-        "values": [ { "value": "MAX_HP", "multiply": -0.85 } ]
-      },
+      "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_0",
       "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_1",
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_l" } },
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_r" } }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_vampire_bat_form_levitation", "intensity": 1 } ]
-      },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] },
-      { "condition": { "u_is_on_terrain": "t_open_air" }, "values": [ { "value": "MOVE_COST", "multiply": -0.6 } ] }
+      "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_2",
+      "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_3",
+      "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_4"
     ],
     "flags": [
       "DRACULIN_VENOM",
@@ -1406,13 +1194,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_VAMPIRE_WOLF_FORM_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_VAMPIRE_WOLF_FORM_TRAITS_1",
+      "INLINE_ENCH_VAMPIRE_WOLF_FORM_TRAITS_2",
+      "INLINE_ENCH_VAMPIRE_WOLF_FORM_TRAITS_3"
     ],
     "flags": [ "MUTE", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
     "override_look": { "id": "mon_wolf", "tile_category": "monster" }
@@ -1640,10 +1424,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "u_has_worn_with_flag": "WARDING_SYMBOL" },
-        "ench_effects": [ { "effect": "effect_xe_holy_burnt_carrying_holy", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE_WEAKNESS_HOLY_BURN_0"
     ],
     "//": "Unsafe: churches, cathedrals, synagogues, rural churches, eventual other holy places.",
     "//2": "Safe: Vampire-filled holy places, the New England Community Church, anywhere not unsafe.",
@@ -1904,10 +1685,7 @@
     "spells_learned": [ [ "vampire_invisible_in_dark", 1 ] ],
     "//2": "This enchantment removes the effect if the vampire is outside at day.",
     "enchantments": [
-      {
-        "condition": { "and": [ "is_day", "u_is_outside" ] },
-        "ench_effects": [ { "effect": "effect_vampire_lose_invisible_in_dark", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE_INVISIBLE_IN_DARK_0"
     ]
   },
   {

@@ -938,7 +938,7 @@
     "threshreq": [ "THRESH_INTERSTICE" ],
     "points": 1,
     "vitamin_cost": 60,
-    "enchantments": [ { "condition": { "not": "is_day" }, "values": [ { "value": "OVERMAP_SIGHT", "add": 15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INTERSTICE_VISION_0" ]
   },
   {
     "type": "mutation",
@@ -3541,9 +3541,7 @@
       }
     ],
     "enchantments": [
-      {
-        "values": [ { "value": "INTELLIGENCE", "multiply": 1 }, { "value": "PAIN_PENALTY_MOD_INT", "add": { "math": [ "u_pain()/6" ] } } ]
-      }
+      "INLINE_ENCH_INT_SLIME_0"
     ]
   },
   {
@@ -3647,9 +3645,7 @@
     "visibility": 10,
     "ugliness": 10,
     "enchantments": [
-      {
-        "values": [ { "value": "HEARING_MULT", "multiply": { "math": [ "rng(-0.75, 1)" ] } }, { "value": "PERCEPTION", "add": -8 } ]
-      }
+      "INLINE_ENCH_PER_SLIME_0"
     ]
   },
   {
@@ -5559,7 +5555,7 @@
     "threshreq": [ "THRESH_FISH", "THRESH_BATRACHIAN" ],
     "points": 2,
     "vitamin_cost": 160,
-    "enchantments": [ { "condition": "u_is_underwater", "values": [ { "value": "SLEEPY", "add": 40 } ] } ]
+    "enchantments": [ "INLINE_ENCH_WATERSLEEPER_0" ]
   },
   {
     "type": "mutation",
@@ -6612,10 +6608,7 @@
     "points": 5,
     "vitamin_cost": 210,
     "enchantments": [
-      {
-        "condition": { "not": "is_day" },
-        "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -0.5 }, { "value": "ATTACK_NOISE", "multiply": -0.2 } ]
-      }
+      "INLINE_ENCH_NIGHT_RAIDER_0"
     ]
   },
   {
@@ -7009,7 +7002,7 @@
     "vitamin_cost": 160,
     "visibility": 8,
     "ugliness": 4,
-    "enchantments": [ { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "stab", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_THORNS_0" ]
   },
   {
     "type": "mutation",

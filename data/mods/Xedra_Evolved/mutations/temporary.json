@@ -46,10 +46,7 @@
     "activated_eocs": [ "EOC_ETHEREAL_WINGS_INITIATE" ],
     "//": "No body part is intentional.  The wings should not be attackable by enemies or get in the way of clothes or armor.  These are also intended as less of a wide stat boost than the other dream toggleable mutations and instead specifically allow flight and carry weight.",
     "enchantments": [
-      {
-        "values": [ { "value": "CARRY_WEIGHT", "add": { "math": [ "2500 * u_spell_level('spell_ethereal_wings')" ] } } ],
-        "ench_effects": [ { "effect": "effect_vampire_bat_form_levitation", "intensity": 1 } ]
-      },
+      "INLINE_ENCH_ethereal_wings_0",
       "INLINE_ENCH_ethereal_wings_1"
     ],
     "flags": [ "GLIDE", "FEATHER_FALL" ]
@@ -142,13 +139,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_TURN_INTO_BEAR_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_TURN_INTO_BEAR_TRAITS_1",
+      "INLINE_ENCH_TURN_INTO_BEAR_TRAITS_2",
+      "INLINE_ENCH_TURN_INTO_BEAR_TRAITS_3"
     ],
     "flags": [
       "MUTE",
@@ -173,12 +166,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_TURN_INTO_DEER_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_TURN_INTO_DEER_TRAITS_1",
+      "INLINE_ENCH_TURN_INTO_DEER_TRAITS_2",
+      "INLINE_ENCH_TURN_INTO_DEER_TRAITS_3"
     ],
     "integrated_armor": [ "integrated_antlers", "integrated_feline_fur" ],
     "flags": [ "MUTE", "NO_SPELLCASTING", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
@@ -196,13 +186,9 @@
     "player_display": false,
     "enchantments": [
       "INLINE_ENCH_TURN_INTO_COUGAR_TRAITS_0",
-      {
-        "condition": { "not": "u_can_drop_weapon" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
-        "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
-      },
-      { "condition": { "u_has_move_mode": "run" }, "values": [ { "value": "MOVE_COST", "multiply": -0.25 } ] },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] }
+      "INLINE_ENCH_TURN_INTO_COUGAR_TRAITS_1",
+      "INLINE_ENCH_TURN_INTO_COUGAR_TRAITS_2",
+      "INLINE_ENCH_TURN_INTO_COUGAR_TRAITS_3"
     ],
     "flags": [ "MUTE", "NO_SPELLCASTING", "QUADRUPED_RUN", "TOUGH_FEET", "TEMPORARY_SHAPESHIFT", "TEMPORARY_SHAPESHIFT_NO_HANDS" ],
     "override_look": { "id": "mon_cougar", "tile_category": "monster" }
@@ -220,20 +206,9 @@
     "bodytemp_modifiers": [ 500, 1200 ],
     "enchantments": [
       "INLINE_ENCH_TURN_INTO_OWL_TRAITS_0",
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_l" } },
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_r" } }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_vampire_bat_form_levitation", "intensity": 1 } ]
-      },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] },
-      {
-        "condition": { "u_is_on_terrain": "t_open_air" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.6 }, { "value": "FOOTSTEP_NOISE", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_TURN_INTO_OWL_TRAITS_1",
+      "INLINE_ENCH_TURN_INTO_OWL_TRAITS_2",
+      "INLINE_ENCH_TURN_INTO_OWL_TRAITS_3"
     ],
     "flags": [
       "LEVITATION",
@@ -321,20 +296,9 @@
     "bodytemp_modifiers": [ 300, 800 ],
     "enchantments": [
       "INLINE_ENCH_TURN_INTO_RAVEN_TRAITS_0",
-      {
-        "condition": {
-          "and": [
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_l" } },
-            { "not": { "u_has_effect": "disabled", "bodypart": "arm_r" } }
-          ]
-        },
-        "ench_effects": [ { "effect": "effect_vampire_bat_form_levitation", "intensity": 1 } ]
-      },
-      { "condition": "u_has_weapon", "values": [ { "value": "MELEE_DAMAGE", "multiply": -1 } ] },
-      {
-        "condition": { "u_is_on_terrain": "t_open_air" },
-        "values": [ { "value": "MOVE_COST", "multiply": -0.6 }, { "value": "FOOTSTEP_NOISE", "multiply": -1 } ]
-      }
+      "INLINE_ENCH_TURN_INTO_RAVEN_TRAITS_1",
+      "INLINE_ENCH_TURN_INTO_RAVEN_TRAITS_2",
+      "INLINE_ENCH_TURN_INTO_RAVEN_TRAITS_3"
     ],
     "flags": [
       "LEVITATION",

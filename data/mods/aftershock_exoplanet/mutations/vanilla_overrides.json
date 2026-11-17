@@ -5,7 +5,7 @@
     "name": { "str": "High Night Vision" },
     "points": 2,
     "description": "You can see incredibly well in the dark!  Activate to toggle NV-visible areas on or off.",
-    "enchantments": [ { "values": [ { "value": "NIGHT_VIS", "add": { "math": [ "u_val('perception') * 0.8" ] } } ] } ],
+    "enchantments": [ "INLINE_ENCH_AFS_NIGHTVISION_0" ],
     "category": [ "COMBAT_BRUTE" ]
   },
   {

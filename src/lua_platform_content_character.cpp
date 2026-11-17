@@ -2530,7 +2530,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 activation->get_or( "armed", false ), activation->get_or( "pain", false ),
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
                 activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false ),
-                std::nullopt, {}, ids( *activation, "spell_school_counts" ), {}
+                std::nullopt, {}, ids( *activation, "spell_school_counts" ), {},
+                activation->get_or( "stats", false ), ids( *activation, "vitamins" )
             };
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
@@ -4299,7 +4300,7 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.character_variables, &inputs.global_variables,
                                         &inputs.character_flags, &inputs.spell_levels,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums,
-                                        &inputs.spell_school_counts } ) {
+                                        &inputs.spell_school_counts, &inputs.vitamins } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -7585,6 +7586,7 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "worn_items", value.load_character_inputs->worn_items );
                     hash_ids( "worn_flags", value.load_character_inputs->worn_flags );
                     hash_ids( "wielded_flags", value.load_character_inputs->wielded_flags );
+                    hash_ids( "vitamins", value.load_character_inputs->vitamins );
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
                     hash_ids( "character_variables", value.load_character_inputs->character_variables );
                     hash_ids( "global_variables", value.load_character_inputs->global_variables );
@@ -7606,6 +7608,7 @@ void character_content_transaction::append_fingerprint(
                     }
                     hash_part( state, value.load_character_inputs->move_mode ? "move_mode" : "no_move_mode" );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
+                    hash_part( state, value.load_character_inputs->stats ? "stats" : "no_stats" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
                     hash_part( state, value.load_character_inputs->morale ? "morale" : "no_morale" );
                     hash_part( state, value.load_character_inputs->max_mana ? "max_mana" : "no_max_mana" );

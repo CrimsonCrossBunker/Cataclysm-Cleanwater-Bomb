@@ -96,3 +96,9 @@ require("vision_enchantments")
 require("effect_enchantments")
 
 require("mutation_enchantments")
+
+require("inline_enchantment_conditions")
+
+require("inline_enchantment_values")
+
+require("inline_enchantment_physiology")

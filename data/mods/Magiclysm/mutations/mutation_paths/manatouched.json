@@ -128,7 +128,7 @@
     "prereqs2": [ "MANA_REGEN2", "MANA_REGEN_MANATOUCHED" ],
     "category": [ "MANATOUCHED" ],
     "enchantments": [
-      { "condition": { "u_has_effect": "effect_manatouched_mana_flash_active" }, "mutations": [ "MANA_LUM_FLASH_ACTIVE" ] }
+      "INLINE_ENCH_MANA_LUM_FLASH_0"
     ]
   },
   {

@@ -53,22 +53,7 @@
     "apply_message": "You rub the ewwww de zombie all over yourself.  Disgusting, but hopefully effective.",
     "rating": "good",
     "enchantments": [
-      {
-        "condition": {
-          "not": {
-            "or": [
-              { "u_has_effect": "effect_ewwww_de_zombie_canceller" },
-              { "u_has_effect": "bleed", "bodypart": "head" },
-              { "u_has_effect": "bleed", "bodypart": "torso" },
-              { "u_has_effect": "bleed", "bodypart": "arm_r" },
-              { "u_has_effect": "bleed", "bodypart": "arm_l" },
-              { "u_has_effect": "bleed", "bodypart": "leg_r" },
-              { "u_has_effect": "bleed", "bodypart": "leg_l" }
-            ]
-          }
-        },
-        "mutations": [ "TRAIT_EWWWW_DE_ZOMBIE" ]
-      },
+      "INLINE_ENCH_effect_ewwww_de_zombie_0",
       "INLINE_ENCH_effect_ewwww_de_zombie_1"
     ]
   },
