@@ -128,7 +128,7 @@
     "points": 3,
     "valid": false,
     "vitamin_cost": 160,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STRONGER_RESISTWARM_LIZ_0" ]
   },
   {
     "type": "mutation",
@@ -193,13 +193,7 @@
     "vitamin_cost": 210,
     "flags": [ "MEND_ALL" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MENDING_MODIFIER", "multiply": 19 },
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 }
-        ]
-      }
+      "INLINE_ENCH_REGEN_LIZARDFOLK_0"
     ]
   }
 ]

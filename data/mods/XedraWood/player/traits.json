@@ -8,7 +8,7 @@
     "starting_trait": false,
     "valid": false,
     "player_display": false,
-    "enchantments": [ { "skills": [ { "value": "computer", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_XEDRA_WOOD_COMPUTER_ILLITERATE_0" ],
     "flags": [ "CANNOT_USE_COMPUTERS" ]
   },
   {
@@ -62,7 +62,7 @@
     "valid": false,
     "flags": [ "MAGICAL_CBMS", "ATTUNEMENT" ],
     "enchantments": [
-      { "condition": "ALWAYS", "values": [ { "value": "POWER_TRICKLE", "add": 100 } ] },
+      "INLINE_ENCH_TATTOOS_BASIC_TRAIT_0",
       { "condition": { "u_has_effect": "asleep" }, "values": [ { "value": "POWER_TRICKLE", "add": 1000 } ] },
       {
         "condition": { "u_has_effect": "effect_pattern_tattoo_meditation" },
