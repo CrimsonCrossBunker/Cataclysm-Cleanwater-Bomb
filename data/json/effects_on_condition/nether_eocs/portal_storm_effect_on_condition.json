@@ -107,34 +107,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_CHECK",
-    "//": "Normally weather is only checked every 5 minutes or so, since your distance to the storm center can change quickly we want to test much more often.",
-    "recurrence": [ "1 seconds", "5 seconds" ],
-    "global": true,
-    "condition": { "or": [ { "math": [ "cause_early_portal_storm == 1" ] }, { "math": [ "cause_portal_storm == 1" ] } ] },
-    "deactivate_condition": { "and": [ { "math": [ "cause_early_portal_storm != 1" ] }, { "math": [ "cause_portal_storm != 1" ] } ] },
-    "effect": "next_weather"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_MOVE_PORTAL_STORM",
-    "recurrence": [ "45 seconds", "90 seconds" ],
-    "global": true,
-    "condition": { "or": [ { "math": [ "cause_early_portal_storm == 1" ] }, { "math": [ "cause_portal_storm == 1" ] } ] },
-    "deactivate_condition": { "and": [ { "math": [ "cause_early_portal_storm != 1" ] }, { "math": [ "cause_portal_storm != 1" ] } ] },
-    "effect": [
-      {
-        "location_variable_adjust": { "global_val": "portal_storm_center" },
-        "overmap_tile": true,
-        "x_adjust": [ -1, 1 ],
-        "y_adjust": [ -1, 1 ]
-      },
-      { "remove_active_mission": "MISSION_INVESTIGATE_PORTAL_STORM_CENTER" },
-      { "assign_mission": "MISSION_INVESTIGATE_PORTAL_STORM_CENTER" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CAUSE_PORTAL_STORM",
     "global": true,
     "//": "This sets up all the variables for the start of a portal storm.",

@@ -136,3 +136,5 @@ require("weather_types")
 require("portal_storm_scenarios")
 
 require("portal_storm_interactions")
+
+require("portal_storm_timers")
