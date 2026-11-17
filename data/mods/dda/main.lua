@@ -141,4 +141,6 @@ require("portal_storm_timers")
 
 require("portal_storm_cycle")
 
+require("highland_incense_content")
+
 require("highland_incense")
