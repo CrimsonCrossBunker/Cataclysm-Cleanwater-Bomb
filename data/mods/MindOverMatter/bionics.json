@@ -73,7 +73,7 @@
     "act_cost": "400 J",
     "react_cost": "400 J",
     "time": "1 s",
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "STEALTH_MODIFIER", "add": 50 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_bio_cameleoflage_fifth_sun_0" ],
     "flags": [ "BIONIC_TOGGLED" ]
   }
 ]

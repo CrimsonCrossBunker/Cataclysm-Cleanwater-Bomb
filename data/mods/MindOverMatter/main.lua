@@ -124,3 +124,5 @@ require("progression_enchantments")
 require("body_enchantments")
 
 require("contextual_enchantments")
+
+require("bionic_enchantments")
