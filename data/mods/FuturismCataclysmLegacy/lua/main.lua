@@ -13,3 +13,5 @@ require("lua.snippets")
 require("lua.requirements")
 
 require("lua.enchantments")
+
+require("bionic_enchantments")

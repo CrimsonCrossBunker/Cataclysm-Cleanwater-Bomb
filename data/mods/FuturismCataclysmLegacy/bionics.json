@@ -43,7 +43,7 @@
     "type": "bionic",
     "name": { "str": "Linguistic Coprocessor" },
     "description": "The left hemisphere of your brain has been augmented with a microcomputer that moderately increases the speed that language and written words are processed, granting a 15% increase to reading speed.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.15 } ] } ],
+    "enchantments": [ "BIONIC_ENCH_fcl_bio_linguistic_coprocessor_0" ],
     "occupied_bodyparts": [ [ "head", 2 ] ]
   },
   {
@@ -117,15 +117,7 @@
     "description": "Your blood is laced with neuron-analogue nanites, allowing your entire circulatory system to function as a secondary brain.  This radical modification increases your intelligence, reflexes and perception by 4, increases your pain tolerance and allows you to survive brain damage that would otherwise prove fatal.",
     "occupied_bodyparts": [ [ "leg_l", 2 ], [ "leg_r", 2 ] ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "INTELLIGENCE", "add": 4 },
-          { "value": "PERCEPTION", "add": 4 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "PAIN", "multiply": -0.33 },
-          { "value": "PAIN_PENALTY_MOD_INT", "add": -4 }
-        ]
-      }
+      "BIONIC_ENCH_fcl_bio_blood_brain_0"
     ]
   }
 ]
