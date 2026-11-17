@@ -1,20 +1,5 @@
 [
   {
-    "type": "enchantment",
-    "id": "ench_sylph_fulgurating_strikes_basic",
-    "condition": "ALWAYS",
-    "melee_damage_bonus": [
-      {
-        "type": "electric",
-        "add": {
-          "math": [
-            "rand(u_spell_level('zap_electrical_emission') + u_spell_level('sylph_call_lightning') + u_spell_level('sylph_crash_of_lightning'))"
-          ]
-        }
-      }
-    ]
-  },
-  {
     "id": "zap_electrical_emission",
     "type": "SPELL",
     "name": "Zap",

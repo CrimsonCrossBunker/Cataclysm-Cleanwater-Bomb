@@ -10,29 +10,5 @@
     "effect": "attack",
     "shape": "blast",
     "flags": [ "SILENT", "NO_EXPLOSION_SFX" ]
-  },
-  {
-    "type": "enchantment",
-    "id": "MON_NEARBY_SPEED",
-    "has": "WIELD",
-    "condition": "ALWAYS",
-    "values": [ { "value": "SPEED", "add": { "math": [ "u_monsters_nearby('radius': 25) / 2" ] } } ]
-  },
-  {
-    "type": "enchantment",
-    "id": "BLOODTHORNE_DRUID_HEARTWHIP",
-    "has": "WIELD",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "math": [ "u_mon_species_nearby('RENFIELD', 'radius': 3, 'attitude': 'both') >= 1" ] },
-            { "math": [ "u_mon_species_nearby('VAMPIRE', 'radius': 3, 'attitude': 'both') >= 1" ] }
-          ]
-        }
-      ]
-    },
-    "melee_damage_bonus": [ { "type": "biological", "add": { "math": [ "rng(5,15)" ] } } ],
-    "values": [ { "value": "WEAKPOINT_ACCURACY", "multiply": 1.5 } ]
   }
 ]
