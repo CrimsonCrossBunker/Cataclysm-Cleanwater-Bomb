@@ -1978,20 +1978,20 @@ bool construct::check_deconstruct( const tripoint_bub_ms &p )
 bool construct::check_up_OK( const tripoint_bub_ms & )
 {
     // You're not going above +OVERMAP_HEIGHT.
-    return ( get_map().get_abs_sub().z() < OVERMAP_HEIGHT );
+    return ( get_map().get_abs_sub().z() < get_map().max_z() );
 }
 
 bool construct::check_down_OK( const tripoint_bub_ms & )
 {
     // You're not going below -OVERMAP_DEPTH.
-    return ( get_map().get_abs_sub().z() > -OVERMAP_DEPTH );
+    return ( get_map().get_abs_sub().z() > get_map().min_z() );
 }
 
 static std::optional<ter_id> excavated_pit_floor( const tripoint_bub_ms &p )
 {
     const map &here = get_map();
     const tripoint_bub_ms below = p + tripoint::below;
-    if( !here.supports_zlevels() || p.z() <= -OVERMAP_DEPTH || !here.inbounds( below ) ) {
+    if( !here.supports_zlevels() || p.z() <= here.min_z() || !here.inbounds( below ) ) {
         return std::nullopt;
     }
 

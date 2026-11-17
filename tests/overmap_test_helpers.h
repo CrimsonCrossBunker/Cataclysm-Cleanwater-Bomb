@@ -17,6 +17,12 @@
 class overmap_test_helper
 {
     public:
+        static void place_atlas_roads_on_land( overmap &om,
+                                               const std::vector<north_america::road_cell> &network ) {
+            const std::vector<north_america::terrain> land(
+                ( OMAPX + 2 ) * ( OMAPY + 2 ), north_america::terrain::land );
+            om.place_atlas_roads( network, land );
+        }
         static bool generate_atlas_streets_and_buildings( overmap &om ) {
             std::vector<north_america::terrain> coast;
             if( !om.place_north_american_water( coast ) ) {

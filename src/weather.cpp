@@ -41,6 +41,7 @@
 #include "messages.h"
 #include "mp_world_session.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
 #include "omdata.h"
 #include "options.h"
 #include "overmap.h"
@@ -1000,9 +1001,9 @@ static bool has_sunlight_access( const tripoint_bub_ms &pos )
 {
     tripoint_bub_ms checked_pnt = pos;
     const map &here = get_map();
-    while( checked_pnt.z() < OVERMAP_HEIGHT ) {
+    while( checked_pnt.z() < here.max_z() ) {
         const tripoint_bub_ms pnt_above = {checked_pnt.xy(), checked_pnt.z() + 1 };
-        const bool should_check_above = pnt_above.z() < OVERMAP_HEIGHT;
+        const bool should_check_above = pnt_above.z() < here.max_z();
         // If checking above would take us outside of game bounds, just assume that it's all open air up there.
         const bool transparent_roof = should_check_above ?
                                       here.has_flag_ter( "NO_FLOOR", pnt_above ) || here.has_flag_ter( "TRANSPARENT_FLOOR", pnt_above ) :
@@ -1203,7 +1204,7 @@ void weather_manager::update_weather()
 
         if( weather_id->sight_penalty != old_weather->sight_penalty ) {
             g->multiplayer_session().visit_resident_maps( here, []( map & terrain ) {
-                for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+                for( int z = terrain.min_z(); z <= terrain.max_z(); ++z ) {
                     terrain.set_transparency_cache_dirty( z );
                     terrain.set_seen_cache_dirty( z );
                 }
@@ -1617,6 +1618,12 @@ units::temperature weather_manager::get_temperature( const tripoint_bub_ms &loca
     if( !g->new_game && !g->swapping_dimensions ) {
         const map &here = get_map();
         const tripoint_bub_ms player = get_player_character().pos_bub();
+        if( location.z() >= 0 && here.inbounds( location ) && north_america::elevation_active() ) {
+            const double current = north_america::altitude_at( here, location );
+            const double sampled = north_america::altitude_at( weather_precise->location );
+            temp = units::from_celsius( units::to_celsius( temp ) +
+                                        north_america::temperature_delta_at_height( current, sampled ) );
+        }
         if( location.z() >= 0 && here.inbounds( location ) &&
             std::abs( location.z() - player.z() ) <= 1 &&
             square_dist( location.xy().raw(), player.xy().raw() ) <= 18 &&

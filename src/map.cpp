@@ -83,6 +83,7 @@
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "mapgen.h"
 #include "material.h"
 #ifdef MP_ENABLED
@@ -500,7 +501,7 @@ void map::set_lightmap_cache_dirty( const int zlev )
 
 void map::set_lightmap_cache_dirty_below( const int zlev )
 {
-    for( int z = zlev; z >= -OVERMAP_DEPTH; z-- ) {
+    for( int z = zlev; z >= min_z(); z-- ) {
         if( inbounds_z( z ) ) {
             get_cache( z ).lightmap_dirty = true;
         }
@@ -828,8 +829,8 @@ VehicleList map::get_vehicles()
                              tripoint_bub_ms( SEEX * my_MAPSIZE, SEEY * my_MAPSIZE, abs_sub.z() ) );
     }
 
-    return get_vehicles( tripoint_bub_ms( 0, 0, -OVERMAP_DEPTH ),
-                         tripoint_bub_ms( SEEX * my_MAPSIZE, SEEY * my_MAPSIZE, OVERMAP_HEIGHT ) );
+    return get_vehicles( tripoint_bub_ms( 0, 0, min_z() ),
+                         tripoint_bub_ms( SEEX * my_MAPSIZE, SEEY * my_MAPSIZE, max_z() ) );
 }
 
 bool map::place_vehicle( std::unique_ptr<vehicle> &&new_vehicle )
@@ -889,7 +890,7 @@ void map::rebuild_vehicle_level_caches()
 {
     clear_vehicle_level_caches();
 
-    for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
+    for( int gridz = min_z(); gridz <= max_z(); gridz++ ) {
         // Cache all vehicles
         level_cache *ch = get_cache_lazy( gridz );
 
@@ -971,7 +972,7 @@ void map::clear_vehicle_point_from_cache( vehicle *veh, const tripoint_bub_ms &p
 
 void map::clear_vehicle_level_caches( )
 {
-    for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
+    for( int gridz = min_z(); gridz <= max_z(); gridz++ ) {
         level_cache *ch = get_cache_lazy( gridz );
         if( ch ) {
             ch->clear_vehicle_cache();
@@ -1006,8 +1007,8 @@ void _add_vehicle_to_list( level_cache &ch, vehicle *veh )
 
 void map::reset_vehicles_sm_pos()
 {
-    int const zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    int const zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    int const zmin = zlevels ? min_z() : abs_sub.z();
+    int const zmax = zlevels ? max_z() : abs_sub.z();
     for( int z = zmin; z <= zmax; z++ ) {
         level_cache &ch = get_cache( z );
         for( int x = 0; x < getmapsize(); x++ ) {
@@ -1047,7 +1048,7 @@ void map::update_vehicle_list( const submap *const to, const int zlev )
 
 void map::forget_vehicle_projection( vehicle &veh )
 {
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+    for( int z = min_z(); z <= max_z(); ++z ) {
         if( level_cache *cache = get_cache_lazy( z ); cache && cache->forget_vehicle( veh ) ) {
             on_vehicle_moved( z );
         }
@@ -1109,7 +1110,7 @@ std::unique_ptr<vehicle> map::detach_vehicle( vehicle *veh )
     }
 
     int z = veh->sm_pos.z();
-    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+    if( z < min_z() || z > max_z() ) {
         debugmsg( "detach_vehicle got a vehicle outside allowed z-level range!  name=%s, submap:%s",
                   veh->name, veh->sm_pos.to_string() );
         // Try to fix by moving the vehicle here
@@ -1183,8 +1184,8 @@ void map::on_vehicle_opening_changed( vehicle &veh, const tripoint_abs_ms &part 
 void map::resolve_off_map_grid_generation( const map_simulation_regions *regions,
         std::unordered_set<vehicle *> &resolved )
 {
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
 
     // Build set of in-bubble vehicles for fast membership check
     std::unordered_set<vehicle *> in_bubble;
@@ -1244,8 +1245,8 @@ void map::resolve_off_map_grid_generation( const map_simulation_regions *regions
 
 void map::resolve_appliance_grid_power( std::unordered_set<vehicle *> &resolved )
 {
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
 
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         const level_cache *cache = get_cache_lazy( zlev );
@@ -1373,8 +1374,8 @@ void map::move_vehicles( std::unordered_set<int64_t> *advanced )
     // give vehicles movement points
     std::vector<safe_reference<vehicle>> vehicle_list;
     std::unordered_set<int64_t> assigned;
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
     std::vector<safe_reference<vehicle>> candidates;
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         level_cache *cache_lazy = get_cache_lazy( zlev );
@@ -1451,8 +1452,8 @@ void map::clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehic
 void map::idle_vehicles( std::unordered_set<int64_t> *advanced,
                          const map_simulation_regions *regions )
 {
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
     std::map<vehicle *, bool> vehs; // value true means in on map
     std::unordered_set<vehicle *> connected_vehs;
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
@@ -1575,9 +1576,9 @@ vehicle *map::move_vehicle( vehicle &veh, const tripoint_rel_ms &dp, const tiler
     cata_assert( vertical == ( dp.xy() == point_rel_ms::zero ) );
 
     const int target_z = dp.z() + veh.sm_pos.z();
-    // limit vehicles to at most OVERMAP_HEIGHT - 1; this mitigates getting to zlevel 10 easily
+    // limit vehicles to at most max_z() - 1; this mitigates getting to zlevel 10 easily
     // and causing `get_cache_ref( zlev + 1 );` call in map::build_sunlight_cache overflowing
-    if( target_z < -OVERMAP_DEPTH || target_z > OVERMAP_HEIGHT - 1 ) {
+    if( target_z < min_z() || target_z > max_z() - 1 ) {
         return &veh;
     }
 
@@ -2113,8 +2114,8 @@ std::set<tripoint_bub_ms> map::get_moving_vehicle_targets( const Creature &z, in
     // list construction was a major hotspot (map::get_vehicles topped a CPU
     // profile at ~15%). The cached vehicle_list gives the same set of vehicles
     // without the rebuild cost.
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
     for( int zlev = minz; zlev <= maxz; ++zlev ) {
         const level_cache *cache = get_cache_lazy( zlev );
         if( !cache ) {
@@ -3984,6 +3985,10 @@ bool map::valid_move( const tripoint_bub_ms &from, const tripoint_bub_ms &to,
         return false;
     }
 
+    if( north_america::elevation_active() && inbounds( to ) &&
+        !north_america::within_altitude_limits( north_america::altitude_at( *this, to ) ) ) {
+        return false;
+    }
     if( from.z() == to.z() ) {
         // But here we need to, to prevent bashing critters
         return passable( to ) || ( bash && inbounds( to ) );
@@ -4093,7 +4098,7 @@ double map::ranged_target_size( const tripoint_bub_ms &p ) const
 
 int map::climb_difficulty( const tripoint_bub_ms &p ) const
 {
-    if( p.z() > OVERMAP_HEIGHT || p.z() < -OVERMAP_DEPTH ) {
+    if( p.z() > max_z() || p.z() < min_z() ) {
         debugmsg( "climb_difficulty on out of bounds point: %d, %d, %d", p.x(), p.y(), p.z() );
         return INT_MAX;
     }
@@ -4260,7 +4265,7 @@ bool map::has_vehicle_ladder_at( const tripoint_bub_ms &pt ) const
 
 bool map::has_floor( const tripoint_bub_ms &p ) const
 {
-    if( !zlevels || p.z() < -OVERMAP_DEPTH + 1 || p.z() > OVERMAP_HEIGHT ) {
+    if( !zlevels || p.z() < min_z() + 1 || p.z() > max_z() ) {
         return true;
     }
     if( !inbounds( p ) ) {
@@ -4272,7 +4277,7 @@ bool map::has_floor( const tripoint_bub_ms &p ) const
 
 bool map::has_floor_or_water( const tripoint_bub_ms &p ) const
 {
-    if( !zlevels || p.z() < -OVERMAP_DEPTH + 1 || p.z() > OVERMAP_HEIGHT ) {
+    if( !zlevels || p.z() < min_z() + 1 || p.z() > max_z() ) {
         return true;
     }
     if( !inbounds( p ) ) {
@@ -5033,7 +5038,7 @@ bool map::is_roofed( const tripoint_bub_ms &p ) const
 
     // Walk upward through z-levels looking for any surface that blocks
     // precipitation. The first blocking surface found means this tile is roofed.
-    for( int z = p.z() + 1; z <= OVERMAP_HEIGHT; ++z ) {
+    for( int z = p.z() + 1; z <= max_z(); ++z ) {
         const tripoint_bub_ms check_pos( p.x(), p.y(), z );
         const level_cache *cache = get_cache_lazy( z );
 
@@ -5441,9 +5446,9 @@ int map::collapse_check( const tripoint_bub_ms &p ) const
         return 0;
     }
 
-    int num_supports = p.z() == OVERMAP_DEPTH ? 0 : -5;
+    int num_supports = p.z() == max_z() ? 0 : -5;
     // if there's support below, things are less likely to collapse
-    if( p.z() > -OVERMAP_DEPTH ) {
+    if( p.z() > min_z() ) {
         const tripoint_bub_ms &pbelow = p + tripoint::below;
         for( const tripoint_bub_ms &tbelow : points_in_radius( pbelow, 1 ) ) {
             if( has_flag( ter_furn_flag::TFLAG_SUPPORTS_ROOF, tbelow ) ) {
@@ -5737,7 +5742,7 @@ ter_str_id map::get_roof( const tripoint_bub_ms &p, const bool allow_air ) const
     // Just use t_dirt instead
     cata_assert( zlevels );
 
-    if( p.z() <= -OVERMAP_DEPTH ) {
+    if( p.z() <= min_z() ) {
         // Could be magma/"void" instead
         return ter_t_rock_floor;
     }
@@ -6973,7 +6978,7 @@ std::unordered_set<item_location> map::all_items( const std::function<bool( cons
 
 
     if( flags & Access_Map_All )  {
-        for( int i = -OVERMAP_DEPTH; i <= OVERMAP_HEIGHT; i++ ) {
+        for( int i = min_z(); i <= max_z(); i++ ) {
             for( const tripoint_bub_ms &pt : points_on_zlevel( i ) ) {
                 for( item &it : i_at( pt ) ) {
                     // We always want to recurse even if the top-level item doesn't pass our filter - the contained items still might!
@@ -8196,8 +8201,8 @@ static void process_vehicle_items( vehicle &cur_veh, int part, map &here )
 void map::process_items( const map_simulation_regions *regions )
 {
     CATA_PROFILE_SCOPE();
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
     for( int gz = minz; gz <= maxz; ++gz ) {
         level_cache &cache = access_cache( gz );
         std::set<tripoint> submaps_with_vehicles;
@@ -9489,9 +9494,9 @@ void map::update_visibility_cache( const int zlev )
         pos != visibility_variables_cache.last_pos || perception_changed ) {
         visibility_variables_cache.cached_levels.reset();
     }
-    const bool rebuild_level = !visibility_variables_cache.cached_levels[zlev + OVERMAP_DEPTH];
+    const bool rebuild_level = !visibility_variables_cache.cached_levels[layer_for_z( zlev )];
     if( rebuild_level && pos.z() - zlev < observer_z_range( player_character ) &&
-        zlev > -OVERMAP_DEPTH ) {
+        zlev > min_z() ) {
         update_visibility_cache( zlev - 1 );
     }
     // Common variables describe the requested level even when its grid is reused.
@@ -9541,7 +9546,7 @@ void map::update_visibility_cache( const int zlev )
                 }
             }
         }
-        visibility_variables_cache.cached_levels.set( zlev + OVERMAP_DEPTH );
+        visibility_variables_cache.cached_levels.set( layer_for_z( zlev ) );
     }
 
     set_draw_points_cache_dirty();
@@ -9771,7 +9776,7 @@ void map::drawsq( const catacurses::window &w, const tripoint_bub_ms &p,
 // a check to see if the lower floor needs to be rendered in tiles
 bool map::dont_draw_lower_floor( const tripoint_bub_ms &p ) const
 {
-    if( !zlevels || p.z() <= -OVERMAP_DEPTH ) {
+    if( !zlevels || p.z() <= min_z() ) {
         return true;
     } else if( !inbounds( p ) ) {
         return false;
@@ -9811,6 +9816,23 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     } else {
         memory_sym = sym = curr_ter.symbol();
         tercol = curr_ter.color();
+    }
+
+    if( sym == '.' && north_america::elevation_active() ) {
+        const point slope = north_america::surface_slope( *this, p );
+        if( std::hypot( slope.x, slope.y ) >= 12 ) {
+            const int east = std::abs( slope.x );
+            const int south = std::abs( slope.y );
+            if( east > 2 * south ) {
+                sym = slope.x > 0 ? 0x2192 : 0x2190;
+            } else if( south > 2 * east ) {
+                sym = slope.y > 0 ? 0x2193 : 0x2191;
+            } else if( slope.y > 0 ) {
+                sym = slope.x > 0 ? 0x2198 : 0x2199;
+            } else {
+                sym = slope.x > 0 ? 0x2197 : 0x2196;
+            }
+        }
     }
 
     avatar &player_character = get_avatar();
@@ -9978,7 +10000,7 @@ bool map::draw_maptile( const catacurses::window &w, const tripoint_bub_ms &p,
     }
 
     if( item_sym.empty() && sym == ' ' ) {
-        if( !zlevels || p.z() <= -OVERMAP_DEPTH || !curr_ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+        if( !zlevels || p.z() <= min_z() || !curr_ter.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
             // Print filler symbol
             tercol = c_black;
         } else {
@@ -10089,8 +10111,8 @@ point map::sees_cache_key( const tripoint_bub_ms &from, const tripoint_bub_ms &t
 
     // A little gross, just pack the values into an integer.
     return point(
-               min.x() << 20 | min.y() << 10 | ( min.z() + OVERMAP_DEPTH ),
-               max.x() << 20 | max.y() << 10 | ( max.z() + OVERMAP_DEPTH )
+               min.x() << 20 | min.y() << 10 | ( layer_for_z( min.z() ) ),
+               max.x() << 20 | max.y() << 10 | ( layer_for_z( max.z() ) )
            );
 }
 
@@ -10103,7 +10125,7 @@ bool map::sees( const tripoint_bub_ms &F, const tripoint_bub_ms &T, const int ra
     bool ( map:: * f_transparent )( const tripoint_bub_ms & p ) const =
         with_fields ? &map::is_transparent : &map::is_transparent_wo_fields;
     lru_cache_t &skew_cache = with_fields ? skew_vision_cache : skew_vision_wo_fields_cache;
-    if( std::abs( F.z() - T.z() ) > fov_3d_z_range ||
+    if( std::abs( F.z() - T.z() ) > z_range() ||
         ( range >= 0 && range < rl_dist( F, T ) ) ||
         !inbounds( T ) ) {
         bresenham_slope = 0;
@@ -10496,7 +10518,7 @@ std::vector<tripoint_bub_ms> map::reachable_item_points( const tripoint_bub_ms &
 bool map::clear_path( const tripoint_bub_ms &f, const tripoint_bub_ms &t, const int range,
                       const int cost_min, const int cost_max ) const
 {
-    if( std::abs( f.z() - t.z() ) > fov_3d_z_range ) {
+    if( std::abs( f.z() - t.z() ) > z_range() ) {
         return false;
     }
 
@@ -10637,11 +10659,11 @@ std::vector<tripoint_bub_ms> map::get_dir_circle( const tripoint_bub_ms &f,
 
 void map::save( const map_simulation_regions *regions )
 {
-    const int min_z = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int max_z = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int bottom = zlevels ? min_z() : abs_sub.z();
+    const int top = zlevels ? max_z() : abs_sub.z();
     for( int gridx = 0; gridx < my_MAPSIZE; ++gridx ) {
         for( int gridy = 0; gridy < my_MAPSIZE; ++gridy ) {
-            for( int gridz = min_z; gridz <= max_z; ++gridz ) {
+            for( int gridz = bottom; gridz <= top; ++gridz ) {
                 const tripoint_abs_sm absolute = abs_sub.xy() + tripoint_rel_sm( gridx, gridy, gridz );
                 if( !regions || regions->owns( *this, absolute ) ) {
                     saven( { gridx, gridy, gridz } );
@@ -10657,7 +10679,8 @@ static bool is_replica_window( const map &terrain )
 }
 
 void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
-                const bool pump_events, const map_simulation_regions *regions )
+                const bool pump_events, const map_simulation_regions *regions,
+                std::optional<int> z_origin_override )
 {
     context_lifetime_.reset();
     viewpoint_.reset();
@@ -10679,10 +10702,24 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
     support_cache_dirty.clear();
     submaps_with_active_items.clear();
     submaps_with_active_items_dirty.clear();
+    const int next_origin = z_origin_override.value_or( north_america::elevation_active() &&
+                            ( w.z() < -OVERMAP_DEPTH || w.z() > OVERMAP_HEIGHT ) ? w.z() : 0 );
+    if( vertical_origin != next_origin ) {
+        skew_vision_cache.clear();
+        skew_vision_wo_fields_cache.clear();
+        for( auto &cache : caches ) {
+            cache.reset();
+        }
+        for( auto &cache : pathfinding_caches ) {
+            cache->dirty = true;
+        }
+        max_populated_zlev.reset();
+        vertical_origin = next_origin;
+    }
     set_abs_sub( w );
     std::fill( grid.begin(), grid.end(), nullptr );
     clear_vehicle_level_caches();
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+    for( int z = min_z(); z <= max_z(); ++z ) {
         clear_vehicle_list( z );
     }
     for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
@@ -10700,8 +10737,8 @@ void map::load( const tripoint_abs_sm &w, const bool update_vehicle,
         // with entities at the edges
         for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
             for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-                const int zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-                const int zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+                const int zmin = zlevels ? min_z() : abs_sub.z();
+                const int zmax = zlevels ? max_z() : abs_sub.z();
                 for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                     actualize( { gridx, gridy, gridz }, regions );
                     if( pump_events ) {
@@ -10773,8 +10810,8 @@ void map::reconcile_loaded_items( const reconcile_scope scope )
     // map holds and the walk would repeat itself once per level.
     for( int gridx = 0; gridx < my_MAPSIZE; gridx++ ) {
         for( int gridy = 0; gridy < my_MAPSIZE; gridy++ ) {
-            const int zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-            const int zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+            const int zmin = zlevels ? min_z() : abs_sub.z();
+            const int zmax = zlevels ? max_z() : abs_sub.z();
             for( int gridz = zmin; gridz <= zmax; gridz++ ) {
                 const tripoint_rel_sm grid( gridx, gridy, gridz );
                 submap *const sm = get_submap_at_grid( grid );
@@ -10918,8 +10955,8 @@ void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
     const tripoint_abs_sm abs = get_abs_sub();
     std::vector<tripoint_rel_sm> loaded_grids;
 
-    const int zmin = -OVERMAP_DEPTH;
-    const int zmax = OVERMAP_HEIGHT;
+    const int zmin = min_z();
+    const int zmax = max_z();
 
     const int x_start = sp.x() >= 0 ? 0 : my_MAPSIZE - 1;
     const int x_stop = sp.x() >= 0 ? my_MAPSIZE : -1;
@@ -11031,6 +11068,39 @@ void map::shift( const point_rel_sm &sp, const map_simulation_regions *regions )
     }
 }
 
+bool map::ensure_z_in_window( const tripoint_bub_ms &destination )
+{
+    if( inbounds_z( destination.z() ) ) {
+        return true;
+    }
+    if( !zlevels || !north_america::elevation_active() || cata_mp::is_session_active() ||
+        !north_america::within_altitude_limits( north_america::altitude_at( *this, destination ) ) ) {
+        return false;
+    }
+    const tripoint_abs_sm previous = abs_sub;
+    if( std::abs( previous.z() - destination.z() ) > z_range() ) {
+        return false;
+    }
+    // Keep the player in the window and leave room for a few more scroll steps.
+    constexpr int prefetch = 3;
+    const int origin = destination.z() > max_z() ?
+                       std::min( destination.z() - OVERMAP_HEIGHT + prefetch, previous.z() + OVERMAP_DEPTH ) :
+                       std::max( destination.z() + OVERMAP_DEPTH - prefetch, previous.z() - OVERMAP_HEIGHT );
+    const auto previous_viewpoint = viewpoint_;
+    save();
+    load( previous, true, false, nullptr, origin );
+    if( previous_viewpoint && inbounds( previous_viewpoint->position ) ) {
+        viewpoint_ = previous_viewpoint;
+    }
+    return true;
+}
+
+int map::z_range() const
+{
+    return zlevels && north_america::elevation_active() && !cata_mp::is_session_active() ?
+           OVERMAP_LAYERS - 1 : fov_3d_z_range;
+}
+
 void map::vertical_shift( const int newz )
 {
     if( !zlevels ) {
@@ -11038,9 +11108,9 @@ void map::vertical_shift( const int newz )
         return;
     }
 
-    if( newz < -OVERMAP_DEPTH || newz > OVERMAP_HEIGHT ) {
+    if( newz < min_z() || newz > max_z() ) {
         debugmsg( "Tried to get z-level %d outside allowed range of %d-%d",
-                  newz, -OVERMAP_DEPTH, OVERMAP_HEIGHT );
+                  newz, min_z(), max_z() );
         return;
     }
 
@@ -11107,8 +11177,8 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
     // Get the base submap "grid" is an offset from.
     const tripoint_abs_sm grid_sm_base = project_to<coords::sm>( grid_abs_omt );
     bool map_incomplete = false;
-    const int start_z = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int stop_z = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int start_z = zlevels ? min_z() : abs_sub.z();
+    const int stop_z = zlevels ? max_z() : abs_sub.z();
 
     // A leading-edge slot can still point into the old window. Clear it
     // before storage access, including when map generation fails.
@@ -11123,7 +11193,8 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
 
     // It might be possible to just check the (0, 0) submap as we should never have
     // a case where only one submap is missing from an OMT level.
-    for( int gridx = 0; !map_incomplete && gridx <= 1; gridx++ ) {
+    const bool intersects_original_levels = start_z <= OVERMAP_HEIGHT && stop_z >= -OVERMAP_DEPTH;
+    for( int gridx = 0; intersects_original_levels && !map_incomplete && gridx <= 1; gridx++ ) {
         for( int gridy = 0; !map_incomplete && gridy <= 1; gridy++ ) {
             for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
                 const tripoint grid_pos( gridx, gridy, gridz );
@@ -11140,7 +11211,9 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         smallmap tmp_map;
         swap_map swap( *tmp_map.cast_to_map() );
         tmp_map.main_cleanup_override( false );
-        tmp_map.generate( grid_abs_omt, calendar::turn, true );
+        const tripoint_abs_omt generation_point( grid_abs_omt.xy(),
+                std::clamp( grid_abs_omt.z(), -OVERMAP_DEPTH, OVERMAP_HEIGHT ) );
+        tmp_map.generate( generation_point, calendar::turn, true );
         _main_requires_cleanup |= main_inbounds && tmp_map.is_main_cleanup_queued();
 
         for( int gridz = -OVERMAP_DEPTH; gridz <= OVERMAP_HEIGHT; gridz++ ) {
@@ -11161,6 +11234,11 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         set_outside_cache_dirty( z );
         set_floor_cache_dirty( z );
         set_pathfinding_cache_dirty( z );
+        if( ( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) && !MAPBUFFER.submap_exists( pos ) ) {
+            static const ter_str_id rock( "t_rock" );
+            static const ter_str_id air( "t_open_air" );
+            MAPBUFFER.generate_uniform( pos, z < 0 ? rock : air );
+        }
         submap *const tmpsub = MAPBUFFER.lookup_submap( pos );
         const size_t index = get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) );
         if( !tmpsub ) {
@@ -12034,7 +12112,7 @@ void map::add_tree_tops( const tripoint_rel_sm &grid )
         return;
     }
 
-    bool check_tree_tops = grid.z() > -OVERMAP_DEPTH;
+    bool check_tree_tops = grid.z() > min_z();
 
     submap *const sub_below = check_tree_tops ? get_submap_at_grid( grid + tripoint_rel_sm::below ) :
                               nullptr;
@@ -12104,7 +12182,7 @@ void map::on_unload( const tripoint_rel_sm &loc )
             // Is there a better option than this manual check?
             if( submap_offset.x() < 0 || submap_offset.x() >= my_MAPSIZE ||
                 submap_offset.y() < 0 || submap_offset.y() >= my_MAPSIZE ||
-                submap_offset.z() < -OVERMAP_DEPTH || submap_offset.z() > OVERMAP_HEIGHT ) {
+                submap_offset.z() < min_z() || submap_offset.z() > max_z() ) {
                 continue;
             }
             // Handle null submap ptr, it can definitely happen and we just ignore it.
@@ -12394,8 +12472,8 @@ void map::spawn_monsters_submap( const tripoint_rel_sm &gp, bool ignore_sight, b
 void map::spawn_monsters( bool ignore_sight, bool spawn_nonlocal,
                           const map_simulation_regions *regions )
 {
-    const int zmin = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int zmax = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int zmin = zlevels ? min_z() : abs_sub.z();
+    const int zmax = zlevels ? max_z() : abs_sub.z();
     tripoint_rel_sm gp;
     int &gx = gp.x();
     int &gy = gp.y();
@@ -12459,7 +12537,7 @@ bool map::inbounds( const tripoint_bub_ms &p ) const
 {
     return p.x() >= 0 && p.x() < my_MAPSIZE * SEEX &&
            p.y() >= 0 && p.y() < my_MAPSIZE * SEEY &&
-           p.z() >= -OVERMAP_DEPTH && p.z() <= OVERMAP_HEIGHT;
+           p.z() >= min_z() && p.z() <= max_z();
     // && ( zlevels || p.z == get_abs_sub().z() );
     // Cannot actually let inbounds check the bounds for maps not supporting Z levels, as
     // tests explicitly expect other Z level coordinates to return t_null when read
@@ -12469,7 +12547,7 @@ bool map::inbounds( const tripoint_bub_ms &p ) const
 bool map::inbounds( const tripoint_abs_omt &p ) const
 {
     const tripoint_abs_omt map_origin = project_to<coords::omt>( abs_sub );
-    return  p.z() >= -OVERMAP_DEPTH && p.z() <= OVERMAP_HEIGHT &&
+    return  p.z() >= min_z() && p.z() <= max_z() &&
             ( zlevels || p.z() == get_abs_sub().z() ) &&
             p.x() >= map_origin.x() &&
             p.y() >= map_origin.y() &&
@@ -12825,20 +12903,23 @@ void map::build_obstacle_cache(
 std::bitset<OVERMAP_LAYERS> map::get_inter_level_visibility( const int origin_zlevel ) const
 {
     std::bitset<OVERMAP_LAYERS> seen_levels;
-    seen_levels.set( origin_zlevel + OVERMAP_DEPTH );
-    for( int z = origin_zlevel + 1; z <= OVERMAP_HEIGHT; ++z ) {
+    if( !inbounds_z( origin_zlevel ) ) {
+        return seen_levels;
+    }
+    seen_levels.set( layer_for_z( origin_zlevel ) );
+    for( int z = origin_zlevel + 1; z <= max_z(); ++z ) {
         if( get_cache_ref( z ).no_floor_gaps ) {
             break;
         } else {
-            seen_levels.set( z + OVERMAP_DEPTH );
+            seen_levels.set( layer_for_z( z ) );
         }
     }
-    for( int z = origin_zlevel; z > -OVERMAP_DEPTH; --z ) {
+    for( int z = origin_zlevel; z > min_z(); --z ) {
         if( get_cache_ref( z ).no_floor_gaps ) {
             break;
         } else {
             // No floor means we can see the *lower* level.
-            seen_levels.set( z - 1 + OVERMAP_DEPTH );
+            seen_levels.set( layer_for_z( z - 1 ) );
         }
     }
     return seen_levels;
@@ -12858,7 +12939,7 @@ bool map::build_floor_cache( const int zlev )
     bool &no_floor_gaps = ch.no_floor_gaps;
     no_floor_gaps = true;
 
-    bool lowest_z_lev = zlev <= -OVERMAP_DEPTH;
+    bool lowest_z_lev = zlev <= min_z();
 
     for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
         for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
@@ -12904,8 +12985,8 @@ bool map::build_floor_cache( const int zlev )
 void map::build_floor_caches()
 {
     CATA_PROFILE_SCOPE();
-    const int minz = zlevels ? -OVERMAP_DEPTH : abs_sub.z();
-    const int maxz = zlevels ? OVERMAP_HEIGHT : abs_sub.z();
+    const int minz = zlevels ? min_z() : abs_sub.z();
+    const int maxz = zlevels ? max_z() : abs_sub.z();
     for( int z = minz; z <= maxz; z++ ) {
         build_floor_cache( z );
     }
@@ -12953,7 +13034,7 @@ void map::do_vehicle_caching( int z )
                 continue;
             }
             vehicle_caching_internal( get_cache( part_pos.z() ), vp, *v, part_pos );
-            if( part_pos.z() < OVERMAP_HEIGHT &&
+            if( part_pos.z() < max_z() &&
                 ( vp.has_feature( VPFLAG_ROOF ) || vp.has_feature( VPFLAG_OPAQUE ) ) ) {
                 get_cache( part_pos.z() + 1 ).floor_cache[part_pos.x()][part_pos.y()] = true;
             }
@@ -12964,8 +13045,8 @@ void map::do_vehicle_caching( int z )
 void map::build_map_cache( const int zlev, bool skip_lightmap )
 {
     CATA_PROFILE_SCOPE();
-    const int minz = zlevels ? -OVERMAP_DEPTH : zlev;
-    const int maxz = zlevels ? OVERMAP_HEIGHT : zlev;
+    const int minz = zlevels ? min_z() : zlev;
+    const int maxz = zlevels ? max_z() : zlev;
     bool seen_cache_dirty = false;
     bool camera_cache_dirty = false;
     for( int z = minz; z <= maxz; z++ ) {
@@ -13168,14 +13249,14 @@ size_t map::get_nonant( const tripoint_rel_sm &gridp ) const
 {
     if( gridp.x() < 0 || gridp.x() >= my_MAPSIZE ||
         gridp.y() < 0 || gridp.y() >= my_MAPSIZE ||
-        gridp.z() < -OVERMAP_DEPTH || gridp.z() > OVERMAP_HEIGHT ) {
+        gridp.z() < min_z() || gridp.z() > max_z() ) {
         debugmsg( "Tried to access invalid map position at grid (%d,%d,%d)", gridp.x(), gridp.y(),
                   gridp.z() );
         return 0;
     }
 
     if( zlevels ) {
-        const int indexz = gridp.z() + OVERMAP_DEPTH; // Can't be lower than 0
+        const int indexz = layer_for_z( gridp.z() ); // Can't be lower than 0
         return indexz + ( gridp.x() + gridp.y() * my_MAPSIZE ) * OVERMAP_LAYERS;
     } else {
         return gridp.x() + gridp.y() * my_MAPSIZE;
@@ -13600,11 +13681,11 @@ void map::function_over( const tripoint_bub_ms &start, const tripoint_bub_ms &en
     // Also clip the area to map area
     const tripoint_bub_ms min( std::max( std::min( start.x(), end.x() ), 0 ),
                                std::max( std::min( start.y(), end.y() ),
-                                         0 ), std::max( std::min( start.z(), end.z() ), -OVERMAP_DEPTH ) );
+                                         0 ), std::max( std::min( start.z(), end.z() ), min_z() ) );
     const tripoint_bub_ms max( std::min( std::max( start.x(), end.x() ), SEEX * my_MAPSIZE - 1 ),
                                std::min( std::max( start.y(), end.y() ), SEEY * my_MAPSIZE - 1 ), std::min( std::max( start.z(),
                                        end.z() ),
-                                       OVERMAP_HEIGHT ) );
+                                       max_z() ) );
 
     // Submaps that contain the bounding points
     const point_bub_sm min_sm( min.x() / SEEX, min.y() / SEEY );
@@ -13707,9 +13788,9 @@ tripoint_range<tripoint_bub_ms> map::points_in_rectangle( const tripoint_bub_ms 
 {
     const tripoint_bub_ms min( std::max( 0, std::min( from.x(), to.x() ) ), std::max( 0,
                                std::min( from.y(),
-                                         to.y() ) ), std::max( -OVERMAP_DEPTH, std::min( from.z(), to.z() ) ) );
+                                         to.y() ) ), std::max( min_z(), std::min( from.z(), to.z() ) ) );
     const tripoint_bub_ms max( std::min( SEEX * my_MAPSIZE - 1, std::max( from.x(), to.x() ) ),
-                               std::min( SEEX * my_MAPSIZE - 1, std::max( from.y(), to.y() ) ), std::min( OVERMAP_HEIGHT,
+                               std::min( SEEX * my_MAPSIZE - 1, std::max( from.y(), to.y() ) ), std::min( max_z(),
                                        std::max( from.z(), to.z() ) ) );
     return tripoint_range<tripoint_bub_ms>( min, max );
 }
@@ -13719,17 +13800,17 @@ tripoint_range<tripoint_bub_ms> map::points_in_radius(
 {
     const tripoint_bub_ms min(
         std::max<int>( 0, center.x() - radius ), std::max<int>( 0, center.y() - radius ),
-        clamp<int>( center.z() - radiusz, -OVERMAP_DEPTH, OVERMAP_HEIGHT ) );
+        clamp<int>( center.z() - radiusz, min_z(), max_z() ) );
     const tripoint_bub_ms max(
         std::min<int>( SEEX * my_MAPSIZE - 1, center.x() + radius ),
         std::min<int>( SEEX * my_MAPSIZE - 1, center.y() + radius ),
-        clamp<int>( center.z() + radiusz, -OVERMAP_DEPTH, OVERMAP_HEIGHT ) );
+        clamp<int>( center.z() + radiusz, min_z(), max_z() ) );
     return tripoint_range<tripoint_bub_ms>( min, max );
 }
 
 tripoint_range<tripoint_bub_ms> map::points_on_zlevel( const int z ) const
 {
-    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+    if( z < min_z() || z > max_z() ) {
         // TODO: need a default constructor that creates an empty range.
         return tripoint_range<tripoint_bub_ms>( tripoint_bub_ms::zero,
                                                 tripoint_bub_ms::zero - tripoint_rel_ms::above );
@@ -13855,8 +13936,8 @@ std::list<Creature *> map::get_creatures_in_radius_circ( const tripoint_bub_ms &
 
 level_cache &map::access_cache( int zlev )
 {
-    if( zlev >= -OVERMAP_DEPTH && zlev <= OVERMAP_HEIGHT ) {
-        std::unique_ptr<level_cache, level_cache_free> &cache = caches[zlev + OVERMAP_DEPTH];
+    if( zlev >= min_z() && zlev <= max_z() ) {
+        std::unique_ptr<level_cache, level_cache_free> &cache = caches[layer_for_z( zlev )];
         if( !cache ) {
             cache = alloc_cache();
         }
@@ -13869,8 +13950,8 @@ level_cache &map::access_cache( int zlev )
 
 const level_cache &map::access_cache( int zlev ) const
 {
-    if( zlev >= -OVERMAP_DEPTH && zlev <= OVERMAP_HEIGHT ) {
-        std::unique_ptr<level_cache, level_cache_free> &cache = caches[zlev + OVERMAP_DEPTH];
+    if( zlev >= min_z() && zlev <= max_z() ) {
+        std::unique_ptr<level_cache, level_cache_free> &cache = caches[layer_for_z( zlev )];
         if( !cache ) {
             cache = alloc_cache();
         }
@@ -13888,7 +13969,7 @@ pathfinding_cache::pathfinding_cache()
 
 pathfinding_cache &map::get_pathfinding_cache( int zlev ) const
 {
-    return *pathfinding_caches[zlev + OVERMAP_DEPTH];
+    return *pathfinding_caches[layer_for_z( zlev )];
 }
 
 void map::set_pathfinding_cache_dirty( const int zlev )
@@ -14056,10 +14137,10 @@ void map::clip_to_bounds( int &x, int &y ) const
 void map::clip_to_bounds( int &x, int &y, int &z ) const
 {
     clip_to_bounds( x, y );
-    if( z < -OVERMAP_DEPTH ) {
-        z = -OVERMAP_DEPTH;
-    } else if( z > OVERMAP_HEIGHT ) {
-        z = OVERMAP_HEIGHT;
+    if( z < min_z() ) {
+        z = min_z();
+    } else if( z > max_z() ) {
+        z = max_z();
     }
 }
 
@@ -14102,10 +14183,10 @@ int map::calc_max_populated_zlev()
         return max_populated_zlev->second;
     }
 
-    // We'll assume ground level is populated
-    int max_z = 0;
+    // Ground is always populated when it belongs to the resident window.
+    int max_z = std::clamp( 0, min_z(), this->max_z() );
 
-    for( int sz = 1; sz <= OVERMAP_HEIGHT; sz++ ) {
+    for( int sz = max_z + 1; sz <= this->max_z(); sz++ ) {
         bool level_done = false;
         for( int sx = 0; sx < my_MAPSIZE; sx++ ) {
             for( int sy = 0; sy < my_MAPSIZE; sy++ ) {
