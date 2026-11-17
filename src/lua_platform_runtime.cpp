@@ -12163,7 +12163,8 @@ bool validate_runtime( const std::shared_ptr<runtime> &value,
         }
     }
     for( const auto &[hook_name, handler_ids] : value->hooks ) {
-        for( const std::string &handler_id : handler_ids ) {
+        for( const runtime::hook_subscription &subscription : handler_ids ) {
+            const std::string &handler_id = subscription.handler_id;
             if( value->handlers.count( handler_id ) == 0 ) {
                 error = "Lua-first Mod '" + value->mod_id + "' native hook '" +
                         hook_name + "' references missing handler '" + handler_id + "'";

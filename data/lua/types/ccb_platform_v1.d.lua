@@ -754,6 +754,7 @@ function ItemDefinition:ammunition(options) end
 ---@field healthy? integer Health modifier; defaults to zero.
 ---@field quench? integer Thirst modifier; defaults to zero.
 ---@field spoils_in_turns? integer Non-negative shelf life; zero never spoils.
+---@field freezing_point_celsius? number Finite native-float freezing point in degrees Celsius; defaults to zero. Negative values retain native behavior.
 ---@field charges? integer Default serving count; defaults to one for food/drink and zero for medicine. Zero uses the native default for the item type.
 ---@field stack_size? integer Servings represented by the volume; defaults to charges. Zero derives the size during native finalization.
 
@@ -7168,6 +7169,7 @@ function CcbPlatformContent.edit_forest_biome_mapgen(id) end
 ---@field character GameHandle Avatar at the synchronous fatal-damage boundary.
 ---@field killer? GameHandle Creature credited with the fatal damage, when still available.
 ---@field cancellable true Returning false prevents death by restoring each vital body part to at least one HP.
+---A surviving Avatar's fatal-damage killer credit is cleared after the hook dispatch.
 ---@field results table Aggregate results from earlier handlers; `allowed` is false after a veto.
 
 ---@class CcbPlatformNpcFatalHook
@@ -7236,9 +7238,14 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
 
+---@class CcbNativeHookOptions
+---@field priority? integer Native signed-int execution priority; defaults to zero. Higher priorities run first across Mods. Equal priorities retain Mod-load and subscription order.
+
 ---@param hook_name string Native synchronous hook name from the checked hook catalog.
 ---@param handler_id string Named Platform handler.
-function CcbPlatformRuntime.hook(hook_name, handler_id) end
+---@param options? CcbNativeHookOptions Optional ordering within this hook; handler payload versions are independent.
+---Each dispatch snapshots its subscriber order; registrations made by callbacks begin on later dispatches.
+function CcbPlatformRuntime.hook(hook_name, handler_id, options) end
 
 ---Render a low-level Lua-owned topic inside the native NPC dialogue window.
 ---The named handler receives CcbPlatformDialogueRenderHook for both phases.
@@ -10476,6 +10483,28 @@ function CcbMissionsApi.abandon(owner, token) end
 ---@class CcbNeedsApi
 local CcbNeedsApi = {}
 
+---@param character GameHandle Exact live Character.
+---@return CcbResult result value is the detached native needs snapshot, including thirst, stamina/stamina_max, oxygen/oxygen_max and stored_kcal.
+function CcbNeedsApi.get(character) end
+
+---@class CcbNeedsSetOptions
+---@field hunger? integer Native signed-int hunger request.
+---@field thirst? integer Native signed-int thirst request.
+---@field sleepiness? integer Native signed-int sleepiness request.
+---@field sleep_deprivation? integer Native signed-int sleep-deprivation request.
+---@field stamina? integer Native signed-int stamina request.
+---@field focus? integer Effective focus request within -1000000..1000000; preserves the current fractional focus pool.
+---@field radiation? integer Native signed-int radiation request.
+---@field painkiller? integer Native signed-int painkiller request.
+---@field oxygen? integer Native signed-int oxygen request; clamped to zero through the Character's current maximum.
+---@field stimulant? integer Native signed-int stimulant request.
+
+---Assign the supplied fields through their native setters. At least one field is required; native clamps still apply.
+---@param character GameHandle Exact live Character.
+---@param values CcbNeedsSetOptions
+---@return CcbResult result value contains before and after needs snapshots.
+function CcbNeedsApi.set(character, values) end
+
 ---Adjust one Character's vitamin level through native clamping and daily tracking.
 ---@param character GameHandle Exact live Character handle.
 ---@param id GameId GameId<vitamin>.
@@ -10502,7 +10531,7 @@ function CcbNeedsApi.modify_raw_pain(character, delta) end
 
 ---Adjust stored calories through native calorie accounting.
 ---@param character GameHandle Exact live Character handle.
----@param delta integer Kilocalorie change within -1000000..1000000.
+---@param delta integer Signed kilocalorie change whose multiplication by 1000 fits the native signed-int calorie unit.
 ---@param ignore_weariness? boolean Skip the weariness adjustment when true.
 ---@return CcbResult result `value` contains before and after needs snapshots and the applied delta.
 function CcbNeedsApi.modify_calories(character, delta, ignore_weariness) end

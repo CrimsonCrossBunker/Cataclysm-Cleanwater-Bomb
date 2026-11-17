@@ -180,7 +180,11 @@ class runtime : public std::enable_shared_from_this<runtime>
         std::unordered_map<std::string, std::map<int, task_payload_migration>>
                 task_migrations;
         std::unordered_map<std::string, std::vector<std::string>> subscriptions;
-        std::unordered_map<std::string, std::vector<std::string>> hooks;
+        struct hook_subscription {
+            std::string handler_id;
+            int priority = 0;
+        };
+        std::unordered_map<std::string, std::vector<hook_subscription>> hooks;
         std::vector<character_recurring_registration> character_recurring_handlers;
         std::set<std::string> reported_character_recurring_failures;
         std::map<std::string, std::string> dialogue_topics;

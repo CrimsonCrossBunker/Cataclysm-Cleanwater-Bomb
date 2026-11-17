@@ -161,6 +161,7 @@ struct item_definition_data {
         std::int64_t healthy = 0;
         std::int64_t quench = 0;
         std::int64_t spoils_in_turns = 0;
+        double freezing_point_celsius = 0.0;
         std::int64_t charges = 1;
         std::int64_t stack_size = 1;
         std::map<std::string, std::int64_t> vitamins;
@@ -842,6 +843,7 @@ struct item_definition_handle {
         value.healthy = options.get_or<std::int64_t>( "healthy", 0 );
         value.quench = options.get_or<std::int64_t>( "quench", 0 );
         value.spoils_in_turns = options.get_or<std::int64_t>( "spoils_in_turns", 0 );
+        value.freezing_point_celsius = options.get_or( "freezing_point_celsius", 0.0 );
         value.charges = options.get_or<std::int64_t>( "charges", value.type == "MED" ? 0 : 1 );
         value.stack_size = options.get_or<std::int64_t>( "stack_size", value.charges );
         definition->comestible = std::move( value );
@@ -4411,6 +4413,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     food.quench > std::numeric_limits<int>::max() ||
                     food.spoils_in_turns < 0 ||
                     food.spoils_in_turns > std::numeric_limits<int>::max() ||
+                    !finite_native_float( food.freezing_point_celsius ) ||
                     food.charges < 0 || food.charges > std::numeric_limits<int>::max() ||
                     food.stack_size < 0 ||
                     food.stack_size > std::numeric_limits<int>::max() ) {
@@ -5707,6 +5710,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->comestible->stack_size = static_cast<int>( source.stack_size );
                         native->comestible->quench = static_cast<int>( source.quench );
                         native->comestible->healthy = static_cast<int>( source.healthy );
+                        native->comestible->freeze_point = static_cast<float>( source.freezing_point_celsius );
                         native->comestible->spoils = time_duration::from_turns(
                                                          static_cast<int>( source.spoils_in_turns ) );
                         native->comestible->set_fun( static_cast<int>( source.fun ) );
@@ -7024,6 +7028,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( food.healthy ) );
                     hash_part( state, std::to_string( food.quench ) );
                     hash_part( state, std::to_string( food.spoils_in_turns ) );
+                    hash_part( state, std::to_string( food.freezing_point_celsius ) );
                     hash_part( state, std::to_string( food.charges ) );
                     hash_part( state, std::to_string( food.stack_size ) );
                     for( const auto &[vitamin_key, amount] : food.vitamins ) {

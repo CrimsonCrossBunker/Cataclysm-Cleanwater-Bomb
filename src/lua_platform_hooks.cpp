@@ -268,7 +268,11 @@ bool dispatch_character_fatal( const std::string_view hook,
 
 bool dispatch_avatar_fatal( Character &character, const Creature *killer )
 {
-    return dispatch_character_fatal( "on_avatar_fatal", character, killer );
+    const bool allowed = dispatch_character_fatal( "on_avatar_fatal", character, killer );
+    if( !character.is_dead_state() ) {
+        character.clear_killer();
+    }
+    return allowed;
 }
 
 bool dispatch_npc_fatal( Character &character, const Creature *killer )

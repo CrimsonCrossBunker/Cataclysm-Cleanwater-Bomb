@@ -109,7 +109,7 @@ struct need_adjustments {
 };
 
 need_adjustments read_need_adjustments(
-    const sol::table &requested, const std::string &api_name )
+    const sol::table &requested, const std::string &api_name, const bool bounded = true )
 {
     need_adjustments result;
     for( const auto &entry : requested ) {
@@ -134,8 +134,8 @@ need_adjustments read_need_adjustments(
                 "' must be an integer" );
         }
         const int value = entry.second.as<int>();
-        if( value < -maximum_need_magnitude ||
-            value > maximum_need_magnitude ) {
+        if( ( bounded || key == "focus" ) && ( value < -maximum_need_magnitude ||
+                value > maximum_need_magnitude ) ) {
             throw std::invalid_argument(
                 api_name + " option '" + key +
                 "' must be within -1000000..1000000" );
@@ -181,7 +181,7 @@ sol::table set_needs(
 {
     const need_adjustments adjustments =
         read_need_adjustments(
-            requested_adjustments, "services.needs.set" );
+            requested_adjustments, "services.needs.set", false );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -335,11 +335,10 @@ sol::table modify_calories(
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    if( requested_delta < -maximum_need_magnitude ||
-        requested_delta > maximum_need_magnitude ) {
+    if( requested_delta < std::numeric_limits<int>::min() / 1000 ||
+        requested_delta > std::numeric_limits<int>::max() / 1000 ) {
         throw std::invalid_argument(
-            "services.needs.modify_calories delta "
-            "must be within -1000000..1000000" );
+            "services.needs.modify_calories delta must fit the native calorie conversion" );
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;

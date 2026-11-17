@@ -2345,7 +2345,8 @@ void install_runtime_callback_api(
         }
     } );
     runtime_api.set_function( "hook", [weak]( const std::string & hook_name,
-    const std::string & handler_id ) {
+                                            const std::string & handler_id,
+    const sol::optional<sol::table> &options ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner ) {
             throw std::runtime_error( "stale Platform runtime" );
@@ -2356,12 +2357,29 @@ void install_runtime_callback_api(
         if( handler_id.empty() ) {
             throw std::runtime_error( "native hook handler id cannot be empty" );
         }
-        std::vector<std::string> &handlers = owner->hooks[hook_name];
-        if( std::find( handlers.begin(), handlers.end(), handler_id ) != handlers.end() ) {
+        int priority = 0;
+        if( options ) {
+            for( const auto &entry : *options ) {
+                if( !entry.first.is<std::string>() || entry.first.as<std::string>() != "priority" ||
+                    !entry.second.is<lua_Integer>() ) {
+                    throw std::runtime_error( "native hook options accept only an integer priority" );
+                }
+                const lua_Integer requested = entry.second.as<lua_Integer>();
+                if( requested < std::numeric_limits<int>::min() ||
+                    requested > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "native hook priority must fit the native signed integer range" );
+                }
+                priority = static_cast<int>( requested );
+            }
+        }
+        std::vector<runtime::hook_subscription> &handlers = owner->hooks[hook_name];
+        if( std::any_of( handlers.begin(), handlers.end(), [&]( const auto & entry ) {
+        return entry.handler_id == handler_id;
+        } ) ) {
             throw std::runtime_error( "duplicate native hook subscription '" + hook_name +
                                       "' for handler '" + handler_id + "'" );
         }
-        handlers.push_back( handler_id );
+        handlers.push_back( { handler_id, priority } );
     } );
     runtime_api.set_function( "dialogue_topic", [weak]( const std::string & topic_id,
     const std::string & handler_id ) {
@@ -2429,6 +2447,12 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
         !aggregate.allowed ) {
         return aggregate;
     }
+    struct hook_callback {
+        std::shared_ptr<runtime> owner;
+        std::string handler_id;
+        int priority;
+    };
+    std::vector<hook_callback> callbacks;
     for( const std::shared_ptr<runtime> &owner : detail::active_runtime_values() ) {
         if( !owner || !owner->world_is_ready ) {
             continue;
@@ -2437,113 +2461,126 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
         if( subscription == owner->hooks.end() ) {
             continue;
         }
-        const std::vector<std::string> handler_ids = subscription->second;
-        sol::object previous = sol::make_object( *owner->lua, sol::lua_nil );
-        for( const std::string &handler_id : handler_ids ) {
-            const auto handler = owner->handlers.find( handler_id );
-            if( handler == owner->handlers.end() ) {
-                continue;
-            }
-            if( owner->callback_depth >= 16 ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook recursion limit reached for '"
-                                            << owner->mod_id << ':' << name << "'";
-                continue;
-            }
-            sol::table payload = platform_callback_payload( *owner, arguments );
-            payload["hook"] = std::string( name );
-            payload["cancellable"] =
-                cata::lua_platform::native_hook_supports_result_field( name, "allow" );
-            sol::table shared = owner->lua->create_table();
-            shared["allowed"] = aggregate.allowed;
-            shared["handled"] = aggregate.handled;
-            shared["text"] = aggregate.text;
-            if( aggregate.result ) {
-                shared["result"] = *aggregate.result;
-            }
-            sol::table strings = owner->lua->create_table();
-            for( std::size_t index = 0; index < aggregate.results.size(); ++index ) {
-                strings[index + 1] = aggregate.results[index];
-            }
-            shared["results"] = std::move( strings );
-            payload["results"] = shared;
-            payload["prev"] = previous;
+        for( const runtime::hook_subscription &entry : subscription->second ) {
+            callbacks.push_back( { owner, entry.handler_id, entry.priority } );
+        }
+    }
+    std::stable_sort( callbacks.begin(), callbacks.end(), []( const auto &lhs, const auto &rhs ) {
+        return lhs.priority > rhs.priority;
+    } );
+    std::map<runtime *, sol::object> previous_values;
+    for( const hook_callback &entry : callbacks ) {
+        const std::shared_ptr<runtime> &owner = entry.owner;
+        if( !owner->world_is_ready ) {
+            continue;
+        }
+        const std::string &handler_id = entry.handler_id;
+        auto previous_entry = previous_values.try_emplace(
+                                  owner.get(), sol::make_object( *owner->lua, sol::lua_nil ) );
+        sol::object &previous = previous_entry.first->second;
+        const auto handler = owner->handlers.find( handler_id );
+        if( handler == owner->handlers.end() ) {
+            continue;
+        }
+        if( owner->callback_depth >= 16 ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook recursion limit reached for '"
+                                        << owner->mod_id << ':' << name << "'";
+            continue;
+        }
+        sol::table payload = platform_callback_payload( *owner, arguments );
+        payload["hook"] = std::string( name );
+        payload["cancellable"] =
+            cata::lua_platform::native_hook_supports_result_field( name, "allow" );
+        sol::table shared = owner->lua->create_table();
+        shared["allowed"] = aggregate.allowed;
+        shared["handled"] = aggregate.handled;
+        shared["text"] = aggregate.text;
+        if( aggregate.result ) {
+            shared["result"] = *aggregate.result;
+        }
+        sol::table strings = owner->lua->create_table();
+        for( std::size_t index = 0; index < aggregate.results.size(); ++index ) {
+            strings[index + 1] = aggregate.results[index];
+        }
+        shared["results"] = std::move( strings );
+        payload["results"] = shared;
+        payload["prev"] = previous;
 
-            sol::protected_function callback = handler->second.callback;
-            callback_scope scope( *owner );
-            // Movement hooks retain their public player/npc field names. Both
-            // forms still bind character state to the actor attempting to move.
-            const char *actor_field = name == "on_player_try_move" ? "player" :
-                                      name == "on_npc_try_move" ? "npc" : "character";
-            const sol::optional<game_handle> character = payload[actor_field];
-            if( character ) {
-                owner->callback_character = *character;
-            }
-            const sol::protected_function_result result = callback( payload );
-            if( !result.valid() ) {
-                report_callback_error( *owner, handler_id, result,
-                                       "hook " + std::string( name ) );
-                continue;
-            }
+        sol::protected_function callback = handler->second.callback;
+        callback_scope scope( *owner );
+        // Movement hooks retain their public player/npc field names. Both
+        // forms still bind character state to the actor attempting to move.
+        const char *actor_field = name == "on_player_try_move" ? "player" :
+                                  name == "on_npc_try_move" ? "npc" : "character";
+        const sol::optional<game_handle> character = payload[actor_field];
+        if( character ) {
+            owner->callback_character = *character;
+        }
+        const sol::protected_function_result result = callback( payload );
+        if( !result.valid() ) {
+            report_callback_error( *owner, handler_id, result,
+                                   "hook " + std::string( name ) );
+            continue;
+        }
 
-            bool stop = false;
-            cata::lua_platform::native_hook_result candidate = aggregate;
-            try {
-                apply_platform_hook_table( name, shared, candidate, stop, true );
-            } catch( const std::exception &exception ) {
-                DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook '" << owner->mod_id
-                                            << ':' << handler_id
-                                            << "' mutated invalid shared results: "
-                                            << exception.what();
-                continue;
-            }
-            sol::object returned = sol::make_object( *owner->lua, sol::lua_nil );
-            bool accept_candidate = true;
-            if( result.return_count() > 0 ) {
-                returned = result.get<sol::object>();
-                if( returned.get_type() == sol::type::boolean ) {
-                    if( !cata::lua_platform::native_hook_supports_result_field( name, "allow" ) ) {
-                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first signal hook '" << name
-                                                    << "' ignored a boolean result from '"
-                                                    << owner->mod_id << ':' << handler_id << "'";
-                    } else {
-                        const bool allowed = returned.as<bool>();
-                        candidate.allowed = candidate.allowed && allowed;
-                        stop = stop || !allowed;
-                    }
-                } else if( returned.get_type() == sol::type::string &&
-                           cata::lua_platform::native_hook_supports_result_field( name, "result" ) ) {
-                    const std::string replacement = returned.as<std::string>();
-                    if( replacement.size() > 512 ) {
-                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook result exceeds 512 bytes";
-                        accept_candidate = false;
-                    } else {
-                        candidate.result = replacement;
-                    }
-                } else if( returned.get_type() == sol::type::table ) {
-                    try {
-                        apply_platform_hook_table( name, returned.as<sol::table>(),
-                                                   candidate, stop, false );
-                    } catch( const std::exception &exception ) {
-                        DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook '" << owner->mod_id
-                                                    << ':' << handler_id << "' returned invalid data: "
-                                                    << exception.what();
-                        accept_candidate = false;
-                    }
-                } else if( returned.get_type() != sol::type::nil ) {
+        bool stop = false;
+        cata::lua_platform::native_hook_result candidate = aggregate;
+        try {
+            apply_platform_hook_table( name, shared, candidate, stop, true );
+        } catch( const std::exception &exception ) {
+            DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook '" << owner->mod_id
+                                        << ':' << handler_id
+                                        << "' mutated invalid shared results: "
+                                        << exception.what();
+            continue;
+        }
+        sol::object returned = sol::make_object( *owner->lua, sol::lua_nil );
+        bool accept_candidate = true;
+        if( result.return_count() > 0 ) {
+            returned = result.get<sol::object>();
+            if( returned.get_type() == sol::type::boolean ) {
+                if( !cata::lua_platform::native_hook_supports_result_field( name, "allow" ) ) {
+                    DebugLog( D_ERROR, D_MAIN ) << "Lua-first signal hook '" << name
+                                                << "' ignored a boolean result from '"
+                                                << owner->mod_id << ':' << handler_id << "'";
+                } else {
+                    const bool allowed = returned.as<bool>();
+                    candidate.allowed = candidate.allowed && allowed;
+                    stop = stop || !allowed;
+                }
+            } else if( returned.get_type() == sol::type::string &&
+                       cata::lua_platform::native_hook_supports_result_field( name, "result" ) ) {
+                const std::string replacement = returned.as<std::string>();
+                if( replacement.size() > 512 ) {
+                    DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook result exceeds 512 bytes";
+                    accept_candidate = false;
+                } else {
+                    candidate.result = replacement;
+                }
+            } else if( returned.get_type() == sol::type::table ) {
+                try {
+                    apply_platform_hook_table( name, returned.as<sol::table>(),
+                                               candidate, stop, false );
+                } catch( const std::exception &exception ) {
                     DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook '" << owner->mod_id
-                                                << ':' << handler_id
-                                                << "' must return nil, boolean, string, or table";
+                                                << ':' << handler_id << "' returned invalid data: "
+                                                << exception.what();
                     accept_candidate = false;
                 }
+            } else if( returned.get_type() != sol::type::nil ) {
+                DebugLog( D_ERROR, D_MAIN ) << "Lua-first native hook '" << owner->mod_id
+                                            << ':' << handler_id
+                                            << "' must return nil, boolean, string, or table";
+                accept_candidate = false;
             }
-            if( !accept_candidate ) {
-                continue;
-            }
-            aggregate = std::move( candidate );
-            previous = std::move( returned );
-            if( stop ) {
-                return aggregate;
-            }
+        }
+        if( !accept_candidate ) {
+            continue;
+        }
+        aggregate = std::move( candidate );
+        previous = std::move( returned );
+        if( stop ) {
+            return aggregate;
         }
     }
     return aggregate;
