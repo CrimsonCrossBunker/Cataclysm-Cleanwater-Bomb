@@ -2542,7 +2542,8 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 std::nullopt, {}, ids( *activation, "spell_school_counts" ), {},
                 activation->get_or( "stats", false ), ids( *activation, "vitamins" ),
                 activation->get_or( "physiology", false ), activation->get_or( "fine_detail_vision", false ),
-                ids( *activation, "skills" )
+                ids( *activation, "skills" ), activation->get_or( "base_stats", false ),
+                activation->get_or( "climate_heat", false ), ids( *activation, "category_counts" )
             };
             if( const auto queries = activation->get<sol::optional<sol::table>>( "nearby_monsters" ) ) {
                 for( const auto &[key, raw] : *queries ) {
@@ -2586,6 +2587,9 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
                 inputs.season = environment->get_or( "season", false );
                 inputs.weather = environment->get_or( "weather", false );
                 inputs.dimension = environment->get_or( "dimension", false );
+                inputs.moon_phase = environment->get_or( "moon_phase", false );
+                inputs.turns_since_midnight = environment->get_or( "turns_since_midnight", false );
+                inputs.temperature_fahrenheit = environment->get_or( "temperature_fahrenheit", false );
                 if( const auto nearby = environment->get<sol::optional<sol::table>>( "nearby_overmap_terrain" ) ) {
                     for( const auto &[key, value] : *nearby ) {
                         if( key.get_type() != sol::type::string || !value.is<lua_Integer>() ) {
@@ -4318,7 +4322,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                         &inputs.character_variables, &inputs.global_variables,
                                         &inputs.character_flags, &inputs.spell_levels,
                                         &inputs.spell_school_levels, &inputs.spell_school_level_sums,
-                                        &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills } ) {
+                                        &inputs.spell_school_counts, &inputs.vitamins, &inputs.skills,
+                                        &inputs.category_counts } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -7619,6 +7624,7 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "wielded_flags", value.load_character_inputs->wielded_flags );
                     hash_ids( "vitamins", value.load_character_inputs->vitamins );
                     hash_ids( "skills", value.load_character_inputs->skills );
+                    hash_ids( "category_counts", value.load_character_inputs->category_counts );
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
                     hash_ids( "character_variables", value.load_character_inputs->character_variables );
                     hash_ids( "global_variables", value.load_character_inputs->global_variables );
@@ -7641,6 +7647,8 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, value.load_character_inputs->move_mode ? "move_mode" : "no_move_mode" );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
                     hash_part( state, value.load_character_inputs->stats ? "stats" : "no_stats" );
+                    hash_part( state, value.load_character_inputs->base_stats ? "base_stats" : "no_base_stats" );
+                    hash_part( state, value.load_character_inputs->climate_heat ? "climate_heat" : "no_climate_heat" );
                     hash_part( state, value.load_character_inputs->physiology ? "physiology" : "no_physiology" );
                     hash_part( state, value.load_character_inputs->fine_detail_vision ? "fine_detail_vision" : "no_fine_detail_vision" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
@@ -7667,6 +7675,9 @@ void character_content_transaction::append_fingerprint(
                         hash_part( state, environment->season ? "season" : "no_season" );
                         hash_part( state, environment->weather ? "weather" : "no_weather" );
                         hash_part( state, environment->dimension ? "dimension" : "no_dimension" );
+                        hash_part( state, environment->moon_phase ? "moon_phase" : "no_moon_phase" );
+                        hash_part( state, environment->turns_since_midnight ? "turns_since_midnight" : "no_turns_since_midnight" );
+                        hash_part( state, environment->temperature_fahrenheit ? "temperature_fahrenheit" : "no_temperature_fahrenheit" );
                     }
                 }
                 hash_part( state, value.emitter );

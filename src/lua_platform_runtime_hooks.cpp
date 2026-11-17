@@ -33,6 +33,7 @@
 #include "dialogue_helpers.h"
 #include "effect.h"
 #include "effect_source.h"
+#include "enums.h"
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
@@ -817,6 +818,16 @@ static sol::table collect_enchantment_environment( sol::state &lua, const const_
     if( requested.dimension ) {
         environment["dimension"] = g->get_dimension_prefix().str();
     }
+    if( requested.moon_phase ) {
+        environment["moon_phase"] = static_cast<int>( get_moon_phase( calendar::turn ) );
+    }
+    if( requested.turns_since_midnight ) {
+        environment["turns_since_midnight"] = to_turns<int>( time_past_midnight( calendar::turn ) );
+    }
+    if( requested.temperature_fahrenheit ) {
+        const double kelvin = units::to_kelvin( get_weather().weather_precise->temperature );
+        environment["temperature_fahrenheit"] = units::to_fahrenheit( units::from_kelvin( kelvin ) );
+    }
     if( requested.temperature_kelvin ) {
         environment["temperature_kelvin"] = units::to_kelvin( get_weather().weather_precise->temperature );
     }
@@ -956,6 +967,10 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string &id ) {
         return actor.get_skill_level( skill_id( id ) );
     } );
+    collect( "category_counts", requested.category_counts, 0, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.get_total_in_category_char_has( mutation_category_id( id ), mut_count_type::ALL );
+    } );
     collect( "spell_school_levels", requested.spell_school_levels, -1,
     []( const const_talker & actor, const std::string & id ) {
         return actor.get_spell_level( trait_id( id ) );
@@ -1031,6 +1046,14 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.base_stats ) {
+            inputs["base_stats"] = owner.lua->create_table_with(
+                                       "strength", speaker->get_str_max(), "dexterity", speaker->get_dex_max(),
+                                       "intelligence", speaker->get_int_max(), "perception", speaker->get_per_max() );
+        }
+        if( requested.climate_heat ) {
+            inputs["climate_heat"] = speaker->climate_control_str_heat();
+        }
         if( requested.physiology ) {
             inputs["physiology"] = owner.lua->create_table_with(
                                        "hunger", speaker->get_hunger(), "thirst", speaker->get_thirst(),

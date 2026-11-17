@@ -321,6 +321,9 @@ struct enchantment_environment_inputs {
     bool season = false;
     bool weather = false;
     bool dimension = false;
+    bool moon_phase = false;
+    bool turns_since_midnight = false;
+    bool temperature_fahrenheit = false;
 };
 struct enchantment_vision_target_inputs {
     std::vector<std::string> species;
@@ -372,6 +375,9 @@ struct enchantment_character_inputs {
     bool physiology = false;
     bool fine_detail_vision = false;
     std::vector<std::string> skills;
+    bool base_stats = false;
+    bool climate_heat = false;
+    std::vector<std::string> category_counts;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

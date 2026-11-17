@@ -5426,6 +5426,9 @@ local WidgetDefinition = {}
 function CcbPlatformContent.Bionic(options) end
 
 ---@class CcbEnchantmentEnvironmentInputs
+---@field moon_phase? boolean Request the native lunar phase.
+---@field turns_since_midnight? boolean Request elapsed native turns since midnight.
+---@field temperature_fahrenheit? boolean Request weather temperature converted through the native Kelvin-to-Fahrenheit path.
 ---@field season? boolean Request the current season ID.
 ---@field weather? boolean Request the current weather type ID.
 ---@field dimension? boolean Request the current world dimension ID.
@@ -5441,6 +5444,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field temperature_kelvin? boolean Request current global weather temperature, in kelvin.
 
 ---@class CcbEnchantmentEnvironmentSnapshot
+---@field moon_phase? integer Native lunar phase from 0 (new moon) through 7 (waning crescent).
+---@field turns_since_midnight? integer
+---@field temperature_fahrenheit? number
 ---@field season? "spring"|"summer"|"autumn"|"winter"
 ---@field weather? string
 ---@field dimension? string
@@ -5461,6 +5467,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field species? string[] Restrict the count to monsters in any listed species.
 
 ---@class CcbEnchantmentCharacterInputs
+---@field base_stats? boolean Request native maximum strength, dexterity, intelligence and perception.
+---@field climate_heat? boolean Request native warmth compensation used by thermal speed calculations.
+---@field category_counts? string[] Mutation categories whose currently held traits are counted with native ALL semantics.
 ---@field skills? string[] Current native skill levels requested for any enchantment callback.
 ---@field physiology? boolean Request hunger, thirst, sleepiness, focus, perceived pain and body size.
 ---@field fine_detail_vision? boolean Request the native integer fine-detail vision modifier.
@@ -5492,6 +5501,9 @@ function CcbPlatformContent.Bionic(options) end
 ---@field nearby_monsters? table<string, CcbEnchantmentMonsterCountQuery> Counts keyed by name.
 
 ---@class CcbEnchantmentCharacterSnapshot
+---@field base_stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer }
+---@field climate_heat? integer
+---@field category_counts? table<string, integer>
 ---@field skills? table<string, integer>
 ---@field physiology? CcbEnchantmentPhysiologySnapshot
 ---@field fine_detail_vision? integer
