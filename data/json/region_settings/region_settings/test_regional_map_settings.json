@@ -111,15 +111,5 @@
     "type": "region_settings_map_extras",
     "id": "no_map_extras",
     "extras": [  ]
-  },
-  {
-    "type": "weather_generator",
-    "id": "extreme_weather",
-    "base_temperature": 60.5,
-    "base_humidity": 70.0,
-    "base_pressure": 1015.0,
-    "base_wind": 90.0,
-    "base_wind_distrib_peaks": 80,
-    "base_wind_season_variation": 0
   }
 ]

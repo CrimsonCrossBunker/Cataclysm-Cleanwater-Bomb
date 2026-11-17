@@ -1,16 +1,5 @@
 [
   {
-    "type": "weather_generator",
-    "id": "reverberation_rainy_weather",
-    "base_temperature": 4.5,
-    "base_humidity": 70.0,
-    "base_pressure": 1015.0,
-    "base_wind": 10.0,
-    "base_wind_distrib_peaks": 80,
-    "base_wind_season_variation": 0,
-    "weather_white_list": [ "rainstorm_reverberation" ]
-  },
-  {
     "type": "region_settings",
     "id": "radiosphere",
     "rivers": null,
@@ -166,24 +155,5 @@
       "subway_connection": "subway_tunnel",
       "rail_connection": "local_railroad"
     }
-  },
-  {
-    "type": "weather_generator",
-    "id": "inner_cabins_weather",
-    "base_temperature": 4.5,
-    "base_humidity": 70.0,
-    "base_pressure": 1015.0,
-    "base_wind": 2.0,
-    "base_wind_distrib_peaks": 80,
-    "base_wind_season_variation": 0,
-    "spring_temp_manual_mod": 0,
-    "summer_temp_manual_mod": 0,
-    "autumn_temp_manual_mod": 0,
-    "winter_temp_manual_mod": 0,
-    "spring_humidity_manual_mod": 0,
-    "summer_humidity_manual_mod": 0,
-    "autumn_humidity_manual_mod": 0,
-    "winter_humidity_manual_mod": 0,
-    "weather_black_list": [ "flurries", "snowing", "snowstorm", "light_drizzle", "sunny", "drizzle", "rain", "rainstorm", "thunder", "lightning" ]
   }
 ]

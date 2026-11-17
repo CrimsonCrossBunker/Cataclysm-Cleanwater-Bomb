@@ -73,16 +73,5 @@
     "id": "highland_t_region_groundcover",
     "ter_id": "t_highland_groundcover",
     "replace_with_terrain": [ [ "t_grass", 2 ], [ "t_grass_dead", 1 ], [ "t_dirt", 1 ], [ "t_grass_long", 2 ] ]
-  },
-  {
-    "type": "weather_generator",
-    "id": "highland_weather",
-    "base_temperature": 18.5,
-    "base_humidity": 70.0,
-    "base_pressure": 995.0,
-    "base_wind": 2.0,
-    "base_wind_distrib_peaks": 80,
-    "base_wind_season_variation": 0,
-    "weather_white_list": [ "clear", "cloudy", "light_drizzle", "rain", "mist", "fog" ]
   }
 ]
