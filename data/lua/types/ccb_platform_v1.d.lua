@@ -2538,6 +2538,7 @@ function ClimbingAidDefinition:deploy(furniture_id) end
 ---@field climate_match? boolean Native station precipitation selection for this type; present only during climate-controlled selection.
 ---@field weather_type_id string
 ---@field temperature_kelvin number
+---@field temperature_celsius number Native conversion of the sampled temperature, retaining native float rounding.
 ---@field humidity number
 ---@field pressure number
 ---@field windpower number

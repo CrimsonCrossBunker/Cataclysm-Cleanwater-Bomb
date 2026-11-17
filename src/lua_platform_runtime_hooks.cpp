@@ -4135,6 +4135,7 @@ std::optional<bool> invoke_weather_type_handler(
         sol::table payload = owner->lua->create_table();
         payload["weather_type_id"] = std::string( weather_type_id_value );
         payload["temperature_kelvin"] = units::to_kelvin( sample.temperature );
+        payload["temperature_celsius"] = units::to_celsius( sample.temperature );
         payload["humidity"] = sample.humidity;
         payload["pressure"] = sample.pressure;
         payload["windpower"] = sample.windpower;
