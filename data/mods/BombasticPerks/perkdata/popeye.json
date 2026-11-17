@@ -37,6 +37,6 @@
     "apply_message": "You feel strong!",
     "remove_message": "Your strength deflates.",
     "rating": "good",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "STRENGTH", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_spinach_strength_0" ]
   }
 ]

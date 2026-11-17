@@ -278,7 +278,7 @@
     "max_duration": "30 seconds",
     "rating": "bad",
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "ARMOR_ALL", "add": -15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_smart_targeted_0" ]
   },
   {
     "type": "effect_type",
@@ -292,7 +292,7 @@
     "desc": [ "Even if its been critically damaged, this android continues to crawl towards its target." ],
     "rating": "bad",
     "max_duration": "100 d",
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_afs_android_crawling_0" ],
     "show_in_info": true
   },
   {

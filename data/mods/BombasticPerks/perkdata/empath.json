@@ -79,7 +79,7 @@
     "max_intensity": 1,
     "int_dur_factor": "30 s",
     "blood_analysis_description": "Zombie?",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PAIN", "multiply": -0.99 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_zombie_0" ]
   },
   {
     "type": "effect_type",
@@ -94,7 +94,7 @@
     "max_intensity": 1,
     "int_dur_factor": "30 s",
     "blood_analysis_description": "Animal?",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "COMBAT_CATCHUP", "multiply": 4.0 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_animal_0" ]
   },
   {
     "type": "effect_type",
@@ -139,15 +139,7 @@
     "int_dur_factor": "30 s",
     "blood_analysis_description": "Bug?",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "acid", "multiply": -1 },
-          { "type": "bash", "add": -8 },
-          { "type": "cut", "add": -8 },
-          { "type": "bullet", "add": -8 }
-        ]
-      }
+      "INLINE_ENCH_effect_insect_0"
     ]
   }
 ]

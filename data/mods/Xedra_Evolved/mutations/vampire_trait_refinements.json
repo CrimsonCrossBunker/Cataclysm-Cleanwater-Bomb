@@ -98,7 +98,7 @@
     "player_display": true,
     "name": { "str": "Light as a Spider's Thread" },
     "description": "Your gravity has been reduced further, increasing your carry capacity by 25% and granting you the ability to glide down from heights.",
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_WALK_ON_WALLS_REFINEMENT_LOW_GRAVITY_0" ],
     "flags": [ "GLIDE" ]
   },
   {

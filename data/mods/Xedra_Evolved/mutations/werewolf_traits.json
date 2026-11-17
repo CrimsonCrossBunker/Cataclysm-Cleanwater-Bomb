@@ -324,7 +324,7 @@
     "cost": 1,
     "time": 10,
     "activation_msg": "",
-    "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "effect_xe_werewolf_camouflage_as_wolf", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_WEREWOLF_CAMOUFLAGE_COAT_0" ]
   },
   {
     "//": "Tier 3 traits begin here",
@@ -366,7 +366,7 @@
     "purifiable": false,
     "valid": false,
     "player_display": false,
-    "enchantments": [ { "hit_you_effect": [ { "id": "xe_werewolf_argent_claws_damage" } ] } ]
+    "enchantments": [ "INLINE_ENCH_WEREWOLF_SILVER_CLAWS_ACTIVE_0" ]
   },
   {
     "type": "mutation",
@@ -403,10 +403,7 @@
           }
         ]
       },
-      {
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_xe_werewolf_primal_strength_human_form", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_WEREWOLF_STRENGTH_BONUS_1"
     ]
   },
   {
@@ -424,7 +421,7 @@
     "cost": 1,
     "time": 2,
     "activation_msg": "The edges of your vision turn red.",
-    "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "effect_xe_werewolf_redhanded_rage", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_WEREWOLF_BATTLE_FURY_0" ]
   },
   {
     "type": "mutation",
@@ -536,20 +533,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "RANGE", "multiply": -1 },
-          { "value": "MAX_HP", "multiply": 0.35 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "STRENGTH", "add": 8 },
-          { "value": "NIGHT_VIS", "add": 8 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.3 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "MUZZLE", "TAIL_FLUFFY", "PAWS", "LUPINE_FUR", "LUPINE_EARS", "PERSISTENCE_HUNTER2", "PRED3" ]
-      },
+      "INLINE_ENCH_WEREWOLF_PRIMAL_FORM_TRAITS_0",
       {
         "condition": { "and": [ { "not": "u_can_drop_weapon" } ] },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],

@@ -19,7 +19,7 @@
       "h_mod_chance_bot": [ 5 ],
       "h_mod_tick": [ 3600 ]
     },
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "MUT_INSTABILITY_MOD", "add": -2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_instability_remover_0" ]
   },
   {
     "id": "effect_noetic_resilience_trigger",
@@ -37,7 +37,7 @@
     "remove_message": "The world snaps back into focus.",
     "rating": "good",
     "max_duration": "1 minutes",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "FORCEFIELD", "add": 0.94 } ] } ]
+    "enchantments": [ "INLINE_ENCH_force_field_generated_0" ]
   },
   {
     "id": "effect_psyshield_protection",
@@ -87,7 +87,7 @@
       "sleepiness_tick": [ 60 ],
       "sleepiness_max_val": [ 700 ]
     },
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": -40 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_black_nether_water_disease_0" ]
   },
   {
     "type": "effect_type",

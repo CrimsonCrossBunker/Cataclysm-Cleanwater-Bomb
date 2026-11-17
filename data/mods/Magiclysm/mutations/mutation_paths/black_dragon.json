@@ -232,13 +232,7 @@
     "changes_to": [ "LARGE_OK_DRAGON", "HUGE_DRAGON" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.5 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.05 }
-        ]
-      }
+      "INLINE_ENCH_LARGE_DRAGON_0"
     ],
     "anger_relations": [ [ "HUMAN", 10 ] ]
   },
@@ -258,13 +252,7 @@
     "changes_to": [ "HUGE_DRAGON" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.5 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.05 }
-        ]
-      }
+      "INLINE_ENCH_LARGE_OK_DRAGON_0"
     ],
     "anger_relations": [ [ "HUMAN", 20 ] ]
   },
@@ -285,15 +273,7 @@
     "changes_to": [ "HUGE_OK_DRAGON" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_HP", "add": -6 },
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "SLEEPINESS", "multiply": 0.15 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_HUGE_DRAGON_0"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "destroys_gear": true,
@@ -309,7 +289,7 @@
     "types": [ "STR" ],
     "changes_to": [ "DRAGON_STR2" ],
     "category": [ "DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_STR_0" ]
   },
   {
     "type": "mutation",
@@ -322,7 +302,7 @@
     "prereqs": [ "DRAGON_STR" ],
     "changes_to": [ "DRAGON_STR3" ],
     "category": [ "DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 3 }, { "value": "DEXTERITY", "add": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_STR2_0" ]
   },
   {
     "type": "mutation",
@@ -335,7 +315,7 @@
     "prereqs": [ "DRAGON_STR2" ],
     "changes_to": [ "DRAGON_STR4" ],
     "category": [ "DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 5 }, { "value": "DEXTERITY", "add": -2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_STR3_0" ]
   },
   {
     "type": "mutation",
@@ -349,7 +329,7 @@
     "prereqs": [ "DRAGON_STR3" ],
     "category": [ "DRAGON_BLACK" ],
     "threshreq": [ "THRESH_DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 8 }, { "value": "DEXTERITY", "add": -3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_STR4_0" ]
   },
   {
     "type": "mutation",
@@ -368,13 +348,7 @@
     "threshreq": [ "THRESH_DRAGON_BLACK" ],
     "category": [ "DRAGON_BLACK" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_HUGE_OK_DRAGON_0"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "destroys_gear": true,
@@ -491,7 +465,7 @@
     "prereqs": [ "WINGS_STUB" ],
     "category": [ "DRAGON_BLACK" ],
     "threshreq": [ "THRESH_DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "DODGE_CHANCE", "add": -3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_DRAGON_WINGS_BLACK_0" ],
     "attacks": {
       "attack_text_u": "You bash %s with your powerful wings!",
       "attack_text_npc": "%1$s bashes %2$s with their powerful wings!",
@@ -530,7 +504,7 @@
     "points": -3,
     "prereqs": [ "NAUSEA" ],
     "category": [ "DRAGON_BLACK", "SLIME" ],
-    "enchantments": [ { "values": [ { "value": "METABOLISM", "multiply": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_OVERLY_ACID_GUT_0" ],
     "vitamins_absorb_multi": [ [ "all", [ [ "vitC", 0.5 ], [ "calcium", 0.5 ], [ "iron", 0.5 ] ] ] ]
   },
   {
@@ -633,7 +607,7 @@
     "prereqs": [ "MANA_MULT3" ],
     "purifiable": false,
     "spells_learned": [ [ "dragon_terror", 1 ] ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 }, { "value": "MAX_MANA", "add": 250 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_MAGIC_0" ]
   },
   {
     "type": "mutation",
@@ -645,7 +619,7 @@
     "threshreq": [ "THRESH_DRAGON_BLACK" ],
     "prereqs": [ "DRAGON_MAGIC" ],
     "spells_learned": [ [ "dragon_terror", 0 ], [ "dragon_boost", 1 ] ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 4 }, { "value": "MAX_MANA", "add": 750 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DRAGON_SPELLS_0" ]
   },
   {
     "type": "mutation",
@@ -845,7 +819,7 @@
     "prereqs2": [ "PRED3_DRAGON" ],
     "threshreq": [ "THRESH_DRAGON_BLACK" ],
     "category": [ "DRAGON_BLACK" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_PRED4_DRAGON_0" ],
     "flags": [ "PRED4" ]
   },
   {

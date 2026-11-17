@@ -14,7 +14,7 @@
     "name": { "str": "Manatouched" },
     "points": 1,
     "description": "Magic is in you.  Magic is you.",
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_THRESH_MANA_0" ],
     "valid": false,
     "purifiable": false,
     "threshold": true
@@ -35,7 +35,7 @@
     "name": { "str": "Seeker Bolts" },
     "description": "Your hands glow with mana energy.  You can fire seeker bolts from your fingertips.",
     "points": 2,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 250 } ] } ],
+    "enchantments": [ "INLINE_ENCH_MANA_SEEKER_BOLTS_0" ],
     "lumination": [ [ "hand_r", 8 ], [ "hand_l", 8 ] ],
     "prereqs": [ "MANA_LUM" ],
     "category": [ "MANATOUCHED" ],
@@ -70,7 +70,7 @@
     "id": "WEAK",
     "type": "mutation",
     "name": { "str": "Weak" },
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": -2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_WEAK_0" ],
     "points": -1,
     "description": "Your body is unnaturally weak.  -2 Strength.",
     "types": [ "STR" ],
@@ -258,7 +258,7 @@
     "types": [ "MANA_ADD" ],
     "prereqs": [ "MANA_ADD3" ],
     "category": [ "MANATOUCHED" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 2500 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_ADD_MANATOUCHED_0" ]
   },
   {
     "type": "mutation",
@@ -271,7 +271,7 @@
     "threshreq": [ "THRESH_MANA" ],
     "types": [ "MANA_REGEN" ],
     "category": [ "MANATOUCHED" ],
-    "enchantments": [ { "values": [ { "value": "REGEN_MANA", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_REGEN_MANATOUCHED_0" ]
   },
   {
     "type": "mutation",
@@ -284,7 +284,7 @@
     "types": [ "MANA_MULT" ],
     "category": [ "MANATOUCHED" ],
     "prereqs": [ "MANA_MULT3" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 1.65 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MANA_MULT_MANATOUCHED_0" ]
   },
   {
     "type": "mutation",

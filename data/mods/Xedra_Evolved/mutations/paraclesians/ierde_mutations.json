@@ -38,7 +38,7 @@
       { "part": "torso", "ignored": 6 }
     ],
     "integrated_armor": [ "integrated_pebbled" ],
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": 0.15 } ] } ],
+    "enchantments": [ "INLINE_ENCH_IERDE_SKIN_2_0" ],
     "flags": [ "TOUGH_FEET", "BARKY" ]
   },
   {
@@ -68,7 +68,7 @@
       { "part": "torso", "ignored": 30 }
     ],
     "integrated_armor": [ "integrated_granite_skin" ],
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": 0.35 } ] } ],
+    "enchantments": [ "INLINE_ENCH_IERDE_SKIN_3_0" ],
     "flags": [ "TOUGH_FEET", "BARKY" ]
   },
   {
@@ -81,7 +81,7 @@
     "description": "Upon gaining this ability the Ierde's eyes begin reflecting their mood: a pale white streaked with rose when happy; pale green or grey when calm, and pure obsidian black when angry.  Glare no longer impacts them and they are not bothered by light levels when sleeping.  In addition, they have much better night vision.",
     "category": [ "IERDE" ],
     "purifiable": false,
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "fae_eyes_ierde" } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_EYES_0" ]
   },
   {
     "type": "mutation",
@@ -93,7 +93,7 @@
     "description": "The Ierde's ears are longer and pointed, like the peak of a high mountain.  They can hear slightly better and are unphased by loud sounds.",
     "category": [ "IERDE" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "HEARING_MULT", "multiply": 0.3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_IERDE_EARS_0" ],
     "flags": [ "IMMUNE_HEARING_DAMAGE" ]
   },
   {
@@ -346,7 +346,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "prereqs": [ "IERDE_SKIN_1", "IERDE_SKIN_2", "IERDE_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "CARDIO_MULTIPLIER", "multiply": 0.6 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_CARDIO_0" ]
   },
   {
     "type": "mutation",
@@ -358,7 +358,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "prereqs": [ "IERDE_SKIN_2", "IERDE_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "CARDIO_MULTIPLIER", "multiply": 1.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_CARDIO2_0" ]
   },
   {
     "type": "mutation",
@@ -370,7 +370,7 @@
     "purifiable": false,
     "threshreq": [ "THRESH_IERDE" ],
     "prereqs": [ "IERDE_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "CARDIO_MULTIPLIER", "multiply": 2.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_CARDIO3_0" ]
   },
   {
     "type": "mutation",
@@ -447,7 +447,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "prereqs": [ "IERDE_REGAIN_STAMINA_UNDERGROUND", "IERDE_HEAL_FASTER_UNDERGROUND" ],
-    "enchantments": [ { "values": [ { "value": "PAIN", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_FEEL_HALF_PAIN_0" ]
   },
   {
     "type": "mutation",
@@ -485,17 +485,7 @@
     "player_display": false,
     "points": 0,
     "enchantments": [
-      {
-        "values": [
-          { "value": "HUNGER", "multiply": -1 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "METABOLISM", "multiply": -1 },
-          { "value": "SLEEPINESS_REGEN", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 15 },
-          { "value": "REGEN_HP", "multiply": 1.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.8 }
-        ]
-      }
+      "INLINE_ENCH_IERDE_STONE_SLEEP_0"
     ]
   },
   {
@@ -508,7 +498,7 @@
     "purifiable": false,
     "changes_to": [ "IERDE_STOP_BLEEDING" ],
     "prereqs": [ "IERDE_HEAL_FASTER_UNDERGROUND" ],
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.666 } ] } ],
+    "enchantments": [ "INLINE_ENCH_IERDE_SLOW_BLEEDING_0" ],
     "//": "Ideally there'd be a flag to let them bleed oil, but there doesn't currently seem to be"
   },
   {
@@ -534,7 +524,7 @@
     "purifiable": false,
     "prereqs": [ "IERDE_SKIN_1", "IERDE_SKIN_2", "IERDE_SKIN_3" ],
     "prereqs2": [ "IERDE_STR_BONUS_1", "IERDE_STR_BONUS_2", "IERDE_STR_BONUS_3", "IERDE_STR_BONUS_4" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "KNOCKBACK_RESIST", "add": 100 } ] } ],
+    "enchantments": [ "INLINE_ENCH_IERDE_NO_KNOCKBACK_0" ],
     "flags": [ "BLOCK_HUGE_ATTACKS" ]
   },
   {
@@ -567,7 +557,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "prereqs": [ "IERDE_SKIN_1", "IERDE_SKIN_2", "IERDE_SKIN_3" ],
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.15 }, { "value": "WEIGHT", "multiply": 0.05 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_TOUGH_0" ]
   },
   {
     "type": "mutation",
@@ -580,7 +570,7 @@
     "purifiable": false,
     "prereqs": [ "IERDE_SKIN_2", "IERDE_SKIN_3" ],
     "prereqs2": [ "IERDE_TOUGH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.3 }, { "value": "WEIGHT", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_TOUGH2_0" ]
   },
   {
     "type": "mutation",
@@ -593,7 +583,7 @@
     "threshreq": [ "THRESH_IERDE" ],
     "prereqs": [ "IERDE_SKIN_3" ],
     "prereqs2": [ "IERDE_TOUGH2" ],
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.45 }, { "value": "WEIGHT", "multiply": 0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_TOUGH3_0" ]
   },
   {
     "type": "mutation",
@@ -618,7 +608,7 @@
     "description": "Like the bountiful soil, the Ierde is filled with power.  +3 Strength.",
     "category": [ "IERDE" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_STR_BONUS_1_0" ]
   },
   {
     "type": "mutation",
@@ -633,7 +623,7 @@
     "description": "Like the stone, the Ierde can withstand any punishment.  +5 Strength.",
     "category": [ "IERDE" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_STR_BONUS_2_0" ]
   },
   {
     "type": "mutation",
@@ -649,7 +639,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "threshreq": [ "THRESH_IERDE" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_STR_BONUS_3_0" ]
   },
   {
     "type": "mutation",
@@ -664,7 +654,7 @@
     "category": [ "IERDE" ],
     "purifiable": false,
     "threshreq": [ "THRESH_IERDE" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 9 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_STR_BONUS_4_0" ]
   },
   {
     "type": "mutation",
@@ -677,7 +667,7 @@
     "description": "Like an observer on a mountaintop, the Ierde sees more than most.  +3 Perception.",
     "category": [ "IERDE" ],
     "purifiable": false,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_IERDE_PER_BONUS_0" ]
   },
   {
     "type": "mutation",
@@ -813,8 +803,8 @@
     "purifiable": false,
     "threshreq": [ "THRESH_IERDE" ],
     "enchantments": [
-      { "values": [ { "value": "WEIGHT", "multiply": 0.1 }, { "value": "FORCEFIELD", "add": 0.15 } ] },
-      { "ench_effects": [ { "effect": "effect_ierde_limb_breaking_stopper", "intensity": 1 } ] }
+      "INLINE_ENCH_IERDE_NO_BROKEN_BONES_0",
+      "INLINE_ENCH_IERDE_NO_BROKEN_BONES_1"
     ]
   }
 ]

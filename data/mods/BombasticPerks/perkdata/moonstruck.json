@@ -8,14 +8,7 @@
     "rating": "good",
     "max_duration": "1 days",
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 3 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "INTELLIGENCE", "add": 3 },
-          { "value": "PERCEPTION", "add": 3 }
-        ]
-      }
+      "INLINE_ENCH_effect_perk_moonstruck_full_0"
     ]
   },
   {
@@ -27,14 +20,7 @@
     "rating": "good",
     "max_duration": "1 days",
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 1 },
-          { "value": "DEXTERITY", "add": 1 },
-          { "value": "INTELLIGENCE", "add": 1 },
-          { "value": "PERCEPTION", "add": 1 }
-        ]
-      }
+      "INLINE_ENCH_effect_perk_moonstruck_waxing_0"
     ]
   },
   {
@@ -46,14 +32,7 @@
     "rating": "bad",
     "max_duration": "1 days",
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": -2 },
-          { "value": "DEXTERITY", "add": -2 },
-          { "value": "INTELLIGENCE", "add": -2 },
-          { "value": "PERCEPTION", "add": -2 }
-        ]
-      }
+      "INLINE_ENCH_effect_perk_moonstruck_new_0"
     ]
   },
   {

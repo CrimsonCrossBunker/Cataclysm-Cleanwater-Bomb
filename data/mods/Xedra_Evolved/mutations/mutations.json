@@ -203,7 +203,7 @@
         "condition": { "math": [ "u_vitamin('human_blood_vitamin')", ">", "0" ] },
         "ench_effects": [ { "effect": "effect_dhampir_empowered_blood_indicator", "intensity": 1 } ]
       },
-      { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] }
+      "INLINE_ENCH_DHAMPIR_TRAIT_5"
     ],
     "//": "Dhampirs not getting Cannibal is deliberate.  The struggle over their own humanity is a core part of the dhampir theme.",
     "flags": [ "HEMOVORE", "HERITAGE" ],
@@ -254,7 +254,7 @@
     "active": true,
     "activated_is_setup": true,
     "activation_msg": "Your fangs lengthen.",
-    "enchantments": [ { "condition": "ACTIVE", "mutations": [ "DHAMPIR_FANGS_ACTIVE" ] } ],
+    "enchantments": [ "INLINE_ENCH_DHAMPIR_FANGS_0" ],
     "activated_eocs": [ "EOC_DHAMPIR_FANGS_activated" ],
     "deactivated_eocs": [ "EOC_DHAMPIR_FANGS_deactivated" ]
   },
@@ -331,16 +331,7 @@
     "valid": false,
     "description": "Being born closer to death, you feel the sensations of the living less strongly.  You suffer much less pain from your injuries than a human would, and the pain affects your capabilities less.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "PAIN", "multiply": -0.4 },
-          { "value": "PAIN_PENALTY_MOD_STR", "multiply": -0.25 },
-          { "value": "PAIN_PENALTY_MOD_DEX", "multiply": -0.25 },
-          { "value": "PAIN_PENALTY_MOD_SPEED", "multiply": -0.25 },
-          { "value": "PAIN_PENALTY_MOD_INT", "multiply": -0.5 },
-          { "value": "PAIN_PENALTY_MOD_PER", "multiply": -0.5 }
-        ]
-      }
+      "INLINE_ENCH_DHAMPIR_REDUCED_PAIN_0"
     ]
   },
   {
@@ -376,16 +367,7 @@
     "processed_eocs": [ "EOC_DHAMPIR_AVOID_EAT_SLEEP_DRINK_periodic" ],
     "deactivated_eocs": [ "EOC_DHAMPIR_AVOID_EAT_SLEEP_DRINK_deactivated" ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "values": [
-          { "value": "HUNGER", "multiply": -1 },
-          { "value": "METABOLISM", "multiply": -1 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "SLEEPINESS", "multiply": -1 }
-        ],
-        "ench_effects": [ { "effect": "effect_dhampir_the_blood_is_the_life", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_DHAMPIR_AVOID_EAT_SLEEP_DRINK_0"
     ]
   },
   {
@@ -518,7 +500,7 @@
     "valid": false,
     "visibility": 7,
     "ugliness": 6,
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_dhampir_corpselike_pallor_pale", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DHAMPIR_WEAKNESS_CORPSELIKE_PALLOR_0" ]
   },
   {
     "type": "mutation",
@@ -548,7 +530,7 @@
     "description": "Fresh blood has an energy that mortal food simply cannot compare to.  You gain 33% reduced kcal from the food you eat, but additional calories from drinking blood.",
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "KCAL", "multiply": -0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DHAMPIR_WEAKNESS_LOWER_KCAL_FROM_FOOD_0" ]
   },
   {
     "type": "mutation",
@@ -994,7 +976,7 @@
     "activated_is_setup": true,
     "activation_msg": "You collapse in an imitation of death.",
     "deactivated_eocs": [ "EOC_VAMPIRE_FEIGN_DEATH_deactivate" ],
-    "enchantments": [ { "condition": "ACTIVE", "ench_effects": [ { "effect": "effect_vampire_feign_death", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_FEIGN_DEATH_0" ]
   },
   {
     "type": "mutation",
@@ -1035,7 +1017,7 @@
     "player_display": false,
     "valid": false,
     "integrated_armor": [ "integrated_claws_rat" ],
-    "enchantments": [ { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_BEAST_CLAWS_active_0" ]
   },
   {
     "type": "mutation",
@@ -1072,7 +1054,7 @@
     "flags": [ "CANNIBAL", "DAYFEAR", "HEMOVORE" ],
     "enchantments": [
       { "condition": { "not": "is_day" }, "values": [ { "value": "OVERMAP_SIGHT", "add": 1 } ] },
-      { "values": [ { "value": "STAMINA_REGEN_MOD", "add": 0.2 }, { "value": "METABOLISM", "multiply": -0.2 } ] },
+      "INLINE_ENCH_VAMPIRE3_1",
       {
         "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
         "ench_effects": [ { "effect": "effect_vampire_burn_under_sunlight", "intensity": 1 } ]
@@ -1169,7 +1151,7 @@
     "valid": false,
     "active": true,
     "activated_is_setup": true,
-    "enchantments": [ { "condition": "ACTIVE", "values": [ { "value": "MOTION_ALARM", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_MOTION_ALARM_0" ]
   },
   {
     "type": "mutation",
@@ -1233,15 +1215,7 @@
     "valid": false,
     "flags": [ "CANNIBAL", "DAYFEAR", "HEMOVORE", "MEND_ALL" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STAMINA_REGEN_MOD", "add": 0.5 },
-          { "value": "METABOLISM", "multiply": -0.5 },
-          { "value": "DISINFECTANT_BONUS", "multiply": -1 },
-          { "value": "BANDAGE_BONUS", "multiply": -1 },
-          { "value": "REGEN_MANA", "multiply": -50 }
-        ]
-      },
+      "INLINE_ENCH_VAMPIRE4_0",
       {
         "condition": { "math": [ "u_vitamin('human_blood_vitamin') <= 0" ] },
         "values": [ { "value": "MENDING_MODIFIER", "multiply": -1 }, { "value": "REGEN_HP", "multiply": -1 } ]
@@ -1277,13 +1251,7 @@
           { "value": "MENDING_MODIFIER", "multiply": 12 }
         ]
       },
-      {
-        "ench_effects": [
-          { "effect": "effect_vampire_immune_to_classic_zombification", "intensity": 1 },
-          { "effect": "effect_dhampir_corpselike_pallor_pale", "intensity": 1 },
-          { "effect": "effect_xe_nonhuman_super_soldier_serum_immune", "intensity": 1 }
-        ]
-      },
+      "INLINE_ENCH_VAMPIRE4_5",
       {
         "condition": { "test_eoc": "EOC_CONDITION_XE_VAMPIRE_AVOID_BURNING_IN_SUNLIGHT" },
         "ench_effects": [ { "effect": "effect_vampire_burn_to_death_in_sunlight", "intensity": 1 } ]
@@ -1309,7 +1277,7 @@
     "valid": false,
     "name": { "str": "Torpor" },
     "cancels": [ "NARCOLEPTIC", "INSOMNIA", "HEAVYSLEEPER", "HEAVYSLEEPER2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SLEEPY", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_TORPOR_0" ],
     "description": "You can enter a deathlike stake known as torpor, in which your wounds will close faster, your fatigue will fully recover and your blood thirst will be less intense.  Be careful, though, as nothing will be able to wake you up until eight hours have passed.",
     "spells_learned": [ [ "vampire_torpor", 1 ] ]
   },
@@ -1388,18 +1356,7 @@
         "condition": { "not": { "u_has_trait": "VAMPIRE_BAT_FORM_REFINEMENT_SWARM" } },
         "values": [ { "value": "MAX_HP", "multiply": -0.85 } ]
       },
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.1 },
-          { "value": "MELEE_DAMAGE", "multiply": -0.95 },
-          { "value": "NIGHT_VIS", "add": 6 },
-          { "value": "DEXTERITY", "add": 8 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "ECHOLOCATION" ],
-        "skills": [ { "value": "dodge", "add": 8 } ]
-      },
+      "INLINE_ENCH_VAMPIRE_BAT_FORM_TRAITS_1",
       {
         "condition": {
           "and": [
@@ -1448,17 +1405,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "NIGHT_VIS", "add": 8 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.2 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "FANGS", "MUZZLE", "TAIL_FLUFFY", "PAWS", "LUPINE_FUR", "LUPINE_EARS", "PERSISTENCE_HUNTER2", "PRED3" ]
-      },
+      "INLINE_ENCH_VAMPIRE_WOLF_FORM_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
@@ -1492,7 +1439,7 @@
     "description": "This mutation carries the traits for mist form.  You shouldn't be able to see it in-game.",
     "valid": false,
     "player_display": false,
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_vampire_mist_form", "intensity": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_MIST_FORM_TRAITS_0" ],
     "override_look": { "id": "fd_extinguisher", "tile_category": "field" }
   },
   {
@@ -1572,18 +1519,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.5 },
-          { "value": "STRENGTH", "add": 3 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "NIGHT_VIS", "add": 50 },
-          { "value": "STAMINA_REGEN_MOD", "add": 0.5 },
-          { "value": "DODGE_CHANCE", "add": 15 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_SHADOW_FORM_TRAITS_0"
     ],
     "flags": [ "MUTE", "NO_SPELLCASTING ", "NO_PSIONICS" ],
     "override_look": { "id": "mon_darkman", "tile_category": "monster" }
@@ -1637,7 +1573,7 @@
     "purifiable": false,
     "valid": false,
     "flags": [ "CANNIBAL" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": -4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_RENFIELD_0" ]
   },
   {
     "type": "mutation",
@@ -1656,18 +1592,7 @@
     "valid": false,
     "ignored_by": [ "VAMPIRE", "RENFIELD" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "FORCEFIELD", "add": 1 } ],
-        "hit_me_effect": [
-          {
-            "id": "mentor_vanish",
-            "hit_self": true,
-            "message": "You're not supposed to see this.  Open a bug report on GitHub about having the Mentor's Peace trait.",
-            "npc_message": "%1$s vanishes in a fine mist."
-          }
-        ]
-      }
+      "INLINE_ENCH_MENTOR_PEACE_0"
     ]
   },
   {
@@ -1767,7 +1692,7 @@
     "starting_trait": false,
     "valid": false,
     "purifiable": false,
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_WEAKNESS_FIRE_VULNERABLE_0" ]
   },
   {
     "type": "mutation",
@@ -1906,13 +1831,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "values": [
-          { "value": "VOMIT_MUL", "multiply": -100 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 100 },
-          { "value": "CONSUME_TIME_MOD", "multiply": -0.8 }
-        ]
-      }
+      "INLINE_ENCH_VAMPIRE_BIG_STOMACH_0"
     ]
   },
   {
@@ -1946,7 +1865,7 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "ATTACK_NOISE", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_SILENT_MOVE_UPGRADE_0" ]
   },
   {
     "type": "mutation",
@@ -2042,7 +1961,7 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_vampire_no_illness", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VAMPIRE_NO_ILLNESS_UPGRADE_0" ]
   },
   {
     "type": "mutation",
@@ -2235,8 +2154,8 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      { "hit_me_effect": [ { "id": "boann_retaliation_mark", "hit_self": false } ] },
-      { "hit_me_effect": [ { "id": "boann_retaliation", "hit_self": true } ] }
+      "INLINE_ENCH_BOANN_RETALIATION_0",
+      "INLINE_ENCH_BOANN_RETALIATION_1"
     ]
   },
   {

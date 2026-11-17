@@ -131,14 +131,7 @@
     "category": [ "SPECIES_DWARF" ],
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": 0.05 },
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "WEIGHT", "multiply": 0.2 }
-        ]
-      }
+      "INLINE_ENCH_DWARVEN_BUILD_0"
     ],
     "flags": [ "HERITAGE", "SMALL" ]
   },
@@ -151,7 +144,7 @@
     "starting_trait": false,
     "purifiable": false,
     "category": [ "SPECIES_DWARF" ],
-    "enchantments": [ { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_BORN_ARTISAN_0" ],
     "flags": [ "CRAFT_IN_DARKNESS" ]
   },
   {
@@ -277,15 +270,7 @@
     "threshreq": [ "THRESH_SPECIES_ELF" ],
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": -0.12 },
-          { "value": "STRENGTH", "add": -1 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "WEIGHT", "multiply": -0.15 }
-        ]
-      },
+      "INLINE_ENCH_ELVEN_BUILD_0",
       {
         "condition": { "math": [ "u_effect_intensity('effect_vitamin_elven_wilderness') <= 3" ] },
         "mutations": [ "DISIMMUNE" ]
@@ -359,7 +344,7 @@
     "types": [ "HEARING" ],
     "category": [ "SPECIES_ELF" ],
     "flags": [ "SAFECRACK_NO_TOOL" ],
-    "enchantments": [ { "values": [ { "value": "HEARING_MULT", "multiply": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ELVEN_HEARING_0" ]
   },
   {
     "type": "mutation",
@@ -371,7 +356,7 @@
     "types": [ "SLEEP" ],
     "category": [ "SPECIES_ELF" ],
     "flags": [ "SEESLEEP" ],
-    "enchantments": [ { "values": [ { "value": "SLEEPINESS_REGEN", "multiply": 1 }, { "value": "SLEEPINESS", "multiply": -0.166667 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ELVEN_SLEEP_0" ]
   },
   {
     "type": "mutation",
@@ -553,17 +538,7 @@
     "spells_learned": [ [ "goblin_tame_warg_spell", 1 ] ],
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "DODGE_CHANCE", "add": 2 },
-          { "value": "MAX_HP", "multiply": -0.25 },
-          { "value": "STRENGTH", "add": -3 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "FOOTSTEP_NOISE", "multiply": -1 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": -0.5 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.7 }
-        ]
-      }
+      "INLINE_ENCH_GOBLIN_BUILD_0"
     ],
     "flags": [ "HERITAGE", "TINY" ]
   },
@@ -614,7 +589,7 @@
     "types": [ "EYES" ],
     "description": "While your reddish eyes have been known to give other people a start, they help you see in the dark.  You have much better night vision than a human, even being able to craft in the dark.",
     "category": [ "SPECIES_GOBLIN" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_goblin" } ] } ],
+    "enchantments": [ "INLINE_ENCH_GOBLIN_EYES_0" ],
     "flags": [ "CRAFT_IN_DARKNESS" ]
   },
   {
@@ -789,7 +764,7 @@
     "ugliness": 1,
     "description": "Ravenfolk are about the same size as humans, though their feathers and wings obviously set them apart.",
     "category": [ "SPECIES_RAVENFOLK" ],
-    "enchantments": [ { "values": [ { "value": "WEIGHT", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_RAVENFOLK_BUILD_0" ],
     "empathize_with": [ "GOBLIN", "RAVENFOLK", "LIZARDFOLK", "ELF", "DWARF", "HUMAN" ],
     "flags": [ "HERITAGE" ]
   },
@@ -806,10 +781,7 @@
     "restricts_gear": [ "foot_l", "foot_r" ],
     "activation_msg": "",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "modified_bodyparts": [ { "lose": "foot_l" }, { "lose": "foot_r" }, { "gain": "avian_talon_l" }, { "gain": "avian_talon_r" } ]
-      }
+      "INLINE_ENCH_RAVENFOLK_LEGS_0"
     ]
   },
   {
@@ -824,8 +796,8 @@
     "vitamin_cost": 210,
     "visibility": 1,
     "enchantments": [
-      { "values": [ { "value": "PERCEPTION", "add": 2 } ] },
-      { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_avian" } ] }
+      "INLINE_ENCH_RAVENFOLK_EYES_0",
+      "INLINE_ENCH_RAVENFOLK_EYES_1"
     ]
   },
   {
@@ -843,7 +815,7 @@
     "strict_threshreq": true,
     "restricts_gear": [ "torso" ],
     "allowed_items": [ "ALLOWS_WINGS" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "wing_ravenfolk_l" }, { "gain": "wing_ravenfolk_r" } ] } ],
+    "enchantments": [ "INLINE_ENCH_RAVENFOLK_WINGS_0" ],
     "allow_soft_gear": true,
     "active": true,
     "activated_is_setup": false,
@@ -869,7 +841,7 @@
     "activated_is_setup": false,
     "activation_msg": "",
     "activated_eocs": [ "EOC_RAVENFOLK_SCREECH" ],
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "mouth" }, { "gain": "beak_bird" } ] } ]
+    "enchantments": [ "INLINE_ENCH_BEAK_RAVEN_0" ]
   },
   {
     "type": "mutation",

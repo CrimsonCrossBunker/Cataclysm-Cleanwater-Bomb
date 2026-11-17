@@ -49,21 +49,7 @@
           { "type": "electric", "multiply": -0.8 }
         ]
       },
-      {
-        "mutations": [
-          "STR_UP_3",
-          "PALE",
-          "MUT_TOUGH3",
-          "DEFORMED3",
-          "POISRESIST",
-          "INFIMMUNE",
-          "DISIMMUNE",
-          "PARAIMMUNE",
-          "NOHEAL",
-          "TOUGH_FEET",
-          "DREAMLESS"
-        ]
-      },
+      "INLINE_ENCH_XE_REVENANT_TRAITS_1",
       {
         "condition": { "not": "u_has_weapon" },
         "melee_damage_bonus": [ { "type": "bash", "add": 4 }, { "type": "cut", "add": 2 } ]

@@ -48,10 +48,7 @@
     ],
     "rating": "good",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "BONUS_DODGE", "add": 1 }, { "value": "DODGE_CHANCE", "add": 5 }, { "value": "RANGE_DODGE", "add": 50 } ]
-      }
+      "INLINE_ENCH_effect_perk_duck_and_weave_0"
     ]
   }
 ]

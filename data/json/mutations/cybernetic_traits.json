@@ -60,7 +60,7 @@
     "valid": false,
     "purifiable": false,
     "starting_trait": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": -1 }, { "value": "DEXTERITY", "add": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CBM_Interface_brain_lesion_0" ]
   },
   {
     "type": "mutation",
@@ -71,7 +71,7 @@
     "valid": false,
     "purifiable": false,
     "starting_trait": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": -4 }, { "value": "DEXTERITY", "add": -4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CBM_Interface_brain_lesion_2_0" ]
   },
   {
     "type": "mutation",
@@ -110,26 +110,7 @@
       "WINGS"
     ],
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "hand_l" },
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "lose": "leg_l" },
-          { "lose": "foot_l" },
-          { "lose": "leg_r" },
-          { "lose": "foot_r" },
-          { "lose": "torso" },
-          { "gain": "torso_bionic_basic" },
-          { "lose": "head" },
-          { "gain": "head_bionic_basic" },
-          { "lose": "eyes" },
-          { "gain": "eyes_bionic_basic" },
-          { "lose": "mouth" },
-          { "gain": "mouth_bionic_basic" }
-        ]
-      }
+      "INLINE_ENCH_EXODII_CYBERFRAME_GENERIC_0"
     ],
     "cancels": [ "BENDY1", "BENDY2", "BENDY3", "INTERSTICE_POSTURE", "INTERSTICE_POSTURE_2" ]
   },
@@ -182,35 +163,8 @@
       "WINGS"
     ],
     "enchantments": [
-      { "values": [ { "value": "STRENGTH", "add": 4 }, { "value": "DEXTERITY", "add": 4 } ] },
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "hand_l" },
-          { "gain": "arm_bionic_basic_l" },
-          { "gain": "hand_bionic_basic_l" },
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "gain": "arm_bionic_basic_r" },
-          { "gain": "hand_bionic_basic_r" },
-          { "lose": "leg_l" },
-          { "lose": "foot_l" },
-          { "gain": "leg_bionic_basic_l" },
-          { "gain": "foot_bionic_basic_l" },
-          { "lose": "leg_r" },
-          { "lose": "foot_r" },
-          { "gain": "leg_bionic_basic_r" },
-          { "gain": "foot_bionic_basic_r" },
-          { "lose": "torso" },
-          { "gain": "torso_bionic_basic" },
-          { "lose": "head" },
-          { "gain": "head_bionic_basic" },
-          { "lose": "eyes" },
-          { "gain": "eyes_bionic_basic" },
-          { "lose": "mouth" },
-          { "gain": "mouth_bionic_basic" }
-        ]
-      }
+      "INLINE_ENCH_EXODII_BODY_1_0",
+      "INLINE_ENCH_EXODII_BODY_1_1"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r", "eyes" ],
     "armor": [
@@ -274,35 +228,8 @@
       "WINGS"
     ],
     "enchantments": [
-      { "values": [ { "value": "STRENGTH", "add": 4 }, { "value": "DEXTERITY", "add": 4 } ] },
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "hand_l" },
-          { "gain": "arm_bionic_basic_l" },
-          { "gain": "hand_bionic_basic_l" },
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "gain": "arm_bionic_basic_r" },
-          { "gain": "hand_bionic_basic_r" },
-          { "lose": "leg_l" },
-          { "lose": "foot_l" },
-          { "gain": "leg_bionic_basic_l" },
-          { "gain": "foot_bionic_basic_l" },
-          { "lose": "leg_r" },
-          { "lose": "foot_r" },
-          { "gain": "leg_bionic_basic_r" },
-          { "gain": "foot_bionic_basic_r" },
-          { "lose": "torso" },
-          { "gain": "torso_bionic_basic" },
-          { "lose": "head" },
-          { "gain": "head_bionic_basic" },
-          { "lose": "eyes" },
-          { "gain": "eyes_bionic_basic" },
-          { "lose": "mouth" },
-          { "gain": "mouth_bionic_basic" }
-        ]
-      }
+      "INLINE_ENCH_EXODII_BODY_1b_0",
+      "INLINE_ENCH_EXODII_BODY_1b_1"
     ],
     "armor": [
       {
@@ -341,14 +268,7 @@
     "purifiable": false,
     "types": [ "Cyberframe", "Cybernetic" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_HP", "add": 10 },
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "CARRY_WEIGHT", "multiply": 2 }
-        ]
-      }
+      "INLINE_ENCH_EXODII_BODY_2_0"
     ],
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "armor": [
@@ -371,14 +291,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "hand_l" },
-          { "gain": "robofac_arm_bionic_basic_l" },
-          { "gain": "robofac_hand_bionic_basic_l" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_ARM_BASIC_LEFT_0"
     ],
     "armor": [
       {
@@ -399,14 +312,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "gain": "robofac_arm_bionic_basic_r" },
-          { "gain": "robofac_hand_bionic_basic_r" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_ARM_BASIC_RIGHT_0"
     ],
     "armor": [
       {
@@ -428,18 +334,7 @@
     "purifiable": false,
     "types": [ "ARMS", "HANDS", "CLAWS" ],
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "arm_l" },
-          { "lose": "hand_l" },
-          { "gain": "robofac_arm_bionic_basic_l" },
-          { "gain": "robofac_hand_bionic_basic_l" },
-          { "lose": "arm_r" },
-          { "lose": "hand_r" },
-          { "gain": "robofac_arm_bionic_basic_r" },
-          { "gain": "robofac_hand_bionic_basic_r" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_ARM_BASIC_BOTH_0"
     ],
     "armor": [
       {
@@ -492,14 +387,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "leg_l" },
-          { "lose": "foot_l" },
-          { "gain": "robofac_leg_bionic_basic_l" },
-          { "gain": "robofac_foot_bionic_basic_l" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_LEG_BASIC_LEFT_0"
     ],
     "armor": [
       {
@@ -520,14 +408,7 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "leg_r" },
-          { "lose": "foot_r" },
-          { "gain": "robofac_leg_bionic_basic_r" },
-          { "gain": "robofac_foot_bionic_basic_r" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_LEG_BASIC_RIGHT_0"
     ],
     "armor": [
       {
@@ -550,18 +431,7 @@
     "flags": [ "TOUGH_FEET" ],
     "types": [ "LEGS", "FEET", "SOLES" ],
     "enchantments": [
-      {
-        "modified_bodyparts": [
-          { "lose": "leg_l" },
-          { "lose": "foot_l" },
-          { "gain": "robofac_leg_bionic_basic_l" },
-          { "gain": "robofac_foot_bionic_basic_l" },
-          { "lose": "leg_r" },
-          { "lose": "foot_r" },
-          { "gain": "robofac_leg_bionic_basic_r" },
-          { "gain": "robofac_foot_bionic_basic_r" }
-        ]
-      }
+      "INLINE_ENCH_BIONIC_LEG_BASIC_BOTH_0"
     ],
     "armor": [
       {

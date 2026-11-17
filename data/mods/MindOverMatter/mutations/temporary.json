@@ -591,6 +591,6 @@
       "active": false,
       "moves": 10
     },
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 150 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PHOTOLIXIR_LIGHT_active_0" ]
   }
 ]

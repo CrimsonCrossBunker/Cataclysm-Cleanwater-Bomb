@@ -187,7 +187,7 @@
     "remove_message": "The power fades away.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_xe_str_0" ]
   },
   {
     "id": "XAEA_int",
@@ -213,7 +213,7 @@
     "remove_message": "You feel yourself much less smarter than before.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 12 } ] } ]
+    "enchantments": [ "INLINE_ENCH_xe_int_0" ]
   },
   {
     "id": "XAEA_electric_sight",
@@ -343,7 +343,7 @@
     "remove_message": "Electric clouds are gone.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "emitter": "emit_shock_cloud_big", "incoming_damage_mod": [ { "type": "electric", "add": -100 } ] } ]
+    "enchantments": [ "INLINE_ENCH_xaea_electric_emit_0" ]
   },
   {
     "id": "XAEA_mod_moves",
@@ -385,15 +385,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "special_vision": [
-          {
-            "distance": 30,
-            "descriptions": [ { "id": "moving_creature", "symbol": "?", "color": "c_white", "text": "You sense something moving here." } ]
-          }
-        ]
-      }
+      "INLINE_ENCH_xe_motion_vision_0"
     ]
   }
 ]

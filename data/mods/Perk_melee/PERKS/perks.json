@@ -71,7 +71,7 @@
     "name": { "str": "Stalwart" },
     "description": "You have an extra block attempt per turn.",
     "flags": "MELEE_PERK_BLOCK",
-    "enchantments": [ { "values": [ { "value": "BONUS_BLOCK", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MELEE_PERK_BLOCK_0" ]
   },
   {
     "type": "mutation",
@@ -80,6 +80,6 @@
     "name": { "str": "Spry footwork" },
     "description": "You have an extra dodge attempt per turn.",
     "flags": "MELEE_PERK_DODGE",
-    "enchantments": [ { "values": [ { "value": "BONUS_DODGE", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MELEE_PERK_DODGE_0" ]
   }
 ]

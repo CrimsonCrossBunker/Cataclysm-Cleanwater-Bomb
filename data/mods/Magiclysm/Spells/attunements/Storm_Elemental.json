@@ -136,7 +136,7 @@
           { "type": "electric", "add": { "math": [ "(u_spell_level('storm_elemental_electric_melee') * 0.9) * rng(0.5,1.4)" ] } }
         ]
       },
-      { "values": [ { "value": "MELEE_DAMAGE", "multiply": 0.4 } ] }
+      "INLINE_ENCH_eff_storm_elemental_electric_melee_1"
     ]
   }
 ]

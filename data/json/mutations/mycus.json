@@ -150,7 +150,7 @@
     "ugliness": 8,
     "flags": [ "HEAT_IMMUNE", "IRRITANT_IMMUNE" ],
     "armor": [ { "part_types": [ "ALL" ], "cut": 2, "bash": 3 } ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": -0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_M_SKIN2_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 9 },
       { "part": "leg_l", "ignored": 30 },
@@ -188,7 +188,7 @@
     ],
     "flags": [ "HEAT_IMMUNE", "IRRITANT_IMMUNE" ],
     "armor": [ { "part_types": [ "ALL" ], "cut": 3, "bash": 5 } ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": -0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_M_SKIN3_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 9 },
       { "part": "leg_l", "ignored": 30 },

@@ -5,7 +5,7 @@
     "name": [ "A W A K E" ],
     "desc": [ "Wow, that coffee was strong." ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "SLEEPINESS", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_xe_abyssal_coffee_0" ],
     "dur_add_perc": 10,
     "base_mods": {
       "sleepiness_min": [ -1 ],

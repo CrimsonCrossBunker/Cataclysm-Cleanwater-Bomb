@@ -89,6 +89,6 @@
     "description": "Genetic tampering made your body incredibly strong.  Strength + 7.",
     "points": 2,
     "cancels": [ "STR_UP" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_AFS_BRUTAL_STRENGTH_0" ]
   }
 ]

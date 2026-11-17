@@ -42,9 +42,7 @@
     "base_mods": { "str_mod": [ 4 ], "dex_mod": [ 4 ], "speed_mod": [ 25 ] },
     "flags": [ "BLEED_IMMUNE", "STEADY" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "bash", "add": -6 }, { "type": "stab", "add": -3 }, { "type": "cut", "add": -4 } ]
-      }
+      "INLINE_ENCH_effect_biokin_potion_0"
     ]
   },
   {
@@ -66,7 +64,7 @@
       "pain_max_val": [ 10 ],
       "pain_tick": [ 200 ]
     },
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "bash", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_biokin_potion_comedown_0" ]
   },
   {
     "type": "effect_type",
@@ -174,7 +172,7 @@
     "max_intensity": 1,
     "flags": [ "COLDBLOOD" ],
     "base_mods": { "pain_chance_bot": [ 200 ], "pain_chance": [ 2, 1 ], "pain_min": [ 1 ], "pain_max_val": [ 10, 5 ] },
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 80 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_pyrokin_potion_comedown_0" ]
   },
   {
     "type": "effect_type",
@@ -188,7 +186,7 @@
     "max_intensity": 1,
     "base_mods": { "str_mod": [ 2 ] },
     "flags": [ "DOWNED_RECOVERY" ],
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 1.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_telekin_potion_0" ]
   },
   {
     "type": "effect_type",
@@ -208,7 +206,7 @@
       "pain_max_val": [ 10 ],
       "pain_tick": [ 200 ]
     },
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.75 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_telekin_potion_comedown_0" ]
   },
   {
     "type": "effect_type",
@@ -222,7 +220,7 @@
     "max_duration": "30 hours",
     "max_intensity": 1,
     "flags": [ "TEEPSHIELD" ],
-    "enchantments": [ { "values": [ { "value": "LEARNING_FOCUS", "add": 15 }, { "value": "SKILL_RUST_RESIST", "add": 100 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_telepath_potion_0" ]
   },
   {
     "type": "effect_type",
@@ -235,7 +233,7 @@
     "max_duration": "55 hours",
     "max_intensity": 1,
     "base_mods": { "int_mod": [ -4 ], "pain_chance": [ 20 ], "pain_min": [ 1 ], "pain_max_val": [ 10 ], "pain_tick": [ 200 ] },
-    "enchantments": [ { "values": [ { "value": "LEARNING_FOCUS", "add": -30 }, { "value": "READING_EXP", "add": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_telepath_potion_comedown_0" ]
   },
   {
     "type": "effect_type",
@@ -283,7 +281,7 @@
     "max_intensity": 1,
     "base_mods": { "healing_rate": [ 4 ] },
     "flags": [ "MEND_ALL", "PARAIMMUNE", "NO_DISEASE", "INFECTION_IMMUNE" ],
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_vitakin_potion_0" ]
   },
   {
     "type": "effect_type",

@@ -20,7 +20,7 @@
     "valid": false,
     "description": "Have you been working out?  +1 Strength.",
     "changes_to": [ "perk_STR_UP_2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "STRENGTH", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_STR_UP_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -32,7 +32,7 @@
     "valid": false,
     "description": "You HAVE been working out.  +2 Strength.",
     "prereqs": [ "perk_STR_UP" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "STRENGTH", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_STR_UP_2_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -44,7 +44,7 @@
     "valid": false,
     "description": "Have you been doing cardio?  +1 Dexterity.",
     "changes_to": [ "perk_DEX_UP_2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "DEXTERITY", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_DEX_UP_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -56,7 +56,7 @@
     "valid": false,
     "description": "You HAVE been doing cardio.  +2 Dexterity.",
     "prereqs": [ "perk_DEX_UP" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "DEXTERITY", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_DEX_UP_2_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -68,7 +68,7 @@
     "valid": false,
     "description": "Have you been reading?  +1 Intelligence.",
     "changes_to": [ "perk_INT_UP_2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "INTELLIGENCE", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_INT_UP_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -80,7 +80,7 @@
     "valid": false,
     "description": "You HAVE been reading.  +2 Intelligence.",
     "prereqs": [ "perk_INT_UP" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_INT_UP_2_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -92,7 +92,7 @@
     "valid": false,
     "description": "Have you been staring out into the middle distance?  +1 Perception.",
     "changes_to": [ "perk_PER_UP_2" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PERCEPTION", "add": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_PER_UP_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -104,7 +104,7 @@
     "valid": false,
     "description": "You HAVE been staring out into the middle distance.  +2 Perception.",
     "prereqs": [ "perk_PER_UP" ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PERCEPTION", "add": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_PER_UP_2_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -129,7 +129,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your rippling muscles enable you to split the skulls of your enemies.  +5% to Lifting, Grip, and Manipulator limb scores.",
-    "enchantments": [ { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_perk_mighty_thews", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_perk_mighty_thews_0" ]
   },
   {
     "type": "mutation",
@@ -139,7 +139,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your movements bring to mind a multitude of cat-based metaphors.  +5% to Balance, Footing, and Reaction limb scores.",
-    "enchantments": [ { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_perk_pantherish_grace", "intensity": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_pantherish_grace_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -150,7 +150,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your sharp gazes misses little.  +25% to Vision and Night Vision limb scores.",
-    "enchantments": [ { "condition": "ALWAYS", "ench_effects": [ { "effect": "effect_perk_eagle_eyes", "intensity": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_eagle_eyes_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -182,7 +182,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You're like a walking tank!  Take 5% less damage from all sources.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "ARMOR_ALL", "multiply": -0.05 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_built_tough_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -194,7 +194,7 @@
     "valid": false,
     "description": "All the beatings you've taken have toughened you up.  You can walk barefoot with no penalty, develop blisters in heat much more slowly, and take slightly less bash damage.",
     "//": "The flesh material also protects against cut and bullets, so we need an enchant to do bash only",
-    "enchantments": [ { "condition": "ALWAYS", "incoming_damage_mod_post_absorbed": [ { "type": "bash", "add": -2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_thick_skin_0" ],
     "flags": [ "PERK", "BARKY", "TOUGH_FEET" ]
   },
   {
@@ -205,7 +205,7 @@
     "purifiable": false,
     "valid": false,
     "description": "All that hauling has paid off.  You can carry 10kg of additional items.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "CARRY_WEIGHT", "add": 10000 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_hauler_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -217,10 +217,7 @@
     "valid": false,
     "description": "Every day in the apocalypse is just like the beach.  You are more comfortable in cold and warm weather.",
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 10 }, { "value": "CLIMATE_CONTROL_CHILL", "add": 10 } ]
-      }
+      "INLINE_ENCH_perk_vacationer_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -308,7 +305,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Practicing with handguns has improved your draw speed with pretty much everything.  Retrieve objects 25% faster from containers.",
-    "enchantments": [ { "values": [ { "value": "OBTAIN_COST_MULTIPLIER", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_quickdraw_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -380,9 +377,7 @@
     "valid": false,
     "description": "You can really put it away.  You eat food 10% faster and can eat 33% more food at a time.",
     "enchantments": [
-      {
-        "values": [ { "value": "CONSUME_TIME_MOD", "multiply": -0.1 }, { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.33 } ]
-      }
+      "INLINE_ENCH_perk_big_eater_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -394,7 +389,7 @@
     "purifiable": false,
     "valid": false,
     "description": "At some point you got really good at falling off rooftops.  Take 40% less fall damage.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "FALL_DAMAGE", "multiply": -0.4 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_tuck_and_roll_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -442,7 +437,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Careful aim allows you to take down game with little tissue damage.  Enemies you kill tend to stay intact.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "OVERKILL_DAMAGE", "add": 30.0 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_surgical_strikes_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -453,7 +448,7 @@
     "purifiable": false,
     "valid": false,
     "description": "For whatever reason you seem to always make a real mess of things.  Enemies you kill tend to explode into a mess of viscera.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "OVERKILL_DAMAGE", "add": -1000.0 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_bloody_mess_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -594,7 +589,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You've not been the same since the apocalypse, almost everything makes you jump.  You are just a bit quicker to act though.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": 0.03 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_jumpy_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -615,7 +610,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You've always been able to fall asleep within a few minutes of closing your eyes, no matter what else is going on around you.  You have a much easier time falling asleep.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SLEEPY", "add": 15 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_sleepy_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -662,7 +657,7 @@
     "purifiable": false,
     "valid": false,
     "description": "No work, no social obligations, lots of time to focus on your hobbies.  You feel like you've been picking up skills faster recently.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "LEARNING_FOCUS", "add": 5.0 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_hobbyist_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -809,7 +804,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your frequent handling of artifacts has allowed you to bleed off some of the side effects of their presence.  Your accumulated artifact resonance is reduced by 1500.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "ARTIFACT_RESONANCE", "add": -1500 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_artifact_resonance_reduction_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -859,7 +854,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You've always felt like someone was looking out for you upstairs.  When you are attacked there is a 5% chance the attack will deal no damage.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "FORCEFIELD", "add": 0.05 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_safety_net_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -870,7 +865,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You have a habit of always ducking at the right time.  You have a 5% chance to dodge any incoming attack.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "EVASION", "add": 0.05 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_lucky_dodge_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -881,7 +876,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You always ate your carrots, that good eyesight is paying off.  You can use ranged weapons effectively up to 4 more tiles away.",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "RANGE", "add": 4 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_long_shot_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -1053,7 +1048,7 @@
     "purifiable": false,
     "valid": false,
     "description": "You really like to do stuff with your own hands.  +10% for crafting speed.",
-    "enchantments": [ { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_crafty_hands_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -1395,7 +1390,7 @@
     "purifiable": false,
     "valid": false,
     "description": "Your blood has always been thicker than most, making you lose less of it when bleeding.",
-    "enchantments": [ { "values": [ { "value": "BLEEDING_RATE", "multiply": -0.333 } ] } ],
+    "enchantments": [ "INLINE_ENCH_perk_thickblood_0" ],
     "flags": [ "PERK" ]
   },
   {
@@ -1769,7 +1764,7 @@
     "anger_relations": [ [ "MAMMAL", 5 ], [ "BIRD", 5 ] ],
     "enchantments": [
       { "condition": { "not": { "u_has_effect": "effect_hive_queen_canceller" } }, "mutations": [ "TRAIT_HIVE_QUEEN" ] },
-      { "values": [ { "value": "SOCIAL_PERSUADE", "add": -5 }, { "value": "SOCIAL_INTIMIDATE", "add": -5 } ] }
+      "INLINE_ENCH_perk_hive_queen_1"
     ],
     "flags": [ "PERK", "ANIMALDISCORD" ]
   }

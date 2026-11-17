@@ -12,6 +12,6 @@
     "valid": false,
     "purifiable": false,
     "types": [ "Equipment" ],
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_well_distributed_0" ]
   }
 ]

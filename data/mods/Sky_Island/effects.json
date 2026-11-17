@@ -117,7 +117,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "PHASE_DISTANCE", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_warped_phasing_0" ]
   },
   {
     "id": "effect_warped_super_clairvoyance",
@@ -160,7 +160,7 @@
     "rating": "bad",
     "show_intensity": false,
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": -0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_challenge_mode_speed_reduction_0" ]
   },
   {
     "type": "effect_type",

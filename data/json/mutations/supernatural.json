@@ -29,7 +29,7 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_anti_shape_0" ]
   },
   {
     "type": "mutation",
@@ -61,6 +61,6 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_NOT_GLASS_0" ]
   }
 ]

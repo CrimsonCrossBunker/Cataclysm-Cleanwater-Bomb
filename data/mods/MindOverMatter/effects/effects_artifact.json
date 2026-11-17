@@ -7,7 +7,7 @@
     "apply_message": "",
     "remove_message": "The world speeds up again.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 200 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_speed_boost_0" ]
   },
   {
     "type": "effect_type",
@@ -17,7 +17,7 @@
     "apply_message": "",
     "remove_message": "Your prowess fades away.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 }, { "value": "DEXTERITY", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_physical_boost_0" ]
   },
   {
     "type": "effect_type",
@@ -27,7 +27,7 @@
     "apply_message": "",
     "remove_message": "The prickling sensation of your skin disappears.",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "PAIN", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_increase_pain_0" ]
   },
   {
     "type": "effect_type",
@@ -37,7 +37,7 @@
     "apply_message": "",
     "remove_message": "Movement becomes slightly easier.",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "MOVEMENT_EXERTION_MODIFIER", "multiply": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_movement_exertion_0" ]
   },
   {
     "type": "effect_type",
@@ -49,10 +49,7 @@
     "rating": "good",
     "blocks_effects": [ "bleed", "hypovolemia", "dermatik" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "bash", "add": -6 }, { "type": "stab", "add": -3 }, { "type": "cut", "add": -4 } ],
-        "values": [ { "value": "PAIN", "multiply": -0.2 } ]
-      }
+      "INLINE_ENCH_effect_mom_artifact_hardened_skin_0"
     ],
     "flags": [ "TOUGH_FEET" ]
   },
@@ -64,7 +61,7 @@
     "apply_message": "All your senses suddenly sharpen.",
     "remove_message": "Your enhanced senses fade away.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_perception_boost_0" ]
   },
   {
     "type": "effect_type",
@@ -72,7 +69,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "rating": "good",
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "electric", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_lightning_immune_0" ]
   },
   {
     "type": "effect_type",
@@ -90,7 +87,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 8000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_illumination_on_self_0" ]
   },
   {
     "type": "effect_type",
@@ -99,7 +96,7 @@
     "desc": [ "You are glowing." ],
     "rating": "bad",
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_lambent_illumination_0" ]
   },
   {
     "type": "effect_type",
@@ -110,7 +107,7 @@
     "remove_message": "The air around you loses its heat.",
     "rating": "good",
     "removes_effects": [ "effect_pyrokinetic_aura_damage" ],
-    "enchantments": [ { "emitter": "emit_pyrokinetic_aura_4" } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_burning_cloak_0" ]
   },
   {
     "type": "effect_type",
@@ -191,7 +188,7 @@
     "rating": "bad",
     "max_duration": 18000,
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_slow_0" ],
     "immune_flags": [ "DIMENSIONAL_ANCHOR", "TELESTOP", "TELEPORT_IMMUNE" ]
   },
   {
@@ -201,13 +198,7 @@
     "desc": [ "Your entire body is tingling slightly." ],
     "rating": "bad",
     "enchantments": [
-      {
-        "values": [
-          { "value": "MENDING_MODIFIER", "multiply": 15 },
-          { "value": "REGEN_HP", "multiply": 1.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.8 }
-        ]
-      }
+      "INLINE_ENCH_effect_mom_artifact_regeneration_0"
     ]
   }
 ]

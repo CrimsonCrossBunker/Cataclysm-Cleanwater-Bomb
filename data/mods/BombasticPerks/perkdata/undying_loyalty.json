@@ -53,6 +53,6 @@
     "rating": "good",
     "show_in_info": true,
     "max_duration": "1 minutes",
-    "enchantments": [ { "values": [ { "value": "ARMOR_ALL", "multiply": -0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_perk_undying_loyalty_0" ]
   }
 ]

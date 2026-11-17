@@ -9,11 +9,7 @@
     "description": "To cast bug killing spells.",
     "debug": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [ { "type": "bullet", "add": -100 } ],
-        "values": [ { "value": "PERCEPTION", "add": 15 } ]
-      }
+      "INLINE_ENCH_VAULT_DEFENDER_0"
     ]
   },
   {
@@ -48,11 +44,7 @@
     "description": "To cast bug killing spells.",
     "debug": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "PERCEPTION", "add": 5 } ],
-        "hit_me_effect": [ { "id": "librarian_blinding", "hit_self": false } ]
-      }
+      "INLINE_ENCH_LIBRARY_DEFENDER_0"
     ]
   }
 ]

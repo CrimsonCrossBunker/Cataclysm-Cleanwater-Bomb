@@ -134,7 +134,7 @@
     "ugliness": 4,
     "integrated_armor": [ "integrated_fishscales" ],
     "armor": [ { "part_types": [ "tail" ], "cut": 8, "bash": 5 } ],
-    "enchantments": [ { "values": [ { "value": "MOVECOST_SWIM_MOD", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_SLEEK_SCALES_0" ],
     "wet_protection": [
       { "part": "head", "good": 7 },
       { "part": "leg_l", "good": 21 },
@@ -249,7 +249,7 @@
     "visibility": 10,
     "ugliness": 3,
     "integrated_armor": [ "integrated_lupine_fur" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LUPINE_FUR_0" ]
   },
   {
     "type": "mutation",
@@ -263,7 +263,7 @@
     "visibility": 10,
     "ugliness": 3,
     "integrated_armor": [ "integrated_lupine_fur_summer" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.35 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LUPINE_FUR_SUMMER_0" ]
   },
   {
     "type": "mutation",
@@ -278,7 +278,7 @@
     "visibility": 10,
     "ugliness": 3,
     "integrated_armor": [ "integrated_ursine_fur" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_URSINE_FUR_0" ]
   },
   {
     "type": "mutation",
@@ -291,7 +291,7 @@
     "visibility": 10,
     "ugliness": 4,
     "integrated_armor": [ "integrated_ursine_fur_summer" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.45 } ] } ]
+    "enchantments": [ "INLINE_ENCH_URSINE_FUR_SUMMER_0" ]
   },
   {
     "type": "mutation",
@@ -307,7 +307,7 @@
     "visibility": 10,
     "ugliness": 3,
     "integrated_armor": [ "integrated_feline_fur" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FELINE_FUR_0" ]
   },
   {
     "type": "mutation",
@@ -338,7 +338,7 @@
     "bodytemp_modifiers": [ 750, 1500 ],
     "integrated_armor": [ "integrated_rabbitfur" ],
     "armor": [ { "part_types": [ "torso", "head", "arm", "hand", "leg", "foot", "mouth", "tail" ], "bash": 1 } ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_RABBIT_FUR_0" ]
   },
   {
     "type": "mutation",
@@ -367,7 +367,7 @@
     "visibility": 10,
     "ugliness": 6,
     "integrated_armor": [ "integrated_patchskin1" ],
-    "enchantments": [ { "values": [ { "value": "MOVECOST_SWIM_MOD", "multiply": -0.05 }, { "value": "BODYTEMP_SLEEP", "add": 0.1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_PATCHSKIN1_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 2 },
       { "part": "leg_l", "ignored": 5 },
@@ -395,7 +395,7 @@
     "visibility": 10,
     "ugliness": 8,
     "integrated_armor": [ "integrated_patchskin2" ],
-    "enchantments": [ { "values": [ { "value": "MOVECOST_SWIM_MOD", "multiply": -0.1 }, { "value": "BODYTEMP_SLEEP", "add": 0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_PATCHSKIN2_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 3 },
       { "part": "leg_l", "ignored": 8 },
@@ -423,7 +423,7 @@
     "visibility": 10,
     "ugliness": 12,
     "integrated_armor": [ "integrated_patchskin3" ],
-    "enchantments": [ { "values": [ { "value": "MOVECOST_SWIM_MOD", "multiply": -0.15 }, { "value": "BODYTEMP_SLEEP", "add": 0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_PATCHSKIN3_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 3 },
       { "part": "leg_l", "ignored": 10 },
@@ -629,7 +629,7 @@
     "integrated_armor": [ "integrated_chitin3", "integrated_chitin3_claws" ],
     "enchantments": [
       { "condition": { "not": "u_has_weapon" }, "melee_damage_bonus": [ { "type": "bash", "add": 4 } ] },
-      { "values": [ { "value": "DEXTERITY", "add": -1 } ] }
+      "INLINE_ENCH_CHITIN3_1"
     ],
     "wet_protection": [
       { "part": "head", "ignored": 4 },
@@ -685,7 +685,7 @@
     "visibility": 10,
     "ugliness": 4,
     "bodytemp_modifiers": [ 100, 150 ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHITIN_FUR_0" ]
   },
   {
     "type": "mutation",
@@ -704,7 +704,7 @@
     "visibility": 10,
     "ugliness": 4,
     "bodytemp_modifiers": [ 150, 250 ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHITIN_FUR2_0" ]
   },
   {
     "type": "mutation",
@@ -723,7 +723,7 @@
     "visibility": 10,
     "ugliness": 4,
     "bodytemp_modifiers": [ 150, 250 ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHITIN_FUR3_0" ]
   },
   {
     "type": "mutation",
@@ -739,7 +739,7 @@
     "visibility": 10,
     "ugliness": 8,
     "integrated_armor": [ "integrated_carapace" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": -2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CRUSTACEAN_CARAPACE_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 15 },
       { "part": "leg_l", "ignored": 20 },
@@ -766,7 +766,7 @@
     "visibility": 10,
     "ugliness": 8,
     "integrated_armor": [ "integrated_carapace_molted" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CRUSTACEAN_CARAPACE_MOLTED_0" ],
     "wet_protection": [
       { "part": "head", "ignored": 8 },
       { "part": "leg_l", "ignored": 16 },
@@ -792,7 +792,7 @@
     "vitamin_cost": 160,
     "visibility": 10,
     "ugliness": 2,
-    "enchantments": [ { "values": [ { "value": "STEALTH_MODIFIER", "add": 20 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CAMO1_0" ]
   },
   {
     "type": "mutation",
@@ -809,7 +809,7 @@
     "vitamin_cost": 160,
     "visibility": 7,
     "ugliness": 1,
-    "enchantments": [ { "values": [ { "value": "STEALTH_MODIFIER", "add": 20 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CAMO2_0" ]
   },
   {
     "type": "mutation",
@@ -838,7 +838,7 @@
     "visibility": 3,
     "ugliness": 2,
     "integrated_armor": [ "integrated_plantskin" ],
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": -0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PLANTSKIN_0" ]
   },
   {
     "type": "mutation",

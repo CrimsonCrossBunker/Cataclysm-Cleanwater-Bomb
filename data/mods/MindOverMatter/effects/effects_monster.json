@@ -102,7 +102,7 @@
     "desc": [ "You are enhancing your strength and agility." ],
     "show_in_info": true,
     "base_mods": { "dodge_mod": [ 1 ] },
-    "enchantments": [ { "melee_damage_bonus": [ { "type": "bash", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_physical_enhancement_0" ]
   },
   {
     "type": "effect_type",
@@ -111,7 +111,7 @@
     "desc": [ "You are greatly enhancing your strength and agility." ],
     "show_in_info": true,
     "base_mods": { "dodge_mod": [ 2 ] },
-    "enchantments": [ { "melee_damage_bonus": [ { "type": "bash", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_physical_enhancement_improved_0" ]
   },
   {
     "type": "effect_type",
@@ -120,9 +120,7 @@
     "desc": [ "You are more resilient than normal." ],
     "show_in_info": true,
     "enchantments": [
-      {
-        "incoming_damage_mod": [ { "type": "bash", "add": -9 }, { "type": "stab", "add": -4 }, { "type": "cut", "add": -6 } ]
-      }
+      "INLINE_ENCH_effect_monster_hardened_skin_0"
     ]
   },
   {
@@ -133,7 +131,7 @@
     "show_in_info": true,
     "removes_effects": [ "blind", "deaf" ],
     "//": "VISION_RANGE enchant is a proxy for perception, which monsters do not have",
-    "enchantments": [ { "values": [ { "value": "VISION_RANGE", "multiply": 0.1 }, { "value": "SPEED", "multiply": 0.17 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_heightened_reflex_0" ]
   },
   {
     "type": "effect_type",
@@ -159,7 +157,7 @@
     "//": "Hidden effect, used to prep for feral biokinetics using Hurricane Blows",
     "name": [ "" ],
     "desc": [ "" ],
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 400 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_psi_biokin3_hurricane_blows_0" ]
   },
   {
     "type": "effect_type",
@@ -167,7 +165,7 @@
     "name": [ "Heightened Senses" ],
     "desc": [ "Your base senses are heightened." ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "VISION_RANGE", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_feral_heightened_senses_0" ]
   },
   {
     "type": "effect_type",
@@ -175,7 +173,7 @@
     "name": [ "Heightened Senses" ],
     "desc": [ "Your base senses are heightened." ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "VISION_RANGE", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_feral_heightened_senses_2_0" ]
   },
   {
     "type": "effect_type",
@@ -184,7 +182,7 @@
     "desc": [ "You are predicting your enemies' movements in advance." ],
     "show_in_info": true,
     "base_mods": { "dodge_mod": [ 2 ] },
-    "enchantments": [ { "values": [ { "value": "RANGE_DODGE", "add": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_feral_combat_sense_2_0" ]
   },
   {
     "type": "effect_type",
@@ -193,7 +191,7 @@
     "desc": [ "You are predicting your enemies' movements in advance." ],
     "show_in_info": true,
     "base_mods": { "dodge_mod": [ 5 ] },
-    "enchantments": [ { "values": [ { "value": "RANGE_DODGE", "add": 0.8 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_feral_combat_sense_3_0" ]
   },
   {
     "type": "effect_type",
@@ -201,7 +199,7 @@
     "name": [ "Heightened Senses" ],
     "desc": [ "Your base senses are heightened." ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "VISION_RANGE", "multiply": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_feral_heightened_senses_3_0" ]
   },
   {
     "type": "effect_type",
@@ -215,7 +213,7 @@
     "name": [ "Neuro-Acceleration" ],
     "desc": [ "You are enhancing your speed." ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_neuro_acceleration_0" ]
   },
   {
     "type": "effect_type",
@@ -223,7 +221,7 @@
     "name": [ "Neuro-Acceleration" ],
     "desc": [ "You are enhancing your speed." ],
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_neuro_acceleration_enhanced_0" ]
   },
   {
     "type": "effect_type",
@@ -284,14 +282,14 @@
     "rating": "bad",
     "max_duration": "5 m",
     "base_mods": { "dodge_mod": [ -2 ] },
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 200 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_photokinetic_illumination_0" ]
   },
   {
     "type": "effect_type",
     "id": "effect_monster_pyrokinetic_fire_immunity",
     "name": [ "Flame Immunity" ],
     "desc": [ "You are immune to fire." ],
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_monster_pyrokinetic_fire_immunity_0" ]
   },
   {
     "type": "effect_type",
@@ -300,15 +298,7 @@
     "desc": [ "You are altering the motion of nearby objects in your favor." ],
     "show_in_info": true,
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.1 },
-          { "type": "stab", "multiply": -0.1 },
-          { "type": "cut", "multiply": -0.1 },
-          { "type": "bullet", "multiply": -0.1 }
-        ],
-        "values": [ { "value": "SPEED", "multiply": 0.03 } ]
-      }
+      "INLINE_ENCH_effect_monster_momentum_alteration_0"
     ]
   },
   {
@@ -319,14 +309,7 @@
     "show_in_info": true,
     "flags": [ "TELEKIN_SHIELD" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -10 },
-          { "type": "stab", "add": -20 },
-          { "type": "cut", "add": -15 },
-          { "type": "bullet", "add": -35 }
-        ]
-      }
+      "INLINE_ENCH_effect_monster_inertial_barrier_0"
     ]
   },
   {
@@ -338,14 +321,7 @@
     "flags": [ "TELEKIN_SHIELD" ],
     "removes_effects": [ "effect_monster_inertial_barrier" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -18 },
-          { "type": "stab", "add": -32 },
-          { "type": "cut", "add": -25 },
-          { "type": "bullet", "add": -50 }
-        ]
-      }
+      "INLINE_ENCH_effect_monster_inertial_barrier_improved_0"
     ]
   },
   {
@@ -356,15 +332,7 @@
     "show_in_info": true,
     "flags": [ "TELEKIN_SHIELD", "CANNOT_MOVE", "CANNOT_ATTACK", "NO_PSIONICS" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -100000 },
-          { "type": "stab", "add": -100000 },
-          { "type": "cut", "add": -100000 },
-          { "type": "bullet", "add": -100000 }
-        ],
-        "values": [ { "value": "TOTAL_WEIGHT", "multiply": 10000 } ]
-      }
+      "INLINE_ENCH_effect_monster_telekinetic_aegis_0"
     ]
   },
   {
@@ -405,7 +373,7 @@
           }
         ]
       },
-      { "values": [ { "value": "PERCEPTION", "add": -2 } ] }
+      "INLINE_ENCH_effect_whispering_amalgamation_whispers_1"
     ],
     "limb_score_mods": [
       { "limb_score": "vision", "modifier": 0.75 },
@@ -422,7 +390,7 @@
     "desc": [ "You will automatically teleport enemies that strike you away from yourself." ],
     "show_in_info": true,
     "rating": "good",
-    "enchantments": [ { "hit_me_effect": [ { "id": "teleport_reactive_displacement_monster_teleport" } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_teleport_reactive_displacement_monster_0" ]
   },
   {
     "type": "effect_type",
@@ -517,13 +485,7 @@
     "max_duration": "18 hours",
     "base_mods": { "str_mod": [ -2 ], "h_mod_min": [ -2 ], "h_mod_chance": [ 1 ], "h_mod_chance_bot": [ 4 ], "h_mod_tick": [ 500 ] },
     "enchantments": [
-      {
-        "values": [
-          { "value": "REGEN_HP_AWAKE", "multiply": -1 },
-          { "value": "REGEN_HP", "multiply": -0.5 },
-          { "value": "REGEN_STAMINA", "multiply": -0.15 }
-        ]
-      }
+      "INLINE_ENCH_effect_vitakinetic_healing_down_0"
     ],
     "vitamins": [ { "vitamin": "iron", "rate": [ [ -10, -10 ] ], "tick": [ "1 m" ] } ]
   },
@@ -545,13 +507,7 @@
       "h_mod_tick": [ 300 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "REGEN_HP_AWAKE", "multiply": -1 },
-          { "value": "REGEN_HP", "multiply": -0.8 },
-          { "value": "REGEN_STAMINA", "multiply": -0.3 }
-        ]
-      }
+      "INLINE_ENCH_effect_vitakinetic_healing_down_super_0"
     ],
     "vitamins": [ { "vitamin": "iron", "rate": [ [ -10, -10 ] ], "tick": [ "1 m" ] } ]
   },
@@ -621,13 +577,7 @@
     "name": [ "" ],
     "desc": [ "" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "head", "multiply": -0.45 },
-          { "type": "electric", "multiply": -0.95 },
-          { "type": "psi_telepathic_damage", "multiply": -0.5 }
-        ]
-      }
+      "INLINE_ENCH_effect_nether_silent_one_resistances_0"
     ]
   },
   {

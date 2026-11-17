@@ -14,13 +14,7 @@
     "social_modifiers": { "intimidate": 15 },
     "enchantments": [
       "ench_giant_growth_size_bonuses",
-      {
-        "values": [
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARDIO_MULTIPLIER", "multiply": 0.25 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_GOBLIN_FRUIT_GIANT_GROWTH_1"
     ]
   },
   {
@@ -56,7 +50,7 @@
         "values": [ { "value": "CARRY_WEIGHT", "add": { "math": [ "2500 * u_spell_level('spell_ethereal_wings')" ] } } ],
         "ench_effects": [ { "effect": "effect_vampire_bat_form_levitation", "intensity": 1 } ]
       },
-      { "values": [ { "value": "MAX_MANA", "multiply": -0.2 } ] }
+      "INLINE_ENCH_ethereal_wings_1"
     ],
     "flags": [ "GLIDE", "FEATHER_FALL" ]
   },
@@ -73,16 +67,8 @@
     "purifiable": false,
     "activated_eocs": [ "EOC_KARMA_ARMS_INITIATE" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "modified_bodyparts": [
-          { "gain": "karma_arm_up_r" },
-          { "gain": "karma_arm_up_l" },
-          { "gain": "karma_arm_lw_r" },
-          { "gain": "karma_arm_lw_l" }
-        ]
-      },
-      { "values": [ { "value": "MAX_MANA", "multiply": -0.1 } ] }
+      "INLINE_ENCH_karma_arms_0",
+      "INLINE_ENCH_karma_arms_1"
     ]
   },
   {
@@ -98,8 +84,8 @@
     "purifiable": false,
     "activated_eocs": [ "EOC_DEVIL_TAIL_INITIATE" ],
     "enchantments": [
-      { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "devil_tail" } ] },
-      { "values": [ { "value": "MAX_MANA", "multiply": -0.1 } ] }
+      "INLINE_ENCH_devil_tail_0",
+      "INLINE_ENCH_devil_tail_1"
     ]
   },
   {
@@ -115,8 +101,8 @@
     "purifiable": false,
     "activated_eocs": [ "EOC_STALKER_EYES_INITIATE" ],
     "enchantments": [
-      { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "stalker_eyes" } ] },
-      { "values": [ { "value": "MAX_MANA", "multiply": -0.1 } ] }
+      "INLINE_ENCH_stalker_eyes_0",
+      "INLINE_ENCH_stalker_eyes_1"
     ]
   },
   {
@@ -155,21 +141,7 @@
     "purifiable": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": 2 },
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 2 },
-          { "value": "STRENGTH", "add": 10 },
-          { "value": "NIGHT_VIS", "add": 5 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.4 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 25 },
-          { "value": "PAIN", "multiply": -0.4 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "FANGS", "MUZZLE_BEAR", "TAIL_STUB", "PAWS_LARGE", "URSINE_FUR", "URSINE_EARS", "PRED3" ]
-      },
+      "INLINE_ENCH_TURN_INTO_BEAR_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
@@ -200,19 +172,7 @@
     "purifiable": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": 0.1 },
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "MOVE_COST", "multiply": -0.5 },
-          { "value": "DEXTERITY", "add": 3 },
-          { "value": "NIGHT_VIS", "add": 6 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "skills": [ { "value": "dodge", "add": 2 } ],
-        "mutations": [ "ANTLERS", "HOOVES" ]
-      },
+      "INLINE_ENCH_TURN_INTO_DEER_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "ench_effects": [ { "effect": "natural_stance", "intensity": 1 }, { "effect": "quadruped_full", "intensity": 1 } ]
@@ -235,20 +195,7 @@
     "valid": false,
     "player_display": false,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "SPEED", "multiply": 0.2 },
-          { "value": "DEXTERITY", "add": 4 },
-          { "value": "NIGHT_VIS", "add": 11 },
-          { "value": "MELEE_DAMAGE", "multiply": 0.2 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 25 },
-          { "value": "FOOTSTEP_NOISE", "multiply": -0.6 },
-          { "value": "MOVECOST_OBSTACLE_MOD", "multiply": -0.5 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "mutations": [ "FANGS", "TAIL_LONG", "PAWS", "FELINE_FUR", "FELINE_EARS", "PRED3", "WHISKERS", "FELINE_LEAP" ]
-      },
+      "INLINE_ENCH_TURN_INTO_COUGAR_TRAITS_0",
       {
         "condition": { "not": "u_can_drop_weapon" },
         "values": [ { "value": "MOVE_COST", "multiply": -0.15 } ],
@@ -272,20 +219,7 @@
     "player_display": false,
     "bodytemp_modifiers": [ 500, 1200 ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": -0.75 },
-          { "value": "SPEED", "multiply": 0.1 },
-          { "value": "MELEE_DAMAGE", "multiply": -0.95 },
-          { "value": "DEXTERITY", "add": 6 },
-          { "value": "PERCEPTION", "add": 6 },
-          { "value": "NIGHT_VIS", "add": 8 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "skills": [ { "value": "dodge", "add": 4 } ],
-        "mutations": [ "BIRD_EYE", "DOWN", "EAGLEEYED", "LIGHTEATER" ]
-      },
+      "INLINE_ENCH_TURN_INTO_OWL_TRAITS_0",
       {
         "condition": {
           "and": [
@@ -330,33 +264,7 @@
     "player_display": false,
     "bodytemp_modifiers": [ 500, 1200 ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": 1.25 },
-          { "value": "SPEED", "multiply": 0.1 },
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "DEXTERITY", "add": 6 },
-          { "value": "PERCEPTION", "add": 6 },
-          { "value": "NIGHT_VIS", "add": 8 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -0.6 }
-        ],
-        "skills": [ { "value": "dodge", "add": 4 }, { "value": "unarmed", "add": 1 } ],
-        "mutations": [
-          "BEAK",
-          "TOUGH_FEET",
-          "BIRD_EYE",
-          "TALONS_STRIX",
-          "BIRD_LEGS",
-          "DOWN",
-          "EAGLEEYED",
-          "HOLLOW_BONES",
-          "LIGHTEATER",
-          "SCREECH",
-          "WINGS_STRIX",
-          "STRIX_SKIN"
-        ]
-      }
+      "INLINE_ENCH_LILIN_WAR_OWL_FORM_TRAITS_0"
     ],
     "flags": [ "TEMPORARY_SHAPESHIFT", "SHAPESHIFT_SIZE_LARGE" ]
   },
@@ -371,7 +279,7 @@
     "starting_trait": false,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "wing_strix_l" }, { "gain": "wing_strix_r" } ] } ]
+    "enchantments": [ "INLINE_ENCH_WINGS_STRIX_0" ]
   },
   {
     "type": "mutation",
@@ -412,20 +320,7 @@
     "player_display": false,
     "bodytemp_modifiers": [ 300, 800 ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "MAX_HP", "multiply": -0.75 },
-          { "value": "SPEED", "multiply": 0.1 },
-          { "value": "MELEE_DAMAGE", "multiply": -0.95 },
-          { "value": "DEXTERITY", "add": 8 },
-          { "value": "PERCEPTION", "add": 4 },
-          { "value": "NIGHT_VIS", "add": 4 },
-          { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": -1000 }
-        ],
-        "skills": [ { "value": "dodge", "add": 6 } ],
-        "mutations": [ "BIRD_EYE", "DOWN", "EAGLEEYED", "LIGHTEATER" ]
-      },
+      "INLINE_ENCH_TURN_INTO_RAVEN_TRAITS_0",
       {
         "condition": {
           "and": [
@@ -571,8 +466,8 @@
     "starting_trait": false,
     "purifiable": false,
     "enchantments": [
-      { "condition": "ALWAYS", "modified_bodyparts": [ { "gain": "assist_arm_r" }, { "gain": "assist_arm_l" } ] },
-      { "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.6 } ] }
+      "INLINE_ENCH_CRAFTING_ASSISTANT_ARMS_0",
+      "INLINE_ENCH_CRAFTING_ASSISTANT_ARMS_1"
     ]
   },
   {

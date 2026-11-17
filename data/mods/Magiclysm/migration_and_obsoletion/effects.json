@@ -33,14 +33,7 @@
     "desc": [ { "str": "You are a monster wearing conjured armor, as this effect indicates.", "//~": "NO_I18N" } ],
     "show_in_info": true,
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "cut", "add": -15 },
-          { "type": "bash", "add": -15 },
-          { "type": "stab", "add": -15 },
-          { "type": "bullet", "add": -15 }
-        ]
-      }
+      "INLINE_ENCH_effect_feral_technomancer_mage_armor_0"
     ]
   },
   {

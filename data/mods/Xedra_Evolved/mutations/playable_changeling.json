@@ -47,7 +47,7 @@
     "valid": false,
     "purifiable": false,
     "threshold": true,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.6 } ] }, { "mutations": [ "IRON_ALLERGY" ] } ]
+    "enchantments": [ "INLINE_ENCH_THRESH_FAIR_FOLK_NOBLE_0", "INLINE_ENCH_THRESH_FAIR_FOLK_NOBLE_1" ]
   },
   {
     "type": "mutation",
@@ -109,7 +109,7 @@
     "purifiable": false,
     "player_display": false,
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHANGELING_SEASONAL_MAGIC_SPRING_0" ]
   },
   {
     "type": "mutation",
@@ -121,7 +121,7 @@
     "purifiable": false,
     "player_display": false,
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHANGELING_SEASONAL_MAGIC_SUMMER_0" ]
   },
   {
     "type": "mutation",
@@ -133,7 +133,7 @@
     "purifiable": false,
     "player_display": false,
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHANGELING_SEASONAL_MAGIC_AUTUMN_0" ]
   },
   {
     "type": "mutation",
@@ -145,7 +145,7 @@
     "purifiable": false,
     "player_display": false,
     "cancels": [ "DREAMER", "DREAMSMITH", "EATER", "INVENTOR" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CHANGELING_SEASONAL_MAGIC_WINTER_0" ]
   },
   {
     "type": "mutation",
@@ -259,7 +259,7 @@
     "valid": false,
     "purifiable": false,
     "threshold": true,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.25 } ] }, { "mutations": [ "IRON_ALLERGY" ] } ]
+    "enchantments": [ "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_BROWNIE_0", "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_BROWNIE_1" ]
   },
   {
     "type": "mutation",
@@ -290,7 +290,7 @@
     "valid": false,
     "purifiable": false,
     "threshold": true,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.3 } ] }, { "mutations": [ "IRON_ALLERGY" ] } ]
+    "enchantments": [ "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_POOKA_0", "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_POOKA_1" ]
   },
   {
     "type": "mutation",
@@ -321,7 +321,7 @@
     "valid": false,
     "purifiable": false,
     "threshold": true,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.2 } ] }, { "mutations": [ "IRON_ALLERGY" ] } ]
+    "enchantments": [ "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_SELKIE_0", "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_SELKIE_1" ]
   },
   {
     "type": "mutation",
@@ -352,7 +352,7 @@
     "valid": false,
     "purifiable": false,
     "threshold": true,
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "multiply": 0.1 } ] }, { "mutations": [ "IRON_ALLERGY" ] } ]
+    "enchantments": [ "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_TROW_0", "INLINE_ENCH_THRESH_FAIR_FOLK_COMMONER_TROW_1" ]
   },
   {
     "type": "mutation",
@@ -439,10 +439,7 @@
     "activation_msg": "You get ready to rip as much power from mortal dreams as you can.",
     "spells_learned": [ [ "changeling_gain_dreamdross_from_dreams", 1 ] ],
     "enchantments": [
-      {
-        "condition": "ACTIVE",
-        "ench_effects": [ { "effect": "effect_changeling_active_banquet_of_dreams", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_CHANGELING_GAIN_DREAMDROSS_FROM_MORTAL_DREAMS_0"
     ]
   },
   {
@@ -523,7 +520,7 @@
     "purifiable": false,
     "description": "You are strong enough to defend a crossroads at twilight against all comers.  +3 Strength.",
     "category": [ "FAIR_FOLK_NOBLE" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_NOBLE_0" ]
   },
   {
     "type": "mutation",
@@ -533,7 +530,7 @@
     "purifiable": false,
     "description": "You are graceful enough to dance the night away beneath a crystal dome on a floor of mirror-bright silver.  +3 Dexterity.",
     "category": [ "FAIR_FOLK_NOBLE" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_NOBLE_0" ]
   },
   {
     "type": "mutation",
@@ -545,7 +542,7 @@
     "category": [ "FAIR_FOLK_NOBLE" ],
     "threshreq": [ "DEX_UP_NOBLE" ],
     "prereqs2": [ "PARACLESIAN_STR_DEX_1", "PARACLESIAN_STR_DEX_2" ],
-    "enchantments": [ { "values": [ { "value": "SPEED", "add": 15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SPEED_UP_NOBLE_0" ]
   },
   {
     "type": "mutation",
@@ -555,7 +552,7 @@
     "purifiable": false,
     "description": "Like the legendary salmon who ate the nine acorns, you have gained a plethora of wisdom.  +3 Intelligence.",
     "category": [ "FAIR_FOLK_NOBLE" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_NOBLE_0" ]
   },
   {
     "type": "mutation",
@@ -565,7 +562,7 @@
     "purifiable": false,
     "description": "You senses are far more attuned to your surroundings than previously.  +3 Perception.",
     "category": [ "FAIR_FOLK_NOBLE" ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_NOBLE_0" ]
   },
   {
     "type": "mutation",
@@ -616,7 +613,7 @@
     "activated_is_setup": true,
     "activation_msg": "The mortal sentiments in your thoughts fade away.",
     "enchantments": [
-      { "condition": "ACTIVE", "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ] },
+      "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_0",
       {
         "condition": { "math": [ "u_pain('type': 'perceived')", ">=", "50" ] },
         "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
@@ -743,7 +740,7 @@
     "purifiable": false,
     "changes_to": [ "BROWNIE_COLD_TOLERANCE2" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BROWNIE_COLD_TOLERANCE_0" ]
   },
   {
     "type": "mutation",
@@ -756,7 +753,7 @@
     "prereqs2": [ "HIRSUTE_BROWNIE", "BROWNIE_FUR" ],
     "changes_to": [ "BROWNIE_COLD_TOLERANCE3" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 50 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BROWNIE_COLD_TOLERANCE2_0" ]
   },
   {
     "type": "mutation",
@@ -769,7 +766,7 @@
     "prereqs2": [ "BROWNIE_FUR" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "CLIMATE_CONTROL_HEAT", "add": 120 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BROWNIE_COLD_TOLERANCE3_0" ]
   },
   {
     "type": "mutation",
@@ -819,7 +816,7 @@
     "description": "With a few quick glances you can take in the contents of an entire room.  +3 Perception.",
     "prereqs": [ "PARACLESIAN_INT_PER_1", "PARACLESIAN_INT_PER_2" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_BROWNIE_0" ]
   },
   {
     "type": "mutation",
@@ -830,7 +827,7 @@
     "description": "It takes a keen mind to keep a household running smoothly.  +2 Intelligence.",
     "prereqs": [ "PARACLESIAN_INT_PER_1", "PARACLESIAN_INT_PER_2" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_BROWNIE_0" ]
   },
   {
     "type": "mutation",
@@ -1208,7 +1205,7 @@
     "description": "Even when not shapeshifted you can bring part of a wild animal's strength to bear.  +2 Strength.",
     "prereqs": [ "PARACLESIAN_STR_DEX_1", "PARACLESIAN_STR_DEX_2" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_POOKA_0" ]
   },
   {
     "type": "mutation",
@@ -1219,7 +1216,7 @@
     "description": "You have the quick reactions of a wild animal.  +3 Dexterity.",
     "prereqs": [ "PARACLESIAN_STR_DEX_1", "PARACLESIAN_STR_DEX_2" ],
     "category": [ "FAIR_FOLK_COMMONER_POOKA" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_POOKA_0" ]
   },
   {
     "type": "mutation",
@@ -1517,7 +1514,7 @@
     "prereqs": [ "PARACLESIAN_STR_DEX_1", "PARACLESIAN_STR_DEX_2" ],
     "prereqs2": [ "SELKIE_WATERMOVE" ],
     "category": [ "FAIR_FOLK_COMMONER_SELKIE" ],
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_SELKIE_0" ]
   },
   {
     "type": "mutation",
@@ -1528,7 +1525,7 @@
     "description": "Your sight is keen whether in or out of the water.  +2 Perception.",
     "prereqs": [ "PARACLESIAN_INT_PER_1", "PARACLESIAN_INT_PER_2" ],
     "category": [ "FAIR_FOLK_COMMONER_SELKIE" ],
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_SELKIE_0" ]
   },
   {
     "type": "mutation",
@@ -1539,7 +1536,7 @@
     "description": "Your mind flows easily from topic to topic while remembering the important details.  +2 Intelligence.",
     "prereqs": [ "PARACLESIAN_INT_PER_1", "PARACLESIAN_INT_PER_2" ],
     "category": [ "FAIR_FOLK_COMMONER_SELKIE" ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_SELKIE_0" ]
   },
   {
     "type": "mutation",
@@ -1839,7 +1836,7 @@
         "condition": { "and": [ { "not": "u_is_outside" }, { "math": [ "u_val('pos_z') <= -1" ] } ] },
         "values": [ { "value": "PAIN", "multiply": -0.5 } ]
       },
-      { "values": [ { "value": "PAIN_PENALTY_MOD_STR", "multiply": -1 } ] }
+      "INLINE_ENCH_PAINRESIST_TROW2_1"
     ]
   },
   {

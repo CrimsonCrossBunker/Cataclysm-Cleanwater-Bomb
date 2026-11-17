@@ -140,13 +140,7 @@
     "rating": "good",
     "show_intensity": false,
     "enchantments": [
-      {
-        "values": [
-          { "value": "ATTACK_SPEED", "add": -30 },
-          { "value": "BONUS_BLOCK", "add": 2 },
-          { "value": "MELEE_DAMAGE", "multiply": 1 }
-        ]
-      }
+      "INLINE_ENCH_gravity_mage_melee_0"
     ]
   }
 ]

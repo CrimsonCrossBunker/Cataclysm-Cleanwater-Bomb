@@ -69,7 +69,7 @@
     "profession": true,
     "purifiable": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PROF_DICEMASTER_0" ]
   },
   {
     "type": "mutation",

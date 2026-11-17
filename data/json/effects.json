@@ -572,16 +572,7 @@
     "show_intensity": false,
     "show_in_info": true,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod": [
-          { "type": "bash", "add": 15 },
-          { "type": "stab", "add": 15 },
-          { "type": "cut", "add": 15 },
-          { "type": "bullet", "add": 50 }
-        ],
-        "values": [ { "value": "SPEED", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_photophobia_0"
     ]
   },
   {
@@ -672,7 +663,7 @@
     "rating": "bad",
     "show_intensity": false,
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "LUMINATION", "add": 10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_Shadow_Reveal_0" ]
   },
   {
     "type": "effect_type",
@@ -1041,7 +1032,7 @@
     "desc": [ "You are wearing earphones and can't hear much from outside world." ],
     "rating": "bad",
     "limb_score_mods": [ { "limb_score": "reaction", "modifier": 0.9 } ],
-    "enchantments": [ { "values": [ { "value": "HEARING_MULT", "multiply": -0.75 } ] } ],
+    "enchantments": [ "INLINE_ENCH_earphones_0" ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
   },
   {
@@ -1456,7 +1447,7 @@
     "desc": [ "You took some melatonin supplements.  It makes you fall asleep more easily, and you sleep longer." ],
     "max_duration": "14 h",
     "rating": "neutral",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SLEEPY", "add": 4 }, { "value": "SLEEPINESS", "add": 0.2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_melatonin_0" ],
     "blood_analysis_description": "Elevated sleep hormone levels (Melatonin)"
   },
   {
@@ -2306,7 +2297,7 @@
     "rating": "bad",
     "show_intensity": false,
     "//": "Don't multiply speed by 0 or else the effect will never be removed for creatures with 0 damage(e.g. rabbits)",
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": 0.01 } ] } ],
+    "enchantments": [ "INLINE_ENCH_lightsnare_0" ],
     "show_in_info": true
   },
   {
@@ -2482,7 +2473,7 @@
     "rating": "bad",
     "resist_traits": [ "SAPROVORE", "EATDEAD" ],
     "base_mods": { "vomit_chance": [ 500, 2000 ] },
-    "enchantments": [ { "values": [ { "value": "SCENT_MASK", "add": 500 } ] } ],
+    "enchantments": [ "INLINE_ENCH_bile_stink_0" ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.95, "resist_modifier": 1 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ],
     "max_duration": "60 m",
@@ -3412,7 +3403,7 @@
       "h_mod_tick": [ 300 ],
       "healing_rate": [ 0.05 ]
     },
-    "enchantments": [ { "values": [ { "value": "METABOLISM", "multiply": 3.0 } ] } ],
+    "enchantments": [ "INLINE_ENCH_dermatik_0" ],
     "immune_flags": [ "ACIDBLOOD", "PARAIMMUNE" ]
   },
   {
@@ -3476,7 +3467,7 @@
     "resist_effects": [ "took_flumed" ],
     "immune_flags": [ "NO_DISEASE" ],
     "base_mods": { "thirst_tick": [ 3600 ], "thirst_min": [ 1 ], "str_mod": [ -1, 0 ], "cough_chance": [ 600, 0 ] },
-    "enchantments": [ { "values": [ { "value": "SLEEPINESS", "multiply": 0.025 }, { "value": "SLEEPINESS_REGEN", "multiply": -0.025 } ] } ]
+    "enchantments": [ "INLINE_ENCH_pre_common_cold_0" ]
   },
   {
     "//": "For player, indistinguishable from pre_cold, but separate here to allow for separate resistances from flu shot/antibodies.",
@@ -3492,7 +3483,7 @@
     "resist_effects": [ "took_flumed" ],
     "immune_flags": [ "NO_DISEASE" ],
     "base_mods": { "thirst_tick": [ 3600 ], "thirst_min": [ 1 ], "str_mod": [ -1, 0 ], "cough_chance": [ 600, 0 ] },
-    "enchantments": [ { "values": [ { "value": "SLEEPINESS", "multiply": 0.05 }, { "value": "SLEEPINESS_REGEN", "multiply": -0.05 } ] } ]
+    "enchantments": [ "INLINE_ENCH_pre_flu_0" ]
   },
   {
     "type": "effect_type",
@@ -3516,13 +3507,7 @@
       "cough_chance": [ 300, 0 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "SLEEPINESS", "multiply": 0.05 },
-          { "value": "SLEEPINESS_REGEN", "multiply": -0.05 },
-          { "value": "SLEEPY", "add": -5 }
-        ]
-      }
+      "INLINE_ENCH_common_cold_0"
     ],
     "blood_analysis_description": "Viral Infection"
   },
@@ -3553,13 +3538,7 @@
       "vomit_chance": [ 3600, 7200 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "SLEEPINESS", "multiply": 0.15 },
-          { "value": "SLEEPINESS_REGEN", "multiply": -0.15 },
-          { "value": "SLEEPY", "add": -10 }
-        ]
-      }
+      "INLINE_ENCH_flu_0"
     ],
     "blood_analysis_description": "Viral Infection"
   },
@@ -3924,7 +3903,7 @@
       "sensitive_amount": [ -1 ],
       "sensitive_min_val": [ -10 ]
     },
-    "enchantments": [ { "values": [ { "value": "VOMIT_MUL", "multiply": -0.9 } ] } ],
+    "enchantments": [ "INLINE_ENCH_weed_high_0" ],
     "blood_analysis_description": "Tetrahydrocannabinol",
     "immune_flags": [ "INHALED_TOXIN_IMMUNE" ]
   },
@@ -5329,7 +5308,7 @@
     "remove_message": "Reality reasserts itself and your gravity returns to normal.",
     "rating": "good",
     "show_intensity": false,
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 1.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_weakened_gravity_0" ]
   },
   {
     "id": "strengthened_gravity",
@@ -5698,7 +5677,7 @@
       {
         "values": [ { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": { "math": [ "u_vitamin('triffid_fiber') / -275" ] } } ]
       },
-      { "condition": "ALWAYS", "values": [ { "value": "THIRST", "multiply": 0.2 } ] }
+      "INLINE_ENCH_triffid_fiber_indigestion_1"
     ],
     "rating": "bad"
   },
@@ -5774,7 +5753,7 @@
     "name": [ "Out of Phase" ],
     "desc": [ "You are not entirely present in baseline reality." ],
     "rating": "good",
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "RANGE_DODGE", "add": 0.66 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_polyp_out_of_phase_0" ]
   },
   {
     "type": "effect_type",
@@ -5966,13 +5945,7 @@
     "rating": "bad",
     "max_intensity": 1,
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": 0.75 },
-          { "value": "MOVECOST_OBSTACLE_MOD", "multiply": -1 },
-          { "value": "PHASE_DISTANCE", "add": 1 }
-        ]
-      }
+      "INLINE_ENCH_nl_phase_goo_0"
     ],
     "show_in_info": true
   },
@@ -6128,14 +6101,7 @@
     "desc": [ "" ],
     "rating": "mixed",
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "multiply": -0.75 },
-          { "type": "cut", "multiply": -0.666 },
-          { "type": "stab", "multiply": -0.5 },
-          { "type": "bullet", "multiply": -0.2 }
-        ]
-      }
+      "INLINE_ENCH_effect_mon_feral_serum_user_armus_0"
     ]
   },
   {

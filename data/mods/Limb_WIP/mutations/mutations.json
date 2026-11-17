@@ -77,7 +77,7 @@
     "processed_eocs": [ "EOC_EYES_INSECT" ],
     "valid": false,
     "vitamin_cost": 300,
-    "enchantments": [ { "condition": "ALWAYS", "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_insect_1" } ] } ]
+    "enchantments": [ "INLINE_ENCH_EYES_INSECT_0" ]
   },
   {
     "type": "mutation",
@@ -94,10 +94,7 @@
     "purifiable": false,
     "vitamin_cost": 500,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "modified_bodyparts": [ { "lose": "eyes" }, { "lose": "head" }, { "gain": "eyes_dragonfly" }, { "gain": "head_dragonfly" } ]
-      }
+      "INLINE_ENCH_EYES_INSECT_2_0"
     ]
   },
   {

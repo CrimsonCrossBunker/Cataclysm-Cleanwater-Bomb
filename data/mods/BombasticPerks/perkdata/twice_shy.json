@@ -8,7 +8,7 @@
     "int_dur_factor": "1 s",
     "max_duration": "5 s",
     "show_in_info": true,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "BONUS_DODGE", "add": 1 }, { "value": "DODGE_CHANCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_perk_twice_shy_0" ]
   },
   {
     "type": "effect_on_condition",

@@ -9,6 +9,6 @@
     "prereqs": [ "INT_ALPHA" ],
     "threshreq": [ "THRESH_ALPHA" ],
     "category": [ "ALPHA" ],
-    "enchantments": [ { "condition": "ALWAYS", "custom": [ { "value": "awakening_odds_traits_mod", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MORE_PSI_ALPHA_0" ]
   }
 ]

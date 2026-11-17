@@ -46,9 +46,7 @@
     "remove_message": "The wind around you dies down.",
     "rating": "good",
     "enchantments": [
-      {
-        "values": [ { "value": "EVASION", "add": 0.4 }, { "value": "RANGE_DODGE", "add": 0.8 }, { "value": "BONUS_DODGE", "add": 1 } ]
-      }
+      "INLINE_ENCH_effect_xe_nether_sorcery_wind_dodge_shell_0"
     ],
     "flags": [ "HARDTOHIT" ]
   }

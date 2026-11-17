@@ -382,13 +382,13 @@
     "points": 1,
     "vitamin_cost": 60,
     "visibility": 1,
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": -0.12 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STRONG_LEGS_MOM_0" ]
   },
   {
     "id": "WEAK_MOM",
     "type": "mutation",
     "name": { "str": "Weak" },
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_WEAK_MOM_0" ],
     "points": -1,
     "description": "Your body is unnaturally weak.  -1 Strength.",
     "types": [ "STR" ]
@@ -397,7 +397,7 @@
     "id": "WEAK_MOM_2",
     "type": "mutation",
     "name": { "str": "Very Weak" },
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": -2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_WEAK_MOM_2_0" ],
     "points": -1,
     "description": "Your body is unnaturally very weak.  -2 Strength.",
     "types": [ "STR" ]
@@ -406,7 +406,7 @@
     "id": "CLUMSY_MOM",
     "type": "mutation",
     "name": { "str": "Fumbling" },
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CLUMSY_MOM_0" ],
     "points": -1,
     "description": "Your movements are unnaturally awkward.  -1 Dexterity.",
     "types": [ "STR" ]
@@ -415,7 +415,7 @@
     "id": "CLUMSY_MOM_2",
     "type": "mutation",
     "name": { "str": "Weak" },
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": -2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_CLUMSY_MOM_2_0" ],
     "points": -1,
     "description": "Your  movements are unnaturally very awkward.  -2 Dexterity.",
     "types": [ "STR" ]

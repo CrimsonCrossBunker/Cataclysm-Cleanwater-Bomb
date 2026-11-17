@@ -45,3 +45,7 @@ require("flags")
 require("tool_qualities")
 
 require("requirements")
+
+require("effect_enchantments")
+
+require("mutation_enchantments")

@@ -37,7 +37,7 @@
     "purifiable": false,
     "valid": false,
     "vitamin_rates": [ [ "xedra_chronomancer_insight", -86400 ] ],
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_XEDRA_CHRONOMANCER_TIME_SLOWDOWN_0" ]
   },
   {
     "type": "mutation",

@@ -27,6 +27,6 @@
     "apply_message": "",
     "rating": "bad",
     "max_duration": "1 s",
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "bash", "multiply": -0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_perk_bellringer_0" ]
   }
 ]

@@ -51,7 +51,7 @@
     "enchantments": [
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] }
+      "INLINE_ENCH_IERDE_2"
     ]
   },
   {
@@ -106,7 +106,7 @@
     "enchantments": [
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] },
+      "INLINE_ENCH_ARVORE_2",
       {
         "condition": {
           "and": [
@@ -181,7 +181,7 @@
     "enchantments": [
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] }
+      "INLINE_ENCH_SALAMANDER_2"
     ]
   },
   {
@@ -197,14 +197,8 @@
     "enchantments": [
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] },
-      {
-        "values": [
-          { "value": "WEAKNESS_TO_WATER", "add": -0.000347 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "SWEAT_MULTIPLIER", "multiply": -1 }
-        ]
-      }
+      "INLINE_ENCH_UNDINE_2",
+      "INLINE_ENCH_UNDINE_3"
     ],
     "ignored_by": [ "UNDINE" ],
     "scent_type": "sc_fae",
@@ -297,7 +291,7 @@
     "enchantments": [
       "ench_paraclesian_homullus_modern_technology_computer_ignorance",
       "ench_paraclesian_homullus_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] }
+      "INLINE_ENCH_HOMULLUS_2"
     ]
   },
   {
@@ -352,7 +346,7 @@
     "enchantments": [
       "ench_paraclesian_modern_technology_computer_ignorance",
       "ench_paraclesian_modern_technology_electronics_ignorance",
-      { "ench_effects": [ { "effect": "effect_lilin_vampire_immune", "intensity": 1 } ] }
+      "INLINE_ENCH_SYLPH_2"
     ]
   },
   {
@@ -391,7 +385,7 @@
       "FAIR_FOLK_COMMONER_SELKIE",
       "FAIR_FOLK_COMMONER_TROW"
     ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 }, { "value": "DEXTERITY", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PARACLESIAN_STR_DEX_1_0" ]
   },
   {
     "type": "mutation",
@@ -442,7 +436,7 @@
       "THRESH_FAIR_FOLK_COMMONER_SELKIE",
       "THRESH_FAIR_FOLK_COMMONER_TROW"
     ],
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 }, { "value": "DEXTERITY", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PARACLESIAN_STR_DEX_2_0" ]
   },
   {
     "type": "mutation",
@@ -480,7 +474,7 @@
       "FAIR_FOLK_COMMONER_SELKIE",
       "FAIR_FOLK_COMMONER_TROW"
     ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 1 }, { "value": "PERCEPTION", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PARACLESIAN_INT_PER_1_0" ]
   },
   {
     "type": "mutation",
@@ -531,7 +525,7 @@
       "THRESH_FAIR_FOLK_COMMONER_SELKIE",
       "THRESH_FAIR_FOLK_COMMONER_TROW"
     ],
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 }, { "value": "PERCEPTION", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PARACLESIAN_INT_PER_2_0" ]
   },
   {
     "type": "mutation",
@@ -676,7 +670,7 @@
     "types": [ "MANA_ADD" ],
     "category": [ "UNDINE", "SALAMANDER", "ARVORE", "IERDE", "HOMULLUS", "SYLPH" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 500 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ELEMENTAL_MANA1_0" ]
   },
   {
     "type": "mutation",
@@ -690,7 +684,7 @@
     "category": [ "UNDINE", "SALAMANDER", "ARVORE", "IERDE", "HOMULLUS", "SYLPH" ],
     "prereqs": [ "ELEMENTAL_MANA1" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 1000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ELEMENTAL_MANA2_0" ]
   },
   {
     "type": "mutation",
@@ -703,7 +697,7 @@
     "category": [ "UNDINE", "SALAMANDER", "ARVORE", "IERDE", "HOMULLUS", "SYLPH" ],
     "prereqs": [ "ELEMENTAL_MANA2" ],
     "flags": [ "NON_THRESH" ],
-    "enchantments": [ { "values": [ { "value": "MAX_MANA", "add": 2000 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ELEMENTAL_MANA3_0" ]
   },
   {
     "type": "mutation",

@@ -166,13 +166,7 @@
       "respiratory_rate_min_val": [ 15 ]
     },
     "enchantments": [
-      {
-        "values": [
-          { "value": "EXTRA_ELEC_PAIN", "multiply": 1 },
-          { "value": "KCAL", "multiply": -0.15 },
-          { "value": "SLEEPINESS_REGEN", "multiply": -0.3333 }
-        ]
-      }
+      "INLINE_ENCH_speed_serum_crash_0"
     ]
   }
 ]

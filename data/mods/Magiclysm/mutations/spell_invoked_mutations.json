@@ -13,15 +13,7 @@
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "social_modifiers": { "intimidate": 15 },
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_HP", "multiply": 0.3 },
-          { "value": "STRENGTH", "add": 6 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARDIO_MULTIPLIER", "multiply": 0.25 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_BIO_GIANT_GROWTH_0"
     ]
   },
   {
@@ -50,18 +42,7 @@
     "player_display": false,
     "points": 0,
     "enchantments": [
-      {
-        "values": [
-          { "value": "HUNGER", "multiply": -1.0 },
-          { "value": "THIRST", "multiply": -1.0 },
-          { "value": "METABOLISM", "multiply": -1.0 },
-          { "value": "SLEEPINESS_REGEN", "multiply": 0.5 },
-          { "value": "MENDING_MODIFIER", "multiply": 15 },
-          { "value": "REGEN_HP", "multiply": 1.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.8 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 150 }
-        ]
-      }
+      "INLINE_ENCH_EARTHSHAPER_STONE_SLEEP_0"
     ]
   },
   {
@@ -70,7 +51,7 @@
     "name": { "str": "Animalistic Mind" },
     "description": { "str": "It's hard to think.  Let the instinct take over." },
     "points": -2,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": -4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BESTIAL_MIND_0" ]
   },
   {
     "type": "mutation",
@@ -79,7 +60,7 @@
     "description": { "str": "Hunt.  Kill.  Feed." },
     "points": 0,
     "mixed_effect": true,
-    "enchantments": [ { "values": [ { "value": "COMBAT_CATCHUP", "multiply": 1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_BESTIAL_MIND_COMBAT_0" ],
     "flags": [ "CANNIBAL", "PRED4", "PSYCHOPATH", "STRICT_HUMANITARIAN" ]
   },
   {
