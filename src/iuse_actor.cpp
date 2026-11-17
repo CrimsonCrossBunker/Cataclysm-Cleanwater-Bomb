@@ -31,8 +31,10 @@
 #include "avatar.h" // IWYU pragma: keep
 #include "bionics.h"
 #include "bodypart.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_imgui.h"
+#include "cata_scope_helpers.h"
 #include "character.h"
 #include "character_action_guard.h"
 #include "charcoal_kiln.h"
@@ -43,6 +45,7 @@
 #include "clzones.h"
 #include "condition.h"
 #include "coordinates.h"
+#include "craft_command.h"
 #include "crafting.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -64,7 +67,6 @@
 #include "game_inventory.h"
 #include "generic_factory.h"
 #include "hsv_color.h"
-#include "iexamine.h"
 #include "input_popup.h"
 #include "item.h"
 #include "item_healing.h"
@@ -73,13 +75,12 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_transformation.h"
+#include "item_uid.h"
 #include "itype.h"
 #include "localized_comparator.h"
 #include "magic.h"
 #include "magic_enchantment.h"
 #include "map.h"
-#include "north_america.h"
-#include "mp_gamestate.h"
 #include "mp_client_conn.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
@@ -92,6 +93,7 @@
 #include "mtype.h"
 #include "music.h"
 #include "mutation.h"
+#include "north_america.h"
 #include "npc.h"
 #include "options.h"
 #include "output.h"
@@ -112,6 +114,7 @@
 #include "string_formatter.h"
 #include "talker.h"
 #include "temp_crafting_inventory.h"
+#include "tool_activity_target.h"
 #include "translations.h"
 #include "trap.h"
 #include "type_id.h"
@@ -121,6 +124,7 @@
 #include "veh_appliance.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
 #include "vfx_emit.h"
 #include "visitable.h"
@@ -1960,7 +1964,7 @@ bool firestarter_actor::query_fire_choices( Character &who, const item &tool, ma
     choices = {};
     const character_action_guard lifetime( who );
     const auto context = here.get_context_reference();
-    const auto origin = who.pos_abs();
+    const tripoint_abs_ms origin = who.pos_abs();
     const bool needs_tinder = tool.has_flag( flag_REQUIRES_TINDER );
     if( !can_use( who, tool, &here, position ).success() ||
         prep_firestarter_use( who, &here, position, true ) == start_type::NONE ||
@@ -2593,7 +2597,7 @@ bool salvage_actor::cut_up( Character &p, item &cutter, item_location &cut ) con
     const auto context = here.get_context_reference();
     const auto tool = cutter.get_safe_reference();
     const itype_id cutter_type = cutter.typeId();
-    const auto origin = p.pos_abs();
+    const tripoint_abs_ms origin = p.pos_abs();
     const uint64_t generation = p.activity.identity_generation();
     const item_source source = capture_item_source( p, cut );
     if( resolve_item_source( p, here, source ) != cut ) {
@@ -3745,7 +3749,7 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
     std::vector<item_comp> comps;
     for( const itype_id &component_id : valid_entries ) {
         if( item::count_by_charges( component_id ) ) {
-            if( crafting_inv.has_charges( component_id, items_needed ) ) {
+            if( crafting_inv.has_charges( component_id, items_needed, filter ) ) {
                 comps.emplace_back( component_id, items_needed );
             }
         } else if( crafting_inv.has_amount( component_id, items_needed, false, filter ) ) {
@@ -3761,8 +3765,8 @@ bool repair_item_actor::handle_components( Character &pl, const item &fix,
                                       _( "You don't have enough clean \"%1$s\" to do that.  Have: %2$d, need: %3$d" ),
                                       item::nname( mat_comp, 2 ),
                                       item::find_type( mat_comp )->count_by_charges() ?
-                                      crafting_inv.charges_of( mat_comp, items_needed ) :
-                                      crafting_inv.amount_of( mat_comp, false ),
+                                      crafting_inv.charges_of( mat_comp, items_needed, filter ) :
+                                      crafting_inv.amount_of( mat_comp, false, std::numeric_limits<int>::max(), filter ),
                                       items_needed );
             }
         }
@@ -6149,7 +6153,7 @@ std::optional<prepared_cable_extension> prepare_cable_extension( Character &who,
 bool link_up_actor::confirm_cable_extension( Character &who, item_location cable,
         item_location selected, bool &allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work ) {
         return false;
     }
@@ -6163,7 +6167,7 @@ bool link_up_actor::confirm_cable_extension( Character &who, item_location cable
 std::optional<int> link_up_actor::extend_cable( Character &who, map &here, item_location cable,
         item_location selected, bool allow_spill ) const
 {
-    const auto work = prepare_cable_extension( who, *this, cable, selected );
+    const auto work = prepare_cable_extension( who, *this, std::move( cable ), std::move( selected ) );
     if( !work || ( work->needs_spill && !allow_spill ) ) {
         return std::nullopt;
     }

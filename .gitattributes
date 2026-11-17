@@ -19,6 +19,10 @@ CMakeLists.txt text eol=lf
 *.cmake   text eol=lf
 *.cmake.in text eol=lf
 
+CMakeLists.txt text eol=lf
+*.cmake   text eol=lf
+*.cmake.in text eol=lf
+
 # Visual Studio project files, leave them alone.
 *.cmd     -text
 *.filters -text

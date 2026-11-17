@@ -253,6 +253,8 @@ class overmapbuffer
         // Persisted PP decisions for this OMT, or nullptr if not associated with a
         // special with any overmap_special-scoped sub-generators.
         std::vector<pp_resolved_generator> *pp_decisions( const tripoint_abs_omt & );
+        bool has_riot_damage( const tripoint_abs_omt &p );
+        void set_riot_damage( const tripoint_abs_omt &p );
         std::string *join_used_at( const std::pair<tripoint_abs_omt, cube_direction> & );
         std::vector<oter_id> predecessors( const tripoint_abs_omt & );
         // pick an OMT, scan it from z level 10, and return the first level that is not air

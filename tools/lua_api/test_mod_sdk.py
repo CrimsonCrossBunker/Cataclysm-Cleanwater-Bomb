@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from urllib.parse import unquote
 
 try:
     from . import mod_sdk
@@ -33,6 +34,40 @@ return ccb
 
 
 class ModSdkTest(unittest.TestCase):
+    def test_windows_diagnostic_paths(self):
+        cases = {
+            "file:///c%3A/Mod%20Files/invalid.lua":
+                r"C:\Mod Files\invalid.lua",
+            "file:///c%3a/Mod%2520Files/invalid.lua":
+                r"C:\Mod%20Files\invalid.lua",
+            "file:///c:/Mods/invalid.lua": r"C:\Mods\invalid.lua",
+            "file://localhost/c%3A/Mods/invalid.lua":
+                r"C:\Mods\invalid.lua",
+            "file://server/share/Mod%20Files/invalid.lua":
+                r"\\server\share\Mod Files\invalid.lua",
+        }
+        with patch.object(mod_sdk.os, "name", "nt"), patch.object(
+                mod_sdk, "url2pathname", nturl2path.url2pathname):
+            for uri, expected in cases.items():
+                with self.subTest(uri=uri):
+                    self.assertEqual(mod_sdk.diagnostic_path(uri), expected)
+
+    def test_posix_diagnostic_paths(self):
+        cases = {
+            "file:///home/Mod%20Files/invalid.lua":
+                "/home/Mod Files/invalid.lua",
+            "file:///home/Mod%2520Files/invalid.lua":
+                "/home/Mod%20Files/invalid.lua",
+            "file://localhost/home/invalid.lua": "/home/invalid.lua",
+            "file:///c%3A/invalid.lua": "/c:/invalid.lua",
+            "untitled:invalid.lua": "untitled:invalid.lua",
+        }
+        with patch.object(mod_sdk.os, "name", "posix"), patch.object(
+                mod_sdk, "url2pathname", unquote):
+            for uri, expected in cases.items():
+                with self.subTest(uri=uri):
+                    self.assertEqual(mod_sdk.diagnostic_path(uri), expected)
+
     def make_sdk(
         self, root: Path, name: str, text: str = DECLARATIONS,
     ) -> Path:
