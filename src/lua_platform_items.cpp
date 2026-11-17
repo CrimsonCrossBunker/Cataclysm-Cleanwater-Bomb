@@ -4089,6 +4089,64 @@ sol::table inventory_weapon_state(
                    state, std::move( value ) ) );
 }
 
+sol::table receive_inventory_items(
+    sol::this_state lua, const game_handle &character_handle,
+    const script_game_id &type, const std::int64_t quantity, const bool group,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_id_kind( type, group ? "item_group" : "item",
+                     group ? "services.inventory.receive_group" : "services.inventory.receive_item" );
+    if( quantity < std::numeric_limits<int>::min() || quantity > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( "Item receipt quantity must fit the native signed integer range" );
+    }
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( character_handle, runtime_generation,
+                           world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    std::size_t attempted = 0;
+    std::size_t accepted = 0;
+    const tripoint_abs_ms spawn_position = character->pos_abs();
+    const auto deliver = [&]( item &created ) {
+        if( created.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
+            created.preserve_location( spawn_position );
+        }
+        ++attempted;
+        if( character->i_add_or_drop( created ) ) {
+            ++accepted;
+        }
+    };
+    if( group ) {
+        item_group::ItemList generated = item_group::items_from( item_group_id( type.value() ),
+                                        calendar::turn );
+        for( item &created : generated ) {
+            deliver( created );
+        }
+    } else {
+        item created( itype_id( type.value() ), calendar::turn );
+        if( created.count_by_charges() ) {
+            created.charges = static_cast<int>( quantity );
+            deliver( created );
+        } else {
+            for( int index = 0; index < quantity; ++index ) {
+                if( !created.ammo_default().is_null() ) {
+                    created.ammo_set( created.ammo_default() );
+                }
+                deliver( created );
+            }
+        }
+    }
+    character->invalidate_crafting_inventory();
+    sol::table value = state.create_table();
+    value["id"] = type;
+    value["attempted_instances"] = attempted;
+    value["accepted_instances"] = accepted;
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table give_inventory_items(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &type, const std::int64_t quantity,
@@ -7970,6 +8028,24 @@ void install_item_api(
                    lua_state, character,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    inventory.set_function(
+        "receive_item",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state, const game_handle & character,
+    const script_game_id & type, const std::int64_t quantity ) {
+        require_item_write();
+        return receive_inventory_items( lua_state, character, type, quantity, false,
+                                        current_runtime_generation(), current_world_generation() );
+    } );
+    inventory.set_function(
+        "receive_group",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state, const game_handle & character,
+    const script_game_id & group ) {
+        require_item_write();
+        return receive_inventory_items( lua_state, character, group, 1, true,
+                                        current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
         "give",

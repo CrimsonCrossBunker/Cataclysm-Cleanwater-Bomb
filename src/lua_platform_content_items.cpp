@@ -213,6 +213,12 @@ struct item_definition_data {
     bool registered = false;
 };
 
+struct quality_requirement_definition {
+    std::string id;
+    std::int64_t level = 1;
+    std::int64_t count = 1;
+};
+
 struct component_requirement {
     std::string id;
     std::int64_t count = 1;
@@ -238,6 +244,8 @@ struct recipe_definition_data {
     bool autolearn = true;
     bool reversible = false;
     std::optional<std::int64_t> result_charges;
+    std::int64_t result_multiplier = 1;
+    std::vector<quality_requirement_definition> qualities;
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::map<std::string, std::int64_t> required_skills;
@@ -267,12 +275,6 @@ struct plant_lifecycle_definition_data {
     std::string target = "seed";
     std::map<std::string, std::string> handlers;
     bool registered = false;
-};
-
-struct quality_requirement_definition {
-    std::string id;
-    std::int64_t level = 1;
-    std::int64_t count = 1;
 };
 
 struct requirement_definition_data {
@@ -920,8 +922,8 @@ struct recipe_definition_handle {
 
     recipe_definition_handle &duration( std::int64_t moves ) {
         require_building_handle( token, *definition, "recipe" );
-        if( moves <= 0 ) {
-            throw std::runtime_error( "recipe duration must be positive" );
+        if( moves < 0 ) {
+            throw std::runtime_error( "recipe duration must be nonnegative" );
         }
         definition->time_moves = moves;
         return *this;
@@ -1024,6 +1026,18 @@ struct recipe_definition_handle {
                                choice.get_or( "requirement", false ) } );
         }
         definition->tools.push_back( std::move( group ) );
+        return *this;
+    }
+
+    recipe_definition_handle &quality( const std::string &id, std::int64_t level,
+                                       std::int64_t count ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() || level <= 0 || count <= 0 ||
+            level > std::numeric_limits<int>::max() ||
+            count > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe quality needs an id, positive level, and positive count" );
+        }
+        definition->qualities.push_back( { id, level, count } );
         return *this;
     }
 
@@ -2508,6 +2522,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "tool", &recipe_definition_handle::tool,
         "tool_charges", &recipe_definition_handle::tool_charges,
         "tool_any", &recipe_definition_handle::tool_any,
+        "quality", &recipe_definition_handle::quality,
         "requires_skill", &recipe_definition_handle::requires_skill,
         "requirement", &recipe_definition_handle::requirement,
         "proficiency", &recipe_definition_handle::proficiency,
@@ -2919,6 +2934,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->skill = options.get_or( "skill", std::string() );
         definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         definition->time_moves = options.get_or<std::int64_t>( "duration_moves", 100 );
+        definition->result_multiplier = options.get_or<std::int64_t>( "result_multiplier", 1 );
         definition->autolearn = options.get_or( "autolearn", true );
         definition->reversible = options.get_or( "reversible", false );
         definition->practice = options.get_or( "practice", false );
@@ -4493,7 +4509,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' without an item result requires a name and completion handler, and cannot supply disassembly or result charges" );
             }
-            if( definition.time_moves <= 0 ||
+            if( definition.time_moves < 0 ||
                 definition.difficulty < 0 || definition.difficulty > MAX_SKILL ||
                 !finite_native_float( definition.activity_level ) || definition.activity_level <= 0.0 ) {
                 throw std::runtime_error( "recipe '" + definition.id +
@@ -4546,6 +4562,17 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                   *definition.result_charges > std::numeric_limits<int>::max() ) ) {
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' has invalid result charges" );
+            }
+            if( definition.result_multiplier <= 0 || !native_int( definition.result_multiplier ) ) {
+                throw std::runtime_error( "recipe '" + definition.id + "' has an invalid result multiplier" );
+            }
+            for( const quality_requirement_definition &quality : definition.qualities ) {
+                if( quality.id.empty() || quality.level <= 0 || !native_int( quality.level ) ||
+                    quality.count <= 0 || !native_int( quality.count ) ||
+                    ( check_engine_state && tool_quality_ids.count( quality.id ) == 0 &&
+                      !quality_id( quality.id ).is_valid() ) ) {
+                    throw std::runtime_error( "recipe '" + definition.id + "' references an invalid quality" );
+                }
             }
             validate_recipe_groups( definition.components, "component", false );
             validate_recipe_groups( definition.tools, "tool", true );
@@ -5760,6 +5787,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( entry.definition->result_charges ) {
                         native.charges = static_cast<int>( *entry.definition->result_charges );
                     }
+                    native.result_mult = static_cast<int>( entry.definition->result_multiplier );
                     native.time = entry.definition->time_moves;
                     native.category = crafting_category_id( entry.definition->category );
                     native.subcategory = entry.definition->subcategory;
@@ -5803,7 +5831,13 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         tools.push_back( std::move( alternatives ) );
                     }
-                    native.requirements_ = requirement_data( tools, {}, components );
+                    requirement_data::alter_quali_req_vector qualities;
+                    for( const quality_requirement_definition &quality : entry.definition->qualities ) {
+                        qualities.push_back( { quality_requirement( quality_id( quality.id ),
+                                               static_cast<int>( quality.count ),
+                                               static_cast<int>( quality.level ) ) } );
+                    }
+                    native.requirements_ = requirement_data( tools, qualities, components );
                     if( !entry.definition->external_requirements.empty() ) {
                         std::map<requirement_id, int> external;
                         for( const auto &[requirement_key, multiplier] : entry.definition->external_requirements ) {
@@ -6987,6 +7021,13 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.result );
                 hash_part( state, v.result_charges ?
                            std::to_string( *v.result_charges ) : "default_charges" );
+                hash_part( state, std::to_string( v.result_multiplier ) );
+                for( const quality_requirement_definition &quality : v.qualities ) {
+                    hash_part( state, "quality" );
+                    hash_part( state, quality.id );
+                    hash_part( state, std::to_string( quality.level ) );
+                    hash_part( state, std::to_string( quality.count ) );
+                }
                 hash_part( state, v.name );
                 hash_part( state, v.description );
                 hash_part( state, v.category );

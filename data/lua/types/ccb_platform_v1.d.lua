@@ -795,6 +795,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 
 ---@class RecipeDefinitionOptions
 ---@field id string Stable recipe id.
+---@field result_multiplier? integer Positive native signed-int multiplier for the produced results; defaults to one.
 ---@field result? string Stable result item id. Omit for a named recipe with a completion handler and no item output.
 ---@field name? string|LocalizedText Display name. Required when the recipe has no item output.
 ---@field description? string|LocalizedText Recipe description.
@@ -803,7 +804,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field subcategory? string Native crafting subcategory id.
 ---@field skill? string Primary skill id.
 ---@field difficulty? integer Difficulty from zero through the native maximum skill level.
----@field duration_moves? integer Positive base duration in moves.
+---@field duration_moves? integer Non-negative base duration in moves.
 ---@field autolearn? boolean Whether the recipe is automatically learnable.
 ---@field reversible? boolean Whether the recipe supplies disassembly data.
 ---@field practice? boolean Whether this is a practice recipe; native practice
@@ -821,7 +822,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field id string
 local RecipeDefinition = {}
 
----@param moves integer
+---@param moves integer Non-negative base duration in moves.
 ---@return RecipeDefinition self
 function RecipeDefinition:duration_moves(moves) end
 
@@ -860,6 +861,12 @@ function RecipeDefinition:tool_charges(id, charges, requirement) end
 ---@param choices RecipeToolAlternative[] Dense one-based array with at most 128 entries.
 ---@return RecipeDefinition self
 function RecipeDefinition:tool_any(choices) end
+
+---@param id string Native tool quality id.
+---@param level integer Positive native signed-int required quality level.
+---@param count integer Positive native signed-int number of tools providing the quality.
+---@return RecipeDefinition self
+function RecipeDefinition:quality(id, level, count) end
 
 ---@param id string
 ---@param level integer
@@ -10878,6 +10885,22 @@ function CcbInventoryApi.give(character, item_type, quantity, options) end
 ---@param options? CcbInventoryGiveOptions
 ---@return CcbResult
 function CcbInventoryApi.give_group(character, group, options) end
+
+---Deliver native-default items through Character::i_add_or_drop, including ground drops when inventory cannot accept them.
+---Charge-counted items receive exactly quantity charges. Other items receive native default ammunition and are attempted quantity times.
+---PRESERVE_SPAWN_LOC records the Character's position. No dialogue popup or item-handle snapshot is produced.
+---@param character GameHandle Exact live Character.
+---@param item_type GameId GameId<item>.
+---@param quantity integer Native signed-int quantity; nonpositive instance counts perform no attempts, while charge counts retain the native value.
+---@return CcbResult result value contains attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
+function CcbInventoryApi.receive_item(character, item_type, quantity) end
+
+---Generate the complete native item group and deliver each top-level item through Character::i_add_or_drop.
+---Keeps native containers, charges, ammunition and global RNG order; no snapshot page limit or dialogue popup applies.
+---@param character GameHandle Exact live Character.
+---@param group GameId GameId<item_group>.
+---@return CcbResult result value contains attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
+function CcbInventoryApi.receive_group(character, group) end
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId GameId<item>
 ---@param count? integer
