@@ -309,11 +309,14 @@ struct enchantment_character_inputs {
     std::vector<std::string> worn_flags;
     std::vector<std::string> wielded_flags;
     std::vector<std::string> effect_intensities;
+    std::vector<std::string> character_variables;
+    std::vector<std::string> global_variables;
     bool armed = false;
     bool pain = false;
     bool morale = false;
     bool max_mana = false;
     bool radiation = false;
+    bool kill_xp = false;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,

@@ -2471,9 +2471,10 @@ void character_content_transaction::impl::install_enchantment( sol::table &conte
             definition->load_character_inputs = enchantment_character_inputs{
                 ids( "effects" ), ids( "traits" ), ids( "worn_items" ), ids( "worn_flags" ),
                 ids( "wielded_flags" ), ids( "effect_intensities" ),
+                ids( "character_variables" ), ids( "global_variables" ),
                 activation->get_or( "armed", false ), activation->get_or( "pain", false ),
                 activation->get_or( "morale", false ), activation->get_or( "max_mana", false ),
-                activation->get_or( "radiation", false )
+                activation->get_or( "radiation", false ), activation->get_or( "kill_xp", false )
             };
         }
         definition->emitter = options.get_or( "emitter", std::string() );
@@ -4181,7 +4182,8 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 }
                 const enchantment_character_inputs &inputs = *definition.load_character_inputs;
                 for( const auto *ids : { &inputs.effects, &inputs.traits, &inputs.worn_items, &inputs.worn_flags,
-                                        &inputs.wielded_flags, &inputs.effect_intensities } ) {
+                                        &inputs.wielded_flags, &inputs.effect_intensities,
+                                        &inputs.character_variables, &inputs.global_variables } ) {
                     for( const std::string &id : *ids ) {
                         require_valid_id( id, "enchantment character input" );
                     }
@@ -7441,11 +7443,14 @@ void character_content_transaction::append_fingerprint(
                     hash_ids( "worn_flags", value.load_character_inputs->worn_flags );
                     hash_ids( "wielded_flags", value.load_character_inputs->wielded_flags );
                     hash_ids( "effect_intensities", value.load_character_inputs->effect_intensities );
+                    hash_ids( "character_variables", value.load_character_inputs->character_variables );
+                    hash_ids( "global_variables", value.load_character_inputs->global_variables );
                     hash_part( state, value.load_character_inputs->armed ? "armed" : "no_armed" );
                     hash_part( state, value.load_character_inputs->pain ? "pain" : "no_pain" );
                     hash_part( state, value.load_character_inputs->morale ? "morale" : "no_morale" );
                     hash_part( state, value.load_character_inputs->max_mana ? "max_mana" : "no_max_mana" );
                     hash_part( state, value.load_character_inputs->radiation ? "radiation" : "no_radiation" );
+                    hash_part( state, value.load_character_inputs->kill_xp ? "kill_xp" : "no_kill_xp" );
                 }
                 hash_part( state, value.emitter );
                 for( const auto &[effect, intensity] : value.effects ) {

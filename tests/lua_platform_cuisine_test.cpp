@@ -14,6 +14,7 @@
 #include "coordinates.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
+#include "global_vars.h"
 #include "flexbuffer_json.h"
 #include "item.h"
 #include "json_loader.h"
@@ -421,7 +422,14 @@ end)
 ccb.runtime.handler("loaded_strength", function(ctx)
     assert(ctx.speaker == nil)
     local state = ctx.character_inputs
+    local saved = state.character_variables
+    assert(saved.lua_test_enchantment_missing == 0)
+    if state.pain > 20 then
+        local ok, problem = pcall(function() return saved.lua_test_enchantment_invalid end)
+        assert(not ok and string.find(problem, "Type mismatch", 1, true))
+    end
     return state.pain + state.effect_intensities.sleep + (state.armed and 10 or 0)
+        + saved.lua_test_enchantment_bonus + state.global_variables.lua_test_enchantment_bonus
 end)
 ccb.content.add(ccb.content.Enchantment {
     id = "ccb_platform_load_activation",
@@ -432,6 +440,10 @@ ccb.content.add(ccb.content.Enchantment {
         worn_items = { "backpack" },
         worn_flags = { "WATERPROOF" },
         effect_intensities = { "sleep" },
+        character_variables = {
+            "lua_test_enchantment_bonus", "lua_test_enchantment_invalid", "lua_test_enchantment_missing",
+        },
+        global_variables = { "lua_test_enchantment_bonus" },
         pain = true,
         armed = true,
     },
@@ -447,6 +459,11 @@ ccb.content.add(ccb.content.Enchantment {
     npc restoring_npc;
     const enchantment_id id( "ccb_platform_load_activation" );
     REQUIRE( id.is_valid() );
+    REQUIRE( get_globals().maybe_get_global_value( "lua_test_enchantment_bonus" ) == nullptr );
+    on_out_of_scope restore_global( []() {
+        get_globals().remove_global_value( "lua_test_enchantment_bonus" );
+    } );
+    restoring_npc.set_value( "lua_test_enchantment_invalid", "typed text" );
     const auto strength_bonus = [&]() {
         enchant_cache cache;
         cache.force_add( id.obj(), restoring_npc );
@@ -454,6 +471,13 @@ ccb.content.add(ccb.content.Enchantment {
     };
     restoring_npc.set_pain( 12 );
     CHECK( strength_bonus() == 11 );
+    restoring_npc.set_value( "lua_test_enchantment_bonus",
+                             diag_value( diag_value::legacy_value( "3.5" ) ) );
+    get_globals().set_global_value( "lua_test_enchantment_bonus", 4 );
+    CHECK( strength_bonus() == 18.5 );
+    restoring_npc.set_pain( 25 );
+    CHECK( strength_bonus() == 31.5 );
+    restoring_npc.set_pain( 12 );
     CHECK_FALSE( id->is_active( restoring_npc, false ) );
     restoring_npc.add_effect( efftype_id( "sleep" ), 2_minutes );
     restoring_npc.set_mutation( trait_id( "TOUGH" ) );
@@ -465,11 +489,11 @@ ccb.content.add(ccb.content.Enchantment {
     CHECK( id->is_active( restoring_npc, false ) );
     item rock( itype_rock );
     REQUIRE( restoring_npc.wield( rock ) );
-    CHECK( strength_bonus() == 22 + restoring_npc.get_effect_int( efftype_id( "sleep" ) ) );
+    CHECK( strength_bonus() == 29.5 + restoring_npc.get_effect_int( efftype_id( "sleep" ) ) );
 
     restoring_npc.remove_effect( efftype_id( "sleep" ) );
     CHECK_FALSE( id->is_active( restoring_npc, false ) );
-    CHECK( strength_bonus() == 21 );
+    CHECK( strength_bonus() == 28.5 );
 }
 
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",

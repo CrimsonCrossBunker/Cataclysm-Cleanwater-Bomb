@@ -17,6 +17,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "avatar.h"
@@ -28,6 +29,7 @@
 #include "creature.h"
 #include "debug.h"
 #include "dialogue.h"
+#include "dialogue_helpers.h"
 #include "effect.h"
 #include "effect_source.h"
 #include "event.h"
@@ -41,6 +43,8 @@
 #include "lua_platform_missions.h"
 #include "map.h"
 #include "mapdata.h"
+#include "math_parser_diag_value.h"
+#include "math_parser_type.h"
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
@@ -740,6 +744,47 @@ static sol::table enchantment_handler_payload( runtime &owner,
     } );
 }
 
+static sol::table capture_enchantment_numbers( sol::state &lua, const const_dialogue &dialogue,
+        const var_type scope, const std::vector<std::string> &keys )
+{
+    sol::table values = lua.create_table( 0, static_cast<int>( keys.size() ) );
+    std::map<std::string, diag_value> legacy;
+    std::map<std::string, std::string> errors;
+    for( const std::string &key : keys ) {
+        const diag_value *const value = maybe_read_var_value( var_info( scope, key ), dialogue );
+        if( !value ) {
+            values[key] = 0.0;
+        } else if( std::holds_alternative<diag_value::legacy_value>( value->data ) ) {
+            legacy.emplace( key, *value );
+        } else {
+            try {
+                values[key] = value->dbl( dialogue );
+            } catch( const math::exception &error ) {
+                errors.emplace( key, error.what() );
+            }
+        }
+    }
+    if( !legacy.empty() || !errors.empty() ) {
+        // Legacy conversions can log. Delay conversion and type errors until
+        // Lua actually uses the operand, including inside short-circuit conditions.
+        sol::table meta = lua.create_table();
+        meta.set_function( "__index", [legacy = std::move( legacy ), errors = std::move( errors )](
+        sol::this_state state, const sol::table &, const std::string & key ) -> sol::object {
+            const auto old = legacy.find( key );
+            if( old != legacy.end() ) {
+                return sol::make_object( state, old->second.dbl( const_dialogue{} ) );
+            }
+            const auto invalid = errors.find( key );
+            if( invalid != errors.end() ) {
+                throw std::runtime_error( "Invalid enchantment variable '" + key + "': " + invalid->second );
+            }
+            return sol::make_object( state, sol::nil );
+        } );
+        values[sol::metatable_key] = meta;
+    }
+    return values;
+}
+
 static sol::table collect_enchantment_character_inputs( runtime &owner,
         const const_dialogue &dialogue, const enchantment_character_inputs &requested )
 {
@@ -779,6 +824,10 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.wielded_with_flag( flag_id( id ) );
     } );
+    inputs["character_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::u,
+                                    requested.character_variables );
+    inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
+                                 requested.global_variables );
     if( speaker ) {
         if( requested.armed ) {
             inputs["armed"] = !speaker->unarmed_attack();
@@ -794,6 +843,9 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         if( requested.radiation ) {
             inputs["radiation"] = speaker->get_rad();
+        }
+        if( requested.kill_xp ) {
+            inputs["kill_xp"] = speaker->get_kill_xp();
         }
     }
     return inputs;

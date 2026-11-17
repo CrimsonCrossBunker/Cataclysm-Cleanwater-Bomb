@@ -5432,11 +5432,14 @@ function CcbPlatformContent.Bionic(options) end
 ---@field worn_flags? string[] Flags queried on the condition's worn items.
 ---@field wielded_flags? string[] Flags queried on the speaker's wielded item.
 ---@field effect_intensities? string[] Whole-body effects whose intensity is requested.
+---@field character_variables? string[] Numeric variables saved on the speaker, using keys without a scope prefix.
+---@field global_variables? string[] Numeric variables saved in the world.
 ---@field armed? boolean Request whether the speaker has a weapon.
 ---@field pain? boolean Request raw pain before painkiller reduction.
 ---@field morale? boolean Request current morale.
 ---@field max_mana? boolean Request current maximum mana.
 ---@field radiation? boolean Request current radiation.
+---@field kill_xp? boolean Request current experience from kills.
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field effects table<string, boolean>
@@ -5445,11 +5448,14 @@ function CcbPlatformContent.Bionic(options) end
 ---@field worn_flags table<string, boolean>
 ---@field wielded_flags table<string, boolean>
 ---@field effect_intensities table<string, integer> Missing effects have intensity -1.
+---@field character_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
+---@field global_variables table<string, number> Requested missing keys read as zero. Type errors surface on access.
 ---@field armed? boolean
 ---@field pain? integer
 ---@field morale? integer
 ---@field max_mana? integer
 ---@field radiation? integer
+---@field kill_xp? integer
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
