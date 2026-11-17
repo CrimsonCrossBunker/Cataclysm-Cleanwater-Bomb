@@ -62,3 +62,5 @@ require("grappling")
 require("position_techniques")
 require("combat_techniques")
 require("nested_recipes")
+
+require("morale_types")

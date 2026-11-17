@@ -25,3 +25,5 @@ end, 1)
 ccb.runtime.on("game:game_begin", "initialize_default_spellcasting")
 
 require("nested_recipes")
+
+require("morale_types")

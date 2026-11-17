@@ -355,10 +355,5 @@
     "required_event": "game_avatar_new",
     "global": true,
     "effect": { "alter_timed_events": "vitrified_farm_escape_key" }
-  },
-  {
-    "id": "morale_vitri_placid",
-    "type": "morale_type",
-    "text": "Content amidst the glass"
   }
 ]

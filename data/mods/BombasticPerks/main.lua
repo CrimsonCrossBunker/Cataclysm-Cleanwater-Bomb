@@ -1,0 +1,1 @@
+require("morale_types")

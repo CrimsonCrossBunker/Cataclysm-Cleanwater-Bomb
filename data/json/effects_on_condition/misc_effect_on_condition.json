@@ -168,16 +168,6 @@
     ]
   },
   {
-    "id": "morale_hates_sewer",
-    "type": "morale_type",
-    "text": "Hates being in sewer"
-  },
-  {
-    "id": "morale_dislikes_sewer",
-    "type": "morale_type",
-    "text": "Dislikes being in sewer"
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_TOOK_OVER_CAMP_NOTICE",
     "eoc_type": "EVENT",

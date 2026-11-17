@@ -1,10 +1,5 @@
 [
   {
-    "id": "morale_perk_early_to_rise",
-    "type": "morale_type",
-    "text": "Early Riser"
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_NETHER_ATTENTION_NIGHTMARES",
     "eoc_type": "EVENT",
