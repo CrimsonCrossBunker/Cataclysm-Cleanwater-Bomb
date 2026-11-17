@@ -3647,7 +3647,7 @@ class jmapgen_sealed_item : public jmapgen_piece_with_has_vehicle_collision
             if( regional_crop && pos.z() == 0 && north_america::active() &&
                 chosen_furn->has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
                 const point_abs_omt field = dat.pos().xy();
-                const auto abs_field = project_to<coords::ms>( field ) + point( SEEX, SEEY );
+                const point_abs_ms abs_field = project_to<coords::ms>( field ) + point( SEEX, SEEY );
                 // A field is planted as a unit. Hash its absolute position with the world seed.
                 const unsigned roll = static_cast<unsigned>( std::hash<point_abs_omt> {}( field ) ) ^
                                       g->get_seed();
