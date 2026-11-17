@@ -335,6 +335,7 @@ struct location_search_options {
     int max_radius = 0;
     int target_min_radius = 0;
     int target_max_radius = 0;
+    std::optional<tripoint_abs_ms> distance_origin;
     int random_attempts = 25;
     tripoint adjustment = tripoint::zero;
     bool z_override = false;
@@ -1340,6 +1341,14 @@ location_search_options read_location_search_options(
             result.target_max_radius = read_location_integer(
                                            value, key, 0,
                                            maximum_location_search_radius );
+        } else if( key == "distance_origin" ) {
+            if( !value.is<script_tripoint_coord>() ) {
+                throw std::invalid_argument(
+                    "services.world.find_location distance_origin must be an absolute map-square Tripoint" );
+            }
+            result.distance_origin = require_absolute_ms(
+                                         value.as<script_tripoint_coord>(),
+                                         "services.world.find_location distance_origin" );
         } else if( key == "random_attempts" ) {
             result.random_attempts = read_location_integer(
                                          value, key, 1,
@@ -1716,7 +1725,8 @@ sol::table find_world_location(
                  center,
                  static_cast<std::size_t>(
                      options.target_max_radius ), 0 ) ) {
-            const int distance = rl_dist( center, position );
+            const int distance = rl_dist( options.distance_origin.value_or( origin ),
+                                          here.get_abs( position ) );
             if( distance <= options.target_min_radius ) {
                 continue;
             }

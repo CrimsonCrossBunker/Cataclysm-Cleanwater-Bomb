@@ -404,6 +404,7 @@ function CcbWorldApi.points_nearby(origin, options) end
 ---@field max_radius? integer Nonnegative random-placement radius; native maximum is 1000.
 ---@field target_min_radius? integer Nonnegative minimum selector distance; native maximum is 1000.
 ---@field target_max_radius? integer Nonnegative maximum selector distance; native maximum is 1000.
+---@field distance_origin? TripointCoord Absolute map-square position used for the selector's minimum-distance exclusion; defaults to origin. Does not move the search area or random-placement anchor.
 ---@field outdoor_only? boolean Require an outdoor random-placement result.
 ---@field passable_only? boolean Require a passable random-placement result.
 
