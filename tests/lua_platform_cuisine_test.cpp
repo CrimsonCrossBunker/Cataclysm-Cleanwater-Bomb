@@ -11,6 +11,7 @@
 #include "avatar.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
+#include "character_martial_arts.h"
 #include "coordinates.h"
 #include "dialogue.h"
 #include "dialogue_helpers.h"
@@ -425,10 +426,8 @@ end)
 ccb.runtime.handler("learning_state", function(ctx)
     assert(ctx.speaker == nil)
     local state = ctx.character_inputs
-    local spell = state.spell_levels.test_eoc_spell
-    assert(state.spell_school_levels.test_trait == spell)
-    assert(state.spell_school_level_sums.test_trait == math.max(0, spell))
-    return state.proficiency_percentages.prof_test + spell
+    return state.proficiency_percentages.prof_test + state.spell_levels.test_eoc_spell
+        + state.spell_school_levels.test_trait + state.spell_school_level_sums.test_trait
 end)
 ccb.runtime.handler("loaded_strength", function(ctx)
     assert(ctx.speaker == nil)
@@ -493,10 +492,14 @@ ccb.content.add(ccb.content.Enchantment {
     };
     restoring_npc.set_pain( 12 );
     CHECK( strength_bonus() == 11 );
-    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == -1 );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == -2 );
     restoring_npc.set_proficiency_practiced_time( proficiency_id( "prof_test" ), 43200 );
     restoring_npc.magic->set_spell_level( spell_id( "test_eoc_spell" ), 4, &restoring_npc );
-    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == 54 );
+    // The native maximum requires membership in the school. The sum and
+    // individual spell level still count a spell learned without that trait.
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == 57 );
+    restoring_npc.set_mutation( trait_id( "test_trait" ) );
+    CHECK( bonus( enchant_vals::mod::PERCEPTION ) == 62 );
     restoring_npc.set_value( "lua_test_enchantment_bonus",
                              diag_value( diag_value::legacy_value( "3.5" ) ) );
     get_globals().set_global_value( "lua_test_enchantment_bonus", 4 );
@@ -519,11 +522,16 @@ ccb.content.add(ccb.content.Enchantment {
     CHECK( id->is_active( restoring_npc, false ) );
     item rock( itype_rock );
     REQUIRE( restoring_npc.wield( rock ) );
+    restoring_npc.martial_arts_data->set_style( matype_id( "style_none" ), true );
+    REQUIRE_FALSE( restoring_npc.unarmed_attack() );
     CHECK( strength_bonus() == 29.5 + restoring_npc.get_effect_int( efftype_id( "sleep" ) ) );
 
     restoring_npc.remove_effect( efftype_id( "sleep" ) );
     CHECK_FALSE( id->is_active( restoring_npc, false ) );
     CHECK( strength_bonus() == 28.5 );
+    restoring_npc.martial_arts_data->set_style( matype_id( "style_kicks" ), true );
+    REQUIRE( restoring_npc.unarmed_attack() );
+    CHECK( strength_bonus() == 18.5 );
 }
 
 TEST_CASE( "lua_first_enchantment_reads_tile_and_overmap_during_character_load",
@@ -587,6 +595,78 @@ ccb.content.add(ccb.content.Enchantment {
     REQUIRE( here.add_field( where, field_type_id( "fd_smoke" ), 1 ) );
     CHECK_FALSE( restoring_npc.is_underwater() );
     CHECK( id->is_active( restoring_npc, false ) );
+}
+
+TEST_CASE( "lua_first_enchantment_vision_reads_range_and_target_without_live_handles",
+           "[lua][platform][content][effect][regression]" )
+{
+    cata::lua_platform::shutdown();
+    clear_map();
+    const on_out_of_scope cleanup( []() {
+        cata::lua_platform::shutdown();
+        clear_map();
+    } );
+    cuisine_test_mod test_mod( "ccb_platform_vision_enchantment" );
+    test_mod.write( std::filesystem::u8path( "main.lua" ), R"lua(
+local ccb = require("ccb")
+ccb.runtime.handler("range", function(ctx)
+    assert(ctx.speaker == nil)
+    return 3 * ctx.character_inputs.spell_school_counts.test_trait
+end)
+ccb.runtime.handler("clear_airway", function(ctx)
+    return not ctx.character_inputs.body_part_effects.mouth.smoke
+end)
+ccb.runtime.handler("warm_npc", function(ctx)
+    assert(ctx.interlocutor == nil)
+    local target = ctx.target_inputs
+    return target.line_of_sight and target.warm and target.npc
+end)
+ccb.runtime.handler("tiny", function(ctx) return ctx.target_inputs.size == 1 end)
+ccb.runtime.handler("medium", function(ctx) return ctx.target_inputs.size == 3 end)
+ccb.content.add(ccb.content.Enchantment {
+    id = "lua_test_enchantment_vision",
+    condition_handler = "clear_airway",
+    load_character_inputs = { spell_school_counts = { "test_trait" }, body_part_effects = { mouth = { "smoke" } } },
+}:vision {
+    distance_handler = "range",
+    condition_handler = "warm_npc",
+    target_inputs = { line_of_sight = true, warm = true, npc = true },
+    descriptions = {
+        { id = "tiny", text = "Tiny.", condition_handler = "tiny", target_inputs = { size = true } },
+        { id = "medium", text = "Medium.", condition_handler = "medium", target_inputs = { size = true } },
+    },
+})
+)lua" );
+    std::string error;
+    REQUIRE( cata::lua_platform::prepare_mods(
+                 { test_mod.source( "ccb_platform_vision_enchantment" ) }, error ) );
+    REQUIRE( cata::lua_platform::apply_prepared_content( error ) );
+    REQUIRE( cata::lua_platform::validate_finalized_prepared_content( error ) );
+    cata::lua_platform::commit_prepared_mods();
+
+    npc observer;
+    npc target;
+    map &here = get_map();
+    observer.setpos( here, tripoint_bub_ms( 60, 60, 0 ), false );
+    target.setpos( here, tripoint_bub_ms( 62, 60, 0 ), false );
+    const_dialogue dialogue( get_const_talker_for( observer ), get_const_talker_for( target ) );
+    const enchantment_id id( "lua_test_enchantment_vision" );
+    REQUIRE( id.is_valid() );
+    CHECK( id->is_active( observer, false ) );
+    observer.add_effect( efftype_id( "smoke" ), 1_minutes, bodypart_id( "mouth" ) );
+    CHECK_FALSE( id->is_active( observer, false ) );
+    observer.remove_effect( efftype_id( "smoke" ), bodypart_id( "mouth" ) );
+
+    enchant_cache unknown;
+    unknown.force_add( id.obj(), observer );
+    CHECK_FALSE( unknown.get_vision_can_see( unknown.get_vision( dialogue ) ) );
+    observer.magic->set_spell_level( spell_id( "test_eoc_spell" ), 1, &observer );
+    enchant_cache learned;
+    learned.force_add( id.obj(), observer );
+    const enchant_cache::special_vision vision = learned.get_vision( dialogue );
+    REQUIRE( learned.get_vision_can_see( vision ) );
+    CHECK( vision.range == 3 );
+    CHECK( learned.get_vision_description_struct( vision, dialogue ).id == "medium" );
 }
 
 TEST_CASE( "lua_first_shopkeeper_whitelist_supports_bounded_item_predicates",

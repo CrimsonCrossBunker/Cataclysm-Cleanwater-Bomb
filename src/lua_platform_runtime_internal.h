@@ -314,6 +314,20 @@ struct enchantment_environment_inputs {
     bool overmap_terrain = false;
     bool temperature_kelvin = false;
 };
+struct enchantment_vision_target_inputs {
+    std::vector<std::string> species;
+    std::vector<std::string> flags;
+    std::vector<std::string> traits;
+    std::vector<std::string> effects;
+    bool line_of_sight = false;
+    bool warm = false;
+    bool size = false;
+    bool npc = false;
+    bool character = false;
+    bool hostile = false;
+    bool anger = false;
+    bool spell_count = false;
+};
 struct enchantment_character_inputs {
     std::vector<std::string> effects;
     std::vector<std::string> traits;
@@ -336,12 +350,15 @@ struct enchantment_character_inputs {
     bool radiation = false;
     bool kill_xp = false;
     std::optional<enchantment_environment_inputs> environment;
+    std::map<std::string, std::vector<std::string>> body_part_effects;
+    std::vector<std::string> spell_school_counts;
 };
 std::optional<bool> invoke_enchantment_condition_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,
     std::string_view handler_id, const const_dialogue &dialogue,
-    const std::optional<enchantment_character_inputs> &load_character_inputs = std::nullopt );
+    const std::optional<enchantment_character_inputs> &load_character_inputs = std::nullopt,
+    const std::optional<enchantment_vision_target_inputs> &target_inputs = std::nullopt );
 std::optional<double> invoke_enchantment_number_handler(
     std::string_view mod_id, std::string_view enchantment,
     std::string_view scope, std::string_view target,

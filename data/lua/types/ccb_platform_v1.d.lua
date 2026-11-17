@@ -5471,6 +5471,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field radiation? boolean Request current radiation.
 ---@field kill_xp? boolean Request current experience from kills.
 ---@field environment? CcbEnchantmentEnvironmentInputs
+---@field body_part_effects? table<string, string[]> Body part IDs mapped to the effect IDs to test on each part.
+---@field spell_school_counts? string[] School IDs whose number of known spells is requested.
 
 ---@class CcbEnchantmentCharacterSnapshot
 ---@field effects table<string, boolean>
@@ -5484,7 +5486,7 @@ function CcbPlatformContent.Bionic(options) end
 ---@field character_flags table<string, boolean>
 ---@field proficiency_percentages table<string, number> Practice percentages are on the 0–100 scale.
 ---@field spell_levels table<string, integer> Unknown spells have level -1.
----@field spell_school_levels table<string, integer> Schools with no known spells have level -1.
+---@field spell_school_levels table<string, integer> Level -1 when the speaker lacks the school trait or knows no spells in it.
 ---@field spell_school_level_sums table<string, integer> Schools with no known spells have sum 0.
 ---@field move_mode? string
 ---@field armed? boolean
@@ -5494,6 +5496,8 @@ function CcbPlatformContent.Bionic(options) end
 ---@field radiation? integer
 ---@field kill_xp? integer
 ---@field environment? CcbEnchantmentEnvironmentSnapshot
+---@field body_part_effects? table<string, table<string, boolean>>
+---@field spell_school_counts table<string, integer>
 
 ---@class CcbEnchantmentCharacterContext
 ---@field character_inputs? CcbEnchantmentCharacterSnapshot Detached inputs requested by the definition.
@@ -5503,11 +5507,12 @@ function CcbPlatformContent.Bionic(options) end
 ---@field id string
 ---@field name? string|LocalizedText
 ---@field description? string|LocalizedText
----@field load_character_inputs? CcbEnchantmentCharacterInputs Enables named activation and numeric callbacks during save reconstruction with detached inputs.
+---@field load_character_inputs? CcbEnchantmentCharacterInputs Enables activation, modifier and vision distance callbacks during save reconstruction.
 ---@field [string] any
 
 ---@class CcbEnchantmentVisionDescription
 ---@field text string|LocalizedText
+---@field target_inputs? CcbEnchantmentVisionTargetInputs Optional inputs specific to this description.
 ---@field [string] any
 
 ---@class CcbFakeSpellOptions
@@ -5517,7 +5522,43 @@ function CcbPlatformContent.Bionic(options) end
 ---@field npc_trigger_message? string|LocalizedText
 ---@field [string] any
 
+---@class CcbEnchantmentVisionTargetInputs
+---@field species? string[]
+---@field flags? string[] Target creature or character flags to test.
+---@field traits? string[]
+---@field effects? string[] Whole-body effects to test.
+---@field line_of_sight? boolean Request map line of sight from the observer, independent of light.
+---@field warm? boolean Request whether the target radiates heat.
+---@field size? boolean Request native size from 1 (tiny) to 5 (huge).
+---@field npc? boolean Request whether the target is an NPC.
+---@field character? boolean Request whether the target is a character.
+---@field hostile? boolean Request whether the target considers the player an enemy.
+---@field anger? boolean Request target anger.
+---@field spell_count? boolean Request the target's count of known spells.
+
+---@class CcbEnchantmentVisionTargetSnapshot
+---@field species? table<string, boolean>
+---@field flags? table<string, boolean>
+---@field traits? table<string, boolean>
+---@field effects? table<string, boolean>
+---@field line_of_sight? boolean
+---@field warm? boolean
+---@field size? integer
+---@field npc? boolean
+---@field character? boolean
+---@field hostile? boolean
+---@field anger? integer
+---@field spell_count? integer
+
+---@class CcbEnchantmentVisionContext: CcbEnchantmentCharacterContext
+---@field target_inputs? CcbEnchantmentVisionTargetSnapshot Requested facts for the detection and description handlers.
+---@field interlocutor? GameHandle Available only after world_ready.
+
 ---@class CcbEnchantmentVisionOptions
+---@field distance? number Detection range in map tiles.
+---@field distance_handler? string Registered handler whose numeric result sets the range.
+---@field condition_handler? string Registered handler deciding whether the vision detects the target.
+---@field target_inputs? CcbEnchantmentVisionTargetInputs Inputs for the condition and description handlers.
 ---@field descriptions? CcbEnchantmentVisionDescription[]
 ---@field [string] any
 
