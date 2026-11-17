@@ -451,20 +451,25 @@ TEST_CASE( "post_process_stair_preservation", "[mapgen][post_process][characteri
     clear_overmaps();
 }
 
-TEST_CASE( "post_process_fire_decay", "[mapgen][post_process][characterization]" )
+TEST_CASE( "post_process_riot_has_no_live_fire", "[mapgen][post_process]" )
 {
     clear_map_and_reset_player();
     map &here = get_map();
     const tripoint_abs_omt pos = project_to<coords::omt>( here.get_abs_sub() );
 
-    // Fire stops spawning well before day 30.
-    build_pp_test_layout( here, 0, false );
-    calendar::turn = calendar::start_of_cataclysm + 30_days;
-    rng_set_engine_seed( 42424242 );
-    pp_generator_riot_damage.obj().execute( here, pos );
-
-    pp_scan_result result = scan_omt( here, 0 );
-    CHECK( result.fire_field_count == 0 );
+    for( const pp_generator_id &id : { pp_generator_riot_damage, pp_generator_riot_damage_road } ) {
+        for( const pp_sub_generator &sg : id.obj().sub_generators() ) {
+            CHECK( sg.type != sub_generator_type::add_fire );
+        }
+        for( int days : { 0, 3, 7, 14, 30 } ) {
+            INFO( id.str() << " at day " << days );
+            build_pp_test_layout( here, 0, false );
+            calendar::turn = calendar::start_of_cataclysm + days * 1_days;
+            rng_set_engine_seed( 42424242 );
+            id.obj().execute( here, pos );
+            CHECK( scan_omt( here, 0 ).fire_field_count == 0 );
+        }
+    }
 
     clear_overmaps();
 }
