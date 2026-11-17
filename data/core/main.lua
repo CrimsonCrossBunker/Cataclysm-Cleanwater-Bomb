@@ -148,3 +148,5 @@ tips:text(ccb.content.text("You can place pieces of furniture in front of the do
 tips:text(ccb.content.text("Some items are worn at your side, like sheathes and holsters, and can have the side they're worn on switched in the armor menu."))
 tips:text(ccb.content.text("Just because a location is filled with zombies or well protected doesn't mean it has good loot for you in the Cataclysm.  Bank vaults full of cash and gold in the old world are filled with kindling in the new one."))
 ccb.content.add(tips)
+
+require("weather_types")
