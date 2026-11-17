@@ -175,7 +175,7 @@
     "visibility": 4,
     "ugliness": 1,
     "bodytemp_modifiers": [ 300, 800 ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DOWN_0" ]
   },
   {
     "type": "mutation",
@@ -218,7 +218,7 @@
     "visibility": 6,
     "ugliness": 2,
     "integrated_armor": [ "integrated_lightfur" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LIGHTFUR_0" ]
   },
   {
     "type": "mutation",
@@ -234,7 +234,7 @@
     "visibility": 10,
     "ugliness": 3,
     "integrated_armor": [ "integrated_fur" ],
-    "enchantments": [ { "values": [ { "value": "BODYTEMP_SLEEP", "add": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FUR_0" ]
   },
   {
     "type": "mutation",

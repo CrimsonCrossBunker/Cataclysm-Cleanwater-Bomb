@@ -93,7 +93,7 @@
     "points": 1,
     "starting_trait": true,
     "vitamin_cost": 60,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": 10 } ] } ]
+    "enchantments": [ "INLINE_ENCH_RESISTWARM_0" ]
   },
   {
     "type": "mutation",
@@ -228,7 +228,7 @@
     "points": 5,
     "starting_trait": true,
     "vitamin_cost": 210,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SPEED", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_QUICK_0" ]
   },
   {
     "type": "mutation",
@@ -249,7 +249,7 @@
     "points": 2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "DODGE_CHANCE", "add": 3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FAST_REFLEXES_0" ]
   },
   {
     "type": "mutation",
@@ -262,7 +262,7 @@
     "points": 2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "MOVECOST_FLATGROUND_MOD", "multiply": -0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FLEET_0" ]
   },
   {
     "type": "mutation",
@@ -284,7 +284,7 @@
     "types": [ "RUNNING" ],
     "points": -3,
     "starting_trait": true,
-    "enchantments": [ { "values": [ { "value": "MOVECOST_FLATGROUND_MOD", "multiply": 0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SLOWRUNNER_0" ]
   },
   {
     "type": "mutation",
@@ -296,7 +296,7 @@
     "points": 1,
     "starting_trait": true,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": -0.6 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LIGHTSTEP_0" ]
   },
   {
     "type": "mutation",
@@ -309,7 +309,7 @@
     "points": 2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "CARDIO_MULTIPLIER", "multiply": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_GOODCARDIO_0" ]
   },
   {
     "type": "mutation",
@@ -344,7 +344,7 @@
     "points": -1,
     "starting_trait": true,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "MOVECOST_OBSTACLE_MOD", "multiply": 0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BADKNEES_0" ]
   },
   {
     "type": "mutation",
@@ -379,7 +379,7 @@
     "starting_trait": true,
     "valid": false,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.35 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STRONGBACK_0" ]
   },
   {
     "type": "mutation",
@@ -391,7 +391,7 @@
     "points": -3,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": -0.35 } ] } ]
+    "enchantments": [ "INLINE_ENCH_BADBACK_0" ]
   },
   {
     "type": "mutation",
@@ -403,7 +403,7 @@
     "starting_trait": true,
     "valid": false,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "OBTAIN_COST_MULTIPLIER", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PACKMULE_0" ]
   },
   {
     "type": "mutation",
@@ -465,7 +465,7 @@
     "valid": false,
     "vitamin_cost": 160,
     "social_modifiers": { "intimidate": 2 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_TOUGH_0" ]
   },
   {
     "type": "mutation",
@@ -478,7 +478,7 @@
     "valid": false,
     "vitamin_cost": 180,
     "social_modifiers": { "intimidate": 3 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_TOUGH2_0" ]
   },
   {
     "type": "mutation",
@@ -490,7 +490,7 @@
     "valid": false,
     "vitamin_cost": 195,
     "social_modifiers": { "intimidate": 4 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_TOUGH3_0" ]
   },
   {
     "type": "mutation",
@@ -505,7 +505,7 @@
     "starting_trait": true,
     "vitamin_cost": 160,
     "social_modifiers": { "intimidate": -2 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": -0.25 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FLIMSY_0" ]
   },
   {
     "type": "mutation",
@@ -561,13 +561,7 @@
     "starting_trait": true,
     "vitamin_cost": 160,
     "enchantments": [
-      {
-        "values": [
-          { "value": "MENDING_MODIFIER", "multiply": 1 },
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.133 }
-        ]
-      }
+      "INLINE_ENCH_FASTHEALER_0"
     ]
   },
   {
@@ -722,7 +716,7 @@
     "points": 3,
     "starting_trait": true,
     "vitamin_cost": 210,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PAIN", "multiply": -0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PAINRESIST_0" ]
   },
   {
     "type": "mutation",
@@ -735,7 +729,7 @@
     "points": -2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "PAIN", "multiply": 0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_MORE_PAIN_0" ],
     "//": "The MORE_PAIN mutations will always increase the pain you receive by at least 1."
   },
   {
@@ -818,7 +812,7 @@
     "visibility": 1,
     "flags": [ "LARGE" ],
     "enchantments": [
-      { "values": [ { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.5 }, { "value": "CARRY_WEIGHT", "multiply": 0.05 } ] }
+      "INLINE_ENCH_VERY_TALL_0"
     ]
   },
   {
@@ -997,7 +991,7 @@
     "points": -1,
     "starting_trait": true,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "SLEEPINESS_REGEN", "multiply": 0.333 }, { "value": "SLEEPINESS", "multiply": 0.333 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SLEEPY_0" ]
   },
   {
     "type": "mutation",
@@ -1209,7 +1203,7 @@
     "points": -2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "STAMINA_REGEN_MOD", "add": 0.1 }, { "value": "METABOLISM", "multiply": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_HUNGER_0" ]
   },
   {
     "type": "mutation",
@@ -1248,7 +1242,7 @@
     "points": -2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_THIRST_0" ]
   },
   {
     "type": "mutation",
@@ -1261,7 +1255,7 @@
     "changes_to": [ "THIRST3" ],
     "points": -3,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_THIRST2_0" ]
   },
   {
     "type": "mutation",
@@ -1274,7 +1268,7 @@
     "threshreq": [ "THRESH_BATRACHIAN", "THRESH_CRUSTACEAN" ],
     "points": -5,
     "vitamin_cost": 210,
-    "enchantments": [ { "values": [ { "value": "THIRST", "multiply": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_THIRST3_0" ]
   },
   {
     "type": "mutation",
@@ -1323,7 +1317,7 @@
     "points": -1,
     "starting_trait": true,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "VOMIT_MUL", "multiply": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_WEAKSTOMACH_0" ]
   },
   {
     "type": "mutation",
@@ -1349,7 +1343,7 @@
     "points": -2,
     "active": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "VOMIT_MUL", "multiply": 2 } ] } ],
+    "enchantments": [ "INLINE_ENCH_NAUSEA_0" ],
     "//": "Nauseous means 'to induce nausea.'"
   },
   {
@@ -1377,7 +1371,7 @@
     "points": -3,
     "active": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "VOMIT_MUL", "multiply": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_VOMITOUS_0" ]
   },
   {
     "type": "mutation",
@@ -1523,9 +1517,7 @@
     "active": true,
     "vitamin_cost": 160,
     "enchantments": [
-      {
-        "values": [ { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 }, { "value": "CONSUME_TIME_MOD", "multiply": -0.25 } ]
-      }
+      "INLINE_ENCH_GOURMAND_0"
     ]
   },
   {
@@ -1540,7 +1532,7 @@
     "points": 2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "METABOLISM", "multiply": -0.333 } ] } ]
+    "enchantments": [ "INLINE_ENCH_LIGHTEATER_0" ]
   },
   {
     "type": "mutation",
@@ -1562,7 +1554,7 @@
     "starting_trait": true,
     "chargen_allow_npc": false,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "CONSUME_TIME_MOD", "multiply": 0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_TABLEMANNERS_0" ]
   },
   {
     "type": "mutation",
@@ -1621,7 +1613,7 @@
     "points": -1,
     "starting_trait": true,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "FOOTSTEP_NOISE", "multiply": 0.7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_CLUMSY_0" ]
   },
   {
     "type": "mutation",
@@ -1703,7 +1695,7 @@
     "points": -2,
     "starting_trait": true,
     "vitamin_cost": 160,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "SLEEPY", "add": -12 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INSOMNIA_0" ]
   },
   {
     "type": "mutation",
@@ -1722,7 +1714,7 @@
     "points": -5,
     "starting_trait": true,
     "valid": false,
-    "enchantments": [ { "skills": [ { "value": "computer", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_COMPUTER_ILLITERATE_0" ],
     "flags": [ "CANNOT_USE_COMPUTERS" ]
   },
   {
@@ -1875,12 +1867,7 @@
     "starting_trait": true,
     "valid": false,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SKILL_RUST_RESIST", "multiply": -0.34 },
-          { "value": "THEORETICAL_SKILL_CATCHUP_BONUS", "multiply": 0.25 }
-        ]
-      }
+      "INLINE_ENCH_GOODMEMORY_0"
     ]
   },
   {
@@ -1926,7 +1913,7 @@
     "starting_trait": true,
     "valid": false,
     "vitamin_cost": 60,
-    "enchantments": [ { "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_FASTREADER_0" ]
   },
   {
     "type": "mutation",
@@ -1937,7 +1924,7 @@
     "points": -1,
     "starting_trait": true,
     "valid": false,
-    "enchantments": [ { "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SLOWREADER_0" ]
   },
   {
     "type": "mutation",
@@ -1969,7 +1956,7 @@
     "points": -3,
     "starting_trait": true,
     "valid": false,
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "LEARNING_FOCUS", "multiply": -0.15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SLOWLEARNER_0" ]
   },
   {
     "type": "mutation",
@@ -2894,7 +2881,7 @@
     "changes_to": [ "SHOUT2" ],
     "points": -2,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "SHOUT_NOISE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SHOUT1_0" ]
   },
   {
     "type": "mutation",
@@ -3077,13 +3064,7 @@
     "flags": [ "LARGE" ],
     "encumbrance_always": [ [ "torso", 10 ], [ "arm_l", 10 ], [ "arm_r", 10 ] ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.5 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.05 }
-        ]
-      }
+      "INLINE_ENCH_LARGE_0"
     ]
   },
   {
@@ -3102,13 +3083,7 @@
     "visibility": 1,
     "flags": [ "LARGE" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 2 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 0.5 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.05 }
-        ]
-      }
+      "INLINE_ENCH_LARGE_OK_0"
     ]
   },
   {
@@ -3130,15 +3105,7 @@
     "destroys_gear": true,
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MAX_HP", "add": -6 },
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "SLEEPINESS", "multiply": 0.15 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_HUGE_0"
     ]
   },
   {
@@ -3161,13 +3128,7 @@
     "destroys_gear": true,
     "restricts_gear": [ "torso", "leg_l", "leg_r", "arm_l", "arm_r", "hand_l", "hand_r", "head", "foot_l", "foot_r" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": 4 },
-          { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": 1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.1 }
-        ]
-      }
+      "INLINE_ENCH_HUGE_OK_0"
     ]
   },
   {
@@ -3183,7 +3144,7 @@
     "points": 2,
     "vitamin_cost": 160,
     "social_modifiers": { "intimidate": 2 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUT_TOUGH_0" ]
   },
   {
     "type": "mutation",
@@ -3198,7 +3159,7 @@
     "points": 3,
     "vitamin_cost": 175,
     "social_modifiers": { "intimidate": 3 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUT_TOUGH2_0" ]
   },
   {
     "type": "mutation",
@@ -3214,7 +3175,7 @@
     "points": 4,
     "vitamin_cost": 190,
     "social_modifiers": { "intimidate": 4 },
-    "enchantments": [ { "values": [ { "value": "MAX_HP", "multiply": 0.4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_MUT_TOUGH3_0" ]
   },
   {
     "type": "mutation",
@@ -3238,7 +3199,7 @@
     "types": [ "STR" ],
     "changes_to": [ "STR_UP_2" ],
     "points": 1,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_0" ]
   },
   {
     "type": "mutation",
@@ -3251,7 +3212,7 @@
     "changes_to": [ "STR_UP_3", "STR_ALPHA" ],
     "points": 2,
     "vitamin_cost": 170,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_2_0" ]
   },
   {
     "type": "mutation",
@@ -3274,7 +3235,7 @@
     "points": 4,
     "vitamin_cost": 200,
     "visibility": 1,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_3_0" ]
   },
   {
     "type": "mutation",
@@ -3290,7 +3251,7 @@
     "vitamin_cost": 300,
     "visibility": 2,
     "ugliness": 2,
-    "enchantments": [ { "values": [ { "value": "STRENGTH", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_STR_UP_4_0" ]
   },
   {
     "type": "mutation",
@@ -3353,7 +3314,7 @@
     "types": [ "DEX" ],
     "changes_to": [ "DEX_UP_2" ],
     "points": 1,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_0" ]
   },
   {
     "type": "mutation",
@@ -3381,7 +3342,7 @@
     "changes_to": [ "DEX_UP_3", "DEX_ALPHA" ],
     "points": 2,
     "vitamin_cost": 170,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_2_0" ]
   },
   {
     "type": "mutation",
@@ -3404,7 +3365,7 @@
     ],
     "points": 3,
     "vitamin_cost": 200,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_3_0" ]
   },
   {
     "type": "mutation",
@@ -3418,7 +3379,7 @@
     "strict_threshreq": true,
     "points": 4,
     "vitamin_cost": 300,
-    "enchantments": [ { "values": [ { "value": "DEXTERITY", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_DEX_UP_4_0" ]
   },
   {
     "type": "mutation",
@@ -3457,7 +3418,7 @@
     "types": [ "INT" ],
     "changes_to": [ "INT_UP_2", "INT_SLIME" ],
     "points": 1,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_0" ]
   },
   {
     "type": "mutation",
@@ -3470,7 +3431,7 @@
     "changes_to": [ "INT_UP_3", "INT_ALPHA" ],
     "points": 2,
     "vitamin_cost": 170,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_2_0" ]
   },
   {
     "type": "mutation",
@@ -3487,7 +3448,7 @@
     "vitamin_cost": 200,
     "visibility": 1,
     "ugliness": 1,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_3_0" ]
   },
   {
     "type": "mutation",
@@ -3503,7 +3464,7 @@
     "vitamin_cost": 300,
     "visibility": 3,
     "ugliness": 3,
-    "enchantments": [ { "values": [ { "value": "INTELLIGENCE", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_INT_UP_4_0" ]
   },
   {
     "type": "mutation",
@@ -3553,7 +3514,7 @@
     "types": [ "PER" ],
     "changes_to": [ "PER_UP_2" ],
     "points": 1,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_0" ]
   },
   {
     "type": "mutation",
@@ -3566,7 +3527,7 @@
     "changes_to": [ "PER_UP_3", "PER_ALPHA" ],
     "points": 2,
     "vitamin_cost": 170,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_2_0" ]
   },
   {
     "type": "mutation",
@@ -3581,7 +3542,7 @@
     "strict_threshreq": true,
     "points": 3,
     "vitamin_cost": 200,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_3_0" ]
   },
   {
     "type": "mutation",
@@ -3597,7 +3558,7 @@
     "strict_threshreq": true,
     "points": 4,
     "vitamin_cost": 300,
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": 7 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PER_UP_4_0" ]
   },
   {
     "type": "mutation",
@@ -3951,7 +3912,7 @@
     "vitamin_cost": 175,
     "flags": [ "PRED2" ],
     "social_modifiers": { "intimidate": 3 },
-    "enchantments": [ { "condition": "ALWAYS", "values": [ { "value": "COMBAT_CATCHUP", "multiply": 2.0 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PRED2_0" ]
   },
   {
     "type": "mutation",
@@ -3980,7 +3941,7 @@
     "vitamin_cost": 190,
     "flags": [ "PRED3" ],
     "social_modifiers": { "intimidate": 4 },
-    "enchantments": [ { "values": [ { "value": "COMBAT_CATCHUP", "multiply": 2.0 }, { "value": "INTELLIGENCE", "add": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PRED3_0" ]
   },
   {
     "type": "mutation",
@@ -3997,7 +3958,7 @@
     "vitamin_cost": 195,
     "flags": [ "PRED4" ],
     "social_modifiers": { "intimidate": 5 },
-    "enchantments": [ { "values": [ { "value": "COMBAT_CATCHUP", "multiply": 3.0 }, { "value": "INTELLIGENCE", "add": -3 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PRED4_0" ]
   },
   {
     "type": "mutation",
@@ -4153,17 +4114,7 @@
     "vitamin_cost": 60,
     "armor": [ { "part_types": [ "torso", "head", "arm", "hand", "leg", "foot", "mouth", "tail" ], "bash": 2 } ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MOVE_COST", "multiply": 0.05 },
-          { "value": "ATTACK_SPEED", "multiply": 0.05 },
-          { "value": "MAX_HP", "multiply": 0.05 },
-          { "value": "MOVECOST_SWIM_MOD", "multiply": 0.2 },
-          { "value": "DODGE_CHANCE", "add": -1 },
-          { "value": "CARRY_WEIGHT", "multiply": 0.15 },
-          { "value": "WEIGHT", "multiply": 0.05 }
-        ]
-      }
+      "INLINE_ENCH_DENSE_BONES_0"
     ]
   },
   {
@@ -4711,15 +4662,7 @@
     "points": 0,
     "vitamin_cost": 250,
     "enchantments": [
-      {
-        "values": [
-          { "value": "SLEEPINESS_REGEN", "multiply": 0.333 },
-          { "value": "SLEEPINESS", "multiply": 0.5 },
-          { "value": "METABOLISM", "multiply": 0.333 },
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.133 }
-        ]
-      }
+      "INLINE_ENCH_MET_RAT_0"
     ]
   },
   {
@@ -4808,13 +4751,7 @@
     "vitamin_cost": 210,
     "flags": [ "MEND_ALL" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "MENDING_MODIFIER", "multiply": 19 },
-          { "value": "REGEN_HP", "multiply": 0.5 },
-          { "value": "REGEN_HP_AWAKE", "multiply": 0.2 }
-        ]
-      }
+      "INLINE_ENCH_REGEN_LIZ_0"
     ]
   },
   {
@@ -4870,7 +4807,7 @@
     "vitamin_cost": 160,
     "visibility": 7,
     "ugliness": 4,
-    "enchantments": [ { "ench_effects": [ { "effect": "effect_slit_nostrils_breathing_penalty", "intensity": 1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_SLIT_NOSTRILS_0" ]
   },
   {
     "type": "mutation",
@@ -4967,16 +4904,7 @@
     "mixed_effect": true,
     "vitamin_cost": 160,
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "incoming_damage_mod_post_absorbed": [ { "type": "bash", "multiply": 0.4 } ],
-        "values": [
-          { "value": "MOVE_COST", "multiply": -0.1 },
-          { "value": "ATTACK_SPEED", "multiply": -0.1 },
-          { "value": "CARRY_WEIGHT", "multiply": -0.2 },
-          { "value": "WEIGHT", "multiply": -0.05 }
-        ]
-      }
+      "INLINE_ENCH_LIGHT_BONES_0"
     ]
   },
   {
@@ -4991,15 +4919,7 @@
     "mixed_effect": true,
     "vitamin_cost": 60,
     "enchantments": [
-      {
-        "incoming_damage_mod_post_absorbed": [ { "type": "bash", "multiply": 0.8 } ],
-        "values": [
-          { "value": "MOVE_COST", "multiply": -0.2 },
-          { "value": "ATTACK_SPEED", "multiply": -0.2 },
-          { "value": "CARRY_WEIGHT", "multiply": -0.4 },
-          { "value": "WEIGHT", "multiply": -0.1 }
-        ]
-      }
+      "INLINE_ENCH_HOLLOW_BONES_0"
     ]
   },
   {
@@ -5015,8 +4935,8 @@
     "vitamin_cost": 210,
     "visibility": 1,
     "enchantments": [
-      { "values": [ { "value": "PERCEPTION", "add": 2 } ] },
-      { "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_avian" } ] }
+      "INLINE_ENCH_BIRD_EYE_0",
+      "INLINE_ENCH_BIRD_EYE_1"
     ]
   },
   {
@@ -5032,7 +4952,7 @@
     "points": -5,
     "purifiable": false,
     "vitamin_cost": 210,
-    "enchantments": [ { "values": [ { "value": "KCAL", "multiply": -0.4 }, { "value": "STOMACH_SIZE_MULTIPLIER", "multiply": -0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_GIZZARD_0" ]
   },
   {
     "type": "mutation",
@@ -5051,7 +4971,7 @@
     "destroys_gear": true,
     "restricts_gear": [ "mouth" ],
     "wet_protection": [ { "part": "mouth", "ignored": 1 } ],
-    "enchantments": [ { "modified_bodyparts": [ { "lose": "mouth" }, { "gain": "beak_bird" } ] } ]
+    "enchantments": [ "INLINE_ENCH_BEAK_0" ]
   },
   {
     "type": "mutation",
@@ -5161,9 +5081,7 @@
     "restricts_gear": [ "leg_l", "leg_r", "foot_l", "foot_r" ],
     "allowed_items": [ "ALLOWS_GASTROPOD_FOOT" ],
     "enchantments": [
-      {
-        "values": [ { "value": "MOVECOST_FLATGROUND_MOD", "multiply": 0.25 }, { "value": "FOOTSTEP_NOISE", "multiply": -0.75 } ]
-      },
+      "INLINE_ENCH_GASTROPOD_FOOT_0",
       {
         "condition": {
           "and": [ { "not": { "u_has_trait": "BIONIC_LEG_BASIC_LEFT" } }, { "not": { "u_has_trait": "BIONIC_LEG_BASIC_RIGHT" } } ]
@@ -5716,7 +5634,7 @@
     "vitamin_cost": 210,
     "social_modifiers": { "lie": -5, "persuade": -5 },
     "enchantments": [
-      { "values": [ { "value": "SKILL_RUST_RESIST", "multiply": 0.5 }, { "value": "LEARNING_FOCUS", "multiply": -0.05 } ] }
+      "INLINE_ENCH_INTERSTICE_MIND_0"
     ],
     "flags": [ "NUMB" ]
   },
@@ -5932,11 +5850,7 @@
     "ugliness": 5,
     "restricts_gear": [ "eyes" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [ { "value": "BONUS_DODGE", "add": 1 } ],
-        "modified_bodyparts": [ { "lose": "eyes" }, { "gain": "eyes_compound" } ]
-      }
+      "INLINE_ENCH_COMPOUND_EYES_0"
     ]
   },
   {
@@ -6185,7 +6099,7 @@
     "points": -2,
     "vitamin_cost": 160,
     "bodytemp_modifiers": [ -250, -250 ],
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.25 }, { "value": "REGEN_HP_AWAKE", "multiply": -0.166 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ROT1_0" ]
   },
   {
     "type": "mutation",
@@ -6199,7 +6113,7 @@
     "points": -8,
     "vitamin_cost": 250,
     "bodytemp_modifiers": [ -750, -750 ],
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -0.25 }, { "value": "REGEN_HP_AWAKE", "multiply": -0.266 } ] } ]
+    "enchantments": [ "INLINE_ENCH_ROT2_0" ]
   },
   {
     "type": "mutation",
@@ -7098,7 +7012,7 @@
     "changes_to": [ "PONDEROUS2" ],
     "points": -3,
     "vitamin_cost": 160,
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": 0.1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PONDEROUS1_0" ]
   },
   {
     "type": "mutation",
@@ -7111,7 +7025,7 @@
     "changes_to": [ "PONDEROUS3" ],
     "points": -5,
     "vitamin_cost": 210,
-    "enchantments": [ { "values": [ { "value": "MOVE_COST", "multiply": 0.2 } ] } ]
+    "enchantments": [ "INLINE_ENCH_PONDEROUS2_0" ]
   },
   {
     "type": "mutation",
