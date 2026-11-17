@@ -43,10 +43,5 @@
         ]
       }
     ]
-  },
-  {
-    "id": "IS_GRIPPED",
-    "type": "json_flag",
-    "info": "You are holding this object really hard, so hard it cannot be removed from your hand unless you die.  Activate the unopenable grip perk again to be able to drop this object."
   }
 ]

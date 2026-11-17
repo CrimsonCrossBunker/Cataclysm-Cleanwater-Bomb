@@ -64,3 +64,6 @@ require("combat_techniques")
 require("nested_recipes")
 
 require("morale_types")
+
+require("flags")
+require("vehicle_part_flags")

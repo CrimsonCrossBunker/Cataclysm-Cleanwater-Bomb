@@ -8,3 +8,5 @@ local definition = content.Blacklist {
 }
 definition:species("EUZHVIL")
 content.add(definition)
+
+require("flags")

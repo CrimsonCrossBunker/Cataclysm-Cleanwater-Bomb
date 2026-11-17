@@ -1,11 +1,5 @@
 [
   {
-    "id": "SKY_ISLAND_NO_RAID_SPAWN",
-    "type": "json_flag",
-    "name": "Sky Island Spawn Prevention",
-    "//": "used to specials to not spawn in the raid dimension, notably faction bases"
-  },
-  {
     "type": "overmap_special",
     "id": "Cabin_Lapin",
     "copy-from": "Cabin_Lapin",

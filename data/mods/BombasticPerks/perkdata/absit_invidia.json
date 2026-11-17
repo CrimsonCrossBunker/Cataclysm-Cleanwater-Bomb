@@ -1,10 +1,5 @@
 [
   {
-    "id": "ANTI_EVIL_EYE_GEAR",
-    "type": "json_flag",
-    "info": "Wearing this will protect you from the Evil Eye."
-  },
-  {
     "id": "holy_symbol",
     "type": "ITEM",
     "subtypes": [ "ARMOR" ],

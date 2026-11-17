@@ -1,12 +1,5 @@
 [
   {
-    "id": "SKY_ISLAND",
-    "type": "json_flag",
-    "name": "Sky Island Specials",
-    "//": "Mainly used to have a single whitelist flag for region settings to disable all other special spawns",
-    "//1": "Can be used in the future for other islands to find in the home dimension?"
-  },
-  {
     "type": "dimension",
     "id": "dimension_sky_island_region",
     "region_layout": "dimension_sky_island_region"
@@ -146,11 +139,6 @@
     "id": "sky_island_raid_region_cold",
     "copy-from": "dimension_sky_island_region",
     "weather": "sky_island_raid_weather_cold"
-  },
-  {
-    "id": "MEGACITY_FLAG",
-    "type": "json_flag",
-    "name": ""
   },
   {
     "type": "dimension",

@@ -1,9 +1,5 @@
 [
   {
-    "id": "HIGH_HEELS",
-    "type": "json_flag"
-  },
-  {
     "id": "heels",
     "copy-from": "heels",
     "type": "ITEM",

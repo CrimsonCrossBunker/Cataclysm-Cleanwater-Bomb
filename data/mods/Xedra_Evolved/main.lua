@@ -57,3 +57,5 @@ ccb.runtime.on("game:game_start", "initialize_encounter_timer")
 require("nested_recipes")
 
 require("morale_types")
+
+require("flags")

@@ -74,3 +74,5 @@ ccb.runtime.on("game:game_start", "count_starting_attunements")
 require("nested_recipes")
 
 require("morale_types")
+
+require("flags")
