@@ -10,4 +10,4 @@ require("lua.ammunition_types")
 
 require("lua.snippets")
 
-require("requirements")
+require("lua.requirements")
