@@ -458,10 +458,7 @@
     "vitamin_cost": 60,
     "visibility": 1,
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_has_weapon" }, { "math": [ "u_encumbrance('hand_l') + u_encumbrance('hand_r') <= 0" ] } ] },
-        "melee_damage_bonus": [ { "type": "stab", "add": 0.5 } ]
-      }
+      "INLINE_ENCH_NAILS_0"
     ]
   },
   {

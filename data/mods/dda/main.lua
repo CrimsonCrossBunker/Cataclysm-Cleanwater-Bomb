@@ -116,3 +116,5 @@ require("thermal_scaling")
 require("innate_enchantments")
 
 require("body_enchantments")
+
+require("contextual_enchantments")
