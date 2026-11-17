@@ -16,3 +16,5 @@ content.add(definition)
 require("speech")
 
 require("ammo_effects")
+
+require("snippets")
