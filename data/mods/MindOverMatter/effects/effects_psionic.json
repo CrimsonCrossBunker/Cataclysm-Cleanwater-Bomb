@@ -662,7 +662,7 @@
           }
         ]
       },
-      { "values": [ { "value": "ATTACK_SPEED", "multiply": -0.25 }, { "value": "RANGE", "multiply": -1.99 } ] }
+      "INLINE_ENCH_effect_biokin_hurricane_blows_2_1"
     ],
     "flags": [ "NO_PSIONICS" ]
   },
@@ -821,7 +821,7 @@
     "desc": [ "Your senses are overwhelmed!" ],
     "apply_message": "Your senses are overwhelmed!",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "PERCEPTION", "add": -3 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_clair_better_senses_pain_0" ],
     "base_mods": { "pain_min": [ 1 ], "pain_chance": [ 4 ], "pain_max_val": [ 20 ], "pain_tick": [ 5 ] }
   },
   {
@@ -1107,7 +1107,7 @@
     "desc": [ "Do it.  Take the shot." ],
     "rating": "good",
     "max_duration": "10 seconds",
-    "enchantments": [ { "values": [ { "value": "RANGED_DAMAGE", "multiply": 1.5 }, { "value": "WEAPON_DISPERSION", "multiply": -1 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_clair_perfect_shot_0" ]
   },
   {
     "type": "effect_type",
@@ -1427,7 +1427,7 @@
     "apply_message": "A faint light springs up over your hand.",
     "remove_message": "The glow above your hand fades.",
     "rating": "good",
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_photokin_light_local_0" ]
   },
   {
     "type": "effect_type",
@@ -1508,7 +1508,7 @@
     "remove_message": "The surrounding air shimmers once more as your light barrier fades.",
     "rating": "good",
     "flags": [ "PHOTOKIN_CHAR_IMMUNE", "NO_RADIATION", "GLARE_RESIST" ],
-    "enchantments": [ { "values": [ { "value": "LUMINATION", "add": 15 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_photokin_light_barrier_0" ]
   },
   {
     "type": "effect_type",
@@ -1966,7 +1966,7 @@
     "max_duration": "7 days",
     "max_intensity": 95,
     "blocks_effects": [ "blisters" ],
-    "enchantments": [ { "incoming_damage_mod": [ { "type": "heat", "multiply": -1 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_pyrokinetic_flame_immunity_0" ],
     "flags": [ "HEAT_IMMUNE" ]
   },
   {
@@ -2161,14 +2161,7 @@
     "max_duration": "20 seconds",
     "removes_effects": [ "grabbed" ],
     "enchantments": [
-      {
-        "incoming_damage_mod": [
-          { "type": "bash", "add": -100000 },
-          { "type": "stab", "add": -100000 },
-          { "type": "cut", "add": -100000 },
-          { "type": "bullet", "add": -100000 }
-        ]
-      }
+      "INLINE_ENCH_effect_telekinetic_aegis_0"
     ],
     "limb_score_mods": [ { "limb_score": "lift", "modifier": 0.51 }, { "limb_score": "grip", "modifier": 0.25 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD", "EFFECT_IMPEDING" ]
@@ -2422,7 +2415,7 @@
     "desc": [ "You will automatically teleport enemies that strike you away from yourself." ],
     "remove_message": "The surrounding matter feels real again.",
     "rating": "good",
-    "enchantments": [ { "hit_me_effect": [ { "id": "teleport_reactive_displacement_teleport" } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_teleport_reactive_displacement_0" ]
   },
   {
     "type": "effect_type",
@@ -2443,7 +2436,7 @@
     "max_duration": 3000,
     "dur_add_perc": 5,
     "show_in_info": true,
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.25 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_teleport_slow_0" ],
     "immune_flags": [ "DIMENSIONAL_ANCHOR", "TELESTOP", "TELEPORT_IMMUNE" ]
   },
   {
@@ -2702,7 +2695,7 @@
     "max_duration": "300 minutes",
     "show_in_info": true,
     "base_mods": { "hit_mod": [ -1 ] },
-    "enchantments": [ { "values": [ { "value": "SPEED", "multiply": -0.05 }, { "value": "REGEN_HP", "multiply": -0.5 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_vitakin_hurt_0" ]
   },
   {
     "type": "effect_type",
@@ -2758,10 +2751,7 @@
     "remove_message": "You yawn involuntarily.",
     "base_mods": { "sleepiness_min": [ -1 ], "sleepiness_chance": [ 1 ], "sleepiness_tick": [ 60 ] },
     "enchantments": [
-      {
-        "values": [ { "value": "SLEEPINESS", "multiply": -1 }, { "value": "LEARNING_FOCUS", "add": -15 } ],
-        "skills": [ { "value": "speech", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_effect_vitakin_no_need_for_sleep_0"
     ]
   },
   {
@@ -2781,7 +2771,7 @@
     "rating": "bad",
     "show_in_info": true,
     "base_mods": { "dodge_mod": [ -3 ], "hit_mod": [ -3 ] },
-    "enchantments": [ { "values": [ { "value": "REGEN_HP", "multiply": -1 }, { "value": "SPEED", "multiply": -0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_vita_degenerating_touch_0" ]
   },
   {
     "type": "effect_type",

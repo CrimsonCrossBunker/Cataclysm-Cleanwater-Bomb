@@ -404,7 +404,7 @@
       {
         "values": [ { "value": "CLIMATE_CONTROL_CHILL", "add": { "math": [ "-15 - ( u_vitamin('vitamin_psionic_drain') / 10)" ] } } ]
       },
-      { "values": [ { "value": "SWEAT_MULTIPLIER", "multiply": 5 } ] }
+      "INLINE_ENCH_effect_pyrokin_overload_1"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.7 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
@@ -435,7 +435,7 @@
     "apply_message": "Your vision doesn't agree with where things seem to actually be",
     "remove_message": "Distances resolve themselves again.",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "OBTAIN_COST_MULTIPLIER", "multiply": 0.1 }, { "value": "MOVE_COST", "multiply": 0.33 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_teleporter_overload_0" ]
   },
   {
     "type": "effect_type",
@@ -455,7 +455,7 @@
     "remove_message": "The oppressive weight vanishes.",
     "rating": "bad",
     "max_intensity": 10,
-    "enchantments": [ { "values": [ { "value": "CARRY_WEIGHT", "multiply": 0.75 }, { "value": "MOVE_COST", "multiply": 0.5 } ] } ],
+    "enchantments": [ "INLINE_ENCH_effect_telekin_overload_0" ],
     "limb_score_mods": [ { "limb_score": "balance", "modifier": 0.7 }, { "limb_score": "reaction", "modifier": 0.7 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
   },
@@ -474,7 +474,7 @@
       {
         "values": [ { "value": "REGEN_HP", "multiply": { "math": [ "-0.125 - ( u_vitamin('vitamin_psionic_drain') * -0.0035)" ] } } ]
       },
-      { "values": [ { "value": "MENDING_MODIFIER", "multiply": -0.5 } ] }
+      "INLINE_ENCH_effect_vitakin_overload_1"
     ],
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.8 }, { "limb_score": "manip", "modifier": 0.8 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]

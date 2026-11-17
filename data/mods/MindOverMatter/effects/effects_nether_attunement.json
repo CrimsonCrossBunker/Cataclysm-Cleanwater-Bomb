@@ -70,7 +70,7 @@
     "desc": [ "You have to work extra hard to draw enough energy to use your powers." ],
     "remove_message": "Your difficulty in drawing on the Nether fades.",
     "rating": "bad",
-    "enchantments": [ { "values": [ { "value": "CASTING_TIME_MULTIPLIER", "multiply": 4 } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_nether_attunement_attenuation_0" ]
   },
   {
     "type": "effect_type",
@@ -132,14 +132,7 @@
     "remove_message": "Your fever finally breaks.",
     "rating": "bad",
     "enchantments": [
-      {
-        "values": [
-          { "value": "STRENGTH", "add": -2 },
-          { "value": "DEXTERITY", "add": -1 },
-          { "value": "CLIMATE_CONTROL_CHILL", "add": -10 },
-          { "value": "SWEAT_MULTIPLIER", "multiply": 2 }
-        ]
-      }
+      "INLINE_ENCH_effect_nether_attunement_pyrokinetic_fever_0"
     ],
     "limb_score_mods": [
       { "limb_score": "grip", "modifier": 0.8 },
@@ -175,7 +168,7 @@
     "apply_message": "A roiling fog coalesces out of the surrounding air.",
     "remove_message": "The roiling fog surrounding you dissipates.",
     "rating": "bad",
-    "enchantments": [ { "emitter": "emit_fog_plume" } ]
+    "enchantments": [ "INLINE_ENCH_effect_nether_attunement_pyrokinetic_fog_0" ]
   },
   {
     "type": "effect_type",
