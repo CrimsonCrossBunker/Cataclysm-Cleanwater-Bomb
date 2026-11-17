@@ -137,16 +137,8 @@
     "rating": "good",
     "max_duration": 40000,
     "enchantments": [
-      {
-        "values": [
-          { "value": "NIGHT_VIS", "add": { "math": [ "((u_spell_level('dark_sight')) + 3)" ] } },
-          { "value": "NIGHT_VIS", "add": { "math": [ "((u_spell_level('dark_sight')) + 3)" ] } }
-        ]
-      },
-      {
-        "condition": { "and": [ { "not": "is_day" }, { "math": [ "u_spell_level('dark_sight') >= 4" ] } ] },
-        "values": [ { "value": "OVERMAP_SIGHT", "add": { "math": [ "u_spell_level('dark_sight') / 4" ] } } ]
-      }
+      "INLINE_ENCH_dark_sight_0",
+      "INLINE_ENCH_dark_sight_1"
     ]
   },
   {
@@ -1624,10 +1616,7 @@
     "remove_message": "Nature no longer speeds your movements.",
     "enchantments": [
       "INLINE_ENCH_effect_druid_traverse_the_wilds_0",
-      {
-        "condition": { "math": [ "u_spell_level('druid_traverse_the_wilds') > 7" ] },
-        "values": [ { "value": "PHASE_DISTANCE", "add": 2 } ]
-      }
+      "INLINE_ENCH_effect_druid_traverse_the_wilds_1"
     ]
   },
   {
