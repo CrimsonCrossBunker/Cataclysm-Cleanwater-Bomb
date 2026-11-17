@@ -810,10 +810,12 @@ std::optional<double> invoke_enchantment_number_handler(
     const std::string_view scope, const std::string_view target,
     const std::string_view part, const std::string_view handler_id,
     const const_dialogue &dialogue,
-    const std::optional<std::vector<std::string>> &load_skills )
+    const std::optional<std::vector<std::string>> &load_skills,
+    const std::optional<std::vector<std::string>> &load_spell_levels )
 {
     const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
-    if( !owner || ( !owner->world_is_ready && !load_skills ) ) {
+    const bool load_inputs = load_skills || load_spell_levels;
+    if( !owner || ( !owner->world_is_ready && !load_inputs ) ) {
         return std::nullopt;
     }
     const auto handler = owner->handlers.find( std::string( handler_id ) );
@@ -824,16 +826,25 @@ std::optional<double> invoke_enchantment_number_handler(
     }
     sol::table payload = enchantment_handler_payload( *owner, dialogue, enchantment, scope,
                          target, part, owner->world_is_ready );
-    if( load_skills && dialogue.has_alpha ) {
+    if( load_inputs && dialogue.has_alpha ) {
         const const_talker &speaker = *dialogue.const_actor( false );
         payload["stats"] = owner->lua->create_table_with(
                                "strength", speaker.str_cur(), "dexterity", speaker.dex_cur(),
                                "intelligence", speaker.int_cur(), "perception", speaker.per_cur() );
-        sol::table skills = owner->lua->create_table( 0, static_cast<int>( load_skills->size() ) );
-        for( const std::string &skill : *load_skills ) {
-            skills[skill] = speaker.get_skill_level( skill_id( skill ) );
+        if( load_skills ) {
+            sol::table skills = owner->lua->create_table( 0, static_cast<int>( load_skills->size() ) );
+            for( const std::string &skill : *load_skills ) {
+                skills[skill] = speaker.get_skill_level( skill_id( skill ) );
+            }
+            payload["skills"] = std::move( skills );
         }
-        payload["skills"] = std::move( skills );
+        if( load_spell_levels ) {
+            sol::table levels = owner->lua->create_table( 0, static_cast<int>( load_spell_levels->size() ) );
+            for( const std::string &spell : *load_spell_levels ) {
+                levels[spell] = speaker.get_spell_level( spell_id( spell ) );
+            }
+            payload["spell_levels"] = std::move( levels );
+        }
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope callback_guard( *owner );

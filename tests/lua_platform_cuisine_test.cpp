@@ -45,6 +45,7 @@
 #include "lua_platform_canvas.h"
 #include "lua_platform_content.h"
 #include "lua_platform_content_items.h"
+#include "magic.h"
 #include "magic_enchantment.h"
 #include "mapdata.h"
 #include "mtype.h"
@@ -360,8 +361,12 @@ ccb.runtime.handler("ready_speed", function()
     assert(ccb.services.characters.avatar())
     return 6
 end)
+ccb.runtime.handler("loaded_perception", function(ctx)
+    return ctx.spell_levels.test_spell_pew
+end)
 enchantment:value("STRENGTH", { add_handler = "loaded_strength", load_skills = { "cooking" } })
 enchantment:value("SPEED", { add_handler = "ready_speed" })
+enchantment:value("PERCEPTION", { add_handler = "loaded_perception", load_spell_levels = { "test_spell_pew" } })
 ccb.content.add(enchantment)
 )lua" );
     std::string error;
@@ -375,13 +380,16 @@ ccb.content.add(enchantment)
     restoring_npc.set_skill_level( skill_id( "cooking" ), 4 );
     const enchantment_id id( "ccb_platform_load_enchantment" );
     REQUIRE( id.is_valid() );
-    const auto check_load_values = [&]() {
+    const auto check_load_values = [&]( const int spell_level ) {
         enchant_cache cache;
         cache.force_add( id.obj(), restoring_npc );
         CHECK( cache.get_value_add( enchant_vals::mod::STRENGTH ) == restoring_npc.get_str() + 4 );
         CHECK( cache.get_value_add( enchant_vals::mod::SPEED ) == 0 );
+        CHECK( cache.get_value_add( enchant_vals::mod::PERCEPTION ) == spell_level );
     };
-    check_load_values();
+    check_load_values( -1 );
+    restoring_npc.magic->set_spell_level( spell_id( "test_spell_pew" ), 4, &restoring_npc );
+    check_load_values( 4 );
     bool finished_native_load = false;
     cata::lua_platform::on_world_ready( false, [&]() {
         enchant_cache cache;
@@ -391,7 +399,7 @@ ccb.content.add(enchantment)
     } );
     CHECK( finished_native_load );
     cata::lua_platform::on_world_load_started();
-    check_load_values();
+    check_load_values( 4 );
 }
 
 TEST_CASE( "lua_first_enchantment_activation_reads_loaded_character_inputs",

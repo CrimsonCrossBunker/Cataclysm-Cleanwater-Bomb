@@ -318,7 +318,8 @@ std::optional<double> invoke_enchantment_number_handler(
     std::string_view scope, std::string_view target,
     std::string_view part, std::string_view handler_id,
     const const_dialogue &dialogue,
-    const std::optional<std::vector<std::string>> &load_skills = std::nullopt );
+    const std::optional<std::vector<std::string>> &load_skills = std::nullopt,
+    const std::optional<std::vector<std::string>> &load_spell_levels = std::nullopt );
 std::optional<bool> invoke_spell_condition_handler(
     std::string_view mod_id, std::string_view spell_id_value,
     std::string_view phase, std::string_view handler_id,

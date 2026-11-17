@@ -5234,6 +5234,7 @@ function ComputerAccessContext:set_value(key, value) end
 ---@class CcbEnchantmentNumericInputs
 ---@field stats? { strength: integer, dexterity: integer, intelligence: integer, perception: integer } Detached current stats of the native speaker, when present.
 ---@field skills? table<string, integer> Detached effective skill levels requested via load_skills, truncated as in native dialogue.
+---@field spell_levels? table<string, integer> Detached effective levels requested via load_spell_levels, with -1 for an unknown spell.
 
 ---@class CcbEnchantmentValueModifierOptions
 ---@field add? number
@@ -5241,6 +5242,7 @@ function ComputerAccessContext:set_value(key, value) end
 ---@field add_handler? string Named callback returning a finite additive modifier.
 ---@field multiply_handler? string Named callback returning a finite multiplicative modifier.
 ---@field load_skills? string[] Enables numeric evaluation during save reconstruction. Use an empty array for stats only. Before world_ready the callback uses detached stats and skills and world services are unavailable.
+---@field load_spell_levels? string[] Enables numeric evaluation during save reconstruction with detached stats and the requested spell levels.
 
 ---@class EnchantmentDefinition
 ---@field active_when any
