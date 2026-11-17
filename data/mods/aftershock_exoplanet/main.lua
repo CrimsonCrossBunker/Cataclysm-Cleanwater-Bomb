@@ -67,3 +67,5 @@ require("bionic_enchantments")
 require("item_enchantments")
 
 require("weather_generators")
+
+require("weather_types")
