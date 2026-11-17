@@ -69,7 +69,7 @@
         },
         "mutations": [ "TRAIT_EWWWW_DE_ZOMBIE" ]
       },
-      { "mutations": [ "TRAIT_EWWWW_DE_ZOMBIE_SCENT" ] }
+      "INLINE_ENCH_effect_ewwww_de_zombie_1"
     ]
   },
   {

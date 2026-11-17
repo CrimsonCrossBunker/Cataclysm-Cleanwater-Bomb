@@ -5,3 +5,5 @@ require("flags")
 require("snippets")
 
 require("conditional_enchantments")
+
+require("effect_enchantments")

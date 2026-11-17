@@ -49,14 +49,7 @@
     "rating": "good",
     "removes_effects": [ "dazed", "downed", "bleed", "blind", "deaf", "stunned" ],
     "enchantments": [
-      {
-        "condition": "ALWAYS",
-        "values": [
-          { "value": "EVASION", "add": 1 },
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 2000 },
-          { "value": "CLIMATE_CONTROL_CHILL", "add": 2000 }
-        ]
-      }
+      "INLINE_ENCH_effect_perk_second_chance_0"
     ],
     "scaling_mods": { "stamina_min": [ 2000 ], "stamina_max": [ 4500 ], "stamina_chance": [ 1 ] },
     "flags": [ "PAIN_IMMUNE" ]
