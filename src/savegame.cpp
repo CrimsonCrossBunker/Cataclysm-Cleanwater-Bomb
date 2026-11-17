@@ -891,10 +891,11 @@ void overmap::unserialize( const JsonObject &jsobj )
 // MA mod's pregenerated overmaps that are shimmed in by overmap::generate.
 void overmap::unserialize_omap( const JsonValue &jsin, const cata_path &json_path )
 {
-    const region_settings_lake &settings_lake = settings->get_settings_lake();
-    const region_settings_ocean &settings_ocean = settings->get_settings_ocean();
-    const int lake_depth = settings_lake.lake_depth;
-    const int ocean_depth = settings_ocean.ocean_depth;
+    // The files can contain water even in regions with procedural water disabled.
+    const int lake_depth = settings->overmap_lake ? settings->get_settings_lake().lake_depth :
+                           region_settings_lake().lake_depth;
+    const int ocean_depth = settings->overmap_ocean ? settings->get_settings_ocean().ocean_depth :
+                            region_settings_ocean().ocean_depth;
 
     JsonArray ja = jsin.get_array();
     JsonObject jo = ja.next_object();
