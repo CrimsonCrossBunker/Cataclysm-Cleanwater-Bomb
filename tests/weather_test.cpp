@@ -524,6 +524,16 @@ TEST_CASE( "room_heat_survives_weather_save_load", "[weather][save]" )
         weather_manager::unserialize_all( snapshot );
         CHECK( saved_weather_state() == saved );
     }
+    SECTION( "out of range room heat assignments are rejected" ) {
+        const std::string index = GENERATE( "1", "18446744073709551615" );
+        std::string invalid = input;
+        const std::string assignment = "\"(10,20,0)\": 0";
+        const std::string::size_type offset = invalid.find( assignment );
+        REQUIRE( offset != std::string::npos );
+        invalid.replace( offset, assignment.size(), "\"(10,20,0)\": " + index );
+        const JsonObject invalid_state = json_loader::from_string( invalid );
+        CHECK_THROWS_AS( weather_manager::unserialize_all( invalid_state ), JsonError );
+    }
     SECTION( "old saves do not retain heat from the previous game" ) {
         weather_manager::unserialize_all( json_loader::from_string(
                                               R"({"temperature":50,"winddirection":0,"windspeed":0})" ) );
