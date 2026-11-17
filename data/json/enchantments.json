@@ -179,14 +179,6 @@
     "ench_effects": [ { "effect": "quadruped_half", "intensity": 1 } ]
   },
   {
-    "id": "ench_dextrous_paws_need_practice",
-    "type": "enchantment",
-    "condition": {
-      "and": [ { "u_has_any_trait": [ "PAWS_LITTLE", "PAWS_RAT" ] }, { "math": [ "u_progress_dextrous_paws_usage < 10" ] } ]
-    },
-    "ench_effects": [ { "effect": "effect_dextrous_paws_no_practice_manipulation_penalty", "intensity": 1 } ]
-  },
-  {
     "//": "This is overwritten in MoM",
     "id": "ench_mom_incense_nether_attunement",
     "type": "enchantment",
