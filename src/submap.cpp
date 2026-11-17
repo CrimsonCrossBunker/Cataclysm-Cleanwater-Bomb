@@ -65,21 +65,6 @@ submap::~submap() = default;
 
 submap &submap::operator=( submap && ) noexcept = default;
 
-void submap::prepare_field_index()
-{
-    if( field_index_valid_ ) {
-        return;
-    }
-    for( int x = 0; x < SEEX; ++x ) {
-        field_rows_[x].reset();
-        for( int y = 0; y < SEEY; ++y ) {
-            field_rows_[x].set( y, exposed_fields_.test( x * SEEY + y ) ||
-                                get_field_count( point_sm_ms( x, y ) ) != 0 );
-        }
-    }
-    field_index_valid_ = true;
-}
-
 void submap::clear_fields( const point_sm_ms &p )
 {
     field &f = get_field( p );
@@ -249,7 +234,6 @@ bool submap::is_open_air( const point_sm_ms &p ) const
 
 void submap::rotate( int turns )
 {
-    invalidate_field_index();
     if( is_uniform() ) {
         return;
     }
@@ -341,7 +325,6 @@ void submap::rotate( int turns )
 
 void submap::mirror( bool horizontally )
 {
-    invalidate_field_index();
     if( is_uniform() ) {
         return;
     }
@@ -415,7 +398,6 @@ void submap::mirror( bool horizontally )
 
 void submap::revert_submap( submap &sr )
 {
-    invalidate_field_index();
     geometry_version_.changed();
     reverted = true;
     if( sr.is_uniform() ) {
@@ -490,7 +472,6 @@ void submap::update_lum_rem( const point_sm_ms &p, const item &i )
 
 void submap::merge_submaps( submap *copy_from, bool copy_from_is_overlay )
 {
-    invalidate_field_index();
     geometry_version_.changed();
     this->field_count = 0;
 

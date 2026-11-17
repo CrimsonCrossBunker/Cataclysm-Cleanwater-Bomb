@@ -551,16 +551,6 @@ void zzip::destroy_private_dctx( void *dctx )
 
 bool zzip::add_file( std::filesystem::path const &zzip_relative_path, std::string_view content )
 {
-    // Exact comparison avoids another compressed frame and footer for unchanged data.
-    // Do not retain snapshots or allocate according to an untrusted archive size.
-    if( !content.empty() && content.size() <= 4 * 1024 * 1024 &&
-        get_file_size( zzip_relative_path ) == content.size() ) {
-        const std::vector<std::byte> previous = get_file( zzip_relative_path );
-        if( previous.size() == content.size() &&
-            std::memcmp( previous.data(), content.data(), content.size() ) == 0 ) {
-            return true;
-        }
-    }
     size_t estimated_size = ZSTD_compressBound( content.length() );
 
     JsonObject footer_copy = copy_footer();

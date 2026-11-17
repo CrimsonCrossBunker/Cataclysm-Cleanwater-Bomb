@@ -1,13 +1,11 @@
 #include "mapbuffer.h"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <exception>
 #include <filesystem>
 #include <functional>
-#include <fstream>
 #include <optional>
 #include <set>
 #include <sstream>
@@ -488,26 +486,6 @@ void mapbuffer::save_quad(
 
     std::string s = std::move( stringout ).str();
 
-    if( !z && file_exists && !( regenerable_uniform && reverted_to_uniform ) ) {
-        std::error_code error;
-        if( std::filesystem::file_size( filename.get_unrelative_path(), error ) == s.size() && !error ) {
-            std::ifstream previous( filename.get_unrelative_path(), std::ios::binary );
-            std::array<char, 16 * 1024> chunk;
-            std::size_t offset = 0;
-            while( previous && offset < s.size() ) {
-                const std::size_t count = std::min( chunk.size(), s.size() - offset );
-                previous.read( chunk.data(), count );
-                if( previous.gcount() != static_cast<std::streamsize>( count ) ||
-                    !std::equal( chunk.data(), chunk.data() + count, s.data() + offset ) ) {
-                    break;
-                }
-                offset += count;
-            }
-            if( previous && offset == s.size() ) {
-                return;
-            }
-        }
-    }
     if( z ) {
         if( !z->add_file( filename.get_relative_path().filename(), s ) ) {
             throw std::runtime_error( "Failed writing map archive " + zzip_name.generic_u8string() );

@@ -483,7 +483,7 @@ TEST_CASE( "owned_uniform_maps_persist_without_a_terrain_resolver", "[map_storag
     }
 }
 
-TEST_CASE( "map_storage_skips_identical_writes_but_persists_live_mutations", "[map_storage][save]" )
+TEST_CASE( "map_storage_repeated_saves_persist_live_mutations", "[map_storage][save]" )
 {
     const bool compressed = GENERATE( false, true );
     storage_fixture fixture;
@@ -499,11 +499,7 @@ TEST_CASE( "map_storage_skips_identical_writes_but_persists_live_mutations", "[m
         }
     }
     REQUIRE_FALSE( saved.empty() );
-    const auto marker = std::filesystem::file_time_type::clock::now() - std::chrono::hours( 1 );
-    std::filesystem::last_write_time( saved, marker );
-    const auto stored_time = std::filesystem::last_write_time( saved );
     buffer.save( false );
-    CHECK( std::filesystem::last_write_time( saved ) == stored_time );
     submap *sm = buffer.lookup_submap( base );
     REQUIRE( sm );
     sm->set_ter( point_sm_ms( 1, 1 ), ter_t_soil );
