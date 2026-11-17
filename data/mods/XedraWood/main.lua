@@ -59,3 +59,5 @@ require("overlay_enchantments")
 require("inline_special_vision")
 
 require("progression_enchantments")
+
+require("thermal_overlay_enchantments")

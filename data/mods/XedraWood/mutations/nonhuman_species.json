@@ -131,12 +131,7 @@
     "purifiable": false,
     "types": [ "METABOLISM" ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "METABOLISM", "multiply": 0.5 },
-          { "value": "SPEED", "add": { "math": [ "temperature_speed_mod(65, 0.5)" ] } }
-        ]
-      }
+      "INLINE_ENCH_COLDBLOOD4_LIZ_0"
     ]
   },
   {

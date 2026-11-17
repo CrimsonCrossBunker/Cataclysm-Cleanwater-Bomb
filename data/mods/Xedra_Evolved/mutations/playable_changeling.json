@@ -591,15 +591,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "changes_to": [ "BROWNIE_CRAFTING_BONUS2" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_monsters_nearby('radius': 8, 'attitude': 'both') == 0" ] },
-            { "math": [ "u_characters_nearby('radius': 8) == 0" ] }
-          ]
-        },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.33 } ]
-      }
+      "INLINE_ENCH_BROWNIE_CRAFTING_BONUS_0"
     ]
   },
   {
@@ -614,15 +606,7 @@
     "changes_to": [ "BROWNIE_CRAFTING_BONUS3" ],
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_monsters_nearby('radius': 8, 'attitude': 'both') == 0" ] },
-            { "math": [ "u_characters_nearby('radius': 8) == 0" ] }
-          ]
-        },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.75 } ]
-      }
+      "INLINE_ENCH_BROWNIE_CRAFTING_BONUS2_0"
     ]
   },
   {
@@ -637,15 +621,7 @@
     "category": [ "FAIR_FOLK_COMMONER_BROWNIE" ],
     "threshreq": [ "THRESH_FAIR_FOLK_COMMONER_BROWNIE" ],
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_monsters_nearby('radius': 8, 'attitude': 'both') == 0" ] },
-            { "math": [ "u_characters_nearby('radius': 8) == 0" ] }
-          ]
-        },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 1.5 } ]
-      }
+      "INLINE_ENCH_BROWNIE_CRAFTING_BONUS3_0"
     ]
   },
   {

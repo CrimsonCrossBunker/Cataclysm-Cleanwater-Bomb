@@ -448,15 +448,7 @@
     "rating": "good",
     "show_in_info": true,
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "u_monsters_nearby('radius': 8, 'attitude': 'both') == 0" ] },
-            { "math": [ "u_characters_nearby('radius': 8) == 0" ] }
-          ]
-        },
-        "values": [ { "value": "CRAFTING_SPEED_MULTIPLIER", "multiply": 0.15 } ]
-      }
+      "INLINE_ENCH_effect_goblin_fruit_craft_speed_boost_0"
     ]
   },
   {

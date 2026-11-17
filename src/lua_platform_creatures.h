@@ -11,6 +11,7 @@
 #include "lua_platform_sol.h"
 #include "type_id.h"
 
+class Character;
 class monster;
 
 namespace cata::lua_platform
@@ -22,6 +23,8 @@ namespace detail
 {
 std::size_t count_native_nearby_monsters( const tripoint_abs_ms &origin, int radius,
         std::string_view attitude, const std::function<bool( const monster & )> &matches );
+std::size_t count_native_nearby_characters( const tripoint_abs_ms &origin, int radius,
+        std::string_view attitude, const Character *observer, bool allow_hallucinations );
 std::vector<matec_id> read_technique_blacklist( const sol::object &value,
         std::string_view api_name );
 } // namespace detail

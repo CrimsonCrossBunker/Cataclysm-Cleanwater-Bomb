@@ -230,25 +230,7 @@
     "max_duration": "7 days",
     "enchantments": [
       "INLINE_ENCH_effect_afs_precog_ranged_enhance_0",
-      {
-        "condition": {
-          "or": [
-            { "u_has_wielded_with_skill": "pistol" },
-            { "u_has_wielded_with_skill": "rifle" },
-            { "u_has_wielded_with_skill": "gun" }
-          ]
-        },
-        "values": [
-          {
-            "value": "WEAKPOINT_ACCURACY",
-            "multiply": {
-              "math": [
-                "min( ( ( ( u_spell_level('afs_precog_ranged_enhance') * 0.08) + 0.10 ) * scaling_factor(u_val('intelligence') ) ), 9 )"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_precog_ranged_enhance_1"
     ]
   },
   {
@@ -298,26 +280,7 @@
     "max_duration": "7 days",
     "enchantments": [
       "INLINE_ENCH_effect_afs_precog_melee_enhance_0",
-      {
-        "condition": {
-          "or": [
-            { "u_has_wielded_with_skill": "melee" },
-            { "u_has_wielded_with_skill": "bashing" },
-            { "u_has_wielded_with_skill": "stabbing" },
-            { "u_has_wielded_with_skill": "cutting" }
-          ]
-        },
-        "values": [
-          {
-            "value": "WEAKPOINT_ACCURACY",
-            "multiply": {
-              "math": [
-                "min( ( ( ( u_spell_level('afs_precog_ranged_enhance') * 0.08) + 0.10 ) * scaling_factor(u_val('intelligence') ) ), 9 )"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_afs_precog_melee_enhance_1"
     ],
     "flags": [ "MYOPIC_SUPERNATURAL" ]
   },

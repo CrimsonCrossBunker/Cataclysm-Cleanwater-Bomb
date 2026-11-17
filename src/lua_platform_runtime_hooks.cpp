@@ -954,6 +954,27 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     const std::string & id ) {
         return actor.has_flag( json_character_flag( id ) );
     } );
+    collect( "known_proficiencies", requested.known_proficiencies, false,
+    []( const const_talker &actor, const std::string &id ) {
+        return actor.knows_proficiency( proficiency_id( id ) );
+    } );
+    collect( "hit_points", requested.hit_points, 0,
+    []( const const_talker &actor, const std::string &id ) {
+        if( id == "ALL_MAJOR" || id == "ALL_MINOR" ) {
+            const get_body_part_flags parts = id == "ALL_MAJOR" ? get_body_part_flags::only_main :
+                                              get_body_part_flags::only_minor;
+            int total = 0;
+            for( const bodypart_id &part : actor.get_all_body_parts( parts ) ) {
+                total += actor.get_cur_hp( part );
+            }
+            return total;
+        }
+        return actor.get_cur_hp( id == "ALL" ? bodypart_str_id::NULL_ID() : bodypart_id( id ) );
+    } );
+    collect( "max_hit_points", requested.max_hit_points, 0,
+    []( const const_talker &actor, const std::string &id ) {
+        return actor.get_hp_max( bodypart_id( id ) );
+    } );
     collect( "proficiency_percentages", requested.proficiency_percentages, 0.0,
     []( const const_talker & actor, const std::string & id ) {
         const proficiency_id prof( id );
@@ -966,6 +987,27 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     collect( "skills", requested.skills, 0, []( const const_talker &actor,
     const std::string &id ) {
         return actor.get_skill_level( skill_id( id ) );
+    } );
+    collect( "species", requested.species, false, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.has_species( species_id( id ) );
+    } );
+    collect( "wielded_skills", requested.wielded_skills, false, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.wielded_with_weapon_skill( skill_id( id ) );
+    } );
+    collect( "wielded_categories", requested.wielded_categories, false, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.wielded_with_weapon_category( weapon_category_id( id ) );
+    } );
+    collect( "wielded_ammunition", requested.wielded_ammunition, false, []( const const_talker &actor,
+    const std::string &id ) {
+        return actor.wielded_with_item_ammotype( ammotype( id ) );
+    } );
+    collect( "encumbrance", requested.encumbrance, 0, []( const const_talker &actor,
+    const std::string &id ) {
+        bodypart_id part( id );
+        return actor.encumbrance_at( part );
     } );
     collect( "category_counts", requested.category_counts, 0, []( const const_talker &actor,
     const std::string &id ) {
@@ -1022,6 +1064,41 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
         }
         inputs["body_part_effects"] = std::move( body_part_effects );
     }
+    if( !requested.body_part_effect_intensities.empty() ) {
+        sol::table parts = owner.lua->create_table();
+        for( const auto &[part, effects] : requested.body_part_effect_intensities ) {
+            sol::table values = owner.lua->create_table();
+            for( const std::string &id : effects ) {
+                const effect current = speaker ? speaker->get_effect( efftype_id( id ), bodypart_id( part ) ) : effect();
+                values[id] = current.is_null() ? -1 : current.get_intensity();
+            }
+            parts[part] = std::move( values );
+        }
+        inputs["body_part_effect_intensities"] = std::move( parts );
+    }
+    if( requested.calorie_reserves ) {
+        sol::table values = owner.lua->create_table();
+        if( speaker && speaker->get_const_character() ) {
+            values["stored"] = speaker->get_stored_kcal();
+            values["healthy"] = speaker->get_healthy_kcal();
+        } else {
+            sol::table meta = owner.lua->create_table();
+            meta.set_function( "__index", []( const sol::table &, const std::string & ) -> int {
+                throw std::runtime_error( "Enchantment calorie reserves require a character speaker" );
+            } );
+            values[sol::metatable_key] = meta;
+        }
+        inputs["calorie_reserves"] = std::move( values );
+    }
+    if( !requested.nearby_characters.empty() ) {
+        sol::table counts = owner.lua->create_table(
+                                0, static_cast<int>( requested.nearby_characters.size() ) );
+        for( const auto &[key, query] : requested.nearby_characters ) {
+            counts[key] = speaker ? count_native_nearby_characters( speaker->pos_abs(), query.radius,
+                          query.attitude, speaker->get_const_character(), query.allow_hallucinations ) : 0;
+        }
+        inputs["nearby_characters"] = std::move( counts );
+    }
     if( !requested.nearby_monsters.empty() ) {
         sol::table counts = owner.lua->create_table(
                                 0, static_cast<int>( requested.nearby_monsters.size() ) );
@@ -1033,10 +1110,12 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
             }
             counts[key] = speaker ? count_native_nearby_monsters(
             speaker->pos_abs(), query.radius, query.attitude, [&]( const monster &candidate ) {
-                return species.empty() || std::any_of( species.begin(), species.end(),
-                [&]( const species_id & id ) {
+                return ( query.types.empty() || std::find( query.types.begin(), query.types.end(),
+                         candidate.type->id.str() ) != query.types.end() ) &&
+                       ( species.empty() || std::any_of( species.begin(), species.end(),
+                [&]( const species_id &id ) {
                     return candidate.in_species( id );
-                } );
+                } ) );
             } ) : 0;
         }
         inputs["nearby_monsters"] = std::move( counts );
@@ -1046,6 +1125,22 @@ static sol::table collect_enchantment_character_inputs( runtime &owner,
     inputs["global_variables"] = capture_enchantment_numbers( *owner.lua, dialogue, var_type::global,
                                  requested.global_variables );
     if( speaker ) {
+        if( requested.identity ) {
+            const Character *character = speaker->get_const_character();
+            inputs["identity"] = owner.lua->create_table_with(
+                                     "avatar", character && character->is_avatar(),
+                                     "npc", speaker->get_const_npc() != nullptr,
+                                     "character", character != nullptr,
+                                     "monster", speaker->get_const_monster() != nullptr );
+        }
+        if( requested.stat_bonuses ) {
+            inputs["stat_bonuses"] = owner.lua->create_table_with(
+                                        "strength", speaker->get_str_bonus(), "dexterity", speaker->get_dex_bonus(),
+                                        "intelligence", speaker->get_int_bonus(), "perception", speaker->get_per_bonus() );
+        }
+        if( requested.artifact_resonance ) {
+            inputs["artifact_resonance"] = speaker->get_artifact_resonance();
+        }
         if( requested.base_stats ) {
             inputs["base_stats"] = owner.lua->create_table_with(
                                        "strength", speaker->get_str_max(), "dexterity", speaker->get_dex_max(),

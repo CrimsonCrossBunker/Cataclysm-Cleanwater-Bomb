@@ -68,3 +68,9 @@ require("inline_special_vision")
 require("progression_enchantments")
 
 require("innate_enchantments")
+
+require("body_enchantments")
+
+require("contextual_enchantments")
+
+require("thermal_overlay_enchantments")

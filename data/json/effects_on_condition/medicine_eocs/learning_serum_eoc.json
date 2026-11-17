@@ -73,38 +73,8 @@
     "enchantments": [
       "INLINE_ENCH_learning_serum_main_0",
       "INLINE_ENCH_learning_serum_main_1",
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_monsters_nearby('radius': 35, 'attitude': 'hostile') + u_characters_nearby('radius': 35, 'attitude': 'not_allies') ) > 0"
-              ]
-            }
-          ]
-        },
-        "intermittent_activation": {
-          "effects": [
-            { "frequency": "7 seconds", "spell_effects": [ { "id": "learning_serum_time_slow_perception_spell" } ] },
-            { "frequency": "19 seconds", "spell_effects": [ { "id": "learning_serum_time_slow_perception_spell" } ] }
-          ]
-        }
-      },
-      {
-        "condition": {
-          "and": [
-            {
-              "math": [
-                "(u_monsters_nearby('radius': 35, 'attitude': 'hostile') + u_characters_nearby('radius': 35, 'attitude': 'not_allies') ) > 0"
-              ]
-            },
-            { "math": [ "u_effect_intensity('learning_serum_main') >= 3" ] }
-          ]
-        },
-        "intermittent_activation": {
-          "effects": [ { "frequency": "13 seconds", "spell_effects": [ { "id": "learning_serum_time_slow_perception_spell" } ] } ]
-        }
-      }
+      "INLINE_ENCH_learning_serum_main_2",
+      "INLINE_ENCH_learning_serum_main_3"
     ],
     "flags": [ "MYOPIC_IN_LIGHT", "CANNOT_SLEEP" ]
   },

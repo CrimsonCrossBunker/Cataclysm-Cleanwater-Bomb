@@ -59,3 +59,5 @@ require("attribute_scaling")
 require("shared_enchantment_values")
 
 require("inline_special_vision")
+
+require("contextual_enchantments")

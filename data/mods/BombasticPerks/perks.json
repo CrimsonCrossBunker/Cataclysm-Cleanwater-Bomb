@@ -361,10 +361,7 @@
     "valid": false,
     "description": "You've gotten pretty good at sneaking up on people.  When you have no allies within 20 squares, enemies' vision detection range is reduced by 15%.",
     "enchantments": [
-      {
-        "condition": { "math": [ "u_characters_nearby('radius': 20, 'attitude': 'allies') == 0" ] },
-        "values": [ { "value": "STEALTH_MODIFIER", "add": 15 } ]
-      }
+      "INLINE_ENCH_perk_ghost_stealth_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -508,15 +505,7 @@
     "valid": false,
     "description": "You've always loved reading, especially before you fall asleep, and have gotten very good at tearing through books as a way to wind down.  You read books 50% faster, but only when you read them between 8 p.m. and 1 a.m.",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "math": [ "time_since('midnight', 'unit': 'hours') >= 20" ] },
-            { "math": [ "time_since('midnight', 'unit': 'hours') <= 1" ] }
-          ]
-        },
-        "values": [ { "value": "READING_SPEED_MULTIPLIER", "multiply": -0.5 } ]
-      }
+      "INLINE_ENCH_perk_bedtime_reader_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -542,22 +531,7 @@
     "valid": false,
     "description": "You can't touch a door without zapping yourself.  Whenever there is a shocker or a robot within 15 squares, or you are outside during a storm, you gain 500J of bionic power per second and your melee attacks will do a small amount of extra electrical damage.",
     "enchantments": [
-      {
-        "condition": {
-          "or": [
-            { "and": [ "u_is_outside", { "or": [ { "is_weather": "lightning" }, { "is_weather": "thunder" } ] } ] },
-            {
-              "math": [
-                "u_monsters_nearby('mon_zombie_brute_shocker', 'mon_zombie_electric', 'mon_skeleton_electric', 'mon_frog_shocker', 'mon_zombie_static', 'mon_amalgamation_zapper', 'mon_zombie_nullfield', 'mon_exodii_worker', 'mon_exodii_quad', 'mon_zomborg', 'mon_zomborg_devourer', 'mon_robofac_skittergun', 'mon_EMP_hack', 'mon_c4_hack', 'mon_flashbang_hack', 'mon_gasbomb_hack', 'mon_grenade_hack', 'mon_manhack', 'exodii_sniper_drone', 'mon_tazer_hack', 'mon_lab_security_drone_GM', 'mon_lab_security_drone_YM', 'mon_lab_security_drone_BM', 'mon_lab_security_drone_BM2', 'mon_lab_security_drone_GR', 'mon_lab_security_drone_BS', 'mon_secubot', 'mon_talon_m202a1', 'mon_secubot_america', 'mon_skitterbot', 'mon_science_bot', 'mon_robofac_prototype', 'mon_dispatch', 'mon_dispatch_military', 'radius': 15)",
-                ">",
-                "0"
-              ]
-            }
-          ]
-        },
-        "values": [ { "value": "POWER_TRICKLE", "add": 500000 } ],
-        "melee_damage_bonus": [ { "type": "electric", "add": 3 } ]
-      }
+      "INLINE_ENCH_perk_static_stockpile_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -737,10 +711,7 @@
       "//~": "The beginning of this description is a reference to the Looney Tunes short 'Robin Hood Daffy' "
     },
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_weapon_category": "FENCING_WEAPONRY" },
-        "values": [ { "value": "BONUS_DODGE", "add": 1 }, { "value": "MOVECOST_FLATGROUND_MOD", "multiply": -0.05 } ]
-      }
+      "INLINE_ENCH_perk_fencing_footwork_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -790,21 +761,7 @@
     "valid": false,
     "description": "Your frequent handling of artifacts has allowed you to redirect some of the otherworldly power they carry.  When suffering from resonance effects, you gain a variety of minor bonuses such as resistance to fire, electricity, or cold, increased dodge, or increased stamina regeneration.",
     "enchantments": [
-      {
-        "condition": { "math": [ "u_artifact_resonance() > 2000" ] },
-        "incoming_damage_mod": [
-          { "type": "heat", "add": { "math": [ "rand(8) + 2" ] } },
-          { "type": "electric", "add": { "math": [ "rand(8) + 2" ] } },
-          { "type": "cold", "add": { "math": [ "rand(8) + 2" ] } }
-        ],
-        "values": [
-          { "value": "BONUS_DODGE", "add": { "math": [ "rand(1)" ] } },
-          { "value": "REGEN_STAMINA", "multiply": { "math": [ "rng(0.1,0.3)" ] } },
-          { "value": "FORCEFIELD", "multiply": { "math": [ "rng(0,0.1)" ] } },
-          { "value": "MOVE_COST", "multiply": { "math": [ "rng(-0.05,0)" ] } },
-          { "value": "PAIN", "multiply": { "math": [ "rng(-0.15,0)" ] } }
-        ]
-      }
+      "INLINE_ENCH_perk_artifact_resonance_exploitation_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1114,24 +1071,8 @@
     "valid": false,
     "description": "You're so used to squeezing all your meals into a short time that your body has adapted to it.  You gain 2.5 times as many calories and vitamins from any meals eaten between noon and 6 p.m., but 0 calories and vitamins for any meals eaten outside that time period.",
     "enchantments": [
-      {
-        "condition": {
-          "and": [
-            { "math": [ "time_since('midnight', 'unit': 'hours') >= 12" ] },
-            { "math": [ "time_since('midnight', 'unit': 'hours') <= 18" ] }
-          ]
-        },
-        "values": [ { "value": "KCAL", "multiply": 1.5 }, { "value": "VITAMIN_ABSORB_MOD", "multiply": 1.5 } ]
-      },
-      {
-        "condition": {
-          "or": [
-            { "math": [ "time_since('midnight', 'unit': 'hours') < 12" ] },
-            { "math": [ "time_since('midnight', 'unit': 'hours') > 18" ] }
-          ]
-        },
-        "values": [ { "value": "KCAL", "multiply": -50 }, { "value": "VITAMIN_ABSORB_MOD", "multiply": -50 } ]
-      }
+      "INLINE_ENCH_perk_eating_window_0",
+      "INLINE_ENCH_perk_eating_window_1"
     ],
     "flags": [ "PERK" ]
   },
@@ -1211,22 +1152,9 @@
     "valid": false,
     "description": "Conventional wisdom says it's not healthy to be fat, but you're nothing if not unconventional.  Your natural padding acts as a ballistic vest, and the fatter you are, the more protection you'll get.  You must be at least Obese to receive any benefit.",
     "enchantments": [
-      {
-        "condition": {
-          "and": [ { "math": [ "u_calories('format': 'percent') >= 200" ] }, { "math": [ "u_calories('format': 'percent') < 300" ] } ]
-        },
-        "mutations": [ "perk_kevlard_obese" ]
-      },
-      {
-        "condition": {
-          "and": [ { "math": [ "u_calories('format': 'percent') >= 300" ] }, { "math": [ "u_calories('format': 'percent') < 400" ] } ]
-        },
-        "mutations": [ "perk_kevlard_veryobese" ]
-      },
-      {
-        "condition": { "and": [ { "math": [ "u_calories('format': 'percent') >= 400" ] } ] },
-        "mutations": [ "perk_kevlard_morbidlyobese" ]
-      }
+      "INLINE_ENCH_perk_kevlard_0",
+      "INLINE_ENCH_perk_kevlard_1",
+      "INLINE_ENCH_perk_kevlard_2"
     ],
     "flags": [ "PERK" ]
   },
@@ -1264,10 +1192,7 @@
     "valid": false,
     "description": "I do not aim with my hand.  He who aims with his hand has…uh, you forget what comes next.  When using pistols, you aim 75% faster and reload 45% faster.",
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_skill": "pistol" },
-        "values": [ { "value": "AIMING_SPEED", "multiply": 0.75 }, { "value": "RELOADING_SPEED", "multiply": -0.45 } ]
-      }
+      "INLINE_ENCH_perk_gunslinger_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1332,19 +1257,7 @@
     "valid": false,
     "description": "You know how to leverage your allies' presence when talking with others, granting you a small boost to lying, persuading and intimidating for each nearby ally.",
     "enchantments": [
-      {
-        "values": [
-          { "value": "SOCIAL_LIE", "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] } },
-          {
-            "value": "SOCIAL_PERSUADE",
-            "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] }
-          },
-          {
-            "value": "SOCIAL_INTIMIDATE",
-            "add": { "math": [ "u_characters_nearby('radius': 15, 'attitude': 'allies')" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_perk_peer_pressure_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1530,14 +1443,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "and": [ { "u_has_wielded_with_flag": "RELOAD_ONE" }, { "u_has_wielded_with_skill": "pistol" } ] },
-        "values": [
-          { "value": "WEAPON_DISPERSION", "multiply": -0.25 },
-          { "value": "RANGED_DAMAGE", "add": 6 },
-          { "value": "RANGE", "add": 4 }
-        ]
-      }
+      "INLINE_ENCH_revolvers_are_cool_0"
     ],
     "flags": [ "PERK" ]
   },
@@ -1550,10 +1456,7 @@
     "purifiable": false,
     "valid": false,
     "enchantments": [
-      {
-        "condition": { "u_has_wielded_with_ammotype": "22" },
-        "values": [ { "value": "RANGED_ARMOR_PENETRATION", "add": 5 }, { "value": "WEAKPOINT_ACCURACY", "multiply": 3 } ]
-      }
+      "INLINE_ENCH_22_is_cool_0"
     ],
     "flags": [ "PERK" ]
   },
