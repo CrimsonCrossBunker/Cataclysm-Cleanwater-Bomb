@@ -276,14 +276,8 @@
     "valid": false,
     "purifiable": false,
     "enchantments": [
-      {
-        "condition": { "and": [ { "not": "u_has_weapon" }, { "not": { "u_has_flag": "NO_PSIONICS" } } ] },
-        "melee_damage_bonus": [ { "type": "bash", "add": { "math": [ "u_skill('unarmed') / 2" ] } } ]
-      },
-      {
-        "condition": { "and": [ { "not": "u_has_weapon" }, { "not": { "u_has_flag": "NO_PSIONICS" } } ] },
-        "melee_damage_bonus": [ { "type": "bash", "multiply": { "math": [ "u_spell_level_sum('school': 'BIOKINETIC') * 0.01" ] } } ]
-      }
+      "INLINE_ENCH_VERDANT_HAND_PROTOCOLS_0",
+      "INLINE_ENCH_VERDANT_HAND_PROTOCOLS_1"
     ]
   },
   {

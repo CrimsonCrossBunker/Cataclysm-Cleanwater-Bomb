@@ -79,7 +79,7 @@
     "rating": "good",
     "apply_message": "Your hair stands on end.",
     "remove_message": "Your skin crackles as lightning discharges into your target!",
-    "enchantments": [ { "melee_damage_bonus": [ { "type": "electric", "add": { "math": [ "rand(40) + 40" ] } } ] } ]
+    "enchantments": [ "INLINE_ENCH_effect_mom_artifact_electrical_zap_attack_0" ]
   },
   {
     "type": "effect_type",

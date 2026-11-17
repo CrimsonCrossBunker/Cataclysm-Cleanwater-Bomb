@@ -939,14 +939,7 @@
     "max_duration": "1 minutes",
     "show_in_info": true,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "ARMOR_ALL",
-            "add": { "math": [ "( ( u_discern_weakness_clear_power_level * 1.5) + 2) * u_discern_weakness_clear_intelligence" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_clair_weak_point_0"
     ]
   },
   {
@@ -1436,18 +1429,7 @@
     "rating": "good",
     "base_mods": { "dodge_mod": [ -1 ] },
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "LUMINATION",
-            "add": {
-              "math": [
-                "min( ( ( 2 + ( u_photokinesis_power_level * 3 ) ) * u_photokinesis_intelligence * u_nether_attunement_photokinesis_scaling), 60 )"
-              ]
-            }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_photokin_enemy_light_0"
     ]
   },
   {
@@ -2786,30 +2768,7 @@
     "max_intensity": 10,
     "int_dur_factor": 30,
     "enchantments": [
-      {
-        "values": [
-          {
-            "value": "PAIN_PENALTY_MOD_STR",
-            "multiply": { "math": [ "u_effect_intensity('effect_vita_super_heal_pain_allayed') * -0.1" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_DEX",
-            "multiply": { "math": [ "u_effect_intensity('effect_vita_super_heal_pain_allayed') * -0.1" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_INT",
-            "multiply": { "math": [ "u_effect_intensity('effect_vita_super_heal_pain_allayed') * -0.1" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_PER",
-            "multiply": { "math": [ "u_effect_intensity('effect_vita_super_heal_pain_allayed') * -0.1" ] }
-          },
-          {
-            "value": "PAIN_PENALTY_MOD_SPEED",
-            "multiply": { "math": [ "u_effect_intensity('effect_vita_super_heal_pain_allayed') * -0.1" ] }
-          }
-        ]
-      }
+      "INLINE_ENCH_effect_vita_super_heal_pain_allayed_0"
     ]
   },
   {
