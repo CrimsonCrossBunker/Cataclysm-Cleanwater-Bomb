@@ -13,6 +13,7 @@
 #include "coordinates.h"
 #include "pimpl.h"
 #include "point.h"
+#include "regional_climate.h"
 #include "ret_val.h"
 #include "type_id.h"
 #include "units.h"
@@ -271,6 +272,9 @@ class weather_manager
         * radiative and convective sources, such as fires or hot air from heaters.
         */
         units::temperature get_temperature( const tripoint_bub_ms &location );
+        // Coarse regional outdoor samples for aging items over long absences.
+        units::temperature get_historical_temperature( const tripoint_abs_ms &location,
+                time_point when );
         /*
         * Returns temperature of given OMT. Does not include any modifications from local sourecs,
         * this is essentially the "natural" temperature.
@@ -296,6 +300,13 @@ class weather_manager
         std::optional<dimension_id> heat_dimension;
         units::temperature_delta get_room_heat( const map &here, const tripoint_bub_ms &location,
                                                 const tripoint_bub_ms &player );
+
+        struct historical_weather_cell {
+            std::optional<regional_climate::normals> normals;
+            std::unordered_map<int, units::temperature> samples;
+        };
+        std::unordered_map<tripoint_abs_omt, historical_weather_cell> historical_weather;
+        std::optional<dimension_id> historical_weather_dimension;
 
         std::optional<time_point> last_weather_turn;
         std::optional<time_point> indoor_reference_time;

@@ -2913,9 +2913,23 @@ const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
 SDL_Rect cata_tiles::snow_sprite( snow_cover depth, const point_abs_ms &pos )
 {
     const int row = depth == snow_cover::deep ? 2 : depth == snow_cover::medium ? 1 : 0;
-    // Adjacent map tiles sample adjacent parts of the same snow pattern.
-    return { modulo( pos.x(), 4 ) *snow_tile_pixels,
-             row *snow_sheet_width + modulo( pos.y(), 4 ) *snow_tile_pixels,
+    const uint32_t x = pos.x();
+    const uint32_t y = pos.y();
+    const auto noise = []( uint32_t column, uint32_t line, uint32_t salt ) {
+        uint32_t value = column * 0x9e3779b9u ^ line * 0x85ebca6bu ^ salt;
+        value = ( value ^ ( value >> 16 ) ) * 0x7feb352du;
+        value = ( value ^ ( value >> 15 ) ) * 0x846ca68bu;
+        return value ^ ( value >> 16 );
+    };
+    // Neighboring tiles hash their shared edge to the same profile.
+    constexpr uint32_t horizontal = 0x93282494u;
+    constexpr uint32_t vertical = 0x51d7348du;
+    const int edges = ( noise( x, y, horizontal ) & 1u ) |
+                      ( ( noise( x + 1, y, vertical ) & 1u ) << 1 ) |
+                      ( ( noise( x, y + 1, horizontal ) & 1u ) << 2 ) |
+                      ( ( noise( x, y, vertical ) & 1u ) << 3 );
+    const int rotation = noise( x, y, 0xa08f9e5du ) & 3u;
+    return { edges * snow_tile_pixels, ( row * 4 + rotation ) *snow_tile_pixels,
              snow_tile_pixels, snow_tile_pixels };
 }
 

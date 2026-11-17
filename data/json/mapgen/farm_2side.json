@@ -83,8 +83,8 @@
         "Ʌ": { "item": { "item": "seed_zucchini" }, "furniture": "f_plant_seedling", "chance": 70 },
         "Δ": { "item": { "item": "seed_celery" }, "furniture": "f_plant_seedling", "chance": 70 },
         "‡": { "item": { "item": "seed_pumpkin" }, "furniture": "f_plant_seedling", "chance": 70 },
-        "D": { "item": { "item": "seed_corn" }, "furniture": "f_plant_seedling", "chance": 80 },
-        "%": { "item": { "item": "seed_oats" }, "furniture": "f_plant_seedling", "chance": 80 }
+        "D": { "item": { "item": "seed_corn" }, "furniture": "f_plant_seedling", "chance": 80, "regional_crop": true },
+        "%": { "item": { "item": "seed_oats" }, "furniture": "f_plant_seedling", "chance": 80, "regional_crop": true }
       },
       "items": {
         "l": [

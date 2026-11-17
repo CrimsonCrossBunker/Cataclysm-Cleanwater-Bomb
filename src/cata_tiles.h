@@ -798,8 +798,8 @@ class cata_tiles
         // 3D-only cache identity. Holding the shared_ptr also prevents address
         // reuse from making a reloaded tileset look like the previous one.
         static constexpr int snow_tile_pixels = 32;
-        static constexpr int snow_sheet_width = 4 * snow_tile_pixels;
-        static constexpr int snow_sheet_height = 3 * snow_sheet_width;
+        static constexpr int snow_sheet_width = 16 * snow_tile_pixels;
+        static constexpr int snow_sheet_height = 12 * snow_tile_pixels;
         const SDL_Texture_Ptr &get_snow_texture();
         static SDL_Rect snow_sprite( snow_cover depth, const point_abs_ms &pos );
 
