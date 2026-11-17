@@ -13471,7 +13471,7 @@ local CcbMonstersApi = {}
 ---@field suppress_message? boolean Native quiet_death policy. Omission preserves the existing policy.
 
 ---Enter native Monster death, including its native death callbacks and events. Storage is retained until the detached result is produced, even if a death callback removes it from the scene.
----@param monster GameHandle Exact live Monster owned by the active game.
+---@param monster GameHandle Exact live Monster belonging to the active native scene.
 ---@param options? CcbMonsterDeathOptions
 ---@return CcbResult result value contains dead, changed and the explicitly requested flags; no removed Monster handle is fabricated.
 function CcbMonstersApi.die(monster, options) end
