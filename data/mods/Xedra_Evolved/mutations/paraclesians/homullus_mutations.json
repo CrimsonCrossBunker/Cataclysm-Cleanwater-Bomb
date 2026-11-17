@@ -340,8 +340,8 @@
     "category": [ "HOMULLUS" ],
     "purifiable": false,
     "enchantments": [
-      { "condition": { "math": [ "u_skill('computer') <= 7" ] }, "skills": [ { "value": "computers", "add": 2 } ] },
-      { "condition": { "math": [ "u_skill('computer') <= 8" ] }, "skills": [ { "value": "computers", "add": 1 } ] }
+      "INLINE_ENCH_HOMULLUS_CAN_USE_COMPUTERS_0",
+      "INLINE_ENCH_HOMULLUS_CAN_USE_COMPUTERS_1"
     ]
   },
   {

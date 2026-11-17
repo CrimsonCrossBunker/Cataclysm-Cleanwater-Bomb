@@ -582,10 +582,7 @@
     "name": { "str": "Blush of Health" },
     "description": "The power of stolen blood keeps you feel amazing.  As long as you are not suffering from the Withering, you gain a bonus to your health.",
     "enchantments": [
-      {
-        "condition": { "not": { "u_has_any_effect": [ "effect_dhampir_enervated_blood", "withering" ] } },
-        "ench_effects": [ { "effect": "effect_vampire_health_bonus", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_VAMPIRE_HEALTH_BONUS_0"
     ]
   },
   {
@@ -1151,18 +1148,7 @@
     "flags": [ "CANNIBAL", "DAYFEAR", "NO_THIRST", "NO_BODY_HEAT", "CANNOT_CONSUME_DRUGS", "CANNOT_GAIN_WEARINESS" ],
     "vitamin_rates": [ [ "vitC", -500 ], [ "iron", -500 ], [ "calcium", -500 ] ],
     "enchantments": [
-      {
-        "values": [
-          { "value": "CLIMATE_CONTROL_HEAT", "add": 9999 },
-          { "value": "STAMINA_REGEN_MOD", "add": 0.1 },
-          { "value": "KCAL", "multiply": -100 },
-          { "value": "VITAMIN_ABSORB_MOD", "multiply": -100 },
-          { "value": "HUNGER", "multiply": -1 },
-          { "value": "THIRST", "multiply": -1 },
-          { "value": "METABOLISM", "multiply": -1 },
-          { "value": "STAMINA_REGEN_MOD", "multiply": -0.333 }
-        ]
-      },
+      "INLINE_ENCH_BLOOD_DRINKER_0",
       "INLINE_ENCH_BLOOD_DRINKER_1"
     ]
   },

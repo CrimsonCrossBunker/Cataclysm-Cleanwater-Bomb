@@ -616,10 +616,7 @@
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_0",
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_1",
       "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_2",
-      {
-        "condition": { "u_has_any_effect": [ "formication", "visuals", "hallu", "bite", "infected" ] },
-        "ench_effects": [ { "effect": "effect_changeling_temporary_psychopath", "intensity": 1 } ]
-      }
+      "INLINE_ENCH_CHANGELING_NOBLE_INHUMAN_MINDSET_3"
     ]
   },
   {
