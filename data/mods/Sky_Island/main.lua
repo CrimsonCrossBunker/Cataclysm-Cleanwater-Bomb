@@ -24,6 +24,8 @@ require("mutations")
 
 require("monster_groups")
 
+require("expedition_timer")
+
 require("weather_generators")
 
 require("portal_storm_cycle")
