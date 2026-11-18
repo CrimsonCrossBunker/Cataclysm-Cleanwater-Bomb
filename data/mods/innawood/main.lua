@@ -25,3 +25,5 @@ require("scenario_filters")
 require("construction_groups")
 
 require("disassembly")
+
+require("food_recipes")

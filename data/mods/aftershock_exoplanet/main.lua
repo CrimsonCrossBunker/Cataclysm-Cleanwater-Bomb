@@ -89,3 +89,5 @@ require("overmap_locations")
 require("field_emissions")
 
 require("disassembly")
+
+require("food_recipes")

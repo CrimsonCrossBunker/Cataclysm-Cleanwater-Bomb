@@ -20,3 +20,5 @@ require("ammo_effects")
 require("snippets")
 
 require("disassembly")
+
+require("food_recipes")

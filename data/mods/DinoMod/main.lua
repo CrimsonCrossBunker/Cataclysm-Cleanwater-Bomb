@@ -9,3 +9,5 @@ require("requirements")
 require("mutation_enchantments")
 
 require("disassembly")
+
+require("food_recipes")
