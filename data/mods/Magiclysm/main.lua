@@ -124,3 +124,5 @@ require("generic_items")
 require("inherited_items")
 
 require("active_items")
+
+require("denarius")
