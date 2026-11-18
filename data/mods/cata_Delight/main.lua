@@ -6,3 +6,5 @@ require("construction_groups")
 require("food_recipes")
 
 require("craft_recipes")
+
+require("effect_types")
