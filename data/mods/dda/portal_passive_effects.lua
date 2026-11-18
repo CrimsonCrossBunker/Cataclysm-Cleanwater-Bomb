@@ -35,9 +35,9 @@ end
 
 local function spawn_message(visible, singular, plural)
     if visible > 1 and plural then
-        services.messages.add(services.translate(plural), "bad")
+        services.messages.add(plural, "bad")
     elseif visible > 0 then
-        services.messages.add(services.translate(singular), "bad")
+        services.messages.add(singular, "bad")
     end
 end
 
@@ -76,8 +76,8 @@ local function light(character)
     local duration = services.time.duration(services.random.native_int(60, maximum), "turn")
     state.checked(services.weather.append_light_event(day and 0 or 125, duration))
     if state.checked(services.creatures.snapshot(character)).outside then
-        state.message(character, services.translate(day and "The sun is snuffed out like a candle."
-            or "Some of the stars grow so bright that they hurt to look at."), "bad")
+        state.message(character, day and services.translate("The sun is snuffed out like a candle.")
+            or services.translate("Some of the stars grow so bright that they hurt to look at."), "bad")
     end
 end
 
@@ -96,7 +96,7 @@ local function people(character)
             error(result.error.message)
         end
     end
-    spawn_message(visible, "A person steps nearby from somewhere else.", "Several identical people walk nearby from nowhere.")
+    spawn_message(visible, services.translate("A person steps nearby from somewhere else."), services.translate("Several identical people walk nearby from nowhere."))
 end
 
 local effects = {
@@ -104,25 +104,25 @@ local effects = {
     light,
     function(character)
         spawn(character, "mon_absence", 1, 0, 45, 300, 3, 20,
-            "The very notion of empty space is made a cruel joke.  Nearby nothing becomes even less.")
+            services.translate("The very notion of empty space is made a cruel joke.  Nearby nothing becomes even less."))
     end,
     function(character)
         spawn(character, "mon_impossible_shape", 1, 1, 60, 180, 3, 20,
-            "You cannot remember how the impossible shape came to be here.  The pain in your head suggests that that's a good thing.",
-            "You cannot remember how the impossible shapes came to be here.  The pain in your head suggests that that's a good thing.")
+            services.translate("You cannot remember how the impossible shape came to be here.  The pain in your head suggests that that's a good thing."),
+            services.translate("You cannot remember how the impossible shapes came to be here.  The pain in your head suggests that that's a good thing."))
     end,
     function(character)
         spawn(character, "mon_flatlander", 1, 1, 60, 180, 3, 20,
-            "something glides into your field of vision out of thin air, slipping between the space between atoms.",
-            "several things glide into your field of vision out of thin air, slipping between the spaces between atoms.")
+            services.translate("something glides into your field of vision out of thin air, slipping between the space between atoms."),
+            services.translate("several things glide into your field of vision out of thin air, slipping between the spaces between atoms."))
     end,
     function(character)
         spawn(character, "mon_memory", 10, 10, 5, 120, 1, 10,
-            "A flickering silhouette appears nearby.", "Human silhouettes appear and surround you.")
+            services.translate("A flickering silhouette appears nearby."), services.translate("Human silhouettes appear and surround you."))
     end,
     function(character)
         spawn(character, "mon_giant_appendage", 1, 3, 5, 45, 3, 20,
-            "A gigantic limb tears its way into reality.", "Gigantic limbs tear their way into reality around you.")
+            services.translate("A gigantic limb tears its way into reality."), services.translate("Gigantic limbs tear their way into reality around you."))
     end,
     people,
 }

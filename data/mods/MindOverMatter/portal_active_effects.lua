@@ -19,7 +19,7 @@ local function spend_ire(character, amount)
 end
 
 local function message(character, text)
-    if character.subtype == "avatar" then services.messages.add(services.translate(text), "bad") end
+    if character.subtype == "avatar" then services.messages.add(text, "bad") end
 end
 
 ccb.content.add(ccb.content.ActivityType {
@@ -39,7 +39,7 @@ ccb.runtime.handler("portal_active_consciousness", function(character)
     checked(services.effects.add(character, id("effect", "psi_stunned"), duration, { intensity = 0 }))
     checked(services.activities.assign_timed(character, id("activity", "ACT_PSI_PORTAL_STUN"), duration))
     spend_ire(character, 3)
-    message(character, "Your head tingles and the world suddenly lurches!")
+    message(character, services.translate("Your head tingles and the world suddenly lurches!"))
 end)
 
 ccb.runtime.handler("portal_active_blink", function(character)
@@ -51,7 +51,7 @@ ccb.runtime.handler("portal_active_blink", function(character)
     checked(services.characters.cast_spell(character, id("spell", "teleport_blink_monster"),
         { min_level = math.tointeger(math.modf(strength() / 2)) }))
     spend_ire(character, 2)
-    message(character, "The world shifts around you!")
+    message(character, services.translate("The world shifts around you!"))
 end)
 
 ccb.runtime.handler("portal_active_tears", function(character)

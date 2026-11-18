@@ -79,9 +79,9 @@ end)
 local function population(character, monster, options, singular, plural)
     local result = state.checked(services.spawns.population(id("monster", monster), state.position(character), options))
     if result.visible > 1 and plural and plural ~= "" then
-        services.messages.add(services.translate(plural), "bad")
+        services.messages.add(plural, "bad")
     elseif result.visible > 0 and singular and singular ~= "" then
-        services.messages.add(services.translate(singular), "bad")
+        services.messages.add(singular, "bad")
     end
 end
 
@@ -158,7 +158,7 @@ end
 function actions.swarm(character)
     population(character, "mon_swarm_structure", {
         count = 1, outdoor_only = true, min_radius = 3, max_radius = 20, lifespan = lifespan(600, 1800),
-    }, "The swarm structure was always here, right?")
+    }, services.translate("The swarm structure was always here, right?"))
     ire(character, -4)
 end
 
@@ -172,8 +172,8 @@ function actions.shifting_mass(character)
     population(character, "mon_shifting_mass", {
         count = count, hallucinations = count, outdoor_only = true,
         min_radius = 3, max_radius = 20, lifespan = lifespan(5, 120),
-    }, "Small gashes in reality open nearby, revealing an endless expanse of black water.  An alien being spills through before the portals close.",
-        "Small gashes in reality open nearby, revealing an endless expanse of black water.  Several alien beings spill out before the portals close.")
+    }, services.translate("Small gashes in reality open nearby, revealing an endless expanse of black water.  An alien being spills through before the portals close."),
+        services.translate("Small gashes in reality open nearby, revealing an endless expanse of black water.  Several alien beings spill out before the portals close."))
 end
 
 function actions.artifact(character)
@@ -181,13 +181,13 @@ function actions.artifact(character)
     local monster, singular, plural
     if state.number("ps_str") < 2 then
         monster = "mon_archunk_weak"
-        singular, plural = "A chunk of reality gets loose and falls on the ground.", "Chunks of reality get loose and fall on the ground."
+        singular, plural = services.translate("A chunk of reality gets loose and falls on the ground."), services.translate("Chunks of reality get loose and fall on the ground.")
     elseif state.number("ps_str") < 5 then
         monster = "mon_archunk_medium"
-        singular, plural = "Reality twists and deforms as a wriggling chunk of it falls on the ground.", "Reality twists and deforms as wriggling chunks of it fall on the ground."
+        singular, plural = services.translate("Reality twists and deforms as a wriggling chunk of it falls on the ground."), services.translate("Reality twists and deforms as wriggling chunks of it fall on the ground.")
     else
         monster = "mon_archunk_strong"
-        singular, plural = "A chunk of reality tears itself asunder and takes shape on the ground.", "Chunks of reality tear themselves asunder and take shape on the ground."
+        singular, plural = services.translate("A chunk of reality tears itself asunder and takes shape on the ground."), services.translate("Chunks of reality tear themselves asunder and take shape on the ground.")
     end
     population(character, monster, {
         count = 1, hallucinations = 1, outdoor_only = true, min_radius = 3, max_radius = 20,
