@@ -2149,6 +2149,10 @@ function EffectTypeDefinition:removes_optional_effect(id) end
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:blocks_effect(id) end
+---Suppress the effect if it is supplied by an enabled Mod.
+---@param id string Native effect id.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:blocks_optional_effect(id) end
 
 ---Append an enchantment in authored order; repeated references remain repeated.
 ---@param id string Existing or same-transaction Enchantment id.
@@ -2178,7 +2182,7 @@ function EffectTypeDefinition:monster_death_chance(numerator, denominator) end
 ---@field resisted_base? number Base while resisted; defaults to zero.
 ---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
 
----@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'|'hunger'|'thirst'|'focus'|'sensitivity'|'blood_pressure'|'sleep'|'size'
+---@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'|'hunger'|'thirst'|'focus'|'sensitivity'|'blood_pressure'|'heart_rate'|'sleep'|'size'
 ---@param action 'amount'|'minimum'|'maximum'|'minimum_value'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stats and healing accept amount only. Cough and vomiting accept chance and tick. Value bounds follow the native modifier kind.
 ---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
 ---@return EffectTypeDefinition self

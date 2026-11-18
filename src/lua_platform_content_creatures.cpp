@@ -439,7 +439,7 @@ struct effect_type_definition_data {
     std::set<std::string> resist_traits;
     std::vector<effect_reference> resist_effects;
     std::vector<effect_reference> removes_effects;
-    std::set<std::string> blocks_effects;
+    std::vector<effect_reference> blocks_effects;
     std::vector<std::string> enchantments;
     bool registered = false;
 };
@@ -1344,7 +1344,11 @@ struct effect_type_definition_handle {
         }
 
         effect_type_definition_handle &blocks_effect( const std::string &id ) {
-            return insert_id( definition->blocks_effects, id, "blocked effect" );
+            return append_effect_reference( definition->blocks_effects, id, false );
+        }
+
+        effect_type_definition_handle &blocks_optional_effect( const std::string &id ) {
+            return append_effect_reference( definition->blocks_effects, id, true );
         }
 
         effect_type_definition_handle &enchantment( const std::string &id ) {
@@ -1399,6 +1403,7 @@ struct effect_type_definition_handle {
                 { "bash", "BASH" }, { "cut", "CUT" },
                 { "hunger", "HUNGER" }, { "thirst", "THIRST" }, { "focus", "FOCUS" },
                 { "sensitivity", "SENSITIVE" }, { "blood_pressure", "BLOOD_PRESSURE" },
+                { "heart_rate", "HEART_RATE" },
                 { "sleep", "SLEEP" }, { "size", "SIZE" },
                 { "healing_head", "HEAL_HEAD" }, { "healing_torso", "HEAL_TORSO" },
                 { "strength", "STR" }, { "dexterity", "DEX" },
@@ -1421,7 +1426,8 @@ struct effect_type_definition_handle {
             const bool minimum_bound = kind == "health" || kind == "health_modifier" ||
                                        kind == "sleepiness" || kind == "stimulant" || kind == "perspiration" ||
                                        kind == "hunger" || kind == "thirst" || kind == "focus" ||
-                                       kind == "sensitivity" || kind == "blood_pressure";
+                                       kind == "sensitivity" || kind == "blood_pressure" ||
+                                       kind == "heart_rate";
             const bool timed_chance_only = kind == "cough" || kind == "vomiting";
             if( effect == kinds.end() || found == actions.end() ||
                 ( ( stat || healing ) && action != "amount" ) ||
@@ -3313,6 +3319,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "removes_effect", &effect_type_definition_handle::removes_effect,
         "removes_optional_effect", &effect_type_definition_handle::removes_optional_effect,
         "blocks_effect", &effect_type_definition_handle::blocks_effect,
+        "blocks_optional_effect", &effect_type_definition_handle::blocks_optional_effect,
         "death_chance", &effect_type_definition_handle::death_chance,
         "monster_death_chance", &effect_type_definition_handle::monster_death_chance,
         "modifier", &effect_type_definition_handle::modifier,
@@ -4527,8 +4534,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown removed effect '" + id + "'" );
                 }
             }
-            for( const std::string &id : definition.blocks_effects ) {
-                if( !effect_exists( id ) ) {
+            for( const auto &[id, optional] : definition.blocks_effects ) {
+                if( !optional && !effect_exists( id ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
                                               "' references unknown blocked effect '" + id + "'" );
                 }
@@ -5347,8 +5354,8 @@ void creatures_content_transaction::impl::apply_effect_type()
         for( const auto &removal : source.removes_effects ) {
             native.removes_effects.emplace_back( removal.id );
         }
-        for( const std::string &id : source.blocks_effects ) {
-            native.blocks_effects.emplace_back( id );
+        for( const auto &blocked : source.blocks_effects ) {
+            native.blocks_effects.emplace_back( blocked.id );
         }
         for( const std::string &id : source.enchantments ) {
             native.enchantments.emplace_back( id );
@@ -7346,7 +7353,10 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, optional ? "removes_optional_effect" : "removes_effect" );
                 hash_part( state, id );
             }
-            hash_ids( "blocks_effect", value.blocks_effects );
+            for( const auto &[id, optional] : value.blocks_effects ) {
+                hash_part( state, optional ? "blocks_optional_effect" : "blocks_effect" );
+                hash_part( state, id );
+            }
             hash_ids( "enchantment", value.enchantments );
         }
     } else if( phase == creatures_content_fingerprint_phase::sub_body_part ) {
