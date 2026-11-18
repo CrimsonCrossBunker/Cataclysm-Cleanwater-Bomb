@@ -6,6 +6,8 @@ require("items")
 
 require("deployable_furniture")
 
+require("map_tiles")
+
 require("upgrade_items")
 
 require("item_groups")
