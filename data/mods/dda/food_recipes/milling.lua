@@ -2,6 +2,7 @@ local content = require("ccb").content
 
 local NO_EXERCISE = 1
 local LIGHT_EXERCISE = 2
+local MODERATE_EXERCISE = 4
 local BRISK_EXERCISE = 6
 
 content.add(content.Recipe {
@@ -1064,4 +1065,48 @@ content.add(content.Recipe {
         })
     :batch_discount(20, 1)
     :result_charges(1)
+)
+
+local chitin_for_milling = {
+    { id = "chitin_piece", count = 1 },
+    { id = "acidchitin_piece", count = 1 },
+    { id = "endochitin", count = 1 },
+    { id = "insect_dust", count = 1 },
+}
+
+content.add(content.Recipe {
+    id = "meal_chitin_piece",
+    result = "meal_chitin_piece",
+    category = "CC_OTHER",
+    subcategory = "CSC_OTHER_MATERIALS",
+    duration_moves = 360000,
+    activity_level = MODERATE_EXERCISE,
+    autolearn = true,
+    skill = "cooking",
+    difficulty = 2,
+    flags = { "BLIND_EASY" },
+}
+    :tool("rock_quern", 1)
+    :component_any(chitin_for_milling)
+    :batch_discount(83, 3)
+    :result_charges(4)
+)
+
+content.add(content.Recipe {
+    id = "meal_chitin_piece_mortar",
+    result = "meal_chitin_piece",
+    category = "CC_OTHER",
+    subcategory = "CSC_OTHER_MATERIALS",
+    duration_moves = 540000,
+    activity_level = LIGHT_EXERCISE,
+    autolearn = true,
+    skill = "cooking",
+    difficulty = 2,
+    flags = { "BLIND_EASY" },
+}
+    :quality("FINE_GRIND", 1, 1)
+    :component_any(chitin_for_milling)
+    :requires_skill("survival", 1)
+    :batch_discount(83, 3)
+    :result_charges(4)
 )

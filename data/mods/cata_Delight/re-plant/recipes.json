@@ -1,48 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_TSOW_THRESH_WILD_RICE",
-    "effect": [
-      { "math": [ "_wild_rice_count = 0" ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      { "if": { "x_in_y_chance": { "x": 1, "y": 10 } }, "then": [ { "math": [ "_wild_rice_count += 1" ] } ] },
-      {
-        "if": { "math": [ "_wild_rice_count > 0" ] },
-        "then": [
-          {
-            "u_message": "You threshed <context_val:wild_rice_count> portions of wild rice from the seeded grass stalks.",
-            "type": "good"
-          },
-          { "u_spawn_item": "wild_rice", "count": { "context_val": "wild_rice_count" } }
-        ],
-        "else": [ { "u_message": "You did not find any usable wild rice in those stalks.", "type": "info" } ]
-      }
-    ]
-  },
-  {
-    "type": "recipe",
-    "id": "tsow_thresh_wild_rice",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_FOOD",
-    "subcategory": "CSC_FOOD_OTHER",
-    "name": "Thresh Wild Rice from Seeded Grass Stalks",
-    "description": "Rub and sift the seeded grass stalks to try separating any edible wild rice from them.  Each stalk has a one-in-ten chance of containing a small handful of wild rice.",
-    "skill_used": "survival",
-    "difficulty": 0,
-    "time": "10 m",
-    "autolearn": [ [ "survival", 0 ] ],
-    "components": [ [ [ "tsow_grass_stalk_with_seed", 10 ] ] ],
-    "result_eocs": [ "EOC_TSOW_THRESH_WILD_RICE" ]
-  },
-  {
     "type": "recipe",
     "activity_level": "MODERATE_EXERCISE",
     "result": "tsow_compost_bin_empty",

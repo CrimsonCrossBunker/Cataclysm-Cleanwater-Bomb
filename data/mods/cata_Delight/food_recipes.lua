@@ -1,4 +1,6 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
+local services = ccb.services
 
 local LIGHT_EXERCISE = 2
 
@@ -240,4 +242,52 @@ content.add(content.Recipe {
     :component("seed_cranberries", 1)
     :component("material_soil", 2)
     :component("water", 2)
+)
+
+local stalks_per_batch = 10
+local wild_rice = services.types.id("item", "wild_rice")
+
+ccb.runtime.handler("thresh_wild_rice", function(payload)
+    local character = payload.character
+    for _ = 1, payload.batch do
+        local count = 0
+        for _ = 1, stalks_per_batch do
+            if services.random.native_probability(1, 10) then
+                count = count + 1
+            end
+        end
+
+        if count > 0 then
+            if character.subtype ~= "npc" then
+                local message = services.translate(
+                    "You threshed <context_val:wild_rice_count> portions of wild rice from the seeded grass stalks."
+                )
+                services.messages.add(message:gsub("<context_val:wild_rice_count>", tostring(count)), "good")
+            end
+            local received = services.inventory.receive_item(character, wild_rice, count)
+            if not received.ok then
+                error(received.error.message)
+            end
+        elseif character.subtype ~= "npc" then
+            services.messages.add(services.translate("You did not find any usable wild rice in those stalks."), "info")
+        end
+    end
+end, 1)
+
+content.add(content.Recipe {
+    id = "tsow_thresh_wild_rice",
+    name = content.text("Thresh Wild Rice from Seeded Grass Stalks"),
+    description = content.text(
+        "Rub and sift the seeded grass stalks to try separating any edible wild rice from them.  Each stalk has a one-in-ten chance of containing a small handful of wild rice."
+    ),
+    category = "CC_FOOD",
+    subcategory = "CSC_FOOD_OTHER",
+    duration_moves = 60000,
+    activity_level = LIGHT_EXERCISE,
+    skill = "survival",
+    scripted_output = true,
+}
+    :component("tsow_grass_stalk_with_seed", stalks_per_batch)
+    :learn_automatically("survival", 0)
+    :on_complete("thresh_wild_rice")
 )
