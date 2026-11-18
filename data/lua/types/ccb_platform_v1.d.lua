@@ -10165,6 +10165,12 @@ function CcbSpellsApi.forget(character, spell) end
 ---@return CcbResult result value is the number of matching known spells.
 function CcbSpellsApi.count(character, school) end
 
+---Read the highest effective level among the Character's known spells of the supplied school.
+---@param character GameHandle Exact live Character.
+---@param school GameId GameId<mutation> of the spell school.
+---@return CcbResult result value is the highest effective level, or -1 when no matching spell is known.
+function CcbSpellsApi.school_level(character, school) end
+
 ---Sum effective levels of known spells at or above the minimum level.
 ---@param character GameHandle Exact live Character.
 ---@param school? GameId GameId<mutation> of the spell school. Omit to include all schools.
