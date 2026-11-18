@@ -2039,3 +2039,109 @@ do
     item:clear_mounted_charge()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "mc_battleaxe",
+        name = ccb.content.plural_text("medium steel battle axe", "medium steel battle axes"),
+        description = ccb.content.text("A huge axe designed for warfare.  Made of medium steel, this isn't the greatest weapon ever forged but it has a decent edge and a real handle."),
+        mass_milligrams = 2202000,
+        volume_ml = 2500,
+        longest_side_mm = 1000,
+        price_cents = 40000,
+        price_postapoc_cents = 12000,
+        melee_to_hit = 0,
+        symbol = "/",
+        color = "light_gray",
+        looks_like = "battleaxe",
+        techniques = { "WBLOCK_1", "WIDE", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" },
+        replace_qualities = true,
+        weapon_categories = { "HOOKING_WEAPONRY", "GREAT_AXES" },
+        category = "weapons",
+    }
+    item:material("mc_steel", 1)
+    item:material("wood", 1)
+    item:quality("AXE", 2)
+    item:quality("BUTCHER", -20)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_AXE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 19)
+    item:melee_damage("cut", 38)
+    item:mounted_charge { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 }
+    item:fault_group("handle_long", {  })
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "ch_battleaxe",
+        copy_from = "mc_battleaxe",
+        looks_like = "mc_battleaxe",
+        name = ccb.content.plural_text("hardened steel battle axe", "hardened steel battle axes"),
+        description = ccb.content.text("A huge axe designed for warfare.  Made of hardened steel, this would be the envy of any Viking raider."),
+    }
+    item:material("ch_steel", 1)
+    item:material("wood", 1)
+    item:adjust_melee_damage { bonuses = { cut = 3 } }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "qt_battleaxe",
+        copy_from = "mc_battleaxe",
+        looks_like = "mc_battleaxe",
+        name = ccb.content.plural_text("tempered steel battle axe", "tempered steel battle axes"),
+        description = ccb.content.text("A huge axe designed for warfare.  Made of tempered steel, this is a weapon that could fell a jötunn."),
+    }
+    item:material("qt_steel", 1)
+    item:material("wood", 1)
+    item:adjust_melee_damage { bonuses = { cut = 4 } }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shock_staff",
+        category = "weapons",
+        name = ccb.content.plural_text("powered quarterstaff", "powered quarterstaves"),
+        description = ccb.content.text("An ironshod quarterstaff that has a high-voltage stun gun built into the handle.  The stun guns prongs are extended by a wire and stick out from the tip of the shaft, allowing you to zap a dangerous opponent should beating them senseless with it prove too hazardous."),
+        mass_milligrams = 1910000,
+        volume_ml = 1800,
+        longest_side_mm = 1800,
+        price_cents = 8000,
+        price_postapoc_cents = 1500,
+        melee_to_hit = 1,
+        symbol = "/",
+        color = "brown",
+        replace_qualities = true,
+        techniques = { "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" },
+        weapon_categories = { "QUARTERSTAVES" },
+        replace_pockets = true,
+    }
+    item:material("wood", 1)
+    item:material("iron", 1)
+    item:quality("HAMMER", 1)
+    item:clear_use_actions()
+    item:native_use("TAZER")
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_SPEAR")
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("WATER_BREAK")
+    item:flag("DURABLE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:mounted_charge { max_steps = 15, damage_type = "bash", multiplier_per_step = 0.06, max_multiplier = 1.25 }
+    item:fault_group("staff_long", {  })
+    item:fault_group("electronic_general", {  })
+    item:magazine_well { rigid = true, flags = { "BATTERY_MEDIUM" }, default_magazine = "medium_battery_cell" }
+    item:tool { charges_per_use = 2, ammo_types = { "battery" } }
+    content.add(item)
+end

@@ -1,50 +1,5 @@
 [
   {
-    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
-    "id": "mc_battleaxe",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "medium steel battle axe" },
-    "description": "A huge axe designed for warfare.  Made of medium steel, this isn't the greatest weapon ever forged but it has a decent edge and a real handle.",
-    "weight": "2202 g",
-    "volume": "2500 ml",
-    "longest_side": "100 cm",
-    "price": "400 USD",
-    "price_postapoc": "120 USD",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "uneven" },
-    "material": [ "mc_steel", "wood" ],
-    "symbol": "/",
-    "color": "light_gray",
-    "looks_like": "battleaxe",
-    "techniques": [ "WBLOCK_1", "WIDE", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" ],
-    "qualities": [ [ "AXE", 2 ], [ "BUTCHER", -20 ] ],
-    "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "SHEATH_AXE" ],
-    "faults": [ { "fault_group": "handle_long" } ],
-    "weapon_category": [ "HOOKING_WEAPONRY", "GREAT_AXES" ],
-    "category": "weapons",
-    "melee_damage": { "bash": 19, "cut": 38 }
-  },
-  {
-    "id": "ch_battleaxe",
-    "copy-from": "mc_battleaxe",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "hardened steel battle axe" },
-    "description": "A huge axe designed for warfare.  Made of hardened steel, this would be the envy of any Viking raider.",
-    "material": [ "ch_steel", "wood" ],
-    "relative": { "melee_damage": { "cut": 3 } }
-  },
-  {
-    "id": "qt_battleaxe",
-    "copy-from": "mc_battleaxe",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "tempered steel battle axe" },
-    "description": "A huge axe designed for warfare.  Made of tempered steel, this is a weapon that could fell a jötunn.",
-    "material": [ "qt_steel", "wood" ],
-    "relative": { "melee_damage": { "cut": 4 } }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "cane",
@@ -310,41 +265,6 @@
     "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "good" },
     "price_postapoc": "10 USD",
     "melee_damage": { "bash": 19 }
-  },
-  {
-    "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
-    "id": "shock_staff",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "powered quarterstaff", "str_pl": "powered quarterstaves" },
-    "description": "An ironshod quarterstaff that has a high-voltage stun gun built into the handle.  The stun guns prongs are extended by a wire and stick out from the tip of the shaft, allowing you to zap a dangerous opponent should beating them senseless with it prove too hazardous.",
-    "weight": "1910 g",
-    "volume": "1800 ml",
-    "longest_side": "180 cm",
-    "price": "80 USD",
-    "price_postapoc": "15 USD",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "uneven" },
-    "material": [ "wood", "iron" ],
-    "symbol": "/",
-    "color": "brown",
-    "charges_per_use": 2,
-    "qualities": [ [ "HAMMER", 1 ] ],
-    "techniques": [ "WBLOCK_2", "RAPID", "SWEEP", "MOUNTED_CHARGE" ],
-    "use_action": [ "TAZER" ],
-    "flags": [ "NONCONDUCTIVE", "SHEATH_SPEAR", "ALWAYS_TWOHAND", "WATER_BREAK", "DURABLE_MELEE" ],
-    "faults": [ { "fault_group": "staff_long" }, { "fault_group": "electronic_general" } ],
-    "weapon_category": [ "QUARTERSTAVES" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "melee_damage": { "bash": 14 },
-    "tool_ammo": [ "battery" ]
   },
   {
     "id": "shocktonfa_off",
