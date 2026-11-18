@@ -322,3 +322,105 @@ do
     group:item("scuba_regulator", 25)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bikini", kind = "distribution" }
+    group:entry {
+        collection = {
+            { item = "bikini_top", variant = "flag_bikini_top" },
+            { item = "bikini_bottom", variant = "flag_bikini_bottom" },
+        },
+        event = "independence_day",
+        probability = 30,
+    }
+    group:group("bikini_matching", 10)
+    group:group("bikini_unmatching", 1)
+    group:group("bikini_fur", 1)
+    group:group("bikini_leather", 1)
+    group:group("bikini_short", 1)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "swimmer_torso", kind = "distribution" }
+    group:item("bikini_top", 85)
+    group:item("bikini_top_fur", 5)
+    group:item("bikini_top_leather", 5)
+    group:item("bikini_top_short", 20)
+    group:item("sports_bra", 10)
+    group:item("wetsuit_jacket", 10)
+    group:item("wetsuit_top", 25)
+    group:item("wetsuit_top_sleeved", 25)
+    group:item("rashguard", 25)
+    group:item("thermal_shirt", 20)
+    group:item("under_armor", 15)
+    group:item("tank_top", 6, "tank_top_camo")
+    group:item("tank_top", 6)
+    group:item("halter_top", 6)
+    group:item("tshirt", 15)
+    group:entry { item = "rashguard", variant = "flag_rashguard_shirt", event = "independence_day", probability = 60 }
+    group:entry { item = "tshirt", variant = "flag_shirt", event = "independence_day", probability = 20 }
+    group:entry { item = "bikini_top", variant = "flag_bikini_top", event = "independence_day", probability = 50 }
+    content.add(group)
+end
+
+do
+    -- For use in death drops where bikinis are paired separately
+    local group = content.ItemGroup { id = "swimmer_torso_no_bikini", kind = "distribution" }
+    group:item("sports_bra", 10)
+    group:item("wetsuit_jacket", 10)
+    group:item("wetsuit_top", 25)
+    group:item("wetsuit_top_sleeved", 25)
+    group:item("rashguard", 25)
+    group:item("thermal_shirt", 20)
+    group:item("under_armor", 15)
+    group:item("tank_top", 6, "tank_top_camo")
+    group:item("tank_top", 6)
+    group:item("halter_top", 6)
+    group:item("tshirt", 15)
+    group:entry { item = "rashguard", variant = "flag_rashguard_shirt", event = "independence_day", probability = 60 }
+    group:entry { item = "tshirt", variant = "flag_shirt", event = "independence_day", probability = 20 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "swimmer_pants", kind = "distribution" }
+    group:item("trunks", 65)
+    group:item("bikini_bottom", 95)
+    group:item("bikini_bottom_short", 20)
+    group:item("swim_briefs", 35)
+    group:item("speedo", 10)
+    group:item("wetsuit_pants", 25)
+    group:item("wetsuit_shorts", 35)
+    group:item("hot_pants", 30)
+    group:item("under_armor_shorts", 15)
+    group:item("skirt", 10)
+    group:item("skirt_grass", 15)
+    group:item("nanoskirt", 5)
+    group:entry { item = "bikini_bottom", variant = "flag_bikini_bottom", event = "independence_day", probability = 50 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "swimmer_wetsuit", kind = "distribution" }
+    group:item("wetsuit", 35)
+    group:item("wetsuit_thick", 5)
+    group:item("wetsuit_spring", 25)
+    group:item("wetsuit_spring_sleeveless", 25)
+    group:item("flag_swimsuit", 65)
+    group:entry { item = "flag_swimsuit", variant = "flag_swimsuit", event = "independence_day", probability = 60 }
+    group:entry { item = "bodysuit_lycra", variant = "flag_suit", event = "independence_day", probability = 10 }
+    content.add(group)
+end
+
+do
+    -- Only diving appropriate suits.
+    local group = content.ItemGroup { id = "diving_wetsuit", kind = "distribution" }
+    group:item("wetsuit", 50)
+    group:item("wetsuit_thick", 50)
+    group:item("wetsuit_spring", 5)
+    group:item("wetsuit_spring_sleeveless", 5)
+    group:item("flag_swimsuit", 1)
+    group:entry { item = "flag_swimsuit", variant = "flag_swimsuit", event = "independence_day", probability = 15 }
+    content.add(group)
+end

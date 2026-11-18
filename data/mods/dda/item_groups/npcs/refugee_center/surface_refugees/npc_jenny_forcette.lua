@@ -18,3 +18,10 @@ do
     group:item("laptop")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "REFUGEE_Jenny_carried", kind = "collection" }
+    group:item("paper")
+    group:entry { item = "soldering_iron_portable", charges = { 20, 20 }, ammo = { item = "battery" } }
+    content.add(group)
+end

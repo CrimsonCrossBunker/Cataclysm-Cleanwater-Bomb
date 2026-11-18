@@ -16,3 +16,38 @@ do
     group:group("robofac_helmet_merc")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_ROBOFAC_MERC_1_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "robofac40", charges = { 40, 40 }, ammo = { item = "556" } }
+    group:item("robofac_gun_kit")
+    group:item("grenade_emp")
+    group:group("mil_food_nodrugs")
+    group:entry { item = "bot_grenade_hack", count = { 2, 2 } }
+    group:entry { item = "protein_bar_evac", count = { 7, 7 } }
+    group:entry { item = "water_clean", count = { 2, 2 } }
+    group:entry { item = "RobofacCoin", count = { 15, 18 } }
+    group:group("charged_smart_phone")
+    group:group("full_1st_aid")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_ROBOFAC_MERC_1_wield", kind = "collection" }
+    group:entry {
+        item = "robofac_gun",
+        charges = { 40, 40 },
+        ammo = { item = "556" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "robofac_gun_ar" },
+        },
+    }
+    content.add(group)
+end

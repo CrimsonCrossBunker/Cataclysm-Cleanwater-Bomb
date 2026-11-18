@@ -105,3 +105,32 @@ do
     group:entry { item = "tanned_pelt", count = { 5, 35 }, probability = 70 }
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a set of tailoring tools.
+    local group = content.ItemGroup { id = "SUS_tailoring_tool_drawer", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "awl_steel", probability = 70 },
+                    { item = "needle_curved", probability = 75 },
+                    { item = "scissors", probability = 90 },
+                    { item = "knitting_needles", probability = 20 },
+                    { item = "sewing_kit", charges = { 0, -1 }, probability = 85 },
+                    { item = "kevlar_shears", probability = 5 },
+                },
+                probability = 25,
+            },
+            { item = "tailors_kit", charges = { 0, -1 }, probability = 75 },
+            { item = "sewing_machine", probability = 75 },
+            { item = "electric_spinwheel", probability = 75 },
+        },
+    }
+    group:entry { item = "thread", count = { 2, 7 }, probability = 75 }
+    group:entry { item = "thread_kevlar", count = { 1, 3 }, probability = 6 }
+    group:entry { item = "thread_nomex", count = { 2, 5 }, probability = 14 }
+    group:entry { item = "thread_canvas", count = { 2, 6 }, probability = 18 }
+    content.add(group)
+end

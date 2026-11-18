@@ -37,3 +37,20 @@ do
     group:item("slime_scrap")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "human_remains", kind = "collection" }
+    group:entry { item = "human_flesh", count = { 1, 10 }, probability = 70 }
+    group:item("hstomach_large", 60)
+    group:item("hstomach", 60)
+    group:entry { item = "bone_human", count = { 1, 5 }, probability = 90 }
+    group:entry {
+        item = "cotton_patchwork",
+        count = { 1, 4 },
+        flags = {
+            "FILTHY",
+        },
+        probability = 90,
+    }
+    content.add(group)
+end

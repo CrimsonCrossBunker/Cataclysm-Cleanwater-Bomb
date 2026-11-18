@@ -1098,3 +1098,27 @@ do
     group:entry { item = "mustard_powder", count = { 50, 50 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "cinnamon_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "cinnamon", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "honey_mustard_sealed_rng", kind = "distribution" }
+    group:entry { item = "honey_mustard", charges = { 1, -1 }, probability = 6 }
+    group:entry { item = "honey_mustard", charges = { 32, 32 }, container = "condiment_bottle_sealed", probability = 1 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "barbecue_sauce_sealed_rng", kind = "distribution" }
+    group:entry { item = "barbecue_sauce", charges = { 1, -1 }, probability = 6 }
+    group:entry { item = "barbecue_sauce", charges = { 32, 32 }, container = "condiment_bottle_sealed", probability = 1 }
+    content.add(group)
+end

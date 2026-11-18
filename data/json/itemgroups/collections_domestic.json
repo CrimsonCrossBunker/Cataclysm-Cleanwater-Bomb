@@ -1,19 +1,5 @@
 [
   {
-    "id": "shower",
-    "//": "Mundane household items that might be found in or around a shower or bath.",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "item": "cotton_patchwork", "prob": 40 },
-      { "item": "bath_toy", "count": [ 1, 4 ], "prob": 10 },
-      { "item": "bathroom_scale", "prob": 20 },
-      { "item": "liquid_soap", "count": [ 1, 4 ], "prob": 70, "charges": [ 1, -1 ] },
-      { "item": "towel", "prob": 30 },
-      { "item": "soap", "prob": 10, "charges": [ 1, 10 ] }
-    ]
-  },
-  {
     "id": "kitchen_appliances",
     "//": "Mundane household appliances that you might find in a kitchen.",
     "type": "item_group",
@@ -199,140 +185,6 @@
       { "group": "pillbox_any_used", "prob": 10 },
       { "item": "home_picture", "prob": 50 },
       { "group": "sex_accessories_domestic", "prob": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "memorial",
-    "subtype": "collection",
-    "entries": [
-      { "item": "corpse_ash", "prob": 100, "count": [ 190, 396 ], "entry-wrapper": "porcelain_urn" },
-      { "item": "photo_album", "prob": 75 },
-      { "item": "bouquet", "prob": 50 },
-      { "item": "candle", "prob": 50, "charges": [ 1, 6 ] },
-      {
-        "distribution": [
-          { "group": "religious_books", "prob": 20 },
-          { "item": "bead_necklace", "prob": 20 },
-          { "item": "bead_bracelet", "prob": 20 },
-          { "item": "holy_symbol", "prob": 20 },
-          { "item": "candlestick", "prob": 20 }
-        ]
-      },
-      {
-        "distribution": [
-          {
-            "collection": [
-              { "item": "american_flag", "prob": 70 },
-              { "item": "beret", "prob": 33 },
-              { "item": "service_medal", "prob": 50 },
-              { "item": "dog_tag", "prob": 100 }
-            ],
-            "prob": 10
-          },
-          {
-            "collection": [
-              { "item": "ceramic_mug", "prob": 50 },
-              { "group": "beer_in_container", "prob": 50 },
-              { "group": "liquor_and_spirits", "prob": 20 },
-              { "group": "wines_worthy", "prob": 10 },
-              { "item": "cigar", "prob": 20 },
-              { "item": "hat_ball", "prob": 20 },
-              { "group": "jewelry_accessories", "prob": 50 },
-              { "group": "clothing_glasses", "prob": 50 },
-              { "item": "foodperson_mask", "prob": 1, "charges": [ 0, 500 ] }
-            ],
-            "prob": 70
-          },
-          {
-            "collection": [
-              { "item": "teddy_bear", "custom-flags": [ "FILTHY" ], "damage": [ 0, 3 ], "prob": 50 },
-              { "item": "hat_ball", "prob": 20 },
-              { "item": "baseball", "prob": 20 },
-              { "item": "roller_shoes_off", "prob": 10 },
-              { "item": "gold_medal", "prob": 20 },
-              { "item": "silver_medal", "prob": 20 },
-              { "item": "bronze_medal", "prob": 20 },
-              { "item": "story_book", "prob": 50 },
-              { "item": "hairpin", "prob": 20 },
-              { "item": "barrette", "prob": 20 },
-              { "item": "newspaper_memorial", "prob": 20 }
-            ],
-            "prob": 5
-          },
-          {
-            "collection": [
-              { "item": "dog_whistle", "prob": 50 },
-              { "item": "dog_whistle_wood", "prob": 25 },
-              { "item": "leather_harness_dog", "prob": 50 },
-              { "item": "dogfood_dry", "container-item": "bowl_plastic", "prob": 50 },
-              { "item": "bone", "prob": 50 },
-              { "item": "dog_tag_dog", "prob": 100 }
-            ],
-            "prob": 15
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "grave_cremains",
-    "subtype": "collection",
-    "entries": [
-      { "item": "corpse_ash", "prob": 100, "count": [ 190, 396 ], "entry-wrapper": "porcelain_urn" },
-      { "item": "bouquet", "prob": 100 },
-      {
-        "distribution": [
-          { "group": "religious_books", "prob": 25 },
-          { "item": "bead_necklace", "prob": 25 },
-          { "item": "bead_bracelet", "prob": 25 },
-          { "item": "holy_symbol", "prob": 25 }
-        ]
-      },
-      {
-        "distribution": [
-          {
-            "collection": [
-              { "item": "american_flag", "prob": 70 },
-              { "item": "beret", "prob": 33 },
-              { "item": "service_medal", "prob": 50 },
-              { "item": "dog_tag", "prob": 100 }
-            ],
-            "prob": 20
-          },
-          {
-            "collection": [
-              { "item": "ceramic_mug", "prob": 50 },
-              { "group": "beer_in_container", "prob": 50 },
-              { "group": "liquor_and_spirits", "prob": 20 },
-              { "group": "wines_worthy", "prob": 10 },
-              { "item": "cigar", "prob": 20 },
-              { "item": "hat_ball", "prob": 20 },
-              { "group": "jewelry_accessories", "prob": 50 },
-              { "group": "clothing_glasses", "prob": 50 },
-              { "item": "foodperson_mask", "prob": 1, "charges": [ 0, 500 ] }
-            ],
-            "prob": 70
-          },
-          {
-            "collection": [
-              { "item": "teddy_bear", "custom-flags": [ "FILTHY" ], "damage": [ 0, 3 ], "prob": 50 },
-              { "item": "hat_ball", "prob": 20 },
-              { "item": "baseball", "prob": 20 },
-              { "item": "roller_shoes_off", "prob": 10 },
-              { "item": "gold_medal", "prob": 20 },
-              { "item": "silver_medal", "prob": 20 },
-              { "item": "bronze_medal", "prob": 20 },
-              { "item": "story_book", "prob": 50 },
-              { "item": "hairpin", "prob": 20 },
-              { "item": "barrette", "prob": 20 },
-              { "item": "newspaper_memorial", "prob": 20 }
-            ],
-            "prob": 10
-          }
-        ]
-      }
     ]
   },
   {
@@ -1058,24 +910,6 @@
       [ "fencing_epee", 20 ],
       [ "fencing_mask", 20 ],
       { "item": "home_picture", "prob": 50 }
-    ]
-  },
-  {
-    "id": "cat_hoarder",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "pet_carrier", "prob": 30 },
-      { "item": "petpack", "prob": 15 },
-      { "item": "catfood", "prob": 30, "container-item": "can_food" },
-      { "prob": 10, "item": "catfood_dry", "count": [ 12, -1 ] },
-      { "item": "towel", "prob": 20 },
-      { "item": "soap", "prob": 10 },
-      { "item": "gloves_medical", "prob": 20 },
-      { "item": "cotton_patchwork", "prob": 15 },
-      { "item": "bag_plastic", "prob": 20 },
-      { "item": "missing_poster_cat", "prob": 40 },
-      { "item": "rope_6", "prob": 15 }
     ]
   }
 ]

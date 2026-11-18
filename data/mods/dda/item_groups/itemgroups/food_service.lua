@@ -802,3 +802,509 @@ do
     group:entry { group = "eggs_in_carton", count = { 1, 3 }, probability = 40 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "teashop_bulk_teas", kind = "distribution" }
+    group:item("honey_bottled", 20)
+    group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 20 }
+    group:item("con_milk", 10)
+    group:group("bee_balm_jar_3l_glass_sealed_1_12", 20)
+    group:entry {
+        item = "jar_3l_glass_sealed",
+        contents = {
+            { group = "teashop_bulk_teas_no_stackable" },
+        },
+        probability = 40,
+    }
+    group:group("raw_burdock_jar_3l_glass_sealed_1_inf", 10)
+    group:group("tea_raw_jar_glass_sealed_10_40", 60)
+    group:group("tea_green_raw_jar_glass_sealed_10_40", 30)
+    group:group("wild_herbs_jar_glass_sealed_20_inf", 50)
+    group:group("raw_dandelion_jar_glass_sealed_1_inf", 10)
+    group:group("milk_powder_various", 30)
+    group:group("cinnamon_jar_glass_sealed_1_inf", 20)
+    group:group("sugar_jar_glass_sealed_10_140", 40)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pizza_kitchen", kind = "distribution" }
+    group:group("seasoning_italian_bulk", 23)
+    group:group("seasoning_salt_bulk", 13)
+    group:group("pepper_bulk", 5)
+    group:group("yeast_bulk", 10)
+    group:group("sugar_bulk", 9)
+    group:entry { item = "cornmeal", count = { 4, -1 }, probability = 8 }
+    group:group("flour_bulk", 25)
+    group:item("cookbook", 3)
+    group:item("cookbook_italian", 2)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "coffee_condiments", kind = "distribution" }
+    group:item("bag_plastic", 25)
+    group:item("box_small", 30)
+    group:entry { item = "honey_bottled", charges = { -1, -1 }, probability = 10 }
+    group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 10 }
+    group:group("milk_in_container", 10)
+    group:entry { item = "oat_milk", charges = { 1, -1 }, probability = 8 }
+    group:group("milk_powder_various", 65)
+    group:group("salt_various", 15)
+    group:group("sugar_bulk", 70)
+    group:group("artificial_sweetener_box_small_71", 15)
+    group:group("tea_raw_bag_plastic_33", 15)
+    group:group("tea_green_raw_bag_plastic_33", 10)
+    group:item("wrapper", 75)
+    group:entry { item = "wrapper_foil", count = { 5, 40 }, wrapper = "wrapper_foil_roll", probability = 5 }
+    group:group("teabag_box", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "coffee_locker", kind = "distribution" }
+    group:item("apron_cotton", 20)
+    group:item("waist_apron_long", 5)
+    group:item("waist_apron_short", 20)
+    group:item("apron_leather", 5)
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 10 }
+    group:item("hat_ball", 25)
+    group:item("towel", 10)
+    group:entry { item = "soap", charges = { 1, 10 }, probability = 8 }
+    group:group("detergent_small_box_part", 4)
+    group:group("borax_box_part", 4)
+    group:item("cotton_patchwork", 15)
+    group:item("broom", 8)
+    group:group("bleach_jug_part", 8)
+    group:item("hotplate", 1)
+    group:entry { item = "vinegar", charges = { 1, -1 }, probability = 3 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fast_kitchen", kind = "distribution" }
+    group:item("knife_huge", 30, "knife_butcher")
+    group:group("bread_in_bag", 50)
+    group:group("seasoning_salt_bulk", 50)
+    group:group("seasoning_italian_bulk", 50)
+    group:group("chicken_in_can", 30)
+    group:group("sugar_bulk", 40)
+    group:group("artificial_sweetener_box_small_71", 10)
+    group:item("soysauce", 10)
+    group:item("hot_sauce", 10)
+    group:group("flour_bulk", 40)
+    group:group("curry_powder_various", 40)
+    group:entry { item = "cornmeal", count = { 10, -1 }, probability = 52 }
+    group:group("oyster_crackers_plastic_bag_vac_1_inf", 35)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fast_fridge", kind = "distribution" }
+    group:group("hotdogs_frozen_bag_plastic_10", 30)
+    group:group("cheese_bag_plastic", 60)
+    group:item("fries", 40)
+    group:group("chicken_in_can", 40)
+    group:group("spam_in_can", 40)
+    group:entry { item = "lettuce", count = { 5, 5 }, probability = 50 }
+    group:group("irradiated_lettuce_bag_plastic_5", 10)
+    group:item("tomato", 50)
+    group:entry {
+        item = "tomato",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 10,
+    }
+    group:item("onion", 50)
+    group:entry {
+        item = "onion",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 10,
+    }
+    group:entry { item = "chili_pepper", count = { 3, 3 }, probability = 50 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fast_locker", kind = "distribution" }
+    group:item("hat_ball", 30)
+    group:item("knife_small", 20, "knife_steak")
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 40 }
+    group:item("towel", 40)
+    group:entry { item = "soap", charges = { 1, 10 }, probability = 30 }
+    group:group("detergent_small_box_part", 15)
+    group:group("borax_box_part", 15)
+    group:item("cotton_patchwork", 30)
+    group:group("bleach_jug_part", 30)
+    group:entry { item = "vinegar", charges = { 1, -1 }, probability = 30 }
+    group:item("backpack", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "groce_bread", kind = "distribution" }
+    group:group("bread_in_bag", 65)
+    group:group("garlic_bread_in_bag", 20)
+    group:group("brown_bread_in_bag", 50)
+    group:entry { item = "cake2", count = { 12, 12 }, probability = 10 }
+    group:entry { item = "cake3", count = { 12, 12 }, probability = 10 }
+    group:group("cornbread_in_bag", 35)
+    group:group("brioche_box_small_6", 50)
+    group:entry { item = "hardtack", count = { 2, 2 }, probability = 30 }
+    group:entry { item = "jihelucake", count = { 12, 12 }, probability = 10 }
+    group:group("biscuit_box_small_10", 50)
+    group:entry { item = "crackers", count = { -1, -1 }, probability = 40 }
+    group:item("soybean_seed", 40)
+    group:entry { item = "almond_shelled", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "pecan_shelled", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "cashews", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "pistachio_shelled", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "peanut_shelled", count = { -1, -1 }, probability = 20 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "groce_ingredient", kind = "distribution" }
+    group:group("flour_various_full", 65)
+    group:entry { item = "cornmeal", count = { -1, -1 }, probability = 50 }
+    group:group("yeast_various_full", 40)
+    group:group("yogurt_starter_culture_bag_plastic_4", 10)
+    group:group("koji_bag_plastic_25", 2)
+    group:group("powder_eggs_bottle_plastic_small_16", 55)
+    group:group("milk_in_container_full", 15)
+    group:item("milk_evap", 25)
+    group:item("con_milk", 25)
+    group:group("milk_powder_various_full", 45)
+    group:group("salt_various_full", 50)
+    group:item("soysauce", 25)
+    group:item("hot_sauce", 25)
+    group:group("sugar_various_full", 60)
+    group:group("artificial_sweetener_box_small_71", 15)
+    group:group("dry_rice_various", 65)
+    group:group("dry_wild_rice_bag_plastic_full", 5)
+    group:group("chem_citric_acid_bottle_glass_50", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "restaur_fridge", kind = "distribution" }
+    group:entry { item = "water_clean", charges = { -1, -1 }, probability = 10 }
+    group:entry { item = "water_mineral", charges = { -1, -1 }, probability = 10 }
+    group:group("milk_in_container", 20)
+    group:group("butter_wrapper_8_64", 35)
+    group:entry { item = "ghee", charges = { 1, 64 }, sealed = false, container = "jar_glass_sealed", probability = 5 }
+    group:item("yoghurt", 10)
+    group:item("pudding", 15)
+    group:item("apple", 10)
+    group:item("sandwich_t", 15)
+    group:item("mushroom", 20)
+    group:item("tomato", 20)
+    group:item("lettuce", 15)
+    group:item("zucchini", 15)
+    group:item("foodplace_food", 20)
+    group:item("onion", 15)
+    group:item("chili_pepper", 15)
+    group:item("carrot", 15)
+    group:item("potato", 15)
+    group:entry {
+        item = "tomato",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "lettuce",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "zucchini",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "onion",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "carrot",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:item("chili", 10)
+    group:group("wines_worthy", 54)
+    group:item("fish_fried", 7)
+    group:item("cheese", 10)
+    group:item("mozzarella_cheese", 10)
+    group:item("lemon", 15)
+    group:group("pickle_jar_glass_sealed_2", 10)
+    group:item("lutefisk", 15)
+    group:item("fries", 15)
+    group:item("cheese_fries", 10)
+    group:item("onion_rings", 10)
+    group:item("royal_beef", 1)
+    group:item("sauce_red", 8)
+    group:item("tofu", 8)
+    group:item("sausage", 10)
+    group:item("bratwurst_sausage", 10)
+    group:item("syrup", 10)
+    group:item("syrup_corn", 5)
+    group:item("sweet_sausage", 2)
+    group:item("soup_meat", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sea_restaur_fridge", kind = "distribution" }
+    group:entry { item = "water_clean", charges = { -1, -1 }, probability = 10 }
+    group:entry { item = "water_mineral", charges = { -1, -1 }, probability = 10 }
+    group:group("milk_in_container", 20)
+    group:item("egg_bird_unfert", 20)
+    group:group("butter_wrapper_8_64", 35)
+    group:entry { item = "ghee", charges = { 1, 64 }, sealed = false, container = "jar_glass_sealed", probability = 5 }
+    group:item("apple", 10)
+    group:item("fish_sandwich", 15)
+    group:item("lobster_roll", 15)
+    group:item("mushroom", 20)
+    group:item("tomato", 20)
+    group:item("lettuce", 15)
+    group:item("zucchini", 15)
+    group:item("onion", 15)
+    group:item("chili_pepper", 15)
+    group:item("carrot", 15)
+    group:item("potato", 15)
+    group:entry {
+        item = "tomato",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "lettuce",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "zucchini",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "onion",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "carrot",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:group("wines_worthy", 54)
+    group:item("fish_fried", 7)
+    group:item("fish", 80)
+    group:item("egg_fish", 10)
+    group:item("lobster", 40)
+    group:item("lobster_cooked", 10)
+    group:item("lemon", 20)
+    group:group("pickle_jar_glass_sealed_2", 10)
+    group:item("fries", 15)
+    group:item("crab_cakes", 20)
+    group:item("stuffed_clams", 20)
+    group:item("onion_rings", 10)
+    group:item("sauce_red", 8)
+    group:item("syrup", 10)
+    group:item("syrup_corn", 10)
+    group:item("soup_fish", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "restaur_kitchen", kind = "distribution" }
+    group:item("vinegar", 20)
+    group:entry { item = "jam_fruit", container = "jar_3l_glass_sealed", probability = 5 }
+    group:group("bread_in_bag", 17)
+    group:item("confit_meat", 14)
+    group:item("meat", 20)
+    group:group("cornbread_in_bag", 7)
+    group:item("biscuit", 8)
+    group:group("seasoning_salt_bulk", 15)
+    group:group("seasoning_italian_bulk", 15)
+    group:item("garlic", 10)
+    group:group("garlic_powder_various", 10)
+    group:item("thyme", 10)
+    group:item("can_chicken", 10)
+    group:item("ghee", 15)
+    group:group("pepper_bulk", 15)
+    group:group("salt_bulk", 20)
+    group:group("sugar_bulk", 5)
+    group:group("flour_bulk", 30)
+    group:item("soysauce", 25)
+    group:item("hot_sauce", 25)
+    group:group("vegetable_oil_bottle", 50)
+    group:item("cookbook", 8)
+    group:item("cookbook_italian", 9)
+    group:entry { item = "cornmeal", count = { 10, -1 }, probability = 3 }
+    group:item("knife_small", 15, "knife_steak")
+    group:group("chilly-p_various", 15)
+    group:group("curry_powder_various", 15)
+    group:entry { item = "cheese_powder", count = { -1, -1 }, probability = 15 }
+    group:entry { item = "macaroni_raw", count = { 4, -1 }, container = "bag_plastic", probability = 20 }
+    group:entry { item = "spaghetti_raw", count = { 4, -1 }, container = "bag_plastic", probability = 20 }
+    group:entry { item = "lasagne_raw", count = { 4, -1 }, probability = 20 }
+    group:item("foodplace_food", 5)
+    group:item("knife_huge", 10, "knife_butcher")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sea_restaur_kitchen", kind = "distribution" }
+    group:item("vinegar", 20)
+    group:item("mayonnaise", 20)
+    group:group("bread_in_bag", 17)
+    group:item("fish", 20)
+    group:group("cornbread_in_bag", 7)
+    group:item("biscuit", 8)
+    group:group("seasoning_salt_bulk", 15)
+    group:group("seasoning_italian_bulk", 15)
+    group:item("garlic", 10)
+    group:item("thyme", 10)
+    group:group("fish_in_can", 10)
+    group:group("lobster_in_can", 10)
+    group:item("can_clams", 10)
+    group:item("ghee", 15)
+    group:group("pepper_bulk", 15)
+    group:group("salt_bulk", 20)
+    group:group("sugar_bulk", 5)
+    group:group("flour_bulk", 25)
+    group:item("soysauce", 25)
+    group:item("hot_sauce", 25)
+    group:group("vegetable_oil_bottle", 40)
+    group:item("cookbook", 8)
+    group:item("cookbook_daintydishes", 9)
+    group:entry { item = "cornmeal", count = { 10, -1 }, probability = 3 }
+    group:item("knife_small", 15, "knife_steak")
+    group:group("chilly-p_various", 15)
+    group:group("curry_powder_various", 15)
+    group:item("macaroni_raw", 20)
+    group:item("knife_huge", 10, "knife_butcher")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "restaurant_mexican_fridge", kind = "collection" }
+    group:entry { item = "water_clean", charges = { -1, -1 }, probability = 10 }
+    group:entry { item = "water_mineral", charges = { -1, -1 }, probability = 10 }
+    group:group("milk_in_container", 20)
+    group:group("butter_wrapper_8_64", 35)
+    group:entry { item = "ghee", charges = { 1, 64 }, sealed = false, container = "jar_glass_sealed", probability = 5 }
+    group:item("cactus_pad", 20)
+    group:item("papaya", 20)
+    group:item("fish_cooked", 20)
+    group:item("boiled_egg", 20)
+    group:item("mango", 20)
+    group:item("spinach", 10)
+    group:item("celery", 10)
+    group:item("corn", 20)
+    group:item("chili_pepper", 20)
+    group:item("cucumber", 5)
+    group:item("garlic", 20)
+    group:item("tomato", 20)
+    group:item("bell_pepper", 8)
+    group:item("sausage_raw", 8)
+    group:item("bacon", 8)
+    group:item("fish", 8)
+    group:item("meat", 8)
+    group:item("porkbelly", 8)
+    group:item("bacon_uncut", 8)
+    group:item("onion", 15)
+    group:item("potato", 15)
+    group:item("pineapple", 20)
+    group:item("tallow", 25)
+    group:item("mushroom_morel", 8)
+    group:item("sausage_cooked", 8)
+    group:item("mushroom", 20)
+    group:item("tomato", 20)
+    group:item("lettuce", 15)
+    group:item("chili_pepper", 15)
+    group:item("carrot", 15)
+    group:entry {
+        item = "tomato",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "lettuce",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "onion",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:entry {
+        item = "carrot",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 4,
+    }
+    group:item("chili", 10)
+    group:item("cheese", 10)
+    group:item("lemon", 15)
+    group:item("sauce_red", 8)
+    group:item("tofu", 8)
+    group:item("sausage", 10)
+    group:item("syrup", 10)
+    group:item("syrup_corn", 10)
+    group:item("sweet_sausage", 2)
+    group:item("soup_meat", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "restaurant_mexican_pantry", kind = "collection" }
+    group:group("pantry_liquids", 30)
+    group:entry { group = "tortilla_corn_bag_plastic_full", count = { 1, 3 }, probability = 50 }
+    group:entry { group = "tortilla_flour_bag_plastic_full", count = { 1, 3 }, probability = 50 }
+    group:item("sauce_red", 30)
+    group:entry { group = "nachos_bag_plastic_full", count = { 1, 3 }, probability = 60 }
+    group:entry { item = "cheese_hard", count = { 4, -1 }, probability = 40 }
+    group:entry { group = "beans_in_can", count = { 1, 3 }, probability = 20 }
+    group:entry { group = "dry_beans_bag_plastic_full", count = { 1, 3 }, probability = 60 }
+    group:entry { item = "dry_mushroom", count = { 1, 3 }, probability = 40 }
+    group:entry { group = "flatbread_in_bag_full", count = { 3, 9 }, probability = 20 }
+    group:entry { group = "dry_rice_various", count = { 1, 3 }, probability = 60 }
+    group:group("SUS_spice_collection", 70)
+    group:entry { group = "big_canned_food", count = { 1, 2 }, probability = 20 }
+    group:group("dry_goods", 30)
+    content.add(group)
+end

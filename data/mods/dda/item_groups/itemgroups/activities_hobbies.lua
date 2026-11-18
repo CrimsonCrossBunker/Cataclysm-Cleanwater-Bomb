@@ -371,3 +371,191 @@ do
     group:item("clue")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "camping_lighting_oil", kind = "distribution" }
+    group:entry {
+        collection = {
+            { item = "oil_lamp", charges = { 0, -1 } },
+            { item = "lamp_oil", charges = { 0, -1 }, probability = 50 },
+        },
+        probability = 5,
+    }
+    group:entry { item = "gasoline_lantern", charges = { 0, -1 }, probability = 5 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "camping_tool", kind = "collection" }
+    group:item("thermometer", 3)
+    group:item("hygrometer", 3)
+    group:item("barometer", 3)
+    group:item("e_tool", 10)
+    group:item("hammer", 35)
+    group:item("pocketwatch", 5)
+    group:item("emer_blanket", 20)
+    group:item("tourist_table", 30)
+    group:item("coat_rain", 10)
+    group:item("hood_rain", 5)
+    group:entry { item = "heatpack", count = { 1, 5 }, probability = 60 }
+    group:entry { item = "UPS_OFF", charges = { 0, 1000 }, probability = 8 }
+    group:item("trailmap", 50)
+    group:entry { item = "radio", charges = { 0, 100 }, probability = 20 }
+    group:entry { item = "chem_hexamine", count = { 5, 10 }, probability = 60 }
+    group:entry { item = "glowstick", charges = { 1400, 1400 }, probability = 60 }
+    group:entry { item = "handflare", charges = { 300, 300 }, probability = 40 }
+    group:item("rope_30", 35)
+    group:item("storage_line", 20)
+    group:item("binoculars", 20)
+    group:group("charcoal_bag_part", 20)
+    group:entry {
+        distribution = {
+            { item = "sewing_kit", charges = { 0, -1 }, probability = 47 },
+            { item = "tailors_kit", charges = { 0, -1 }, probability = 3 },
+        },
+        probability = 30,
+    }
+    group:entry { item = "thread", count = { 2, 10 }, probability = 40 }
+    group:group("pur_tablets_bottle_plastic_small_1_50", 10)
+    group:entry {
+        distribution = {
+            { item = "umbrella", probability = 47 },
+            { item = "teleumbrella", probability = 3 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "whistle", probability = 10 },
+            { item = "airhorn", probability = 10 },
+            { item = "whistle_multitool", probability = 5 },
+        },
+        probability = 20,
+    }
+    group:entry {
+        collection = {
+            { item = "flaregun" },
+            { item = "signal_flare", count = { 1, 3 } },
+        },
+        probability = 20,
+    }
+    content.add(group)
+end
+
+do
+    -- stuff you could fit in a bag
+    local group = content.ItemGroup { id = "hiking", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:item("rope_30", 35)
+    group:item("hatchet", 10)
+    group:item("storage_line", 20)
+    group:item("misc_repairkit", 5)
+    group:item("mess_kit", 10)
+    group:item("pot", 20)
+    group:item("folded_inflatable_boat", 25)
+    group:item("hand_pump", 5)
+    group:item("pot_copper", 5)
+    group:item("teapot", 5)
+    group:item("pan", 20)
+    group:item("binoculars", 20)
+    group:item("hotplate", 10)
+    group:entry { item = "popcan_stove", charges = { 0, 500 }, probability = 10 }
+    group:item("coffeemaker", 5)
+    group:group("tinware", 10)
+    group:item("kukri", 4)
+    group:item("knife_hunting", 18)
+    group:group("knife_rambo_cont", 20)
+    group:item("machete", 5)
+    group:item("machete_gimmick", 5)
+    group:item("armrig", 3)
+    group:item("leg_small_bag", 3)
+    group:item("leg_bag", 3)
+    group:item("cowboy_hat", 4)
+    group:item("10gal_hat", 4)
+    group:item("mag_survival", 40)
+    group:item("textbook_survival", 20)
+    group:item("modern_tanner", 8)
+    group:item("recipe_bows", 8)
+    group:item("recipe_arrows", 8)
+    group:item("mag_rifle", 30)
+    group:item("mag_shotgun", 20)
+    group:item("mag_traps", 20)
+    group:item("manual_cutting", 12)
+    group:item("manual_knives", 8)
+    group:item("manual_swords", 8)
+    group:item("manual_gun", 8)
+    group:item("manual_shotgun", 6)
+    group:item("manual_pistol", 4)
+    group:item("manual_smg", 2)
+    group:item("manual_survival", 20)
+    group:item("manual_first_aid", 40)
+    group:item("manual_traps", 12)
+    group:item("trappers_companion", 2)
+    group:item("textbook_traps", 8)
+    group:entry { item = "lighter", charges = { 0, 100 }, probability = 60 }
+    group:entry { item = "ref_lighter", charges = { 0, 50 }, probability = 10 }
+    group:entry { item = "matches", charges = { 1, 20 }, probability = 60 }
+    group:entry { item = "sewing_kit", charges = { 0, -1 }, probability = 47 }
+    group:entry { item = "tailors_kit", charges = { 0, -1 }, probability = 3 }
+    group:item("electric_spinwheel", 3)
+    group:item("thread", 40)
+    group:item("hammer", 35)
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 40 }
+    group:entry { item = "heavy_flashlight", charges = { 0, 300 }, probability = 20 }
+    group:item("water_purifier", 5)
+    group:entry { item = "radio", charges = { 0, 100 }, probability = 20 }
+    group:item("string_36", 40)
+    group:item("lc_wire", 50)
+    group:item("rollmat", 40)
+    group:item("tent_kit", 17)
+    group:item("ax", 8)
+    group:item("heatpack", 60)
+    group:entry { item = "glowstick", charges = { 1400, 1400 }, probability = 60 }
+    group:entry { item = "handflare", charges = { 300, 300 }, probability = 40 }
+    group:item("emer_blanket", 20)
+    group:item("cloak", 5)
+    group:item("sleeping_bag", 10)
+    group:item("dive_bag", 10)
+    group:item("dry_bag", 10)
+    group:item("dry_duffelbag", 10)
+    group:item("dry_bag_large", 5)
+    group:group("tools_fishingrods_portable", 20)
+    group:item("fishing_waders", 12)
+    group:entry { item = "gasoline_lantern", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "electric_lantern", charges = { 0, 100 }, probability = 8 }
+    group:entry { item = "oil_lamp", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "lamp_oil", charges = { 0, -1 }, probability = 5 }
+    group:item("coat_rain", 10)
+    group:item("hood_rain", 5)
+    group:item("jacket_windbreaker", 5)
+    group:item("umbrella", 12)
+    group:item("teleumbrella", 5)
+    group:item("pocketwatch", 5)
+    group:item("boots_hiking", 20)
+    group:item("runner_bag", 15)
+    group:group("pur_tablets_bottle_plastic_small_1_50", 10)
+    group:item("e_tool", 10)
+    group:item("knife_trench", 7)
+    group:item("flaregun", 20)
+    group:item("signal_flare", 25)
+    group:item("airhorn", 20)
+    group:item("whistle", 20)
+    group:item("bullwhip", 1)
+    group:item("grapnel", 1)
+    group:item("razor_blade", 9)
+    group:item("survnote", 1)
+    group:item("thermometer", 3)
+    group:item("hygrometer", 3)
+    group:item("barometer", 3)
+    group:item("trailmap", 5)
+    group:item("chem_hexamine", 5)
+    group:item("flint_steel", 10)
+    group:item("bottle_metal", 5)
+    group:item("tarp", 10)
+    group:entry { item = "tinderbox", charges = { 0, 100 }, probability = 5 }
+    group:item("cloak_wool", 5)
+    group:item("whistle_multitool", 5)
+    group:item("esbit_stove", 10)
+    group:item("bottle_folding", 10)
+    group:group("pillbox_any_used", 1)
+    content.add(group)
+end

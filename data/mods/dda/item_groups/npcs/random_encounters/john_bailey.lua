@@ -85,3 +85,9 @@ do
     group:entry { item = "arrow_cf", count = { 20, 20 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "john_bailey_pistol", kind = "collection" }
+    group:entry { item = "sw_619", charges = { 7, 7 }, ammo = { item = "357mag_fmj" } }
+    content.add(group)
+end

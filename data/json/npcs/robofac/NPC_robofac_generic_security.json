@@ -31,30 +31,6 @@
     "weapon_override": "NC_robofac_security_weapon"
   },
   {
-    "type": "item_group",
-    "id": "NC_robofac_generic_security_misc",
-    "subtype": "collection",
-    "entries": [
-      { "item": "grenade_emp", "prob": 33 },
-      {
-        "collection": [
-          { "item": "glock_17", "charges": 22, "ammo-item": "9mmP" },
-          { "item": "glock17_22", "charges": 22, "ammo-item": "9mmP", "count": [ 1, 2 ] },
-          { "item": "9mmP", "count": [ 1, 2 ] },
-          { "item": "stanag30", "charges": 30, "ammo-item": "556", "count": [ 1, 2 ] },
-          { "item": "556", "count": 2 }
-        ]
-      },
-      { "item": "grenade", "prob": 2 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_robofac_security_weapon",
-    "subtype": "collection",
-    "entries": [ { "group": "h&k416a5_default_or_short", "contents-group": "robofac_sec_weapon_mods", "charges": 30 } ]
-  },
-  {
     "id": "TALK_HUB_SECURITY",
     "type": "talk_topic",
     "dynamic_line": [ "Keep it civil, merc.", "Just on watch, move along.", { "u_male": [ "Sir." ], "no": [ "Ma'am" ] } ],

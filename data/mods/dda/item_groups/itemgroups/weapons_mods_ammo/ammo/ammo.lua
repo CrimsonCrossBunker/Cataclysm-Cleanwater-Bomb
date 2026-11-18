@@ -216,3 +216,10 @@ do
     group:item("cannon_shot")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "ammo_heavy_batteries", kind = "distribution" }
+    group:entry { item = "heavy_battery_cell", charges = { 0, 1000 }, probability = 40 }
+    group:entry { item = "heavy_plus_battery_cell", charges = { 0, -1 }, probability = 80 }
+    content.add(group)
+end

@@ -237,3 +237,119 @@ do
     group:entry { item = "carrot", count = { 2, 2 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "hotdogs_cooked_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "hotdogs_cooked", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "hotdogs_newyork_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "hotdogs_newyork", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "crab_cakes_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "crab_cakes", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "stuffed_clams_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "stuffed_clams", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "freeze_dried_meal_box_any", kind = "distribution", container = "box_small" }
+    group:entry { item = "freeze_dried_meal", count = { -1, -1 }, probability = 40 }
+    group:entry { item = "freeze_dried_stroganoff", count = { -1, -1 }, probability = 40 }
+    group:entry { item = "freeze_dried_veggypasta", count = { -1, -1 }, probability = 20 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "peanutbutter_jar_sealed", kind = "collection", container = "jar_glass_sealed" }
+    group:entry { item = "peanutbutter", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "lobster_roll_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "lobster_roll", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fries_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "fries", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "cheese_fries_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "cheese_fries", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fish_fried_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "fish_fried", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pizza_meat_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "pizza_meat", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pizza_veggy_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "pizza_veggy", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pizza_cheese_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "pizza_cheese", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pizza_supreme_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "pizza_supreme", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "nachosv_bag_plastic_1_inf", kind = "collection", container = "bag_plastic" }
+    group:entry { item = "nachosv", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "nachosmc_bag_plastic_1_inf", kind = "collection", container = "bag_plastic" }
+    group:entry { item = "nachosmc", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "nachosc_bag_plastic_1_inf", kind = "collection", container = "bag_plastic" }
+    group:entry { item = "nachosc", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "junk_burrito_bag_plastic_1_inf", kind = "collection", container = "bag_plastic" }
+    group:entry { item = "junk_burrito", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "veggy_salad_bowl_plastic_1_inf", kind = "collection", container = "bowl_plastic" }
+    group:entry { item = "veggy_salad", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end

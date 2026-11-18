@@ -185,3 +185,29 @@ do
     group:item("q_staff")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_ARSONIST_masks", kind = "distribution" }
+    group:item("null", 80)
+    group:item("mask_dust", 10)
+    group:item("bandana", 10)
+    group:entry { item = "mask_filter", charges = { 10, -1 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_ARSONIST_misc", kind = "distribution" }
+    group:item("trenchcoat", 25)
+    group:item("gloves_fingerless", 30)
+    group:item("mask_hockey", 20)
+    group:item("pipebomb", 40)
+    group:item("molotov")
+    group:entry { item = "ref_lighter", charges = { 0, -1 }, probability = 30 }
+    group:entry { item = "lighter", charges = { 10, -1 }, probability = 30 }
+    group:entry { item = "matches", charges = { 1, -1 }, probability = 30 }
+    group:item("firecracker_pack", 50)
+    group:item("firecracker", 30)
+    group:item("dynamite", 50)
+    group:item("rebar")
+    content.add(group)
+end

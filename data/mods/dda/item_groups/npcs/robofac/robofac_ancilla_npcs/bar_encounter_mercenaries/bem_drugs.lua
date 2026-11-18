@@ -19,3 +19,14 @@ do
     group:entry { item = "pure_meth", count = { 1, 6 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "BEM_DRUGRUNNER_stock", kind = "collection" }
+    group:entry { item = "glock17_22", count = { 1, 2 }, charges = { 22, 22 }, ammo = { item = "9mmP" } }
+    group:group("coke_bag_zipper_1_8", 30)
+    group:group("pure_meth_bag_zipper_1_6", 30)
+    group:group("heroin_bag_zipper_1_4")
+    group:group("oxycodone_bottle_plastic_pill_prescription_1_10")
+    group:entry { group = "harddrugs", count = { 6, 12 } }
+    content.add(group)
+end

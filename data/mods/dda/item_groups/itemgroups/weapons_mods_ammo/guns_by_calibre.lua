@@ -883,3 +883,140 @@ do
     group:item("browning_citori_20")
     content.add(group)
 end
+
+do
+    -- If the gun is designed for conceal carry, such as being small, use prob from guns_pistol_common.  If full sized, 10-20% of the original prob.  This is an asspull but I know that full sized handguns are gonna be less commonly carried
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_9mm", kind = "distribution" }
+    group:entry { item = "glock_17", charges = { 0, -1 }, probability = 7 }
+    group:entry { item = "glock_19", charges = { 0, -1 } }
+    group:entry { item = "glock_26", charges = { 0, -1 }, probability = 14 }
+    group:entry { item = "glock_34", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "glock_43", charges = { 0, -1 }, probability = 13 }
+    group:entry { item = "glock_43x", charges = { 0, -1 }, probability = 51 }
+    group:entry { item = "glock_48", charges = { 0, -1 }, probability = 19 }
+    group:entry { item = "p365", charges = { 0, -1 }, probability = 161 }
+    group:entry { item = "m9", charges = { 0, -1 }, variant = "m9", probability = 2 }
+    group:entry { item = "px4", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "hi_power_9mm", charges = { 0, -1 }, probability = 2 }
+    group:entry { item = "walther_ppq_9mm", charges = { 0, -1 }, probability = 4 }
+    group:entry { item = "hptc9", charges = { 0, -1 }, probability = 2 }
+    group:entry { item = "cz75", charges = { 0, -1 }, probability = 7 }
+    group:entry { item = "walther_ccp", charges = { 0, -1 }, probability = 2 }
+    group:entry { item = "m18", charges = { 0, -1 }, probability = 22 }
+    group:entry { item = "m11", charges = { 0, -1 }, probability = 6 }
+    group:entry { item = "m17", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "p226_9mm", charges = { 0, -1 }, probability = 11 }
+    group:entry { item = "sp2022", charges = { 0, -1 }, probability = 4 }
+    group:entry { item = "usp_9mm", charges = { 0, -1 }, probability = 6 }
+    group:entry { item = "walther_p38", charges = { 0, -1 }, probability = 1 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_22", kind = "distribution" }
+    group:entry { item = "sig_mosquito", charges = { 0, -1 }, probability = 6 }
+    group:entry { item = "sr22", charges = { 0, -1 }, probability = 80 }
+    group:entry { item = "walther_p22", charges = { 0, -1 }, probability = 45 }
+    group:entry { item = "ruger_lcr_22", charges = { 0, -1 }, probability = 2 }
+    group:entry { item = "ruger_mk4", charges = { 0, -1 }, probability = 16 }
+    group:entry { item = "1911_22", charges = { 0, -1 }, probability = 20 }
+    group:entry { item = "glock_44", charges = { 0, -1 }, probability = 13 }
+    group:entry { item = "sw617", charges = { 0, -1 }, probability = 8 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_45", kind = "distribution" }
+    group:entry { item = "glock_21", charges = { 0, -1 }, probability = 2 }
+    group:entry { item = "glock_30", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "glock_36", charges = { 0, -1 }, probability = 3 }
+    group:entry { item = "m1911", charges = { 0, -1 }, probability = 13 }
+    group:entry { item = "walther_ppq_45", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "hptjhp", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "usp_45", charges = { 0, -1 }, probability = 1 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_380", kind = "distribution" }
+    group:entry { item = "rugerlcp", charges = { 0, -1 }, probability = 231 }
+    group:entry { item = "hptcf380", charges = { 0, -1 }, probability = 15 }
+    group:entry { item = "swbodyguard", charges = { 0, -1 }, probability = 1673 }
+    group:entry { item = "glock_42", charges = { 0, -1 }, probability = 439 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_40", kind = "distribution" }
+    group:entry { item = "glock_22", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "glock_23", charges = { 0, -1 }, probability = 61 }
+    group:entry { item = "glock_27", charges = { 0, -1 }, probability = 75 }
+    group:entry { item = "px4_40", charges = { 0, -1 }, probability = 20 }
+    group:entry { item = "hi_power_40", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "hptjcp", charges = { 0, -1 }, probability = 3 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_357mag", kind = "distribution" }
+    group:entry { item = "sw_619", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "rp63", charges = { 0, -1 }, probability = 11 }
+    group:entry { item = "colt_python", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "chiappa_rhino", charges = { 0, -1 }, probability = 7 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_38", kind = "distribution" }
+    group:entry { item = "ruger_lcr_38", charges = { 0, -1 }, probability = 66 }
+    group:entry { item = "sw642", charges = { 0, -1 } }
+    group:entry { item = "model_10_revolver", charges = { 0, -1 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_44", kind = "distribution" }
+    group:entry { item = "sw629", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "colt_anaconda_6", charges = { 0, -1 }, probability = 4 }
+    group:entry { item = "colt_anaconda_4", charges = { 0, -1 }, probability = 12 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_10mm", kind = "distribution" }
+    group:entry { item = "glock_40", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "m1911_10", charges = { 0, -1 }, probability = 3 }
+    group:entry { item = "p220_10", charges = { 0, -1 }, probability = 4 }
+    group:entry { item = "xd_10", charges = { 0, -1 }, probability = 9 }
+    group:entry { item = "witness_10", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "glock_20", charges = { 0, -1 }, probability = 12 }
+    group:entry { item = "glock_29", charges = { 0, -1 }, probability = 62 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_57", kind = "distribution" }
+    group:entry { item = "ruger_57", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "fn57", charges = { 0, -1 }, probability = 1 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_32", kind = "distribution" }
+    group:entry { item = "walther_ppk", charges = { 0, -1 }, probability = 1 }
+    group:entry { item = "lws32", charges = { 0, -1 }, probability = 200 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_45colt", kind = "distribution" }
+    group:entry { item = "taurus_judge", charges = { 0, -1 }, probability = 10 }
+    group:entry { item = "colt_saa", charges = { 0, -1 }, probability = 2 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common_everyday_carry_38super", kind = "distribution" }
+    group:entry { item = "m1911a1_38super", charges = { 0, -1 } }
+    content.add(group)
+end

@@ -1026,3 +1026,168 @@ do
     group:entry { item = "lye_potassium", count = { 1, 20 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bleach_jug_part", kind = "distribution" }
+    group:entry { item = "bleach", charges = { 125, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "oxy_powder_bottle_part", kind = "distribution", container = "bottle_plastic_small" }
+    group:entry { item = "oxy_powder", charges = { 30, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "lye_powder_bottle_part", kind = "distribution", container = "bottle_plastic_small" }
+    group:entry { item = "lye_powder", charges = { 30, -1 } }
+    content.add(group)
+end
+
+do
+    -- General laboratory reagents and expendibles.  This list contains most conceivable chemicals in the game.  More specific lists for each type of lab would be reasonable eventually.
+    local group = content.ItemGroup { id = "supplies_fluid_catalytic_lab", kind = "distribution" }
+    group:entry { item = "water_clean", charges = { 1, -1 }, sealed = false, container = "bottle_plastic", probability = 90 }
+    group:entry { item = "cooking_oil", count = { 4, 4 }, charges = { 10, -1 } }
+    group:entry { item = "chem_washing_soda", charges = { 1, 20 } }
+    group:entry { item = "lamp_oil", count = { 4, 4 }, charges = { 10, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "gym_school", kind = "distribution" }
+    group:item("basketball")
+    group:item("indoor_volleyball", 50)
+    group:item("baseball")
+    group:item("shuttlecock", 10)
+    group:item("hat_ball", 10)
+    group:entry {
+        item = "helmet_ball",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:item("bat", 80)
+    group:item("bat_metal", 40)
+    group:item("bat_nerf", 50)
+    group:item("hockey_stick", 10)
+    group:item("towel", 30)
+    group:item("pom_poms", 50)
+    group:entry {
+        item = "tank_top",
+        variant = "tank_top_cheerleader",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 25,
+    }
+    group:entry {
+        item = "cheerleader_top_short",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 1,
+    }
+    group:entry {
+        item = "cheerleader_skirt",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 25,
+    }
+    group:entry {
+        item = "cheerleader_skirt_short",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 1,
+    }
+    group:item("football")
+    group:entry {
+        item = "football_armor",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:entry {
+        item = "helmet_football",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:item("medical_gauze", 10)
+    group:item("heatpack", 10)
+    group:item("whistle", 5)
+    group:item("airhorn", 2)
+    content.add(group)
+end
+
+do
+    -- now used for shelters that have been looted by kids, see SUS groups for general shelter supplies
+    local group = content.ItemGroup { id = "shelter_supplies", kind = "collection" }
+    group:item("wrapper", 90)
+    group:item("evac_pamphlet", 80)
+    group:item("glass_shard", 80)
+    group:item("emer_blanket", 40)
+    group:item("bottle_plastic", 30)
+    group:item("plastic_knife", 20)
+    group:item("plastic_spoon", 20)
+    group:item("plastic_fork", 20)
+    group:item("bowl_plastic", 10)
+    group:item("jacket_evac", 15)
+    group:item("folding_poncho", 10)
+    group:item("sponge", 10)
+    group:item("mask_dust", 9)
+    group:item("handflare_dead", 9)
+    group:item("whistle", 7)
+    group:item("teddy_bear", 7)
+    group:entry { item = "vinegar", charges = { 1, -1 }, probability = 6 }
+    group:item("candle", 5)
+    group:item("pliers", 4)
+    group:item("mirror", 4)
+    group:item("wearable_light", 2)
+    group:item("calcium_tablet", 1)
+    group:item("vitamins", 1)
+    group:entry { item = "protein_bar_evac", count = { 0, 3 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "chem_peptone_broth_bottle_plastic_small_1_inf",
+        kind = "collection",
+        container = "bottle_plastic_small",
+    }
+    group:entry { item = "chem_peptone_broth", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "chem_agar_bottle_plastic_small_1_inf",
+        kind = "collection",
+        container = "bottle_plastic_small",
+    }
+    group:entry { item = "chem_agar", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "chem_citric_acid_bottle_glass_100_inf",
+        kind = "collection",
+        container = "bottle_glass",
+    }
+    group:entry { item = "chem_citric_acid", count = { 100, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "chem_acrylamide_bottle_glass_1_inf", kind = "collection", container = "bottle_glass" }
+    group:entry { item = "chem_acrylamide", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end

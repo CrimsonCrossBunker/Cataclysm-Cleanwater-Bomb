@@ -1092,3 +1092,11 @@ do
     group:entry { item = "box_oversize_folded", count = { 0, 1 }, probability = 5 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "commercial_electronics_accessories", kind = "distribution" }
+    group:entry { group = "used_usb_drives", variables = { browsed = "true" }, probability = 60 }
+    group:entry { group = "used_memory_cards", variables = { browsed = "true" }, probability = 60 }
+    group:item("battery_charger", 80)
+    content.add(group)
+end

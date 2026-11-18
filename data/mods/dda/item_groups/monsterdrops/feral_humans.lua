@@ -611,3 +611,134 @@ do
     group:group("mon_zombie_prisoner_death_drops")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "mon_feral_militia_death_drops",
+        kind = "collection",
+        with_ammo = 20,
+        with_magazine = 100,
+    }
+    group:entry { group = "clothing_military", damage = { 0, 4 } }
+    group:entry { group = "clothing_military_headwear", damage = { 0, 4 }, probability = 40 }
+    group:entry { item = "two_way_radio", charges = { 0, 300 }, probability = 25 }
+    group:group("wallets_military", 5)
+    group:entry { group = "clothing_glasses", damage = { 0, 4 }, probability = 5 }
+    group:entry { item = "wristwatch", damage = { 0, 4 }, probability = 33 }
+    group:group("pocket_cigar", 5)
+    group:group("misc_smoking_legal", 10)
+    group:entry { item = "knife_KABAR", container = "sheath", probability = 40 }
+    group:entry { item = "kevlar", damage = { 2, 4 }, probability = 50 }
+    group:entry { item = "wearable_light", charges = { 0, 100 }, damage = { 1, 4 } }
+    group:entry { group = "feral_autogun", charges = { 0, 0 }, damage = { 1, 4 } }
+    group:group("survivor_grenades", 20)
+    group:entry { group = "bags", damage = { 1, 4 } }
+    group:group("book_survival", 70)
+    group:entry { group = "gear_survival", damage = { 1, 4 }, probability = 70 }
+    group:group("stash_food", 35)
+    group:group("mil_food", 39)
+    group:group("mil_food_nodrugs", 40)
+    group:group("shelter", 30)
+    group:entry { group = "used_survival_kit", damage = { 1, 4 }, probability = 80 }
+    group:entry { item = "stanag30", charges = { 0, 0 }, probability = 25 }
+    group:entry { item = "stanag30ranger", charges = { 0, 0 }, probability = 33 }
+    group:entry { item = "stanag30", charges = { 0, 0 }, probability = 50 }
+    group:item("dog_tag", 20)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "mon_feral_marine_death_drops",
+        kind = "collection",
+        with_ammo = 60,
+        with_magazine = 100,
+    }
+    group:entry { group = "clothing_navy", damage = { 0, 4 } }
+    group:entry { item = "pants_army", damage = { 0, 4 }, variant = "apants_MARPAT" }
+    group:entry { item = "boots_combat", damage = { 0, 4 } }
+    group:entry {
+        group = "military_standard_assault_rifles",
+        charges = { 0, 0 },
+        damage = { 0, 4 },
+        dirt = { 0, 6000 },
+        contents = {
+            { item = "knife_combat_marine" },
+        },
+    }
+    group:entry { group = "military_standard_grenades", count = { 1, 3 }, probability = 20 }
+    group:group("military_patrol_food")
+    group:entry {
+        distribution = {
+            { item = "mask_gas", charges = { 0, 100 }, damage = { 1, 4 }, probability = 25 },
+            {
+                item = "mask_gas",
+                charges = { 0, 100 },
+                damage = { 1, 4 },
+                contents = {
+                    { group = "gasmask_inserts_in_use" },
+                },
+                probability = 25,
+            },
+            { group = "gasmask_bag_full", damage = { 1, 4 }, probability = 25 },
+            { group = "gasmask_bag_used", damage = { 1, 4 }, probability = 60 },
+        },
+        probability = 5,
+    }
+    group:entry { group = "loaded_webbing_belt", damage = { 0, 4 }, probability = 60 }
+    group:entry { item = "two_way_radio", charges = { 0, 100 }, damage = { 1, 4 }, probability = 15 }
+    group:item("sheath", 80)
+    group:entry {
+        distribution = {
+            { group = "infantry_officer_gear" },
+            { group = "infantry_medical_gear" },
+        },
+        probability = 25,
+    }
+    group:group("wallets_military", 5)
+    group:group("pocket_cigar", 15)
+    group:group("misc_smoking_legal", 30)
+    group:entry { item = "elbow_pads", damage = { 0, 4 }, probability = 10 }
+    group:entry { item = "knee_pads", damage = { 0, 4 }, probability = 85 }
+    group:entry { item = "helmet_army", damage = { 0, 4 }, probability = 80 }
+    group:entry { item = "gloves_tactical", damage = { 0, 4 }, probability = 60 }
+    group:entry { group = "military_ballistic_vest", damage = { 0, 4 } }
+    group:entry { group = "molle_backpacks_and_accessories", damage = { 0, 4 }, probability = 85 }
+    group:entry { group = "clothing_tactical_leg", damage = { 0, 4 }, probability = 15 }
+    group:item("dog_tag", 40)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mon_feral_cop_death_drops", kind = "collection", with_ammo = 40, with_magazine = 100 }
+    group:entry {
+        distribution = {
+            { item = "baton-extended", damage = { 1, 2 }, probability = 35 },
+            { item = "PR24-extended", damage = { 1, 2 }, probability = 40 },
+            { item = "tonfa_wood", damage = { 1, 2 }, probability = 10 },
+            { item = "tonfa", damage = { 1, 2 }, probability = 15 },
+        },
+    }
+    group:entry { item = "whistle", damage = { 0, 1 } }
+    group:entry { group = "cop_armor", damage = { 0, 2 }, probability = 98 }
+    group:entry { group = "cop_other_clothes", damage = { 0, 2 }, probability = 98 }
+    group:entry { group = "cop_gear", damage = { 0, 2 }, probability = 95 }
+    group:entry { group = "cop_gloves", damage = { 0, 3 }, probability = 95 }
+    group:entry { group = "cop_helmet", damage = { 0, 3 }, probability = 85 }
+    group:entry { group = "cop_pants", damage = { 0, 3 } }
+    group:entry { group = "cop_shoes", damage = { 0, 3 } }
+    group:entry { group = "cop_torso", damage = { 0, 3 } }
+    group:entry { group = "underwear", damage = { 0, 2 } }
+    group:group("clothing_glasses", 5)
+    group:group("clothing_watch", 5)
+    group:group("cop_pants_stuff")
+    group:entry { group = "cop_armaments", charges = { 0, 0 } }
+    group:entry {
+        collection = {
+            { item = "badge_deputy" },
+            { item = "badge_detective", probability = 20 },
+        },
+        probability = 10,
+    }
+    content.add(group)
+end

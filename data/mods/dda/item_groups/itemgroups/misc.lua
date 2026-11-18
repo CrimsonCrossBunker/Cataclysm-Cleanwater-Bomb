@@ -354,3 +354,56 @@ do
     group:item("deck_of_tarot_cards", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cannabis_extraction_equipment", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "pipe" },
+                    { item = "vac_oven_small" },
+                    { group = "butane_can_full", count = { 0, 3 } },
+                },
+                probability = 70,
+            },
+            {
+                collection = {
+                    { item = "closed_loop_extractor_small" },
+                    { item = "pipe" },
+                    { item = "flask_glass" },
+                    { item = "microcentrifuge", probability = 80 },
+                    { item = "still_lab", probability = 80 },
+                    { item = "cotton_patchwork", count = { 3, 10 } },
+                    {
+                        distribution = {
+                            { item = "hotplate", probability = 80 },
+                            { item = "chemistry_set", probability = 20 },
+                        },
+                    },
+                    { item = "vac_pump" },
+                    { group = "ethanol_bottle_liter_part", probability = 80 },
+                },
+                probability = 30,
+            },
+        },
+    }
+    group:entry {
+        collection = {
+            { item = "filter_paper_qualitative", charges = { 30, -1 } },
+            { item = "filter_paper_quantitative", charges = { 30, -1 } },
+            { item = "gasket_plastic_set", count = { 1, 3 } },
+            { item = "textbook_extraction", probability = 75 },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "makeshift_memorial", kind = "collection" }
+    group:entry { item = "candle", count = { 1, 3 }, charges = { 0, 50 } }
+    group:entry { item = "candle", count = { 1, 2 }, charges = { 50, -1 }, probability = 33 }
+    group:entry { item = "family_photo", count = { 1, 2 }, probability = 20 }
+    group:item("teddy_bear", 5)
+    content.add(group)
+end

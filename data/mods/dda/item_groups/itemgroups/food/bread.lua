@@ -104,3 +104,16 @@ do
     group:entry { item = "brown_bread", count = { 14, 14 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bread_wheat_free_bag_plastic_14", kind = "collection", container = "bag_plastic" }
+    group:entry {
+        item = "bread",
+        count = { 14, 14 },
+        container = "null",
+        components = {
+            "flour_wheat_free",
+        },
+    }
+    content.add(group)
+end

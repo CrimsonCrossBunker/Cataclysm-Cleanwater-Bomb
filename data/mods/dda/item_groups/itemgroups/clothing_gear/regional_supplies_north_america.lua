@@ -767,3 +767,104 @@ do
     group:item("coat_fur", 25)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "regional_supply_original_coats_unisex", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { item = "cloak", probability = 80 },
+            { item = "cloak_wool", probability = 40 },
+            { item = "cloak_leather", probability = 20 },
+            { item = "cloak_fur", probability = 10 },
+            { item = "jedi_cloak", probability = 1 },
+            { group = "costume_cloacks", probability = 1 },
+            { item = "american_flag", event = "independence_day" },
+            { group = "costume_cloacks", event = "halloween" },
+        },
+        probability = 20,
+    }
+    group:entry {
+        distribution = {
+            { item = "duster", probability = 80 },
+            { item = "duster_leather", probability = 60 },
+            { item = "duster_faux_fur", probability = 30 },
+            { item = "duster_fur", probability = 5 },
+            { item = "sleeveless_duster", probability = 70 },
+            { item = "sleeveless_duster_leather", probability = 50 },
+            { item = "sleeveless_duster_fur", probability = 20 },
+            { item = "sleeveless_duster_faux_fur", probability = 10 },
+        },
+        probability = 60,
+    }
+    group:entry {
+        distribution = {
+            { item = "trenchcoat", probability = 80 },
+            { item = "trenchcoat_leather", probability = 60 },
+            { item = "trenchcoat_faux_fur", probability = 30 },
+            { item = "trenchcoat_fur", probability = 5 },
+            { item = "sleeveless_trenchcoat", probability = 40 },
+            { item = "sleeveless_trenchcoat_leather", probability = 30 },
+            { item = "sleeveless_trenchcoat_fur", probability = 10 },
+            { item = "sleeveless_trenchcoat_faux_fur", probability = 20 },
+        },
+        probability = 40,
+    }
+    group:entry {
+        distribution = {
+            { item = "coat_rain", probability = 80 },
+            { item = "coat_winter", probability = 50 },
+            { item = "peacoat", probability = 50 },
+            { item = "greatcoat", probability = 35 },
+            { item = "coat_faux_fur", probability = 20 },
+            { item = "coat_fur", probability = 15 },
+            { group = "costume_coats", probability = 1 },
+            { group = "costume_coats", event = "halloween" },
+        },
+        probability = 80,
+    }
+    group:entry {
+        distribution = {
+            { item = "jacket_jean", probability = 80 },
+            { item = "jacket_flannel", probability = 50 },
+            { item = "jacket_leather", probability = 50 },
+            { item = "tacjacket", probability = 50 },
+            { item = "jacket_army", probability = 30 },
+            { item = "leather_police_jacket", probability = 10 },
+            { item = "jacket_light", probability = 60 },
+            { item = "jacket_windbreaker", probability = 70 },
+            { item = "jacket_varsity", probability = 30 },
+            { item = "poncho", probability = 30 },
+            { item = "ski_jacket", probability = 25 },
+            { group = "costume_jackets", probability = 1 },
+            { group = "costume_jackets", event = "halloween" },
+            { group = "christmas_jackets", event = "christmas", probability = 50 },
+        },
+        probability = 60,
+    }
+    group:entry {
+        distribution = {
+            { item = "kimono", probability = 20 },
+            { item = "robe", probability = 10 },
+        },
+        probability = 5,
+    }
+    group:entry {
+        distribution = {
+            { item = "vest", probability = 80 },
+            { item = "vest_leather", probability = 20 },
+            { item = "vest_jean", probability = 25 },
+            { item = "tank_top", variant = "tank_top_camo", probability = 40 },
+            { item = "blazer", probability = 70 },
+        },
+        probability = 40,
+    }
+    group:entry {
+        distribution = {
+            { item = "soft_3a_vest", probability = 50 },
+            { item = "stab_vest", probability = 50 },
+        },
+        probability = 5,
+    }
+    group:entry { group = "christmas_coats_unisex", event = "christmas", probability = 40 }
+    content.add(group)
+end

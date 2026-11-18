@@ -17,3 +17,44 @@ do
     group:entry { item = "highland_golden_incense", count = { 1, 2 }, container = "bowl_clay", probability = 10 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "highland_tomb_revenant", kind = "collection" }
+    group:item("highland_shroud", 100, "guardian")
+    group:entry {
+        item = "art_dagger",
+        artifact = { preset = "cult", power_level = 750, max_attributes = 3, max_negative_power = -500, resonant = true },
+    }
+    group:entry { item = "gold_ring", count = { 2, 8 } }
+    group:entry { group = "bracelets_gold", count = { 4, 12 } }
+    group:item("higlands_funeral_crown")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "highland_sarcophagus_imperial", kind = "collection" }
+    group:item("skull_human")
+    group:entry { item = "bone_human", count = { 20, 40 } }
+    group:item("coin_highlands")
+    group:item("highland_shroud", 100, "noble")
+    group:item("higlands_funeral_crown")
+    group:entry {
+        item = "highland_funeral_mask",
+        artifact = { preset = "cult", power_level = 1250, max_attributes = 3, max_negative_power = -1000, resonant = true },
+    }
+    group:entry {
+        item = "art_book",
+        variant = "stars",
+        artifact = {
+            preset = "artifact_book",
+            power_level = 750,
+            max_attributes = 3,
+            max_negative_power = -500,
+            resonant = true,
+        },
+    }
+    group:item("highland_medallion", 100, "faith")
+    group:entry { item = "highland_purple_incense", count = { 1, 2 }, container = "bowl_clay" }
+    group:entry { item = "highland_golden_incense", count = { 1, 2 }, container = "bowl_clay" }
+    content.add(group)
+end

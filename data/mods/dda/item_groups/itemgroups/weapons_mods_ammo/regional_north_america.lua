@@ -3725,3 +3725,15 @@ do
     group:group("guns_common-open")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "regional_original_guns_rifle_common_worn", kind = "distribution" }
+    group:entry { group = "guns_rifle_common_display", charges = { 1, 30 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "regional_original_guns_shotgun_common_worn", kind = "distribution" }
+    group:entry { group = "guns_shotgun_common_display", charges = { 1, 8 } }
+    content.add(group)
+end

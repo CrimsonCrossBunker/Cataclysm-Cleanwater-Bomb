@@ -49,3 +49,32 @@ do
     group:entry { item = "bread", count = { 2, 2 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "football_items", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:item("whistle", 10)
+    group:item("sports_drink", 60)
+    group:item("bottle_plastic", 80)
+    group:item("towel", 80)
+    group:item("heatpack", 40)
+    group:item("heatpack_used", 60)
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 20 }
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 10 }
+    group:group("adhesive_bandages_box_used", 20)
+    group:item("mouthpiece", 40)
+    group:item("football", 60)
+    group:item("football_armor", 60)
+    group:item("helmet_football", 60)
+    group:item("armguard_soft", 30)
+    group:item("legguard_hard", 30)
+    group:item("jersey", 60)
+    group:item("cleats", 60)
+    group:item("duffelbag", 30)
+    group:item("backpack", 40)
+    group:item("energy_drink", 30)
+    group:entry { item = "cell_phone", charges = { 0, 150 }, probability = 6 }
+    group:entry { group = "civilian_phones", charges = { 0, -1 }, probability = 44 }
+    group:item("mp3", 50)
+    group:entry { item = "inhaler", charges = { 0, 100 }, probability = 10 }
+    content.add(group)
+end

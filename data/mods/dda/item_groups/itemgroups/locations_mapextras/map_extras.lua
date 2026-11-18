@@ -118,3 +118,17 @@ do
     group:entry { item = "corpse_dermatik_victim", damage = { 1, 3 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "map_extra_casings", kind = "distribution" }
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+    }
+    group:item("cigar_butt")
+    group:item("cig_butt")
+    group:item("can_drink")
+    content.add(group)
+end

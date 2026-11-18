@@ -1,54 +1,5 @@
 [
   {
-    "id": "cabin_suicide",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "item": "usp_45", "charges": 11, "ammo-item": "45_acp" },
-      { "item": "45_casing", "charges": 1 },
-      { "item": "corpse" },
-      { "group": "underwear" },
-      { "group": "cabin_suicide_over" },
-      { "group": "cabin_suicide_shirt" },
-      { "group": "cabin_suicide_legs" },
-      { "group": "cabin_suicide_shoes" },
-      { "group": "cabin_suicide_extras", "count": [ 3, 6 ] }
-    ]
-  },
-  {
-    "id": "cabin_suicide_extras",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "item": "water_clean", "prob": 10, "container-item": "canteen", "charges": [ 1, 5 ] },
-      [ "3006", 25 ],
-      [ "45_acp", 25 ],
-      { "item": "bandages", "prob": 15, "count": [ 1, 3 ] },
-      [ "bandana", 10 ],
-      [ "cig", 5 ],
-      { "item": "cell_phone", "prob": 3, "charges": [ 0, 150 ] },
-      { "group": "civilian_phones", "prob": 18, "charges": [ 0, -1 ] },
-      [ "gloves_fingerless", 5 ],
-      [ "holster", 5 ],
-      [ "hatchet", 5 ],
-      [ "hat_ball", 5 ],
-      [ "knife_combat", 5 ],
-      [ "silver_locket", 5 ],
-      [ "mask_gas", 10 ],
-      [ "molotov", 5 ],
-      [ "matches", 25 ],
-      [ "mbag", 10 ],
-      [ "machete", 2 ],
-      [ "photo_album", 5 ],
-      [ "pipe", 5 ],
-      [ "poncho", 5 ],
-      [ "sheath", 5 ],
-      [ "scarf", 10 ],
-      [ "survivormap", 2 ],
-      [ "wristwatch", 15 ]
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "dirtroad1_aban1" ],
     "object": {

@@ -191,16 +191,5 @@
       "monster": { "~": { "monster": "mon_turret_rifle" } },
       "nested": { "§": { "chunks": [ "fire_extinguisher" ] } }
     }
-  },
-  {
-    "type": "item_group",
-    "id": "bunker_basement_suicide",
-    "subtype": "collection",
-    "items": [
-      { "item": "m1911", "charges": 6, "ammo-item": "45_acp" },
-      { "item": "45_casing", "charges": 1 },
-      { "group": "underwear" },
-      { "item": "corpse" }
-    ]
   }
 ]

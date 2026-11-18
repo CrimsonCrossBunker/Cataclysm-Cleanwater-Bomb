@@ -244,3 +244,15 @@ do
     group:item("jug_plastic")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "dry_beans_bag_plastic_full", kind = "collection", container = "bag_plastic_small" }
+    group:entry { item = "dry_beans", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "vegetable_oil_bottle_full", kind = "distribution" }
+    group:entry { item = "cooking_oil", container_group = "oil_bottle_empty" }
+    content.add(group)
+end

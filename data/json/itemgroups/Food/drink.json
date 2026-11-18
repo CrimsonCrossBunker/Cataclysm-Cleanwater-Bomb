@@ -1,17 +1,5 @@
 [
   {
-    "id": "soda_in_container",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "group": "any_soda", "container-item": "bottle_twoliter", "charges": [ 1, -1 ] },
-      { "group": "any_soda", "container-item": "bottle_plastic", "charges": [ 1, -1 ] },
-      { "group": "any_soda", "container-item": "bottle_plastic_355ml", "charges": [ 1, -1 ] },
-      { "group": "any_soda", "container-item": "can_drink", "charges": [ 1, -1 ] },
-      { "group": "any_soda", "container-item": "can_aluminum_250ml", "charges": [ 1, -1 ] }
-    ]
-  },
-  {
     "id": "soda_in_small_container",
     "type": "item_group",
     "subtype": "distribution",

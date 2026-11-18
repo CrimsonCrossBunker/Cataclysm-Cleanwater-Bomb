@@ -59,31 +59,5 @@
       { "group": "flask_liquor", "prob": 3 },
       { "item": "pin_badge", "prob": 6 }
     ]
-  },
-  {
-    "id": "accesories_personal_unisex_child",
-    "type": "item_group",
-    "//": "unisex personal accessories that a kid could have on them",
-    "subtype": "collection",
-    "items": [
-      { "group": "clothing_glasses", "prob": 50 },
-      { "group": "clothing_watch", "prob": 15 },
-      { "group": "accessory_ring", "prob": 15 },
-      { "group": "accessory_earring", "prob": 15 },
-      { "group": "accessory_bracelet", "prob": 15 },
-      { "group": "accessory_teeth", "prob": 2 },
-      { "group": "accessory_necklace", "prob": 15 },
-      { "group": "accessory_sportsgear", "prob": 5 },
-      { "item": "folding_poncho", "prob": 5 },
-      { "item": "leather_belt", "prob": 30 },
-      { "item": "wearable_light", "prob": 10, "charges": [ 0, 100 ] },
-      { "item": "binoculars", "prob": 2 },
-      { "item": "whistle", "prob": 3 },
-      { "item": "harmonica_holder", "prob": 1 },
-      { "group": "costume_accessories", "prob": 1 },
-      { "group": "costume_jewelry", "prob": 1 },
-      { "group": "costume_accessories", "prob": 30, "event": "halloween" },
-      { "group": "costume_jewelry", "prob": 30, "event": "halloween" }
-    ]
   }
 ]

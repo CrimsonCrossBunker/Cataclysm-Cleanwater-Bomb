@@ -36,3 +36,31 @@ do
     group:item("shoulder_strap")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_robofac_generic_security_misc", kind = "collection" }
+    group:item("grenade_emp", 33)
+    group:entry {
+        collection = {
+            { item = "glock_17", charges = { 22, 22 }, ammo = { item = "9mmP" } },
+            { item = "glock17_22", count = { 1, 2 }, charges = { 22, 22 }, ammo = { item = "9mmP" } },
+            { item = "9mmP", count = { 1, 2 } },
+            { item = "stanag30", count = { 1, 2 }, charges = { 30, 30 }, ammo = { item = "556" } },
+            { item = "556", count = { 2, 2 } },
+        },
+    }
+    group:item("grenade", 2)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_robofac_security_weapon", kind = "collection" }
+    group:entry {
+        group = "h&k416a5_default_or_short",
+        charges = { 30, 30 },
+        contents = {
+            { group = "robofac_sec_weapon_mods" },
+        },
+    }
+    content.add(group)
+end

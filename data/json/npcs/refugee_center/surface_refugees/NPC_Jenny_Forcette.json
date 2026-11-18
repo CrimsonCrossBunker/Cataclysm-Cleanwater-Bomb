@@ -28,12 +28,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Jenny_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "paper" }, { "item": "soldering_iron_portable", "ammo-item": "battery", "charges": 20 } ]
-  },
-  {
     "type": "npc",
     "id": "refugee_JennyForcette",
     "name_unique": "Jenny Forcette",

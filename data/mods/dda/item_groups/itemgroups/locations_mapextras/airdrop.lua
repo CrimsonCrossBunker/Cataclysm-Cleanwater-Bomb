@@ -103,3 +103,20 @@ do
     group:entry { item = "cardboard", count = { 1200, 1700 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "airdrop_trash", kind = "collection", container = "box_medium", overflow = "spill" }
+    group:entry {
+        item = "paper",
+        count = { 5, 15 },
+        flags = {
+            "FILTHY",
+        },
+    }
+    group:entry { item = "cardboard", count = { 100, 210 } }
+    group:entry { item = "shrink_wrap", count = { 2, 8 } }
+    group:entry { item = "bottle_twoliter", count = { 3, 11 } }
+    group:entry { item = "plastic_chunk", count = { 10, 30 } }
+    group:entry { item = "bottle_plastic_small", count = { 0, 4 }, probability = 50 }
+    content.add(group)
+end

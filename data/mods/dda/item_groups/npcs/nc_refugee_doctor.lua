@@ -109,3 +109,12 @@ do
     group:group("testosterone_hrt", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_REFUGEE_DOCTOR_masks", kind = "distribution" }
+    group:item("null", 5)
+    group:item("mask_dust", 80)
+    group:item("bandana", 10)
+    group:entry { item = "mask_filter", charges = { 10, -1 }, probability = 10 }
+    content.add(group)
+end

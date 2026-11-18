@@ -182,38 +182,6 @@
     }
   },
   {
-    "id": "football_items",
-    "type": "item_group",
-    "ammo": 75,
-    "magazine": 100,
-    "items": [
-      [ "whistle", 10 ],
-      [ "sports_drink", 60 ],
-      [ "bottle_plastic", 80 ],
-      [ "towel", 80 ],
-      [ "heatpack", 40 ],
-      [ "heatpack_used", 60 ],
-      { "item": "bandages", "prob": 20, "count": [ 1, 3 ] },
-      { "item": "liq_bandage_spray", "prob": 10, "charges": [ 1, -1 ] },
-      { "group": "adhesive_bandages_box_used", "prob": 20 },
-      [ "mouthpiece", 40 ],
-      [ "football", 60 ],
-      [ "football_armor", 60 ],
-      [ "helmet_football", 60 ],
-      [ "armguard_soft", 30 ],
-      [ "legguard_hard", 30 ],
-      [ "jersey", 60 ],
-      [ "cleats", 60 ],
-      [ "duffelbag", 30 ],
-      [ "backpack", 40 ],
-      [ "energy_drink", 30 ],
-      { "item": "cell_phone", "prob": 6, "charges": [ 0, 150 ] },
-      { "group": "civilian_phones", "prob": 44, "charges": [ 0, -1 ] },
-      [ "mp3", 50 ],
-      { "item": "inhaler", "prob": 10, "charges": [ 0, 100 ] }
-    ]
-  },
-  {
     "id": "football_vehicles",
     "type": "vehicle_group",
     "vehicles": [ [ "water_cart", 100 ] ]

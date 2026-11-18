@@ -103,3 +103,18 @@ do
     }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "amigara_drops", kind = "distribution" }
+    group:entry {
+        group = "amigara_items",
+        artifact = {
+            preset = "netherum_tunnels",
+            power_level = 1000,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    content.add(group)
+end

@@ -52,3 +52,12 @@ do
     group:group("clothing_watch", 5)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bunker_basement_suicide", kind = "collection" }
+    group:entry { item = "m1911", charges = { 6, 6 }, ammo = { item = "45_acp" } }
+    group:entry { item = "45_casing", charges = { 1, 1 } }
+    group:group("underwear")
+    group:item("corpse")
+    content.add(group)
+end

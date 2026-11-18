@@ -60,3 +60,37 @@ do
     }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "void_spider_corpse_minor_loot",
+        kind = "distribution",
+        container = "corpse_void_mummified",
+        overflow = "spill",
+    }
+    group:item("longrifle_flintlock", 10, "leadworks_longrifle_flintlock")
+    group:item("helmet_kettle", 10, "morion")
+    group:item("golden_hat", 10)
+    group:item("towel", 10)
+    group:item("tattered_garment", 10)
+    group:entry {
+        group = "amigara_items",
+        artifact = { preset = "cult", power_level = 1250, max_attributes = 4, max_negative_power = -1000, resonant = true },
+        probability = 15,
+    }
+    group:entry {
+        group = "ps_artifacts",
+        artifact = {
+            preset = "netherum_tunnels",
+            power_level = 750,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+        probability = 15,
+    }
+    group:item("altered_exposed_wiring_prototype", 10)
+    group:item("bead_bracelet", 10)
+    group:item("cape_sci_fi", 10)
+    content.add(group)
+end

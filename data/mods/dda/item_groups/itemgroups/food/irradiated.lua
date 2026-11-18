@@ -60,3 +60,59 @@ do
     group:item("pea", 50)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "irradiated_lettuce_bag_plastic_5", kind = "collection", container = "bag_plastic" }
+    group:entry {
+        item = "lettuce",
+        count = { 5, 5 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "irradiated_cabbage_bag_plastic_8", kind = "collection", container = "bag_plastic" }
+    group:entry {
+        item = "cabbage",
+        count = { 8, 8 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "irradiated_carrot_bag_plastic_6", kind = "collection", container = "bag_plastic" }
+    group:entry {
+        item = "carrot",
+        count = { 6, 6 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "irradiated_cranberries_bag_plastic_3",
+        kind = "collection",
+        container = "bag_plastic",
+    }
+    group:entry {
+        item = "cranberries",
+        count = { 3, 3 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end

@@ -112,3 +112,11 @@ do
     group:group("beer_in_six_pack_cardboard")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "beer_in_container", kind = "distribution" }
+    group:entry { group = "any_beer", charges = { 1, -1 }, container = "bottle_glass" }
+    group:entry { group = "any_beer", charges = { 1, -1 }, container = "bottle_glass_330ml" }
+    group:entry { group = "any_beer", charges = { 1, -1 }, container = "can_drink" }
+    content.add(group)
+end

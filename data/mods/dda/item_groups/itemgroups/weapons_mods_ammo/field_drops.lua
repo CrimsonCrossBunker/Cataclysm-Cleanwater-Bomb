@@ -782,3 +782,171 @@ do
     }
     content.add(group)
 end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for Armalite Rifles (though other stanag compliants could work too), loaded with .223 ammo
+    local group = content.ItemGroup { id = "field_ar15_223", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "223" }, probability = 50 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "223" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "223" }, probability = 30 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "223" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "223" }, probability = 30 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "223" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for Armalite Rifles (though other stanag compliants could work too), loaded with Mk318-type 'duty' ammo
+    local group = content.ItemGroup { id = "field_ar15_mk318", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 50 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 30 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 30 },
+            { item = "stanag30", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for Mini-14 rifles
+    local group = content.ItemGroup { id = "field_mini14", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "ruger20", charges = { 20, 20 }, ammo = { item = "223" }, probability = 50 },
+            { item = "ruger20", charges = { 0, 5 }, ammo = { item = "223" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "ruger20", charges = { 20, 20 }, ammo = { item = "223" }, probability = 30 },
+            { item = "ruger20", charges = { 0, 5 }, ammo = { item = "223" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "ruger20", charges = { 20, 20 }, ammo = { item = "223" }, probability = 30 },
+            { item = "ruger20", charges = { 0, 5 }, ammo = { item = "223" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for Steyr AUG rifles
+    local group = content.ItemGroup { id = "field_steyraug", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "augmag_30rd", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 50 },
+            { item = "augmag_30rd", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "augmag_30rd", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 30 },
+            { item = "augmag_30rd", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "augmag_30rd", charges = { 30, 30 }, ammo = { item = "556_mk318" }, probability = 30 },
+            { item = "augmag_30rd", charges = { 0, 5 }, ammo = { item = "556_mk318" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for the glock 22
+    local group = content.ItemGroup { id = "field_glock_22", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "glock40mag", charges = { 15, 15 }, ammo = { item = "40sw" }, probability = 50 },
+            { item = "glock40mag", charges = { 0, 5 }, ammo = { item = "40sw" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "glock40mag", charges = { 15, 15 }, ammo = { item = "40sw" }, probability = 30 },
+            { item = "glock40mag", charges = { 0, 5 }, ammo = { item = "40sw" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "glock40mag", charges = { 15, 15 }, ammo = { item = "40sw" }, probability = 30 },
+            { item = "glock40mag", charges = { 0, 5 }, ammo = { item = "40sw" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end
+
+do
+    -- this is a distribution for ammo and magazines an active combatant would have immediately on hand.  Most should be expended.
+    -- usually takes the form of 100% chance for first mag, 70% for second, 50% for third with reducing chances of them being mostly expended.
+    -- this group is for the AS50 AMR
+    local group = content.ItemGroup { id = "field_as50", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "as50mag", charges = { 5, 5 }, ammo = { item = "50match" }, probability = 50 },
+            { item = "as50mag", charges = { 0, 1 }, ammo = { item = "50match" }, probability = 50 },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "as50mag", charges = { 5, 5 }, ammo = { item = "50match" }, probability = 30 },
+            { item = "as50mag", charges = { 0, 1 }, ammo = { item = "50match" }, probability = 70 },
+        },
+        probability = 70,
+    }
+    group:entry {
+        distribution = {
+            { item = "as50mag", charges = { 5, 5 }, ammo = { item = "50match" }, probability = 30 },
+            { item = "as50mag", charges = { 0, 1 }, ammo = { item = "50match" }, probability = 70 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end

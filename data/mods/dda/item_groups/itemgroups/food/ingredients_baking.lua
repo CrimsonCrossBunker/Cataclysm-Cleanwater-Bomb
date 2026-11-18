@@ -370,3 +370,9 @@ do
     group:entry { item = "yeast", count = { 20, 1000 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cornmeal_box_full", kind = "collection", container = "box_small" }
+    group:entry { item = "cornmeal", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end

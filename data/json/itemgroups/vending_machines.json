@@ -1,21 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "vending_food_items",
-    "items": [
-      { "group": "candy_chocolate", "prob": 615 },
-      { "group": "salty_snacks", "prob": 485 },
-      { "item": "peanut_shelled", "count": -1, "prob": 60 },
-      { "item": "almond_shelled", "count": -1, "prob": 60 },
-      { "item": "cashews", "count": -1, "prob": 60 },
-      { "item": "pistachio_shelled", "count": -1, "prob": 60 },
-      { "item": "cookies", "count": -1, "prob": 80 },
-      { "item": "choco_coffee_beans", "count": -1, "prob": 10 },
-      { "item": "fruit_leather", "count": -1, "prob": 25 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "vending_drink_items",
     "items": [
       [ "water_clean", 90 ],

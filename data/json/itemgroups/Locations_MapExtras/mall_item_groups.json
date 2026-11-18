@@ -40,38 +40,5 @@
       [ "bathroom_scale", 20 ],
       { "group": "pillbox_any_empty", "prob": 20 }
     ]
-  },
-  {
-    "id": "beauty",
-    "type": "item_group",
-    "ammo": 75,
-    "magazine": 100,
-    "items": [
-      [ "mag_glam", 40 ],
-      [ "mag_beauty", 30 ],
-      [ "hairpin", 40 ],
-      [ "scarf", 10 ],
-      [ "scarf_long", 5 ],
-      [ "knit_scarf", 10 ],
-      [ "long_knit_scarf", 5 ],
-      [ "bellyband", 5 ],
-      [ "barrette", 5 ],
-      [ "eyedrops", 35 ],
-      { "item": "candle", "prob": 50, "charges": 100 },
-      [ "scissors", 30 ],
-      [ "soap", 45 ],
-      { "item": "moisturizer", "prob": 60, "charges": [ 1, -1 ], "container-item": "bottle_plastic_small" },
-      { "item": "tailors_kit", "prob": 25, "charges": 400 },
-      { "item": "shavingkit", "prob": 20, "charges": 10 },
-      { "item": "elec_hairtrimmer", "prob": 20, "charges": 50 },
-      [ "razor_shaving", 20 ],
-      [ "curler_hair", 30 ],
-      [ "hair_dryer", 40 ],
-      [ "curling_iron", 40 ],
-      [ "comb_pocket", 10 ],
-      [ "hairbrush", 10 ],
-      [ "mirror", 35 ],
-      { "item": "makeup_kit", "prob": 30 }
-    ]
   }
 ]

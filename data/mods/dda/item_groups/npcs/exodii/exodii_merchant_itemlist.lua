@@ -641,3 +641,54 @@ do
     group:group("Exodii_XE_no_spell_items", 1)
     content.add(group)
 end
+
+do
+    -- This group does not spawn anywhere, it exists only to set Exodii merchant prices
+    local group = content.ItemGroup { id = "exodii_unwanted_bathroom_medicine", kind = "collection" }
+    group:entry {
+        distribution = {
+            { group = "birth_control", probability = 50 },
+            { group = "estrogen_hrt", probability = 3 },
+            { group = "testosterone_hrt", probability = 2 },
+        },
+        probability = 95,
+    }
+    group:item("comb_lice", 10)
+    group:entry { item = "eyedrops", count = { 10, 10 }, probability = 15 }
+    group:entry { item = "steroid_eyedrops", count = { 5, 5 }, probability = 5 }
+    group:entry { item = "pepto", charges = { 1, -1 }, container = "bottle_plastic_small", probability = 60 }
+    group:group("tums_bottle_plastic_small_1_20", 60)
+    group:entry { item = "inhaler", charges = { 10, 100 }, probability = 25 }
+    group:group("tampon_box_used", 20)
+    group:group("menstrual_pad_box_used", 20)
+    group:item("menstrual_cup", 2)
+    group:group("alcohol_wipes_box_used", 60)
+    group:group("alcohol_wipes_box_full", 20)
+    group:entry {
+        distribution = {
+            {
+                item = "pills_sleep",
+                count = { 1, 10 },
+                wrapper = "bottle_plastic_pill_prescription",
+                container = "null",
+                probability = 60,
+            },
+            {
+                item = "melatonin_tablet",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_prescription",
+                container = "null",
+                probability = 40,
+            },
+        },
+        probability = 10,
+    }
+    group:entry {
+        distribution = {
+            { item = "nyquil", charges = { 1, -1 }, probability = 60 },
+            { item = "dayquil", charges = { 1, -1 }, probability = 20 },
+        },
+        probability = 50,
+    }
+    content.add(group)
+end

@@ -664,3 +664,15 @@ do
     group:entry { item = "water_clean", count = { 2, 2 }, charges = { 2, 2 }, sealed = false, container = "bottle_plastic" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "military_grenadier_assault_rifles", kind = "distribution" }
+    group:entry {
+        group = "modular_m4a1",
+        charges = { 0, 30 },
+        contents = {
+            { group = "issued_grenadier_mods" },
+        },
+    }
+    content.add(group)
+end

@@ -215,3 +215,82 @@ do
     group:group("fish_pickled_jar_3l_glass_sealed_12", 25)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "barbecue", kind = "distribution" }
+    group:group("beer_in_container_full", 30)
+    group:item("meat", 65)
+    group:entry { item = "glazed_tenderloin", count = { 3, 3 }, probability = 55 }
+    group:item("fish", 10)
+    group:item("fish_smoked", 5)
+    group:item("lobster", 10)
+    group:item("lobster_smoked", 5)
+    group:item("lobster_cakes", 10)
+    group:item("crab_cakes", 10)
+    group:group("stuffed_clams_box_small_5", 5)
+    group:item("meat_smoked", 60)
+    group:item("sausage", 35)
+    group:entry { item = "bratwurst_sausage", count = { 10, 10 }, probability = 30 }
+    group:group("hotdogs_frozen_bag_plastic_10", 65)
+    group:item("hotdogs_cooked", 65)
+    group:item("hotdogs_newyork", 45)
+    group:group("chilidogs_wrapper_2", 30)
+    group:group("currywurst_wrapper_2", 15)
+    group:entry { item = "lettuce", count = { 5, 5 }, probability = 45 }
+    group:item("tomato", 45)
+    group:item("onion", 30)
+    group:entry { item = "chili_pepper", count = { 3, 3 }, probability = 30 }
+    group:item("corn", 20)
+    group:group("irradiated_lettuce_bag_plastic_5", 20)
+    group:entry {
+        item = "tomato",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 20,
+    }
+    group:entry {
+        item = "onion",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "corn",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 10,
+    }
+    group:group("bacon_bag_plastic_2", 20)
+    group:item("potato_baked", 15)
+    group:group("bread_in_bag", 40)
+    group:group("bread_wheat_free_bag_plastic_14", 40)
+    group:group("ketchup_sealed_rng", 70)
+    group:group("mustard_sealed_rng", 75)
+    group:group("barbecue_sauce_sealed_rng", 80)
+    group:group("honey_mustard_sealed_rng", 40)
+    group:group("pickle_jar_glass_sealed_2", 20)
+    group:item("pickle", 20)
+    group:item("cheeseburger", 20)
+    group:item("deluxe_cheeseburger", 50)
+    group:item("hamburger", 70)
+    group:group("cheese_bag_plastic", 45)
+    group:item("mozzarella_cheese", 30)
+    group:item("mozzarella_cheese_smoked", 10)
+    group:item("ceramic_plate", 30)
+    group:item("knife_small", 45, "knife_steak")
+    group:item("tongs", 60)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "honey_market_stall", kind = "collection" }
+    group:group("honey_mustard_sealed_rng", 15)
+    group:entry { item = "honey_bottled", charges = { -1, -1 }, probability = 20 }
+    group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "honeycomb", count = { 2, 4 }, probability = 10 }
+    group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 10 }
+    content.add(group)
+end

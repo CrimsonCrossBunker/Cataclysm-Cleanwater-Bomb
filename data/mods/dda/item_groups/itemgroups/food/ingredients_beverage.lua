@@ -206,3 +206,33 @@ do
     group:entry { item = "bee_balm", count = { 1, 12 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "raw_burdock_jar_3l_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_3l_glass_sealed",
+    }
+    group:entry { item = "raw_burdock", count = { 1, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "wild_herbs_jar_glass_sealed_20_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "wild_herbs", count = { 20, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "raw_dandelion_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "raw_dandelion", count = { 1, -1 } }
+    content.add(group)
+end

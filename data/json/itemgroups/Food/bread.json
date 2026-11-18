@@ -1,9 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "bread_wheat_free_bag_plastic_14",
-    "subtype": "collection",
-    "container-item": "bag_plastic",
-    "entries": [ { "item": "bread", "container-item": "null", "components": [ "flour_wheat_free" ], "count": 14 } ]
-  }
-]

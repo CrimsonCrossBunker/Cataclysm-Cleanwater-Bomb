@@ -14,14 +14,5 @@
       { "group": "ammo_any_batteries_full", "prob": 100 },
       { "item": "jumpsuit", "variant": "robofac", "count": 10 }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "robofac_merc_mags",
-    "entries": [
-      { "item": "robofac40", "ammo-item": "556", "charges": 40 },
-      { "item": "robofac40", "ammo-item": "556", "charges": 40 }
-    ]
   }
 ]

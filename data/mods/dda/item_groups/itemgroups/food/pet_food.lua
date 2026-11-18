@@ -111,3 +111,19 @@ do
     group:entry { item = "catfood_dry", count = { 20, 20 }, wrapper = "bag_plastic", probability = 1 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "pet_food_in_container", kind = "distribution" }
+    group:entry { item = "birdfood", count = { -1, -1 }, container = "bag_plastic", probability = 1 }
+    group:group("dog_food_in_container", 4)
+    group:group("cat_food_in_container", 4)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pet_food_in_container_full", kind = "distribution" }
+    group:entry { item = "birdfood", count = { -1, -1 }, container = "bag_plastic", probability = 1 }
+    group:group("dog_food_in_container_full", 4)
+    group:group("cat_food_in_container_full", 4)
+    content.add(group)
+end

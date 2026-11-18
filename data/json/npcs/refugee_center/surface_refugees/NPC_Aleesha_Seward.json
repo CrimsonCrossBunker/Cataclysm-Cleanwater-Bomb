@@ -28,12 +28,6 @@
     "traits": [ { "group": "Appearance_African" }, { "trait": "NO_BASH" }, { "trait": "RETURN_TO_START_POS" } ]
   },
   {
-    "type": "item_group",
-    "id": "REFUGEE_Aleesha_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "novel_coa" }, { "group": "civilian_phones", "ammo-item": "battery", "charges": 120 } ]
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

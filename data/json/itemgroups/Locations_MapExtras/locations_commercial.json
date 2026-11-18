@@ -1,11 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "public_sink",
-    "//": "Items you might find in the sink of a public place, like a bathroom.",
-    "items": [ { "item": "liquid_soap", "count": [ 1, 4 ], "prob": 70, "charges": [ 1, -1 ] } ]
-  },
-  {
     "id": "dollar_food",
     "type": "item_group",
     "items": [
@@ -705,71 +699,6 @@
     ]
   },
   {
-    "id": "sugar_house_kitchen_items",
-    "type": "item_group",
-    "items": [
-      [ "thermometer", 90 ],
-      [ "family_cookbook", 90 ],
-      [ "maple_sap", 50 ],
-      [ "syrup", 100 ],
-      [ "maple_candy", 10 ],
-      [ "flour", 30 ],
-      [ "milk_powder", 30 ],
-      [ "cocoa_powder", 30 ],
-      [ "cocoa_powder_milk", 30 ],
-      [ "powder_eggs", 10 ],
-      { "group": "eggs_in_carton" },
-      { "group": "vegetable_oil_bottle", "prob": 20 },
-      { "item": "apple", "prob": 5, "custom-flags": [ "IRRADIATED" ] },
-      { "item": "banana", "prob": 5, "custom-flags": [ "IRRADIATED" ] },
-      { "item": "strawberries", "prob": 5, "custom-flags": [ "IRRADIATED" ] },
-      [ "chocolate", 20 ],
-      [ "waffleiron", 60 ],
-      { "prob": 30, "group": "bread_in_bag" },
-      [ "peanutbutter", 20 ],
-      [ "pot", 80 ]
-    ]
-  },
-  {
-    "id": "petstore_misc",
-    "type": "item_group",
-    "items": [
-      { "item": "dogfood", "prob": 20, "container-item": "can_medium" },
-      { "item": "catfood", "prob": 20, "container-item": "can_food" },
-      { "prob": 5, "item": "dogfood_dry", "count": -1 },
-      { "prob": 5, "item": "catfood_dry", "count": -1 },
-      { "prob": 15, "item": "birdfood", "count": -1, "container-item": "bag_plastic" },
-      [ "dog_whistle", 15 ],
-      { "item": "flashlight", "prob": 5, "charges": [ 0, 300 ] }
-    ]
-  },
-  {
-    "id": "petstore_shelves",
-    "type": "item_group",
-    "items": [
-      { "item": "dogfood", "prob": 10, "container-item": "can_medium" },
-      { "item": "catfood", "prob": 10, "container-item": "can_food" },
-      { "prob": 10, "item": "dogfood_dry", "count": -1 },
-      { "prob": 10, "item": "catfood_dry", "count": -1 },
-      { "item": "salt_water", "prob": 10, "container-item": "aquarium_medium" },
-      { "item": "water", "prob": 10, "container-item": "aquarium_medium" },
-      { "item": "salt_water", "prob": 10, "container-item": "aquarium_small" },
-      { "item": "water", "prob": 10, "container-item": "aquarium_small" },
-      { "item": "salt_water", "prob": 3, "container-item": "aquarium_large" },
-      { "item": "water", "prob": 3, "container-item": "aquarium_large" },
-      { "prob": 15, "item": "birdfood", "count": -1, "container-item": "bag_plastic_small" },
-      { "group": "tuna_in_can", "prob": 15 },
-      [ "can_chicken", 15 ],
-      [ "aquarium_medium", 10 ],
-      [ "aquarium_small", 10 ],
-      [ "aquarium_large", 3 ],
-      [ "petpack", 10 ],
-      [ "kevlar_harness", 2 ],
-      [ "leather_harness_dog", 8 ],
-      [ "rubber_harness_dog", 15 ]
-    ]
-  },
-  {
     "type": "item_group",
     "id": "oa_ig_cd_lockers",
     "//": "for cs_car_dealership",
@@ -867,25 +796,6 @@
     ]
   },
   {
-    "id": "thrift_misc",
-    "type": "item_group",
-    "items": [
-      [ "magnifying_glass", 5 ],
-      { "item": "sewing_kit", "prob": 15, "charges": [ 0, -1 ] },
-      [ "scissors", 10 ],
-      { "item": "sewing_machine", "prob": 15 },
-      { "item": "gasoline_lantern", "prob": 7, "charges": [ 0, 500 ] },
-      { "item": "flashlight", "prob": 25, "charges": [ 0, 300 ] },
-      { "item": "hotplate", "prob": 20 },
-      { "item": "coffeemaker", "prob": 25 },
-      [ "textbook_firstaid", 2 ],
-      [ "cigar_cutter", 5 ],
-      [ "cigar_punch", 5 ],
-      [ "pocket_firearms", 1 ],
-      [ "mag_archery", 4 ]
-    ]
-  },
-  {
     "id": "elecsto_lights",
     "type": "item_group",
     "//": "For s_electronics shops",
@@ -957,66 +867,6 @@
     "items": [ [ "television", 50 ], { "group": "new_eink_tablet_pcs", "prob": 50 }, [ "stereo", 30 ], [ "microwave", 40 ] ]
   },
   {
-    "id": "vet_softdrug",
-    "//": "for veterinarian",
-    "type": "item_group",
-    "items": [
-      { "item": "bandages", "prob": 30, "count": [ 1, 3 ] },
-      { "group": "adhesive_bandages_box_used", "prob": 30 },
-      { "item": "liq_bandage_spray", "prob": 5, "charges": [ 1, -1 ] },
-      { "group": "full_1st_aid", "prob": 10 },
-      { "item": "saline", "prob": 20, "charges": [ 1, 5 ] },
-      { "prob": 15, "group": "vitamins_bottle_plastic_pill_supplement_1_20" },
-      { "prob": 15, "group": "calcium_tablet_bottle_plastic_pill_supplement_1_20" },
-      { "group": "any_cough_syrup_in_bottle", "prob": 5 },
-      { "item": "disinfectant", "prob": 15, "charges": [ 1, 10 ] },
-      [ "protein_powder", 15 ],
-      { "item": "smoxygen_tank", "prob": 20, "charges": [ 0, 12 ] },
-      { "item": "elec_hairtrimmer", "prob": 15, "charges": [ 0, 50 ] },
-      [ "survnote", 5 ],
-      [ "mask_dust", 65 ],
-      [ "glasses_safety", 10 ],
-      [ "towel", 50 ],
-      [ "scissors_medical", 50 ],
-      [ "fungicide", 10 ],
-      { "group": "insecticide_bag_plastic", "prob": 10 },
-      { "item": "soap", "prob": 20, "charges": [ 1, 10 ] },
-      { "item": "chem_hydrogen_peroxide", "prob": 10, "charges": [ 1, 10 ] },
-      [ "canister_empty", 5 ],
-      [ "stethoscope", 50 ],
-      [ "scalpel", 50 ],
-      [ "gloves_medical", 50 ],
-      [ "medical_gauze", 25 ],
-      { "prob": 10, "group": "quikclot_bag_plastic_1_6" },
-      [ "hacksaw", 5 ],
-      [ "gloves_rubber", 25 ],
-      [ "apron_plastic", 15 ],
-      { "item": "cotton_patchwork", "prob": 10, "custom-flags": [ "FILTHY" ] },
-      [ "bag_plastic", 20 ],
-      [ "string_6", 5 ]
-    ]
-  },
-  {
-    "id": "vet_utility",
-    "//": "for veterinarian",
-    "type": "item_group",
-    "items": [
-      [ "dog_whistle", 10 ],
-      [ "pet_carrier", 30 ],
-      [ "petpack", 3 ],
-      { "item": "dogfood", "prob": 20, "container-item": "can_medium" },
-      { "item": "catfood", "prob": 20, "container-item": "can_food" },
-      { "item": "birdfood", "prob": 10, "count": -1, "container-item": "bag_plastic_small" },
-      [ "towel", 20 ],
-      { "item": "soap", "prob": 10, "charges": [ 1, 10 ] },
-      [ "gloves_medical", 20 ],
-      [ "cotton_patchwork", 15 ],
-      { "item": "cotton_patchwork", "prob": 2, "custom-flags": [ "FILTHY" ] },
-      [ "bag_plastic", 20 ],
-      [ "jerky", 40 ]
-    ]
-  },
-  {
     "id": "vet_hardrug",
     "//": "for veterinarian",
     "type": "item_group",
@@ -1076,45 +926,6 @@
       { "prob": 10, "group": "vitamins_bottle_plastic_pill_supplement_1_20" },
       { "prob": 10, "group": "bottle_otc_painkiller_1_20" },
       [ "fitness_band", 10 ]
-    ]
-  },
-  {
-    "id": "sewing_group",
-    "//": "spawn list for craft stores",
-    "type": "item_group",
-    "items": [
-      { "group": "tailoring_fabric", "prob": 30 },
-      [ "awl_steel", 10 ],
-      { "item": "loom_frame", "prob": 2 },
-      { "item": "sewing_kit", "prob": 30, "charges": [ 0, -1 ] },
-      { "item": "sewing_machine", "prob": 30 },
-      { "item": "shed_stick", "prob": 2 },
-      { "item": "tailors_kit", "prob": 9, "charges": [ 0, -1 ] },
-      { "item": "electric_spinwheel", "prob": 9 },
-      [ "knitting_needles", 15 ],
-      [ "sheet_kevlar_layered", 10 ],
-      [ "leather", 10 ],
-      [ "sheet_leather", 10 ],
-      [ "cotton_patchwork", 20 ],
-      [ "needle_curved", 10 ],
-      [ "nomex", 10 ],
-      [ "neoprene", 5 ],
-      [ "felt_patch", 10 ],
-      [ "fur", 10 ],
-      [ "thread", 15 ],
-      [ "yarn", 15 ],
-      [ "sinew", 15 ],
-      { "group": "duct_tape_roll", "prob": 15 },
-      { "group": "glue_weak_professional", "prob": 5 },
-      { "group": "glue_strong_professional", "prob": 5 },
-      [ "feather", 15 ],
-      [ "mag_animecon", 15 ],
-      [ "mag_beauty", 15 ],
-      [ "mag_tailor", 15 ],
-      [ "manual_tailor", 15 ],
-      [ "tailor_portfolio", 5 ],
-      [ "recipe_fauxfur", 5 ],
-      [ "textbook_tailor", 3 ]
     ]
   }
 ]

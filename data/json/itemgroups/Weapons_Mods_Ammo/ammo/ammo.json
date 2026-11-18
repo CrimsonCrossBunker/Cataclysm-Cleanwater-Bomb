@@ -217,15 +217,6 @@
   },
   {
     "type": "item_group",
-    "id": "ammo_heavy_batteries",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "heavy_battery_cell", "prob": 40, "charges": [ 0, 1000 ] },
-      { "item": "heavy_plus_battery_cell", "prob": 80, "charges": [ 0, -1 ] }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "ammo_any_batteries_full",
     "subtype": "distribution",
     "entries": [

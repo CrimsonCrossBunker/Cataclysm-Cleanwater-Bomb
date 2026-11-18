@@ -569,3 +569,157 @@ do
     group:entry { item = "poppy_sleep", count = { 2, 2 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "GODCO_helena_worn", kind = "collection" }
+    group:item("socks")
+    group:item("boots")
+    group:item("bra")
+    group:item("panties")
+    group:item("longshirt")
+    group:item("pants_cargo")
+    group:item("jacket_army")
+    group:item("holy_symbol_wood")
+    group:entry { item = "quiver", charges = { 20, 20 }, ammo = { item = "bolt_wood_bodkin" } }
+    group:item("hat_boonie")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "GODCO_guard_carried", kind = "collection" }
+    group:entry { item = "shot_00", count = { 2, 3 } }
+    group:entry { item = "flashlight", charges = { 120, 120 }, ammo = { item = "battery" } }
+    group:entry { group = "snacks", count = { 1, 2 }, probability = 75 }
+    group:entry { group = "cannedfood", count = { 1, 2 }, probability = 50 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "GODCO_sonia_carried", kind = "collection" }
+    group:entry { group = "civilian_phones", charges = { 120, 120 }, ammo = { item = "battery" } }
+    group:entry { group = "snacks", count = { 1, 2 } }
+    content.add(group)
+end
+
+do
+    -- camping itemgroup modified to remove junk/common/lengthy items.
+    local group = content.ItemGroup { id = "GODCO_kostas_carried", kind = "collection" }
+    group:entry { item = "rebreather", ammo = { item = "rebreather_cartridge_o2" }, probability = 3 }
+    group:entry { item = "UPS_off", charges = { 0, 1000 }, probability = 5 }
+    group:entry { item = "bbgun", charges = { 100, -1 }, probability = 15 }
+    group:entry { item = "bb", charges = { 100, -1 }, probability = 10 }
+    group:entry { item = "tailors_kit", charges = { 0, -1 }, probability = 15 }
+    group:item("misc_repairkit", 20)
+    group:entry { item = "heavy_flashlight", charges = { 100, 300 }, probability = 20 }
+    group:entry { item = "glowstick", charges = { 1400, 1400 }, probability = 50 }
+    group:entry { item = "handflare", charges = { 300, 300 }, probability = 50 }
+    group:entry { item = "pur_tablets", count = { 15, 50 }, probability = 10 }
+    group:entry { item = "gasoline_lantern", charges = { 100, -1 }, probability = 7 }
+    group:entry { item = "oil_lamp", charges = { 100, -1 }, probability = 7 }
+    group:entry { item = "lamp_oil", charges = { 100, -1 }, probability = 5 }
+    group:item("mess_kit", 33)
+    group:entry { item = "popcan_stove", charges = { 100, 500 }, probability = 33 }
+    group:entry {
+        distribution = {
+            { group = "premium_contents" },
+            { group = "full_survival_kit" },
+            { group = "used_survival_kit" },
+        },
+        probability = 66,
+    }
+    group:item("hatchet", 15)
+    group:item("folded_inflatable_boat", 25)
+    group:item("hand_pump", 5)
+    group:item("binoculars", 33)
+    group:item("firecracker_pack", 5)
+    group:item("knife_hunting", 18)
+    group:item("knife_rambo", 20)
+    group:item("machete", 5)
+    group:item("kukri", 5)
+    group:item("daypack", 20)
+    group:item("backpack_hiking", 12)
+    group:item("bigback", 3)
+    group:item("travelpack", 6)
+    group:item("mag_survival", 40)
+    group:item("textbook_survival", 20)
+    group:item("modern_tanner", 8)
+    group:item("recipe_bows", 8)
+    group:item("recipe_arrows", 8)
+    group:item("mag_rifle", 30)
+    group:item("mag_shotgun", 20)
+    group:item("mag_traps", 20)
+    group:item("manual_cutting", 12)
+    group:item("manual_knives", 8)
+    group:item("manual_swords", 8)
+    group:item("manual_gun", 8)
+    group:item("manual_shotgun", 6)
+    group:item("manual_pistol", 4)
+    group:item("manual_smg", 2)
+    group:item("manual_survival", 20)
+    group:item("manual_first_aid", 40)
+    group:item("manual_traps", 12)
+    group:item("trappers_companion", 2)
+    group:item("textbook_traps", 8)
+    group:item("beartrap", 25)
+    group:group("crossbow_bolts", 10)
+    group:item("hand_crossbow", 1)
+    group:item("crossbow", 2)
+    group:item("compcrossbow", 3)
+    group:item("longbow", 3)
+    group:item("compbow", 7)
+    group:item("bow_sight", 10)
+    group:item("bow_stabilizer", 10)
+    group:item("arrowrest", 10)
+    group:item("recurbow", 2)
+    group:item("reflexbow", 2)
+    group:item("quiver", 7)
+    group:item("vambrace_larmor", 1)
+    group:item("tent_kit", 15)
+    group:item("large_tent_kit", 15)
+    group:item("camelbak", 5)
+    group:item("sleeping_bag", 10)
+    group:group("tools_fishingrods_portable", 20)
+    group:item("fishing_waders", 12)
+    group:item("boots_hiking", 20)
+    group:item("e_tool", 10)
+    group:item("flaregun", 20)
+    group:item("signal_flare", 25)
+    group:item("bullwhip", 1)
+    group:item("sheath", 5)
+    group:item("bootsheath", 5)
+    group:item("thermometer", 7)
+    group:item("hygrometer", 5)
+    group:item("barometer", 5)
+    group:item("trailmap")
+    group:item("canteen_wood", 5)
+    group:item("whistle_multitool", 5)
+    group:item("chem_hexamine", 5)
+    group:item("flint_steel", 10)
+    group:item("esbit_stove", 10)
+    group:entry { item = "wild_herbs", count = { 20, 200 } }
+    group:entry { item = "thyme", count = { 1, 10 }, probability = 75 }
+    group:entry { item = "hickory_nut", count = { 1, 10 }, probability = 66 }
+    group:group("poppy_pain_jar_glass_sealed_2", 80)
+    group:group("poppy_sleep_jar_glass_sealed_2", 80)
+    group:entry { item = "icon", count = { 10, 20 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "GODCO_helena_wield", kind = "collection" }
+    group:entry { item = "compcrossbow", charges = { 1, 1 }, ammo = { item = "bolt_wood_bodkin" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "GODCO_russell_wield", kind = "collection" }
+    group:entry {
+        item = "remington700_270",
+        charges = { 4, 4 },
+        ammo = { item = "270win_jsp" },
+        contents = {
+            { item = "shoulder_strap" },
+        },
+    }
+    content.add(group)
+end

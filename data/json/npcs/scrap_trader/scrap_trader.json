@@ -96,28 +96,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "SCRAP_MERCHANT_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "glasses_safety" },
-      { "item": "helmet_liner" },
-      { "item": "hat_hard" },
-      { "item": "turtleneck_shirt" },
-      { "item": "jacket_jean" },
-      { "item": "vest" },
-      { "item": "boxer_briefs" },
-      { "item": "jeans" },
-      { "item": "gloves_work" },
-      { "item": "socks" },
-      { "item": "boots" },
-      { "item": "gold_ring" },
-      { "item": "tool_belt" },
-      { "item": "spearsling" },
-      { "group": "modular_ar15", "ammo-item": "223", "charges": 30, "container-item": "back_holster" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": [ "TALK_NPC_SCRAP_TRADER_INTRO", "TALK_NPC_SCRAP_TRADER_STORY", "TALK_NPC_SCRAP_TRADER_FORT" ],
     "responses": [

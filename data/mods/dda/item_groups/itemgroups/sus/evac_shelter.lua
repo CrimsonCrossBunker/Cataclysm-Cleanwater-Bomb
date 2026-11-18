@@ -245,3 +245,70 @@ do
     group:entry { item = "towel", count = { 1, 2 }, probability = 20 }
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- These cabinets have been picked over by a previous flood of evacuees, but plenty of good stuff could still be left.
+    local group = content.ItemGroup { id = "SUS_evac_shelter_cabinet_used", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "folding_poncho", count = { 1, 10 }, probability = 60 },
+                    { item = "emer_blanket", count = { 1, 10 }, probability = 60 },
+                    { item = "jacket_evac", count = { 1, 10 }, probability = 50 },
+                },
+                probability = 30,
+            },
+            {
+                collection = {
+                    { item = "water_clean", count = { 1, 6 }, probability = 60 },
+                    { item = "bottle_plastic", count = { 1, 6 }, probability = 90 },
+                },
+                probability = 50,
+            },
+            { group = "box_of_evacuation_protein_bar", probability = 60 },
+            {
+                collection = {
+                    { item = "extinguisher", charges = { 100, 100 }, probability = 50 },
+                    { group = "full_1st_aid", probability = 5 },
+                    { item = "two_way_radio", probability = 25 },
+                    { item = "electric_lantern", probability = 5 },
+                    { item = "wearable_light", probability = 5 },
+                },
+                probability = 10,
+            },
+            {
+                collection = {
+                    { group = "detergent_small_box_part", probability = 15 },
+                    { group = "borax_box_part", probability = 15 },
+                    { item = "brush", probability = 85 },
+                    { group = "bleach_jug_part", probability = 45 },
+                    { item = "box_small", probability = 5 },
+                    { item = "bag_plastic", probability = 5 },
+                    { item = "bowl_plastic", probability = 5 },
+                    { group = "ammonia_hydroxide_bottle_twoliter_part", probability = 15 },
+                    { item = "chem_washing_soda", count = { 1, -1 }, probability = 10 },
+                    { group = "bag_garbage_box_part", probability = 35 },
+                },
+                probability = 15,
+            },
+            {
+                collection = {
+                    { group = "beans_in_can", count = { 1, 2 }, probability = 10 },
+                    { group = "tomatoes_in_can", count = { 1, 2 }, probability = 5 },
+                    { item = "soup_chicken", count = { 1, 2 }, probability = 2 },
+                    { item = "box_small", probability = 5 },
+                    { item = "bag_plastic", probability = 5 },
+                    { item = "bowl_plastic", probability = 5 },
+                    { item = "vitamins", probability = 5 },
+                    { item = "can_food", count = { 1, 30 }, probability = 90 },
+                    { item = "can_opener", probability = 90 },
+                },
+                probability = 5,
+            },
+        },
+    }
+    group:item("evac_pamphlet", 15)
+    content.add(group)
+end

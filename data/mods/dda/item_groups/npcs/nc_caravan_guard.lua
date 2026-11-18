@@ -56,3 +56,12 @@ do
     group:item("sunglasses", 20)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_CARAVAN_GUARD_masks", kind = "distribution" }
+    group:item("null", 10)
+    group:item("mask_dust", 30)
+    group:item("bandana", 10)
+    group:entry { item = "mask_filter", charges = { 10, -1 }, probability = 30 }
+    content.add(group)
+end

@@ -5,12 +5,5 @@
     "subtype": "collection",
     "container-item": "bag_plastic_small",
     "entries": [ { "item": "quikclot", "container-item": "null", "count": 5 } ]
-  },
-  {
-    "id": "cotton_ball_bag_used",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "bag_plastic_small",
-    "items": [ { "item": "cotton_ball", "count": [ 1, -1 ] } ]
   }
 ]

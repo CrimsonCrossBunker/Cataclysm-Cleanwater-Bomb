@@ -30,27 +30,6 @@
   },
   {
     "type": "item_group",
-    "id": "oyster_crackers_plastic_bag_vac_1_inf",
-    "subtype": "collection",
-    "container-item": "plastic_bag_vac",
-    "entries": [ { "item": "oyster_crackers", "container-item": "null", "count": [ 1, -1 ] } ]
-  },
-  {
-    "type": "item_group",
-    "id": "crackers_box_small_full",
-    "subtype": "collection",
-    "container-item": "box_small",
-    "entries": [ { "item": "crackers", "container-item": "null", "count": -1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "onion_rings_box_small_1_inf",
-    "subtype": "collection",
-    "container-item": "box_small",
-    "entries": [ { "item": "onion_rings", "container-item": "null", "count": [ 1, -1 ] } ]
-  },
-  {
-    "type": "item_group",
     "subtype": "distribution",
     "id": "chewing_gum_used",
     "container-item": { "item": "blister_pack_small", "variant": "blister_pack_gum" },

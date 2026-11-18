@@ -165,3 +165,115 @@ do
     group:entry { item = "airgun_pellet_hunting", charges = { 0, 250 }, probability = 50 }
     content.add(group)
 end
+
+do
+    -- Pistols that are sought after but with little or no historical value.  Think of magnum handguns, stuff made famous by movies, guns that "look cool".  Should all be unloaded, but with magazines as these are display pieces.
+    local group = content.ItemGroup { id = "guns_pistol_display_pieces", kind = "distribution", with_magazine = 100 }
+    group:item("colt_python", 30)
+    group:item("chiappa_rhino", 20)
+    group:item("colt_anaconda_4", 40)
+    group:item("colt_anaconda_6", 20)
+    group:item("colt_anaconda_8", 40)
+    group:entry { group = "modular_deagle_357", charges = { 0, 0 }, probability = 4 }
+    group:entry { group = "modular_deagle_44", charges = { 0, 0 }, probability = 20 }
+    group:entry { group = "modular_deagle_50", charges = { 0, 0 }, probability = 40 }
+    group:item("raging_bull", 20)
+    group:item("taurus_judge", 10)
+    group:entry { item = "hk_mp5_semi_pistol", charges = { 0, 0 } }
+    group:item("sw_500", 50)
+    group:item("bfr", 10)
+    content.add(group)
+end
+
+do
+    -- gun plus potential expended magazines for a tacticool operator, should be lots of AR-15s
+    local group = content.ItemGroup { id = "longguns_operator_in_field", kind = "distribution" }
+    group:entry {
+        collection = {
+            {
+                group = "modular_ar15",
+                charges = { 0, 30 },
+                contents = {
+                    { item = "shoulder_strap_front" },
+                },
+            },
+            { group = "field_ar15" },
+        },
+        probability = 20,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "longguns_operator", kind = "distribution" }
+    group:entry {
+        group = "modular_ar15",
+        charges = { 0, 30 },
+        contents = {
+            { item = "shoulder_strap_front" },
+        },
+        probability = 20,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sidearms_operator", kind = "distribution" }
+    group:entry { item = "glock_19", charges = { 0, 15 }, probability = 15 }
+    group:entry { item = "glock_34", charges = { 0, 15 }, probability = 15 }
+    group:entry { item = "glock_22", charges = { 0, 15 }, ammo = { item = "40sw" }, probability = 20 }
+    group:entry { item = "m9", charges = { 0, 15 }, variant = "m9", probability = 5 }
+    group:entry { item = "sig_40", charges = { 0, 12 }, probability = 20 }
+    group:entry { item = "usp_45", charges = { 0, 12 }, probability = 10 }
+    group:entry { item = "usp_9mm", charges = { 0, 15 }, probability = 10 }
+    group:entry { item = "colt_python", charges = { 0, 6 }, probability = 5 }
+    content.add(group)
+end
+
+do
+    -- gun plus potential expended magazines
+    local group = content.ItemGroup { id = "sidearms_operator_in_field", kind = "distribution" }
+    group:entry {
+        collection = {
+            { item = "glock_19", charges = { 0, 15 } },
+            { group = "field_glock_19" },
+        },
+        probability = 15,
+    }
+    group:entry {
+        collection = {
+            { item = "glock_22", charges = { 0, 15 }, ammo = { item = "40sw" } },
+            { group = "field_glock_22" },
+        },
+        probability = 20,
+    }
+    group:entry {
+        collection = {
+            { item = "m9", charges = { 0, 15 }, variant = "m9" },
+            { group = "field_m9" },
+        },
+        probability = 5,
+    }
+    group:entry {
+        collection = {
+            { item = "sig_40", charges = { 0, 12 } },
+            { group = "field_sig_40" },
+        },
+        probability = 20,
+    }
+    group:entry {
+        collection = {
+            { item = "usp_45", charges = { 0, 12 } },
+            { group = "field_usp_45" },
+        },
+        probability = 10,
+    }
+    group:entry {
+        collection = {
+            { item = "usp_9mm", charges = { 0, 15 } },
+            { group = "field_usp_9mm" },
+        },
+        probability = 10,
+    }
+    content.add(group)
+end

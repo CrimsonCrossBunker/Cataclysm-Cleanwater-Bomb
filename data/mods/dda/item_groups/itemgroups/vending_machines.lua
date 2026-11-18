@@ -37,3 +37,17 @@ do
     group:group("chewing_gum_full", 15)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "vending_food_items", kind = "distribution" }
+    group:group("candy_chocolate", 615)
+    group:group("salty_snacks", 485)
+    group:entry { item = "peanut_shelled", count = { -1, -1 }, probability = 60 }
+    group:entry { item = "almond_shelled", count = { -1, -1 }, probability = 60 }
+    group:entry { item = "cashews", count = { -1, -1 }, probability = 60 }
+    group:entry { item = "pistachio_shelled", count = { -1, -1 }, probability = 60 }
+    group:entry { item = "cookies", count = { -1, -1 }, probability = 80 }
+    group:entry { item = "choco_coffee_beans", count = { -1, -1 }, probability = 10 }
+    group:entry { item = "fruit_leather", count = { -1, -1 }, probability = 25 }
+    content.add(group)
+end

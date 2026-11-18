@@ -67,3 +67,16 @@ do
     group:item("sunglasses", 20)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_SURVIVOR_CHEF_misc", kind = "distribution" }
+    group:item("water_clean", 90)
+    group:item("knife_huge", 100, "knife_butcher")
+    group:item("joint", 50)
+    group:group("coke_bag_zipper_8", 5)
+    group:group("cig_box_cigarette_20", 60)
+    group:entry { item = "lighter", charges = { 10, -1 }, probability = 60 }
+    group:group("veggy_pickled_jar_glass_sealed_2", 30)
+    group:group("meat_pickled_jar_glass_sealed_2", 20)
+    content.add(group)
+end

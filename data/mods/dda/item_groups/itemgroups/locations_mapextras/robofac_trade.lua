@@ -170,3 +170,10 @@ do
     group:item("template_photonics")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "robofac_merc_mags", kind = "collection" }
+    group:entry { item = "robofac40", charges = { 40, 40 }, ammo = { item = "556" } }
+    group:entry { item = "robofac40", charges = { 40, 40 }, ammo = { item = "556" } }
+    content.add(group)
+end

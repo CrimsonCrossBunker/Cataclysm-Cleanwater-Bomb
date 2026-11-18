@@ -210,3 +210,138 @@ do
     group:item("cardboard", 25)
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.
+    -- This group is for an almost full trashbag in a trashcan
+    local group = content.ItemGroup {
+        id = "SUS_trash_trashcan_full",
+        kind = "collection",
+        container = "bag_garbage",
+        overflow = "spill",
+    }
+    group:entry { group = "SUS_trash_floor", count = { 4, 12 }, probability = 75 }
+    group:entry { group = "SUS_trash_hardware", count = { 1, 5 }, probability = 20 }
+    group:entry { group = "SUS_trash_sewing", count = { 1, 2 }, probability = 10 }
+    group:group("civilian_memory_cards", 6)
+    group:entry { item = "material_styrofoam_chunk", count = { 1, 5 }, probability = 2 }
+    group:item("bum_wine", 5)
+    group:entry { item = "chain", count = { 1, 5 }, probability = 10 }
+    group:item("glass_sheet", 5)
+    group:entry { item = "joint_roach", count = { 0, 5 }, probability = 5 }
+    group:item("ceramic_mug", 1, "mean_mug")
+    group:item("ceramic_mug", 1, "mean_mug2")
+    group:entry { item = "lighter", charges = { 0, 10 }, probability = 20 }
+    group:entry { item = "matches", charges = { 0, 3 }, probability = 20 }
+    group:item("syringe", 5)
+    group:entry { group = "silverware", count = { 2, 6 }, probability = 5 }
+    group:entry { item = "leather", count = { 2, 8 }, probability = 5 }
+    group:entry {
+        group = "used_usb_drives",
+        contents = {
+            { group = "efiles_scrap" },
+        },
+        probability = 10,
+    }
+    group:entry { item = "news_regional", count = { 2, 5 }, probability = 30 }
+    group:entry { group = "newspaper", count = { 2, 5 }, probability = 20 }
+    group:entry { item = "file", count = { 1, 4 }, probability = 5 }
+    group:item("decoy_elfa", 10)
+    group:item("fuel_tin", 8)
+    group:item("spray_can", 2)
+    group:item("jar_glass_sealed", 10)
+    group:item("jar_3l_glass_sealed", 8)
+    group:item("handflare_dead", 3)
+    group:entry { item = "creepy_doll", charges = { 0, 2 }, probability = 1 }
+    group:group("SUS_book_nonf_pulp_newage", 2)
+    group:item("razor_blade", 10)
+    group:item("survnote", 5)
+    group:entry { item = "balloon", count = { 5, 10 }, probability = 5 }
+    group:item("box_medium_folded", 15)
+    group:entry { item = "inhaler", charges = { 0, 2 }, probability = 5 }
+    group:entry { item = "light_minus_disposable_cell", charges = { 0, 0 }, probability = 2 }
+    group:entry { item = "light_battery_cell", count = { 1, 4 }, charges = { 0, 2 }, probability = 5 }
+    group:entry { item = "ear_plugs", count = { 2, 2 }, probability = 20 }
+    group:item("book_ruined", 5)
+    group:entry { item = "candle", count = { 1, 2 }, charges = { 0, 8 }, probability = 33 }
+    group:item("family_photo", 2)
+    group:item("eraser", 5)
+    group:entry {
+        item = "cotton_ball",
+        count = { 3, 7 },
+        flags = {
+            "FILTHY",
+        },
+        probability = 10,
+    }
+    group:group("used_toy_box", 8)
+    group:entry { group = "superglue_bottles", count = { 1, 3 }, probability = 8 }
+    group:item("godco_flier", 1)
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.
+    -- This group is for a normal amount of trash in a trashcan, contained in a trashbag
+    local group = content.ItemGroup {
+        id = "SUS_trash_trashcan_half",
+        kind = "collection",
+        container = "bag_garbage",
+        overflow = "spill",
+    }
+    group:entry { group = "SUS_trash_floor", count = { 1, 5 }, probability = 75 }
+    group:entry { group = "SUS_trash_hardware", count = { 0, 2 }, probability = 20 }
+    group:group("SUS_trash_sewing", 10)
+    group:group("civilian_memory_cards", 6)
+    group:entry { item = "material_styrofoam_chunk", count = { 1, 3 }, probability = 2 }
+    group:item("bum_wine", 5)
+    group:entry { item = "chain", count = { 1, 2 }, probability = 10 }
+    group:item("glass_sheet", 5)
+    group:entry { item = "joint_roach", count = { 0, 2 }, probability = 5 }
+    group:item("ceramic_mug", 1, "mean_mug")
+    group:item("ceramic_mug", 1, "mean_mug2")
+    group:entry { item = "lighter", charges = { 0, 10 }, probability = 10 }
+    group:entry { item = "matches", charges = { 0, 3 }, probability = 10 }
+    group:item("syringe", 2)
+    group:entry { group = "silverware", count = { 1, 2 }, probability = 2 }
+    group:entry { item = "leather", count = { 2, 3 }, probability = 5 }
+    group:entry {
+        group = "used_usb_drives",
+        contents = {
+            { group = "efiles_scrap" },
+        },
+        probability = 10,
+    }
+    group:entry { item = "news_regional", count = { 1, 3 }, probability = 20 }
+    group:entry { group = "newspaper", count = { 1, 2 }, probability = 20 }
+    group:item("file", 5)
+    group:item("decoy_elfa", 5)
+    group:item("fuel_tin", 4)
+    group:item("spray_can", 2)
+    group:item("jar_glass_sealed", 5)
+    group:item("jar_3l_glass_sealed", 4)
+    group:item("handflare_dead", 3)
+    group:entry { item = "creepy_doll", charges = { 0, 2 }, probability = 1 }
+    group:group("SUS_book_nonf_pulp_newage", 1)
+    group:item("razor_blade", 5)
+    group:item("survnote", 5)
+    group:item("box_medium_folded", 15)
+    group:entry { item = "inhaler", charges = { 0, 2 }, probability = 5 }
+    group:entry { item = "light_minus_disposable_cell", charges = { 0, 0 }, probability = 2 }
+    group:entry { item = "light_battery_cell", count = { 1, 4 }, charges = { 0, 2 }, probability = 5 }
+    group:entry { item = "ear_plugs", count = { 2, 2 }, probability = 10 }
+    group:item("book_ruined", 5)
+    group:entry { item = "candle", count = { 1, 2 }, charges = { 0, 8 }, probability = 10 }
+    group:entry {
+        item = "cotton_ball",
+        count = { 3, 7 },
+        flags = {
+            "FILTHY",
+        },
+        probability = 5,
+    }
+    group:group("used_toy_box", 8)
+    group:group("superglue_bottles", 8)
+    group:entry { item = "godco_flier", count = { 1, 3 }, probability = 1 }
+    content.add(group)
+end

@@ -197,3 +197,256 @@ do
     group:entry { item = "36navy", charges = { 14, 14 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "holster_supp_MEU", kind = "collection" }
+    group:entry {
+        item = "m1911",
+        charges = { 7, 7 },
+        variant = "m1911_MEU",
+        ammo = { item = "45_acp" },
+        contents = {
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "holster_supp_usp9", kind = "collection" }
+    group:entry {
+        item = "usp_9mm",
+        charges = { 15, 15 },
+        ammo = { item = "9mmfmj" },
+        contents = {
+            { item = "suppressor_compact" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "glock17_mags", kind = "collection" }
+    group:entry { item = "glockmag", charges = { 15, 15 }, ammo = { item = "9mm" } }
+    group:entry { item = "glockmag", charges = { 15, 15 }, ammo = { item = "9mm" } }
+    group:entry { item = "glockmag", charges = { 15, 15 }, ammo = { item = "9mm" } }
+    group:entry { item = "glockmag", charges = { 15, 15 }, ammo = { item = "9mm" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_1911", kind = "collection" }
+    group:entry { item = "m1911mag", charges = { 7, 7 }, ammo = { item = "45_acp" } }
+    group:entry { item = "m1911mag", charges = { 7, 7 }, ammo = { item = "45_acp" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_m17", kind = "collection" }
+    group:entry { item = "p320mag_17rd_9x19mm", charges = { 17, 17 }, ammo = { item = "9mmfmj" } }
+    group:entry { item = "p320mag_17rd_9x19mm", charges = { 17, 17 }, ammo = { item = "9mmfmj" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "holster_supp_57", kind = "collection" }
+    group:entry { item = "fn57", charges = { 20, 20 }, ammo = { item = "57mm" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_57", kind = "collection" }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm" } }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_m14", kind = "collection" }
+    group:entry { item = "m14mag", charges = { 20, 20 }, ammo = { item = "762_51" } }
+    group:entry { item = "m14mag", charges = { 20, 20 }, ammo = { item = "762_51" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_mp5", kind = "collection" }
+    group:entry { item = "mp5mag", charges = { 30, 30 }, ammo = { item = "9mm" } }
+    group:entry { item = "mp5mag", charges = { 30, 30 }, ammo = { item = "9mm" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "ranger_mags", kind = "collection" }
+    group:entry { item = "p320mag_13rd_357sig", charges = { 13, 13 }, ammo = { item = "357sig_fmj" } }
+    group:entry { item = "p320mag_13rd_357sig", charges = { 13, 13 }, ammo = { item = "357sig_fmj" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_electrical_measuring", kind = "collection" }
+    group:item("voltmeter")
+    group:entry {
+        item = "light_battery_cell",
+        charges = { 100, 100 },
+        container = "multimeter",
+        ammo = { item = "battery" },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_smart_phone", kind = "collection" }
+    group:entry { item = "smart_phone", charges = { 120, 120 }, ammo = { item = "battery" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_smart_watch", kind = "collection" }
+    group:entry { item = "smart_watch", charges = { 20, 20 }, ammo = { item = "battery" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_smart_watch_adv", kind = "collection" }
+    group:entry { item = "smart_watch_adv", charges = { 30, 30 }, ammo = { item = "battery" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_two_way_radio", kind = "collection" }
+    group:entry {
+        item = "light_battery_cell",
+        charges = { 300, 300 },
+        container = "two_way_radio",
+        ammo = { item = "battery" },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_powered_earmuffs", kind = "collection" }
+    group:entry {
+        item = "light_minus_battery_cell",
+        charges = { 50, 50 },
+        container = "powered_earmuffs",
+        ammo = { item = "battery" },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_tazer", kind = "collection" }
+    group:entry { item = "medium_battery_cell", charges = { 1200, 1200 }, container = "tazer", ammo = { item = "battery" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "charged_penblack", kind = "collection" }
+    group:entry { item = "pen", charges = { 100, 100 }, ammo = { item = "black_pen_ink" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "full_rebreather_mask", kind = "collection" }
+    group:entry { item = "rebreather", charges = { 180, 180 }, ammo = { item = "rebreather_cartridge_o2" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "full_gasmask", kind = "collection" }
+    group:entry { item = "mask_gas", charges = { 100, 100 }, ammo = { item = "gasfilter_med" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_m2010", kind = "collection" }
+    group:entry { item = "m2010mag", charges = { 5, 5 }, ammo = { item = "300_winmag" } }
+    group:entry { item = "m2010mag", charges = { 5, 5 }, ammo = { item = "300_winmag" } }
+    group:entry { item = "m2010mag", charges = { 5, 5 }, ammo = { item = "300_winmag" } }
+    group:entry { item = "m2010mag", charges = { 5, 5 }, ammo = { item = "300_winmag" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_tac338", kind = "collection" }
+    group:entry { item = "ai_338mag", charges = { 5, 5 }, ammo = { item = "338lapua_fmjbt" } }
+    group:entry { item = "ai_338mag", charges = { 5, 5 }, ammo = { item = "338lapua_fmjbt" } }
+    group:entry { item = "ai_338mag", charges = { 5, 5 }, ammo = { item = "338lapua_fmjbt" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mags_50beowulf_ar15", kind = "collection" }
+    group:entry { item = "50beowulf_ar15mag", charges = { 10, 10 }, ammo = { item = "50beowulf_xtp" } }
+    group:entry { item = "50beowulf_ar15mag", charges = { 10, 10 }, ammo = { item = "50beowulf_xtp" } }
+    group:entry { item = "50beowulf_ar15mag", charges = { 10, 10 }, ammo = { item = "50beowulf_xtp" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mags_ruger_arr", kind = "collection" }
+    group:entry { item = "ruger_arr_mag", charges = { 3, 3 }, ammo = { item = "450_ftx" } }
+    group:entry { item = "ruger_arr_mag", charges = { 3, 3 }, ammo = { item = "450_ftx" } }
+    group:entry { item = "ruger_arr_mag", charges = { 3, 3 }, ammo = { item = "450_ftx" } }
+    group:entry { item = "ruger_arr_mag", charges = { 3, 3 }, ammo = { item = "450_ftx" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_m110", kind = "collection" }
+    group:entry { item = "hk417mag_20rd", charges = { 20, 20 }, ammo = { item = "762_51" } }
+    group:entry { item = "hk417mag_20rd", charges = { 20, 20 }, ammo = { item = "762_51" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_usp45", kind = "collection" }
+    group:entry { item = "usp45mag", charges = { 12, 12 }, ammo = { item = "45_acp" } }
+    group:entry { item = "usp45mag", charges = { 12, 12 }, ammo = { item = "45_acp" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_usp9", kind = "collection" }
+    group:entry { item = "usp9mag", charges = { 15, 15 }, ammo = { item = "9mmfmj" } }
+    group:entry { item = "usp9mag", charges = { 15, 15 }, ammo = { item = "9mmfmj" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "army_mags_glock17", kind = "collection" }
+    group:entry { item = "glock17_22", charges = { 22, 22 }, ammo = { item = "9mmfmj" } }
+    group:entry { item = "glock17_22", charges = { 22, 22 }, ammo = { item = "9mmfmj" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "speedloaders_s&w619_special", kind = "collection" }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "38_special" } }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "38_special" } }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "38_special" } }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "38_special" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "speedloaders_s&w619_magnum", kind = "collection" }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "357mag_fmj" } }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "357mag_fmj" } }
+    group:entry { item = "38_speedloader", charges = { 7, 7 }, ammo = { item = "357mag_fmj" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mags_skyfarer", kind = "collection" }
+    group:entry { item = "glock42_mag", charges = { 6, 6 }, ammo = { item = "380_p" } }
+    group:entry { item = "glock42_mag", charges = { 6, 6 }, ammo = { item = "380_p" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mags_rifle_skyfarer", kind = "collection" }
+    group:entry { item = "762R_clip", charges = { 5, 5 }, ammo = { item = "762_54R" } }
+    group:entry { item = "762R_clip", charges = { 5, 5 }, ammo = { item = "762_54R" } }
+    content.add(group)
+end

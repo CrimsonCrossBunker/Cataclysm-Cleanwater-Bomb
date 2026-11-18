@@ -49,25 +49,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "TACOMA_Dana_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "bra" },
-      { "item": "panties" },
-      { "item": "socks" },
-      { "item": "longshirt" },
-      { "item": "jeans" },
-      { "item": "leather_belt" },
-      { "item": "jacket_leather" },
-      { "item": "apron_leather" },
-      { "item": "boots" },
-      { "item": "purse" },
-      { "item": "glock_17", "ammo-item": "9mm", "container-item": "holster", "charges": 17 },
-      { "item": "machete", "container-item": "scabbard" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_TACOMA_Dana_1",
     "dynamic_line": {

@@ -22,80 +22,6 @@
   },
   {
     "type": "item_group",
-    "id": "bugout_meds_prepper",
-    "subtype": "collection",
-    "//": "A pessimist planning for a catastrophe, excluding serious first aid items.",
-    "entries": [
-      { "group": "adhesive_bandages_box_full", "count": 1, "prob": 80 },
-      { "group": "alcohol_wipes_box_full", "count": 1, "prob": 50 },
-      { "group": "cotton_ball_bag_full", "count": 1, "prob": 60 },
-      { "item": "liq_bandage_spray", "charges": [ 1, -1 ], "prob": 30 },
-      { "group": "vitc_tablet_bottle_full", "count": 1, "prob": 30 },
-      {
-        "item": "calcium_tablet",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 30
-      },
-      {
-        "item": "gummy_vitamins",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 25, -1 ],
-        "prob": 20
-      },
-      {
-        "item": "antibiotics",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 30
-      },
-      {
-        "item": "iodine",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 30
-      },
-      {
-        "item": "prussian_blue",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 12, -1 ],
-        "prob": 20
-      },
-      {
-        "item": "antifungal",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 10
-      },
-      {
-        "item": "antiparasitic",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 10
-      },
-      {
-        "item": "homeopathic_pills",
-        "entry-wrapper": "bottle_plastic_pill_supplement",
-        "container-item": "null",
-        "count": [ 30, -1 ],
-        "prob": 10
-      },
-      { "group": "drugs_analgesic", "count": [ 1, 2 ], "prob": 40 },
-      { "group": "drugs_misc", "count": [ 1, 2 ], "prob": 5 },
-      { "group": "drugs_rare", "count": [ 1, 2 ], "prob": 5 },
-      { "item": "wrapped_rad_badge", "count": [ 1, 4 ], "prob": 5 },
-      { "group": "jar_weed", "count": 1, "prob": 25 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "bugout_memento",
     "//": "this list is for collectibles, antiques, sports memorablia, awards, etc. that a person might put on display in their home. This is just the small items.",
     "items": [
@@ -142,33 +68,5 @@
       [ "gold_anklet", 25 ],
       [ "silver_anklet", 25 ]
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "peanuts_ziploc",
-    "subtype": "collection",
-    "container-item": "bag_zipper",
-    "entries": [ { "item": "peanut_shelled", "container-item": "null", "count": -1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "jerky_ziploc",
-    "subtype": "collection",
-    "container-item": "bag_zipper",
-    "entries": [ { "item": "jerky", "container-item": "null", "count": -1 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "jerky_ziploc_gallon_irradiated",
-    "subtype": "collection",
-    "container-item": "bag_zipper_gallon",
-    "entries": [ { "item": "jerky", "container-item": "null", "count": -1, "custom-flags": [ "IRRADIATED" ] } ]
-  },
-  {
-    "type": "item_group",
-    "id": "pemmican_ziploc_gallon_irradiated",
-    "subtype": "collection",
-    "container-item": "bag_zipper_gallon",
-    "entries": [ { "item": "pemmican", "container-item": "null", "count": 37, "custom-flags": [ "IRRADIATED" ] } ]
   }
 ]

@@ -54,3 +54,87 @@ do
     group:entry { item = "sandwich_reuben", count = { 2, 2 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cheeseburger_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "cheeseburger", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "hamburger_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "hamburger", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "blt_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "blt", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fish_sandwich_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "fish_sandwich", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sloppyjoe_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sloppyjoe", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_t_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_t", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_veggy_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_veggy", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_jam_butter_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_jam_butter", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_jam_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_jam", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_cheese_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_cheese", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_deluxe_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_deluxe", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_reuben_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_reuben", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_pb_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_pb", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sandwich_pbj_wrapper_1_inf", kind = "collection", container = "wrapper" }
+    group:entry { item = "sandwich_pbj", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end

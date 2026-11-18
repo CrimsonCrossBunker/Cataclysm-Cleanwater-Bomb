@@ -7122,3 +7122,23 @@ do
     group:item("tortilla_flour", 40)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "regional_supply_original_pantry_liquids",
+        kind = "distribution",
+        with_ammo = 75,
+        with_magazine = 100,
+    }
+    group:entry { item = "syrup", charges = { 1, -1 }, probability = 15 }
+    group:entry { item = "syrup_simple", charges = { 1, -1 }, probability = 1 }
+    group:entry { item = "syrup_corn", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "molasses", charges = { 1, -1 }, probability = 15 }
+    group:group("vegetable_oil_bottle", 60)
+    group:entry { item = "honey_bottled", charges = { 1, -1 }, probability = 15 }
+    group:entry { item = "honey_glassed", count = { 1, -1 }, probability = 5 }
+    group:item("jar_glass_sealed", 20)
+    group:item("jar_3l_glass_sealed", 30)
+    group:entry { item = "vinegar", charges = { 1, -1 }, probability = 15 }
+    content.add(group)
+end

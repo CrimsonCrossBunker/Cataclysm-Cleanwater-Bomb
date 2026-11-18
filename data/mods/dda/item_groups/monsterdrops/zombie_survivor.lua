@@ -375,3 +375,24 @@ do
     group:item("fencing_jacket", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "survivor_longguns", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { group = "guns_smg_improvised", probability = 10 },
+            { group = "guns_rifle_improvised" },
+            { group = "guns_shotgun_improvised" },
+        },
+        probability = 200,
+    }
+    group:entry { group = "modular_ar15", charges = { 0, 30 }, probability = 5 }
+    group:entry { item = "mossberg_500", charges = { 0, 6 }, probability = 5 }
+    group:entry { item = "remington_870", charges = { 0, 5 }, probability = 5 }
+    group:entry { item = "ruger_1022", charges = { 0, 10 }, probability = 15 }
+    group:entry { item = "shotgun_s", charges = { 0, 1 }, probability = 10 }
+    group:entry { item = "shotgun_d", charges = { 0, 2 }, probability = 10 }
+    group:entry { item = "sten", charges = { 0, 32 }, probability = 20 }
+    group:entry { item = "sks", charges = { 0, 10 }, probability = 10 }
+    content.add(group)
+end

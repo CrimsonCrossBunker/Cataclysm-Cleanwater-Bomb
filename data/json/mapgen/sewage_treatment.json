@@ -599,17 +599,5 @@
       ],
       "place_monsters": [ { "monster": "GROUP_ZOMBIE", "x": [ 16, 20 ], "y": [ 11, 14 ], "density": 0.1 } ]
     }
-  },
-  {
-    "id": "human_remains",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      { "item": "human_flesh", "prob": 70, "count": [ 1, 10 ] },
-      { "item": "hstomach_large", "prob": 60 },
-      { "item": "hstomach", "prob": 60 },
-      { "item": "bone_human", "prob": 90, "count": [ 1, 5 ] },
-      { "item": "cotton_patchwork", "prob": 90, "count": [ 1, 4 ], "custom-flags": [ "FILTHY" ] }
-    ]
   }
 ]

@@ -1074,3 +1074,216 @@ do
     }
     content.add(group)
 end
+
+do
+    -- Items you might find in the sink of a public place, like a bathroom.
+    local group = content.ItemGroup { id = "public_sink", kind = "distribution" }
+    group:entry { item = "liquid_soap", count = { 1, 4 }, charges = { 1, -1 }, probability = 70 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "sugar_house_kitchen_items", kind = "distribution" }
+    group:item("thermometer", 90)
+    group:item("family_cookbook", 90)
+    group:item("maple_sap", 50)
+    group:item("syrup")
+    group:item("maple_candy", 10)
+    group:item("flour", 30)
+    group:item("milk_powder", 30)
+    group:item("cocoa_powder", 30)
+    group:item("cocoa_powder_milk", 30)
+    group:item("powder_eggs", 10)
+    group:group("eggs_in_carton")
+    group:group("vegetable_oil_bottle", 20)
+    group:entry {
+        item = "apple",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "banana",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "strawberries",
+        flags = {
+            "IRRADIATED",
+        },
+        probability = 5,
+    }
+    group:item("chocolate", 20)
+    group:item("waffleiron", 60)
+    group:group("bread_in_bag", 30)
+    group:item("peanutbutter", 20)
+    group:item("pot", 80)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "petstore_misc", kind = "distribution" }
+    group:entry { item = "dogfood", container = "can_medium", probability = 20 }
+    group:entry { item = "catfood", container = "can_food", probability = 20 }
+    group:entry { item = "dogfood_dry", count = { -1, -1 }, probability = 5 }
+    group:entry { item = "catfood_dry", count = { -1, -1 }, probability = 5 }
+    group:entry { item = "birdfood", count = { -1, -1 }, container = "bag_plastic", probability = 15 }
+    group:item("dog_whistle", 15)
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 5 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "petstore_shelves", kind = "distribution" }
+    group:entry { item = "dogfood", container = "can_medium", probability = 10 }
+    group:entry { item = "catfood", container = "can_food", probability = 10 }
+    group:entry { item = "dogfood_dry", count = { -1, -1 }, probability = 10 }
+    group:entry { item = "catfood_dry", count = { -1, -1 }, probability = 10 }
+    group:entry { item = "salt_water", container = "aquarium_medium", probability = 10 }
+    group:entry { item = "water", container = "aquarium_medium", probability = 10 }
+    group:entry { item = "salt_water", container = "aquarium_small", probability = 10 }
+    group:entry { item = "water", container = "aquarium_small", probability = 10 }
+    group:entry { item = "salt_water", container = "aquarium_large", probability = 3 }
+    group:entry { item = "water", container = "aquarium_large", probability = 3 }
+    group:entry { item = "birdfood", count = { -1, -1 }, container = "bag_plastic_small", probability = 15 }
+    group:group("tuna_in_can", 15)
+    group:item("can_chicken", 15)
+    group:item("aquarium_medium", 10)
+    group:item("aquarium_small", 10)
+    group:item("aquarium_large", 3)
+    group:item("petpack", 10)
+    group:item("kevlar_harness", 2)
+    group:item("leather_harness_dog", 8)
+    group:item("rubber_harness_dog", 15)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "thrift_misc", kind = "distribution" }
+    group:item("magnifying_glass", 5)
+    group:entry { item = "sewing_kit", charges = { 0, -1 }, probability = 15 }
+    group:item("scissors", 10)
+    group:item("sewing_machine", 15)
+    group:entry { item = "gasoline_lantern", charges = { 0, 500 }, probability = 7 }
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 25 }
+    group:item("hotplate", 20)
+    group:item("coffeemaker", 25)
+    group:item("textbook_firstaid", 2)
+    group:item("cigar_cutter", 5)
+    group:item("cigar_punch", 5)
+    group:item("pocket_firearms", 1)
+    group:item("mag_archery", 4)
+    content.add(group)
+end
+
+do
+    -- for veterinarian
+    local group = content.ItemGroup { id = "vet_softdrug", kind = "distribution" }
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 30 }
+    group:group("adhesive_bandages_box_used", 30)
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 5 }
+    group:group("full_1st_aid", 10)
+    group:entry { item = "saline", charges = { 1, 5 }, probability = 20 }
+    group:group("vitamins_bottle_plastic_pill_supplement_1_20", 15)
+    group:group("calcium_tablet_bottle_plastic_pill_supplement_1_20", 15)
+    group:group("any_cough_syrup_in_bottle", 5)
+    group:entry { item = "disinfectant", charges = { 1, 10 }, probability = 15 }
+    group:item("protein_powder", 15)
+    group:entry { item = "smoxygen_tank", charges = { 0, 12 }, probability = 20 }
+    group:entry { item = "elec_hairtrimmer", charges = { 0, 50 }, probability = 15 }
+    group:item("survnote", 5)
+    group:item("mask_dust", 65)
+    group:item("glasses_safety", 10)
+    group:item("towel", 50)
+    group:item("scissors_medical", 50)
+    group:item("fungicide", 10)
+    group:group("insecticide_bag_plastic", 10)
+    group:entry { item = "soap", charges = { 1, 10 }, probability = 20 }
+    group:entry { item = "chem_hydrogen_peroxide", charges = { 1, 10 }, probability = 10 }
+    group:item("canister_empty", 5)
+    group:item("stethoscope", 50)
+    group:item("scalpel", 50)
+    group:item("gloves_medical", 50)
+    group:item("medical_gauze", 25)
+    group:group("quikclot_bag_plastic_1_6", 10)
+    group:item("hacksaw", 5)
+    group:item("gloves_rubber", 25)
+    group:item("apron_plastic", 15)
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+        probability = 10,
+    }
+    group:item("bag_plastic", 20)
+    group:item("string_6", 5)
+    content.add(group)
+end
+
+do
+    -- for veterinarian
+    local group = content.ItemGroup { id = "vet_utility", kind = "distribution" }
+    group:item("dog_whistle", 10)
+    group:item("pet_carrier", 30)
+    group:item("petpack", 3)
+    group:entry { item = "dogfood", container = "can_medium", probability = 20 }
+    group:entry { item = "catfood", container = "can_food", probability = 20 }
+    group:entry { item = "birdfood", count = { -1, -1 }, container = "bag_plastic_small", probability = 10 }
+    group:item("towel", 20)
+    group:entry { item = "soap", charges = { 1, 10 }, probability = 10 }
+    group:item("gloves_medical", 20)
+    group:item("cotton_patchwork", 15)
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+        probability = 2,
+    }
+    group:item("bag_plastic", 20)
+    group:item("jerky", 40)
+    content.add(group)
+end
+
+do
+    -- spawn list for craft stores
+    local group = content.ItemGroup { id = "sewing_group", kind = "distribution" }
+    group:group("tailoring_fabric", 30)
+    group:item("awl_steel", 10)
+    group:item("loom_frame", 2)
+    group:entry { item = "sewing_kit", charges = { 0, -1 }, probability = 30 }
+    group:item("sewing_machine", 30)
+    group:item("shed_stick", 2)
+    group:entry { item = "tailors_kit", charges = { 0, -1 }, probability = 9 }
+    group:item("electric_spinwheel", 9)
+    group:item("knitting_needles", 15)
+    group:item("sheet_kevlar_layered", 10)
+    group:item("leather", 10)
+    group:item("sheet_leather", 10)
+    group:item("cotton_patchwork", 20)
+    group:item("needle_curved", 10)
+    group:item("nomex", 10)
+    group:item("neoprene", 5)
+    group:item("felt_patch", 10)
+    group:item("fur", 10)
+    group:item("thread", 15)
+    group:item("yarn", 15)
+    group:item("sinew", 15)
+    group:group("duct_tape_roll", 15)
+    group:group("glue_weak_professional", 5)
+    group:group("glue_strong_professional", 5)
+    group:item("feather", 15)
+    group:item("mag_animecon", 15)
+    group:item("mag_beauty", 15)
+    group:item("mag_tailor", 15)
+    group:item("manual_tailor", 15)
+    group:item("tailor_portfolio", 5)
+    group:item("recipe_fauxfur", 5)
+    group:item("textbook_tailor", 3)
+    content.add(group)
+end

@@ -345,3 +345,725 @@ do
     }
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a well-stocked refrigerator with a variety of things.
+    local group = content.ItemGroup { id = "SUS_fridge_stocked", kind = "collection" }
+    group:entry { group = "fresh_produce", count = { 1, 8 }, probability = 50 }
+    group:entry {
+        distribution = {
+            { group = "milk_in_container" },
+            {
+                item = "milk_choc",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "jug_plastic",
+                probability = 5,
+            },
+        },
+        probability = 95,
+    }
+    group:group("ketchup_sealed_rng", 85)
+    group:group("mustard_sealed_rng", 85)
+    group:group("barbecue_sauce_sealed_rng", 40)
+    group:group("honey_mustard_sealed_rng", 25)
+    group:entry { item = "mayonnaise", charges = { 1, -1 }, probability = 75 }
+    group:entry { item = "soysauce", charges = { 1, -1 }, probability = 65 }
+    group:entry { item = "horseradish", charges = { 1, -1 }, probability = 25 }
+    group:group("salsa_jar_glass_sealed_1_inf", 15)
+    group:entry { item = "jam_fruit", charges = { 1, -1 }, probability = 60 }
+    group:group("cheese_bag_plastic", 60)
+    group:item("cottage_cheese", 12)
+    group:group("cheese_hard_wrapper_8", 55)
+    group:item("yoghurt", 80)
+    group:group("butter_wrapper_32", 80)
+    group:item("pudding", 30)
+    group:item("gelatin_dessert_processed", 20)
+    group:group("eggs_in_carton", 85)
+    group:group("bacon_bag_plastic_2", 25)
+    group:group("fresh_fish", 20)
+    group:entry {
+        distribution = {
+            { item = "lunchmeat", probability = 60 },
+            { item = "bologna", probability = 40 },
+            { item = "tofu", probability = 30 },
+        },
+        probability = 60,
+    }
+    group:entry { group = "sauerkraut_jar_glass_sealed_1_inf", sealed = false, probability = 25 }
+    group:entry { group = "pickle_jar_glass_sealed_1_inf", sealed = false, probability = 60 }
+    group:entry { group = "meat_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 10 }
+    group:entry { group = "fish_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 20 }
+    group:entry { group = "veggy_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 40 }
+    group:entry {
+        distribution = {
+            {
+                item = "veggy_salad",
+                count = { 1, -1 },
+                wrapper = "bowl_plastic",
+                container = "null",
+                probability = 10,
+            },
+            { item = "blt", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            { item = "protein_shake", charges = { 1, -1 }, probability = 5 },
+            { item = "fries", count = { 1, -1 }, wrapper = "box_small", container = "null", probability = 10 },
+            {
+                item = "cheese_fries",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "onion_rings",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            { item = "milkshake", charges = { 1, -1 }, probability = 10 },
+            { item = "milkshake_fastfood", charges = { 1, -1 }, probability = 10 },
+            { item = "frozen_lemonade", charges = { 1, -1 }, probability = 10 },
+            { item = "milkshake_deluxe", charges = { 1, -1 }, probability = 5 },
+            {
+                item = "pizza_meat",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_veggy",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_cheese",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_supreme",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "cheeseburger",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            { item = "hamburger", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            {
+                item = "fish_fried",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "fish_sandwich",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "lobster_roll",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            { item = "sloppyjoe", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            { item = "sandwich_t", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            {
+                item = "junk_burrito",
+                count = { 1, -1 },
+                wrapper = "bag_plastic",
+                container = "null",
+                probability = 10,
+            },
+            { item = "chili", count = { 1, -1 }, wrapper = "can_medium", container = "null", probability = 10 },
+            {
+                item = "hotdogs_cooked",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "hotdogs_newyork",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "crab_cakes",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "lobster_cakes",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "stuffed_clams",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 3,
+            },
+        },
+        probability = 75,
+    }
+    group:entry {
+        distribution = {
+            { group = "sixpack_bottles_random", probability = 70 },
+            { group = "sixpack_cans_random", probability = 15 },
+            { group = "twoliter_bottle_random", probability = 15 },
+        },
+        probability = 90,
+    }
+    group:group("beer_in_six_pack", 70)
+    group:entry {
+        distribution = {
+            {
+                item = "apple_cider",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "bottle_plastic",
+                probability = 20,
+            },
+            { item = "fruit_wine", charges = { 1, -1 }, probability = 15 },
+            { group = "beer_in_container", probability = 166 },
+        },
+        probability = 60,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a refrigerator belonging to someone who doesn't make much food for themselves.  It is meant to be a bit of a humorous sterotype.
+    local group = content.ItemGroup { id = "SUS_fridge_bachelor", kind = "collection" }
+    group:entry { group = "fresh_produce", count = { 1, 2 }, probability = 20 }
+    group:entry { group = "milk_in_container", count = { 1, 3 }, probability = 75 }
+    group:group("ketchup_sealed_rng", 55)
+    group:group("barbecue_sauce_sealed_rng", 50)
+    group:group("honey_mustard_sealed_rng", 50)
+    group:group("mustard_sealed_rng", 85)
+    group:entry {
+        distribution = {
+            { item = "mayonnaise", charges = { 1, -1 }, probability = 60 },
+            { item = "mayonnaise", count = { 2, 3 }, charges = { 1, 1 }, sealed = false, probability = 40 },
+        },
+        probability = 65,
+    }
+    group:entry {
+        distribution = {
+            { item = "soysauce", charges = { 1, -1 }, probability = 60 },
+            { item = "soysauce", count = { 2, 3 }, charges = { 1, 1 }, sealed = false, probability = 40 },
+        },
+        probability = 25,
+    }
+    group:entry { item = "horseradish", charges = { 1, -1 }, probability = 5 }
+    group:group("salsa_jar_glass_sealed_1_inf", 5)
+    group:entry { item = "jam_fruit", charges = { 1, -1 }, probability = 40 }
+    group:group("cheese_bag_plastic", 60)
+    group:item("cottage_cheese", 4)
+    group:group("cheese_hard_wrapper_8", 35)
+    group:item("yoghurt", 20)
+    group:group("butter_wrapper_32", 30)
+    group:item("pudding", 10)
+    group:group("eggs_in_carton_empty", 55)
+    group:group("bacon_bag_plastic_2", 65)
+    group:entry {
+        distribution = {
+            {
+                item = "pickle",
+                count = { 1, -1 },
+                sealed = false,
+                wrapper = "jar_glass_sealed",
+                probability = 60,
+            },
+            {
+                item = "pickle",
+                count = { 2, 3 },
+                sealed = false,
+                wrapper = "jar_3l_glass_sealed",
+                probability = 40,
+            },
+        },
+        probability = 75,
+    }
+    group:group("blt_wrapper_1_inf", 10)
+    group:entry { item = "protein_shake", charges = { 1, -1 }, probability = 5 }
+    group:group("fries_box_small_1_inf", 10)
+    group:group("cheese_fries_box_small_1_inf", 10)
+    group:group("onion_rings_box_small_1_inf", 10)
+    group:entry { item = "milkshake", charges = { 1, -1 }, probability = 10 }
+    group:entry { item = "milkshake_fastfood", charges = { 1, -1 }, probability = 10 }
+    group:entry { item = "frozen_lemonade", charges = { 1, -1 }, probability = 10 }
+    group:entry { item = "milkshake_deluxe", charges = { 1, -1 }, probability = 5 }
+    group:group("pizza_meat_box_small_1_inf", 10)
+    group:group("pizza_veggy_box_small_1_inf", 10)
+    group:group("pizza_cheese_box_small_1_inf", 10)
+    group:group("pizza_supreme_box_small_1_inf", 10)
+    group:group("nachosv_bag_plastic_1_inf", 10)
+    group:group("nachosmc_bag_plastic_1_inf", 10)
+    group:group("nachosc_bag_plastic_1_inf", 10)
+    group:entry { item = "spaghetti_bolognese", count = { 1, 3 }, probability = 10 }
+    group:group("cheeseburger_wrapper_1_inf", 10)
+    group:group("hamburger_wrapper_1_inf", 10)
+    group:group("fish_fried_box_small_1_inf", 10)
+    group:group("fish_sandwich_wrapper_1_inf", 10)
+    group:group("lobster_roll_wrapper_1_inf", 10)
+    group:group("sloppyjoe_wrapper_1_inf", 10)
+    group:group("sandwich_t_wrapper_1_inf", 10)
+    group:group("junk_burrito_bag_plastic_1_inf", 10)
+    group:group("chili_can_medium_1_inf", 10)
+    group:group("hotdogs_cooked_wrapper_1_inf", 10)
+    group:group("hotdogs_newyork_wrapper_1_inf", 5)
+    group:group("crab_cakes_box_small_1_inf", 5)
+    group:group("stuffed_clams_box_small_1_inf", 3)
+    group:entry {
+        distribution = {
+            { group = "sixpack_bottles_random_unhealthy", probability = 70 },
+            { group = "sixpack_cans_random_unhealthy", probability = 15 },
+            { group = "twoliter_bottle_random", probability = 15 },
+        },
+        probability = 70,
+    }
+    group:group("beer_in_six_pack", 80)
+    group:entry {
+        distribution = {
+            { item = "apple_cider", charges = { 1, -1 }, probability = 20 },
+            { item = "fruit_wine", charges = { 1, -1 }, probability = 15 },
+            { group = "beer_in_container", probability = 166 },
+        },
+        probability = 70,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a refrigerator belonging to someone who is vegan and avoids junk-food.
+    local group = content.ItemGroup { id = "SUS_fridge_healthy_vegan", kind = "collection" }
+    group:entry { group = "fresh_produce", count = { 1, 8 }, probability = 50 }
+    group:entry {
+        distribution = {
+            {
+                item = "almond_milk",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "carton_milk",
+                probability = 50,
+            },
+            { item = "hazelnut_milk", charges = { 1, -1 }, sealed = false, probability = 5 },
+            {
+                item = "oat_milk",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "carton_milk",
+                probability = 30,
+            },
+            {
+                item = "soy_milk",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "carton_milk",
+                probability = 10,
+            },
+            {
+                item = "walnut_milk",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "carton_milk",
+                probability = 5,
+            },
+        },
+        probability = 95,
+    }
+    group:group("ketchup_sealed_rng", 55)
+    group:entry { item = "soysauce", charges = { 1, -1 }, probability = 75 }
+    group:entry { item = "jam_fruit", charges = { 1, -1 }, probability = 70 }
+    group:entry { item = "tofu", count = { 1, 5 }, probability = 90 }
+    group:entry { group = "sauerkraut_jar_glass_sealed_1_inf", sealed = false, probability = 45 }
+    group:entry { group = "pickle_jar_glass_sealed_1_inf", sealed = false, probability = 60 }
+    group:entry { group = "veggy_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 60 }
+    group:group("veggy_salad_bowl_plastic_1_inf", 50)
+    group:entry { item = "protein_shake", charges = { 1, -1 }, probability = 45 }
+    group:group("fries_box_small_1_inf", 10)
+    group:group("onion_rings_box_small_1_inf", 10)
+    group:group("pizza_veggy_box_small_1_inf", 20)
+    group:group("nachosv_bag_plastic_1_inf", 20)
+    group:item("gelatin_dessert_vegan", 30)
+    group:item("gelatin_dessert_vegan_fruit", 30)
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    {
+                        item = "water_clean",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "water_clean", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 90,
+            },
+            {
+                collection = {
+                    {
+                        item = "water_mineral",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "water_mineral", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 70,
+            },
+            {
+                collection = {
+                    {
+                        item = "oj",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "oj", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 50,
+            },
+            {
+                collection = {
+                    {
+                        item = "pineapple_juice",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "pineapple_juice", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 50,
+            },
+            {
+                collection = {
+                    {
+                        item = "cranberry_juice",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "cranberry_juice", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 50,
+            },
+            {
+                collection = {
+                    {
+                        item = "juice",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "juice", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 50,
+            },
+            {
+                collection = {
+                    {
+                        item = "sports_drink",
+                        charges = { 1, 1 },
+                        sealed = false,
+                        container = "bottle_plastic",
+                        probability = 50,
+                    },
+                    { item = "sports_drink", count = { 1, 6 }, container = "bottle_plastic" },
+                },
+                probability = 30,
+            },
+        },
+        probability = 80,
+    }
+    group:group("beer_in_six_pack", 40)
+    group:entry {
+        distribution = {
+            { item = "apple_cider", charges = { 1, -1 }, probability = 20 },
+            { item = "fruit_wine", charges = { 1, -1 }, probability = 15 },
+            { group = "beer_in_container", probability = 166 },
+        },
+        probability = 40,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a partially-emptied refrigerator. It's basically the SUS_fridge_stocked item group, just with lower chances to spawn for all items and item groups.
+    local group = content.ItemGroup { id = "SUS_fridge_partial_empty", kind = "collection" }
+    group:entry { group = "fresh_produce", count = { 1, 8 }, probability = 20 }
+    group:group("milk_in_container", 20)
+    group:group("ketchup_sealed_rng", 20)
+    group:group("mustard_sealed_rng", 20)
+    group:group("honey_mustard_sealed_rng", 5)
+    group:entry { item = "mayonnaise", charges = { 1, -1 }, probability = 20 }
+    group:entry { item = "soysauce", charges = { 1, -1 }, probability = 20 }
+    group:entry { item = "horseradish", charges = { 1, -1 }, probability = 25 }
+    group:group("salsa_jar_glass_sealed_1_inf", 15)
+    group:entry { item = "jam_fruit", charges = { 1, -1 }, probability = 20 }
+    group:group("cheese_bag_plastic", 20)
+    group:item("cottage_cheese", 2)
+    group:group("cheese_hard_wrapper_8", 20)
+    group:item("yoghurt", 20)
+    group:group("butter_wrapper_32", 20)
+    group:item("pudding", 20)
+    group:item("gelatin_dessert_processed", 10)
+    group:group("eggs_in_carton", 20)
+    group:group("bacon_bag_plastic_2", 25)
+    group:entry {
+        distribution = {
+            { item = "lunchmeat", probability = 60 },
+            { item = "bologna", probability = 40 },
+            { item = "tofu", probability = 30 },
+        },
+        probability = 20,
+    }
+    group:entry { group = "sauerkraut_jar_glass_sealed_1_inf", sealed = false, probability = 25 }
+    group:entry { group = "pickle_jar_glass_sealed_1_inf", sealed = false, probability = 20 }
+    group:entry { group = "meat_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 10 }
+    group:entry { group = "fish_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 20 }
+    group:entry { group = "veggy_pickled_jar_glass_sealed_1_inf", sealed = false, probability = 20 }
+    group:entry {
+        distribution = {
+            {
+                item = "veggy_salad",
+                count = { 1, -1 },
+                wrapper = "bowl_plastic",
+                container = "null",
+                probability = 10,
+            },
+            { item = "blt", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            { item = "protein_shake", charges = { 1, -1 }, probability = 5 },
+            { item = "fries", count = { 1, -1 }, wrapper = "box_small", container = "null", probability = 10 },
+            {
+                item = "cheese_fries",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "onion_rings",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            { item = "milkshake", charges = { 1, -1 }, probability = 10 },
+            { item = "milkshake_fastfood", charges = { 1, -1 }, probability = 10 },
+            { item = "frozen_lemonade", charges = { 1, -1 }, probability = 10 },
+            { item = "milkshake_deluxe", charges = { 1, -1 }, probability = 5 },
+            {
+                item = "pizza_meat",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_veggy",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_cheese",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "pizza_supreme",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "cheeseburger",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            { item = "hamburger", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            {
+                item = "fish_fried",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "fish_sandwich",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            { item = "sloppyjoe", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            { item = "sandwich_t", count = { 1, -1 }, wrapper = "wrapper", container = "null", probability = 10 },
+            {
+                item = "junk_burrito",
+                count = { 1, -1 },
+                wrapper = "bag_plastic",
+                container = "null",
+                probability = 10,
+            },
+            { item = "chili", count = { 1, -1 }, wrapper = "can_medium", container = "null", probability = 10 },
+            {
+                item = "hotdogs_cooked",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 10,
+            },
+            {
+                item = "hotdogs_newyork",
+                count = { 1, -1 },
+                wrapper = "wrapper",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "crab_cakes",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "stuffed_clams",
+                count = { 1, -1 },
+                wrapper = "box_small",
+                container = "null",
+                probability = 3,
+            },
+        },
+        probability = 20,
+    }
+    group:entry {
+        distribution = {
+            { group = "sixpack_bottles_random", probability = 70 },
+            { group = "sixpack_cans_random", probability = 15 },
+            { group = "twoliter_bottle_random", probability = 15 },
+        },
+        probability = 20,
+    }
+    group:group("beer_in_six_pack", 20)
+    group:entry {
+        distribution = {
+            {
+                item = "apple_cider",
+                charges = { 1, -1 },
+                sealed = false,
+                container = "bottle_plastic",
+                probability = 20,
+            },
+            { item = "fruit_wine", charges = { 1, -1 }, probability = 15 },
+            { group = "beer_in_container", probability = 166 },
+        },
+        probability = 20,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "twoliter_bottle_random", kind = "distribution" }
+    group:entry { item = "cola", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "creamsoda", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "lemonlime", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "orangesoda", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "colamdew", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "rootbeer", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "zerocola", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "zeroorange", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "zerotropical", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "zeromdew", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "foodplace_zero_drink", charges = { 1, -1 }, container = "bottle_twoliter", probability = 4 }
+    group:entry { item = "sparkling", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "sparkling_peach", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    group:entry { item = "sparkling_pomegranate", charges = { 1, -1 }, container = "bottle_twoliter", probability = 15 }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a refrigerator which can be found in office kitchenettes, or workplace breakrooms.
+    local group = content.ItemGroup { id = "SUS_fridge_breakroom", kind = "collection" }
+    group:entry { item = "apple", count = { 1, 3 }, probability = 25 }
+    group:entry { item = "orange", count = { 1, 3 }, probability = 25 }
+    group:entry { item = "banana", count = { 1, 3 }, probability = 25 }
+    group:entry { item = "pear", count = { 1, 2 }, probability = 10 }
+    group:item("grapes", 10)
+    group:entry { item = "peach", count = { 1, 2 }, probability = 5 }
+    group:item("watermelon", 2)
+    group:item("melon", 2)
+    group:entry { item = "kiwi", count = { 1, 3 }, probability = 2 }
+    group:group("milk_in_container")
+    group:entry { item = "milk_choc", charges = { 1, -1 }, sealed = false, container = "jug_plastic", probability = 2 }
+    group:entry { item = "milk_choc", charges = { 1, -1 }, sealed = false, container = "carton_milk", probability = 6 }
+    group:entry { item = "horchata", charges = { 1, -1 }, sealed = false, container = "bottle_plastic", probability = 3 }
+    group:group("cheese_bag_plastic", 40)
+    group:item("cottage_cheese", 9)
+    group:group("cheese_hard_wrapper_8", 50)
+    group:entry { item = "yoghurt", count = { 1, 3 }, probability = 75 }
+    group:group("butter_wrapper_32", 50)
+    group:item("pudding", 30)
+    group:item("gelatin_dessert_processed", 10)
+    group:group("veggy_salad_bowl_plastic_1_inf", 19)
+    group:group("blt_wrapper_1_inf", 13)
+    group:entry { item = "protein_shake", charges = { 1, -1 }, probability = 6 }
+    group:group("sandwich_t_wrapper_1_inf", 13)
+    group:group("sandwich_veggy_wrapper_1_inf", 10)
+    group:group("sandwich_jam_butter_wrapper_1_inf", 1)
+    group:group("sandwich_jam_wrapper_1_inf", 6)
+    group:group("sandwich_cheese_wrapper_1_inf", 6)
+    group:group("sandwich_deluxe_wrapper_1_inf", 6)
+    group:group("sandwich_reuben_wrapper_1_inf", 3)
+    group:group("sandwich_pb_wrapper_1_inf", 6)
+    group:group("sandwich_pbj_wrapper_1_inf", 6)
+    group:group("fish_sandwich_wrapper_1_inf", 6)
+    group:entry { group = "soda_in_small_container", count = { 1, 5 }, probability = 75 }
+    group:entry { item = "water_clean", count = { 1, 3 }, container = "bottle_plastic", probability = 65 }
+    group:entry { item = "water_mineral", count = { 1, 2 }, container = "bottle_plastic", probability = 35 }
+    content.add(group)
+end

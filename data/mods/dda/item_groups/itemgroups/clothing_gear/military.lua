@@ -296,3 +296,79 @@ do
     group:item("knee_pads", 20)
     content.add(group)
 end
+
+do
+    -- Standard set of clothes worn by a military helicopter pilot.
+    local group = content.ItemGroup { id = "clothing_military_pilot", kind = "collection" }
+    group:item("chestrig", 40)
+    group:entry { item = "flight_helmet", charges = { 0, 150 }, ammo = { item = "light_battery_cell" } }
+    group:item("mil_flight_suit", 80)
+    group:item("nomex_gloves")
+    group:group("loaded_webbing_belt")
+    group:entry {
+        distribution = {
+            { item = "socks", probability = 30 },
+            { item = "nomex_socks", probability = 70 },
+        },
+    }
+    group:item("gloves_tactical", 60)
+    group:item("boots_combat")
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "sports_bra" },
+                    { item = "boy_shorts" },
+                },
+            },
+            {
+                distribution = {
+                    { item = "briefs" },
+                    { item = "boxer_briefs" },
+                    { item = "boxer_shorts" },
+                },
+            },
+        },
+    }
+    group:group("clothing_watch", 85)
+    group:entry { item = "goggles_ir", charges = { 0, 100 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    -- todo: when #57228 would be closed, change this one to copy-from `clothing_military`
+    local group = content.ItemGroup { id = "clothing_military_pilot_distribution", kind = "distribution" }
+    group:item("chestrig", 40)
+    group:entry { item = "flight_helmet", charges = { 0, 150 }, ammo = { item = "light_battery_cell" } }
+    group:item("mil_flight_suit", 80)
+    group:item("nomex_gloves")
+    group:group("loaded_webbing_belt")
+    group:entry {
+        distribution = {
+            { item = "socks", probability = 30 },
+            { item = "nomex_socks", probability = 70 },
+        },
+    }
+    group:item("gloves_tactical", 60)
+    group:item("boots_combat")
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "sports_bra" },
+                    { item = "boy_shorts" },
+                },
+            },
+            {
+                distribution = {
+                    { item = "briefs" },
+                    { item = "boxer_briefs" },
+                    { item = "boxer_shorts" },
+                },
+            },
+        },
+    }
+    group:group("clothing_watch", 85)
+    group:entry { item = "goggles_ir", charges = { 0, 100 }, probability = 10 }
+    content.add(group)
+end

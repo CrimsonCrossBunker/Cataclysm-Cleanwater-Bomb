@@ -34,3 +34,33 @@ do
     group:item("press")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "CODY_MILLER_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:item("swage")
+    group:item("metal_file")
+    group:item("metalworking_tongs")
+    group:item("hotcut")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "JAY_RUCKERS_worn", kind = "collection" }
+    group:item("tshirt")
+    group:group("ballistic_vest_light_pristine")
+    group:item("boxer_briefs")
+    group:item("jeans")
+    group:entry { item = "fn57", charges = { 20, 20 }, container = "tactical_holster", ammo = { item = "57mm" } }
+    group:item("powered_earmuffs")
+    group:item("glasses_bal")
+    group:item("mbag")
+    group:item("socks")
+    group:item("boots_combat")
+    content.add(group)
+end

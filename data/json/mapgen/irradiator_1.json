@@ -11,21 +11,6 @@
     ]
   },
   {
-    "id": "radiation_meds",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [
-      { "prob": 50, "group": "iodine_bottle_plastic_pill_supplement_10" },
-      { "prob": 75, "group": "prussian_blue_bottle_plastic_pill_supplement_10" },
-      { "group": "full_1st_aid", "prob": 50 },
-      { "item": "gloves_medical", "prob": 20 },
-      { "item": "cotton_patchwork", "prob": 30, "custom-flags": [ "FILTHY" ] },
-      { "group": "drugs_emergency", "prob": 30 },
-      { "group": "drugs_heal_simple", "prob": 20 },
-      { "group": "drugs_analgesic", "prob": 10 }
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [
       [ "irradiator_1_3", "irradiator_1_2", "irradiator_1_1" ],

@@ -125,3 +125,82 @@ do
     group:group("solder_wire_spool_part")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "used_eink_tablet_pcs", kind = "distribution" }
+    group:entry { item = "eink_tablet_pc", charges = { 0, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "civilian_eink_tablet_pcs", kind = "distribution" }
+    group:entry {
+        item = "eink_tablet_pc",
+        charges = { 0, -1 },
+        contents = {
+            { group = "civilian_einktablet_efiles" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "new_phones_case", kind = "distribution", container = "waterproof_smart_phone_case" }
+    group:entry { group = "smart_phone_maybe_locked", charges = { 100, 100 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "new_phones_no_case", kind = "distribution" }
+    group:entry { item = "cell_phone", charges = { 100, 100 }, probability = 1 }
+    group:entry { group = "smart_phone_maybe_locked", charges = { 100, 100 }, probability = 17 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "civilian_phones_case",
+        kind = "distribution",
+        container = "waterproof_smart_phone_case",
+    }
+    group:entry {
+        group = "smart_phone_maybe_locked",
+        charges = { 0, 15 },
+        contents = {
+            { group = "civilian_smartphone_efiles" },
+        },
+        probability = 17,
+    }
+    group:entry {
+        group = "smart_phone_maybe_locked",
+        charges = { 100, 100 },
+        contents = {
+            { group = "civilian_smartphone_efiles" },
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "civilian_phones_no_case", kind = "distribution" }
+    group:entry { item = "cell_phone", charges = { 0, 15 }, probability = 2 }
+    group:entry { item = "cell_phone", charges = { 100, 100 }, probability = 1 }
+    group:entry {
+        group = "smart_phone_maybe_locked",
+        charges = { 0, 15 },
+        contents = {
+            { group = "civilian_smartphone_efiles" },
+        },
+        probability = 17,
+    }
+    group:entry {
+        group = "smart_phone_maybe_locked",
+        charges = { 100, 100 },
+        contents = {
+            { group = "civilian_smartphone_efiles" },
+        },
+        probability = 1,
+    }
+    content.add(group)
+end

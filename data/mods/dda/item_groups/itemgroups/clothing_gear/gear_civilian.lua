@@ -235,3 +235,17 @@ do
     group:entry { item = "napkin", count = { 1, 5 }, probability = 15 }
     content.add(group)
 end
+
+do
+    -- Tobacco products an ecig user would carry on them.
+    -- Ratio of disposable and reusable ecigs loosely aqcuired from https://pmc.ncbi.nlm.nih.gov/articles/PMC8493914/
+    local group = content.ItemGroup { id = "smoker_e_cigarette", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "ecig", probability = 31 },
+            { item = "advanced_ecig", charges = { 0, -1 }, probability = 102 },
+        },
+    }
+    group:entry { group = "nicotine_liquid_bottle_part", count = { 1, 2 }, probability = 80 }
+    content.add(group)
+end

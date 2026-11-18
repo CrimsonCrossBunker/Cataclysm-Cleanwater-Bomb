@@ -167,3 +167,9 @@ do
     group:entry { item = "menstrual_pad", count = { 1, 24 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cotton_ball_bag_used", kind = "collection", container = "bag_plastic_small" }
+    group:entry { item = "cotton_ball", count = { 1, -1 } }
+    content.add(group)
+end

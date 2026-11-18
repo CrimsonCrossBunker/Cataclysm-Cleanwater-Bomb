@@ -984,3 +984,16 @@ do
     group:group("nondrowsy_cough_syrup_in_bottle_full")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "nondrowsy_cough_syrup_in_bottle", kind = "distribution" }
+    group:entry { item = "dayquil", charges = { 1, -1 }, container = "bottle_plastic_small" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "any_cough_syrup_in_bottle", kind = "distribution" }
+    group:entry { item = "nyquil", charges = { 1, -1 }, container = "bottle_plastic_small" }
+    group:group("nondrowsy_cough_syrup_in_bottle")
+    content.add(group)
+end

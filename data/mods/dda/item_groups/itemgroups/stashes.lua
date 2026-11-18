@@ -500,3 +500,121 @@ do
     group:entry { item = "hardtack", count = { 64, 64 } }
     content.add(group)
 end
+
+do
+    -- A pessimist planning for a catastrophe, excluding serious first aid items.
+    local group = content.ItemGroup { id = "bugout_meds_prepper", kind = "collection" }
+    group:entry { group = "adhesive_bandages_box_full", count = { 1, 1 }, probability = 80 }
+    group:entry { group = "alcohol_wipes_box_full", count = { 1, 1 }, probability = 50 }
+    group:entry { group = "cotton_ball_bag_full", count = { 1, 1 }, probability = 60 }
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 30 }
+    group:entry { group = "vitc_tablet_bottle_full", count = { 1, 1 }, probability = 30 }
+    group:entry {
+        item = "calcium_tablet",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 30,
+    }
+    group:entry {
+        item = "gummy_vitamins",
+        count = { 25, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 20,
+    }
+    group:entry {
+        item = "antibiotics",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 30,
+    }
+    group:entry {
+        item = "iodine",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 30,
+    }
+    group:entry {
+        item = "prussian_blue",
+        count = { 12, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 20,
+    }
+    group:entry {
+        item = "antifungal",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 10,
+    }
+    group:entry {
+        item = "antiparasitic",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 10,
+    }
+    group:entry {
+        item = "homeopathic_pills",
+        count = { 30, -1 },
+        wrapper = "bottle_plastic_pill_supplement",
+        container = "null",
+        probability = 10,
+    }
+    group:entry { group = "drugs_analgesic", count = { 1, 2 }, probability = 40 }
+    group:entry { group = "drugs_misc", count = { 1, 2 }, probability = 5 }
+    group:entry { group = "drugs_rare", count = { 1, 2 }, probability = 5 }
+    group:entry { item = "wrapped_rad_badge", count = { 1, 4 }, probability = 5 }
+    group:entry { group = "jar_weed", count = { 1, 1 }, probability = 25 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "peanuts_ziploc", kind = "collection", container = "bag_zipper" }
+    group:entry { item = "peanut_shelled", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "jerky_ziploc", kind = "collection", container = "bag_zipper" }
+    group:entry { item = "jerky", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "jerky_ziploc_gallon_irradiated",
+        kind = "collection",
+        container = "bag_zipper_gallon",
+    }
+    group:entry {
+        item = "jerky",
+        count = { -1, -1 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "pemmican_ziploc_gallon_irradiated",
+        kind = "collection",
+        container = "bag_zipper_gallon",
+    }
+    group:entry {
+        item = "pemmican",
+        count = { 37, 37 },
+        container = "null",
+        flags = {
+            "IRRADIATED",
+        },
+    }
+    content.add(group)
+end

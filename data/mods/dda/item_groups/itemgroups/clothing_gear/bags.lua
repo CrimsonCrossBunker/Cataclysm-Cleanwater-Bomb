@@ -64,3 +64,134 @@ do
     group:item("duffelbag_xl_nylon", 30)
     content.add(group)
 end
+
+do
+    -- worn bags of all sorts for domestic buildings
+    local group = content.ItemGroup { id = "bags_unisex", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { item = "straw_basket", probability = 35 },
+            { item = "suitcase_l", probability = 15 },
+            { item = "suitcase_m", probability = 25 },
+        },
+        probability = 20,
+    }
+    group:entry {
+        distribution = {
+            { item = "2lcanteen", probability = 50 },
+            { item = "camelbak", probability = 25 },
+            { item = "canteen", probability = 70 },
+        },
+        probability = 5,
+    }
+    group:entry {
+        distribution = {
+            { item = "fanny", probability = 60 },
+            { item = "mbag", probability = 35 },
+            { item = "runner_bag", probability = 45 },
+            { item = "slingpack", probability = 65 },
+            { item = "purse", probability = 70 },
+            { item = "briefcase", probability = 40 },
+            { item = "duffelbag", probability = 20 },
+            { item = "leg_bag", probability = 1 },
+            { item = "leg_small_bag", probability = 1 },
+            { item = "armrig", probability = 1 },
+        },
+        probability = 60,
+    }
+    group:entry {
+        distribution = {
+            { item = "case_violin", probability = 5 },
+            { item = "bookstrap", probability = 5 },
+            { item = "camera_bag", probability = 20 },
+            { item = "quiver_takedown_bow", probability = 2 },
+            { item = "nylon_quiver", probability = 12 },
+            { item = "quiver", probability = 8 },
+            { item = "quiver_large", probability = 15 },
+            { item = "ammo_satchel", probability = 10 },
+            { item = "ammo_pouch", probability = 10 },
+            { item = "chestrig", probability = 20 },
+            { item = "chestrig", variant = "flag_chestrig", probability = 2 },
+            { item = "dive_bag", probability = 25 },
+            { item = "dry_bag", probability = 25 },
+            { item = "dry_duffelbag", probability = 25 },
+            { item = "dry_bag_large", probability = 15 },
+            { item = "chestrig", variant = "flag_chestrig", event = "independence_day", probability = 70 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "daypack", probability = 25 },
+            { item = "backpack_leather", probability = 40 },
+            { item = "backpack", probability = 85 },
+            { item = "backpack_denim", probability = 5 },
+            { item = "backpack_hiking", probability = 25 },
+            { group = "gym_bags", probability = 80 },
+            { item = "duffelbag", probability = 80 },
+            { group = "large_duffelbags", probability = 10 },
+            { item = "travelpack", probability = 25 },
+            { group = "bugout_bag", probability = 1 },
+        },
+        probability = 80,
+    }
+    content.add(group)
+end
+
+do
+    -- worn bags of all sorts for domestic buildings
+    local group = content.ItemGroup { id = "bags_unisex_small", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { item = "2lcanteen", probability = 50 },
+            { item = "camelbak", probability = 25 },
+            { item = "canteen", probability = 70 },
+        },
+        probability = 5,
+    }
+    group:entry {
+        distribution = {
+            { item = "fanny", probability = 60 },
+            { item = "mbag", probability = 35 },
+            { item = "runner_bag", probability = 45 },
+            { item = "slingpack", probability = 65 },
+            { item = "purse", probability = 70 },
+            { item = "leg_bag", probability = 1 },
+            { item = "leg_small_bag", probability = 1 },
+            { item = "armrig", probability = 1 },
+        },
+        probability = 60,
+    }
+    group:entry {
+        distribution = {
+            { item = "case_violin", probability = 5 },
+            { item = "bookstrap", probability = 5 },
+            { item = "camera_bag", probability = 20 },
+            { item = "quiver_takedown_bow", probability = 2 },
+            { item = "nylon_quiver", probability = 12 },
+            { item = "quiver", probability = 8 },
+            { item = "quiver_large", probability = 15 },
+            { item = "ammo_satchel", probability = 10 },
+            { item = "ammo_pouch", probability = 10 },
+            { item = "chestrig", probability = 20 },
+            { item = "chestrig", variant = "flag_chestrig", probability = 2 },
+            { item = "dive_bag", probability = 25 },
+            { item = "dry_bag", probability = 25 },
+            { item = "chestrig", variant = "flag_chestrig", event = "independence_day", probability = 70 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "daypack", probability = 25 },
+            { item = "backpack_leather", probability = 40 },
+            { item = "backpack", probability = 85 },
+            { item = "backpack_denim", probability = 5 },
+            { item = "travelpack", probability = 25 },
+            { group = "small_gym_bags", probability = 40 },
+            { group = "bugout_bag", probability = 1 },
+        },
+        probability = 80,
+    }
+    content.add(group)
+end

@@ -19,3 +19,31 @@ do
     group:item("gloves_fingerless_mod")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_SCAVENGER_MERC_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556" } }
+    group:entry { group = "any_MRE", count = { 2, 2 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_SCAVENGER_MERC_wield", kind = "collection" }
+    group:entry {
+        group = "modular_m4a1",
+        charges = { 30, 30 },
+        ammo = { item = "556" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "holo_sight" },
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end

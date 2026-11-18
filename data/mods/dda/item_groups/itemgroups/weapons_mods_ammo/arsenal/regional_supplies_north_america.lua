@@ -627,3 +627,46 @@ do
     group:item("steyr_scout_mag", 5)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "longguns_cop-CA", kind = "distribution" }
+    group:entry { group = "modular_m4a1", charges = { 0, 15 }, damage = { 0, 3 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "longguns_cop_loaded-CA", kind = "distribution" }
+    group:entry { group = "modular_m4a1", charges = { 0, 15 }, damage = { 0, 3 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "longguns_cop_in_field-CA", kind = "collection" }
+    group:entry { group = "modular_m4a1", charges = { 0, 15 }, damage = { 0, 3 } }
+    group:group("field_ar15_223")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "military_standard_assault_rifles-CA", kind = "distribution" }
+    group:entry { item = "modular_m16_auto_rifle", charges = { 0, 8 }, probability = 85 }
+    group:entry { group = "modular_m4a1", charges = { 0, 8 }, probability = 15 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_rifle_milspec-CA", kind = "distribution" }
+    group:entry { item = "modular_m16_auto_rifle", charges = { 0, 8 }, probability = 85 }
+    group:entry { group = "modular_m4a1", charges = { 0, 8 }, probability = 15 }
+    group:item("steyr_scout", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "regional_military_surplus_firearms-CA", kind = "distribution" }
+    group:entry { item = "modular_m16_auto_rifle", charges = { 0, 8 }, probability = 85 }
+    group:entry { group = "modular_m4a1", charges = { 0, 8 }, probability = 15 }
+    group:item("steyr_scout", 5)
+    group:item("m17", 30)
+    content.add(group)
+end

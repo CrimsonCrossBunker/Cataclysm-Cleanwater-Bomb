@@ -27,15 +27,5 @@
       { "item": "cheap_whiskey", "prob": 10 },
       { "item": "canadian_whiskey", "prob": 10 }
     ]
-  },
-  {
-    "id": "beer_in_container",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      { "group": "any_beer", "container-item": "bottle_glass", "charges": [ 1, -1 ] },
-      { "group": "any_beer", "container-item": "bottle_glass_330ml", "charges": [ 1, -1 ] },
-      { "group": "any_beer", "container-item": "can_drink", "charges": [ 1, -1 ] }
-    ]
   }
 ]

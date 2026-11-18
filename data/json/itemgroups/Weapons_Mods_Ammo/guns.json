@@ -66,28 +66,6 @@
   },
   {
     "type": "item_group",
-    "subtype": "distribution",
-    "id": "guns_pistol_display_pieces",
-    "magazine": 100,
-    "//": "Pistols that are sought after but with little or no historical value.  Think of magnum handguns, stuff made famous by movies, guns that \"look cool\".  Should all be unloaded, but with magazines as these are display pieces.",
-    "items": [
-      { "item": "colt_python", "prob": 30 },
-      { "item": "chiappa_rhino", "prob": 20 },
-      { "item": "colt_anaconda_4", "prob": 40 },
-      { "item": "colt_anaconda_6", "prob": 20 },
-      { "item": "colt_anaconda_8", "prob": 40 },
-      { "group": "modular_deagle_357", "prob": 4, "charges": 0 },
-      { "group": "modular_deagle_44", "prob": 20, "charges": 0 },
-      { "group": "modular_deagle_50", "prob": 40, "charges": 0 },
-      { "item": "raging_bull", "prob": 20 },
-      { "item": "taurus_judge", "prob": 10 },
-      { "item": "hk_mp5_semi_pistol", "prob": 100, "charges": 0 },
-      { "item": "sw_500", "prob": 50 },
-      { "item": "bfr", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "guns_smg_milspec",
     "//": "Military specification SMGs only ever found at military sites.",
     "items": [
@@ -1077,70 +1055,6 @@
     "id": "guns_cop",
     "//": "Police issue weapons of all types",
     "items": [ { "group": "longguns_cop", "prob": 20 }, { "group": "sidearms_cop", "prob": 80 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "longguns_operator_in_field",
-    "//": "gun plus potential expended magazines for a tacticool operator, should be lots of AR-15s",
-    "items": [
-      {
-        "collection": [
-          { "group": "modular_ar15", "prob": 100, "charges": [ 0, 30 ], "contents-item": "shoulder_strap_front" },
-          { "group": "field_ar15" }
-        ],
-        "prob": 20
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "longguns_operator",
-    "items": [ { "group": "modular_ar15", "prob": 20, "charges": [ 0, 30 ], "contents-item": "shoulder_strap_front" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "sidearms_operator",
-    "items": [
-      { "item": "glock_19", "prob": 15, "charges": [ 0, 15 ] },
-      { "item": "glock_34", "prob": 15, "charges": [ 0, 15 ] },
-      { "item": "glock_22", "prob": 20, "ammo-item": "40sw", "charges": [ 0, 15 ] },
-      { "item": "m9", "variant": "m9", "prob": 5, "charges": [ 0, 15 ] },
-      { "item": "sig_40", "prob": 20, "charges": [ 0, 12 ] },
-      { "item": "usp_45", "prob": 10, "charges": [ 0, 12 ] },
-      { "item": "usp_9mm", "prob": 10, "charges": [ 0, 15 ] },
-      { "item": "colt_python", "prob": 5, "charges": [ 0, 6 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "sidearms_operator_in_field",
-    "//": "gun plus potential expended magazines",
-    "items": [
-      {
-        "collection": [ { "item": "glock_19", "prob": 100, "charges": [ 0, 15 ] }, { "group": "field_glock_19" } ],
-        "prob": 15
-      },
-      {
-        "collection": [ { "item": "glock_22", "ammo-item": "40sw", "prob": 100, "charges": [ 0, 15 ] }, { "group": "field_glock_22" } ],
-        "prob": 20
-      },
-      {
-        "collection": [ { "item": "m9", "variant": "m9", "prob": 100, "charges": [ 0, 15 ] }, { "group": "field_m9" } ],
-        "prob": 5
-      },
-      {
-        "collection": [ { "item": "sig_40", "prob": 100, "charges": [ 0, 12 ] }, { "group": "field_sig_40" } ],
-        "prob": 20
-      },
-      {
-        "collection": [ { "item": "usp_45", "prob": 100, "charges": [ 0, 12 ] }, { "group": "field_usp_45" } ],
-        "prob": 10
-      },
-      {
-        "collection": [ { "item": "usp_9mm", "prob": 100, "charges": [ 0, 15 ] }, { "group": "field_usp_9mm" } ],
-        "prob": 10
-      }
-    ]
   },
   {
     "type": "item_group",

@@ -346,3 +346,67 @@ do
     group:entry { item = "veggy_pickled", count = { 12, 12 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "chili_can_medium_1_inf", kind = "collection", container = "can_medium" }
+    group:entry { item = "chili", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "salsa_jar_glass_sealed_1_inf", kind = "collection", container = "jar_glass_sealed" }
+    group:entry { item = "salsa", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "veggy_pickled_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "veggy_pickled", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "sauerkraut_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "sauerkraut", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "meat_pickled_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "meat_pickled", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "jam_fruit_jar_sealed", kind = "collection", container = "jar_glass_sealed" }
+    group:entry { item = "jam_fruit", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "fish_pickled_jar_glass_sealed_1_inf",
+        kind = "collection",
+        container = "jar_glass_sealed",
+    }
+    group:entry { item = "fish_pickled", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pickle_jar_glass_sealed_1_inf", kind = "collection", container = "jar_glass_sealed" }
+    group:entry { item = "pickle", count = { 1, -1 } }
+    content.add(group)
+end

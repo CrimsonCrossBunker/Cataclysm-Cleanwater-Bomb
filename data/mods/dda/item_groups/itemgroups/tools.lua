@@ -659,3 +659,39 @@ do
     group:entry { item = "glue_strong", charges = { 3750, 3750 }, container = "jug_plastic_glue" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "tools_tailor", kind = "collection" }
+    group:item("awl_steel", 60)
+    group:item("loom_frame", 5)
+    group:item("needle_curved", 30)
+    group:item("scissors")
+    group:entry {
+        distribution = {
+            { item = "sewing_kit", charges = { 0, -1 }, probability = 120 },
+            { item = "tailors_kit", charges = { 0, -1 }, probability = 10 },
+        },
+    }
+    group:item("sewing_machine")
+    group:item("shed_stick", 5)
+    group:item("electric_spinwheel", 10)
+    group:item("knitting_needles", 40)
+    group:item("kevlar_shears", 60)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "tools_commercial_tailor", kind = "collection" }
+    group:item("awl_steel")
+    group:item("needle_curved", 30)
+    group:item("scissors")
+    group:entry {
+        distribution = {
+            { item = "sewing_kit", charges = { 0, -1 }, probability = 120 },
+            { item = "tailors_kit", charges = { 0, -1 }, probability = 10 },
+        },
+    }
+    group:item("sewing_machine")
+    group:item("kevlar_shears", 40)
+    content.add(group)
+end

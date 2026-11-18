@@ -11,12 +11,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "military_grenadier_assault_rifles",
-    "subtype": "distribution",
-    "entries": [ { "group": "modular_m4a1", "contents-group": "issued_grenadier_mods", "prob": 100, "charges": [ 0, 30 ] } ]
-  },
-  {
     "id": "military_ballistic_vest_pristine",
     "type": "item_group",
     "//": "ESAPI vest plus plates",

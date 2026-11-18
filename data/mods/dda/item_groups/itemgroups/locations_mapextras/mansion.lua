@@ -1287,3 +1287,207 @@ do
     group:item("candlestick", 5)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "glass_of_wine", kind = "distribution" }
+    group:entry { item = "wine_riesling", container_group = "wine_glasses", probability = 20 }
+    group:entry { item = "wine_chardonnay", container_group = "wine_glasses", probability = 30 }
+    group:entry { item = "wine_cabernet", container_group = "wine_glasses", probability = 30 }
+    group:entry { item = "wine_marsala", container_group = "wine_glasses", probability = 15 }
+    group:entry { item = "wine_noir", container_group = "wine_glasses", probability = 20 }
+    group:entry { item = "wine_vermouth", container_group = "wine_glasses", probability = 25 }
+    group:entry { item = "wine_marsala", container_group = "wine_glasses", probability = 15 }
+    group:entry { item = "sherry", container_group = "wine_glasses", probability = 10 }
+    group:entry { item = "madeira", container_group = "wine_glasses", probability = 10 }
+    group:entry { item = "bristol_sherry", container_group = "wine_glasses", probability = 10 }
+    group:entry { item = "fruit_wine", container_group = "wine_glasses", probability = 5 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "creepy", kind = "distribution" }
+    group:entry { item = "candle", charges = { 0, 100 }, probability = 50 }
+    group:item("rope_6", 50)
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+        probability = 40,
+    }
+    group:item("spike", 30)
+    group:entry { item = "blood", sealed = false, container = "jar_3l_glass_sealed", probability = 10 }
+    group:item("bone_human", 10)
+    group:item("bowl_skull", 5)
+    group:item("skull_human", 20)
+    group:item("skull_canis", 10)
+    group:item("bondage_mask", 10)
+    group:item("zentai", 5)
+    group:item("bondage_suit", 5)
+    group:item("bodysuit_lycra", 5, "bondage_suit")
+    group:item("vampire_fangs", 5)
+    group:item("cloak_vampire", 5)
+    group:item("cloak_black", 5)
+    group:group("esoteric_books", 40)
+    group:group("costume_jewelry_dark", 20)
+    group:group("costume_jewelry_vampire", 20)
+    group:item("sinister_cane", 5)
+    group:item("wizard_cane", 4)
+    group:item("robe_wizard", 4)
+    group:item("grim_reaper_robe", 4)
+    group:item("scythe_toy", 4)
+    group:item("long_dress_sleeved", 2, "witch_black")
+    group:item("gown_sleeved", 2, "sinister")
+    group:item("long_dress_sleeved", 2, "sinister")
+    group:item("mask_plague", 2)
+    group:item("trenchcoat_steampunk", 2)
+    group:item("mummy_dress", 2)
+    group:item("mummy_jumpsuit", 2)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "clutter_bathroom", kind = "distribution" }
+    group:group("softdrugs", 90)
+    group:item("bathroom_scale", 10)
+    group:item("string_6", 50)
+    group:item("wrapper", 50)
+    group:item("wrapper_foil", 5)
+    group:entry { item = "paper", count = { 20, 50 }, probability = 50 }
+    group:item("ceramic_shard", 40)
+    group:item("shot_hull", 40)
+    group:item("sinew", 40)
+    group:item("cotton_patchwork", 40)
+    group:item("bottle_plastic", 30)
+    group:entry { item = "glass_shard", count = { 1, 8 }, probability = 30 }
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+        probability = 20,
+    }
+    group:item("9mm_casing", 20)
+    group:item("38_casing", 20)
+    group:item("45_casing", 20)
+    group:item("bone_tainted", 1)
+    group:item("toothbrush_plain", 10)
+    group:group("sunscreen_bottle", 10)
+    group:group("corpse_mansion", 1)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "clutter_gym", kind = "distribution" }
+    group:item("water_clean", 20)
+    group:item("lemonade", 12)
+    group:item("sports_drink", 20)
+    group:item("V8", 12)
+    group:item("tank_top", 5)
+    group:item("towel", 20)
+    group:item("protein_shake", 8)
+    group:group("coke_bag_zipper_1_8", 3)
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 5 }
+    group:group("adhesive_bandages_box_used", 5)
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 1 }
+    group:item("heatpack", 10)
+    group:group("chewing_gum_used", 12)
+    group:item("yoghurt", 12)
+    group:group("vitamins_bottle_plastic_pill_supplement_1_20", 10)
+    group:group("bottle_otc_painkiller_1_20", 15)
+    group:group("corpse_mansion", 1)
+    group:item("fitness_band", 3)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "locker_gym", kind = "distribution" }
+    group:item("water_clean", 12)
+    group:item("sports_drink", 12)
+    group:item("tank_top", 30)
+    group:item("towel", 40)
+    group:item("under_armor_shorts", 50)
+    group:item("under_armor", 50)
+    group:item("tshirt", 60)
+    group:item("tshirt_cropped", 6)
+    group:item("sneakers", 60)
+    group:item("hot_pants", 44)
+    group:item("leotard", 10)
+    group:item("unitard", 10)
+    group:item("undershirt", 60)
+    group:item("hoodie", 50)
+    group:item("hoodie_cropped", 5)
+    group:item("shorts", 60)
+    group:item("longshirt", 60)
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 5 }
+    group:group("adhesive_bandages_box_used", 5)
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 1 }
+    group:item("heatpack", 10)
+    group:group("chewing_gum_used", 12)
+    group:entry { item = "soap", charges = { 1, 10 }, probability = 10 }
+    group:item("rashguard", 30)
+    group:item("sports_bra", 60)
+    group:item("briefs", 60)
+    group:item("swim_briefs", 10)
+    group:item("speedo", 15)
+    group:group("bikini", 15)
+    group:group("vitamins_bottle_plastic_pill_supplement_1_10", 10)
+    group:group("bottle_otc_painkiller_1_20", 10)
+    group:item("karate_gi", 10)
+    group:item("judo_gi", 5)
+    group:item("fitness_band", 5)
+    group:item("cheerleader_dress", 5)
+    group:item("cheerleader_skirt", 5)
+    group:item("cheerleader_skirt_short", 5)
+    group:item("tank_top", 5, "tank_top_cheerleader")
+    group:item("cheerleader_top_short", 5)
+    group:item("pom_poms", 6)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "cleaning_bulk", kind = "distribution" }
+    group:item("broom", 40)
+    group:item("mop", 25)
+    group:item("mop_folded", 15)
+    group:group("ammonia_hydroxide_bottle_twoliter_part", 24)
+    group:entry { item = "chem_washing_soda", count = { 1, -1 }, probability = 5 }
+    group:item("chem_hydrogen_peroxide", 20)
+    group:item("boots_rubber", 20)
+    group:group("bleach_jug_part", 20)
+    group:entry { item = "material_rocksalt", container = "bag_canvas", probability = 10 }
+    group:item("vinegar", 10)
+    group:entry { item = "lye_powder", container = "bag_canvas_small", probability = 5 }
+    group:group("oxy_powder_bottle_part", 5)
+    group:item("fungicide", 5)
+    group:group("insecticide_bag_plastic", 5)
+    group:group("charcoal_bag_part", 5)
+    group:item("toilet_paper", 30)
+    group:item("plunger_toilet", 10)
+    group:item("plunger_futuristic", 25)
+    group:entry { item = "chem_turpentine", charges = { 20, -1 }, probability = 20 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "garden_shed", kind = "distribution" }
+    group:item("g_shovel", 80)
+    group:item("gloves_work", 70)
+    group:item("boots_rubber", 50)
+    group:item("hoe", 50)
+    group:item("scythe", 1)
+    group:item("straw_hat", 50)
+    group:item("bucket", 40)
+    group:item("bucket_5gal", 40)
+    group:item("shovel", 40)
+    group:item("clay_pot_flower", 40)
+    group:item("plastic_pot_flower", 60)
+    group:group("fertilizer_commercial_bag_canvas_60", 30)
+    group:group("quicklime_bag", 30)
+    group:item("seed_sunflower", 30)
+    group:item("straw_basket", 30)
+    group:entry { item = "trimmer_off", charges = { 0, -1 }, probability = 20 }
+    group:item("knee_pads", 10)
+    group:item("fertilizer_liquid", 1)
+    content.add(group)
+end

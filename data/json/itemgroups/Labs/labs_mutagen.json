@@ -1,41 +1,5 @@
 [
   {
-    "id": "lab_mutagen_ingredients",
-    "type": "item_group",
-    "//CCB": "撤销 PR #86581 — 恢复僵尸尸体的实用性",
-    "subtype": "collection",
-    "entries": [
-      { "group": "bleach_jug_part", "charges": [ 1, -1 ], "prob": 40 },
-      { "item": "ammonia_liquid", "charges": [ 6, -1 ], "prob": 40, "container-item": "pressure_tank" },
-      {
-        "distribution": [
-          { "item": "honey_glassed", "count": [ 1, -1 ], "prob": 20 },
-          { "item": "honey_bottled", "charges": [ 1, -1 ], "prob": 80 }
-        ],
-        "prob": 30
-      },
-      { "item": "can_clams", "count": [ 1, 3 ], "prob": 30 },
-      { "group": "lye_powder_bottle_part", "prob": 30 },
-      { "item": "honeycomb", "prob": 30 },
-      { "prob": 30, "group": "iodine_bottle_plastic_pill_supplement_10" },
-      { "item": "disinfectant", "prob": 30 },
-      { "prob": 30, "group": "protein_powder_bottle_plastic_small_9" },
-      { "item": "bee_sting", "prob": 20 },
-      { "item": "slime_scrap", "prob": 20 },
-      { "item": "datura_seed", "prob": 20 },
-      { "item": "chitin_piece", "prob": 20 },
-      { "group": "oxy_powder_bottle_part", "prob": 30 },
-      { "prob": 10, "group": "heroin_bag_zipper_4" },
-      { "item": "lsd", "prob": 10, "count": 5 },
-      { "prob": 10, "group": "oxycodone_bottle_plastic_pill_prescription_10" },
-      { "prob": 10, "group": "tramadol_bottle_plastic_pill_prescription_10" },
-      { "prob": 10, "group": "codeine_bottle_plastic_pill_painkiller_10" },
-      { "prob": 10, "group": "thorazine_bottle_plastic_pill_prescription_10" },
-      { "prob": 20, "group": "pills_sleep_bottle_plastic_pill_prescription_10" },
-      { "prob": 30, "group": "vitamins_bottle_plastic_pill_supplement_20" }
-    ]
-  },
-  {
     "id": "lab_mutagen_ingredients_fridge",
     "type": "item_group",
     "subtype": "collection",

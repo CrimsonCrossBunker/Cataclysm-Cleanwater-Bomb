@@ -22,19 +22,6 @@
     "shopkeeper_price_rules": [ { "group": "BEM_DRUGRUNNER_STOCK", "markup": 4.5 } ]
   },
   {
-    "type": "item_group",
-    "id": "BEM_DRUGRUNNER_stock",
-    "subtype": "collection",
-    "entries": [
-      { "item": "glock17_22", "charges": 22, "ammo-item": "9mmP", "count": [ 1, 2 ] },
-      { "prob": 30, "group": "coke_bag_zipper_1_8" },
-      { "prob": 30, "group": "pure_meth_bag_zipper_1_6" },
-      { "prob": 100, "group": "heroin_bag_zipper_1_4" },
-      { "prob": 100, "group": "oxycodone_bottle_plastic_pill_prescription_1_10" },
-      { "group": "harddrugs", "prob": 100, "count": [ 6, 12 ] }
-    ]
-  },
-  {
     "id": [ "BEM_DRUGRUNNER_1" ],
     "type": "talk_topic",
     "dynamic_line": {

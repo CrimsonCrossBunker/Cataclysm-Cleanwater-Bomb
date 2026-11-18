@@ -62,38 +62,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_ARSONIST_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "backpack_leather" },
-      { "item": "legrig", "contents-group": "makayla_ammo" },
-      { "item": "bunker_pants" },
-      { "group": "clothing_watch" },
-      { "item": "bunker_coat" },
-      { "item": "socks" },
-      { "item": "boots_combat" },
-      { "item": "slingpack" },
-      { "item": "bra" },
-      { "item": "tank_top" },
-      { "item": "panties" },
-      { "item": "model_10_revolver", "ammo-item": "38_special", "charges": 6, "container-item": "holster" },
-      { "item": "webbing_belt", "contents-group": "makayla_belt" },
-      { "item": "gloves_fingerless_mod" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "makayla_ammo",
-    "subtype": "collection",
-    "items": [
-      { "item": "38_speedloader6", "ammo-item": "38_special", "charges": 6 },
-      { "item": "38_speedloader6", "ammo-item": "38_special", "charges": 6 },
-      { "item": "38_speedloader6", "ammo-item": "38_special", "charges": 6 },
-      { "item": "38_special" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_ARSONIST",
     "dynamic_line": {

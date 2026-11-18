@@ -150,20 +150,5 @@
       { "item": "homeopathic_pills", "variant": "sugar_pill", "count": [ 0, 6 ], "prob": 5 },
       { "item": "birth_control", "count": [ 0, 28 ], "prob": 40 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "nondrowsy_cough_syrup_in_bottle",
-    "subtype": "distribution",
-    "entries": [ { "item": "dayquil", "container-item": "bottle_plastic_small", "charges": [ 1, -1 ] } ]
-  },
-  {
-    "type": "item_group",
-    "id": "any_cough_syrup_in_bottle",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "nyquil", "container-item": "bottle_plastic_small", "charges": [ 1, -1 ] },
-      { "group": "nondrowsy_cough_syrup_in_bottle" }
-    ]
   }
 ]

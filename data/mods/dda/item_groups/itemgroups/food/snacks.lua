@@ -531,3 +531,25 @@ do
     group:entry { item = "nic_gum", count = { 12, 12 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "oyster_crackers_plastic_bag_vac_1_inf",
+        kind = "collection",
+        container = "plastic_bag_vac",
+    }
+    group:entry { item = "oyster_crackers", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "crackers_box_small_full", kind = "collection", container = "box_small" }
+    group:entry { item = "crackers", count = { -1, -1 }, container = "null" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "onion_rings_box_small_1_inf", kind = "collection", container = "box_small" }
+    group:entry { item = "onion_rings", count = { 1, -1 }, container = "null" }
+    content.add(group)
+end

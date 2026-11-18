@@ -1,38 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "void_spider_corpse_minor_loot",
-    "subtype": "distribution",
-    "container-item": "corpse_void_mummified",
-    "on_overflow": "spill",
-    "entries": [
-      { "item": "longrifle_flintlock", "variant": "leadworks_longrifle_flintlock", "prob": 10 },
-      { "item": "helmet_kettle", "variant": "morion", "prob": 10 },
-      { "item": "golden_hat", "prob": 10 },
-      { "item": "towel", "prob": 10 },
-      { "item": "tattered_garment", "prob": 10 },
-      {
-        "group": "amigara_items",
-        "artifact": {
-          "procgen_id": "cult",
-          "rules": { "power_level": 1250, "max_attributes": 4, "max_negative_power": -1000, "resonant": true }
-        },
-        "prob": 15
-      },
-      {
-        "group": "ps_artifacts",
-        "artifact": {
-          "procgen_id": "netherum_tunnels",
-          "rules": { "power_level": 750, "max_attributes": 4, "max_negative_power": -1000, "resonant": true }
-        },
-        "prob": 15
-      },
-      { "item": "altered_exposed_wiring_prototype", "prob": 10 },
-      { "item": "bead_bracelet", "prob": 10 },
-      { "item": "cape_sci_fi", "prob": 10 }
-    ]
-  },
-  {
     "type": "mapgen",
     "update_mapgen_id": "void_spider_lair_corpses",
     "object": { "place_nested": [ { "chunks": [ "void_spider_lair_corpses" ], "x": 0, "y": 0 } ] }

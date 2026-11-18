@@ -144,3 +144,12 @@ do
     group:entry { item = "cottage_cheese", count = { 1, 1 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "milk_in_container", kind = "distribution" }
+    group:entry { group = "any_milk", charges = { 1, -1 }, container = "jug_plastic" }
+    group:entry { group = "any_milk", charges = { 1, -1 }, container = "jug_plastic_1892ml" }
+    group:entry { group = "any_milk", charges = { 1, -1 }, container = "carton_sealed" }
+    group:entry { group = "any_milk", charges = { 1, -1 }, container = "carton_946ml" }
+    content.add(group)
+end

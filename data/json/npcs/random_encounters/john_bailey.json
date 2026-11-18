@@ -67,12 +67,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "john_bailey_pistol",
-    "subtype": "collection",
-    "entries": [ { "item": "sw_619", "ammo-item": "357mag_fmj", "charges": 7 } ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_RC_John_Bailey_1",
     "dynamic_line": {

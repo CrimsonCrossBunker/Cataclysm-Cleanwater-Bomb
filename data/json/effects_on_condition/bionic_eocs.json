@@ -248,21 +248,11 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "internal_mp3_music_group",
-    "items": [ { "item": "internal_mp3_music", "active": true } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_BIONIC_WEARMAN_ACTIVATE_RADIO",
     "effect": [
       { "u_spawn_item": "internal_mp3_radio_group", "suppress_message": true, "force_equip": true, "use_item_group": true }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "internal_mp3_radio_group",
-    "items": [ { "item": "internal_mp3_radio", "active": true } ]
   },
   {
     "type": "effect_on_condition",

@@ -58,12 +58,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_EXODII_TYPE_1_carried",
-    "//": "Weapon for Rubik.",
-    "items": [ { "item": "pamd68rubik", "ammo-item": "123ln", "charges": 60 } ]
-  },
-  {
     "type": "shopkeeper_blacklist",
     "id": "rubik_shopkeep_blacklist",
     "entries": [

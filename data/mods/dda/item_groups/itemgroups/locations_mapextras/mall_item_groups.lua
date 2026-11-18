@@ -176,3 +176,33 @@ do
     group:item("fitness_band", 5)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "beauty", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:item("mag_glam", 40)
+    group:item("mag_beauty", 30)
+    group:item("hairpin", 40)
+    group:item("scarf", 10)
+    group:item("scarf_long", 5)
+    group:item("knit_scarf", 10)
+    group:item("long_knit_scarf", 5)
+    group:item("bellyband", 5)
+    group:item("barrette", 5)
+    group:item("eyedrops", 35)
+    group:entry { item = "candle", charges = { 100, 100 }, probability = 50 }
+    group:item("scissors", 30)
+    group:item("soap", 45)
+    group:entry { item = "moisturizer", charges = { 1, -1 }, container = "bottle_plastic_small", probability = 60 }
+    group:entry { item = "tailors_kit", charges = { 400, 400 }, probability = 25 }
+    group:entry { item = "shavingkit", charges = { 10, 10 }, probability = 20 }
+    group:entry { item = "elec_hairtrimmer", charges = { 50, 50 }, probability = 20 }
+    group:item("razor_shaving", 20)
+    group:item("curler_hair", 30)
+    group:item("hair_dryer", 40)
+    group:item("curling_iron", 40)
+    group:item("comb_pocket", 10)
+    group:item("hairbrush", 10)
+    group:item("mirror", 35)
+    group:item("makeup_kit", 30)
+    content.add(group)
+end

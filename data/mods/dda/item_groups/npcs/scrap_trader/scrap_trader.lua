@@ -112,3 +112,23 @@ do
     group:entry { group = "SCRAPPER_Shop_Platinum", count = { 0, 3 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "SCRAP_MERCHANT_worn", kind = "collection" }
+    group:item("glasses_safety")
+    group:item("helmet_liner")
+    group:item("hat_hard")
+    group:item("turtleneck_shirt")
+    group:item("jacket_jean")
+    group:item("vest")
+    group:item("boxer_briefs")
+    group:item("jeans")
+    group:item("gloves_work")
+    group:item("socks")
+    group:item("boots")
+    group:item("gold_ring")
+    group:item("tool_belt")
+    group:item("spearsling")
+    group:entry { group = "modular_ar15", charges = { 30, 30 }, container = "back_holster", ammo = { item = "223" } }
+    content.add(group)
+end

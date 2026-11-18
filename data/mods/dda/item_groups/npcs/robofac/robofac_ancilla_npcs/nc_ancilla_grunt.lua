@@ -21,3 +21,33 @@ do
     group:item("gloves_fingerless_mod")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_ANCILLA_GRUNT_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556" } }
+    group:entry { item = "glock17_22", count = { 1, 2 }, charges = { 22, 22 }, ammo = { item = "9mmP" } }
+    group:entry { item = "9mmP", count = { 1, 2 } }
+    group:entry { item = "556", count = { 2, 2 } }
+    group:entry { group = "any_MRE", count = { 2, 2 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_ANCILLA_GRUNT_wield", kind = "collection" }
+    group:entry {
+        group = "modular_m4a1",
+        charges = { 30, 30 },
+        ammo = { item = "556" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end

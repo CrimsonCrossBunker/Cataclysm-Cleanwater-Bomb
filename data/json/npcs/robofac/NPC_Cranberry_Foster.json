@@ -57,32 +57,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_MERC_1_carry",
-    "subtype": "collection",
-    "items": [
-      { "item": "ear_plugs", "custom-flags": [ "no_auto_equip" ] },
-      { "item": "robofac40", "ammo-item": "556", "charges": 40 },
-      { "item": "robofac_gun_kit" },
-      { "item": "grenade_emp" },
-      { "group": "mil_food_nodrugs" },
-      { "item": "bot_grenade_hack", "count": 2 },
-      { "item": "protein_bar_evac", "count": 7 },
-      { "item": "water_clean", "count": 2 },
-      { "item": "RobofacCoin", "count": [ 15, 18 ] },
-      { "group": "charged_smart_phone" },
-      { "group": "full_1st_aid" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ROBOFAC_MERC_1_wield",
-    "subtype": "collection",
-    "items": [
-      { "item": "robofac_gun", "ammo-item": "556", "charges": 40, "contents-item": [ "shoulder_strap", "robofac_gun_ar" ] }
-    ]
-  },
-  {
     "id": "TALK_ROBOFAC_MERC_1",
     "type": "talk_topic",
     "dynamic_line": {

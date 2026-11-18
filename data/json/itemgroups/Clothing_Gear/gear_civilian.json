@@ -1,17 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "smoker_e_cigarette",
-    "//": "Tobacco products an ecig user would carry on them.",
-    "//1": "Ratio of disposable and reusable ecigs loosely aqcuired from https://pmc.ncbi.nlm.nih.gov/articles/PMC8493914/",
-    "subtype": "collection",
-    "items": [
-      { "distribution": [ { "item": "ecig", "prob": 31 }, { "item": "advanced_ecig", "prob": 102, "charges": [ 0, -1 ] } ] },
-      { "group": "nicotine_liquid_bottle_part", "prob": 80, "count": [ 1, 2 ] }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "everyday_gear",
     "ammo": 75,
     "magazine": 100,

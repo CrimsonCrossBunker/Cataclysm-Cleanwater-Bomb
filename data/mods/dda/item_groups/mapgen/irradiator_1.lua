@@ -48,3 +48,22 @@ do
     group:item("styrofoam_cup", 10)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "radiation_meds", kind = "collection" }
+    group:group("iodine_bottle_plastic_pill_supplement_10", 50)
+    group:group("prussian_blue_bottle_plastic_pill_supplement_10", 75)
+    group:group("full_1st_aid", 50)
+    group:item("gloves_medical", 20)
+    group:entry {
+        item = "cotton_patchwork",
+        flags = {
+            "FILTHY",
+        },
+        probability = 30,
+    }
+    group:group("drugs_emergency", 30)
+    group:group("drugs_heal_simple", 20)
+    group:group("drugs_analgesic", 10)
+    content.add(group)
+end

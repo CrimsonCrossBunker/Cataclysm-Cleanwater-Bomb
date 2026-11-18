@@ -5,40 +5,6 @@
     "vehicles": [ [ "car", 300 ], [ "hearse", 200 ], [ "suv", 100 ], [ "policecar", 50 ] ]
   },
   {
-    "id": "grave_memories",
-    "type": "item_group",
-    "items": [
-      [ "barrette", 5 ],
-      [ "boots_combat", 10 ],
-      [ "cassock", 1 ],
-      [ "child_book", 5 ],
-      [ "flask_hip", 5 ],
-      [ "jedi_cloak", 1 ],
-      [ "jersey", 1 ],
-      [ "kittel", 1 ],
-      [ "kufi", 1 ],
-      [ "kippah", 1 ],
-      [ "tallit_gadol", 1 ],
-      { "group": "rings_and_things", "prob": 20 },
-      [ "long_glove_white", 1 ],
-      [ "photo_album", 15 ],
-      [ "ref_lighter", 5 ],
-      [ "roadmap", 3 ],
-      [ "spray_can", 5 ],
-      [ "story_book", 5 ],
-      [ "syringe", 3 ],
-      [ "tall_tales", 5 ],
-      { "item": "teddy_bear", "custom-flags": [ "FILTHY" ], "damage": [ 0, 3 ], "prob": 15 },
-      [ "teleumbrella", 2 ],
-      [ "thawb", 1 ],
-      [ "umbrella", 10 ],
-      { "group": "newspaper", "prob": 20 },
-      [ "survnote", 3 ],
-      [ "cig_butt", 5 ],
-      [ "cigar_butt", 10 ]
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ [ "cemetery_4square_00", "cemetery_4square_10" ], [ "cemetery_4square_01", "cemetery_4square_11" ] ],
     "object": {

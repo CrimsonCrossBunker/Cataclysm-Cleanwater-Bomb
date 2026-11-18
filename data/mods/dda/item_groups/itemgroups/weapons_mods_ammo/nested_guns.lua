@@ -2232,3 +2232,275 @@ do
     group:group("on_hand_3030")
     content.add(group)
 end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_glock_22", kind = "collection", with_ammo = 100 }
+    group:entry { item = "glock_22", charges = { 0, 15 }, ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag", ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag", ammo = { item = "40sw" }, probability = 50 }
+    group:group("on_hand_40")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_glock_23", kind = "collection", with_ammo = 100 }
+    group:entry { item = "glock_23", charges = { 0, 15 }, ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag", ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag", ammo = { item = "40sw" }, probability = 50 }
+    group:group("on_hand_40")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_glock_27", kind = "collection", with_ammo = 100 }
+    group:entry { item = "glock_27", charges = { 0, 15 }, ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag_9", ammo = { item = "40sw" } }
+    group:entry { item = "glock40mag_9", ammo = { item = "40sw" }, probability = 50 }
+    group:group("on_hand_40")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_deagle_357", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_deagle_357", charges = { 0, 9 } }
+    group:item("deaglemag_357")
+    group:item("deaglemag_357", 50)
+    group:group("on_hand_357")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_deagle_44", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_deagle_44", charges = { 0, 8 } }
+    group:item("deaglemag")
+    group:item("deaglemag", 50)
+    group:group("on_hand_44")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_deagle_50", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_deagle_50", charges = { 0, 7 } }
+    group:item("deaglemag_50")
+    group:item("deaglemag_50", 50)
+    group:group("on_hand_50ae")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_deagle_gold", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_deagle_50", charges = { 0, 7 }, variant = "modular_deagle_gold" }
+    group:item("deaglemag_50")
+    group:item("deaglemag_50", 50)
+    group:group("on_hand_50ae")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_ump_9", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_ump_9", charges = { 0, 30 } }
+    group:item("ump9mag")
+    group:item("ump9mag", 50)
+    group:group("on_hand_9mm")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_ump_40", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_ump_40", charges = { 0, 30 } }
+    group:item("ump40mag")
+    group:item("ump40mag", 50)
+    group:group("on_hand_40")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_modular_ump_45", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_ump_45", charges = { 0, 25 } }
+    group:item("ump45mag")
+    group:item("ump45mag", 50)
+    group:group("on_hand_45")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar15", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_ar15", charges = { 0, 30 } }
+    group:item("stanag10")
+    group:item("stanag10", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar_pistol", kind = "collection", with_ammo = 100 }
+    group:entry { group = "ar_pistol", charges = { 0, 30 } }
+    group:item("stanag10")
+    group:item("stanag10", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar_pistol_long", kind = "collection", with_ammo = 100 }
+    group:entry { group = "ar_pistol_long", charges = { 0, 30 } }
+    group:item("stanag10")
+    group:item("stanag10", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar_pistol_300", kind = "collection", with_ammo = 100 }
+    group:entry { group = "ar_pistol_300", charges = { 0, 30 } }
+    group:item("stanag10")
+    group:item("stanag10", 50)
+    group:group("on_hand_300BLK")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar_pistol_300_long", kind = "collection", with_ammo = 100 }
+    group:entry { group = "ar_pistol_300_long", charges = { 0, 30 } }
+    group:item("stanag10")
+    group:item("stanag10", 50)
+    group:group("on_hand_300BLK")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_m4_carbine", kind = "collection", with_ammo = 100 }
+    group:entry { group = "modular_m4a1", charges = { 0, 30 } }
+    group:item("stanag30")
+    group:item("stanag30", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_h&k416a5", kind = "collection", with_ammo = 100 }
+    group:entry { group = "h&k416a5_any", charges = { 0, 30 } }
+    group:item("stanag30")
+    group:item("stanag30", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_m27iar", kind = "collection", with_ammo = 100 }
+    group:entry { group = "m27iar", charges = { 0, 30 } }
+    group:item("stanag30")
+    group:item("stanag30", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_ar12_shotgun", kind = "collection", with_ammo = 100 }
+    group:entry { item = "ar12_shotgun", charges = { 0, -1 } }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "mka_1919_5" },
+                    { item = "mka_1919_5", probability = 70 },
+                    { item = "mka_1919_5", probability = 30 },
+                },
+                probability = 3,
+            },
+            {
+                collection = {
+                    { item = "mka_1919_10" },
+                    { item = "mka_1919_10", probability = 70 },
+                    { item = "mka_1919_10", probability = 30 },
+                },
+                probability = 2,
+            },
+            {
+                collection = {
+                    { item = "mka_1919_20" },
+                    { item = "mka_1919_20", probability = 70 },
+                    { item = "mka_1919_20", probability = 30 },
+                },
+                probability = 1,
+            },
+        },
+    }
+    group:group("on_hand_shot")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_gfy_1", kind = "collection", with_ammo = 100 }
+    group:entry { item = "gfy_1", charges = { 0, -1 } }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    { item = "mka_1919_5" },
+                    { item = "mka_1919_5", probability = 70 },
+                    { item = "mka_1919_5", probability = 30 },
+                },
+                probability = 3,
+            },
+            {
+                collection = {
+                    { item = "mka_1919_10" },
+                    { item = "mka_1919_10", probability = 70 },
+                    { item = "mka_1919_10", probability = 30 },
+                },
+                probability = 2,
+            },
+            {
+                collection = {
+                    { item = "mka_1919_20" },
+                    { item = "mka_1919_20", probability = 70 },
+                    { item = "mka_1919_20", probability = 30 },
+                },
+                probability = 1,
+            },
+        },
+    }
+    group:group("on_hand_shot")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_mdrx", kind = "collection", with_ammo = 100 }
+    group:entry { group = "mdrx", charges = { 0, 30 } }
+    group:item("stanag30")
+    group:item("stanag30", 50)
+    group:group("on_hand_223")
+    content.add(group)
+end
+
+do
+    -- this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack
+    local group = content.ItemGroup { id = "nested_axmc", kind = "collection", with_ammo = 100 }
+    group:entry { group = "axmc", charges = { 0, 10 } }
+    group:item("ai_338mag_10")
+    group:item("ai_338mag_10", 50)
+    group:group("on_hand_338lapua")
+    content.add(group)
+end

@@ -158,3 +158,27 @@ do
     group:item("tefillin_head")
     content.add(group)
 end
+
+do
+    -- unisex personal accessories that a kid could have on them
+    local group = content.ItemGroup { id = "accesories_personal_unisex_child", kind = "collection" }
+    group:group("clothing_glasses", 50)
+    group:group("clothing_watch", 15)
+    group:group("accessory_ring", 15)
+    group:group("accessory_earring", 15)
+    group:group("accessory_bracelet", 15)
+    group:group("accessory_teeth", 2)
+    group:group("accessory_necklace", 15)
+    group:group("accessory_sportsgear", 5)
+    group:item("folding_poncho", 5)
+    group:item("leather_belt", 30)
+    group:entry { item = "wearable_light", charges = { 0, 100 }, probability = 10 }
+    group:item("binoculars", 2)
+    group:item("whistle", 3)
+    group:item("harmonica_holder", 1)
+    group:group("costume_accessories", 1)
+    group:group("costume_jewelry", 1)
+    group:entry { group = "costume_accessories", event = "halloween", probability = 30 }
+    group:entry { group = "costume_jewelry", event = "halloween", probability = 30 }
+    content.add(group)
+end

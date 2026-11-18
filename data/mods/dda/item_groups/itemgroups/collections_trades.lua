@@ -43,3 +43,20 @@ do
     group:item("hoof_stand", 65)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "dentist_supplies", kind = "collection" }
+    group:entry { item = "dental_tools", count = { 1, 2 }, probability = 80 }
+    group:entry { item = "string_floss", count = { 1, 3 }, probability = 75 }
+    group:entry { item = "toothbrush_plain", count = { 1, 4 }, probability = 75 }
+    group:item("toothbrush_electric", 20)
+    group:entry { item = "dentures", count = { 1, 2 }, probability = 40 }
+    group:entry { item = "medical_gauze", count = { 1, 4 }, probability = 20 }
+    group:item("syringe", 30)
+    group:item("mask_dust", 60)
+    group:item("gloves_medical", 70)
+    group:entry { item = "disinfectant", charges = { 1, 10 }, probability = 30 }
+    group:entry { item = "anesthetic_kit", charges = { 0, -1 }, probability = 10 }
+    group:item("gold_dental_grill", 1)
+    content.add(group)
+end

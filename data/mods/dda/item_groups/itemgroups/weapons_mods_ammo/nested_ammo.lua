@@ -471,3 +471,30 @@ do
     group:group("boxed_3030", 50)
     content.add(group)
 end
+
+do
+    -- a collection of ammo that would be found with a loaded gun.
+    local group = content.ItemGroup { id = "on_hand_shot", kind = "collection" }
+    group:group("boxed_12_used")
+    group:entry { group = "12_loose", charges = { 1, 4 } }
+    group:group("boxed_12", 50)
+    content.add(group)
+end
+
+do
+    -- a collection of ammo that would be found with a loaded gun.  29Slug:36Buck:184Bird.
+    local group = content.ItemGroup { id = "on_hand_20shot", kind = "collection" }
+    group:group("boxed_20_used")
+    group:entry { group = "20_loose", charges = { 1, 4 } }
+    group:group("boxed_20", 50)
+    content.add(group)
+end
+
+do
+    -- a collection of ammo that would be found with a loaded gun.  29Slug:36Buck:184Bird.
+    local group = content.ItemGroup { id = "on_hand_410shot", kind = "collection" }
+    group:group("boxed_410_used")
+    group:entry { group = "410_loose", charges = { 1, 4 } }
+    group:group("boxed_410", 50)
+    content.add(group)
+end
