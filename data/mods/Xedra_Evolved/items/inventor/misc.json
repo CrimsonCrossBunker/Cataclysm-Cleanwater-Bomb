@@ -148,16 +148,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "software_AI",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "IA software" },
-    "description": "A simple intelligent agent to provide support in parsing big layers of information.",
-    "extend": { "flags": [ "INVENTOR_CRAFTED" ] },
-    "qualities": [ [ "AI_TOOL", 1 ] ]
-  },
-  {
     "id": "inventor_portal_closer",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -228,53 +218,6 @@
     ],
     "melee_damage": { "stab": 10 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "inventor_water_purifier",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "ThirstTrouncer Dispenser" },
-    "looks_like": "water_purifier",
-    "description": "This turbocharged water purifier can turn any water into pure ThirstTrouncer.  Even sewage will be processed, purified and turned into the most hydrating substance ever made through clever application of the principles that rule the purification of water.  Warning: do not consume if hydrated.",
-    "longest_side": "200 mm",
-    "material": [ "plastic", "steel" ],
-    "symbol": ";",
-    "volume": "4 L",
-    "weight": "1760 g",
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "default_magazine": "inventor_heavy_cell"
-      }
-    ],
-    "flags": [ "ELECTRONIC", "INVENTOR_CRAFTED" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "tool_ammo": "battery"
-  },
-  {
-    "id": "inventor_oxygen_jelly_machine",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Oxyjelly Machine" },
-    "looks_like": "pressure_cooker",
-    "description": "This high-pressure device creates the perfect environment to jellify oxygen, resulting in a compact and light jelly carrying all the benefits of pure oxygen.",
-    "material": [ "steel" ],
-    "symbol": ")",
-    "volume": "8000 ml",
-    "weight": "7 kg",
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "default_magazine": "inventor_heavy_cell"
-      }
-    ],
-    "flags": [ "ELECTRONIC", "INVENTOR_CRAFTED" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "tool_ammo": "battery"
   },
   {
     "id": "inventor_gaming_rig",
