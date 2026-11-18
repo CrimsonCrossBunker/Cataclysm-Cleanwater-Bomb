@@ -69,4 +69,3 @@ ccb.dialogue.register_topic {
         { text = "Interesting…", text_translation = {}, topic = "SKYISLAND_QUESTIONS" },
     },
 }
-
