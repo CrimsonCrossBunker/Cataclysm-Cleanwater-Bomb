@@ -1,25 +1,5 @@
 [
   {
-    "id": "mag_barter",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "name": { "str": "Car Buyer's Guide", "str_pl": "copies of Car Buyer's Guide" },
-    "description": "Normally this glossy, ad-filled magazine about cars would be pointless, but it has a series of articles on haggling techniques.",
-    "weight": "90 g",
-    "volume": "250 ml",
-    "price": "4 USD 50 cent",
-    "price_postapoc": "50 cent",
-    "material": [ "paper" ],
-    "symbol": "?",
-    "looks_like": "mag_glam",
-    "color": "pink",
-    "max_level": 1,
-    "intelligence": 5,
-    "time": "8 m",
-    "read_skill": "speech"
-  },
-  {
     "id": "manual_business",
     "type": "ITEM",
     "subtypes": [ "BOOK" ],

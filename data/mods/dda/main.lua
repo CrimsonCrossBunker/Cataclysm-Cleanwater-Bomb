@@ -456,3 +456,5 @@ require("phone_recovery")
 require("item_groups")
 
 require("item_group_changes")
+
+require("book_items")

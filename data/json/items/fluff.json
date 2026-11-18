@@ -1474,24 +1474,6 @@
     "flags": [ "NO_REPAIR" ]
   },
   {
-    "id": "trade_writ",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "writ of trade", "str_pl": "writs of trade" },
-    "description": "A short writ featuring the signed agreement of establishing a trade route.",
-    "weight": "1 g",
-    "volume": "5 ml",
-    "price": "30 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "paper" ],
-    "symbol": "?",
-    "looks_like": "mag_glam",
-    "color": "light_cyan",
-    "intelligence": 5,
-    "time": "10 m",
-    "melee_damage": { "bash": 1 }
-  },
-  {
     "type": "ITEM",
     "id": "ruler",
     "name": { "str": "ruler" },

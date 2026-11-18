@@ -244,19 +244,6 @@
     "copy-from": "book_nonf_soft_phil_tpl"
   },
   {
-    "id": "book_nonf_hard_phil_mdlogic",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "Modal Logic as Metaphysics", "str_pl": "copies of Modal Logic" },
-    "description": "A treatise on applying logical tools to questions about that nature of reality, this book contains detailed discussion of metaphysical issues.",
-    "//isbn13": 9780199552078,
-    "weight": "834 g",
-    "volume": "1249 ml",
-    "longest_side": "24 cm",
-    "price": "48 USD 95 cent",
-    "copy-from": "book_nonf_hard_phil_tpl"
-  },
-  {
     "id": "book_nonf_hard_phil_aesth",
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
@@ -283,19 +270,5 @@
     "price": "83 USD 91 cent",
     "copy-from": "book_nonf_hard_phil_tpl",
     "relative": { "intelligence": 1, "fun": -2 }
-  },
-  {
-    "id": "book_nonf_soft_phil_benoth",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "Being and Nothingness", "str_pl": "copies of Being and Nothingness" },
-    "description": "This paperback is a copy of Jean-Paul Sartre's \"Being and Nothingness\".  A key work in the existentialist tradition.",
-    "//isbn13": 9780415278485,
-    "weight": "794 g",
-    "volume": "1 L",
-    "longest_side": "21 cm",
-    "price": "34 USD",
-    "price_postapoc": "50 cent",
-    "copy-from": "book_nonf_soft_phil_tpl"
   }
 ]

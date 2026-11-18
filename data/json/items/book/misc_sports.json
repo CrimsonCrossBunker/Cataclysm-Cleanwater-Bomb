@@ -10,43 +10,6 @@
     "relative": { "chapters": 12, "fun": 1, "intelligence": 1 }
   },
   {
-    "id": "book_fict_soft_sports_bunt",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "The Art of Bunting", "str_pl": "copies of The Art of Bunting" },
-    "description": "While you might be forgiven for expecting instructions for party decorating, it is in fact a novel about baseball.  In the final climactic game a young star proves to himself that he is ready for the big leagues.",
-    "//isbn13": 9780316126670,
-    "weight": "472 g",
-    "volume": "1074 ml",
-    "longest_side": "20 cm",
-    "copy-from": "book_fict_soft_tpl"
-  },
-  {
-    "id": "book_fict_soft_sports_tdsp",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "The Touchdown Special", "str_pl": "copies of The Touchdown Special" },
-    "description": "In this absorbing novel of football fandom, a pizza delivery driver makes a desperate gamble on the Monday night game.",
-    "//isbn13": 9780393353785,
-    "weight": "184 g",
-    "volume": "450 ml",
-    "longest_side": "21 cm",
-    "copy-from": "book_fict_soft_tpl"
-  },
-  {
-    "id": "book_fict_soft_sports_envy",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "Trophy Envy", "str_pl": "copies of Trophy Envy" },
-    "description": "This paperback tells the story of a tennis prodigy who begins to regret her own success.",
-    "//isbn13": 9781250183170,
-    "weight": "227 g",
-    "volume": "535 ml",
-    "longest_side": "20 cm",
-    "price": "17 USD 99 cent",
-    "copy-from": "book_fict_soft_tpl"
-  },
-  {
     "id": "book_fict_hard_sports_semi",
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
@@ -55,32 +18,6 @@
     "//isbn13": 9780689105180,
     "copy-from": "book_fict_hard_tpl",
     "relative": { "fun": 1 }
-  },
-  {
-    "id": "book_fict_hard_sports_omni",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "The Golf Omnivore", "str_pl": "copies of The Golf Omnivore" },
-    "description": "This hardback book is a collection of short stories in which love and golf are the only two constants.",
-    "//isbn13": 9780091439606,
-    "weight": "648 g",
-    "volume": "720 ml",
-    "longest_side": "21 cm",
-    "copy-from": "book_fict_hard_tpl"
-  },
-  {
-    "id": "book_fict_hard_sports_uni",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "Uniform Boy", "str_pl": "copies of Uniform Boy" },
-    "description": "This hardback book about an equipment manager for a minor league team explores themes of loyalty and resentment.",
-    "//isbn13": 9780606153522,
-    "//dual genre": "sports and ya",
-    "weight": "363 g",
-    "volume": "640 ml",
-    "longest_side": "20 cm",
-    "price": "18 USD 99 cent",
-    "copy-from": "book_fict_hard_tpl"
   },
   {
     "id": "book_nonf_soft_sports_bdgt",

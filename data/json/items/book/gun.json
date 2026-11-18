@@ -119,25 +119,6 @@
     "read_skill": "gun"
   },
   {
-    "id": "pocket_firearms",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "name": { "str": "Pocket Guide to Firearm Safety", "str_pl": "copies of Pocket Guide to Firearm Safety" },
-    "description": "This pocket-sized leather-bound guide to firearm safety combines a wealth of concise information with simple to follow instructions and easy to read illustrations.",
-    "weight": "226 g",
-    "volume": "250 ml",
-    "price": "40 USD",
-    "price_postapoc": "5 USD",
-    "material": [ "paper", "leather" ],
-    "symbol": "?",
-    "color": "green",
-    "max_level": 2,
-    "intelligence": 6,
-    "time": "20 m",
-    "read_skill": "gun"
-  },
-  {
     "id": "text_gunsmith",
     "type": "ITEM",
     "subtypes": [ "BOOK" ],
