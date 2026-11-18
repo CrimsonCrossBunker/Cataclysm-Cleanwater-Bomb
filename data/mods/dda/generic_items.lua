@@ -1,3 +1,4 @@
+require("generic_items.artifact.artifact_item_types")
 require("generic_items.items.ammo.nail")
 require("generic_items.items.ammo.weldgas")
 require("generic_items.items.appliances.appliances_generators")
