@@ -48,24 +48,6 @@
     "flags": [ "TRADER_AVOID", "ALLOWS_REMOTE_USE", "SPAWN_ACTIVE" ]
   },
   {
-    "id": "mkey_opening",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "skeleton key of opening", "str_pl": "skeleton keys of opening" },
-    "description": "A small gold skeleton key.  You can activate it to unlock locked things.",
-    "weight": "20 g",
-    "volume": "1 ml",
-    "price": "5 kUSD",
-    "material": [ "gold" ],
-    "symbol": "[",
-    "color": "yellow",
-    "initial_charges": 5,
-    "max_charges": 5,
-    "charges_per_use": 1,
-    "qualities": [ [ "LOCKPICK", 50 ] ],
-    "flags": [ "PERFECT_LOCKPICK" ]
-  },
-  {
     "id": "mtorch_everburning",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
