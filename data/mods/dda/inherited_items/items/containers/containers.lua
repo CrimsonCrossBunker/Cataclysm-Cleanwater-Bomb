@@ -432,3 +432,147 @@ do
     item:adjust_measurements { volume_ml = { factor = 0.5 }, mass_milligrams = { factor = 0.5 } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "bucket",
+        category = "container",
+        name = ccb.content.plural_text("bucket", "buckets"),
+        description = ccb.content.text("A galvanized bucket for peanuts, chilled wine, iced beer, lobster, crab legs, French fries, animal feed, farm use, tailgating, crafts, planting flowers, holding gift baskets, containing a fruit basket and herbs, loose item storage, or as an ice bucket."),
+        ascii_picture = "bucket",
+        mass_milligrams = 725000,
+        volume_ml = 5500,
+        longest_side_mm = 250,
+        price_cents = 300,
+        price_postapoc_cents = 10,
+        symbol = ")",
+        color = "light_gray",
+        replace_pockets = true,
+        replace_qualities = true,
+    }
+    item:material("steel", 1)
+    item:container_pocket {
+        max_volume_ml = 5000,
+        max_weight_milligrams = 20000000,
+        rigid = true,
+        watertight = true,
+        open_container = true,
+    }
+    item:clear_use_actions()
+    item:native_use("HEAT_ALL_ITEMS")
+    item:quality("BOIL", 2)
+    item:quality("CONTAIN", 1)
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pressurized_canister",
+        category = "tool_magazine",
+        name = ccb.content.plural_text("pressurized canister", "pressurized canisters"),
+        description = ccb.content.text("A small tank for containing pressurized gases."),
+        mass_milligrams = 25000,
+        volume_ml = 350,
+        longest_side_mm = 120,
+        price_cents = 2000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:container_pocket { max_volume_ml = 250, max_weight_milligrams = 50000, airtight = true, watertight = true, rigid = true }
+    item:clear_flags()
+    item:flag("COLLAPSE_CONTENTS")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "small_biogas_tank",
+        category = "container",
+        name = ccb.content.plural_text("small biogas tank", "small biogas tanks"),
+        description = ccb.content.text("A small tank of biogas, commonly used for camping stoves and torches."),
+        copy_from = "small_propane_tank",
+        looks_like = "small_propane_tank",
+        replace_pockets = true,
+    }
+    item:container_pocket {
+        max_volume_ml = 5000,
+        max_weight_milligrams = 1000000,
+        airtight = true,
+        rigid = true,
+        allowed_items = { "biogas" },
+    }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "medium_biogas_tank",
+        category = "container",
+        name = ccb.content.plural_text("medium biogas tank", "medium biogas tanks"),
+        description = ccb.content.text("A medium-sized tank of biogas, commonly used for barbeques."),
+        copy_from = "medium_propane_tank",
+        looks_like = "medium_propane_tank",
+        replace_pockets = true,
+    }
+    item:container_pocket {
+        max_volume_ml = 20000,
+        max_weight_milligrams = 10000000,
+        airtight = true,
+        rigid = true,
+        allowed_items = { "biogas" },
+    }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "large_biogas_tank",
+        category = "container",
+        name = ccb.content.plural_text("large biogas tank", "large biogas tanks"),
+        description = ccb.content.text("A large tank of biogas, commonly used for heating."),
+        copy_from = "large_propane_tank",
+        looks_like = "large_propane_tank",
+        replace_pockets = true,
+    }
+    item:container_pocket {
+        max_volume_ml = 75000,
+        max_weight_milligrams = 25000000,
+        airtight = true,
+        rigid = true,
+        allowed_items = { "biogas" },
+    }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "xl_biogas_tank",
+        category = "container",
+        name = ccb.content.plural_text("extra large biogas tank", "extra large biogas tanks"),
+        description = ccb.content.text("A massive tank of biogas, commonly used for heating a home or vehicle."),
+        copy_from = "xl_propane_tank",
+        looks_like = "xl_propane_tank",
+        replace_pockets = true,
+    }
+    item:container_pocket {
+        max_volume_ml = 350000,
+        max_weight_milligrams = 50000000,
+        airtight = true,
+        rigid = true,
+        allowed_items = { "biogas" },
+    }
+    item:tool()
+    content.add(item)
+end

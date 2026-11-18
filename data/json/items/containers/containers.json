@@ -37,34 +37,6 @@
     ]
   },
   {
-    "id": "bucket",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "bucket" },
-    "description": "A galvanized bucket for peanuts, chilled wine, iced beer, lobster, crab legs, French fries, animal feed, farm use, tailgating, crafts, planting flowers, holding gift baskets, containing a fruit basket and herbs, loose item storage, or as an ice bucket.",
-    "ascii_picture": "bucket",
-    "weight": "725 g",
-    "volume": "5500 ml",
-    "longest_side": "25 cm",
-    "price": "3 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel" ],
-    "symbol": ")",
-    "color": "light_gray",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "open_container": true,
-        "max_contains_volume": "5000 ml",
-        "max_contains_weight": "20 kg"
-      }
-    ],
-    "use_action": [ "HEAT_ALL_ITEMS" ],
-    "qualities": [ [ "BOIL", 2 ], [ "CONTAIN", 1 ] ]
-  },
-  {
     "id": "camelbak",
     "type": "ITEM",
     "subtypes": [ "ARMOR" ],
@@ -503,35 +475,6 @@
     "properties": { "burst_when_filled": "75" }
   },
   {
-    "id": "pressurized_canister",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tool_magazine",
-    "name": { "str": "pressurized canister" },
-    "description": "A small tank for containing pressurized gases.",
-    "weight": "25 g",
-    "volume": "350 ml",
-    "longest_side": "12 cm",
-    "price": "20 USD",
-    "price_postapoc": "5 USD",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
-    "material": [ "steel", "plastic" ],
-    "symbol": ";",
-    "color": "green",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "airtight": true,
-        "watertight": true,
-        "rigid": true,
-        "max_contains_volume": "250 ml",
-        "max_contains_weight": "50 g"
-      }
-    ],
-    "flags": [ "COLLAPSE_CONTENTS", "NO_SALVAGE" ],
-    "melee_damage": { "bash": 1 }
-  },
-  {
     "id": "small_propane_tank",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -658,82 +601,6 @@
     "charges_per_use": 1,
     "flags": [ "GAS_TANK", "NO_SALVAGE" ],
     "melee_damage": { "bash": 15 }
-  },
-  {
-    "id": "small_biogas_tank",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "container",
-    "name": { "str": "small biogas tank" },
-    "description": "A small tank of biogas, commonly used for camping stoves and torches.",
-    "copy-from": "small_propane_tank",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "airtight": true,
-        "rigid": true,
-        "max_contains_volume": "5 L",
-        "max_contains_weight": "1 kg",
-        "item_restriction": [ "biogas" ]
-      }
-    ]
-  },
-  {
-    "id": "medium_biogas_tank",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "container",
-    "name": { "str": "medium biogas tank" },
-    "description": "A medium-sized tank of biogas, commonly used for barbeques.",
-    "copy-from": "medium_propane_tank",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "airtight": true,
-        "rigid": true,
-        "max_contains_volume": "20 L",
-        "max_contains_weight": "10 kg",
-        "item_restriction": [ "biogas" ]
-      }
-    ]
-  },
-  {
-    "id": "large_biogas_tank",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "container",
-    "name": { "str": "large biogas tank" },
-    "description": "A large tank of biogas, commonly used for heating.",
-    "copy-from": "large_propane_tank",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "airtight": true,
-        "rigid": true,
-        "max_contains_volume": "75 L",
-        "max_contains_weight": "25 kg",
-        "item_restriction": [ "biogas" ]
-      }
-    ]
-  },
-  {
-    "id": "xl_biogas_tank",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "container",
-    "name": { "str": "extra large biogas tank" },
-    "description": "A massive tank of biogas, commonly used for heating a home or vehicle.",
-    "copy-from": "xl_propane_tank",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "airtight": true,
-        "rigid": true,
-        "max_contains_volume": "350 L",
-        "max_contains_weight": "50 kg",
-        "item_restriction": [ "biogas" ]
-      }
-    ]
   },
   {
     "id": "bottle_gourd",
