@@ -331,3 +331,31 @@ do
     group:item("denarius", 15)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "pawn", kind = "distribution" }
+    group:group("enchanted_wands_lesser", 3)
+    group:group("enchanted_rings_common", 1)
+    group:item("wolfshead_cufflinks", 10)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "SUS_trash_floor_light", kind = "collection" }
+    group:group("magiclysm_joke_scrolls", 1)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "SUS_trash_floor_heavy", kind = "collection" }
+    group:group("magiclysm_joke_scrolls", 1)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "manuals", kind = "distribution" }
+    group:group("spellbook_tier_0", 60)
+    group:group("spellbook_loot_0", 3)
+    group:group("dragon_books", 4)
+    content.extend_item_group(group)
+end

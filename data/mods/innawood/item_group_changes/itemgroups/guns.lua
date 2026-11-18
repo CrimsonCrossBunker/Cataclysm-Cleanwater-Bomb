@@ -226,3 +226,13 @@ do
     group:group("archery", 50)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "archery", kind = "distribution" }
+    group:item("crossbow", 70)
+    group:item("bullet_crossbow", 10)
+    group:item("hand_crossbow", 10)
+    group:item("longbow", 40)
+    group:item("shortbow", 20)
+    content.upsert_item_group(group)
+end

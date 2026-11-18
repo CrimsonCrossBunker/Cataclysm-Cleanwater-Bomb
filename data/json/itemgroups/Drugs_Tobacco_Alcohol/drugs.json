@@ -18,24 +18,6 @@
     ]
   },
   {
-    "id": "drugs_rare",
-    "type": "item_group",
-    "//": "Rare and/or valuable drugs excluding painkillers",
-    "subtype": "distribution",
-    "items": [
-      { "group": "adderall_dr_group", "prob": 10 },
-      { "group": "antibiotics_dr_group", "prob": 10 },
-      { "group": "strong_antibiotics_dr_group", "prob": 10 },
-      { "group": "antifungal_dr_group", "prob": 10 },
-      { "group": "antiparasitic_dr_group", "prob": 10 },
-      { "group": "diazepam_dr_group", "prob": 10 },
-      { "group": "iron_dr_group", "prob": 10 },
-      { "group": "prozac_dr_group", "prob": 10 },
-      { "group": "thorazine_dr_group", "prob": 10 },
-      { "group": "xanax_dr_group", "prob": 10 }
-    ]
-  },
-  {
     "type": "item_group",
     "id": "softdrugs",
     "items": [
@@ -73,23 +55,6 @@
       { "item": "elec_hairtrimmer", "prob": 2, "charges": [ 0, 50 ] },
       { "item": "nic_gum", "prob": 25, "count": [ 1, 10 ] },
       { "prob": 30, "group": "weak_antibiotic_bottle_plastic_pill_prescription_1_5" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "birth_control",
-    "subtype": "distribution",
-    "container-item": { "item": "blister_pack_small", "variant": "blister_pack_bc" },
-    "entries": [
-      {
-        "collection": [
-          { "item": "birth_control", "count": [ 0, 21 ] },
-          { "item": "homeopathic_pills", "variant": "sugar_pill", "count": 7 }
-        ],
-        "prob": 40
-      },
-      { "item": "homeopathic_pills", "variant": "sugar_pill", "count": [ 0, 6 ], "prob": 5 },
-      { "item": "birth_control", "count": [ 0, 28 ], "prob": 40 }
     ]
   }
 ]

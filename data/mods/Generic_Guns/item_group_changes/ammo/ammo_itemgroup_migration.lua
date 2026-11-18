@@ -707,3 +707,9 @@ do
     group:group("boxed_rifle_looted")
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "boxed_410", kind = "distribution" }
+    group:group("boxed_shot")
+    content.upsert_item_group(group)
+end

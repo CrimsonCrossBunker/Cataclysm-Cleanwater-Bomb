@@ -1,7 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "loincloth",
-    "items": [ [ "loincloth", 2 ], [ "loincloth_wool", 1 ], [ "loincloth_fur", 1 ], [ "loincloth_leather", 1 ] ]
-  }
-]

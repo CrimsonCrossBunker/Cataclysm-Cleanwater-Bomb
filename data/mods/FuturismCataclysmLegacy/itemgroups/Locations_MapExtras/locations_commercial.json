@@ -1,8 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "pawn",
-    "copy-from": "pawn",
-    "extend": { "items": [ [ "fcl_atomic_coffeemaker", 1 ], [ "fcl_atomic_lamp", 1 ], [ "fcl_atomic_light", 1 ] ] }
-  }
-]

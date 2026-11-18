@@ -85,3 +85,9 @@ do
     group:item("afs_titanium_bat", 40)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "weapons", kind = "distribution" }
+    group:item("afs_titanium_bat", 40)
+    content.extend_item_group(group)
+end

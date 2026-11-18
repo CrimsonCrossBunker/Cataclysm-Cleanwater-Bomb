@@ -20,3 +20,9 @@ do
     group:item("fcl_bio_monowhip", 10)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "launchers", kind = "distribution" }
+    group:item("fcl_rm802", 40)
+    content.extend_item_group(group)
+end

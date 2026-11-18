@@ -32,3 +32,11 @@ do
     group:group("pillbox_any_empty", 20)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "candy_shop", kind = "distribution" }
+    group:group("candy_chocolate", 460)
+    group:item("cookies", 50)
+    group:group("licorice_bag_plastic_4", 50)
+    content.add(group)
+end

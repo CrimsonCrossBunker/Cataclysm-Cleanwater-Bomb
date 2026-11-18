@@ -1071,3 +1071,12 @@ do
     group:entry { item = "3030", charges = { 0, 4 } }
     content.add(group)
 end
+
+do
+    -- Yes this is a bad name.  We only have one 410 shotgun right now anyways so it can be changed once there's more.
+    local group = content.ItemGroup { id = "boxed_410", kind = "distribution" }
+    group:group("boxed_410_5", 214)
+    group:group("boxed_410_10", 5)
+    group:group("boxed_410_25", 13)
+    content.upsert_item_group(group)
+end

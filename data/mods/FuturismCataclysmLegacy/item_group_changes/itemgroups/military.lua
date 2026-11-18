@@ -18,3 +18,9 @@ do
     group:item("solar_cell_v3", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "military_standard_assault_rifles", kind = "distribution" }
+    group:entry { item = "fcl_needlegun", charges = { 0, 100 }, probability = 2 }
+    content.extend_item_group(group)
+end

@@ -180,3 +180,27 @@ do
     group:group("ammo_can_slug_full", 2)
     content.add(group)
 end
+
+do
+    -- Factory specification grenade launcher ammo intended for military use
+    local group = content.ItemGroup { id = "ammo_launcher_grenade", kind = "distribution" }
+    group:item("40x53mm_m1001", 10)
+    group:item("40x46mm_m433", 120)
+    group:item("40x53mm_m430a1", 75)
+    group:item("40x46mm_m576", 15)
+    group:item("40x46mm_m651", 20)
+    content.add(group)
+end
+
+do
+    -- Ammo issued to paramilitary forces in addition to standard police issue.
+    local group = content.ItemGroup { id = "ammo_swat", kind = "distribution" }
+    group:group("ammo_cop")
+    group:entry { item = "300_winmag", charges = { 1, 10 }, probability = 5 }
+    group:entry { item = "3006fmj", charges = { 1, 20 }, probability = 2 }
+    group:entry { item = "40x46mm_m433", charges = { 1, 6 }, probability = 5 }
+    group:entry { item = "40x46mm_m651", charges = { 1, 6 }, probability = 20 }
+    group:entry { item = "556", charges = { 1, 30 }, probability = 10 }
+    group:entry { item = "shot_slug", charges = { 1, 20 }, probability = 20 }
+    content.add(group)
+end

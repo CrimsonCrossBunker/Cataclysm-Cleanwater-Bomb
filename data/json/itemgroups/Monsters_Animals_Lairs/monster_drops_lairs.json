@@ -1,8 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "ant_egg",
-    "subtype": "distribution",
-    "entries": [ { "item": "ant_egg", "prob": 5 } ]
-  }
-]

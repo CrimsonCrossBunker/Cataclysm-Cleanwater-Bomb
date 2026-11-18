@@ -1,7 +1,0 @@
-[
-  {
-    "id": "candy_shop",
-    "type": "item_group",
-    "items": [ { "group": "candy_chocolate", "prob": 460 }, [ "cookies", 50 ], { "prob": 50, "group": "licorice_bag_plastic_4" } ]
-  }
-]

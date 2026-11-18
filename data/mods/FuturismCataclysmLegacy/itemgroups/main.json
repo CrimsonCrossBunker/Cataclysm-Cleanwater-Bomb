@@ -1,8 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "launchers",
-    "copy-from": "launchers",
-    "extend": { "items": [ { "item": "fcl_rm802", "prob": 40 } ] }
-  }
-]

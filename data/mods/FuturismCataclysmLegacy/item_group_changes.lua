@@ -1,6 +1,8 @@
 require("item_group_changes.itemgroups.bionics")
 require("item_group_changes.itemgroups.collections_domestic")
+require("item_group_changes.itemgroups.electronics")
 require("item_group_changes.itemgroups.food_service")
+require("item_group_changes.itemgroups.harvest_cbm")
 require("item_group_changes.itemgroups.labs.lab_security")
 require("item_group_changes.itemgroups.locations_mapextras.locations")
 require("item_group_changes.itemgroups.locations_mapextras.locations_commercial")

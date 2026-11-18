@@ -104,3 +104,20 @@ do
     group:item("bio_microgen", 2)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bionics", kind = "distribution" }
+    group:item("bio_microgen", 5)
+    group:item("afs_bio_missiles", 10)
+    group:item("afs_bio_linguistic_coprocessor", 10)
+    group:item("afs_bio_dopamine_stimulators", 10)
+    group:item("afs_bio_neurosoft_aeronautics", 5)
+    group:item("afs_bio_neurosoft_aircraft_mechanic", 5)
+    group:item("bio_shield_weak", 25)
+    group:item("afs_bio_translocator", 5)
+    group:item("bio_shock_absorber", 2)
+    group:item("afs_bio_skullgun", 5)
+    group:item("afs_bio_beavy_batteries", 20)
+    group:item("afs_bio_chemical_enhancement_rig", 10)
+    content.extend_item_group(group)
+end

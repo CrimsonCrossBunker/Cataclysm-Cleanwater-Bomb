@@ -240,3 +240,12 @@ do
     group:item("null", 10)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "pants", kind = "distribution" }
+    group:item("leather_belt", 30)
+    group:item("pants_leather", 60)
+    group:item("skirt_leather", 5)
+    group:item("kilt", 2)
+    content.upsert_item_group(group)
+end

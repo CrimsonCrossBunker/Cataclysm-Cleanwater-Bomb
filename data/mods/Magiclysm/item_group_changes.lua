@@ -1,3 +1,4 @@
+require("item_group_changes.itemgroups.bionics")
 require("item_group_changes.itemgroups.death_drops")
 require("item_group_changes.itemgroups.itemgroups")
 require("item_group_changes.itemgroups.mutagen_kits")

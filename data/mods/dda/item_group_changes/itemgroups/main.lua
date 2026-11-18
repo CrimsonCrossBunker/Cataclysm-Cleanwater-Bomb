@@ -15,3 +15,37 @@ do
     group:item("v29", 10)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "launchers", kind = "distribution" }
+    group:item("m320", 50)
+    group:item("mgl", 60)
+    group:item("m203", 50)
+    group:item("LAW_Packed", 80)
+    group:item("m3_carlgustav", 10)
+    group:item("m4_carlgustav", 10)
+    group:item("m202_flash", 20)
+    group:item("atgm_launcher", 3)
+    group:item("atgm_heat", 6)
+    group:item("rm451_flamethrower", 40)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "archery", kind = "distribution" }
+    group:item("crossbow", 70)
+    group:item("compcrossbow", 10)
+    group:item("bullet_crossbow", 10)
+    group:item("hand_crossbow", 10)
+    group:item("bow_sling", 10)
+    group:item("longbow", 40)
+    group:item("compbow", 40)
+    group:item("shortbow", 20)
+    group:item("recurbow", 40)
+    group:item("takedown_recurbow", 2)
+    group:item("quiver_takedown_bow", 1)
+    group:item("reflexbow", 20)
+    group:item("slingshot", 50)
+    group:item("wristrocket", 50)
+    content.upsert_item_group(group)
+end

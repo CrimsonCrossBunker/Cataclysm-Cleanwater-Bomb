@@ -1,3 +1,4 @@
+require("item_group_changes.itemgroups.arcology_groups")
 require("item_group_changes.itemgroups.bionics_groups")
 require("item_group_changes.itemgroups.clothing_group")
 require("item_group_changes.itemgroups.item_groups")

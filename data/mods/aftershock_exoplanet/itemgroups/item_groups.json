@@ -1,11 +1,5 @@
 [
   {
-    "id": "kitchen",
-    "type": "item_group",
-    "copy-from": "kitchen",
-    "extend": { "items": [ [ "afs_atompot", 1 ], [ "atomic_butterchurn", 1 ] ] }
-  },
-  {
     "id": "bedroom",
     "type": "item_group",
     "copy-from": "bedroom",
@@ -16,24 +10,6 @@
     "type": "item_group",
     "copy-from": "consumer_electronics",
     "extend": { "items": [ [ "afs_atomic_smartphone", 2 ], [ "afs_imager", 2 ], [ "afs_atomic_light", 4 ], [ "STEED_registry", 1 ] ] }
-  },
-  {
-    "id": "electronics",
-    "type": "item_group",
-    "copy-from": "electronics",
-    "extend": { "items": [ [ "afs_atomic_smartphone", 1 ], [ "afs_imager", 2 ], [ "afs_atomic_light", 2 ], [ "STEED_registry", 1 ] ] }
-  },
-  {
-    "id": "subway",
-    "type": "item_group",
-    "copy-from": "subway",
-    "extend": { "items": [ [ "afs_atomic_smartphone", 1 ] ] }
-  },
-  {
-    "type": "item_group",
-    "id": "mechanics",
-    "copy-from": "mechanics",
-    "extend": { "items": [ [ "afs_imager", 5 ], [ "afs_plasma_torch", 5 ] ] }
   },
   {
     "id": "science",

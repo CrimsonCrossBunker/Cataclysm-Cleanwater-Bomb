@@ -10,11 +10,5 @@
     "id": "hospital_lab",
     "copy-from": "hospital_lab",
     "extend": { "items": [ { "group": "bionics_common", "prob": 2 } ] }
-  },
-  {
-    "id": "subway",
-    "type": "item_group",
-    "copy-from": "subway",
-    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_light", 1 ] ] }
   }
 ]

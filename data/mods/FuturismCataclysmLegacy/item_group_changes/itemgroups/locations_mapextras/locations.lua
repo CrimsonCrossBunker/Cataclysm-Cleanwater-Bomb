@@ -42,3 +42,10 @@ do
     group:item("fcl_ftk93", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "subway", kind = "distribution" }
+    group:item("fcl_atomic_smartphone", 1)
+    group:item("fcl_atomic_light", 1)
+    content.extend_item_group(group)
+end

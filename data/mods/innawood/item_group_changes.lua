@@ -1,5 +1,6 @@
 require("item_group_changes.itemgroups.clothing")
 require("item_group_changes.itemgroups.guns")
+require("item_group_changes.itemgroups.location_mapextras_locations")
 require("item_group_changes.itemgroups.monster_drops_lairs")
 require("item_group_changes.itemgroups.tools")
 require("item_group_changes.mapgen.cave")

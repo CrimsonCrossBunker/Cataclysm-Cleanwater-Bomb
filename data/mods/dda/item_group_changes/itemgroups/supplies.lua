@@ -425,3 +425,23 @@ do
     group:item("hand_controls", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "paint", kind = "distribution" }
+    group:entry { item = "paint_red", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_blue", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_yellow", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_green", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_purple", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_orange", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_pink", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_cyan", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_brown", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_white", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_black", container_group = "paintcans", probability = 45 }
+    group:entry { item = "paint_gray", container_group = "paintcans", probability = 45 }
+    group:item("chipper", 55)
+    group:item("paint_brush", 55)
+    group:entry { item = "chem_turpentine", charges = { 20, -1 }, probability = 45 }
+    content.add(group)
+end

@@ -42,3 +42,70 @@ do
     group:item("folding_solar_panel_v2", 5)
     content.add(group)
 end
+
+do
+    -- Standard (non-winter) set of clothes and combat gear worn by soldiers and paramilitary forces.
+    local group = content.ItemGroup { id = "clothing_soldier_set", kind = "collection" }
+    group:group("clothing_military")
+    group:item("elbow_pads", 10)
+    group:item("knee_pads", 85)
+    group:entry {
+        distribution = {
+            { group = "army_helmet_nvg", probability = 15 },
+            { item = "helmet_army", probability = 85 },
+        },
+        probability = 80,
+    }
+    group:item("gloves_tactical", 60)
+    group:group("military_ballistic_vest", 90)
+    group:group("molle_backpacks_and_accessories", 85)
+    group:group("clothing_tactical_leg", 15)
+    group:entry {
+        distribution = {
+            { group = "clothing_glasses", probability = 60 },
+            { item = "glasses_bal", probability = 30 },
+        },
+        probability = 20,
+    }
+    group:group("clothing_watch", 5)
+    content.add(group)
+end
+
+do
+    -- Winter set of clothes and combat gear worn by soldiers and paramilitary forces.
+    local group = content.ItemGroup { id = "clothing_soldier_winter_set", kind = "collection" }
+    group:group("clothing_military_winter")
+    group:item("elbow_pads", 10)
+    group:item("knee_pads", 85)
+    group:entry {
+        collection = {
+            {
+                distribution = {
+                    { group = "army_helmet_nvg", probability = 15 },
+                    { item = "helmet_army", probability = 85 },
+                },
+            },
+            { item = "helmet_liner" },
+        },
+        probability = 80,
+    }
+    group:entry {
+        collection = {
+            { item = "gloves_liner", probability = 60 },
+            { item = "winter_gloves_army" },
+        },
+        probability = 80,
+    }
+    group:group("military_ballistic_vest", 90)
+    group:group("molle_backpacks_and_accessories", 85)
+    group:group("clothing_tactical_leg", 15)
+    group:entry {
+        distribution = {
+            { group = "clothing_glasses", probability = 60 },
+            { item = "glasses_bal", probability = 30 },
+        },
+        probability = 20,
+    }
+    group:group("clothing_watch", 5)
+    content.add(group)
+end

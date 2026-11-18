@@ -124,3 +124,12 @@ do
     group:item("cow_candy", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "kitchen", kind = "distribution" }
+    group:item("cookies", 300)
+    group:item("grahmcrackers", 200)
+    group:item("marshmallow")
+    group:item("smores", 50)
+    content.extend_item_group(group)
+end

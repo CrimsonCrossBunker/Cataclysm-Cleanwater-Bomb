@@ -167,3 +167,32 @@ do
     group:item("material_aluminium_ingot", 20)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "subway", kind = "distribution" }
+    group:item("afs_atomic_smartphone", 1)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "kitchen", kind = "distribution" }
+    group:item("afs_atompot", 1)
+    group:item("atomic_butterchurn", 1)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mechanics", kind = "distribution" }
+    group:item("afs_imager", 5)
+    group:item("afs_plasma_torch", 5)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "electronics", kind = "distribution" }
+    group:item("afs_atomic_smartphone", 1)
+    group:item("afs_imager", 2)
+    group:item("afs_atomic_light", 2)
+    group:item("STEED_registry", 1)
+    content.extend_item_group(group)
+end

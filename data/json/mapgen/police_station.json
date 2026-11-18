@@ -94,11 +94,6 @@
     }
   },
   {
-    "type": "item_group",
-    "id": "badge_deputy",
-    "items": [ [ "badge_deputy", 100 ] ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": "police_roof",
     "object": {

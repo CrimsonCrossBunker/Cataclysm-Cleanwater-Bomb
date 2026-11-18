@@ -85,3 +85,9 @@ do
     group:item("homemade_bomb_act", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "ant_egg", kind = "distribution" }
+    group:item("ant_egg", 5)
+    content.add(group)
+end

@@ -1,12 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "kitchen",
-    "copy-from": "kitchen",
-    "extend": { "items": [ [ "cookies", 300 ], [ "grahmcrackers", 200 ], [ "marshmallow", 100 ], [ "smores", 50 ] ] }
-  },
-  {
-    "type": "item_group",
     "id": "bedroom",
     "copy-from": "bedroom",
     "extend": {

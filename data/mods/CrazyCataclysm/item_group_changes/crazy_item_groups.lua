@@ -70,3 +70,9 @@ do
     group:item("bio_chest_gun", 1)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bionics", kind = "distribution" }
+    group:item("bio_chest_gun", 5)
+    content.extend_item_group(group)
+end

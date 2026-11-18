@@ -41,3 +41,12 @@ do
     group:item("under_armor_shorts", 20)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "loincloth", kind = "distribution" }
+    group:item("loincloth", 2)
+    group:item("loincloth_wool", 1)
+    group:item("loincloth_fur", 1)
+    group:item("loincloth_leather", 1)
+    content.add(group)
+end

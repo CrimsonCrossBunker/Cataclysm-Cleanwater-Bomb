@@ -583,3 +583,59 @@ do
     group:item("valentine_card", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "manuals", kind = "distribution" }
+    group:group("manuals_school", 424)
+    group:item("manual_melee", 6)
+    group:item("manual_cutting", 12)
+    group:item("manual_stabbing", 6)
+    group:item("manual_knives", 8)
+    group:item("manual_swords", 8)
+    group:item("manual_gun", 8)
+    group:item("manual_shotgun", 6)
+    group:item("manual_rifle", 6)
+    group:item("manual_pistol", 4)
+    group:item("manual_smg", 2)
+    group:item("manual_launcher", 1)
+    group:item("text_gunsmith", 1)
+    group:item("recipe_bullets", 2)
+    group:item("recipe_melee", 2)
+    group:item("howto_traps", 10)
+    group:item("preserving_juice", 10)
+    group:item("manual_traps", 12)
+    group:item("vinegar_maker", 4)
+    group:item("dairy_book", 20)
+    group:item("winemaking_beginner", 14)
+    group:item("manual_canning", 18)
+    group:item("manual_sealing", 9)
+    group:item("vacuum_sealing", 5)
+    group:item("fermenting_book", 8)
+    group:item("distilling_cookbook", 8)
+    group:item("theater_props", 5)
+    group:item("book_pneumatics", 2)
+    group:item("cookbook_bloodforgood", 4)
+    group:item("ballista_book", 4)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "record_patient", kind = "distribution" }
+    group:item("record_patient")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "magazines", kind = "distribution" }
+    group:group("book_mag_gen", 240)
+    group:group("book_mag_interests", 220)
+    group:group("book_mag_tech", 155)
+    group:group("book_mag_combat")
+    group:group("book_gunmags", 95)
+    group:group("book_mag_surv", 90)
+    group:item("mag_porn", 20)
+    group:item("mag_comic", 20)
+    group:group("newspaper_recent", 15)
+    group:item("survnote", 1)
+    content.add(group)
+end

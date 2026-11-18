@@ -1,8 +1,0 @@
-[
-  {
-    "id": "weapons",
-    "type": "item_group",
-    "copy-from": "weapons",
-    "extend": { "items": [ [ "afs_titanium_bat", 40 ] ] }
-  }
-]

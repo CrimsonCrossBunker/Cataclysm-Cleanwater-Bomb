@@ -52,3 +52,29 @@ do
     }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "mechanics", kind = "distribution", with_ammo = 100 }
+    group:group("supplies_spares_vehicle")
+    group:group("tools_common")
+    group:group("tools_mechanic", 150)
+    group:group("supplies_metal", 20)
+    group:group("supplies_mechanics", 80)
+    group:item("goggles_welding", 50)
+    group:item("welding_book", 10)
+    group:item("welding_mask", 30)
+    group:item("welding_papr_helmet", 10)
+    group:item("throat_guard_cut_resistant", 8)
+    group:item("jerrycan", 10)
+    group:item("jerrycan_big", 10)
+    group:item("polycarbonate_sheet", 35)
+    group:item("metal_tank", 8)
+    group:entry { item = "seatbelt", count = { 1, 4 }, probability = 8 }
+    group:entry { item = "five-point_harness", count = { 1, 2 }, probability = 2 }
+    group:item("metal_tank_little", 8)
+    group:item("55gal_drum_aluminum", 1)
+    group:item("30gal_drum_aluminum", 2)
+    group:item("cu_pipe", 5)
+    group:item("survnote", 1)
+    content.upsert_item_group(group)
+end

@@ -1,43 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "manuals",
-    "copy-from": "manuals",
-    "extend": {
-      "items": [
-        { "group": "spellbook_tier_0", "prob": 60 },
-        { "group": "spellbook_loot_0", "prob": 3 },
-        { "group": "dragon_books", "prob": 4 }
-      ]
-    }
-  },
-  {
-    "id": "SUS_trash_floor_light",
-    "type": "item_group",
-    "copy-from": "SUS_trash_floor_light",
-    "subtype": "collection",
-    "extend": { "items": [ { "group": "magiclysm_joke_scrolls", "prob": 1 } ] }
-  },
-  {
-    "id": "SUS_trash_floor_heavy",
-    "type": "item_group",
-    "copy-from": "SUS_trash_floor_heavy",
-    "subtype": "collection",
-    "extend": { "items": [ { "group": "magiclysm_joke_scrolls", "prob": 1 } ] }
-  },
-  {
-    "type": "item_group",
-    "id": "pawn",
-    "copy-from": "pawn",
-    "extend": {
-      "items": [
-        { "group": "enchanted_wands_lesser", "prob": 3 },
-        { "group": "enchanted_rings_common", "prob": 1 },
-        [ "wolfshead_cufflinks", 10 ]
-      ]
-    }
-  },
-  {
     "id": "science",
     "type": "item_group",
     "copy-from": "science",
