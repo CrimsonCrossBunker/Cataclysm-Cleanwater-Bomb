@@ -11,3 +11,5 @@ require("craft_recipes")
 require("item_group_changes")
 
 require("book_items")
+
+require("effect_types")
