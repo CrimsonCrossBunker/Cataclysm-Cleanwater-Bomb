@@ -436,30 +436,6 @@
     ]
   },
   {
-    "id": "item_undine_liquid_water_pocket",
-    "type": "ITEM",
-    "category": "clothing",
-    "name": { "str": "water pocket" },
-    "description": "Your skin is capable of .",
-    "material": [ "fae_flesh" ],
-    "symbol": ")",
-    "color": "blue",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "watertight": true,
-        "max_contains_volume": "3 L",
-        "max_item_volume": "17 ml",
-        "max_contains_weight": "6 kg",
-        "volume_encumber_modifier": 0,
-        "volume_multiplier": 0,
-        "weight_multiplier": 0,
-        "item_restriction": [ "water", "water_clean", "salt_water", "water_mineral" ]
-      }
-    ],
-    "flags": [ "INTEGRATED", "PADDED", "SEMITANGIBLE", "ZERO_WEIGHT", "TARDIS", "UNBREAKABLE", "PERSONAL", "SOFT", "WATER_FRIENDLY" ]
-  },
-  {
     "id": "item_gracken_shadowstuff_pocket",
     "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],

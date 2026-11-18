@@ -61,18 +61,5 @@
     "fun": 5,
     "smoking_result": "dry_fruit",
     "vitamins": [ [ "fruit_allergen", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "id": "xe_elder_ginseng",
-    "name": { "str": "elder ginseng", "str_pl": "several elder ginseng" },
-    "//": "magical poisons, 'death' and 'bio' related",
-    "color": "white",
-    "symbol": "*",
-    "description": "A clump of off white roots in the shape of a humanoid body.  It feels strange to the touch, almost alive.",
-    "price_postapoc": "7 USD",
-    "volume": "5 ml",
-    "weight": "5 g",
-    "material": [ "veggy" ]
   }
 ]

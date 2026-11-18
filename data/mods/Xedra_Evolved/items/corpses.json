@@ -1,58 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "broken_sniperbot",
-    "symbol": "x",
-    "color": "brown",
-    "name": "broken sniper bot",
-    "category": "other",
-    "description": "A broken sniper bot.  Total scrap, but some stuff is still useful.",
-    "material": [ "lc_steel" ],
-    "weight": "40 kg",
-    "volume": "150 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_shotgunbot",
-    "symbol": "x",
-    "color": "brown",
-    "name": "broken shotgun bot",
-    "category": "other",
-    "description": "A broken shotgun bot.  Total scrap, but some stuff is still useful.",
-    "material": [ "lc_steel" ],
-    "weight": "40 kg",
-    "volume": "150 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_meleebot",
-    "symbol": "x",
-    "color": "brown",
-    "name": "broken cutthroater",
-    "category": "other",
-    "description": "A broken cutthroater.  Total scrap, but some stuff is still useful.",
-    "material": [ "lc_steel" ],
-    "weight": "40 kg",
-    "volume": "150 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_bitebot",
-    "symbol": "x",
-    "color": "brown",
-    "name": "broken bitebot",
-    "category": "other",
-    "description": "A broken bitebot.  Total scrap, but some stuff is still useful.",
-    "material": [ "lc_steel" ],
-    "weight": "40 kg",
-    "volume": "150 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
     "id": "broken_exodii_quad_jotunn",
     "symbol": ",",
     "color": "light_gray",
@@ -65,21 +13,6 @@
     "weight": "498 kg",
     "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
     "melee_damage": { "bash": 20, "cut": 15 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_dreamforged_automaton",
-    "symbol": ",",
-    "color": "light_gray",
-    "name": { "str": "broken dreamforged automaton" },
-    "category": "other",
-    "description": "The automaton is now much more broken than it was before.  It resembles a pile of random parts and its internals are fried beyond salvage but could be gutted for materials.",
-    "price": "0 USD",
-    "material": [ "lc_steel", "dreamstuff" ],
-    "volume": "210 L",
-    "weight": "195 kg",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 10 }
   },
   {
     "type": "ITEM",
@@ -126,19 +59,5 @@
     "description": "Your body, lying on the ground while your spirit walks free.  Hopefully nothing happens to it while you're gone.",
     "looks_like": "corpse_generic_human",
     "material": [ "hflesh" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_xe_golem",
-    "symbol": "x",
-    "color": "brown",
-    "name": "broken golem",
-    "category": "other",
-    "description": "A lifeless pile of clay of what once a golem.  Could be smashed for clay.",
-    "price": "0 USD",
-    "material": [ "clay" ],
-    "weight": "292490 g",
-    "volume": "200 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
   }
 ]
