@@ -1087,18 +1087,6 @@
     "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" }
   },
   {
-    "id": "lc_estoc",
-    "copy-from": "mc_estoc",
-    "type": "ITEM",
-    "name": { "str": "mild steel estoc" },
-    "description": "A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade with mild steel and lacking a proper grip, this is better than the sticks you swung around as a kid, but you know you can do better.",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "good" },
-    "replace_materials": { "mc_steel": "lc_steel", "leather": "lc_steel" },
-    "proportional": { "price_postapoc": 0.75, "price": 0.75 },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
-    "relative": { "melee_damage": { "stab": -4 }, "qualities": [ [ "BUTCHER", -1 ] ] }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "mc_estoc",
     "type": "ITEM",
@@ -1128,16 +1116,6 @@
     "melee_damage": { "bash": 11, "stab": 36 }
   },
   {
-    "id": "hc_estoc",
-    "copy-from": "mc_estoc",
-    "type": "ITEM",
-    "name": { "str": "high steel estoc" },
-    "description": "A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade with high steel and featuring a sturdy grip, this feels like a proper weapon.  The balance feels right and the blade is quite sharp.",
-    "replace_materials": { "mc_steel": "hc_steel" },
-    "proportional": { "price_postapoc": 1.05, "price": 1.05 },
-    "relative": { "melee_damage": { "stab": 4 }, "qualities": [ [ "BUTCHER", 1 ] ] }
-  },
-  {
     "id": "ch_estoc",
     "copy-from": "mc_estoc",
     "type": "ITEM",
@@ -1146,16 +1124,6 @@
     "replace_materials": { "mc_steel": "ch_steel", "leather": "kevlar" },
     "proportional": { "price_postapoc": 1.1, "price": 1.1 },
     "relative": { "melee_damage": { "stab": 5 }, "qualities": [ [ "BUTCHER", 1 ] ] }
-  },
-  {
-    "id": "qt_estoc",
-    "copy-from": "mc_estoc",
-    "type": "ITEM",
-    "name": { "str": "tempered steel estoc" },
-    "description": "A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade of tempered steel, this is a masterpiece.  The grip, the balance, the blade, all perfect.  This is the peak of the swordsmith's craft.",
-    "replace_materials": { "mc_steel": "qt_steel", "leather": "kevlar" },
-    "proportional": { "price_postapoc": 1.15, "price": 1.15 },
-    "relative": { "melee_damage": { "stab": 8 }, "qualities": [ [ "BUTCHER", 2 ] ] }
   },
   {
     "mounted_charge": null,

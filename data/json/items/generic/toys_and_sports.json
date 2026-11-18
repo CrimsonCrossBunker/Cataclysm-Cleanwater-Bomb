@@ -127,37 +127,5 @@
     "weight": "800 g",
     "volume": "3500 ml",
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "beach_volleyball",
-    "symbol": "*",
-    "color": "green",
-    "name": { "str": "beach volleyball" },
-    "category": "other",
-    "description": "A brightly colored beach volleyball.  It is slightly larger than a regular white one.",
-    "price": "12 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "rubber" ],
-    "weight": "280 g",
-    "volume": "1 L",
-    "longest_side": "27 cm",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 4 } ]
-  },
-  {
-    "type": "ITEM",
-    "id": "puck",
-    "symbol": "*",
-    "color": "dark_gray",
-    "name": { "str": "hockey puck" },
-    "category": "other",
-    "description": "A heavy circular block of solid rubber, normally used for playing hockey.  You can throw it to cause some serious harm.",
-    "price": "10 USD",
-    "price_postapoc": "0 cent",
-    "material": [ "rubber" ],
-    "weight": "170 g",
-    "volume": "250 ml",
-    "longest_side": "76 mm",
-    "thrown_damage": [ { "damage_type": "bash", "amount": 7 } ]
   }
 ]

@@ -1344,3 +1344,71 @@ do
     item:fault_group("blade_general", {  })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "javelin",
+        name = ccb.content.plural_text("wooden javelin", "wooden javelins"),
+        description = ccb.content.text("A fire-hardened wooden spear honed to a sharper point."),
+        mass_milligrams = 600000,
+        color = "brown",
+        symbol = "/",
+        techniques = { "WBLOCK_1", "MOUNTED_CHARGE" },
+        volume_ml = 1000,
+        longest_side_mm = 1400,
+        melee_to_hit = -1,
+        weapon_categories = { "SPEARS" },
+        price_cents = 4000,
+        price_postapoc_cents = 250,
+        replace_qualities = true,
+    }
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("SHEATH_SPEAR")
+    item:flag("JAVELIN")
+    item:quality("COOK", 1)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("stab", 11)
+    item:throwing_damage { { type = "bash", amount = 5 }, { type = "stab", amount = 11 } }
+    item:mounted_charge { max_steps = 15, damage_type = "stab", multiplier_per_step = 0.1, max_multiplier = 1.5 }
+    item:fault_group("staff_long", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "javelin_iron",
+        name = ccb.content.plural_text("iron javelin", "iron javelins"),
+        description = ccb.content.text("An iron-tipped wooden throwing spear."),
+        mass_milligrams = 960000,
+        color = "light_gray",
+        symbol = "/",
+        techniques = { "WBLOCK_1", "MOUNTED_CHARGE" },
+        volume_ml = 1000,
+        longest_side_mm = 1400,
+        melee_to_hit = -1,
+        weapon_categories = { "SPEARS" },
+        price_cents = 9000,
+        price_postapoc_cents = 500,
+        replace_qualities = true,
+    }
+    item:material("wood", 1)
+    item:material("iron", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_SPEAR")
+    item:flag("JAVELIN")
+    item:quality("COOK", 1)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:melee_damage("stab", 19)
+    item:throwing_damage { { type = "bash", amount = 5 }, { type = "stab", amount = 17 } }
+    item:mounted_charge { max_steps = 15, damage_type = "stab", multiplier_per_step = 0.1, max_multiplier = 1.5 }
+    item:fault_group("handle_long", { weight_multiplier = 4 })
+    item:fault_group("spearhead", {  })
+    content.add(item)
+end

@@ -1598,3 +1598,138 @@ do
     item:replace_material("mc_steel", "qt_steel")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "hammer_sledge",
+        name = ccb.content.plural_text("sledge hammer", "sledge hammers"),
+        description = ccb.content.text("A large, heavy hammer.  A very hard-hitting melee weapon, but it's slow to swing and will probably exhaust you quickly."),
+        mass_milligrams = 4250000,
+        color = "brown",
+        symbol = "/",
+        weapon_categories = { "GREAT_HAMMERS" },
+        techniques = { "WBLOCK_1", "BRUTAL" },
+        volume_ml = 1250,
+        longest_side_mm = 800,
+        melee_to_hit = 1,
+        price_cents = 12000,
+        price_postapoc_cents = 500,
+        replace_qualities = true,
+    }
+    item:material("wood", 1)
+    item:material("mc_steel", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("ALWAYS_TWOHAND")
+    item:quality("HAMMER", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 50)
+    item:throwing_damage { { type = "bash", amount = 12 } }
+    item:fault_group("handle_long", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hammer_sledge_short",
+        copy_from = "hammer_sledge",
+        name = ccb.content.plural_text("short sledge hammer", "short sledge hammers"),
+        description = ccb.content.text("A sledge hammer with a notably shorter handle.  This makes it worse as a melee weapon, but a more portable tool."),
+        looks_like = "hammer_sledge",
+        melee_to_hit = -2,
+    }
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:throwing_damage { { type = "bash", amount = 9 } }
+    item:adjust_measurements {
+        longest_side_mm = { offset = -200 },
+        price_postapoc_cents = { offset = -150 },
+        volume_ml = { offset = -350 },
+        mass_milligrams = { offset = -250000 },
+    }
+    item:adjust_melee_damage { bonuses = { bash = -15 } }
+    item:fault_group("handle_short", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hammer_sledge_engineer",
+        copy_from = "hammer_sledge",
+        looks_like = "hammer_sledge",
+        name = ccb.content.plural_text("engineer's hammer", "engineer's hammers"),
+        description = ccb.content.text("A stout and hefty hammer, more akin to a sledge than a typical ball-peen.  Useful for portable demolition work, but very unwieldy as a weapon."),
+        techniques = { "WBLOCK_1" },
+        melee_to_hit = -2,
+    }
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("BELT_CLIP")
+    item:throwing_damage { { type = "bash", amount = 6 } }
+    item:adjust_quality("HAMMER", 1)
+    item:adjust_measurements {
+        longest_side_mm = { factor = 0.5 },
+        price_cents = { factor = 0.5 },
+        price_postapoc_cents = { factor = 0.5 },
+        volume_ml = { factor = 0.5 },
+        mass_milligrams = { factor = 0.5 },
+    }
+    item:adjust_melee_damage { factors = { bash = 0.5 } }
+    item:fault_group("handle_short", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hammer_sledge_heavy",
+        copy_from = "hammer_sledge",
+        looks_like = "hammer_sledge",
+        name = ccb.content.plural_text("heavy sledge hammer", "heavy sledge hammers"),
+        description = ccb.content.text("A large sledge hammer with a massive, heavy head.  This unwieldy tool is meant to break concrete, rock, brick, anything really."),
+        melee_to_hit = 0,
+    }
+    item:throwing_damage { { type = "bash", amount = 20 } }
+    item:adjust_measurements {
+        longest_side_mm = { offset = 200 },
+        price_cents = { factor = 2 },
+        price_postapoc_cents = { factor = 2 },
+        volume_ml = { offset = 450 },
+        mass_milligrams = { offset = 5250000 },
+    }
+    item:adjust_melee_damage { bonuses = { bash = 30 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hammer_sledge_crude",
+        name = ccb.content.plural_text("homewrecker", "homewreckers"),
+        description = ccb.content.text("Chunks of steel welded together affixed to a wooden handle.  Not the most elegant and ugly as all hell, but still mostly works."),
+        mass_milligrams = 4500000,
+        color = "brown",
+        symbol = "/",
+        weapon_categories = { "GREAT_HAMMERS" },
+        techniques = { "WBLOCK_1", "BRUTAL" },
+        volume_ml = 1450,
+        longest_side_mm = 800,
+        melee_to_hit = 1,
+        price_cents = 500,
+        price_postapoc_cents = 200,
+        replace_qualities = true,
+    }
+    item:material("wood", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("ALWAYS_TWOHAND")
+    item:quality("HAMMER", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 40)
+    item:throwing_damage { { type = "bash", amount = 12 } }
+    item:fault_group("handle_long", {  })
+    content.add(item)
+end

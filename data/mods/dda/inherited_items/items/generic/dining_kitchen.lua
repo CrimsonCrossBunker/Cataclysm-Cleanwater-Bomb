@@ -87,3 +87,59 @@ do
     item:melee_damage("bash", 7)
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "steel_pan",
+        category = "tools",
+        name = ccb.content.plural_text("steel frying pan", "steel frying pans"),
+        description = ccb.content.text("A steel frying pan.  Makes a decent melee weapon, and is used for cooking."),
+        copy_from = "base_cookpot",
+        color = "light_gray",
+        looks_like = "pan",
+        mass_milligrams = 660000,
+        volume_ml = 3000,
+        longest_side_mm = 350,
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:container_pocket {
+        max_volume_ml = 1000,
+        max_weight_milligrams = 1000000,
+        watertight = true,
+        open_container = true,
+        rigid = true,
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:adjust_quality("COOK", -1)
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "copper_pan",
+        category = "tools",
+        name = ccb.content.plural_text("copper frying pan", "copper frying pans"),
+        description = ccb.content.text("A copper frying pan, coated in a thin layer of tin.  Makes a decent melee weapon, and is used for cooking."),
+        copy_from = "base_cookpot",
+        color = "light_red",
+        looks_like = "pan",
+        mass_milligrams = 628000,
+        volume_ml = 3000,
+        longest_side_mm = 350,
+        replace_pockets = true,
+    }
+    item:material("copper", 1)
+    item:container_pocket {
+        max_volume_ml = 1000,
+        max_weight_milligrams = 1000000,
+        watertight = true,
+        open_container = true,
+        rigid = true,
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 7)
+    item:adjust_quality("COOK", -1)
+    content.add(item)
+end

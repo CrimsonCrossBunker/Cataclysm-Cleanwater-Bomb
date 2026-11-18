@@ -578,3 +578,54 @@ do
     item:fault_group("blade_general", {  })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "lc_estoc",
+        copy_from = "mc_estoc",
+        looks_like = "mc_estoc",
+        name = ccb.content.plural_text("mild steel estoc", "mild steel estocs"),
+        description = ccb.content.text("A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade with mild steel and lacking a proper grip, this is better than the sticks you swung around as a kid, but you know you can do better."),
+        melee_to_hit = 0,
+    }
+    item:clear_flags()
+    item:flag("CONDUCTIVE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_quality("BUTCHER", -1)
+    item:adjust_measurements { price_cents = { factor = 0.75 }, price_postapoc_cents = { factor = 0.75 } }
+    item:adjust_melee_damage { bonuses = { stab = -4 } }
+    item:replace_material("leather", "lc_steel")
+    item:replace_material("mc_steel", "lc_steel")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hc_estoc",
+        copy_from = "mc_estoc",
+        looks_like = "mc_estoc",
+        name = ccb.content.plural_text("high steel estoc", "high steel estocs"),
+        description = ccb.content.text("A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade with high steel and featuring a sturdy grip, this feels like a proper weapon.  The balance feels right and the blade is quite sharp."),
+    }
+    item:adjust_quality("BUTCHER", 1)
+    item:adjust_measurements { price_cents = { factor = 1.05 }, price_postapoc_cents = { factor = 1.05 } }
+    item:adjust_melee_damage { bonuses = { stab = 4 } }
+    item:replace_material("mc_steel", "hc_steel")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "qt_estoc",
+        copy_from = "mc_estoc",
+        looks_like = "mc_estoc",
+        name = ccb.content.plural_text("tempered steel estoc", "tempered steel estocs"),
+        description = ccb.content.text("A thin thrusting sword, a sort of predecessor to the rapier.  It requires a larger baldric or scabbard, compared to smaller swords.\n\nMade of tempered steel, this is a masterpiece.  The grip, the balance, the blade, all perfect.  This is the peak of the swordsmith's craft."),
+    }
+    item:adjust_quality("BUTCHER", 2)
+    item:adjust_measurements { price_cents = { factor = 1.15 }, price_postapoc_cents = { factor = 1.15 } }
+    item:adjust_melee_damage { bonuses = { stab = 8 } }
+    item:replace_material("leather", "kevlar")
+    item:replace_material("mc_steel", "qt_steel")
+    content.add(item)
+end

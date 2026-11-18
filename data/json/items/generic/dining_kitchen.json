@@ -298,56 +298,6 @@
   {
     "type": "ITEM",
     "category": "tools",
-    "id": "steel_pan",
-    "name": { "str": "steel frying pan" },
-    "description": "A steel frying pan.  Makes a decent melee weapon, and is used for cooking.",
-    "copy-from": "base_cookpot",
-    "material": [ "steel" ],
-    "color": "light_gray",
-    "looks_like": "pan",
-    "weight": "660 g",
-    "volume": "3 L",
-    "longest_side": "35 cm",
-    "pocket_data": [
-      {
-        "max_contains_volume": "1 L",
-        "max_contains_weight": "1 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "relative": { "qualities": [ [ "COOK", -1 ] ] },
-    "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "copper_pan",
-    "name": { "str": "copper frying pan" },
-    "description": "A copper frying pan, coated in a thin layer of tin.  Makes a decent melee weapon, and is used for cooking.",
-    "copy-from": "base_cookpot",
-    "material": [ "copper" ],
-    "color": "light_red",
-    "looks_like": "pan",
-    "weight": "628 g",
-    "volume": "3 L",
-    "longest_side": "35 cm",
-    "pocket_data": [
-      {
-        "max_contains_volume": "1 L",
-        "max_contains_weight": "1 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "relative": { "qualities": [ [ "COOK", -1 ] ] },
-    "melee_damage": { "bash": 7 }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
     "id": "kettle",
     "name": { "str": "kettle" },
     "description": "A stovetop kettle for boiling water.",
