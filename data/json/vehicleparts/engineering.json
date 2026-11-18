@@ -1,12 +1,5 @@
 [
   {
-    "id": "crane_pseudo_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_butcher_rack",
-    "name": { "str_sp": "suspending for butchering" }
-  },
-  {
     "id": "crane_medium",
     "type": "vehicle_part",
     "name": { "str": "boom crane" },
