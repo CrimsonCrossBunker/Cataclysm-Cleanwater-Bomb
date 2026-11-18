@@ -156,3 +156,5 @@ require("field_emissions")
 require("disassembly")
 
 require("craft_recipes")
+
+require("practice_recipes")
