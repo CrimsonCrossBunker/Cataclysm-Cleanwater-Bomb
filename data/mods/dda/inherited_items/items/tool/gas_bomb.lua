@@ -140,3 +140,80 @@ do
     item:flag("SPAWN_ACTIVE")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "tool_rocket_candy",
+        category = "weapons",
+        name = ccb.content.plural_text("rocket candy", "rocket candies"),
+        description = ccb.content.text("A pear-shaped chunk of rocket candy obtained by heating saltpeter with sugar and casting the obtained liquid.  Can serve as a rocket fuel, but also as a smokescreen - if you light the narrow end, you should be able to throw it before the flame reaches the broad end."),
+        mass_milligrams = 250000,
+        volume_ml = 250,
+        price_cents = 100,
+        price_postapoc_cents = 100,
+        symbol = "*",
+        color = "green",
+    }
+    item:material("powder_nonflam", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "tool_rocket_candy_primed" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Light up"),
+        message = ccb.content.text("You light the rocket candy on fire.  Throw it!"),
+        need_fire = 1,
+    }
+    item:clear_flags()
+    item:flag("RADIO_MODABLE")
+    item:flag("RADIO_INVOKE_PROC")
+    item:flag("BOMB")
+    item:flag("ACT_IN_FIRE")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "tool_rocket_candy_primed",
+        copy_from = "tool_rocket_candy",
+        looks_like = "tool_rocket_candy",
+        description = ccb.content.text("A chunk of rocket candy that has been ignited and burns with a loud hiss."),
+        countdown_turns = 5,
+    }
+    item:clear_use_actions()
+    item:message_on_use {
+        message = ccb.content.text("You've already lit the rocket candy, try throwing it instead."),
+        menu_text = ccb.content.text("Light up"),
+    }
+    item:clear_flags()
+    item:flag("DANGEROUS")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "tool_rocket_candy_act" }
+    item:tool()
+    item:clear_tick_actions()
+    item:sound_on_tick { message = ccb.content.text("ssss…"), volume = 5, sound_id = "misc", sound_variant = "lit_fuse" }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "tool_rocket_candy_act",
+        copy_from = "tool_rocket_candy",
+        looks_like = "tool_rocket_candy",
+        description = ccb.content.text("A chunk of rocket candy that burns with a loud hiss, spewing forth large amounts of smoke."),
+        countdown_turns = 30,
+        field_emissions = { "emit_smoke_stream" },
+    }
+    item:clear_use_actions()
+    item:message_on_use {
+        message = ccb.content.text("You've already lit the rocket candy, try throwing it instead."),
+        menu_text = ccb.content.text("Light up"),
+    }
+    item:clear_flags()
+    item:flag("DANGEROUS")
+    item:flag("SPAWN_ACTIVE")
+    item:tool()
+    item:clear_tick_actions()
+    item:sound_on_tick { message = ccb.content.text("ssss…"), volume = 10, sound_id = "misc", sound_variant = "lit_fuse" }
+    content.add(item)
+end
