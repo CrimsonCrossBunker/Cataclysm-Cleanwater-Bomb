@@ -6266,6 +6266,11 @@ function CcbPlatformContent.OvermapTerrain(options) end
 ---@return OvermapSpecialDefinition
 function CcbPlatformContent.OvermapSpecial(options) end
 
+---At bootstrap, append flags to a native special or one staged by this Mod.
+---@param id string Existing overmap special ID.
+---@param flags string[] Non-empty list of flags to append.
+function CcbPlatformContent.extend_overmap_special_flags(id, flags) end
+
 ---@param options VehiclePartDefinitionOptions
 ---@return VehiclePartDefinition
 function CcbPlatformContent.VehiclePart(options) end

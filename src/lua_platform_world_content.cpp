@@ -1795,6 +1795,7 @@ struct world_content_transaction::impl {
     std::vector<registration<npc_data>> npcs;
     std::vector<registration<overmap_terrain_data>> overmap_terrains;
     std::vector<registration<overmap_special_data>> overmap_specials;
+    std::map<std::string, std::set<std::string>> overmap_special_flag_additions;
     std::vector<registration<vehicle_part_data>> vehicle_parts;
     std::vector<registration<vehicle_data>> vehicles;
 
@@ -2451,6 +2452,22 @@ void world_content_transaction::impl::install_overmap_special_api( sol::table &c
     // The native loader treats city_building as a fixed overmap_special alias.
     // Keep one implementation and registry path while exposing both authoring names.
     content["CityBuilding"] = content["OvermapSpecial"];
+    content.set_function( "extend_overmap_special_flags",
+    [this, owner]( const std::string & id, const sol::table & flags ) {
+        if( owner->state != lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        const std::vector<std::string> additional = read_dense_array<std::string>(
+                    flags, "overmap special flags" );
+        if( id.empty() || additional.empty() ||
+            std::any_of( additional.begin(), additional.end(), []( const std::string & flag ) {
+            return flag.empty();
+        } ) ) {
+            throw std::invalid_argument( "extend_overmap_special_flags requires an id and non-empty flags" );
+        }
+        std::set<std::string> &staged = overmap_special_flag_additions[id];
+        staged.insert( additional.begin(), additional.end() );
+    } );
 }
 
 void world_content_transaction::impl::install_vehicle_part_api( sol::table &content ) const
@@ -4006,6 +4023,16 @@ void world_content_transaction::impl::apply_overmap_special()
         }
         detail::overmap_special_registry().insert( native );
     }
+    for( const auto &[id, flags] : overmap_special_flag_additions ) {
+        const overmap_special_id target( id );
+        if( !target.is_valid() ) {
+            throw std::runtime_error( "cannot extend flags of unknown overmap special '" + id + "'" );
+        }
+        overmap_special native = target.obj();
+        overmap_special_undo.emplace_back( target, native );
+        native.flags_.insert( flags.begin(), flags.end() );
+        detail::overmap_special_registry().insert( native );
+    }
 }
 
 void world_content_transaction::impl::apply_vehicle_part( std::string &error )
@@ -4785,6 +4812,11 @@ void world_content_transaction::append_fingerprint( std::uint64_t &state ) const
     hash_registrations( state, "npc", pimpl_->npcs );
     hash_registrations( state, "overmap_terrain", pimpl_->overmap_terrains );
     hash_registrations( state, "overmap_special", pimpl_->overmap_specials );
+    for( const auto &[id, flags] : pimpl_->overmap_special_flag_additions ) {
+        hash_part( state, "extend_overmap_special_flags" );
+        hash_part( state, id );
+        hash_strings( state, flags );
+    }
     hash_registrations( state, "vehicle_part", pimpl_->vehicle_parts );
     hash_registrations( state, "vehicle", pimpl_->vehicles );
 }
