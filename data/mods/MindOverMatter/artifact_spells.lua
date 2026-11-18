@@ -17,6 +17,20 @@ local function add_spell(options)
 end
 
 add_spell {
+    id = "MoM_AEA_BIOKINETIC_AWAKENING",
+    name = "MoM Artifact Biokinetic Awakening",
+    description = "Causes the artifact to awaken you as a biokinetic.",
+    message = "",
+    valid_targets = { "self" },
+    skill = "metaphysics",
+    shape = "blast",
+    base_casting_time = 100,
+    flags = { "NO_PROJECTILE", "NO_EXPLOSION_SFX" },
+    additional_spells = { calorie_cost },
+    impact = "awaken_from_biokinetic_artifact",
+}
+
+add_spell {
     id = "MoM_AEA_EXTRA_CALORIE_COST",
     name = "MoM Artifact Extra calories",
     description = "Causes the artifact to take even more calories than usual.",
