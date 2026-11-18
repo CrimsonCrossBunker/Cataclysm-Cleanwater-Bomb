@@ -797,9 +797,31 @@ function ItemDefinition:book(options) end
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label, description) end
 
----Ensure the item has a native armor slot. Missing armor receives native defaults with no covered body parts; inherited armor data remains intact.
+---@class ArmorDefinitionOptions
+---@field warmth? integer Native signed-int warmth. Omission inherits; new armor defaults to zero.
+---@field max_worn? integer Native signed-int per-type wear limit. Omission inherits or retains the engine default.
+
+---Ensure the item has a native armor slot. Missing armor receives native defaults with no covered body parts; unspecified inherited armor data remains intact.
+---@param options? ArmorDefinitionOptions
 ---@return ItemDefinition self
-function ItemDefinition:armor() end
+function ItemDefinition:armor(options) end
+
+---@class ArmorPortionDefinitionOptions
+---@field covers string[] Body-part IDs covered by this portion. An empty array covers none.
+---@field sub_parts? string[] Explicit covered sub-body-part IDs. Omission retains native body-part expansion during finalization.
+---@field encumbrance? integer Native signed-int encumbrance; defaults to zero.
+---@field coverage? integer Native signed-int coverage; also supplies melee and ranged coverage. Vitals coverage retains the native zero default.
+
+---Append one native armor portion, ensuring an armor slot exists. Native finalization derives layers, sub-part aggregation and material properties.
+---@param options ArmorPortionDefinitionOptions
+---@return ItemDefinition self
+function ItemDefinition:armor_portion(options) end
+
+---Accumulate an ammunition type and positive native signed-int capacity into one appended rigid ammunition-storage pocket. This leaves the item's native magazine subtype unchanged.
+---@param ammo_type string Existing or same-transaction ammunition-type ID.
+---@param capacity integer Positive native signed-int capacity.
+---@return ItemDefinition self
+function ItemDefinition:ammo_pocket(ammo_type, capacity) end
 
 ---Remove inherited native activation actions and any on_use staged before this call.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.

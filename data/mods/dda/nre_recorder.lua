@@ -96,10 +96,40 @@ recorder:tool { ammo_types = { "battery" }, charges_per_use = 10 }
 recorder:magazine_well { rigid = true, flags = { "BATTERY_MEDIUM" }, default_magazine = "medium_battery_cell" }
 recorder:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Activate the recorder's printer."))
 ccb.content.add(recorder)
-local station = ccb.content.Item { id = "robofac_mobile_weather_station", copy_from = "robofac_mobile_weather_station" }
-station:clear_use_actions()
-station:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Print NRE data."))
-ccb.content.replace(station)
+for _, options in ipairs {
+    {
+        id = "xedra_mobile_weather_station", name = ccb.content.text("mobile hazardous environment weather station"),
+        -- Based on the ecoTech Mini Met and aem weather backpacks, with interdimensional equipment.
+        description = ccb.content.text("A sleek black case housing a mix of mundane and otherworldly devices that can be deployed from the top of the box.  It is also equipped with a built-in analysis computer, a small thermal printer, and a rechargeable battery.  The case itself is outfitted with back straps and a telescoping stand.  \"X.E.D.R.A.\" and \"HE weather station\" are engraved on the case."),
+        mass_grams = 6000, color = "black",
+    },
+    {
+        id = "robofac_mobile_weather_station", name = ccb.content.text("mobile HEW-NRE station"),
+        description = ccb.content.text("A brown and white case housing equipment to measure atmospheric conditions in extremely hazardous environments.  It is equipped with several deployable sensors, a Hub 01 NRE recorder, a built-in analysis computer, a thermal printer, and a rechargeable battery.  The case itself is outfitted with back straps and a telescoping stand.  The Hub 01 logo is displayed proudly on the case lid."),
+        mass_grams = 6230, color = "brown",
+    },
+} do
+    options.volume_ml = 90000
+    options.longest_side_mm = 600
+    options.price_cents = 90000
+    options.price_postapoc_cents = 4050
+    options.symbol = "["
+    options.looks_like = "briefcase"
+    local station = ccb.content.Item(options)
+    station:material("plastic", 1)
+    station:material("aluminum", 1)
+    for _, flag in ipairs { "BELTED", "ELECTRONIC", "WATERPROOF", "NO_UNLOAD", "NO_RELOAD", "RECHARGE" } do
+        station:flag(flag)
+    end
+    station:tool { charges_per_use = 1 }
+    station:armor { warmth = 10, max_worn = 1 }
+    station:armor_portion { covers = { "torso" }, sub_parts = { "torso_hanging_back" }, encumbrance = 30, coverage = 80 }
+    station:ammo_pocket("battery", 1000)
+    if options.id == "robofac_mobile_weather_station" then
+        station:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Print NRE data."))
+    end
+    ccb.content.add(station)
+end
 
 local significant = {
     mon_hound_tindalos = true, mon_darkman = true, mon_zombie_phase_shrike = true,

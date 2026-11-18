@@ -46,6 +46,8 @@ extern "C" {
 #include "ammo_effect.h"
 #include "butchery.h"
 #include "butchery_requirements.h"
+#include "body_part_set.h"
+#include "bodypart.h"
 #include "calendar.h"
 #include "color.h"
 #include "coordinates.h"
@@ -74,6 +76,7 @@ extern "C" {
 #include "requirements.h"
 #include "scent_map.h"
 #include "skill.h"
+#include "subbodypart.h"
 #include "translation.h"
 #include "type_id.h"
 #include "units.h"
@@ -158,6 +161,16 @@ struct item_definition_data {
         std::optional<std::string> default_magazine;
         std::set<std::string> flags;
     };
+    struct armor_data {
+        std::optional<std::int64_t> warmth;
+        std::optional<std::int64_t> max_worn;
+    };
+    struct armor_portion_definition {
+        std::set<std::string> covers;
+        std::set<std::string> sub_parts;
+        std::int64_t encumbrance = 0;
+        std::int64_t coverage = 0;
+    };
     struct ammunition_data {
         std::string type;
         std::optional<std::int64_t> count;
@@ -222,6 +235,9 @@ struct item_definition_data {
     bool has_armor = false;
     std::optional<tool_data> tool;
     std::vector<magazine_well_data> magazine_wells;
+    std::optional<armor_data> armor;
+    std::vector<armor_portion_definition> armor_portions;
+    std::map<std::string, std::int64_t> ammo_pocket;
     std::vector<std::string> passive_enchantments;
     std::string use_handler;
     std::string tick_handler;
@@ -930,9 +946,49 @@ struct item_definition_handle {
         return *this;
     }
 
-    item_definition_handle &armor() {
+    item_definition_handle &armor( const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "item" );
+        if( options ) {
+            auto value = definition->armor.value_or( item_definition_data::armor_data{} );
+            if( const auto warmth = options->get<sol::optional<std::int64_t>>( "warmth" ) ) {
+                value.warmth = *warmth;
+            }
+            if( const auto worn = options->get<sol::optional<std::int64_t>>( "max_worn" ) ) {
+                value.max_worn = *worn;
+            }
+            definition->armor = std::move( value );
+        }
         definition->has_armor = true;
+        return *this;
+    }
+
+    item_definition_handle &armor_portion( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::armor_portion_definition value;
+        const sol::table covers = options.get<sol::table>( "covers" );
+        const std::size_t count = require_dense_array( covers, "armor covered parts", 0 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            value.covers.insert( covers.get<std::string>( index ) );
+        }
+        if( const auto sub_parts = options.get<sol::optional<sol::table>>( "sub_parts" ) ) {
+            const std::size_t sub_count = require_dense_array( *sub_parts, "armor covered subparts", 0 );
+            for( std::size_t index = 1; index <= sub_count; ++index ) {
+                value.sub_parts.insert( sub_parts->get<std::string>( index ) );
+            }
+        }
+        value.encumbrance = options.get_or<std::int64_t>( "encumbrance", 0 );
+        value.coverage = options.get_or<std::int64_t>( "coverage", 0 );
+        definition->armor_portions.push_back( std::move( value ) );
+        definition->has_armor = true;
+        return *this;
+    }
+
+    item_definition_handle &ammo_pocket( const std::string &ammo, std::int64_t capacity ) {
+        require_building_handle( token, *definition, "item" );
+        if( ammo.empty() || capacity <= 0 || capacity > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "ammo pocket requires an ammunition type and positive native capacity" );
+        }
+        definition->ammo_pocket[ammo] = capacity;
         return *this;
     }
 
@@ -2600,6 +2656,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "tool", &item_definition_handle::tool,
         "magazine_well", &item_definition_handle::magazine_well,
         "armor", &item_definition_handle::armor,
+        "armor_portion", &item_definition_handle::armor_portion,
+        "ammo_pocket", &item_definition_handle::ammo_pocket,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
@@ -4483,6 +4541,31 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' has invalid magazine ammo" );
                 }
             }
+            for( const auto &[ammo, capacity] : definition.ammo_pocket ) {
+                if( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) {
+                    throw std::runtime_error( "item '" + definition.id + "' references unknown pocket ammo '" + ammo + "'" );
+                }
+            }
+            if( definition.armor &&
+                ( ( definition.armor->warmth && !native_int( *definition.armor->warmth ) ) ||
+                  ( definition.armor->max_worn && !native_int( *definition.armor->max_worn ) ) ) ) {
+                throw std::runtime_error( "item '" + definition.id + "' has invalid armor values" );
+            }
+            for( const auto &portion : definition.armor_portions ) {
+                if( !native_int( portion.encumbrance ) || !native_int( portion.coverage ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has invalid armor portion values" );
+                }
+                for( const std::string &part : portion.covers ) {
+                    if( part.empty() || ( check_engine_state && !bodypart_str_id( part ).is_valid() ) ) {
+                        throw std::runtime_error( "item '" + definition.id + "' references unknown body part '" + part + "'" );
+                    }
+                }
+                for( const std::string &part : portion.sub_parts ) {
+                    if( part.empty() || ( check_engine_state && !sub_bodypart_str_id( part ).is_valid() ) ) {
+                        throw std::runtime_error( "item '" + definition.id + "' references unknown body subpart '" + part + "'" );
+                    }
+                }
+            }
             if( definition.has_magazine_capacity &&
                 ( definition.magazine_capacity <= 0 || !native_int( definition.magazine_capacity ) ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has an invalid magazine capacity" );
@@ -5797,6 +5880,37 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.has_armor && !native->armor ) {
                         native->armor = cata::make_value<islot_armor>();
                         native->armor->was_loaded = true;
+                    }
+                    if( definition.armor ) {
+                        if( definition.armor->warmth ) {
+                            native->armor->warmth = static_cast<int>( *definition.armor->warmth );
+                        }
+                        if( definition.armor->max_worn ) {
+                            native->max_worn = static_cast<int>( *definition.armor->max_worn );
+                        }
+                    }
+                    for( const auto &portion : definition.armor_portions ) {
+                        armor_portion_data data;
+                        data.covers = body_part_set();
+                        for( const std::string &part : portion.covers ) {
+                            data.covers->set( bodypart_str_id( part ) );
+                        }
+                        for( const std::string &part : portion.sub_parts ) {
+                            data.sub_coverage.insert( sub_bodypart_str_id( part ) );
+                        }
+                        data.encumber = static_cast<int>( portion.encumbrance );
+                        data.coverage = static_cast<int>( portion.coverage );
+                        data.cover_melee = data.coverage;
+                        data.cover_ranged = data.coverage;
+                        native->armor->sub_data.push_back( std::move( data ) );
+                    }
+                    if( !definition.ammo_pocket.empty() ) {
+                        pocket_data pocket( pocket_type::MAGAZINE );
+                        pocket.was_loaded = true;
+                        for( const auto &[ammo, capacity] : definition.ammo_pocket ) {
+                            pocket.ammo_restriction.emplace( ammotype( ammo ), static_cast<int>( capacity ) );
+                        }
+                        native->pockets.push_back( std::move( pocket ) );
                     }
                     for( const std::string &name : definition.passive_enchantments ) {
                         const enchantment_id id( name );
@@ -7163,6 +7277,28 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                 }
                 hash_part( state, v.has_armor ? "armor" : "inherit_armor" );
+                if( v.armor ) {
+                    hash_part( state, v.armor->warmth ? std::to_string( *v.armor->warmth ) : "inherit_warmth" );
+                    hash_part( state, v.armor->max_worn ? std::to_string( *v.armor->max_worn ) : "inherit_max_worn" );
+                }
+                for( const auto &portion : v.armor_portions ) {
+                    hash_part( state, "armor_portion" );
+                    hash_part( state, std::to_string( portion.encumbrance ) );
+                    hash_part( state, std::to_string( portion.coverage ) );
+                    for( const std::string &part : portion.covers ) {
+                        hash_part( state, "body_part" );
+                        hash_part( state, part );
+                    }
+                    for( const std::string &part : portion.sub_parts ) {
+                        hash_part( state, "sub_part" );
+                        hash_part( state, part );
+                    }
+                }
+                for( const auto &[ammo, capacity] : v.ammo_pocket ) {
+                    hash_part( state, "ammo_pocket" );
+                    hash_part( state, ammo );
+                    hash_part( state, std::to_string( capacity ) );
+                }
                 for( const std::string &enchantment : v.passive_enchantments ) {
                     hash_part( state, "passive_enchantment" );
                     hash_part( state, enchantment );
