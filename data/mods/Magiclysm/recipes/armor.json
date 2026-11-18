@@ -21,13 +21,6 @@
     "components": [ [ [ "cordage_superior", 1, "LIST" ] ], [ [ "demon_chitin_plate", 1 ] ], [ [ "demon_chitin_piece", 1 ] ] ]
   },
   {
-    "result": "xl_armor_chitin",
-    "type": "recipe",
-    "copy-from": "armor_chitin",
-    "time": "5 h 30 m",
-    "components": [ [ [ "cordage_superior", 1, "LIST" ] ], [ [ "demon_chitin_plate", 1 ] ], [ [ "demon_chitin_piece", 3 ] ] ]
-  },
-  {
     "result": "armguard_demonchitin",
     "byproducts": [ [ "demon_chitin_piece", 8 ] ],
     "qualities": [

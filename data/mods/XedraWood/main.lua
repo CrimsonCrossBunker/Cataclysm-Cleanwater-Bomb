@@ -79,3 +79,5 @@ require("food_recipes")
 require("stepped_recipes")
 
 require("retired_recipes")
+
+require("armor_recipes")
