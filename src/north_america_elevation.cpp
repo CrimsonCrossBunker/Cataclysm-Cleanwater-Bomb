@@ -3,18 +3,27 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <exception>
+#include <fstream>
 #include <functional>
+#include <ios>
 #include <istream>
+#include <stdexcept>
 #include <string_view>
+#include <utility>
 #include <vector>
+#include <zlib.h>
 
 #include "cata_path.h"
-#include "cata_utility.h"
+#include "cata_scope_helpers.h"
+#include "debug.h"
 #include "filesystem.h"
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
+#include "native_file_path.h"
 #include "north_america.h"
 #include "path_info.h"
 #include "regional_climate.h"
@@ -25,11 +34,63 @@ namespace
 {
 constexpr int grid_width = 5671;
 constexpr int grid_height = 2341;
+constexpr std::size_t grid_bytes = 2 * grid_width * grid_height;
 constexpr double south = 6.0 + 1.0 / 120.0;
 constexpr double west = -195.0 + 1.0 / 120.0;
 constexpr double samples_per_degree = 30.0;
 constexpr double tropopause_m = 11000.0;
 constexpr double lapse_rate = 0.0065;
+
+bool read_compressed_grid( std::istream &input, std::vector<std::uint8_t> &bytes )
+{
+    z_stream stream{};
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+    const int initialized = inflateInit2( &stream, MAX_WBITS | 16 );
+#pragma GCC diagnostic pop
+    if( initialized != Z_OK ) {
+        throw std::runtime_error( "could not initialize gzip elevation reader" );
+    }
+    const on_out_of_scope cleanup( [&stream]() {
+        inflateEnd( &stream );
+    } );
+    std::array<Bytef, 32768> buffer;
+    std::array<char, 8> signature{};
+    Bytef extra;
+    stream.next_out = reinterpret_cast<Bytef *>( signature.data() );
+    stream.avail_out = signature.size();
+    while( true ) {
+        if( stream.avail_in == 0 ) {
+            input.read( reinterpret_cast<char *>( buffer.data() ), buffer.size() );
+            stream.next_in = buffer.data();
+            stream.avail_in = static_cast<uInt>( input.gcount() );
+        }
+        const int result = inflate( &stream, Z_NO_FLUSH );
+        if( result != Z_OK && result != Z_STREAM_END ) {
+            throw std::runtime_error( stream.msg ? stream.msg : "incomplete gzip elevation data" );
+        }
+        if( stream.total_out > signature.size() + grid_bytes ) {
+            return false;
+        }
+        if( stream.avail_out == 0 ) {
+            if( bytes.empty() ) {
+                if( std::string_view( signature.data(), signature.size() ) != "CCBDEM1\n" ) {
+                    return false;
+                }
+                bytes.resize( grid_bytes );
+                stream.next_out = bytes.data();
+                stream.avail_out = static_cast<uInt>( bytes.size() );
+            } else {
+                // Leave room to consume the gzip trailer and detect excess output.
+                stream.next_out = &extra;
+                stream.avail_out = 1;
+            }
+        }
+        if( result == Z_STREAM_END ) {
+            return stream.total_out == signature.size() + grid_bytes;
+        }
+    }
+}
 
 struct elevation_grid {
     std::vector<std::uint8_t> bytes;
@@ -39,18 +100,35 @@ struct elevation_grid {
         const cata_path compressed = directory / "north_america.elevation.gz";
         const cata_path path = file_exist( compressed ) ? compressed :
                                directory / "north_america.elevation";
-        auto input = read_maybe_compressed_file( path );
-        if( !input ) {
-            return;
-        }
-        std::array<char, 8> signature{};
-        if( !input->read( signature.data(), signature.size() ) ||
-            std::string_view( signature.data(), signature.size() ) != "CCBDEM1\n" ) {
-            return;
-        }
-        bytes.resize( 2 * grid_width * grid_height );
-        if( !input->read( reinterpret_cast<char *>( bytes.data() ), bytes.size() ) ) {
-            bytes.clear();
+        try {
+            std::ifstream input( native_file_path( path.get_unrelative_path() ), std::ios::binary );
+            if( !input ) {
+                throw std::runtime_error( "opening elevation file failed" );
+            }
+            std::array<char, 2> header{};
+            if( !input.read( header.data(), header.size() ) ) {
+                return;
+            }
+            input.seekg( 0 );
+            std::vector<std::uint8_t> data;
+            if( header[0] == '\x1f' && header[1] == '\x8b' ) {
+                if( read_compressed_grid( input, data ) ) {
+                    bytes = std::move( data );
+                }
+                return;
+            }
+            std::array<char, 8> signature{};
+            if( !input.read( signature.data(), signature.size() ) ||
+                std::string_view( signature.data(), signature.size() ) != "CCBDEM1\n" ) {
+                return;
+            }
+            data.resize( grid_bytes );
+            if( input.read( reinterpret_cast<char *>( data.data() ), data.size() ) ) {
+                bytes = std::move( data );
+            }
+        } catch( const std::exception &err ) {
+            debugmsg( "Failed to read elevation data from \"%s\": %s",
+                      path.generic_u8string().c_str(), err.what() );
         }
     }
 
