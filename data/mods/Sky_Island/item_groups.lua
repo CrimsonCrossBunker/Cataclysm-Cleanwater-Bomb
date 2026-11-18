@@ -167,3 +167,104 @@ do
     group:group("si_exodii_cbms_low_value", 20)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "SUS_exodii_storage_medvalue", kind = "distribution" }
+    group:entry { probability = 10, collection = {
+        { group = "si_exodii_cbms_low_value", probability = 50, count = { 1, 2 } },
+        { group = "si_exodii_cbms_med_value", probability = 20 },
+    } }
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "SUS_exodii_storage_highvalue", kind = "distribution" }
+    group:entry { probability = 25, collection = {
+        { group = "si_exodii_cbms_low_value", probability = 80, count = { 1, 3 } },
+        { group = "si_exodii_cbms_med_value", probability = 50, count = { 1, 2 } },
+        { group = "si_exodii_cbms_high_value", probability = 20 },
+    } }
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "si_exodii_cbms_low_value", kind = "distribution" }
+    group:entry { probability = 80, distribution = {
+        { item = "bio_power_storage", probability = 90 },
+        { item = "bio_power_storage_mkII", probability = 10 },
+    } }
+    group:group("Zomborg_CBM_harvest_structural", 40)
+    group:group("Zomborg_CBM_harvest_utility", 60)
+    group:group("Zomborg_CBM_harvest_charging_tools", 30)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "si_exodii_cbms_med_value", kind = "distribution" }
+    group:entry { probability = 30, distribution = {
+        { item = "bio_power_storage", probability = 90 },
+        { item = "bio_power_storage_mkII", probability = 10 },
+    } }
+    group:group("Zomborg_CBM_harvest_structural", 40)
+    group:group("Zomborg_CBM_harvest_stat_enhancements", 30)
+    group:group("Zomborg_CBM_harvest_sensors", 60)
+    group:entry { probability = 30, distribution = {
+        { group = "Zomborg_CBM_harvest_melee_weapons", probability = 70 },
+        { group = "Zomborg_CBM_harvest_ranged_weapons", probability = 40 },
+    } }
+    group:group("Zomborg_CBM_harvest_sensors", 60)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mon_zombie_bio_op_death_drops", kind = "collection", with_ammo = 60, with_magazine = 100 }
+    group:entry { distribution = {
+        { group = "clothing_soldier_set", probability = 65, damage = { 1, 4 } },
+        { group = "clothing_soldier_winter_set", probability = 35, damage = { 1, 4 } },
+    } }
+    group:entry { probability = 10, distribution = {
+        {
+            group = "military_standard_assault_rifles",
+            probability = 75,
+            damage = { 0, 4 },
+            dirt = { 0, 6000 },
+            contents = { { group = "sopmod" } },
+        },
+        {
+            group = "military_standard_lmgs",
+            probability = 4,
+            damage = { 0, 4 },
+            dirt = { 0, 6000 },
+            contents = { { item = "shoulder_strap" } },
+        },
+        {
+            group = "military_standard_lmgs",
+            probability = 6,
+            damage = { 0, 4 },
+            dirt = { 0, 6000 },
+            contents = { { item = "shoulder_strap" }, { item = "acog_scope" } },
+        },
+        {
+            group = "military_standard_shotguns",
+            probability = 5,
+            damage = { 0, 4 },
+            dirt = { 0, 6000 },
+            contents = { { item = "shoulder_strap" } },
+        },
+    } }
+    group:group("infantry_common_gear")
+    group:entry { probability = 20, distribution = {
+        { group = "military_standard_grenades", probability = 80, count = { 1, 3 } },
+        { item = "40x46mm_m433", probability = 20, charges = { 1, 3 } },
+    } }
+    group:group("military_patrol_food")
+    group:entry { collection = {
+        { group = "infantry_officer_gear", probability = 90 },
+        { group = "infantry_medical_gear", probability = 80 },
+    } }
+    group:group("wallets", 10)
+    group:group("pocket_cigar", 15)
+    group:group("misc_smoking_legal", 30)
+    group:item("dog_tag", 40)
+    content.add(group)
+end
