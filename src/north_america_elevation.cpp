@@ -11,6 +11,7 @@
 
 #include "cata_path.h"
 #include "cata_utility.h"
+#include "filesystem.h"
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
@@ -34,8 +35,11 @@ struct elevation_grid {
     std::vector<std::uint8_t> bytes;
 
     elevation_grid() {
-        auto input = read_maybe_compressed_file(
-                         PATH_INFO::datadir_path() / "raw" / "north_america.elevation.gz" );
+        const cata_path directory = PATH_INFO::datadir_path() / "raw";
+        const cata_path compressed = directory / "north_america.elevation.gz";
+        const cata_path path = file_exist( compressed ) ? compressed :
+                               directory / "north_america.elevation";
+        auto input = read_maybe_compressed_file( path );
         if( !input ) {
             return;
         }
