@@ -1315,3 +1315,13 @@ do
     group:item("zucchini", 3)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "pur_tablets_bottle_plastic_small_50",
+        kind = "collection",
+        container = "bottle_plastic_small",
+    }
+    group:entry { item = "pur_tablets", count = { 50, 50 } }
+    content.add(group)
+end

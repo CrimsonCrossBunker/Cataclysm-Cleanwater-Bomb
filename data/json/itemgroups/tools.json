@@ -88,12 +88,5 @@
       { "item": "acetylene_machine", "prob": 1 },
       { "group": "writing_utensils", "prob": 5 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "pur_tablets_bottle_plastic_small_50",
-    "subtype": "collection",
-    "container-item": "bottle_plastic_small",
-    "entries": [ { "item": "pur_tablets", "count": 50 } ]
   }
 ]

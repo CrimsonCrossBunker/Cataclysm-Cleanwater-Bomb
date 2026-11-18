@@ -26,23 +26,6 @@
     "extend": { "items": [ { "group": "magiclysm_joke_scrolls", "prob": 1 } ] }
   },
   {
-    "id": "potions_rare",
-    "type": "item_group",
-    "items": [
-      [ "flask_healing", 10 ],
-      [ "flask_excitement", 10 ],
-      [ "flask_regeneration", 10 ],
-      [ "flask_mana_regen", 10 ],
-      [ "flask_teleport_rand", 10 ],
-      { "group": "potions_illegal", "prob": 1 }
-    ]
-  },
-  {
-    "id": "potions_rare",
-    "type": "item_group",
-    "items": [ [ "flask_healing", 10 ], [ "flask_excitement", 10 ], [ "flask_regeneration", 10 ], [ "flask_mana_regen", 10 ] ]
-  },
-  {
     "type": "item_group",
     "id": "pawn",
     "copy-from": "pawn",

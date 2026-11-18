@@ -27,18 +27,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_AUGUSTMOON_TOOL_TRADER_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "legpouch_large" },
-      { "item": "afs_hazard_suit_casual" },
-      { "item": "boots_combat" },
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" }
-    ]
-  },
-  {
     "type": "npc",
     "id": "augustmoon_tool_trader",
     "name_suffix": "gadget store clerk",

@@ -309,3 +309,12 @@ do
     group:group("enchanted_combat_items", 50)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "potions_rare", kind = "distribution" }
+    group:item("flask_healing", 10)
+    group:item("flask_excitement", 10)
+    group:item("flask_regeneration", 10)
+    group:item("flask_mana_regen", 10)
+    content.add(group)
+end
