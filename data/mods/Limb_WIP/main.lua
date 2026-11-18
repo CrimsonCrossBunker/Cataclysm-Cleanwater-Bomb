@@ -11,3 +11,5 @@ require("overlay_enchantments")
 require("item_enchantments")
 
 require("sub_body_parts")
+
+require("body_parts")

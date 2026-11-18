@@ -151,6 +151,28 @@ ccb.content.add(tips)
 
 require("weather_types")
 
+do
+    local part = ccb.content.BodyPart {
+        id = "bp_null",
+        name = ccb.content.text("appendix"),
+        plural_name = "",
+        accusative = ccb.content.text("appendix", "bodypart_accusative"),
+        plural_accusative = "",
+        heading = ccb.content.text("appendix"),
+        plural_heading = ccb.content.text("Appendices"),
+        encumbrance_text = ccb.content.text("It's inflamed."),
+        hp_bar_text = "",
+        legacy_id = "NUM_BP",
+        hit_size = 0,
+        hit_difficulty = 0,
+        drench_capacity = 1,
+        limb = false,
+    }
+    part:sub_part("sub_bp_null")
+    part:limb_type("other")
+    ccb.content.add(part)
+end
+
 ccb.content.add(ccb.content.SubBodyPart {
     id = "sub_bp_null",
     parent = "bp_null",

@@ -197,3 +197,8 @@ require("mutation_sub_body_parts")
 
 require("anatomies")
 require("body_graphs")
+
+require("body_parts")
+require("bionic_body_parts")
+require("mutation_body_parts")
+require("prosthetic_body_parts")
