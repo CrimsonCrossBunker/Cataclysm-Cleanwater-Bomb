@@ -3099,6 +3099,7 @@ function EndScreenDefinition:condition(handler_id) end
 ---@field fetch_items_to_zone? boolean Whether native fetching may supply the activity; defaults to true.
 ---@field refuel_fires? boolean Whether native fire-refuelling support is enabled.
 ---@field auto_needs? boolean Whether native auto-eat/drink support is enabled.
+---@field mute_npc_completion? boolean Suppress the NPC activity completion message. Defaults to false.
 ---@field activity_level? number Positive finite native exertion multiplier; defaults to 1.
 
 ---@class ActivityPolicyPayload

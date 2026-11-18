@@ -124,6 +124,7 @@ struct activity_type_definition_data {
     bool fetch_items_to_zone = true;
     bool refuel_fires = false;
     bool auto_needs = false;
+    bool mute_npc_completion = false;
     double activity_level = NO_EXERCISE;
     std::set<std::string> ignored_distractions;
     std::string do_turn_handler;
@@ -695,6 +696,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         const bool fetch_items_to_zone = options.get_or( "fetch_items_to_zone", true );
         const bool refuel_fires = options.get_or( "refuel_fires", false );
         const bool auto_needs = options.get_or( "auto_needs", false );
+        const bool mute_npc_completion = options.get_or( "mute_npc_completion", false );
         const double activity_level = options.get_or( "activity_level", 1.0 );
         auto definition = std::make_shared<activity_type_definition_data>();
         definition->id = id;
@@ -708,6 +710,7 @@ void presentation_content_transaction::install_lua_api( sol::state &lua, sol::ta
         definition->fetch_items_to_zone = fetch_items_to_zone;
         definition->refuel_fires = refuel_fires;
         definition->auto_needs = auto_needs;
+        definition->mute_npc_completion = mute_npc_completion;
         definition->activity_level = activity_level;
         return activity_type_definition_handle{ std::move( definition ), transaction->token };
     } );
@@ -1428,6 +1431,9 @@ bool presentation_content_transaction::apply( std::string &error )
             native.fetch_items_to_zone_ = source.fetch_items_to_zone;
             native.refuel_fires = source.refuel_fires;
             native.auto_needs = source.auto_needs;
+            native.mute_npc_completion = source.mute_npc_completion;
+            native.has_lua_turn_handler_ = !source.do_turn_handler.empty();
+            native.has_lua_completion_handler_ = !source.completion_handler.empty();
             native.activity_level = static_cast<float>( source.activity_level );
             for( const std::string &distraction : source.ignored_distractions ) {
                 native.default_ignored_distractions_.insert(
@@ -1863,6 +1869,9 @@ void presentation_content_transaction::append_fingerprint( std::uint64_t &state 
         hash_part( state, value.fetch_items_to_zone ? "fetch" : "no_fetch" );
         hash_part( state, value.refuel_fires ? "refuel" : "no_refuel" );
         hash_part( state, value.auto_needs ? "auto_needs" : "manual_needs" );
+        if( value.mute_npc_completion ) {
+            hash_part( state, "mute_npc_completion" );
+        }
         hash_part( state, std::to_string( value.activity_level ) );
         for( const std::string &distraction : value.ignored_distractions ) {
             hash_part( state, distraction );

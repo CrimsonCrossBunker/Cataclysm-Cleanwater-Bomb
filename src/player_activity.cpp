@@ -363,7 +363,8 @@ void player_activity::do_turn( Character &you )
     you.set_activity_level( exertion_level() );
 
     const std::uint64_t dispatched_identity = identity_generation();
-    const bool lua_first_activity = cata::lua_platform::invoke_activity_type_handler(
+    const bool lua_first_activity = type->has_lua_turn_handler() &&
+                                    cata::lua_platform::invoke_activity_type_handler(
                                         type.str(), "do_turn", *this, you );
     if( !character_reference ||
         ( *this && identity_generation() != dispatched_identity ) ) {
@@ -477,7 +478,8 @@ void player_activity::do_turn( Character &you )
         // Note: For some activities "finish" is a misnomer; that's why we explicitly check if the
         // type is ACT_NULL below.
         const std::uint64_t completion_identity = identity_generation();
-        const bool lua_first_completion = cata::lua_platform::invoke_activity_type_handler(
+        const bool lua_first_completion = type->has_lua_completion_handler() &&
+                                          cata::lua_platform::invoke_activity_type_handler(
                                               type.str(), "completion", *this, you );
         if( !character_reference ||
             ( *this && identity_generation() != completion_identity ) ) {

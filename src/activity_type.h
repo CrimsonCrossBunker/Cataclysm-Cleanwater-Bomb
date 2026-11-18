@@ -59,6 +59,8 @@ class activity_type
         bool refuel_fires = false;
         bool auto_needs = false;
         bool mute_npc_completion = false;
+        bool has_lua_turn_handler_ = false;
+        bool has_lua_completion_handler_ = false;
         float activity_level = NO_EXERCISE;
         std::set<distraction_type> default_ignored_distractions_;
     public:
@@ -111,6 +113,12 @@ class activity_type
         // If true, no message will be given when the npc completes the activity
         bool mute_npc_completion_message() const {
             return mute_npc_completion;
+        }
+        bool has_lua_turn_handler() const {
+            return has_lua_turn_handler_;
+        }
+        bool has_lua_completion_handler() const {
+            return has_lua_completion_handler_;
         }
         float exertion_level() const {
             return activity_level;

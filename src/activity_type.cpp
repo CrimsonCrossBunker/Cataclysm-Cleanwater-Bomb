@@ -150,8 +150,9 @@ void activity_type::check_consistency()
         const bool has_turn_func = activity_handlers::do_turn_functions.find( pair.second.id_ ) !=
                                    activity_handlers::do_turn_functions.end();
 
-        if( pair.second.based_on_ == based_on_type::NEITHER && !( has_turn_func || has_actor ) ) {
-            debugmsg( "%s needs a do_turn function or activity actor if it's not based on time or speed.",
+        if( pair.second.based_on_ == based_on_type::NEITHER &&
+            !has_turn_func && !has_actor && !pair.second.has_lua_turn_handler() ) {
+            debugmsg( "%s needs a turn handler or activity actor if it's not based on time or speed.",
                       pair.second.id_.c_str() );
         }
     }
