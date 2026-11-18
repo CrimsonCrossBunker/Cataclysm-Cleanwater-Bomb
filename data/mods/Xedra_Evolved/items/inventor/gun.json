@@ -299,32 +299,6 @@
     "color": "light_green"
   },
   {
-    "id": "ion_gun",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "ion rifle" },
-    "description": "Something something ion, something something wide area.  Don't even ask.",
-    "weight": "2260 g",
-    "volume": "3130 ml",
-    "longest_side": "780 mm",
-    "melee_damage": { "bash": 6 },
-    "material": [ "mc_steel" ],
-    "symbol": "|",
-    "color": "blue",
-    "charges_per_use": 30,
-    "flags": [ "TRADER_AVOID", "MUNDANE", "INVENTOR_CRAFTED" ],
-    "use_action": { "type": "cast_spell", "spell_id": "ion_shot_1", "no_fail": true, "level": 0, "need_wielding": true },
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "inventor_sniper",
     "copy-from": "modular_m27_assault_rifle",
     "looks_like": "modular_ar15",
@@ -588,27 +562,6 @@
     "description": "A bunch of powerful lenses and reflectors that transform the energy output into a powerful directed laser beam."
   },
   {
-    "id": "inventor_grenade_noise_expl",
-    "name": { "str": "inventor's noise grenade" },
-    "description": "A small energy grenade with an additional timer slapped onto it.  When triggered, the timer will start to count to 70 seconds.  As it ends a massive explosion will rip your enemies apart.",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "weight": "300 g",
-    "volume": "450 ml",
-    "material": [ "lc_steel" ],
-    "symbol": "*",
-    "color": "blue",
-    "flags": [ "NONCONDUCTIVE", "TRADER_AVOID", "INVENTOR_CRAFTED" ],
-    "use_action": {
-      "need_wielding": true,
-      "target": "inventor_grenade_noise_expl_act",
-      "menu_text": "Activate",
-      "msg": "You trigger the mechanism, and it starts to whistle!",
-      "target_timer": "70 seconds",
-      "type": "transform"
-    }
-  },
-  {
     "id": "inventor_grenade_noise_expl_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -623,27 +576,6 @@
     "tick_action": [ { "type": "sound", "sound_message": "whistle", "sound_volume": 35, "sound_variant": "bomb_ticking" } ],
     "countdown_action": { "type": "explosion", "explosion": { "power": 1200 } },
     "flags": [ "TRADER_AVOID", "BOMB", "INVENTOR_CRAFTED" ]
-  },
-  {
-    "id": "inventor_grenade_noise_emp",
-    "name": { "str": "inventor's noise EMP grenade" },
-    "description": "A small energy grenade with an additional timer and a whistle slapped onto it.   When triggered, the timer will start to count to 70 seconds.  As it ends a huge EMP explosion will cover the zone.",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "weight": "300 g",
-    "volume": "450 ml",
-    "material": [ "lc_steel" ],
-    "symbol": "*",
-    "color": "blue",
-    "flags": [ "NONCONDUCTIVE", "TRADER_AVOID", "INVENTOR_CRAFTED" ],
-    "use_action": {
-      "need_wielding": true,
-      "target": "inventor_grenade_noise_emp_act",
-      "menu_text": "Activate",
-      "msg": "You trigger the mechanism, and it starts to whistle!",
-      "target_timer": "70 seconds",
-      "type": "transform"
-    }
   },
   {
     "id": "inventor_grenade_noise_emp_act",
@@ -668,27 +600,6 @@
       "emp_blast_radius": 12
     },
     "flags": [ "TRADER_AVOID", "BOMB", "INVENTOR_CRAFTED", "SPAWN_ACTIVE" ]
-  },
-  {
-    "id": "inventor_grenade_noise_fire",
-    "name": { "str": "inventor's noise fire grenade" },
-    "description": "A small energy grenade with an additional timer slapped onto it.  When triggered, the timer will start to count to 70 seconds.  As it ends a massive fire explosion will rip your enemies apart.",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "weight": "300 g",
-    "volume": "450 ml",
-    "material": [ "lc_steel" ],
-    "symbol": "*",
-    "color": "blue",
-    "flags": [ "NONCONDUCTIVE", "TRADER_AVOID", "INVENTOR_CRAFTED" ],
-    "use_action": {
-      "need_wielding": true,
-      "target": "inventor_grenade_noise_fire_act",
-      "menu_text": "Activate",
-      "msg": "You trigger the mechanism, and it starts to whistle!",
-      "target_timer": "70 seconds",
-      "type": "transform"
-    }
   },
   {
     "id": "inventor_grenade_noise_fire_act",
@@ -755,32 +666,6 @@
         "default_magazine": "medium_battery_cell"
       }
     ]
-  },
-  {
-    "id": "heater_gun",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "\"Boiler\"", "str_pl": "\"Boilers\"" },
-    "description": "A rifle-sized tool that can concentrate heat in a huge range.  It lost its ability to work as a tool as you don't want to accidentally evaporate your materials, but the damage output pays for this with interest.",
-    "weight": "1908 g",
-    "volume": "3130 ml",
-    "longest_side": "1160 mm",
-    "melee_damage": { "bash": 3 },
-    "material": [ "mc_steel" ],
-    "symbol": "|",
-    "color": "blue",
-    "charges_per_use": 50,
-    "flags": [ "TRADER_AVOID", "INVENTOR_CRAFTED" ],
-    "use_action": { "type": "cast_spell", "spell_id": "heat_expl_gun", "no_fail": true, "level": 0, "need_wielding": true },
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_HEAVY" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "tool_ammo": [ "battery" ]
   },
   {
     "id": "inventor_pistol",
