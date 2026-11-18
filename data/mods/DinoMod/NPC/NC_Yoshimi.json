@@ -37,10 +37,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "u_met_yoshimi"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_Yoshimi_1",
     "dynamic_line": {
