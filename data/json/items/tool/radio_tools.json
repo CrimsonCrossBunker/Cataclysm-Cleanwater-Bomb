@@ -85,24 +85,6 @@
     "flags": [ "RADIO_CONTAINER", "TRADER_AVOID", "RADIOCAR", "WATER_BREAK", "ELECTRONIC" ]
   },
   {
-    "id": "radio_mod",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "spare_parts",
-    "name": { "str": "radio activation mod" },
-    "description": "A small electronic device that can be attached to certain items to activate them with a radio signal from an RC car controller.",
-    "weight": "142 g",
-    "volume": "250 ml",
-    "price": "50 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "use_action": [ "RADIO_MOD" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "flags": [ "SINGLE_USE", "WATER_BREAK", "ELECTRONIC" ]
-  },
-  {
     "id": "radio",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
