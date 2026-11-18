@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "efile_video",
         symbol = "o",
-        name = content.plural_text("abstract video", "abstract videos"),
-        description = content.text("An abstract video file, implemented as a book."),
+        name = ccb.content.plural_text("abstract video", "abstract videos"),
+        description = ccb.content.text("An abstract video file, implemented as a book."),
         looks_like = "story_book",
         color = "light_cyan",
         copy_from = "abstract_efile",

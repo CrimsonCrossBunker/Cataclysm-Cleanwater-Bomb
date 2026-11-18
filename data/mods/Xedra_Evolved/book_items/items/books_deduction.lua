@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
@@ -6,8 +7,8 @@ do
         category = "manuals",
         copy_from = "mag_deduction",
         looks_like = "mag_deduction",
-        name = content.plural_text("The Noon", "issues of The Noon"),
-        description = content.text("A tabloid paper with a rather unusually out-of-this-world articles even for tabloids' standard, ranging from something like an article about morticians selling the deceased's 'dreams' to the government to a sensational headline about a half-bat half-human boy causing 40-car pileup in the highway while driving away from police pursuit.  While most thought of The Noon as an amusing but otherwise mostly fake news paper in the past, the Cataclysm might bring the articles' presumably fake facts to light."),
+        name = ccb.content.plural_text("The Noon", "issues of The Noon"),
+        description = ccb.content.text("A tabloid paper with a rather unusually out-of-this-world articles even for tabloids' standard, ranging from something like an article about morticians selling the deceased's 'dreams' to the government to a sensational headline about a half-bat half-human boy causing 40-car pileup in the highway while driving away from police pursuit.  While most thought of The Noon as an amusing but otherwise mostly fake news paper in the past, the Cataclysm might bring the articles' presumably fake facts to light."),
         color = "red",
     }
     book:book {
@@ -27,8 +28,8 @@ do
     local book = content.Item {
         id = "manual_deduction",
         category = "manuals",
-        name = content.plural_text("The Holmesian Guide to Magickal Practice", "copies of The Holmesian Guide to Magickal Practice"),
-        description = content.text("It's big and heavy, but full of great information about esoteric investigations."),
+        name = ccb.content.plural_text("The Holmesian Guide to Magickal Practice", "copies of The Holmesian Guide to Magickal Practice"),
+        description = ccb.content.text("It's big and heavy, but full of great information about esoteric investigations."),
         mass_milligrams = 454000,
         volume_ml = 1250,
         price_cents = 2500,
@@ -56,8 +57,8 @@ do
     local book = content.Item {
         id = "book_teens_deduction",
         category = "manuals",
-        name = content.plural_text("Scraggy-Boo and the Mystery Crew", "copies of Scraggy-Boo and the Mystery Crew"),
-        description = content.text("A guide for teens interested in pursuing occult knowledge.  Readers often speak of encountering a guide in their dreams of a Russian Sheepdog, who introduces himself as Scraggy-Boo."),
+        name = ccb.content.plural_text("Scraggy-Boo and the Mystery Crew", "copies of Scraggy-Boo and the Mystery Crew"),
+        description = ccb.content.text("A guide for teens interested in pursuing occult knowledge.  Readers often speak of encountering a guide in their dreams of a Russian Sheepdog, who introduces himself as Scraggy-Boo."),
         mass_milligrams = 192000,
         volume_ml = 250,
         price_cents = 4000,
@@ -85,8 +86,8 @@ do
     local book = content.Item {
         id = "book_deduction_out_of_place",
         category = "manuals",
-        name = content.plural_text("Out-of-place manuscript", "Out-of-place manuscript"),
-        description = content.text("This book always feels like it shouldn't be where it is.  Its texts are incoherent and illogical, but they promise to help you understand something.  Reading a few words from its pages is enough to give you a headache."),
+        name = ccb.content.plural_text("Out-of-place manuscript", "Out-of-place manuscript"),
+        description = ccb.content.text("This book always feels like it shouldn't be where it is.  Its texts are incoherent and illogical, but they promise to help you understand something.  Reading a few words from its pages is enough to give you a headache."),
         mass_milligrams = 1360000,
         volume_ml = 2000,
         price_cents = 8500,
@@ -114,8 +115,8 @@ do
     local book = content.Item {
         id = "mag_deduction",
         category = "manuals",
-        name = content.plural_text("Esoteric Investigations Weekly", "issues of Esoteric Investigations Weekly"),
-        description = content.text("A magazine for occult investigators.  These types of magazines proliferated in the decade prior to the Cataclysm."),
+        name = ccb.content.plural_text("Esoteric Investigations Weekly", "issues of Esoteric Investigations Weekly"),
+        description = ccb.content.text("A magazine for occult investigators.  These types of magazines proliferated in the decade prior to the Cataclysm."),
         mass_milligrams = 60000,
         volume_ml = 250,
         price_cents = 480,
@@ -143,8 +144,8 @@ do
     local book = content.Item {
         id = "book_deduction_black_iron_prison",
         category = "manuals",
-        name = content.plural_text("Escaping the Black Iron Prison", "copies of Escaping the Black Iron Prison"),
-        description = content.text("A hardbound book detailing numerous rituals and thought modifications in order to teach its readers how to break the shackles of mundanity."),
+        name = ccb.content.plural_text("Escaping the Black Iron Prison", "copies of Escaping the Black Iron Prison"),
+        description = ccb.content.text("A hardbound book detailing numerous rituals and thought modifications in order to teach its readers how to break the shackles of mundanity."),
         mass_milligrams = 1360000,
         volume_ml = 2000,
         price_cents = 8500,

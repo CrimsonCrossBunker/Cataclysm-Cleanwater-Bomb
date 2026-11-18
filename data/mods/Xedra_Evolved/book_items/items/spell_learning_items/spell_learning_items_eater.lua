@@ -1,10 +1,11 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "eater_book_artifact",
-        name = content.plural_text("Enemy of the World", "copies of Enemy of the World"),
-        description = content.text("A small Korean novel that describes the journey of an incredibly strong protagonist attempting to save the world."),
+        name = ccb.content.plural_text("Enemy of the World", "copies of Enemy of the World"),
+        description = ccb.content.text("A small Korean novel that describes the journey of an incredibly strong protagonist attempting to save the world."),
         mass_milligrams = 460000,
         volume_ml = 500,
         symbol = "[",

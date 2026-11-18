@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "fcl_helixwirl_hydroponics_manual",
         category = "manuals",
-        name = content.plural_text("Helixwirl Biotechnologies internal hydroponics memorandum", "Helixwirl Biotechnologies internal hydroponics memorandums"),
-        description = content.text("An internal Helixwirl Biotechnologies memorandum detailing the hydroponics core's field-control architecture.  The documentation is dry and technical, except for one bizarre structure whose function cannot be identified.  A warning in huge, bright-red lettering reads: DO NOT ALTER, IF PRODUCTION REVEALS ANY DEVIATION FROM THE REFERENCE, DISCARD THE UNIT IMMEDIATELY."),
+        name = ccb.content.plural_text("Helixwirl Biotechnologies internal hydroponics memorandum", "Helixwirl Biotechnologies internal hydroponics memorandums"),
+        description = ccb.content.text("An internal Helixwirl Biotechnologies memorandum detailing the hydroponics core's field-control architecture.  The documentation is dry and technical, except for one bizarre structure whose function cannot be identified.  A warning in huge, bright-red lettering reads: DO NOT ALTER, IF PRODUCTION REVEALS ANY DEVIATION FROM THE REFERENCE, DISCARD THE UNIT IMMEDIATELY."),
         mass_milligrams = 700000,
         volume_ml = 750,
         price_cents = 10000,

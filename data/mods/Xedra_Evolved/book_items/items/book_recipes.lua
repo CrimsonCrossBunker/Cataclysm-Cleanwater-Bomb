@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "book_moons_tears_ingot",
         category = "manuals",
-        name = content.plural_text("Report: LAUGHING DANCER metallurgy", "copies of Report: LAUGHING DANCER metallurgy"),
-        description = content.text("A series of documents discussing the properties of the armor and weapons used by a group or organization only referred to as \"LAUGHING DANCER\".  Some of these described specifications don't seem physically possible."),
+        name = ccb.content.plural_text("Report: LAUGHING DANCER metallurgy", "copies of Report: LAUGHING DANCER metallurgy"),
+        description = ccb.content.text("A series of documents discussing the properties of the armor and weapons used by a group or organization only referred to as \"LAUGHING DANCER\".  Some of these described specifications don't seem physically possible."),
         mass_milligrams = 60000,
         volume_ml = 250,
         looks_like = "mag_glam",
@@ -32,10 +33,10 @@ do
     local book = content.Item {
         id = "manual_arvore_lashing_bough",
         copy_from = "book_martial",
-        name = content.plural_text("sap-stained documents", "sets of sap-stained documents", "book"),
+        name = ccb.content.plural_text("sap-stained documents", "sets of sap-stained documents", "book"),
         price_postapoc_cents = 1000,
         mass_milligrams = 60000,
-        description = content.text("A set of documents describing some kind of esoteric martial art that apparently controls the plants and power of nature.  Their are repeated references to \"lashing vines\" and \"poison claws.\""),
+        description = ccb.content.text("A set of documents describing some kind of esoteric martial art that apparently controls the plants and power of nature.  Their are repeated references to \"lashing vines\" and \"poison claws.\""),
     }
     book:book {
         required_level = 0,

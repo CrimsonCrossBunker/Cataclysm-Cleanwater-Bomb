@@ -1,12 +1,13 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "manual_mma_desert_wind",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Scorching Sirocco", "copies of Scorching Sirocco"),
-        description = content.text("This book contains the teaching of the Desert Wind discipline."),
+        name = ccb.content.plural_text("Scorching Sirocco", "copies of Scorching Sirocco"),
+        description = ccb.content.text("This book contains the teaching of the Desert Wind discipline."),
     }
     book:book {
         required_level = 0,
@@ -26,8 +27,8 @@ do
         id = "manual_mma_diamond_mind",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Perfect Clarity of Mind and Body", "copies of Perfect Clarity of Mind and Body"),
-        description = content.text("This book contains the teaching of the Diamond Mind discipline."),
+        name = ccb.content.plural_text("Perfect Clarity of Mind and Body", "copies of Perfect Clarity of Mind and Body"),
+        description = ccb.content.text("This book contains the teaching of the Diamond Mind discipline."),
     }
     book:book {
         required_level = 0,
@@ -47,8 +48,8 @@ do
         id = "manual_mma_hylian",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("The Book of Mudora", "copies of The Book of Mudora"),
-        description = content.text("A collection of ancient Hylian lore and stories.  A section on historic battles is bookmarked."),
+        name = ccb.content.plural_text("The Book of Mudora", "copies of The Book of Mudora"),
+        description = ccb.content.text("A collection of ancient Hylian lore and stories.  A section on historic battles is bookmarked."),
     }
     book:book {
         required_level = 0,
@@ -68,8 +69,8 @@ do
         id = "manual_mma_iron_heart",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Stormguard Warrior", "copies of Stormguard Warrior"),
-        description = content.text("This book contains the teaching of the Iron Heart discipline."),
+        name = ccb.content.plural_text("Stormguard Warrior", "copies of Stormguard Warrior"),
+        description = ccb.content.text("This book contains the teaching of the Iron Heart discipline."),
     }
     book:book {
         required_level = 0,
@@ -89,8 +90,8 @@ do
         id = "manual_mma_panzer",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("The Life and Work of Tiger Sauer", "copies of The Life and Work of Tiger Sauer"),
-        description = content.text("A biography of a combat cyborg agent detailing his philosophy and martial art."),
+        name = ccb.content.plural_text("The Life and Work of Tiger Sauer", "copies of The Life and Work of Tiger Sauer"),
+        description = ccb.content.text("A biography of a combat cyborg agent detailing his philosophy and martial art."),
     }
     book:book {
         required_level = 0,
@@ -110,8 +111,8 @@ do
         id = "manual_mma_pokken",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Pocket Monster Encyclopedia", "copies of Pocket Monster Encyclopedia"),
-        description = content.text("This encyclopedia contains a detailed listing of the strengths and techniques of various fictional monsters and how to apply them in a real fight."),
+        name = ccb.content.plural_text("Pocket Monster Encyclopedia", "copies of Pocket Monster Encyclopedia"),
+        description = ccb.content.text("This encyclopedia contains a detailed listing of the strengths and techniques of various fictional monsters and how to apply them in a real fight."),
     }
     book:book {
         required_level = 0,
@@ -131,8 +132,8 @@ do
         id = "manual_mma_setting_sun",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Distant Horizon", "copies of Distant Horizon"),
-        description = content.text("This book contains the teaching of the Setting Sun discipline."),
+        name = ccb.content.plural_text("Distant Horizon", "copies of Distant Horizon"),
+        description = ccb.content.text("This book contains the teaching of the Setting Sun discipline."),
     }
     book:book {
         required_level = 0,
@@ -152,8 +153,8 @@ do
         id = "manual_mma_shii_cho",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Jedi Holocrons: Form I", "copies of Jedi Holocrons: Form I"),
-        description = content.text("This device contains the teachings of the first form of Jedi lightsaber combat: Shii-Cho."),
+        name = ccb.content.plural_text("Jedi Holocrons: Form I", "copies of Jedi Holocrons: Form I"),
+        description = ccb.content.text("This device contains the teachings of the first form of Jedi lightsaber combat: Shii-Cho."),
     }
     book:book {
         required_level = 0,
@@ -173,8 +174,8 @@ do
         id = "manual_mma_stone_dragon",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Shards of Granite", "copies of Shards of Granite"),
-        description = content.text("This book contains the teaching of the Stone Dragon discipline."),
+        name = ccb.content.plural_text("Shards of Granite", "copies of Shards of Granite"),
+        description = ccb.content.text("This book contains the teaching of the Stone Dragon discipline."),
     }
     book:book {
         required_level = 0,
@@ -194,8 +195,8 @@ do
         id = "manual_mma_tiger_claw",
         copy_from = "book_martial",
         looks_like = "manual_karate",
-        name = content.plural_text("Reaping Talons", "copies of Reaping Talons"),
-        description = content.text("This book contains the teaching of the Tiger Claw discipline."),
+        name = ccb.content.plural_text("Reaping Talons", "copies of Reaping Talons"),
+        description = ccb.content.text("This book contains the teaching of the Tiger Claw discipline."),
     }
     book:book {
         required_level = 0,
@@ -214,9 +215,9 @@ do
     local book = content.Item {
         id = "manual_centipede",
         copy_from = "book_martial",
-        name = content.plural_text("The Centipede Lu Feng", "copies of The Centipede Lu Feng"),
+        name = ccb.content.plural_text("The Centipede Lu Feng", "copies of The Centipede Lu Feng"),
         price_postapoc_cents = 2000,
-        description = content.text("A complete guide to Centipede Kung Fu."),
+        description = ccb.content.text("A complete guide to Centipede Kung Fu."),
     }
     book:book {
         required_level = 0,
@@ -235,9 +236,9 @@ do
     local book = content.Item {
         id = "manual_lizard",
         copy_from = "book_martial",
-        name = content.plural_text("The Lizard Kuo Chui", "copies of The Lizard Kuo Chui"),
+        name = ccb.content.plural_text("The Lizard Kuo Chui", "copies of The Lizard Kuo Chui"),
         price_postapoc_cents = 2000,
-        description = content.text("A complete guide to Lizard Kung Fu."),
+        description = ccb.content.text("A complete guide to Lizard Kung Fu."),
     }
     book:book {
         required_level = 0,
@@ -256,9 +257,9 @@ do
     local book = content.Item {
         id = "manual_scorpion",
         copy_from = "book_martial",
-        name = content.plural_text("The Scorpion Sun Chien", "copies of The Scorpion Sun Chien"),
+        name = ccb.content.plural_text("The Scorpion Sun Chien", "copies of The Scorpion Sun Chien"),
         price_postapoc_cents = 2000,
-        description = content.text("A complete guide to Scorpion Kung Fu."),
+        description = ccb.content.text("A complete guide to Scorpion Kung Fu."),
     }
     book:book {
         required_level = 0,
@@ -277,9 +278,9 @@ do
     local book = content.Item {
         id = "manual_toad",
         copy_from = "book_martial",
-        name = content.plural_text("The Toad Lo Mang", "copies of The Toad Lo Mang"),
+        name = ccb.content.plural_text("The Toad Lo Mang", "copies of The Toad Lo Mang"),
         price_postapoc_cents = 2000,
-        description = content.text("A complete guide to Toad Kung Fu."),
+        description = ccb.content.text("A complete guide to Toad Kung Fu."),
     }
     book:book {
         required_level = 0,
@@ -298,9 +299,9 @@ do
     local book = content.Item {
         id = "manual_venom_snake",
         copy_from = "book_martial",
-        name = content.plural_text("The Viper Wei Pai", "copies of The Viper Wei Pai"),
+        name = ccb.content.plural_text("The Viper Wei Pai", "copies of The Viper Wei Pai"),
         price_postapoc_cents = 2000,
-        description = content.text("A complete guide to Viper Kung Fu."),
+        description = ccb.content.text("A complete guide to Viper Kung Fu."),
     }
     book:book {
         required_level = 0,

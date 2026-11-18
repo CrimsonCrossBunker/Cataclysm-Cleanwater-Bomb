@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
@@ -6,8 +7,8 @@ do
         category = "manuals",
         copy_from = "book_deduction_black_iron_prison",
         looks_like = "holybook_wicca",
-        name = content.plural_text("On the Opening of the Way", "copies of On the Opening of the Way"),
-        description = content.text("A thick tome that seems to be a collection of rituals which will allow one to \"reach out and seize the power from beyond\" and \"call down the dancers in the dark between the stars.\"  You suspect the authorities would not approve, were they still alive."),
+        name = ccb.content.plural_text("On the Opening of the Way", "copies of On the Opening of the Way"),
+        description = ccb.content.text("A thick tome that seems to be a collection of rituals which will allow one to \"reach out and seize the power from beyond\" and \"call down the dancers in the dark between the stars.\"  You suspect the authorities would not approve, were they still alive."),
     }
     book:book {
         required_level = 5,

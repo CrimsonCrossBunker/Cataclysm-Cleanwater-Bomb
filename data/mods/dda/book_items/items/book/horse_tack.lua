@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "book_horse_tack",
         category = "manuals",
-        name = content.plural_text("The Practical Saddler", "copies of The Practical Saddler"),
-        description = content.text("An illustrated guide to measuring a horse, cutting leather, and sewing bridles, saddles, and bags that fit.  Its full-sized patterns make practical tack much easier to produce."),
+        name = ccb.content.plural_text("The Practical Saddler", "copies of The Practical Saddler"),
+        description = ccb.content.text("An illustrated guide to measuring a horse, cutting leather, and sewing bridles, saddles, and bags that fit.  Its full-sized patterns make practical tack much easier to produce."),
         mass_milligrams = 950000,
         volume_ml = 1250,
         price_cents = 3500,

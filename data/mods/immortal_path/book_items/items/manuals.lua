@@ -1,4 +1,5 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     -- 最基础的入门功法：教人引气入体、吐纳打坐。用 learn_spell use_action 授予 immortal_path_meditate spell，是玩家踏上修炼的唯一入口（开局不再默认会打坐）。残卷=不完整传承，故只授予入门吐纳。译名查 GLOSSARY：功法=cultivation technique、吐纳=qi breathing、残卷=scroll。/ The most basic entry method: teaches drawing qi into the body and meditation. Grants the meditate spell via learn_spell — the player's only way onto the cultivation path (no one starts able to meditate). A 'scroll' = partial transmission, so it only grants the entry breathing art.
@@ -8,8 +9,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_breathing",
         category = "manuals",
-        name = content.plural_text("吐纳引气诀（残卷）", "吐纳引气诀（残卷）"),
-        description = content.text("一卷残破的修炼功法，记载着引气入体、吐纳温养的入门法门。研读之后，便可盘膝打坐、纳天地灵气入体。"),
+        name = ccb.content.plural_text("吐纳引气诀（残卷）", "吐纳引气诀（残卷）"),
+        description = ccb.content.text("一卷残破的修炼功法，记载着引气入体、吐纳温养的入门法门。研读之后，便可盘膝打坐、纳天地灵气入体。"),
         mass_milligrams = 120000,
         volume_ml = 250,
         price_cents = 3000,
@@ -41,8 +42,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_evergreen",
         category = "manuals",
-        name = content.plural_text("葳蕤经", "葳蕤经"),
-        description = content.text("一部完整的木行修炼功法，封皮以青藤缠绕，纸页似有草木清气。所载养荣导引引木行生气入体，使经脉常青、生机不绝。乃练气期之法。"),
+        name = ccb.content.plural_text("葳蕤经", "葳蕤经"),
+        description = ccb.content.text("一部完整的木行修炼功法，封皮以青藤缠绕，纸页似有草木清气。所载养荣导引引木行生气入体，使经脉常青、生机不绝。乃练气期之法。"),
         mass_milligrams = 340000,
         volume_ml = 500,
         price_cents = 20000,
@@ -74,8 +75,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_blazing_sun",
         category = "manuals",
-        name = content.plural_text("炎阳真传", "炎阳真传"),
-        description = content.text("一部火行修炼功法，纸页泛着焦黄，触手微温。所载炼焰息纳火行炎气入丹田，体魄染炎上之力，近战更具威势。乃练气期之法。"),
+        name = ccb.content.plural_text("炎阳真传", "炎阳真传"),
+        description = ccb.content.text("一部火行修炼功法，纸页泛着焦黄，触手微温。所载炼焰息纳火行炎气入丹田，体魄染炎上之力，近战更具威势。乃练气期之法。"),
         mass_milligrams = 340000,
         volume_ml = 500,
         price_cents = 20000,
@@ -107,8 +108,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_deep_earth",
         category = "manuals",
-        name = content.plural_text("磐石篇", "磐石篇"),
-        description = content.text("一部土行修炼功法，封皮厚重如石板，入手沉甸。所载镇岳吐纳沉气入地，体魄坚凝如山岳，御伤难撼。乃练气期之法。"),
+        name = ccb.content.plural_text("磐石篇", "磐石篇"),
+        description = ccb.content.text("一部土行修炼功法，封皮厚重如石板，入手沉甸。所载镇岳吐纳沉气入地，体魄坚凝如山岳，御伤难撼。乃练气期之法。"),
         mass_milligrams = 340000,
         volume_ml = 500,
         price_cents = 20000,
@@ -140,8 +141,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_true_metal",
         category = "manuals",
-        name = content.plural_text("素锋录", "素锋录"),
-        description = content.text("一部金行修炼功法，以薄金片为页，寒光内蕴。所载淬锋诀引金行锐气淬炼筋骨，出手锋锐精准。乃练气期之法。"),
+        name = ccb.content.plural_text("素锋录", "素锋录"),
+        description = ccb.content.text("一部金行修炼功法，以薄金片为页，寒光内蕴。所载淬锋诀引金行锐气淬炼筋骨，出手锋锐精准。乃练气期之法。"),
         mass_milligrams = 600000,
         volume_ml = 500,
         price_cents = 25000,
@@ -173,8 +174,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_cold_pool",
         category = "manuals",
-        name = content.plural_text("玄渊心法", "玄渊心法"),
-        description = content.text("一部水行修炼功法，纸页清润如得水汽。所载纳川息心静如止水，丹田如渊纳百川，灵气蓄养更深。乃练气期之法。"),
+        name = ccb.content.plural_text("玄渊心法", "玄渊心法"),
+        description = ccb.content.text("一部水行修炼功法，纸页清润如得水汽。所载纳川息心静如止水，丹田如渊纳百川，灵气蓄养更深。乃练气期之法。"),
         mass_milligrams = 340000,
         volume_ml = 500,
         price_cents = 22000,
@@ -206,8 +207,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_blood_fiend",
         category = "manuals",
-        name = content.plural_text("血煞炼尸功（残篇）", "血煞炼尸功（残篇）"),
-        description = content.text("一卷以暗红皮革装订的邪典，字迹似以血书成，翻动时隐有腥气。所载摄血息摄死气血煞养身，催修为暴进，却反噬经脉、有损根本。邪道之法，慎修。"),
+        name = ccb.content.plural_text("血煞炼尸功（残篇）", "血煞炼尸功（残篇）"),
+        description = ccb.content.text("一卷以暗红皮革装订的邪典，字迹似以血书成，翻动时隐有腥气。所载摄血息摄死气血煞养身，催修为暴进，却反噬经脉、有损根本。邪道之法，慎修。"),
         mass_milligrams = 500000,
         volume_ml = 500,
         price_cents = 0,
@@ -239,8 +240,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_fireball",
         category = "manuals",
-        name = content.plural_text("火弹术（残卷）", "火弹术（残卷）"),
-        description = content.text("一卷焦痕斑驳的法术残卷，记载着凝聚火行灵气、催作火弹掷敌的法门。但凡能引气入体，研读之后便能以灵气催发火弹，灼伤来犯之敌。"),
+        name = ccb.content.plural_text("火弹术（残卷）", "火弹术（残卷）"),
+        description = ccb.content.text("一卷焦痕斑驳的法术残卷，记载着凝聚火行灵气、催作火弹掷敌的法门。但凡能引气入体，研读之后便能以灵气催发火弹，灼伤来犯之敌。"),
         mass_milligrams = 150000,
         volume_ml = 250,
         price_cents = 8000,
@@ -272,8 +273,8 @@ do
     local book = content.Item {
         id = "immortal_path_manual_water_burst",
         category = "manuals",
-        name = content.plural_text("寒泉迸（残卷）", "寒泉迸（残卷）"),
-        description = content.text("一卷水渍晕染、字迹微皱的法术残卷，记载着凝聚水行至阴之气、催作寒泉迸敌的法门。但凡能引气入体，研读之后便能以灵气催发寒泉，激射来犯之敌。"),
+        name = ccb.content.plural_text("寒泉迸（残卷）", "寒泉迸（残卷）"),
+        description = ccb.content.text("一卷水渍晕染、字迹微皱的法术残卷，记载着凝聚水行至阴之气、催作寒泉迸敌的法门。但凡能引气入体，研读之后便能以灵气催发寒泉，激射来犯之敌。"),
         mass_milligrams = 150000,
         volume_ml = 250,
         price_cents = 8000,

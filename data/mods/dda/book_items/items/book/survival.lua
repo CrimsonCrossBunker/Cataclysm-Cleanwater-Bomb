@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "atomic_survival",
         category = "manuals",
-        name = content.plural_text("Survival Under Atomic Attack", "copies of Survival Under Atomic Attack"),
-        description = content.text("A wordy and intricate guide to wilderness and urban survival in a worst-case scenario.  While filled with loads of useful information, the madman who wrote this was a terrible writer, and gleaning knowledge from the rants is a chore."),
+        name = ccb.content.plural_text("Survival Under Atomic Attack", "copies of Survival Under Atomic Attack"),
+        description = ccb.content.text("A wordy and intricate guide to wilderness and urban survival in a worst-case scenario.  While filled with loads of useful information, the madman who wrote this was a terrible writer, and gleaning knowledge from the rants is a chore."),
         mass_milligrams = 1920000,
         volume_ml = 2000,
         price_cents = 920,
@@ -34,8 +35,8 @@ do
     local book = content.Item {
         id = "fun_survival",
         category = "manuals",
-        name = content.plural_text("Through the Lens", "copies of Through the Lens"),
-        description = content.text("A colorful digest devoted to backpacking and wilderness photography.  The photos are beautiful, though the terminology in the sections on survivalcraft assume some proficiency."),
+        name = ccb.content.plural_text("Through the Lens", "copies of Through the Lens"),
+        description = ccb.content.text("A colorful digest devoted to backpacking and wilderness photography.  The photos are beautiful, though the terminology in the sections on survivalcraft assume some proficiency."),
         mass_milligrams = 440000,
         volume_ml = 250,
         price_cents = 450,
@@ -66,8 +67,8 @@ do
     local book = content.Item {
         id = "mag_dude",
         category = "manuals",
-        name = content.plural_text("Alpha Male Quarterly", "Alpha Male Quarterlies"),
-        description = content.text("A full-size glossy men's magazine.  There's a brief article about hiking and a list of simple wilderness survival tips somewhere in between the photos of bikini-clad women and the gadget advertisements."),
+        name = ccb.content.plural_text("Alpha Male Quarterly", "Alpha Male Quarterlies"),
+        description = ccb.content.text("A full-size glossy men's magazine.  There's a brief article about hiking and a list of simple wilderness survival tips somewhere in between the photos of bikini-clad women and the gadget advertisements."),
         mass_milligrams = 180000,
         volume_ml = 500,
         price_cents = 450,
@@ -94,8 +95,8 @@ do
     local book = content.Item {
         id = "mag_survival",
         category = "manuals",
-        name = content.plural_text("Outdoor Adventures", "issues of Outdoor Adventures"),
-        description = content.text("A glossy magazine about surviving and hunting in the wilderness.  There's an exciting article about a bear attack in the back pages."),
+        name = ccb.content.plural_text("Outdoor Adventures", "issues of Outdoor Adventures"),
+        description = ccb.content.text("A glossy magazine about surviving and hunting in the wilderness.  There's an exciting article about a bear attack in the back pages."),
         mass_milligrams = 80000,
         volume_ml = 250,
         price_cents = 450,
@@ -122,8 +123,8 @@ do
     local book = content.Item {
         id = "manual_survival",
         category = "manuals",
-        name = content.plural_text("Pitching a Tent", "copies of Pitching a Tent"),
-        description = content.text("A guide detailing the basics of woodsmanship and outdoor survival."),
+        name = ccb.content.plural_text("Pitching a Tent", "copies of Pitching a Tent"),
+        description = ccb.content.text("A guide detailing the basics of woodsmanship and outdoor survival."),
         mass_milligrams = 454000,
         volume_ml = 750,
         price_cents = 2900,
@@ -154,8 +155,8 @@ do
     local book = content.Item {
         id = "pocket_survival",
         category = "manuals",
-        name = content.plural_text("Pocket Survival Guide", "copies of Pocket Survival Guide"),
-        description = content.text("This pocket-sized leather-bound survival guide combines a wealth of concise information with simple to follow instructions and easy to read illustrations."),
+        name = ccb.content.plural_text("Pocket Survival Guide", "copies of Pocket Survival Guide"),
+        description = ccb.content.text("This pocket-sized leather-bound survival guide combines a wealth of concise information with simple to follow instructions and easy to read illustrations."),
         mass_milligrams = 212000,
         volume_ml = 250,
         price_cents = 4000,
@@ -188,8 +189,8 @@ do
     local book = content.Item {
         id = "survival_book",
         category = "manuals",
-        name = content.plural_text("Autobiography of a Mountain Man", "copies of Autobiography of a Mountain Man"),
-        description = content.text("An amusing historical novel filled with detailed descriptions of surviving in the wild, potentially containing great insights for an experienced outdoorsman."),
+        name = ccb.content.plural_text("Autobiography of a Mountain Man", "copies of Autobiography of a Mountain Man"),
+        description = ccb.content.text("An amusing historical novel filled with detailed descriptions of surviving in the wild, potentially containing great insights for an experienced outdoorsman."),
         mass_milligrams = 1920000,
         volume_ml = 2000,
         price_cents = 920,
@@ -222,8 +223,8 @@ do
     local book = content.Item {
         id = "textbook_survival",
         category = "manuals",
-        name = content.plural_text("Outdoor Survival Guide", "copies of Outdoor Survival Guide"),
-        description = content.text("A thick soft-cover book filled with vital information about surviving in the wild, aimed at the experienced backpacker."),
+        name = ccb.content.plural_text("Outdoor Survival Guide", "copies of Outdoor Survival Guide"),
+        description = ccb.content.text("A thick soft-cover book filled with vital information about surviving in the wild, aimed at the experienced backpacker."),
         mass_milligrams = 910000,
         volume_ml = 2000,
         price_cents = 6000,
@@ -251,8 +252,8 @@ do
     local book = content.Item {
         id = "textbook_botany",
         category = "manuals",
-        name = content.plural_text("Introduction to Plant Biology", "copies of Introduction to Plant Biology"),
-        description = content.text("A college-level textbook about plants of all shapes and sizes.  Covers a wide range of subjects, from horticulture to the identification of tropical plants.  As such, it is of limited practical use in your current situation."),
+        name = ccb.content.plural_text("Introduction to Plant Biology", "copies of Introduction to Plant Biology"),
+        description = ccb.content.text("A college-level textbook about plants of all shapes and sizes.  Covers a wide range of subjects, from horticulture to the identification of tropical plants.  As such, it is of limited practical use in your current situation."),
         mass_milligrams = 1200000,
         volume_ml = 2700,
         price_cents = 6000,
@@ -280,8 +281,8 @@ do
     local book = content.Item {
         id = "textbook_arthropod",
         category = "manuals",
-        name = content.plural_text("The Wonderful World of Arthropodology", "copies of The Wonderful World of Arthropodology"),
-        description = content.text("A three-volume doorstopper introducing the whole breadth of modern arthropodology, beginning with a lengthy section on the comparative anatomy of the described taxa.  The authors somehow manage to maintain a gushingly enthusiastic tone, even as they describe the grisly effects of arthropod venoms or the mating habits of horseshoe crabs.  Given the curious lack of man-sized wasps in the illustrations, you have to wonder how much of the content is still applicable."),
+        name = ccb.content.plural_text("The Wonderful World of Arthropodology", "copies of The Wonderful World of Arthropodology"),
+        description = ccb.content.text("A three-volume doorstopper introducing the whole breadth of modern arthropodology, beginning with a lengthy section on the comparative anatomy of the described taxa.  The authors somehow manage to maintain a gushingly enthusiastic tone, even as they describe the grisly effects of arthropod venoms or the mating habits of horseshoe crabs.  Given the curious lack of man-sized wasps in the illustrations, you have to wonder how much of the content is still applicable."),
         mass_milligrams = 2200000,
         volume_ml = 2680,
         price_cents = 10000,
@@ -311,8 +312,8 @@ do
     local book = content.Item {
         id = "isherwood_herbal_remedies",
         category = "manuals",
-        name = content.plural_text("Natural Remedies of New England", "copies of Natural Remedies of New England"),
-        description = content.text("A leather-bound manuscript, it features native herbal remedies with hand-colored illustrations of each plant."),
+        name = ccb.content.plural_text("Natural Remedies of New England", "copies of Natural Remedies of New England"),
+        description = ccb.content.text("A leather-bound manuscript, it features native herbal remedies with hand-colored illustrations of each plant."),
         mass_milligrams = 400000,
         volume_ml = 1250,
         price_cents = 50000,

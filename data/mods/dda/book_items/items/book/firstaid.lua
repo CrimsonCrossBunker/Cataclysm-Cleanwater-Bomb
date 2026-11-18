@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "emergency_book",
         category = "manuals",
-        name = content.plural_text("Guide to Advanced Emergency Care", "copies of Guide to Advanced Emergency Care"),
-        description = content.text("A thick textbook for paramedics describing advanced lifesaving procedures and field-expedient care methods."),
+        name = ccb.content.plural_text("Guide to Advanced Emergency Care", "copies of Guide to Advanced Emergency Care"),
+        description = ccb.content.text("A thick textbook for paramedics describing advanced lifesaving procedures and field-expedient care methods."),
         mass_milligrams = 2063000,
         volume_ml = 2000,
         price_cents = 9200,
@@ -36,8 +37,8 @@ do
     local book = content.Item {
         id = "mag_firstaid",
         category = "manuals",
-        name = content.plural_text("Paramedics", "issues of Paramedics"),
-        description = content.text("An educational magazine for EMTs."),
+        name = ccb.content.plural_text("Paramedics", "issues of Paramedics"),
+        description = ccb.content.text("An educational magazine for EMTs."),
         mass_milligrams = 60000,
         volume_ml = 250,
         price_cents = 480,
@@ -67,8 +68,8 @@ do
     local book = content.Item {
         id = "pocket_firstaid",
         category = "manuals",
-        name = content.plural_text("Pocket Guide to First Aid", "copies of Pocket Guide to First Aid"),
-        description = content.text("This pocket-sized leather-bound guide to first aid combines a wealth of concise information with simple to follow instructions and easy to read illustrations."),
+        name = ccb.content.plural_text("Pocket Guide to First Aid", "copies of Pocket Guide to First Aid"),
+        description = ccb.content.text("This pocket-sized leather-bound guide to first aid combines a wealth of concise information with simple to follow instructions and easy to read illustrations."),
         mass_milligrams = 192000,
         volume_ml = 250,
         price_cents = 4000,
@@ -99,8 +100,8 @@ do
     local book = content.Item {
         id = "textbook_firstaid",
         category = "manuals",
-        name = content.plural_text("First Responder Handbook", "copies of First Responder Handbook"),
-        description = content.text("A hardbound book detailing advanced first aid techniques and field-expedient medical care."),
+        name = ccb.content.plural_text("First Responder Handbook", "copies of First Responder Handbook"),
+        description = ccb.content.text("A hardbound book detailing advanced first aid techniques and field-expedient medical care."),
         mass_milligrams = 1360000,
         volume_ml = 2000,
         price_cents = 8500,
@@ -131,8 +132,8 @@ do
     local book = content.Item {
         id = "booklet_firstaid",
         category = "manuals",
-        name = content.plural_text("First Aid Kit Instruction Booklet", "copies of First Aid Kit Instruction Booklet"),
-        description = content.text("Illustrated how-to guide for your first aid kit."),
+        name = ccb.content.plural_text("First Aid Kit Instruction Booklet", "copies of First Aid Kit Instruction Booklet"),
+        description = ccb.content.text("Illustrated how-to guide for your first aid kit."),
         mass_milligrams = 60000,
         volume_ml = 250,
         price_cents = 480,
@@ -159,8 +160,8 @@ do
     local book = content.Item {
         id = "reference_firstaid1",
         category = "manuals",
-        name = content.plural_text("Physicians' Desk Reference", "copies of Physicians' Desk Reference"),
-        description = content.text("This hefty volume contains all the legally mandated information relevant to physicians for writing prescriptions, generously supported by the efforts and contributions of major pharmaceutical companies.  For the most part, it provides information identical to what is available on that of medication packaging inserts, and cannot match the completeness of digital pharmaceutical references like MediSoft.  At least it doesn't need power to be used."),
+        name = ccb.content.plural_text("Physicians' Desk Reference", "copies of Physicians' Desk Reference"),
+        description = ccb.content.text("This hefty volume contains all the legally mandated information relevant to physicians for writing prescriptions, generously supported by the efforts and contributions of major pharmaceutical companies.  For the most part, it provides information identical to what is available on that of medication packaging inserts, and cannot match the completeness of digital pharmaceutical references like MediSoft.  At least it doesn't need power to be used."),
         mass_milligrams = 2268000,
         volume_ml = 2500,
         price_cents = 10000,
@@ -188,8 +189,8 @@ do
     local book = content.Item {
         id = "reference_firstaid2",
         category = "manuals",
-        name = content.plural_text("Merck Veterinary Manual", "copies of Merck Veterinary Manual"),
-        description = content.text("This expansive text covers 'all domestic species and diseases in veterinary medicine worldwide'.  Should you need information regarding zoonotic diseases, off-label use of medication for animals, common dysfunctions and diseases of animals, or any other veterinary reference info, this is your book.  There are some interesting new chapters on animal cloning in this edition."),
+        name = ccb.content.plural_text("Merck Veterinary Manual", "copies of Merck Veterinary Manual"),
+        description = ccb.content.text("This expansive text covers 'all domestic species and diseases in veterinary medicine worldwide'.  Should you need information regarding zoonotic diseases, off-label use of medication for animals, common dysfunctions and diseases of animals, or any other veterinary reference info, this is your book.  There are some interesting new chapters on animal cloning in this edition."),
         mass_milligrams = 1634000,
         volume_ml = 2160,
         price_cents = 8000,
@@ -217,8 +218,8 @@ do
     local book = content.Item {
         id = "textbook_toxicology",
         category = "manuals",
-        name = content.plural_text("Textbook of Advanced Toxicology", "copies of Textbook of Advanced Toxicology"),
-        description = content.text("This unassuming volume details the broad spectrum of chemical and biological toxins known to modern medicine.  While the obvious focus of the book is the therapy of such poisonings, there are lengthy sections describing the structure and synthesis of some compounds of interest."),
+        name = ccb.content.plural_text("Textbook of Advanced Toxicology", "copies of Textbook of Advanced Toxicology"),
+        description = ccb.content.text("This unassuming volume details the broad spectrum of chemical and biological toxins known to modern medicine.  While the obvious focus of the book is the therapy of such poisonings, there are lengthy sections describing the structure and synthesis of some compounds of interest."),
         mass_milligrams = 3000000,
         volume_ml = 3000,
         price_cents = 30000,
@@ -246,8 +247,8 @@ do
     local book = content.Item {
         id = "book_forensic_reports",
         category = "manuals",
-        name = content.plural_text("Forensic Autopsy Reports", "copies of Forensic Autopsy Reports"),
-        description = content.text("A thick stack of binders holding police autopsy and casework records.  It is packed with specialized jargon, extremely long Latin words, and photographs of human dissection procedures that are horrifying or outright nauseating.  To a layperson it might as well be text from hell; even to a professional it is boring."),
+        name = ccb.content.plural_text("Forensic Autopsy Reports", "copies of Forensic Autopsy Reports"),
+        description = ccb.content.text("A thick stack of binders holding police autopsy and casework records.  It is packed with specialized jargon, extremely long Latin words, and photographs of human dissection procedures that are horrifying or outright nauseating.  To a layperson it might as well be text from hell; even to a professional it is boring."),
         mass_milligrams = 2300000,
         volume_ml = 3000,
         price_cents = 12000,
@@ -279,8 +280,8 @@ do
     local book = content.Item {
         id = "manual_first_aid",
         category = "manuals",
-        name = content.plural_text("The Big Book of First Aid", "copies of The Big Book of First Aid"),
-        description = content.text("It's big and heavy, but full of great information about first aid."),
+        name = ccb.content.plural_text("The Big Book of First Aid", "copies of The Big Book of First Aid"),
+        description = ccb.content.text("It's big and heavy, but full of great information about first aid."),
         mass_milligrams = 454000,
         volume_ml = 1250,
         price_cents = 2500,

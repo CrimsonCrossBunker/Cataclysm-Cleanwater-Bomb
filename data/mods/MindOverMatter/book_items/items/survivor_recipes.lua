@@ -1,10 +1,11 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "recipe_survivor_matrix_crystal_ground",
-        name = content.plural_text("scribbled matrix crystal notes", "scribbled matrix crystal notes"),
-        description = content.text("A series of notes, musings, and marginalia about grinding up matrix crystals, refining the dust and then…mixing it with water and drinking the results?  Hopefully it won't make you go blind."),
+        name = ccb.content.plural_text("scribbled matrix crystal notes", "scribbled matrix crystal notes"),
+        description = ccb.content.text("A series of notes, musings, and marginalia about grinding up matrix crystals, refining the dust and then…mixing it with water and drinking the results?  Hopefully it won't make you go blind."),
         symbol = "ç",
         color = "blue",
         copy_from = "file",

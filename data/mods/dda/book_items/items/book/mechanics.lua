@@ -1,12 +1,13 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "book_pneumatics",
         copy_from = "book_icef",
         looks_like = "book_icef",
-        name = content.plural_text("Pneumatic Pnowledge", "copies of Pneumatic Pnowledge"),
-        description = content.text("A whimsical guide to the world of building and designing compressed air and pneumatic devices, loaded with puns and dry technical diagrams.  It is unclear who the audience for a book like this would be."),
+        name = ccb.content.plural_text("Pneumatic Pnowledge", "copies of Pneumatic Pnowledge"),
+        description = ccb.content.text("A whimsical guide to the world of building and designing compressed air and pneumatic devices, loaded with puns and dry technical diagrams.  It is unclear who the audience for a book like this would be."),
     }
     book:book {
         required_level = 4,
@@ -29,9 +30,9 @@ do
         id = "mag_fieldrepair",
         copy_from = "book_magazine",
         category = "manuals",
-        name = content.plural_text("army improvised field repairs manual", "army improvised field repairs manuals"),
+        name = ccb.content.plural_text("army improvised field repairs manual", "army improvised field repairs manuals"),
         price_postapoc_cents = 500,
-        description = content.text("A compact manual with faded print detailing a number of improvised field repairs that can be made to vehicles."),
+        description = ccb.content.text("A compact manual with faded print detailing a number of improvised field repairs that can be made to vehicles."),
     }
     book:book {
         required_level = 0,
@@ -50,8 +51,8 @@ do
     local book = content.Item {
         id = "mag_mechanics",
         category = "manuals",
-        name = content.plural_text("Popular Mechanics", "issues of Popular Mechanics"),
-        description = content.text("A magazine about mechanical innovations.  Full of entertaining articles and advertisements for esoteric gadgets."),
+        name = ccb.content.plural_text("Popular Mechanics", "issues of Popular Mechanics"),
+        description = ccb.content.text("A magazine about mechanical innovations.  Full of entertaining articles and advertisements for esoteric gadgets."),
         mass_milligrams = 70000,
         volume_ml = 250,
         price_cents = 450,
@@ -78,8 +79,8 @@ do
     local book = content.Item {
         id = "manual_makerspace",
         category = "manuals",
-        name = content.plural_text("makerspace kit instructions", "copies of makerspace kit instructions"),
-        description = content.text("Instructions and blueprints for dozens of projects of increasing complexity for anyone new to the maker community."),
+        name = ccb.content.plural_text("makerspace kit instructions", "copies of makerspace kit instructions"),
+        description = ccb.content.text("Instructions and blueprints for dozens of projects of increasing complexity for anyone new to the maker community."),
         mass_milligrams = 70000,
         volume_ml = 250,
         price_cents = 450,
@@ -106,8 +107,8 @@ do
     local book = content.Item {
         id = "manual_robotics_kit",
         category = "manuals",
-        name = content.plural_text("robotics kit instructions", "copies of robotics kit instructions"),
-        description = content.text("Instructions and blueprints for dozens of projects of increasing complexity.  An introduction to toy robots."),
+        name = ccb.content.plural_text("robotics kit instructions", "copies of robotics kit instructions"),
+        description = ccb.content.text("Instructions and blueprints for dozens of projects of increasing complexity.  An introduction to toy robots."),
         mass_milligrams = 70000,
         volume_ml = 250,
         price_cents = 450,
@@ -134,8 +135,8 @@ do
     local book = content.Item {
         id = "manual_engine_kit",
         category = "manuals",
-        name = content.plural_text("Stirling engine kit instructions", "copies of Stirling engine instructions"),
-        description = content.text("Instructions and blueprints for building toy Stirling engines.  An introduction to engine principles."),
+        name = ccb.content.plural_text("Stirling engine kit instructions", "copies of Stirling engine instructions"),
+        description = ccb.content.text("Instructions and blueprints for building toy Stirling engines.  An introduction to engine principles."),
         mass_milligrams = 70000,
         volume_ml = 250,
         price_cents = 450,
@@ -162,8 +163,8 @@ do
     local book = content.Item {
         id = "manual_mechanics",
         category = "manuals",
-        name = content.plural_text("Under the Hood", "copies of Under the Hood"),
-        description = content.text("An advanced mechanics manual, covering all sorts of topics."),
+        name = ccb.content.plural_text("Under the Hood", "copies of Under the Hood"),
+        description = ccb.content.text("An advanced mechanics manual, covering all sorts of topics."),
         mass_milligrams = 454000,
         volume_ml = 750,
         price_cents = 5500,
@@ -191,8 +192,8 @@ do
     local book = content.Item {
         id = "manual_mechanics_car_owner",
         category = "manuals",
-        name = content.plural_text("car owner manual", "car owner manuals"),
-        description = content.text("A manual detailing how to do maintenance and light repairs to a car, ranging from changing a tire to changing oil and general checks of engine health."),
+        name = ccb.content.plural_text("car owner manual", "car owner manuals"),
+        description = ccb.content.text("A manual detailing how to do maintenance and light repairs to a car, ranging from changing a tire to changing oil and general checks of engine health."),
         mass_milligrams = 454000,
         volume_ml = 750,
         price_cents = 3000,
@@ -221,9 +222,9 @@ do
         id = "textbook_atomic_lab",
         copy_from = "recipe_lab_cvd",
         looks_like = "recipe_lab_cvd",
-        name = content.plural_text("lab journal-Curie", "lab journals-Curie"),
+        name = ccb.content.plural_text("lab journal-Curie", "lab journals-Curie"),
         price_postapoc_cents = 2000,
-        description = content.text("This lab notebook is filled with the collective discoveries and refinements of a research team dedicated to nuclear energy.  You don't think you're ready to start a second Cataclysm, but the general information provided might be useful…"),
+        description = ccb.content.text("This lab notebook is filled with the collective discoveries and refinements of a research team dedicated to nuclear energy.  You don't think you're ready to start a second Cataclysm, but the general information provided might be useful…"),
     }
     book:book {
         required_level = 6,
@@ -242,8 +243,8 @@ do
     local book = content.Item {
         id = "book_nonf_soft_mechnic_hotrod",
         category = "manuals",
-        name = content.plural_text("Hot Rod Chassis & Suspension Handbook", "copies of Hot Rod Handbook"),
-        description = content.text("By learning the fundamentals of chassis building and suspension design you will gain the critical knowledge needed to hot rod properly."),
+        name = ccb.content.plural_text("Hot Rod Chassis & Suspension Handbook", "copies of Hot Rod Handbook"),
+        description = ccb.content.text("By learning the fundamentals of chassis building and suspension design you will gain the critical knowledge needed to hot rod properly."),
         mass_milligrams = 500000,
         volume_ml = 500,
         price_cents = 3100,
@@ -271,8 +272,8 @@ do
     local book = content.Item {
         id = "textbook_mechanics",
         category = "manuals",
-        name = content.plural_text("Mechanical Mastery", "copies of Mechanical Mastery"),
-        description = content.text("An advanced guide on mechanics and welding, covering topics like \"Grinding off rust\" and \"Making cursive E's\"."),
+        name = ccb.content.plural_text("Mechanical Mastery", "copies of Mechanical Mastery"),
+        description = ccb.content.text("An advanced guide on mechanics and welding, covering topics like \"Grinding off rust\" and \"Making cursive E's\"."),
         mass_milligrams = 1587000,
         volume_ml = 1500,
         price_cents = 4950,
@@ -301,8 +302,8 @@ do
     local book = content.Item {
         id = "book_icef",
         category = "manuals",
-        name = content.plural_text("Internal Combustion Fundamentals", "copies of Internal Combustion Fundamentals"),
-        description = content.text("A college-level textbook that details the operation, maintenance, and repair of internal combustion engines."),
+        name = ccb.content.plural_text("Internal Combustion Fundamentals", "copies of Internal Combustion Fundamentals"),
+        description = ccb.content.text("A college-level textbook that details the operation, maintenance, and repair of internal combustion engines."),
         mass_milligrams = 1587000,
         volume_ml = 1500,
         price_cents = 5950,

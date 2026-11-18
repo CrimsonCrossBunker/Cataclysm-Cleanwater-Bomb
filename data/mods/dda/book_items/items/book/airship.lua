@@ -1,11 +1,12 @@
-local content = require("ccb").content
+local ccb = require("ccb")
+local content = ccb.content
 
 do
     local book = content.Item {
         id = "book_airship_piloting",
         category = "manuals",
-        name = content.plural_text("The Complete Guide to Piloting Aircraft", "copies of The Complete Guide to Piloting Aircraft"),
-        description = content.text("A comprehensive civilian flight manual covering every kind of aircraft, from helicopters to lighter-than-air craft.  It explains managing lift and ballast, steering with rotors and propellers, and handling changing winds."),
+        name = ccb.content.plural_text("The Complete Guide to Piloting Aircraft", "copies of The Complete Guide to Piloting Aircraft"),
+        description = ccb.content.text("A comprehensive civilian flight manual covering every kind of aircraft, from helicopters to lighter-than-air craft.  It explains managing lift and ballast, steering with rotors and propellers, and handling changing winds."),
         mass_milligrams = 1400000,
         volume_ml = 1500,
         price_cents = 8500,
