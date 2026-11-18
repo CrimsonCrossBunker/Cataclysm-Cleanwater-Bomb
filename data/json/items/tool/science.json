@@ -772,8 +772,7 @@
     "warmth": 10,
     "max_worn": 1,
     "armor": [ { "encumbrance": 30, "coverage": 80, "covers": [ "torso" ], "specifically_covers": [ "torso_hanging_back" ] } ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1000 } } ],
-    "use_action": [ { "type": "effect_on_conditions", "description": "Print NRE data.", "effect_on_conditions": [ "print_nre_data" ] } ]
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1000 } } ]
   },
   {
     "id": "nitrogen_tank",

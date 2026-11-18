@@ -17,6 +17,46 @@ function M.capture(character)
     state.message(character, services.translate("The NRE recorder emits a sharp beep!"), "info")
 end
 
+local function printout(character, item, count)
+    state.message(character, services.translate("The recorder whirs as it starts printing the recorded data."), "info")
+    state.checked(services.inventory.receive_item(character, id("item", item), count))
+end
+
+function M.print(character)
+    if travel.number(character, "portal_storm_record") <= 0 and travel.number(character, "generic_nre_anomaly") <= 0 then
+        state.message(character, services.translate("The recorder prints: \"NO DATA\" in a short piece of paper"), "info")
+        return
+    end
+    for _, tier in ipairs {
+        { 25, "large_printout_portal_storm_data" },
+        { 3, "medium_printout_portal_storm_data" },
+        { 1, "small_printout_portal_storm_data" },
+    } do
+        if travel.number(character, "portal_storm_record") >= tier[1] then
+            printout(character, tier[2], 1)
+            travel.set(character, "portal_storm_record", 0)
+        end
+    end
+    local anomalies = travel.number(character, "generic_nre_anomaly")
+    if anomalies >= 1 then
+        printout(character, "nre_anomaly_printout_data", math.modf(anomalies))
+        travel.set(character, "generic_nre_anomaly", 0)
+    end
+end
+
+ccb.runtime.handler("nre_print_data", function(payload)
+    if payload.character then M.print(payload.character) end
+    return 0
+end)
+local recorder = ccb.content.Item { id = "nre_recorder", copy_from = "nre_recorder" }
+recorder:clear_use_actions()
+recorder:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Activate the recorder's printer."))
+ccb.content.replace(recorder)
+local station = ccb.content.Item { id = "robofac_mobile_weather_station", copy_from = "robofac_mobile_weather_station" }
+station:clear_use_actions()
+station:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Print NRE data."))
+ccb.content.replace(station)
+
 local significant = {
     mon_hound_tindalos = true, mon_darkman = true, mon_zombie_phase_shrike = true,
     mon_swarm_structure = true, mon_better_half = true, mon_hallucinator = true,
