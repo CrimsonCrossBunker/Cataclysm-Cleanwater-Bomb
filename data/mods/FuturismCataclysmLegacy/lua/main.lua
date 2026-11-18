@@ -39,3 +39,5 @@ require("generic_items")
 require("inherited_items")
 
 require("active_items")
+
+require("lua.effect_types")
