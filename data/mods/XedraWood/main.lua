@@ -87,3 +87,5 @@ require("craft_recipes")
 require("practice_recipes")
 
 require("hedge_research")
+
+require("anima_meditation")
