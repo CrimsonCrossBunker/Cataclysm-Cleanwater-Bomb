@@ -15,3 +15,5 @@ require("snippets")
 require("weather_generators")
 
 require("disassembly")
+
+require("retired_recipes")

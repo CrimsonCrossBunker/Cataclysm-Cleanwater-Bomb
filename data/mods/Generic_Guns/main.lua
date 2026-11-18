@@ -7,3 +7,5 @@ require("ammunition_types")
 require("requirements")
 
 require("disassembly")
+
+require("retired_recipes")

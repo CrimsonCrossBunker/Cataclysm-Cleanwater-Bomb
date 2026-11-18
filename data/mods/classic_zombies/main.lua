@@ -56,3 +56,5 @@ require("portal_storm_cycle")
 require("scenario_filters")
 
 require("construction_groups")
+
+require("retired_recipes")

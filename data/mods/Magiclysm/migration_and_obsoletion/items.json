@@ -149,11 +149,6 @@
     "melee_damage": { "bash": 12 }
   },
   {
-    "type": "recipe",
-    "result": "shotcestus",
-    "obsolete": true
-  },
-  {
     "id": "obfuscating_aura",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
