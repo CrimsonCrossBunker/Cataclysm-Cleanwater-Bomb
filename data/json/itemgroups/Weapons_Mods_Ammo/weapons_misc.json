@@ -41,21 +41,5 @@
       [ "survnote", 1 ],
       [ "karambit", 1 ]
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "grenades",
-    "items": [
-      [ "grenade", 30 ],
-      [ "grenade_inc", 30 ],
-      [ "flashbang", 30 ],
-      [ "EMPbomb", 20 ],
-      [ "grenade_emp", 5 ],
-      [ "gasbomb", 15 ],
-      [ "gasbomb_makeshift", 15 ],
-      [ "smokebomb", 50 ],
-      [ "dynamite", 50 ],
-      [ "c4", 50 ]
-    ]
   }
 ]

@@ -1210,3 +1210,187 @@ do
     group:entry { group = "guns_pistol_common_display_40", charges = { 0, 20 }, probability = 25 }
     content.add(group)
 end
+
+do
+    -- Pistols that are reasonably prolific amongst civilians, commonly owned and reliably obtainable by citizens and that are found in many locations.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_pistol_common", kind = "distribution", with_magazine = 100 }
+    group:group("guns_pistol_common_9mm", 74)
+    group:group("guns_pistol_common_22", 64)
+    group:group("guns_pistol_common_45", 20)
+    group:group("guns_pistol_common_380", 28)
+    group:group("guns_pistol_common_40", 19)
+    group:group("guns_pistol_common_357mag", 12)
+    group:group("guns_pistol_common_38", 11)
+    group:group("guns_pistol_common_44", 1)
+    group:group("guns_pistol_common_10mm", 1)
+    group:group("guns_pistol_common_223", 33)
+    group:group("guns_pistol_common_300", 8)
+    group:group("guns_pistol_common_57", 2)
+    group:group("guns_pistol_common_460", 2)
+    group:group("guns_pistol_common_32", 1)
+    group:group("guns_pistol_common_45colt", 1)
+    group:group("guns_pistol_common_38super", 1)
+    group:group("guns_pistol_common_other", 2)
+    content.add(group)
+end
+
+do
+    -- Empty and reasonably common pistols found exclusively in gun stores.
+    local group = content.ItemGroup { id = "guns_pistol_common_display", kind = "distribution" }
+    group:group("guns_pistol_common_display_9mm", 74)
+    group:group("guns_pistol_common_display_22", 64)
+    group:group("guns_pistol_common_display_45", 20)
+    group:group("guns_pistol_common_display_380", 28)
+    group:group("guns_pistol_common_display_40", 19)
+    group:group("guns_pistol_common_display_357mag", 12)
+    group:group("guns_pistol_common_display_38", 11)
+    group:group("guns_pistol_common_display_44", 1)
+    group:group("guns_pistol_common_display_45colt", 5)
+    group:group("guns_pistol_common_display_10mm", 1)
+    group:group("guns_pistol_common_display_223", 17)
+    group:group("guns_pistol_common_display_300", 8)
+    group:group("guns_pistol_common_display_57", 2)
+    group:group("guns_pistol_common_display_460", 2)
+    group:group("guns_pistol_common_display_32", 1)
+    group:group("guns_pistol_common_display_38super", 1)
+    group:group("guns_pistol_common_display_other", 2)
+    content.add(group)
+end
+
+do
+    -- US military specification pistols only ever found at military sites. These weapons must be pistols that are still in current inventory, and are still being issued in some capacity to American personnel.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_pistol_milspec", kind = "distribution" }
+    group:group("nested_glock_18c", 40)
+    group:group("nested_glock_19", 30)
+    group:group("nested_m17")
+    group:group("nested_m18")
+    group:group("nested_usp_45_mk23", 5)
+    group:group("nested_m1911_MEU", 5)
+    content.add(group)
+end
+
+do
+    -- Military specification SMGs only ever found at military sites.
+    local group = content.ItemGroup { id = "guns_smg_milspec", kind = "distribution" }
+    group:group("nested_hk_mp5")
+    group:group("nested_hk_mp5k", 10)
+    group:group("nested_hk_mp5sd", 5)
+    content.add(group)
+end
+
+do
+    -- Rifles commonly owned by citizens and found in many locations.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_rifle_common", kind = "distribution", with_magazine = 100 }
+    group:group("guns_rifle_common_22", 1760)
+    group:group("guns_rifle_common_223", 1000)
+    group:group("guns_rifle_common_308", 320)
+    group:group("guns_rifle_common_45acp", 271)
+    group:group("guns_rifle_common_762", 230)
+    group:group("guns_rifle_common_9mm", 180)
+    group:group("guns_rifle_common_3006", 149)
+    group:group("guns_rifle_common_357", 108)
+    group:group("guns_rifle_common_44", 81)
+    group:group("guns_rifle_common_3030", 76)
+    group:group("guns_rifle_common_762R", 70)
+    group:group("guns_rifle_common_270win", 57)
+    group:group("guns_rifle_common_300winmag", 32)
+    group:group("guns_rifle_common_380", 24)
+    group:group("guns_rifle_common_300blk", 19)
+    group:group("guns_rifle_common_4570", 18)
+    group:group("guns_rifle_common_30carbine", 17)
+    group:group("guns_rifle_common_303", 16)
+    group:group("guns_rifle_common_338", 14)
+    group:group("guns_rifle_common_450", 3)
+    group:group("guns_rifle_common_50beowulf", 3)
+    group:group("guns_rifle_common_57", 3)
+    group:group("guns_rifle_common_545", 3)
+    group:group("guns_rifle_common_7mm_arisaka", 2)
+    content.add(group)
+end
+
+do
+    -- Empty rifles commonly found in gun stores.
+    local group = content.ItemGroup { id = "guns_rifle_common_display", kind = "distribution" }
+    group:group("guns_rifle_common_display_22", 1760)
+    group:group("guns_rifle_common_display_223", 1000)
+    group:group("guns_rifle_common_display_308", 320)
+    group:group("guns_rifle_common_display_45acp", 271)
+    group:group("guns_rifle_common_display_762", 230)
+    group:group("guns_rifle_common_display_9mm", 180)
+    group:group("guns_rifle_common_display_3006", 149)
+    group:group("guns_rifle_common_display_357", 108)
+    group:group("guns_rifle_common_display_44", 81)
+    group:group("guns_rifle_common_display_3030", 76)
+    group:group("guns_rifle_common_display_762R", 70)
+    group:group("guns_rifle_common_display_270win", 57)
+    group:group("guns_rifle_common_display_300winmag", 32)
+    group:group("guns_rifle_common_display_380", 24)
+    group:group("guns_rifle_common_display_300blk", 19)
+    group:group("guns_rifle_common_display_4570", 18)
+    group:group("guns_rifle_common_display_30carbine", 17)
+    group:group("guns_rifle_common_display_303", 16)
+    group:group("guns_rifle_common_display_338", 14)
+    group:group("guns_rifle_common_display_450", 3)
+    group:group("guns_rifle_common_display_50beowulf", 3)
+    group:group("guns_rifle_common_display_57", 3)
+    group:group("guns_rifle_common_display_545", 3)
+    group:group("guns_rifle_common_display_7mm_arisaka", 2)
+    content.add(group)
+end
+
+do
+    -- Military specification rifles only ever found at military sites.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_rifle_milspec", kind = "distribution" }
+    group:group("nested_m4_carbine", 200)
+    group:group("nested_h&k416a5", 50)
+    group:group("nested_m107a1", 3)
+    group:group("nested_m134", 10)
+    group:group("nested_m14ebr", 10)
+    group:group("nested_tac50", 1)
+    group:group("nested_tac338", 5)
+    group:group("nested_m2010", 20)
+    group:group("nested_m240", 15)
+    group:group("nested_m249", 25)
+    group:group("nested_m27iar", 50)
+    group:group("nested_m60", 15)
+    group:group("nested_scar_l", 50)
+    group:group("nested_scar_h", 50)
+    group:group("nested_m110a1", 50)
+    group:group("nested_M24", 15)
+    content.add(group)
+end
+
+do
+    -- Assorted factory crafted energy weapons.
+    local group = content.ItemGroup { id = "guns_energy", kind = "distribution" }
+    group:item("laser_rifle", 30)
+    group:item("emp_gun", 10)
+    group:item("v29", 70)
+    content.add(group)
+end
+
+do
+    -- Military shotguns currently in service.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_shotgun_milspec", kind = "distribution" }
+    group:group("nested_remington_870_express", 50)
+    group:group("nested_mossberg_590_shockwave", 20)
+    group:group("nested_mossberg_590", 50)
+    group:group("nested_m1014", 50)
+    group:group("nested_benelli_m4", 50)
+    content.add(group)
+end
+
+do
+    -- Factory manufactured grenade launchers (excludes improvised weapons)
+    local group = content.ItemGroup { id = "guns_launcher_grenade", kind = "distribution" }
+    group:item("m320", 75)
+    group:item("m79")
+    group:entry { item = "mark19", charges = { 0, 10 }, probability = 10 }
+    group:entry { item = "mgl", charges = { 0, 6 }, probability = 25 }
+    content.add(group)
+end

@@ -138,18 +138,6 @@
   },
   {
     "type": "item_group",
-    "id": "SUS_trash_trashcan",
-    "//1": "SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.",
-    "//2": "This group is for trash in a trashcan, contained in a trashbag",
-    "subtype": "distribution",
-    "items": [
-      { "group": "SUS_trash_trashcan_full", "prob": 25 },
-      { "group": "SUS_trash_trashcan_half", "prob": 60 },
-      { "group": "SUS_trash_trashcan_empty", "prob": 15 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "SUS_trash_forest_no_manmade",
     "//1": "SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.",
     "//2": "This group is for forests without manmade trash",

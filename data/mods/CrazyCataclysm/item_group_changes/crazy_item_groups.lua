@@ -22,3 +22,45 @@ do
     group:group("on_hand_762")
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "drugs_misc", kind = "distribution" }
+    group:item("flu_shot_fun", 50)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "harddrugs", kind = "distribution" }
+    group:item("flu_shot_fun", 50)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "SUS_junk_drawer", kind = "collection" }
+    group:entry { item = "kitchen_gun", charges = { 1, 3 }, probability = 5 }
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "SUS_fridge_snacks", kind = "collection" }
+    group:group("powerthirst_flavors", 10)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "guns_pistol_common", kind = "distribution" }
+    group:item("yeet_cannon", 12)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "grenades", kind = "distribution" }
+    group:item("granade", 1)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "bionics_mil", kind = "distribution" }
+    group:item("bio_chest_gun", 1)
+    content.extend_item_group(group)
+end

@@ -188,3 +188,5 @@ require("banish_illness")
 require("shadow_urge")
 
 require("item_groups")
+
+require("item_group_changes")

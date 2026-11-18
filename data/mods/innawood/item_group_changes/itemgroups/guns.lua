@@ -181,3 +181,48 @@ do
     group:group("guns_improvised", 50)
     content.replace(group)
 end
+
+do
+    -- Pistols that are reasonably prolific amongst civilians, commonly owned and reliably obtainable by citizens and that are found in many locations.
+    local group = content.ItemGroup { id = "guns_pistol_common", kind = "distribution" }
+    group:group("guns_pistol_improvised", 35)
+    content.replace(group)
+end
+
+do
+    -- US military specification pistols only ever found at military sites. These weapons must be pistols that are still in current inventory, and are still being issued in some capacity to American personnel.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_pistol_milspec", kind = "distribution" }
+    group:group("guns_pistol_improvised", 35)
+    content.replace(group)
+end
+
+do
+    -- Rifles commonly owned by citizens and found in many locations.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_rifle_common", kind = "distribution" }
+    group:group("guns_rifle_improvised", 22)
+    content.replace(group)
+end
+
+do
+    -- Military specification rifles only ever found at military sites.
+    -- Making the assumption any loaded gun will have additional ammo and mags with it.
+    local group = content.ItemGroup { id = "guns_rifle_milspec", kind = "distribution" }
+    group:group("guns_rifle_improvised", 22)
+    content.replace(group)
+end
+
+do
+    -- Military shotguns currently in service.
+    local group = content.ItemGroup { id = "guns_shotgun_milspec", kind = "distribution" }
+    group:group("guns_shotgun_improvised", 20)
+    content.replace(group)
+end
+
+do
+    -- Factory manufactured grenade launchers (excludes improvised weapons)
+    local group = content.ItemGroup { id = "guns_launcher_grenade", kind = "distribution" }
+    group:group("archery", 50)
+    content.replace(group)
+end

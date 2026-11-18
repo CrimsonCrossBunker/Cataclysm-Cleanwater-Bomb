@@ -1,10 +1,5 @@
 [
   {
-    "id": "flags_pride_and_other",
-    "type": "item_group",
-    "items": [ [ "american_flag", 20 ], [ "state_flag", 10 ] ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": "house_detatched6",
     "object": {

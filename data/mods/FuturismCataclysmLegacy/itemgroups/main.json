@@ -1,31 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "nanofab_recipes",
-    "copy-from": "nanofab_recipes",
-    "extend": {
-      "items": [
-        [ "fcl_atomic_coffeemaker", 10 ],
-        [ "fcl_plasma_gun", 10 ],
-        [ "fcl_plasma_rifle", 10 ],
-        [ "fcl_heavy_rail_rifle", 10 ],
-        [ "fcl_ftk93", 10 ],
-        [ "fcl_fusion_pack", 10 ],
-        [ "fcl_fusion_pellet", 10 ],
-        [ "fcl_ftk29", 10 ],
-        [ "fcl_ftk07", 10 ],
-        [ "fcl_bio_neurosoft_aeronautics", 10 ],
-        [ "fcl_bio_neurosoft_aircraft_mechanic", 10 ],
-        [ "fcl_bio_missiles", 10 ],
-        [ "fcl_bio_melee_counteraction", 10 ],
-        [ "fcl_bio_melee_optimization_unit", 10 ],
-        [ "fcl_bio_dopamine_stimulators", 10 ],
-        [ "fcl_bio_monowhip", 10 ]
-      ]
-    }
-  },
-  {
-    "type": "item_group",
     "id": "launchers",
     "copy-from": "launchers",
     "extend": { "items": [ { "item": "fcl_rm802", "prob": 40 } ] }

@@ -1,34 +1,5 @@
 [
   {
-    "id": "grave_contents",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "group": "everyday_corpse", "prob": 85 }, { "group": "grave_cremains", "prob": 15 } ]
-  },
-  {
-    "id": "crate_sports",
-    "type": "item_group",
-    "subtype": "collection",
-    "groups": [ [ "sports_bulk", 90 ], [ "sports_bulk", 70 ], [ "sports_bulk", 40 ], [ "sports_bulk", 10 ] ]
-  },
-  {
-    "id": "table_wine",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "glass", 80 ],
-      [ "towel", 40 ],
-      [ "ceramic_bowl", 30 ],
-      [ "bucket", 30 ],
-      { "group": "glass_of_wine", "prob": 50 },
-      { "group": "wines_worthy", "prob": 20 },
-      { "group": "glass_set", "prob": 20 },
-      { "group": "tinware", "prob": 20 },
-      [ "knife_swissarmy", 10 ],
-      [ "funnel", 10 ]
-    ]
-  },
-  {
     "id": "clutter_bedroom",
     "type": "item_group",
     "subtype": "distribution",
@@ -78,74 +49,6 @@
       { "item": "bb", "prob": 5, "charges": [ 1, 500 ] },
       [ "bone_tainted", 1 ],
       { "group": "corpse_mansion", "prob": 1 }
-    ]
-  },
-  {
-    "id": "clutter_yard",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "cig_butt", 50 ],
-      [ "string_6", 50 ],
-      [ "stick", 50 ],
-      [ "rock", 50 ],
-      [ "rock_flaking", 5 ],
-      [ "flint", 1 ],
-      [ "rock_large", 5 ],
-      [ "plastic_shopping_bag", 40 ],
-      [ "sinew", 40 ],
-      [ "cotton_patchwork", 40 ],
-      [ "cup_plastic", 30 ],
-      [ "can_drink", 30 ],
-      [ "bottle_plastic", 30 ],
-      [ "bag_plastic", 30 ],
-      [ "sharp_rock", 30 ],
-      [ "box_cigarette", 20 ],
-      { "item": "cotton_patchwork", "prob": 20, "custom-flags": [ "FILTHY" ] },
-      [ "9mm_casing", 20 ],
-      [ "shot_hull", 20 ],
-      [ "38_casing", 20 ],
-      [ "45_casing", 20 ],
-      [ "wrapper", 20 ],
-      [ "wrapper_foil", 2 ],
-      [ "bottle_glass", 10 ],
-      [ "flyer", 10 ],
-      [ "bone_tainted", 5 ],
-      { "group": "corpse_mansion", "prob": 5 }
-    ]
-  },
-  {
-    "id": "clutter_ballroom",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "ceramic_shard", 40 ],
-      [ "shot_hull", 40 ],
-      [ "sinew", 40 ],
-      { "item": "glass_shard", "prob": 30, "count": [ 1, 8 ] },
-      [ "wrapper", 30 ],
-      [ "wrapper_foil", 3 ],
-      [ "dance_shoes", 20 ],
-      [ "dress_shoes", 20 ],
-      { "item": "cotton_patchwork", "prob": 20, "custom-flags": [ "FILTHY" ] },
-      [ "9mm_casing", 20 ],
-      [ "38_casing", 20 ],
-      [ "45_casing", 20 ],
-      [ "tieclip", 20 ],
-      [ "splinter", 20 ],
-      [ "state_flag", 3 ],
-      [ "purse", 20 ],
-      [ "heels", 20 ],
-      [ "cotton_patchwork", 20 ],
-      { "group": "tinware", "prob": 20 },
-      { "item": "mask_skull", "variant": "guy_fawkes", "prob": 10 },
-      [ "gold_ear", 10 ],
-      [ "bone_tainted", 5 ],
-      [ "silver_ear", 5 ],
-      [ "bead_ear", 5 ],
-      [ "platinum_ear", 1 ],
-      { "group": "corpse_mansion", "prob": 5 },
-      { "group": "neckties", "prob": 1 }
     ]
   },
   {

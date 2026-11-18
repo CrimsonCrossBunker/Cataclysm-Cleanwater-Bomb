@@ -1,46 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "ammo_pistol_milspec",
-    "//": "Military specification pistol ammo found at military sites.",
-    "subtype": "distribution",
-    "entries": [ { "item": "9mmfmj", "prob": 100 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "ammo_rifle_milspec",
-    "//": "Military specification rifle ammo found at military sites.",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "50_incendiary", "prob": 10 },
-      { "item": "50bmg", "prob": 30 },
-      { "item": "50match", "prob": 30 },
-      { "item": "50ss", "prob": 10 },
-      { "item": "50_mk211", "prob": 1 },
-      { "item": "556_incendiary", "prob": 15 },
-      { "item": "556_mk262", "prob": 3 },
-      { "item": "556_mk318", "prob": 1 },
-      { "item": "556", "prob": 79 },
-      { "item": "556_m855a1", "prob": 2 },
-      { "item": "556_m995", "prob": 2 },
-      { "item": "762_51_incendiary", "prob": 10 },
-      { "item": "762_51", "prob": 40 },
-      { "item": "762_51_m993", "prob": 20 },
-      { "item": "300blk", "prob": 15 },
-      { "item": "300blk_ss", "prob": 10 },
-      { "item": "338lapua_fmjbt", "prob": 15 },
-      { "item": "338lapua_api", "prob": 15 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "ammo_shotgun_milspec",
-    "//": "Military specification shotgun ammo found at military sites.",
-    "subtype": "distribution",
-    "entries": [ { "group": "ammo_can_shot_full", "prob": 10 }, { "group": "ammo_can_slug_full", "prob": 2 } ]
-  },
-  {
-    "type": "item_group",
     "id": "ammo_launcher_grenade",
     "//": "Factory specification grenade launcher ammo intended for military use",
     "subtype": "distribution",

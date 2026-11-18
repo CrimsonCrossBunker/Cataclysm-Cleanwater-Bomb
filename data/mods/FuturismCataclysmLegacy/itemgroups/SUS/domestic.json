@@ -5,12 +5,5 @@
     "subtype": "collection",
     "copy-from": "SUS_coffee_cupboard",
     "extend": { "items": [ [ "atomic_coffeepot", 10 ] ] }
-  },
-  {
-    "id": "SUS_oven",
-    "type": "item_group",
-    "subtype": "collection",
-    "copy-from": "SUS_oven",
-    "extend": { "items": [ [ "fcl_atompot", 3 ] ] }
   }
 ]

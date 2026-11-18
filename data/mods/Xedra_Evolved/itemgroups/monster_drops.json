@@ -203,62 +203,6 @@
     ]
   },
   {
-    "id": "default_zombie_children_clothes",
-    "type": "item_group",
-    "subtype": "collection",
-    "copy-from": "default_zombie_children_clothes",
-    "extend": {
-      "entries": [
-        { "item": "wyld_candy", "prob": 15, "container-item": "null", "entry-wrapper": "wrapper_wyld", "sealed": false },
-        { "item": "scrap_dreamdross", "prob": 35, "count": [ 1, 4 ] }
-      ]
-    }
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "mon_zombie_scientist_death_drops",
-    "copy-from": "mon_zombie_scientist_death_drops",
-    "extend": { "entries": [ { "group": "xe_datacores", "prob": 3 } ] }
-  },
-  {
-    "type": "item_group",
-    "id": "harddrugs",
-    "copy-from": "harddrugs",
-    "subtype": "distribution",
-    "extend": {
-      "entries": [
-        { "item": "faewild", "prob": 15, "container-item": "null", "entry-wrapper": "bag_zipper", "count": [ 3, 12 ] },
-        {
-          "item": "lotus_blossom",
-          "prob": 15,
-          "container-item": "null",
-          "entry-wrapper": "bag_zipper",
-          "count": [ 2, 16 ]
-        }
-      ]
-    }
-  },
-  {
-    "type": "item_group",
-    "id": "default_zombie_items_pockets",
-    "copy-from": "default_zombie_items_pockets",
-    "subtype": "collection",
-    "extend": {
-      "entries": [
-        { "item": "faewild", "prob": 5, "container-item": "null", "entry-wrapper": "bag_zipper", "count": [ 3, 12 ] },
-        {
-          "item": "lotus_blossom",
-          "prob": 5,
-          "container-item": "null",
-          "entry-wrapper": "bag_zipper",
-          "count": [ 2, 16 ]
-        },
-        { "item": "scrap_dreamdross", "prob": 15, "count": [ 1, 4 ] }
-      ]
-    }
-  },
-  {
     "id": "default_moroi_death_drops",
     "type": "item_group",
     "subtype": "collection",

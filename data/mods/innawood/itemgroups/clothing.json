@@ -1,11 +1,5 @@
 [
   {
-    "id": "clothing_watch",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "item": "null", "prob": 10 } ]
-  },
-  {
     "type": "item_group",
     "id": "pants",
     "items": [ [ "leather_belt", 30 ], [ "pants_leather", 60 ], [ "skirt_leather", 5 ], [ "kilt", 2 ] ]

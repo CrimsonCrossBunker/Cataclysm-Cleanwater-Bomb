@@ -1,1 +1,8 @@
+require("item_group_changes.itemgroups.bionics_groups")
+require("item_group_changes.itemgroups.clothing_group")
+require("item_group_changes.itemgroups.item_groups")
+require("item_group_changes.itemgroups.scrap_expansion_groups")
+require("item_group_changes.itemgroups.titanium_groups")
 require("item_group_changes.itemgroups.tool_groups")
+require("item_group_changes.itemgroups.weapons.weapon_expansion_groups")
+require("item_group_changes.monsters.harvest")

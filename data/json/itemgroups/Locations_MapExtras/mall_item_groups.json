@@ -3,42 +3,5 @@
     "id": "candy_shop",
     "type": "item_group",
     "items": [ { "group": "candy_chocolate", "prob": 460 }, [ "cookies", 50 ], { "prob": 50, "group": "licorice_bag_plastic_4" } ]
-  },
-  {
-    "id": "music_shop",
-    "type": "item_group",
-    "ammo": 75,
-    "magazine": 100,
-    "items": [
-      { "group": "box_of_batteries_unopened", "prob": 50 },
-      { "item": "radio", "prob": 30, "charges": 100 },
-      { "item": "mp3", "prob": 25, "charges": 100 },
-      { "item": "national_flag", "prob": 1 }
-    ]
-  },
-  {
-    "id": "vitamin_shop",
-    "type": "item_group",
-    "items": [
-      { "group": "adhesive_bandages_box_full", "prob": 25 },
-      { "group": "full_1st_aid", "prob": 15 },
-      { "group": "full_ifak", "prob": 15 },
-      { "group": "vitamins_bottle_plastic_pill_supplement_20", "prob": 75 },
-      { "group": "calcium_tablet_bottle_full", "prob": 75 },
-      { "group": "vitc_tablet_bottle_full", "prob": 75 },
-      { "group": "aspirin_bottle_full", "prob": 45 },
-      { "group": "ibuprofen_bottle_full", "prob": 45 },
-      { "group": "naproxen_bottle_full", "prob": 45 },
-      { "group": "acetaminophen_bottle_full", "prob": 45 },
-      { "group": "caffeine_bottle_full", "prob": 50 },
-      { "group": "pills_sleep_bottle_full", "prob": 45 },
-      { "group": "melatonin_bottle_full", "prob": 30 },
-      [ "disinfectant", 15 ],
-      { "group": "protein_bottle_full", "prob": 40 },
-      { "group": "chewing_gum_full_caff", "prob": 30 },
-      { "group": "chewing_gum_full_nic", "prob": 25 },
-      [ "bathroom_scale", 20 ],
-      { "group": "pillbox_any_empty", "prob": 20 }
-    ]
   }
 ]

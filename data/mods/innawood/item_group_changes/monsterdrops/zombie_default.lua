@@ -48,3 +48,15 @@ do
     group:group("default_zombie_items_pockets", 20)
     content.replace(group)
 end
+
+do
+    -- items people could have carried in their pockets prior to zombification
+    local group = content.ItemGroup { id = "default_zombie_items_pockets", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "primitive_knife", probability = 50 },
+        },
+        probability = 5,
+    }
+    content.replace(group)
+end

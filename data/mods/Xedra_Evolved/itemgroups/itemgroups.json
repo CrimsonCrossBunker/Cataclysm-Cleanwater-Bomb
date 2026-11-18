@@ -210,50 +210,6 @@
     ]
   },
   {
-    "id": "kids_books",
-    "type": "item_group",
-    "subtype": "distribution",
-    "copy-from": "kids_books",
-    "extend": { "entries": [ { "item": "book_teens_deduction", "prob": 4 } ] }
-  },
-  {
-    "id": "homebooks",
-    "type": "item_group",
-    "subtype": "distribution",
-    "copy-from": "homebooks",
-    "extend": {
-      "entries": [
-        { "item": "book_deduction_out_of_place", "prob": 1 },
-        { "item": "manual_deduction", "prob": 1 },
-        { "item": "mag_deduction", "prob": 10 },
-        { "item": "mag_deduction_tabloid", "prob": 40 }
-      ]
-    }
-  },
-  {
-    "id": "book_mag_gen",
-    "type": "item_group",
-    "subtype": "distribution",
-    "copy-from": "book_mag_gen",
-    "extend": { "entries": [ { "item": "mag_deduction_tabloid", "prob": 40 } ] }
-  },
-  {
-    "id": "newspaper",
-    "type": "item_group",
-    "subtype": "distribution",
-    "copy-from": "newspaper",
-    "extend": { "entries": [ { "item": "mag_deduction_tabloid", "prob": 40 } ] }
-  },
-  {
-    "id": "religious_books",
-    "type": "item_group",
-    "subtype": "distribution",
-    "copy-from": "religious_books",
-    "extend": {
-      "entries": [ { "item": "book_deduction_black_iron_prison", "prob": 1 }, { "item": "book_deduction_out_of_place", "prob": 1 } ]
-    }
-  },
-  {
     "type": "item_group",
     "id": "softdrugs",
     "subtype": "distribution",
@@ -283,42 +239,6 @@
       [ "sleeveless_duster_glimmer_fur", 1 ],
       [ "sleeveless_trenchcoat_glimmer_fur", 1 ]
     ]
-  },
-  {
-    "id": "costume_misc_items",
-    "type": "item_group",
-    "//": "Adding spell learning items to standard itemgroups",
-    "copy-from": "costume_misc_items",
-    "subtype": "distribution",
-    "extend": { "items": [ [ "magicians_hat", 1 ] ] }
-  },
-  {
-    "id": "homebooks",
-    "type": "item_group",
-    "//": "Adding spell learning items to standard itemgroups",
-    "copy-from": "homebooks",
-    "subtype": "distribution",
-    "extend": {
-      "entries": [
-        { "item": "firmament_driver_book", "prob": 1 },
-        { "item": "eater_book_artifact", "prob": 1 },
-        { "group": "hedge_magic_books", "prob": 1 }
-      ]
-    }
-  },
-  {
-    "id": "esoteric_books",
-    "type": "item_group",
-    "copy-from": "esoteric_books",
-    "subtype": "distribution",
-    "extend": { "entries": [ { "group": "hedge_magic_books", "prob": 1 } ] }
-  },
-  {
-    "id": "mansion_books",
-    "type": "item_group",
-    "copy-from": "mansion_books",
-    "subtype": "distribution",
-    "extend": { "entries": [ { "group": "hedge_magic_books", "prob": 5 }, { "group": "nether_sorcery_books", "prob": 2 } ] }
   },
   {
     "id": "blood_containers",

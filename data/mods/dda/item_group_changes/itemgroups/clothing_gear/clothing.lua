@@ -493,3 +493,19 @@ do
     }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "clothing_watch", kind = "distribution" }
+    group:item("wristwatch", 90)
+    group:item("silver_watch", 70)
+    group:item("gold_watch", 40)
+    group:item("platinum_watch", 10)
+    group:item("sf_watch", 5)
+    group:item("pocketwatch", 5)
+    group:item("diving_watch", 20)
+    group:entry { item = "game_watch", charges = { 0, 50 }, probability = 5 }
+    group:item("fitness_band", 35)
+    group:entry { item = "smart_watch", charges = { 0, 80 }, probability = 50 }
+    group:entry { item = "smart_watch_adv", charges = { 0, 40 }, probability = 25 }
+    content.add(group)
+end

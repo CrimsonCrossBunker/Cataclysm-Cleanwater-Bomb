@@ -1,8 +1,0 @@
-[
-  {
-    "id": "drugdealer",
-    "type": "item_group",
-    "copy-from": "drugdealer",
-    "extend": { "items": [ [ "fcl_atomic_smartphone", 2 ] ] }
-  }
-]

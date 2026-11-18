@@ -234,3 +234,9 @@ do
     group:item("loincloth_fur", 30)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "clothing_watch", kind = "distribution" }
+    group:item("null", 10)
+    content.replace(group)
+end

@@ -15,3 +15,5 @@ require("sub_body_parts")
 require("body_parts")
 
 require("craft_recipes")
+
+require("item_group_changes")

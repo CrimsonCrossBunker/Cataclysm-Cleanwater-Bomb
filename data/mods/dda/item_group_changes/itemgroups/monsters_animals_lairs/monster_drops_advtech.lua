@@ -1,0 +1,58 @@
+local content = require("ccb").content
+
+do
+    local group = content.ItemGroup { id = "robots", kind = "distribution" }
+    group:item("processor", 15)
+    group:item("RAM", 22)
+    group:item("power_supply", 16)
+    group:item("amplifier", 8)
+    group:item("solar_cell", 5)
+    group:item("transponder", 5)
+    group:item("receiver", 10)
+    group:item("antenna", 18)
+    group:item("mc_steel_chunk", 30)
+    group:item("spring", 50)
+    group:item("mc_steel_lump", 30)
+    group:item("sheet_kevlar_layered", 10)
+    group:item("ceramic_armor", 15)
+    group:item("motor", 2)
+    group:group("ammo_heavy_batteries_full", 50)
+    group:entry { item = "plut_cell", charges = { 1, 5 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "cyborg_harvest", kind = "distribution" }
+    group:item("bio_dis_shock", 1)
+    group:item("bio_dis_acid", 1)
+    group:item("bio_drain", 1)
+    group:item("bio_noise", 1)
+    group:item("bio_power_weakness", 1)
+    group:item("bio_itchy", 1)
+    group:item("bio_nostril", 1)
+    group:item("bio_thumbs", 1)
+    group:item("bio_spasm", 1)
+    group:item("bio_shakes", 1)
+    group:item("bio_leaky", 1)
+    group:item("bio_sleepy", 1)
+    group:item("bio_deformity", 1)
+    group:item("bio_voice", 1)
+    group:item("bio_pokedeye", 1)
+    group:item("bio_ankles", 1)
+    group:item("bio_trip", 1)
+    group:item("bio_stiff", 1)
+    group:item("bio_armor_head", 3)
+    group:item("bio_armor_torso", 3)
+    group:item("bio_armor_arms", 3)
+    group:item("bio_armor_legs", 3)
+    group:item("bio_armor_eyes", 3)
+    group:item("bio_razors", 3)
+    group:item("bio_power_storage", 2)
+    group:item("bio_betavoltaic", 4)
+    group:item("bio_glowy", 1)
+    group:item("bio_sleep_shutdown", 1)
+    group:item("bio_faulty_electromagnetic_leak", 1)
+    group:item("bio_faulty_grossfood", 1)
+    group:item("bio_radleak", 1)
+    content.add(group)
+end

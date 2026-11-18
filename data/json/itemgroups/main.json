@@ -1,25 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "nanofab_recipes",
-    "//": "Very rare high level loot. This list doesn't spawn anywhere directly, it is used to create the recipes inside nanofabricator templates. ",
-    "magazine": 100,
-    "subtype": "distribution",
-    "entries": [
-      { "item": "emp_gun", "prob": 10 },
-      { "item": "laser_rifle", "prob": 10 },
-      { "item": "optical_cloak", "prob": 10 },
-      { "item": "holo_cloak", "prob": 10 },
-      { "item": "portal", "prob": 10 },
-      { "item": "rm13_armor", "prob": 10 },
-      { "item": "high_density_capacitor", "prob": 10 },
-      { "item": "beam_scatterer", "prob": 10 },
-      { "item": "rm11b_sniper_rifle", "prob": 10 },
-      { "item": "v29", "prob": 10 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "launchers",
     "subtype": "distribution",
     "entries": [

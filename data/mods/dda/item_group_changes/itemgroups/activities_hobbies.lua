@@ -1,0 +1,253 @@
+local content = require("ccb").content
+
+do
+    local group = content.ItemGroup { id = "sports", kind = "distribution" }
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 25 }
+    group:group("adhesive_bandages_box_used", 25)
+    group:entry { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 10 }
+    group:group("cotton_ball_bag_used", 50)
+    group:group("cotton_ball_bag_full", 20)
+    group:group("bottle_otc_painkiller_1_20", 85)
+    group:item("bat", 60)
+    group:item("bat_nerf", 60)
+    group:item("pom_poms", 40)
+    group:item("boxing_gloves", 35)
+    group:item("pool_cue", 30)
+    group:item("bat_metal", 60)
+    group:item("tank_top", 10, "tank_top_cheerleader")
+    group:item("cheerleader_top_short", 2)
+    group:item("cheerleader_skirt", 10)
+    group:item("cheerleader_skirt_short", 2)
+    group:item("football_armor", 10)
+    group:item("helmet_football", 10)
+    group:item("sneakers", 80)
+    group:item("socks", 50)
+    group:item("socks_ankle", 70)
+    group:item("stockings", 20)
+    group:item("tshirt", 80)
+    group:item("tshirt_cropped", 8)
+    group:item("longshirt", 70)
+    group:item("tank_top", 50)
+    group:item("sports_bra", 30)
+    group:item("swim_briefs", 10)
+    group:item("speedo", 10)
+    group:group("bikini", 5)
+    group:item("unitard", 10)
+    group:item("leotard", 5)
+    group:item("trunks", 50)
+    group:item("arm_warmers", 20)
+    group:item("leg_warmers", 20)
+    group:item("leggings", 20)
+    group:item("under_armor", 20)
+    group:item("under_armor_shorts", 20)
+    group:item("towel", 40)
+    group:item("gloves_fingerless", 20)
+    group:item("mask_hockey", 25)
+    group:item("hockey_stick", 35)
+    group:item("throat_guard_nylon", 5)
+    group:item("throat_guard_canvas", 5)
+    group:item("throat_guard_plastic", 2)
+    group:item("throat_guard_cut_resistant", 1)
+    group:item("headgear", 35)
+    group:item("jersey", 30)
+    group:item("puck", 30)
+    group:item("basketball", 25)
+    group:item("indoor_volleyball", 20)
+    group:item("beach_volleyball", 20)
+    group:item("golf_club", 35)
+    group:item("hat_golf", 20)
+    group:item("gloves_golf", 20)
+    group:item("golf_bag", 10)
+    group:item("golf_tee", 30)
+    group:item("golf_ball", 40)
+    group:item("glasses_safety", 40)
+    group:item("armguard_soft", 40)
+    group:item("chestguard_hard", 20)
+    group:item("armguard_hard", 20)
+    group:item("legguard_hard", 15)
+    group:item("goggles_swim", 50)
+    group:item("swim_fins", 30)
+    group:item("goggles_ski", 30)
+    group:item("mask_ski", 30)
+    group:item("hat_ball", 30)
+    group:item("helmet_bike", 25)
+    group:group("helmet_bike_modified", 10)
+    group:item("plastic_chin_guard", 10)
+    group:item("shield_visor", 1)
+    group:item("helmet_ball", 45)
+    group:item("baseball", 35)
+    group:item("football", 35)
+    group:item("frisbee", 10)
+    group:item("shuttlecock", 10)
+    group:item("disc_golf", 10)
+    group:item("manual_brawl", 30)
+    group:item("manual_bashing", 1)
+    group:item("manual_melee", 10)
+    group:item("foot_crank", 10)
+    group:group("gym_bags", 30)
+    group:item("flotation_vest", 10)
+    group:item("swimming_kickboard", 5)
+    group:item("rashguard", 30)
+    group:item("wetsuit_shorts", 30)
+    group:item("wetsuit_pants", 20)
+    group:item("wetsuit_top_sleeved", 10)
+    group:item("wetsuit_top", 20)
+    group:item("wetsuit_jacket", 20)
+    group:item("flag_swimsuit", 20)
+    group:item("wetsuit", 10)
+    group:item("wetsuit_thick", 2)
+    group:item("wetsuit_spring", 10)
+    group:item("wetsuit_spring_sleeveless", 15)
+    group:item("wetsuit_gloves", 20)
+    group:item("wetsuit_gloves_thick", 5)
+    group:item("wetsuit_booties", 20)
+    group:item("wetsuit_booties_thick", 5)
+    group:item("wetsuit_hood", 10)
+    group:item("wetsuit_hood_thick", 2)
+    group:item("swim_cap", 35)
+    group:item("scuba_regulator", 20)
+    group:entry { item = "scuba_tank", charges = { 60, 60 }, probability = 20 }
+    group:entry { item = "small_scuba_tank", charges = { 20, 20 }, probability = 10 }
+    group:group("tools_fishingrods_commercial", 4)
+    group:item("dive_bag", 5)
+    group:item("dry_bag", 5)
+    group:item("dry_duffelbag", 5)
+    group:item("dry_bag_large", 3)
+    group:item("diving_watch", 10)
+    group:item("rebreather", 3)
+    group:item("rebreather_cartridge_o2", 3)
+    group:entry { item = "glowstick", charges = { 1400, 1400 }, probability = 60 }
+    group:entry { item = "handflare", charges = { 300, 300 }, probability = 40 }
+    group:item("elbow_pads", 40)
+    group:item("knee_pads", 40)
+    group:item("roller_blades", 20)
+    group:item("rollerskates", 10)
+    group:item("folded_skateboard_generic", 10)
+    group:item("wheel_skate", 50)
+    group:item("manual_throw", 12)
+    group:group("protein_powder_bottle_plastic_small_1_9", 12)
+    group:item("airhorn", 40)
+    group:item("whistle", 10)
+    group:item("boots_hiking", 10)
+    group:item("runner_bag", 5)
+    group:item("mouthpiece", 15)
+    group:item("leathersandals", 10)
+    group:item("fencing_jacket", 8)
+    group:item("gambeson_HEMA", 1)
+    group:item("fencing_mask", 8)
+    group:item("fencing_pants", 8)
+    group:item("fencing_foil", 8)
+    group:item("fencing_sabre", 8)
+    group:item("fencing_epee", 8)
+    group:item("lame_foil", 8)
+    group:item("lame_saber", 8)
+    group:item("plastron_cotton", 8)
+    group:item("plastron_plastic", 8)
+    group:item("gauntlet_fencing", 8)
+    group:item("gauntlet_fencing_l", 1)
+    group:item("survnote", 1)
+    group:item("halter_top", 30)
+    group:item("iceaxe", 30)
+    group:item("tourist_table", 30)
+    group:item("fitness_band", 5)
+    group:item("aim_game", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "allsporting", kind = "distribution", with_ammo = 50, with_magazine = 100 }
+    group:group("sports", 2290)
+    group:group("camping", 1284)
+    group:item("ski_jacket", 5)
+    group:item("sports_drink", 20)
+    group:group("book_mag_combat", 105)
+    group:group("book_mag_surv", 50)
+    group:item("mag_firstaid", 15)
+    group:item("manual_swimming", 10)
+    group:item("manual_bashing", 1)
+    group:item("sunglasses", 20)
+    group:item("fitover_sunglasses", 10)
+    group:item("scorecard", 10)
+    group:item("can_sealer", 5)
+    group:item("multitool", 12)
+    group:item("throwing_knife", 7)
+    group:entry { item = "throwing_knife", count = { 1, 6 }, wrapper = "leg_sheath6", probability = 3 }
+    group:item("slingpack", 18)
+    group:item("armrig", 3)
+    group:item("leg_small_bag", 3)
+    group:item("leg_bag", 3)
+    group:item("manual_cutting", 12)
+    group:item("manual_launcher", 1)
+    group:item("recipe_bullets", 8)
+    group:item("howto_traps", 16)
+    group:entry { item = "extinguisher", charges = { 100, 100 }, probability = 20 }
+    group:item("javelin_bag", 1)
+    group:item("nylon_quiver", 3)
+    group:item("quiver", 1)
+    group:item("quiver_large", 1)
+    group:item("quiver_takedown_bow", 1)
+    group:group("archery_loaded_quivers", 1)
+    group:item("manual_archery", 7)
+    group:item("book_archery", 12)
+    group:item("protein_shake", 15)
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 10 }
+    group:group("quikclot_bag_plastic_1_6", 10)
+    group:group("bfipowder_bottle_plastic_small_1_4", 15)
+    group:item("speargun", 10)
+    group:item("doublespeargun", 8)
+    group:item("airspeargun", 8)
+    group:item("fishspear", 12)
+    group:item("m_fishspear", 10)
+    group:item("c_fishspear", 10)
+    group:item("diveknife", 12)
+    group:item("small_repairkit", 2)
+    group:item("slingshot", 10)
+    group:item("wristrocket", 5)
+    group:entry { item = "powered_earmuffs", charges = { 0, 50 }, probability = 80 }
+    group:entry { item = "powered_earplugs", charges = { 0, 50 }, probability = 60 }
+    group:item("stab_vest", 10, "airsoft_stab_vest")
+    group:item("gloves_airsoft", 10)
+    group:item("airsoft_helmet", 5)
+    group:item("bandolier_wrist")
+    group:item("fitness_band", 10)
+    group:item("hand_pump", 10)
+    group:item("folded_inflatable_boat", 4)
+    group:group("butterfly_net_any", 20)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "camping_lighting_electric", kind = "distribution" }
+    group:entry { item = "electric_lantern", charges = { 0, 100 }, probability = 8 }
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 40 }
+    group:entry { item = "heavy_flashlight", charges = { 0, 300 }, probability = 20 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "camping_cooking", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "pot_copper", probability = 5 },
+            { item = "pan", probability = 20 },
+            { item = "dutch_oven", probability = 5 },
+            { item = "pot", probability = 20 },
+        },
+        probability = 90,
+    }
+    group:item("teapot", 20)
+    group:item("waffleiron", 15)
+    group:entry {
+        distribution = {
+            { item = "portable_stove", container = "nylon_bag", probability = 10 },
+            { item = "hotplate", probability = 10 },
+            { item = "popcan_stove", charges = { 0, 500 }, probability = 10 },
+            { item = "esbit_stove", probability = 10 },
+        },
+        probability = 90,
+    }
+    group:item("coffeemaker", 5)
+    group:group("tinware", 10)
+    group:item("mess_kit", 10)
+    content.add(group)
+end

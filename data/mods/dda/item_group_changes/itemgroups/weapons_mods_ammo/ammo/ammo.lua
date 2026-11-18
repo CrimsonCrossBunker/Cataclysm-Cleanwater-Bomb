@@ -141,3 +141,42 @@ do
     group:group("boxed_458_looted", 5)
     content.add(group)
 end
+
+do
+    -- Military specification pistol ammo found at military sites.
+    local group = content.ItemGroup { id = "ammo_pistol_milspec", kind = "distribution" }
+    group:item("9mmfmj")
+    content.add(group)
+end
+
+do
+    -- Military specification rifle ammo found at military sites.
+    local group = content.ItemGroup { id = "ammo_rifle_milspec", kind = "distribution" }
+    group:item("50_incendiary", 10)
+    group:item("50bmg", 30)
+    group:item("50match", 30)
+    group:item("50ss", 10)
+    group:item("50_mk211", 1)
+    group:item("556_incendiary", 15)
+    group:item("556_mk262", 3)
+    group:item("556_mk318", 1)
+    group:item("556", 79)
+    group:item("556_m855a1", 2)
+    group:item("556_m995", 2)
+    group:item("762_51_incendiary", 10)
+    group:item("762_51", 40)
+    group:item("762_51_m993", 20)
+    group:item("300blk", 15)
+    group:item("300blk_ss", 10)
+    group:item("338lapua_fmjbt", 15)
+    group:item("338lapua_api", 15)
+    content.add(group)
+end
+
+do
+    -- Military specification shotgun ammo found at military sites.
+    local group = content.ItemGroup { id = "ammo_shotgun_milspec", kind = "distribution" }
+    group:group("ammo_can_shot_full", 10)
+    group:group("ammo_can_slug_full", 2)
+    content.add(group)
+end

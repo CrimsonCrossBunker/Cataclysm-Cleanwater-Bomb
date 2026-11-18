@@ -1,9 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "//": "items people could have carried in their pockets prior to zombification",
-    "id": "default_zombie_items_pockets",
-    "entries": [ { "distribution": [ { "item": "primitive_knife", "prob": 50 } ], "prob": 5 } ]
-  }
-]

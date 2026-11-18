@@ -40,3 +40,5 @@ content.upsert_enchantment(content.Enchantment {
     condition_handler = "martial_enchantment_unarmed",
     load_character_inputs = { armed = true },
 }:melee_damage("bash", { add_handler = "ki_strike_bash", load_skills = { "unarmed" } }))
+
+require("item_group_changes")

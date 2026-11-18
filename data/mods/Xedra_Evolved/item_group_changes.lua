@@ -1,1 +1,4 @@
+require("item_group_changes.itemgroups.itemgroups")
+require("item_group_changes.itemgroups.monster_drops")
 require("item_group_changes.mapgen.safehouse")
+require("item_group_changes.npc.merchant_itemgroups")

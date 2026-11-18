@@ -1,1 +1,5 @@
+require("item_group_changes.itemgroups.death_drops")
+require("item_group_changes.itemgroups.itemgroups")
 require("item_group_changes.itemgroups.mutagen_kits")
+require("item_group_changes.items.forage")
+require("item_group_changes.npc.merchant_itemgroups")
