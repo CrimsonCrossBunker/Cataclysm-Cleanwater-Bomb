@@ -314,9 +314,46 @@ def _gendered_translation_edits(source: str) -> list[tuple[int, int, str]]:
     return edits
 
 
-def _rewrite_dialogue_markers(source: str) -> str | None:
+def _effect_memorial_edits(source: str) -> list[tuple[int, int, str]]:
+    """Extract both native memorial contexts from literal EffectType fields."""
+    if "EffectType" not in source or "memorial_log" not in source:
+        return []
+    tokens = _lua_tokens(source)
+    edits = []
+    for table in _dialogue_tables(tokens).values():
+        constructor = table.token_index - 1
+        if constructor >= 0 and tokens[constructor].value == "(":
+            constructor -= 1
+        if (
+            constructor < 1 or tokens[constructor].value != "EffectType" or
+            tokens[constructor - 1].value != "."
+        ):
+            continue
+        for field_name in ("apply_memorial_log", "remove_memorial_log"):
+            fields = table.fields.get(field_name, [])
+            if len(fields) != 1 or fields[0] + 1 >= len(tokens):
+                continue
+            index = fields[0]
+            message = tokens[index]
+            if (
+                message.kind != "string" or "\n" in message.value or
+                "\r" in message.value or tokens[index + 1].value not in (",", ";", "}")
+            ):
+                continue
+            calls = [
+                f'ccb.content.text({message.value}, "memorial_{gender}")'
+                for gender in ("male", "female")
+            ]
+            edits.append((message.start, message.end, " .. ".join(calls)))
+    return edits
+
+
+def _rewrite_translation_markers(source: str) -> str | None:
     """Rewrite marked literals as an xgettext-only keyword call."""
-    edits = _dialogue_translation_edits(source) + _gendered_translation_edits(source)
+    edits = (
+        _dialogue_translation_edits(source) + _gendered_translation_edits(source) +
+        _effect_memorial_edits(source)
+    )
     if not edits:
         return None
     rewritten = source
@@ -359,7 +396,7 @@ def extract(files: list[Path], executable: str = "xgettext") -> str:
             for index, filename in enumerate(input_files):
                 source_path = Path(filename)
                 source = source_path.read_text(encoding="utf-8")
-                rewritten = _rewrite_dialogue_markers(source)
+                rewritten = _rewrite_translation_markers(source)
                 if rewritten is None:
                     staged_inputs.append(filename)
                     continue
