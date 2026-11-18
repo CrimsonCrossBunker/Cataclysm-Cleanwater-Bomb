@@ -108,3 +108,178 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "anesthetic_kit",
+        name = ccb.content.plural_text("anesthesia kit", "anesthesia kits"),
+        description = ccb.content.text("A kit for inducing anesthesia for surgery, containing specialized canisters with a variety of powerful hypnotic, analgesic, and stimulative drugs.  It's intended for use in specialized medical equipment, and can't be administered manually."),
+        category = "drugs",
+        mass_milligrams = 100000,
+        volume_ml = 3250,
+        price_cents = 1000,
+        price_postapoc_cents = 1500,
+        symbol = "!",
+        color = "cyan",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("glass", 1)
+    item:quality("ANESTHESIA", 1)
+    item:tool { ammo_types = { "anesthetic" } }
+    item:magazine_pocket { ammo_capacities = { anesthetic = 6000 }, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "inhaler",
+        category = "drugs",
+        name = ccb.content.plural_text("inhaler", "inhalers"),
+        description = ccb.content.text("An albuterol inhaler.  Used in the treatment of bronchospasm, it is a lifeline for people with asthma.  A mild stimulant, it may cause anxiety or tremors."),
+        mass_milligrams = 85000,
+        volume_ml = 100,
+        price_cents = 5000,
+        price_postapoc_cents = 750,
+        symbol = "!",
+        color = "light_blue",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_use_actions()
+    item:native_use("INHALER")
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { albuterol = 100 }, airtight = true, rigid = true, watertight = true }
+    content.add(item)
+end
+
+do
+    -- stats *exclude* contents
+    -- potentially revert_to an empty container e.g. bottle_30ml_atomizer
+    local item = content.Item {
+        id = "liq_bandage_spray",
+        category = "drugs",
+        name = ccb.content.plural_text("spray bottle of liquid bandage", "spray bottles of liquid bandage"),
+        description = ccb.content.text("Liquid bandage for minor cuts and scrapes, packaged in a tiny bottle with an atomizer spray for convenient application."),
+        mass_milligrams = 5000,
+        volume_ml = 50,
+        price_cents = 25,
+        price_postapoc_cents = 5,
+        symbol = "!",
+        color = "white",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:heal { bandages_power = 1, bleed = 4, disinfectant_power = 2, bite = 0.3, move_cost = 250 }
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { liq_bandage = 90 }, airtight = true, rigid = true, watertight = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "rx12_injector",
+        name = ccb.content.plural_text("RX12 jet injector", "RX12 jet injectors"),
+        description = ccb.content.text("A Rivtech RX12 jet injector, a small pistol-shaped device used to inject advanced fast-healing chemicals through the skin without using a needle.  A label on the side warns against using more than two doses per hour."),
+        category = "drugs",
+        mass_milligrams = 316000,
+        volume_ml = 500,
+        price_cents = 100000,
+        price_postapoc_cents = 1500,
+        symbol = ",",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("ceramic", 1)
+    item:material("superalloy", 1)
+    item:clear_use_actions()
+    item:native_use("JET_INJECTOR")
+    item:tool { charges_per_use = 1, ammo_types = { "ampoule" } }
+    item:magazine_pocket { ammo_capacities = { ampoule = 2 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "smoxygen_tank",
+        name = ccb.content.plural_text("small oxygen delivery kit", "small oxygen delivery kits"),
+        description = ccb.content.text("A small tank of compressed medical oxygen with a folding regulator and mask.  Commonly used in emergency situations, it provides immediate relief for asthma attacks or smoke inhalation, and can provide a brief burst of energy."),
+        mass_milligrams = 800000,
+        volume_ml = 1100,
+        longest_side_mm = 220,
+        price_cents = 4000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -5,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_use_actions()
+    item:native_use("OXYGEN_BOTTLE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { oxygen = 12 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "oxygen_tank",
+        name = ccb.content.plural_text("oxygen delivery kit", "oxygen delivery kits"),
+        description = ccb.content.text("A tank of compressed medical oxygen with a regulator and mask.  Commonly used in emergency situations, it provides immediate relief for asthma attacks or smoke inhalation, and can provide a brief burst of energy."),
+        mass_milligrams = 2721000,
+        volume_ml = 3750,
+        longest_side_mm = 420,
+        price_cents = 6000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_use_actions()
+    item:native_use("OXYGEN_BOTTLE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { oxygen = 24 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wrapped_rad_badge",
+        name = ccb.content.plural_text("wrapped radiation badge", "wrapped radiation badges"),
+        description = ccb.content.text("A badge that detects radiation dosage, sealed in a radiation-blocking bag.  Use it to remove it from the bag."),
+        mass_milligrams = 25000,
+        volume_ml = 25,
+        price_cents = 8000,
+        price_postapoc_cents = 500,
+        symbol = ",",
+        color = "light_blue",
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "rad_badge" },
+        message = ccb.content.text("You remove the badge from its wrapper, exposing it to ambient radiation."),
+        menu_text = ccb.content.text("Unwrap badge"),
+    }
+    item:tool()
+    content.add(item)
+end
