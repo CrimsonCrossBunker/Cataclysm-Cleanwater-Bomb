@@ -16,6 +16,13 @@
 #include "weather.h"
 #include "weather_gen.h"
 
+static void check_regional_item_group( const item_group_id &base, const item_group_id &expected )
+{
+    const item_group_id *const regional = north_america::regional_item_group( base );
+    REQUIRE( regional != nullptr );
+    CHECK( *regional == expected );
+}
+
 TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america][worldgen]" )
 {
     const restore_on_out_of_scope saved_mode( g->north_america_world );
@@ -30,26 +37,24 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
     {
         const north_america::scoped_regional_loot canada( toronto );
         CHECK( north_america::civic_flag_variant() == "canadian_flag" );
-        CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-CA-ON" ) );
-        CHECK( north_america::regional_item_group( police ) ==
-               item_group_id( "police_armory_any_pistol-CA" ) );
-        CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-CA" ) );
-        CHECK( north_america::regional_item_group( maps ) == item_group_id( "roadmap_stock-CA-ON" ) );
+        check_regional_item_group( produce, item_group_id( "fresh_produce-CA-ON" ) );
+        check_regional_item_group( police, item_group_id( "police_armory_any_pistol-CA" ) );
+        check_regional_item_group( swat_drops, item_group_id( "guns_swat-CA" ) );
+        check_regional_item_group( maps, item_group_id( "roadmap_stock-CA-ON" ) );
     }
     {
         const north_america::scoped_regional_loot mexico( mexico_city );
         CHECK( north_america::civic_flag_variant() == "mexican_flag" );
-        CHECK( north_america::regional_item_group( produce ) == item_group_id( "fresh_produce-MX-CMX" ) );
-        CHECK( north_america::regional_item_group( police ) ==
-               item_group_id( "police_armory_any_pistol-MX" ) );
-        CHECK( north_america::regional_item_group( swat_drops ) == item_group_id( "guns_swat-MX" ) );
+        check_regional_item_group( produce, item_group_id( "fresh_produce-MX-CMX" ) );
+        check_regional_item_group( police, item_group_id( "police_armory_any_pistol-MX" ) );
+        check_regional_item_group( swat_drops, item_group_id( "guns_swat-MX" ) );
     }
     g->north_america_world = false;
     const north_america::scoped_regional_loot classic( toronto );
     CHECK( north_america::civic_flag_variant().empty() );
-    CHECK( north_america::regional_item_group( produce ) == produce );
-    CHECK( north_america::regional_item_group( police ) == police );
-    CHECK( north_america::regional_item_group( maps ) == maps );
+    CHECK( north_america::regional_item_group( produce ) == nullptr );
+    CHECK( north_america::regional_item_group( police ) == nullptr );
+    CHECK( north_america::regional_item_group( maps ) == nullptr );
 }
 
 TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][farming]" )
@@ -208,22 +213,22 @@ TEST_CASE( "north_america_regional_loot_scope_uses_spawn_location",
     g->north_america_world = false;
     {
         const north_america::scoped_regional_loot classic( dallas );
-        CHECK( north_america::regional_item_group( magazines ) == magazines );
+        CHECK( north_america::regional_item_group( magazines ) == nullptr );
         CHECK( north_america::regional_monster( swat, toronto ) == swat );
     }
 
     g->north_america_world = true;
     {
         const north_america::scoped_regional_loot texas( dallas );
-        CHECK( north_america::regional_item_group( magazines ) == texas_magazines );
+        check_regional_item_group( magazines, texas_magazines );
         CHECK( item_group::item_from( police_footwear ).typeId() == itype_id( "boots_western" ) );
         {
             const north_america::scoped_regional_loot massachusetts( point_abs_ms::zero );
-            CHECK( north_america::regional_item_group( magazines ) == magazines );
+            CHECK( north_america::regional_item_group( magazines ) == nullptr );
         }
-        CHECK( north_america::regional_item_group( magazines ) == texas_magazines );
+        check_regional_item_group( magazines, texas_magazines );
     }
-    CHECK( north_america::regional_item_group( magazines ) == magazines );
+    CHECK( north_america::regional_item_group( magazines ) == nullptr );
     CHECK( north_america::regional_monster( swat, toronto ) == ert );
     CHECK( north_america::regional_monster( swat, dallas ) == swat );
 }
