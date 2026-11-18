@@ -29,27 +29,6 @@
   },
   {
     "type": "ITEM",
-    "id": "bokken",
-    "copy-from": "bokken",
-    "name": { "str_sp": "bokken" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
-    "id": "bokken_fake",
-    "copy-from": "bokken_fake",
-    "name": { "str_sp": "bokken" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
-    "id": "bokken_inferior",
-    "copy-from": "bokken_inferior",
-    "name": { "str_sp": "bokken" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "GUN" ],
     "id": "compositebow",
     "copy-from": "compositebow",
@@ -117,22 +96,8 @@
   },
   {
     "type": "ITEM",
-    "id": "naginata_fake",
-    "copy-from": "naginata_fake",
-    "name": { "str_sp": "naginata" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
     "id": "pike",
     "copy-from": "pike",
-    "name": { "ctxt": "weapon", "str": "pike" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
-    "id": "pike_fake",
-    "copy-from": "pike_fake",
     "name": { "ctxt": "weapon", "str": "pike" },
     "extend": { "flags": [ "WOODEN_WEAPON" ] }
   },

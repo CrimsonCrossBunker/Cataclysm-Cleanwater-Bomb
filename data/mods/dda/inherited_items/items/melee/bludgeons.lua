@@ -1733,3 +1733,309 @@ do
     item:fault_group("handle_long", {  })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "battleaxe",
+        copy_from = "mc_battleaxe",
+        looks_like = "mc_battleaxe",
+        name = ccb.content.plural_text("battle axe", "battle axes"),
+        description = ccb.content.text("A huge axe designed for warfare.  Though intended for use as a weapon, it can also be pressed into service as a rather clumsy woodcutting tool."),
+    }
+    item:material("steel", 1)
+    item:material("wood", 1)
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "battleaxe_fake",
+        copy_from = "battleaxe",
+        looks_like = "battleaxe",
+        name = ccb.content.plural_text("battle axe", "battle axes"),
+        description = ccb.content.text("A dull, cheaply-made replica of a huge axe designed for warfare."),
+        mass_milligrams = 2068000,
+        melee_to_hit = 1,
+        price_cents = 1050,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("aluminum", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_AXE")
+    item:adjust_melee_damage { factors = { cut = 0.1 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    -- Not actually as damaging as a steel katana, by any stretch.  It's a fancy, very well-carved wooden training sword, not a weapon of war.  It's also completely rounded, so any cutting damage wouldn't make sense.  Also, the heaviest bokken I could find were 700g, none were nearly close to a kilogram.
+    local item = content.Item {
+        id = "bokken",
+        symbol = "/",
+        color = "brown",
+        name = ccb.content.plural_text("bokken", "bokken"),
+        description = ccb.content.text("A solid wood 'training' katana, exactingly crafted to mimic the weight and balance of the real thing.  Despite its lack of a sharp metal edge, it's still quite capable of inflicting deadly wounds."),
+        price_cents = 55000,
+        price_postapoc_cents = 2500,
+        ascii_picture = "bokken",
+        techniques = { "RAPID", "WBLOCK_2", "MOUNTED_CHARGE" },
+        mass_milligrams = 700000,
+        volume_ml = 2000,
+        longest_side_mm = 1000,
+        melee_to_hit = 3,
+        category = "weapons",
+        weapon_categories = { "LONG_SWORDS" },
+    }
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 16)
+    item:mounted_charge { max_steps = 15, damage_type = "bash", multiplier_per_step = 0.06, max_multiplier = 1.25 }
+    item:fault_group("staff_short", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "bokken_fake",
+        copy_from = "bokken",
+        symbol = "/",
+        color = "brown",
+        looks_like = "bokken",
+        name = ccb.content.plural_text("bokken", "bokken"),
+        description = ccb.content.text("A solid wood 'training' katana.  It feels far too light to make an effective weapon."),
+        mass_milligrams = 480000,
+        melee_to_hit = 2,
+        price_cents = 12500,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_melee_damage { factors = { bash = 0.5 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "bokken_inferior",
+        copy_from = "bokken",
+        symbol = "/",
+        color = "brown",
+        looks_like = "bokken",
+        name = ccb.content.plural_text("bokken", "bokken"),
+        description = ccb.content.text("A solid wood 'training' katana.  It looks to be mass-produced, and not quite as effective as the real deal."),
+        mass_milligrams = 580000,
+        melee_to_hit = 2,
+        price_cents = 12500,
+        price_postapoc_cents = 750,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("SHEATH_SWORD")
+    item:adjust_melee_damage { factors = { bash = 0.75 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "sinister_cane",
+        name = ccb.content.plural_text("sinister cane", "sinister canes"),
+        description = ccb.content.text("A sinister looking cane made of plastic.  It has a shiny red orb gripped by claws at the handle."),
+        copy_from = "cane",
+        looks_like = "cane",
+        mass_milligrams = 91000,
+        color = "red",
+        symbol = "/",
+        melee_to_hit = 1,
+        price_postapoc_cents = 10,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("plastic", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:flag("FRAGILE_MELEE")
+    item:flag("COSPLAY_PROPS")
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "lucern_hammer",
+        symbol = "/",
+        color = "light_gray",
+        name = ccb.content.plural_text("lucerne hammer", "lucerne hammers"),
+        description = ccb.content.text("A versatile polearm with a spiked hammer head, a spike, and a hook attached to a beefy wooden pole."),
+        weapon_categories = { "HOOKING_WEAPONRY", "POLEARMS" },
+        price_cents = 50000,
+        techniques = { "WBLOCK_1", "WIDE", "SWEEP", "MOUNTED_CHARGE" },
+        mass_milligrams = 3200000,
+        volume_ml = 3750,
+        longest_side_mm = 2000,
+        melee_to_hit = -1,
+        price_postapoc_cents = 10000,
+        replace_qualities = true,
+        category = "weapons",
+    }
+    item:material("wood", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("REACH_ATTACK")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("SHEATH_SPEAR")
+    item:flag("SPEAR")
+    item:flag("ALWAYS_TWOHAND")
+    item:quality("COOK", 1)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 44)
+    item:melee_damage("stab", 39)
+    item:mounted_charge { max_steps = 15, damage_type = "stab", multiplier_per_step = 0.1, max_multiplier = 1.5 }
+    item:fault_group("handle_long", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "lucern_hammerfake",
+        copy_from = "lucern_hammer",
+        looks_like = "lucern_hammer",
+        name = ccb.content.plural_text("lucerne hammer", "lucerne hammers"),
+        description = ccb.content.text("A cheap piece of crap imitation of a versatile polearm with a spiked hammer head, probably meant to be used for LARPing."),
+        mass_milligrams = 2700000,
+        price_cents = 4000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("wood", 1)
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("REACH_ATTACK")
+    item:flag("SHEATH_SPEAR")
+    item:flag("SPEAR")
+    item:adjust_melee_damage { factors = { bash = 0.5, stab = 0.1 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "mace_fake",
+        copy_from = "mace",
+        looks_like = "mace",
+        name = ccb.content.plural_text("mace", "maces"),
+        description = ccb.content.text("A light, cheaply-made replica of a medieval weapon that would normally consist of a wood handle with a heavy metal head."),
+        mass_milligrams = 750000,
+        price_cents = 10000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("wood", 1)
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("BELT_CLIP")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:adjust_melee_damage { factors = { bash = 0.38 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "morningstar",
+        name = ccb.content.plural_text("morningstar", "morningstars"),
+        description = ccb.content.text("A medieval weapon consisting of a wood handle with a heavy, spiked metal ball on the end.  It deals devastating crushing damage, and the spikes easily puncture soft targets."),
+        mass_milligrams = 1400000,
+        color = "dark_gray",
+        symbol = "/",
+        ascii_picture = "morningstar",
+        techniques = { "WBLOCK_1", "SWEEP", "MOUNTED_CHARGE" },
+        volume_ml = 1500,
+        longest_side_mm = 800,
+        melee_to_hit = 1,
+        weapon_categories = { "MACES" },
+        price_cents = 120000,
+        price_postapoc_cents = 8000,
+        replace_qualities = true,
+        category = "weapons",
+    }
+    item:material("steel", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("BELT_CLIP")
+    item:quality("HAMMER", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 38)
+    item:melee_damage("stab", 8)
+    item:mounted_charge { max_steps = 15, damage_type = "bash", multiplier_per_step = 0.06, max_multiplier = 1.25 }
+    item:fault_group("handle_short", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "morningstar_fake",
+        copy_from = "morningstar",
+        looks_like = "morningstar",
+        name = ccb.content.plural_text("morningstar", "morningstars"),
+        description = ccb.content.text("A light, cheaply-made replica of a medieval weapon that would normally consist of a wood handle with a heavy, spiked metal ball on the end."),
+        mass_milligrams = 700000,
+        melee_to_hit = 1,
+        price_cents = 12000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("aluminum", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("BELT_CLIP")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:adjust_melee_damage { factors = { bash = 0.35, stab = 0.1 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "warhammer_fake",
+        copy_from = "warhammer",
+        looks_like = "warhammer",
+        name = ccb.content.plural_text("war hammer", "war hammers"),
+        description = ccb.content.text("A light, cheaply-made replica of a medieval hammer with a spike on one end."),
+        melee_to_hit = 1,
+        mass_milligrams = 750000,
+        price_cents = 10000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("BELT_CLIP")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:adjust_melee_damage { factors = { bash = 0.38, stab = 0.38 } }
+    item:replace_material("mc_steel", "aluminum")
+    item:clear_mounted_charge()
+    content.add(item)
+end

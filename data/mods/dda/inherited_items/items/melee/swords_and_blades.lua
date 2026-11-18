@@ -629,3 +629,87 @@ do
     item:replace_material("mc_steel", "qt_steel")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "jian_fake",
+        looks_like = "jian",
+        copy_from = "mc_jian",
+        name = ccb.content.plural_text("jian", "jian"),
+        description = ccb.content.text("A dull, cheaply-made replica of an ancient Chinese doubled-edged straight sword, with an ornate guard."),
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("CONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_measurements { price_cents = { factor = 0.05 }, price_postapoc_cents = { factor = 0.05 } }
+    item:adjust_melee_damage { factors = { bash = 1.9, cut = 0.07 } }
+    item:replace_material("mc_steel", "aluminum")
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "scimitar_fake",
+        copy_from = "mc_scimitar",
+        looks_like = "mc_scimitar",
+        name = ccb.content.plural_text("shamshir", "shamshirs"),
+        description = ccb.content.text("A dull, cheaply-made replica of a curved sword associated with various Middle Eastern and Central Asian countries."),
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("CONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_measurements { price_cents = { factor = 0.05 }, price_postapoc_cents = { factor = 0.05 } }
+    item:adjust_melee_damage { factors = { bash = 1.9, cut = 0.07 } }
+    item:replace_material("leather", "nylon")
+    item:replace_material("mc_steel", "aluminum")
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "estoc_fake",
+        copy_from = "mc_estoc",
+        looks_like = "mc_estoc",
+        name = ccb.content.plural_text("estoc", "estocs"),
+        description = ccb.content.text("A dull, cheaply-made replica of a thin thrusting sword predating the rapier.  It requires a larger baldric or scabbard compared to smaller swords."),
+        melee_to_hit = 1,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("CONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_measurements { price_cents = { factor = 0.05 }, price_postapoc_cents = { factor = 0.05 } }
+    item:adjust_melee_damage { factors = { bash = 1.2, stab = 0.08 } }
+    item:replace_material("leather", "nylon")
+    item:replace_material("mc_steel", "aluminum")
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "arming_sword_fake",
+        copy_from = "mc_arming_sword",
+        looks_like = "mc_arming_sword",
+        name = ccb.content.plural_text("arming sword", "arming swords"),
+        description = ccb.content.text("A dull, cheaply-made replica of a classic medieval sword, just the right size to use one-handed."),
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:clear_flags()
+    item:flag("CONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SHEATH_SWORD")
+    item:adjust_measurements { price_cents = { factor = 0.05 }, price_postapoc_cents = { factor = 0.05 } }
+    item:adjust_melee_damage { factors = { bash = 2.3, cut = 0.07 } }
+    item:replace_material("leather", "nylon")
+    item:replace_material("mc_steel", "aluminum")
+    item:clear_mounted_charge()
+    content.add(item)
+end

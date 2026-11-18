@@ -965,19 +965,6 @@
     "replace_materials": { "mc_steel": "budget_steel" }
   },
   {
-    "mounted_charge": null,
-    "id": "jian_fake",
-    "looks_like": "jian",
-    "copy-from": "mc_jian",
-    "type": "ITEM",
-    "name": { "str_sp": "jian" },
-    "description": "A dull, cheaply-made replica of an ancient Chinese doubled-edged straight sword, with an ornate guard.",
-    "proportional": { "melee_damage": { "bash": 1.9, "cut": 0.07 }, "price_postapoc": 0.05, "price": 0.05 },
-    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
-    "extend": { "flags": [ "FRAGILE_MELEE" ] },
-    "replace_materials": { "mc_steel": "aluminum" }
-  },
-  {
     "id": "scimitar",
     "copy-from": "mc_scimitar",
     "looks_like": "katana",
@@ -1075,18 +1062,6 @@
     "replace_materials": { "mc_steel": "budget_steel" }
   },
   {
-    "mounted_charge": null,
-    "id": "scimitar_fake",
-    "copy-from": "mc_scimitar",
-    "type": "ITEM",
-    "name": { "str": "shamshir" },
-    "description": "A dull, cheaply-made replica of a curved sword associated with various Middle Eastern and Central Asian countries.",
-    "proportional": { "melee_damage": { "bash": 1.9, "cut": 0.07 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
-    "extend": { "flags": [ "FRAGILE_MELEE" ] },
-    "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
     "id": "mc_estoc",
     "type": "ITEM",
@@ -1124,19 +1099,6 @@
     "replace_materials": { "mc_steel": "ch_steel", "leather": "kevlar" },
     "proportional": { "price_postapoc": 1.1, "price": 1.1 },
     "relative": { "melee_damage": { "stab": 5 }, "qualities": [ [ "BUTCHER", 1 ] ] }
-  },
-  {
-    "mounted_charge": null,
-    "id": "estoc_fake",
-    "copy-from": "mc_estoc",
-    "type": "ITEM",
-    "name": { "str": "estoc" },
-    "description": "A dull, cheaply-made replica of a thin thrusting sword predating the rapier.  It requires a larger baldric or scabbard compared to smaller swords.",
-    "proportional": { "melee_damage": { "bash": 1.2, "stab": 0.08 }, "price": 0.05, "price_postapoc": 0.05 },
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
-    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
-    "extend": { "flags": [ "FRAGILE_MELEE" ] },
-    "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" }
   },
   {
     "id": "longsword",
@@ -1342,18 +1304,6 @@
     "replace_materials": { "mc_steel": "budget_steel" },
     "proportional": { "melee_damage": { "bash": 2, "cut": 0.86 }, "price": 0.1, "price_postapoc": 0.1 },
     "delete": { "flags": [ "DURABLE_MELEE" ] }
-  },
-  {
-    "mounted_charge": null,
-    "id": "arming_sword_fake",
-    "copy-from": "mc_arming_sword",
-    "type": "ITEM",
-    "name": { "str": "arming sword" },
-    "description": "A dull, cheaply-made replica of a classic medieval sword, just the right size to use one-handed.",
-    "replace_materials": { "mc_steel": "aluminum", "leather": "nylon" },
-    "proportional": { "melee_damage": { "bash": 2.3, "cut": 0.07 }, "price": 0.05, "price_postapoc": 0.05 },
-    "delete": { "techniques": [ "MOUNTED_CHARGE" ], "flags": [ "DURABLE_MELEE" ] },
-    "extend": { "flags": [ "FRAGILE_MELEE" ] }
   },
   {
     "id": "sword_xiphos",

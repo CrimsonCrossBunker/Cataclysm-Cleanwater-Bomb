@@ -1412,3 +1412,126 @@ do
     item:fault_group("spearhead", {  })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "halberd",
+        symbol = "/",
+        color = "light_gray",
+        name = ccb.content.plural_text("halberd", "halberds"),
+        description = ccb.content.text("A versatile polearm with an axe blade, a spike, and other fun things attached to a long, sturdy stick."),
+        price_cents = 50000,
+        ascii_picture = "halberd",
+        weapon_categories = { "HOOKING_WEAPONRY", "POLEARMS" },
+        techniques = { "WBLOCK_1", "WIDE", "SWEEP", "MOUNTED_CHARGE" },
+        mass_milligrams = 3175000,
+        volume_ml = 3750,
+        longest_side_mm = 1800,
+        melee_to_hit = 1,
+        price_postapoc_cents = 10000,
+        replace_qualities = true,
+        category = "weapons",
+    }
+    item:material("wood", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("REACH_ATTACK")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("SHEATH_SPEAR")
+    item:flag("ALWAYS_TWOHAND")
+    item:quality("COOK", 1)
+    item:quality("BUTCHER", -70)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 15)
+    item:melee_damage("cut", 49)
+    item:mounted_charge { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 }
+    item:fault_group("handle_long", { weight_multiplier = 4 })
+    item:fault_group("blade_general", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "halberd_fake",
+        copy_from = "halberd",
+        looks_like = "halberd",
+        name = ccb.content.plural_text("halberd", "halberds"),
+        description = ccb.content.text("A dull, cheaply made replica of a polearm with an axe blade, a spike, and other fun things attached to a thick pole."),
+        mass_milligrams = 1644000,
+        melee_to_hit = 1,
+        price_cents = 5000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("aluminum", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("REACH_ATTACK")
+    item:flag("SHEATH_SPEAR")
+    item:adjust_melee_damage { factors = { bash = 1.2, cut = 0.1 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "naginata_fake",
+        copy_from = "naginata",
+        looks_like = "naginata",
+        name = ccb.content.plural_text("naginata", "naginata"),
+        description = ccb.content.text("A dull, slightly floppy replica of a Japanese polearm with a curved blade.  With a little difficulty, you could use it administer a solid slap from a distance."),
+        mass_milligrams = 1400000,
+        melee_to_hit = 0,
+        price_cents = 8000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("aluminum", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("REACH_ATTACK")
+    item:flag("SHEATH_SPEAR")
+    item:adjust_melee_damage { factors = { bash = 1.5, cut = 0.05 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pike_fake",
+        copy_from = "pike",
+        looks_like = "pike",
+        name = ccb.content.plural_text("pike", "pikes", "weapon"),
+        description = ccb.content.text("A dull, cheaply made replica of a medieval weapon consisting of a very long wooden shaft tipped with an iron spearhead."),
+        mass_milligrams = 2000000,
+        melee_to_hit = 0,
+        price_cents = 4000,
+        price_postapoc_cents = 500,
+        remove_techniques = { "MOUNTED_CHARGE" },
+    }
+    item:material("aluminum", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("REACH3")
+    item:flag("REACH_ATTACK")
+    item:flag("SPEAR")
+    item:adjust_melee_damage { factors = { bash = 1.44, stab = 0.06 } }
+    item:clear_mounted_charge()
+    content.add(item)
+end

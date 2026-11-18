@@ -479,3 +479,58 @@ do
     item:flag("WOODEN_WEAPON")
     content.replace(item)
 end
+
+do
+    local item = content.Item {
+        id = "bokken",
+        copy_from = "bokken",
+        looks_like = "bokken",
+        name = ccb.content.plural_text("bokken", "bokken"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "bokken_fake",
+        copy_from = "bokken_fake",
+        looks_like = "bokken_fake",
+        name = ccb.content.plural_text("bokken", "bokken"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "bokken_inferior",
+        copy_from = "bokken_inferior",
+        looks_like = "bokken_inferior",
+        name = ccb.content.plural_text("bokken", "bokken"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "naginata_fake",
+        copy_from = "naginata_fake",
+        looks_like = "naginata_fake",
+        name = ccb.content.plural_text("naginata", "naginata"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "pike_fake",
+        copy_from = "pike_fake",
+        looks_like = "pike_fake",
+        name = ccb.content.plural_text("pike", "pikes", "weapon"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
