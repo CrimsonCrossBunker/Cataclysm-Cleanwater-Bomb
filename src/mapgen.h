@@ -595,6 +595,8 @@ class update_mapgen_function_json : public mapgen_function_json_base
 
 // A typed update assembled by Lua. It uses the same placement phases and
 // smallmap lifecycle as registered updates without a JSON definition.
+class mapgen_function_json_nested;
+
 class mapgen_patch final : private update_mapgen_function_json
 {
     public:
@@ -615,6 +617,8 @@ class mapgen_patch final : private update_mapgen_function_json
         void clear_items( const point &first, const point &last );
         void set_faction_owner( const jmapgen_place &where, const faction_id &owner );
         void add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance );
+        std::shared_ptr<mapgen_function_json_nested> freeze_nested( int size,
+                const std::string &context ) const;
         ret_val<void> run( const tripoint_abs_omt &position, mission *active_mission,
                            bool cancel_on_collision ) const;
 
@@ -634,6 +638,9 @@ class mapgen_function_json_nested : public mapgen_function_json_base
         void finalize_parameters();
         void check() const;
         mapgen_function_json_nested( JsonObject &&jsobj, const std::string &context );
+        mapgen_function_json_nested( const std::string &context, int size,
+                                     jmapgen_objects placements, std::vector<jmapgen_setmap> setmap,
+                                     const enum_bitset<jmapgen_flags> &flags );
         ~mapgen_function_json_nested() override = default;
 
         void nest( const mapgendata &md, const tripoint_rel_ms &offset,
@@ -652,6 +659,7 @@ class nested_mapgen
             return funcs_;
         }
         void add( const std::shared_ptr<mapgen_function_json_nested> &p, int weight );
+        void remove( const std::shared_ptr<mapgen_function_json_nested> &p );
         // Returns a set containing every relative coordinate of a point that
         // might have something placed by this mapgen
         std::unordered_set<point_rel_ms> all_placement_coords() const;

@@ -6271,6 +6271,15 @@ function CcbPlatformContent.OvermapSpecial(options) end
 ---@param flags string[] Non-empty list of flags to append.
 function CcbPlatformContent.extend_overmap_special_flags(id, flags) end
 
+---@class NestedMapgenOptions
+---@field id string Native nested mapgen ID. Existing IDs receive another weighted variant.
+---@field size integer Side length in map squares, from 1 to 24.
+---@field weight? integer Positive native variant weight. Defaults to 1000.
+---@field build fun(layout: MapgenPatch) Populates the layout during content loading.
+
+---@param options NestedMapgenOptions
+function CcbPlatformContent.add_nested_mapgen(options) end
+
 ---@param options VehiclePartDefinitionOptions
 ---@return VehiclePartDefinition
 function CcbPlatformContent.VehiclePart(options) end

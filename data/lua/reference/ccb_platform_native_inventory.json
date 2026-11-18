@@ -968,7 +968,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_world_content.cpp",
-          "line": 1828
+          "line": 1841
         },
         "direct_roots": [
           "FactionDefinition",
@@ -7804,7 +7804,7 @@
       "registration_name": "FactionDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1839,
+        "line": 1852,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -7843,7 +7843,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1840
+                "line": 1853
               }
             ]
           }
@@ -16710,7 +16710,7 @@
       "registration_name": "NpcClassDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1841,
+        "line": 1854,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16749,7 +16749,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1842
+                "line": 1855
               }
             ]
           }
@@ -16763,7 +16763,7 @@
       "registration_name": "NpcDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1843,
+        "line": 1856,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -16802,7 +16802,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1844
+                "line": 1857
               }
             ]
           }
@@ -17588,7 +17588,7 @@
       "registration_name": "OvermapSpecialDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1847,
+        "line": 1860,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17627,7 +17627,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1848
+                "line": 1861
               }
             ]
           }
@@ -17641,7 +17641,7 @@
       "registration_name": "OvermapTerrainDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1845,
+        "line": 1858,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -17680,7 +17680,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1846
+                "line": 1859
               }
             ]
           }
@@ -31046,7 +31046,7 @@
       "registration_name": "VehicleDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1851,
+        "line": 1864,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -31085,7 +31085,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1852
+                "line": 1865
               }
             ]
           }
@@ -31294,7 +31294,7 @@
       "registration_name": "VehiclePartDefinition",
       "registration": {
         "path": "src/lua_platform_world_content.cpp",
-        "line": 1849,
+        "line": 1862,
         "installer": "platform_v1.world_content_transaction.install_lua_api",
         "namespace": "ccb"
       },
@@ -31333,7 +31333,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_world_content.cpp",
-                "line": 1850
+                "line": 1863
               }
             ]
           }

@@ -5243,6 +5243,11 @@ void nested_mapgen::add( const std::shared_ptr<mapgen_function_json_nested> &p, 
     funcs_.add( p, weight );
 }
 
+void nested_mapgen::remove( const std::shared_ptr<mapgen_function_json_nested> &p )
+{
+    funcs_.remove( p );
+}
+
 void update_mapgen::add( std::unique_ptr<update_mapgen_function_json> &&p )
 {
     funcs_.push_back( std::move( p ) );
@@ -8227,6 +8232,32 @@ void mapgen_patch::add_piece( const jmapgen_place &where,
     }
     objects.add( where, piece );
     extent_ = point( std::max( extent_.x, reach.x ), std::max( extent_.y, reach.y ) );
+}
+
+std::shared_ptr<mapgen_function_json_nested> mapgen_patch::freeze_nested(
+    const int size, const std::string &context ) const
+{
+    if( size < 1 || size > mapgensize.x() || size > mapgensize.y() ||
+        extent_.x >= size || extent_.y >= size ) {
+        throw std::invalid_argument( "Nested mapgen placements must fit the declared square" );
+    }
+    return std::make_shared<mapgen_function_json_nested>( context, size, objects, setmap_points,
+            flags_ );
+}
+
+mapgen_function_json_nested::mapgen_function_json_nested(
+    const std::string &context, const int size, jmapgen_objects placements,
+    std::vector<jmapgen_setmap> setmap, const enum_bitset<jmapgen_flags> &flags )
+    : mapgen_function_json_nested( JsonObject(), context )
+{
+    mapgensize = point_rel_ms( size, size );
+    total_size = mapgensize;
+    flags_ = flags;
+    objects = std::move( placements );
+    objects.finalize();
+    setmap_points = std::move( setmap );
+    std::stable_sort( setmap_points.begin(), setmap_points.end(), compare_phases );
+    is_ready = true;
 }
 
 ret_val<void> mapgen_patch::run( const tripoint_abs_omt &position, mission *active_mission,

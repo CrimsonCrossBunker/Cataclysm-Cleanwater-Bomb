@@ -52,6 +52,7 @@ extern "C" {
 #include "lua_platform_content.h"
 #include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
+#include "mapgen.h"
 #include "memory_fast.h"
 #include "npc.h"
 #include "npc_class.h"
@@ -72,6 +73,7 @@ using detail::authored_text;
 
 enum class lifecycle : int {
     building,
+    applying,
     committed,
     discarded
 };
@@ -1757,6 +1759,13 @@ void set_npc_snippet( dialogue_chatbin_snippets &snippets,
 } // namespace
 
 struct world_content_transaction::impl {
+    struct nested_mapgen_definition {
+        std::string id;
+        int size;
+        int weight;
+        sol::protected_function build;
+    };
+
     using faction_handle = definition_handle<faction_data>;
     using npc_class_handle = definition_handle<npc_class_data>;
     using npc_handle = definition_handle<npc_data>;
@@ -1775,6 +1784,7 @@ struct world_content_transaction::impl {
     void apply_overmap_terrain();
     void install_overmap_special_api( sol::table &content ) const;
     void apply_overmap_special();
+    void apply_nested_mapgens();
     void install_vehicle_part_api( sol::table &content ) const;
     void apply_vehicle_part( std::string &error );
     void install_vehicle_api( sol::table &content ) const;
@@ -1796,6 +1806,9 @@ struct world_content_transaction::impl {
     std::vector<registration<overmap_terrain_data>> overmap_terrains;
     std::vector<registration<overmap_special_data>> overmap_specials;
     std::map<std::string, std::set<std::string>> overmap_special_flag_additions;
+    std::vector<nested_mapgen_definition> nested_mapgen_definitions;
+    std::vector<std::pair<nested_mapgen_id, std::shared_ptr<mapgen_function_json_nested>>>
+    nested_mapgen_undo;
     std::vector<registration<vehicle_part_data>> vehicle_parts;
     std::vector<registration<vehicle_data>> vehicles;
 
@@ -1858,6 +1871,24 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     pimpl_->install_overmap_special_api( content );
     pimpl_->install_vehicle_part_api( content );
     pimpl_->install_vehicle_api( content );
+    content.set_function( "add_nested_mapgen", [this]( const sol::table & options ) {
+        if( pimpl_->handle_token->state != lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        require_known_table_keys( options, { "id", "size", "weight", "build" }, "nested mapgen" );
+        const std::string id = options.get_or( "id", std::string() );
+        const int size = options.get_or( "size", 0 );
+        const int weight = options.get_or( "weight", 1000 );
+        const sol::object build = options.raw_get<sol::object>( "build" );
+        if( id.empty() || id == "null" || size < 1 || size > SEEX * 2 || weight < 1 ||
+            build.get_type() != sol::type::function ) {
+            throw std::invalid_argument(
+                "add_nested_mapgen requires an id, square size, positive weight and build function" );
+        }
+        pimpl_->nested_mapgen_definitions.push_back( {
+            id, size, weight, build.as<sol::protected_function>()
+        } );
+    } );
     static_cast<void>( lua );
 }
 
@@ -3536,6 +3567,7 @@ bool world_content_transaction::apply( std::string &error )
         error = "world content transaction is no longer building";
         return false;
     }
+    pimpl_->handle_token->state = lifecycle::applying;
     try {
         pimpl_->apply_faction();
         pimpl_->apply_npc_class();
@@ -3544,6 +3576,8 @@ bool world_content_transaction::apply( std::string &error )
         pimpl_->apply_overmap_special();
         pimpl_->apply_vehicle_part( error );
         pimpl_->apply_vehicle();
+        pimpl_->apply_nested_mapgens();
+        pimpl_->handle_token->state = lifecycle::building;
         pimpl_->applied = true;
         error.clear();
         return true;
@@ -4032,6 +4066,30 @@ void world_content_transaction::impl::apply_overmap_special()
         overmap_special_undo.emplace_back( target, native );
         native.flags_.insert( flags.begin(), flags.end() );
         detail::overmap_special_registry().insert( native );
+    }
+}
+
+void world_content_transaction::impl::apply_nested_mapgens()
+{
+    for( const nested_mapgen_definition &definition : nested_mapgen_definitions ) {
+        const nested_mapgen_id id( definition.id );
+        const auto existing = nested_mapgens.find( id );
+        if( existing != nested_mapgens.end() &&
+            existing->second.funcs().get_weight() > std::numeric_limits<int>::max() - definition.weight ) {
+            throw std::runtime_error( "total nested mapgen weight exceeds the native range for '" +
+                                      definition.id + "'" );
+        }
+        sol::state_view lua( definition.build.lua_state() );
+        const sol::object layout = sol::make_object( lua, mapgen_patch() );
+        const sol::protected_function_result result = definition.build( layout );
+        if( !result.valid() ) {
+            const sol::error build_error = result;
+            throw std::runtime_error( "nested mapgen '" + definition.id + "': " + build_error.what() );
+        }
+        const auto prepared = layout.as<const mapgen_patch &>().freeze_nested(
+                                  definition.size, "Lua nested mapgen " + definition.id );
+        nested_mapgen_undo.emplace_back( id, prepared );
+        nested_mapgens[id].add( prepared, definition.weight );
     }
 }
 
@@ -4723,6 +4781,16 @@ void world_content_transaction::rollback()
         }
     }
     pimpl_->overmap_special_undo.clear();
+    for( const auto &[id, entry] : pimpl_->nested_mapgen_undo ) {
+        const auto found = nested_mapgens.find( id );
+        if( found != nested_mapgens.end() ) {
+            found->second.remove( entry );
+            if( found->second.funcs().empty() ) {
+                nested_mapgens.erase( found );
+            }
+        }
+    }
+    pimpl_->nested_mapgen_undo.clear();
     for( auto it = pimpl_->overmap_terrain_undo.rbegin();
          it != pimpl_->overmap_terrain_undo.rend(); ++it ) {
         std::vector<oter_id> generated = it->generated;
@@ -4786,6 +4854,7 @@ void world_content_transaction::commit()
     pimpl_->npc_undo.clear();
     pimpl_->overmap_terrain_undo.clear();
     pimpl_->overmap_special_undo.clear();
+    pimpl_->nested_mapgen_undo.clear();
     pimpl_->vehicle_part_undo.clear();
     pimpl_->vehicle_undo.clear();
     pimpl_->vehicle_self_group_undo.clear();
@@ -4816,6 +4885,12 @@ void world_content_transaction::append_fingerprint( std::uint64_t &state ) const
         hash_part( state, "extend_overmap_special_flags" );
         hash_part( state, id );
         hash_strings( state, flags );
+    }
+    for( const impl::nested_mapgen_definition &definition : pimpl_->nested_mapgen_definitions ) {
+        hash_part( state, "nested_mapgen" );
+        hash_part( state, definition.id );
+        hash_number( state, definition.size );
+        hash_number( state, definition.weight );
     }
     hash_registrations( state, "vehicle_part", pimpl_->vehicle_parts );
     hash_registrations( state, "vehicle", pimpl_->vehicles );
