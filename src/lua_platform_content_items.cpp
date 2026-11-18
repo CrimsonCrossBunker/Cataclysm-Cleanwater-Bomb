@@ -71,7 +71,9 @@ extern "C" {
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "json.h"
 #include "lua_platform_content.h"
+#include "lua_platform_values.h"
 #include "martialarts.h"
 #include "material.h"
 #include "mod_tracker.h"
@@ -599,7 +601,7 @@ struct item_action_definition_data {
     bool registered = false;
 };
 
-struct item_group_contents_entry {
+struct item_group_reference {
     std::string id;
     bool group;
 };
@@ -609,21 +611,29 @@ struct item_group_entry_definition_data {
     bool group = false;
     std::int64_t probability = 100;
     std::string variant;
+    bool variant_specified = false;
     bool count_specified = false;
     std::int64_t count_min = 1;
     std::int64_t count_max = 1;
     bool charges_specified = false;
     std::int64_t charges_min = -1;
     std::int64_t charges_max = -1;
-    std::optional<std::string> container = std::nullopt;
+    std::optional<item_group_reference> container = std::nullopt;
+    std::optional<item_group_reference> ammo = std::nullopt;
     std::optional<std::string> wrapper = std::nullopt;
     std::optional<std::string> wrapper_variant = std::nullopt;
     std::optional<bool> sealed = std::nullopt;
+    std::optional<bool> active = std::nullopt;
+    holiday event = holiday::none;
+    std::optional<Item_spawn_data::relic_generator> artifact = std::nullopt;
+    std::vector<std::string> components = {};
+    std::vector<std::string> flags = {};
+    std::optional<std::map<std::string, diag_value>> variables = std::nullopt;
     std::optional<Item_group::Type> subgroup = std::nullopt;
     std::vector<item_group_entry_definition_data> children = {};
     std::optional<std::pair<int, int>> damage = std::nullopt;
     std::optional<std::pair<int, int>> dirt = std::nullopt;
-    std::vector<item_group_contents_entry> contents = {};
+    std::vector<item_group_reference> contents = {};
 };
 
 struct item_group_definition_data {
@@ -2634,6 +2644,27 @@ struct item_group_definition_handle {
         }
 
     private:
+        static item_group_reference read_reference( const sol::table &options ) {
+            const std::string item = options.get_or( "item", std::string() );
+            const std::string group_id = options.get_or( "group", std::string() );
+            if( item.empty() == group_id.empty() ) {
+                throw std::invalid_argument( "Item-group reference requires exactly one of item or group" );
+            }
+            return { item.empty() ? group_id : item, item.empty() };
+        }
+
+        static std::vector<std::string> read_string_list( const sol::table &options, const char *field ) {
+            std::vector<std::string> result;
+            if( const auto values = options.get<sol::optional<sol::table>>( field ) ) {
+                const std::size_t count = require_dense_array( *values, field, 0 );
+                result.reserve( count );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    result.push_back( values->raw_get<std::string>( i ) );
+                }
+            }
+            return result;
+        }
+
         static std::optional<std::pair<int, int>> read_modifier_range( const sol::table &options,
                 const char *field, int minimum, int maximum ) {
             const sol::optional<sol::table> range = options.get<sol::optional<sol::table>>( field );
@@ -2653,6 +2684,9 @@ struct item_group_definition_handle {
                 std::vector<const void *> &ancestors ) {
             item_group_entry_definition_data value;
             value.probability = options.get_or<std::int64_t>( "probability", 100 );
+            if( const auto event = options.get<sol::optional<std::string>>( "event" ) ) {
+                value.event = io::string_to_enum<holiday>( *event );
+            }
             const std::string item = options.get_or( "item", std::string() );
             const std::string group_id = options.get_or( "group", std::string() );
             const sol::optional<sol::table> collection =
@@ -2687,9 +2721,21 @@ struct item_group_definition_handle {
             }
             value.id = item.empty() ? group_id : item;
             value.group = item.empty();
-            value.variant = options.get_or( "variant", std::string() );
+            if( const auto variant = options.get<sol::optional<std::string>>( "variant" ) ) {
+                value.variant = *variant;
+                value.variant_specified = true;
+            }
             if( const auto container = options.get<sol::optional<std::string>>( "container" ) ) {
-                value.container = *container;
+                value.container = item_group_reference{ *container, false };
+            }
+            if( const auto container = options.get<sol::optional<std::string>>( "container_group" ) ) {
+                if( value.container ) {
+                    throw std::invalid_argument( "Item-group entry accepts either container or container_group" );
+                }
+                value.container = item_group_reference{ *container, true };
+            }
+            if( const auto ammo = options.get<sol::optional<sol::table>>( "ammo" ) ) {
+                value.ammo = read_reference( *ammo );
             }
             if( const auto wrapper = options.get<sol::optional<std::string>>( "wrapper" ) ) {
                 value.wrapper = *wrapper;
@@ -2699,6 +2745,32 @@ struct item_group_definition_handle {
             }
             if( const auto sealed = options.get<sol::optional<bool>>( "sealed" ) ) {
                 value.sealed = *sealed;
+            }
+            if( const auto active = options.get<sol::optional<bool>>( "active" ) ) {
+                value.active = *active;
+            }
+            value.components = read_string_list( options, "components" );
+            value.flags = read_string_list( options, "flags" );
+            if( const auto variables = options.get<sol::optional<sol::table>>( "variables" ) ) {
+                value.variables.emplace();
+                for( const auto &entry : *variables ) {
+                    if( entry.first.get_type() != sol::type::string ) {
+                        throw std::invalid_argument( "Item-group variable keys must be strings" );
+                    }
+                    const auto key = entry.first.as<std::string>();
+                    value.variables->emplace( key, script_diag_value_from_lua(
+                                                 entry.second, "Item-group variable '" + key + "'",
+                                                 std::numeric_limits<std::size_t>::max(),
+                                                 script_diag_value_read_policy::native_range ) );
+                }
+            }
+            if( const auto artifact = options.get<sol::optional<sol::table>>( "artifact" ) ) {
+                value.artifact.emplace();
+                value.artifact->id = relic_procgen_id( artifact->get<std::string>( "preset" ) );
+                value.artifact->rules.power_level = artifact->get<int>( "power_level" );
+                value.artifact->rules.max_attributes = artifact->get<int>( "max_attributes" );
+                value.artifact->rules.max_negative_power = artifact->get_or( "max_negative_power", 0 );
+                value.artifact->rules.resonant = artifact->get_or( "resonant", false );
             }
             if( const sol::optional<sol::table> count =
                     options.get<sol::optional<sol::table>>( "count" ) ) {
@@ -2724,25 +2796,8 @@ struct item_group_definition_handle {
                 const std::size_t count = require_dense_array( *contents, "item-group contents", 0 );
                 value.contents.reserve( count );
                 for( std::size_t i = 1; i <= count; ++i ) {
-                    const sol::table child = contents->raw_get<sol::table>( i );
-                    const std::string child_item = child.get_or( "item", std::string() );
-                    const std::string child_group = child.get_or( "group", std::string() );
-                    if( child_item.empty() == child_group.empty() ) {
-                        throw std::invalid_argument( "Item-group contents require exactly one of item or group" );
-                    }
-                    value.contents.push_back( {
-                        child_item.empty() ? child_group : child_item, child_item.empty()
-                    } );
+                    value.contents.push_back( read_reference( contents->raw_get<sol::table>( i ) ) );
                 }
-            }
-            if( value.probability <= 0 || value.count_min < 0 ||
-                value.count_max < value.count_min ||
-                value.count_max > std::numeric_limits<int>::max() ||
-                value.charges_min < -1 || value.charges_max < value.charges_min ||
-                value.charges_max > std::numeric_limits<int>::max() ||
-                ( value.group && value.charges_min != -1 ) ) {
-                throw std::runtime_error(
-                    "item-group entry has invalid probability, count, or charges" );
             }
             return value;
         }
@@ -5208,6 +5263,24 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 item_group_children[id].push_back( target );
             }
         };
+        const auto validate_group_item = [&]( const std::string &id, const std::string &target,
+        const std::string_view field, const bool migrate ) {
+            if( target.empty() || ( target != "null" && declared_item_ids.count( target ) == 0 &&
+                                    check_engine_state &&
+                                    !item::type_is_defined( migrate ? item_controller->migrate_id( itype_id( target ) ) :
+                                                            itype_id( target ) ) ) ) {
+                throw std::runtime_error( "item group '" + id + "' references an unknown " +
+                                          std::string( field ) + " item '" + target + "'" );
+            }
+        };
+        const auto validate_spawn_reference = [&]( const std::string &id,
+        const item_group_reference &reference, const std::string_view field, const bool migrate = false ) {
+            if( reference.group ) {
+                validate_group_reference( id, reference.id );
+            } else {
+                validate_group_item( id, reference.id, field, migrate );
+            }
+        };
         const auto validate_group_entries = [&]( const auto &self, const std::string &id,
         const std::vector<item_group_entry_definition_data> &entries, bool collection ) -> void {
             for( const item_group_entry_definition_data &group_entry : entries ) {
@@ -5222,35 +5295,34 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     continue;
                 }
                 if( group_entry.id.empty() || group_entry.variant.size() > 256 ||
-                    group_entry.variant.find( '\0' ) != std::string::npos || group_entry.count_min < 0 ||
-                    group_entry.count_max < group_entry.count_min || !native_int( group_entry.count_max ) ||
-                    group_entry.charges_min < -1 || group_entry.charges_max < group_entry.charges_min ||
-                    !native_int( group_entry.charges_max ) ||
-                    ( group_entry.wrapper_variant && !group_entry.wrapper ) ||
-                    ( group_entry.group && ( !group_entry.variant.empty() ||
-                                             group_entry.charges_min != -1 || group_entry.charges_max != -1 ) ) ) {
+                    group_entry.variant.find( '\0' ) != std::string::npos ||
+                    !native_int( group_entry.count_min ) || !native_int( group_entry.count_max ) ||
+                    group_entry.charges_min < -1 || group_entry.charges_max < -1 ||
+                    !native_int( group_entry.charges_min ) || !native_int( group_entry.charges_max ) ||
+                    ( group_entry.wrapper_variant && !group_entry.wrapper ) ) {
                     throw std::runtime_error( "item group '" + id + "' contains an invalid entry" );
                 }
-                for( const auto &container : {
-                         group_entry.container, group_entry.wrapper
-                     } ) {
-                    if( container && ( container->empty() ||
-                                       ( *container != "null" && declared_item_ids.count( *container ) == 0 &&
-                                         check_engine_state && !item::type_is_defined( itype_id( *container ) ) ) ) ) {
-                        throw std::runtime_error( "item group '" + id + "' references an unknown container" );
-                    }
+                if( group_entry.wrapper ) {
+                    validate_group_item( id, *group_entry.wrapper, "wrapper", false );
+                }
+                if( group_entry.container ) {
+                    validate_spawn_reference( id, *group_entry.container, "container" );
+                }
+                if( group_entry.ammo ) {
+                    validate_spawn_reference( id, *group_entry.ammo, "ammo" );
+                }
+                for( const std::string &component : group_entry.components ) {
+                    validate_group_item( id, component, "component", false );
+                }
+                if( group_entry.artifact && ( group_entry.artifact->id.is_empty() ||
+                                              ( check_engine_state && !group_entry.artifact->id.is_valid() ) ) ) {
+                    throw std::runtime_error( "item group '" + id + "' references an unknown relic preset" );
                 }
                 if( group_entry.group ) {
                     validate_group_reference( id, group_entry.id );
                 }
-                for( const item_group_contents_entry &child : group_entry.contents ) {
-                    if( child.group ) {
-                        validate_group_reference( id, child.id );
-                    } else if( check_engine_state && declared_item_ids.count( child.id ) == 0 &&
-                               !item::type_is_defined( item_controller->migrate_id( itype_id( child.id ) ) ) ) {
-                        throw std::runtime_error( "item group '" + id +
-                                                  "' references an unknown contents item '" + child.id + "'" );
-                    }
+                for( const item_group_reference &child : group_entry.contents ) {
+                    validate_spawn_reference( id, child, "contents", true );
                 }
             }
         };
@@ -6824,20 +6896,23 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         replacement->sealed = source.sealed;
                         native = replacement.get();
                     }
-                    const auto load_contents = []( const std::vector<item_group_contents_entry> &contents,
+                    const auto load_reference = []( const item_group_reference &reference,
+                    const Item_group &parent, const std::string &context ) {
+                        auto result = std::make_unique<Single_item_creator>(
+                                          reference.id, reference.group ? Single_item_creator::S_ITEM_GROUP :
+                                          Single_item_creator::S_ITEM, 100, context );
+                        result->inherit_ammo_mag_chances( parent.with_ammo, parent.with_magazine );
+                        return result;
+                    };
+                    const auto load_contents = [&load_reference]( const std::vector<item_group_reference> &contents,
                     const Item_group &parent ) -> std::unique_ptr<Item_spawn_data> {
                         const std::string context = "contents of " + parent.context();
                         if( contents.size() == 1 ) {
-                            const auto &child = contents.front();
-                            auto result = std::make_unique<Single_item_creator>(
-                                              child.id, child.group ? Single_item_creator::S_ITEM_GROUP :
-                                              Single_item_creator::S_ITEM, 100, context );
-                            result->inherit_ammo_mag_chances( parent.with_ammo, parent.with_magazine );
-                            return result;
+                            return load_reference( contents.front(), parent, context );
                         }
                         auto result = std::make_unique<Item_group>( Item_group::G_COLLECTION, 100,
                                       parent.with_ammo, parent.with_magazine, context );
-                        for( const item_group_contents_entry &child : contents ) {
+                        for( const item_group_reference &child : contents ) {
                             if( child.group ) {
                                 result->add_group_entry( item_group_id( child.id ), 100 );
                             } else {
@@ -6852,7 +6927,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             if( source_entry.subgroup ) {
                                 auto subgroup = std::make_unique<Item_group>(
                                                     *source_entry.subgroup, static_cast<int>( source_entry.probability ),
-                                                    parent.with_ammo, parent.with_magazine, parent.context() );
+                                                    parent.with_ammo, parent.with_magazine, parent.context(), source_entry.event );
                                 self( self, *subgroup, source_entry.children );
                                 parent.add_entry( std::move( subgroup ) );
                                 continue;
@@ -6873,10 +6948,23 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             auto native_entry = std::make_unique<Single_item_creator>(
                                                     entry_id, entry_type,
                                                     static_cast<int>( source_entry.probability ),
-                                                    "Lua-first item-group entry " + source.id );
-                            if( source_entry.count_specified || !source_entry.variant.empty() ||
-                                source_entry.charges_specified || source_entry.container || source_entry.sealed ||
-                                source_entry.damage || source_entry.dirt || !source_entry.contents.empty() ) {
+                                                    "Lua-first item-group entry " + source.id, source_entry.event );
+                            native_entry->active = source_entry.active;
+                            if( source_entry.artifact ) {
+                                native_entry->artifact = cata::make_value<Item_spawn_data::relic_generator>(
+                                                             *source_entry.artifact );
+                            }
+                            if( !source_entry.components.empty() ) {
+                                auto &components = native_entry->components_items.emplace();
+                                components.reserve( source_entry.components.size() );
+                                for( const std::string &component : source_entry.components ) {
+                                    components.emplace_back( component );
+                                }
+                            }
+                            if( source_entry.count_specified || source_entry.variant_specified || !source_entry.variant.empty() ||
+                                source_entry.charges_specified || source_entry.container || source_entry.ammo ||
+                                source_entry.sealed || source_entry.damage || source_entry.dirt ||
+                                source_entry.variables || !source_entry.flags.empty() || !source_entry.contents.empty() ) {
                                 native_entry->modifier.emplace();
                                 native_entry->modifier->count = {
                                     static_cast<int>( source_entry.count_min ),
@@ -6900,14 +6988,22 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                     native_entry->modifier->contents = load_contents( source_entry.contents, parent );
                                 }
                                 if( source_entry.container ) {
-                                    auto container = std::make_unique<Single_item_creator>(
-                                                                            *source_entry.container, Single_item_creator::S_ITEM, 100,
-                                                                            "Lua-first item-group container " + source.id );
-                                    container->inherit_ammo_mag_chances( parent.with_ammo, parent.with_magazine );
-                                    native_entry->modifier->container = std::move( container );
+                                    native_entry->modifier->container = load_reference( *source_entry.container, parent,
+                                                                        "container of " + parent.context() );
+                                }
+                                if( source_entry.ammo ) {
+                                    native_entry->modifier->ammo = load_reference( *source_entry.ammo, parent,
+                                                                   "ammo of " + parent.context() );
                                 }
                                 if( source_entry.sealed ) {
                                     native_entry->modifier->sealed = *source_entry.sealed;
+                                }
+                                for( const std::string &flag : source_entry.flags ) {
+                                    native_entry->modifier->custom_flags.emplace_back( flag );
+                                }
+                                if( source_entry.variables ) {
+                                    native_entry->modifier->item_vars.insert( source_entry.variables->begin(),
+                                            source_entry.variables->end() );
                                 }
                             }
                             if( source_entry.wrapper ) {
@@ -8586,6 +8682,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
             const auto hash_entries = [&state]( const auto &self,
             const std::vector<item_group_entry_definition_data> &entries ) -> void {
                 for( const auto &e : entries ) {
+                    if( e.event != holiday::none ) {
+                        hash_part( state, "event" );
+                        hash_part( state, io::enum_to_string( e.event ) );
+                    }
                     if( e.subgroup ) {
                         hash_part( state, *e.subgroup == Item_group::G_COLLECTION ? "collection" : "distribution" );
                         hash_part( state, std::to_string( e.probability ) );
@@ -8597,6 +8697,9 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, e.id );
                     hash_part( state, std::to_string( e.probability ) );
                     hash_part( state, e.variant );
+                    if( e.variant_specified && e.variant.empty() ) {
+                        hash_part( state, "explicit_empty_variant" );
+                    }
                     if( e.count_specified && e.count_min == 1 && e.count_max == 1 ) {
                         hash_part( state, "explicit_single_count" );
                     }
@@ -8614,8 +8717,43 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     if( e.sealed ) {
                         hash_part( state, *e.sealed ? "sealed" : "unsealed" );
                     }
-                    hash_part( state, e.container ? "container" : "default_container" );
-                    hash_part( state, e.container.value_or( "" ) );
+                    if( e.active ) {
+                        hash_part( state, *e.active ? "active" : "inactive" );
+                    }
+                    hash_part( state, e.container ? ( e.container->group ? "container_group" :
+                                                      "container" ) : "default_container" );
+                    hash_part( state, e.container ? e.container->id : "" );
+                    if( e.ammo ) {
+                        hash_part( state, e.ammo->group ? "ammo_group" : "ammo_item" );
+                        hash_part( state, e.ammo->id );
+                    }
+                    if( e.artifact ) {
+                        hash_part( state, "artifact" );
+                        hash_part( state, e.artifact->id.str() );
+                        hash_part( state, std::to_string( e.artifact->rules.power_level ) );
+                        hash_part( state, std::to_string( e.artifact->rules.max_attributes ) );
+                        hash_part( state, std::to_string( e.artifact->rules.max_negative_power ) );
+                        hash_part( state, e.artifact->rules.resonant ? "resonant" : "ordinary" );
+                    }
+                    for( const std::string &flag : e.flags ) {
+                        hash_part( state, "flag" );
+                        hash_part( state, flag );
+                    }
+                    for( const std::string &component : e.components ) {
+                        hash_part( state, "component" );
+                        hash_part( state, component );
+                    }
+                    if( e.variables ) {
+                        hash_part( state, "variables" );
+                        hash_part( state, std::to_string( e.variables->size() ) );
+                        for( const auto &[key, value] : *e.variables ) {
+                            std::ostringstream encoded;
+                            JsonOut out( encoded, false );
+                            value.serialize( out );
+                            hash_part( state, key );
+                            hash_part( state, encoded.str() );
+                        }
+                    }
                     hash_part( state, e.wrapper ? "wrapper" : "no_wrapper" );
                     hash_part( state, e.wrapper.value_or( "" ) );
                     if( e.damage ) {
