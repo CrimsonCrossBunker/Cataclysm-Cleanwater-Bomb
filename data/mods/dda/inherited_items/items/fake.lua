@@ -507,3 +507,116 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "fake_crafting_tool",
+        copy_from = "fake_item",
+        name = content.plural_text("fake crafting tool", "fake crafting tools"),
+        description = content.text("Used for practice recipes and the like.  If you see this description, it is a bug."),
+    }
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("PSEUDO")
+    item:tool()
+    content.add(item)
+end
+
+do
+    -- charges_per_use was kept to prevent qualities from always being avaliable to the player
+    local item = content.Item {
+        id = "oven_tool",
+        name = ccb.content.plural_text("oven", "ovens"),
+        copy_from = "fake_appliance_tool",
+        charged_qualities = { { id = "OVEN", level = 2 }, { id = "TEMPER", level = 1 } },
+    }
+    item:tool { charges_per_use = 25 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "drill_press_tool",
+        name = ccb.content.plural_text("drill press", "drill presses"),
+        copy_from = "fake_appliance_tool",
+        charged_qualities = { { id = "DRILL", level = 3 } },
+    }
+    item:tool { charges_per_use = 25 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "power_hammer_tool",
+        name = ccb.content.plural_text("power hammer", "power hammers"),
+        copy_from = "fake_appliance_tool",
+        charged_qualities = { { id = "HAMMER", level = 5, speed = 0.33 }, { id = "ANVIL", level = 1 } },
+    }
+    item:flag("ALLOWS_REMOTE_USE")
+    item:tool { charges_per_use = 20 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "steel_kiln_tool",
+        name = ccb.content.plural_text("tempering kiln", "tempering kilns"),
+        copy_from = "fake_appliance_tool",
+        charged_qualities = { { id = "TEMPER", level = 2, speed = 0.8 } },
+    }
+    item:tool { charges_per_use = 25 }
+    content.add(item)
+end
+
+do
+    -- there's a laptop in the disassembly, I assume it requires power.
+    local item = content.Item {
+        id = "catalytic_cracking_reactor_tool",
+        copy_from = "fake_appliance_tool",
+        name = ccb.content.plural_text("catalytic cracking reactor", "catalytic cracking reactors"),
+        charged_qualities = { { id = "EXTRACT", level = 3 } },
+    }
+    item:tool { charges_per_use = 1 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "air_compressor_tool",
+        copy_from = "fake_appliance_tool",
+        name = ccb.content.plural_text("air compressor", "air compressors"),
+        charged_qualities = { { id = "PRESSURIZATION", level = 2 } },
+    }
+    item:tool { charges_per_use = 50 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pseudo_app_hd_compressor_unit",
+        name = ccb.content.plural_text("high pressure compressor unit", "high pressure compressor units"),
+        copy_from = "fake_crafting_tool",
+        looks_like = "fake_crafting_tool",
+        replace_pockets = true,
+        charged_qualities = { { id = "PRESSURIZATION", level = 10 } },
+    }
+    item:tool { charges_per_use = 100, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        default_magazine = "pseudo_battery",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "fake_mill_vertical",
+        copy_from = "fake_appliance_tool",
+        name = ccb.content.plural_text("vertical mill", "vertical mills"),
+        charged_qualities = { { id = "DRILL", level = 3 } },
+    }
+    item:tool { charges_per_use = 25 }
+    content.add(item)
+end

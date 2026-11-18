@@ -12,15 +12,6 @@
     "color": "red"
   },
   {
-    "id": "fake_crafting_tool",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "fake crafting tool", "//~": "NO_I18N" },
-    "description": { "str": "Used for practice recipes and the like.  If you see this description, it is a bug.", "//~": "NO_I18N" },
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE", "PSEUDO" ] }
-  },
-  {
     "id": "internal_mp3_music",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
@@ -158,63 +149,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "oven_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "oven" },
-    "copy-from": "fake_appliance_tool",
-    "//": "charges_per_use was kept to prevent qualities from always being avaliable to the player",
-    "charges_per_use": 25,
-    "charged_qualities": [ { "id": "OVEN", "level": 2 }, { "id": "TEMPER", "level": 1 } ]
-  },
-  {
-    "id": "drill_press_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "drill press", "str_pl": "drill presses" },
-    "copy-from": "fake_appliance_tool",
-    "charges_per_use": 25,
-    "charged_qualities": [ [ "DRILL", 3 ] ]
-  },
-  {
-    "id": "power_hammer_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "power hammer" },
-    "copy-from": "fake_appliance_tool",
-    "charges_per_use": 20,
-    "charged_qualities": [ { "id": "HAMMER", "level": 5, "speed": 0.33 }, { "id": "ANVIL", "level": 1, "speed": 1.0 } ],
-    "extend": { "flags": [ "ALLOWS_REMOTE_USE" ] }
-  },
-  {
-    "id": "steel_kiln_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "tempering kiln" },
-    "copy-from": "fake_appliance_tool",
-    "charges_per_use": 25,
-    "charged_qualities": [ { "id": "TEMPER", "level": 2, "speed": 0.8 } ]
-  },
-  {
-    "id": "catalytic_cracking_reactor_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_appliance_tool",
-    "name": { "str": "catalytic cracking reactor" },
-    "//": "there's a laptop in the disassembly, I assume it requires power.",
-    "charges_per_use": 1,
-    "charged_qualities": [ [ "EXTRACT", 3 ] ]
-  },
-  {
-    "id": "air_compressor_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "fake_appliance_tool",
-    "name": { "str": "air compressor" },
-    "charges_per_use": 50,
-    "charged_qualities": [ [ "PRESSURIZATION", 2 ] ]
-  },
-  {
     "id": "pseudo_magazine",
     "type": "ITEM",
     "subtypes": [ "MAGAZINE" ],
@@ -235,17 +169,6 @@
     ],
     "symbol": "@",
     "color": "red"
-  },
-  {
-    "id": "pseudo_app_hd_compressor_unit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "high pressure compressor unit" },
-    "copy-from": "fake_crafting_tool",
-    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "default_magazine": "pseudo_battery" } ],
-    "charges_per_use": 100,
-    "charged_qualities": [ [ "PRESSURIZATION", 10 ] ],
-    "tool_ammo": [ "battery" ]
   },
   {
     "id": "fake_dynamite_50lbs",
@@ -271,14 +194,5 @@
     "countdown_interval": "1 seconds",
     "flags": [ "BOMB" ],
     "melee_damage": { "bash": 4 }
-  },
-  {
-    "id": "fake_mill_vertical",
-    "copy-from": "fake_appliance_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "vertical mill" },
-    "charged_qualities": [ [ "DRILL", 3 ] ],
-    "charges_per_use": 25
   }
 ]
