@@ -353,3 +353,42 @@ do
     item:material("plastic", 1)
     content.add(item)
 end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "base_toiletries",
+        abstract = true,
+        name = content.plural_text("generic grooming", "generic grooming"),
+        description = content.text("generic item template"),
+        symbol = "+",
+        color = "blue",
+        price_cents = 200,
+        price_postapoc_cents = 0,
+        mass_milligrams = 100000,
+        volume_ml = 100,
+    }
+    item:material("plastic", 1)
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "toothbrush_electric",
+        name = ccb.content.plural_text("electric toothbrush", "electric toothbrushes"),
+        description = ccb.content.text("A plastic electric toothbrush."),
+        symbol = "/",
+        copy_from = "base_toiletries",
+        mass_milligrams = 140000,
+        volume_ml = 107,
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:magazine_well {
+        rigid = true,
+        flags = { "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" },
+        default_magazine = "light_battery_cell",
+    }
+    content.add(item)
+end

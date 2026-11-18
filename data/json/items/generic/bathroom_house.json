@@ -1,18 +1,5 @@
 [
   {
-    "abstract": "base_toiletries",
-    "name": { "str_sp": "generic grooming", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "symbol": "+",
-    "color": "blue",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "weight": "100 g",
-    "volume": "100 ml",
-    "material": [ "plastic" ]
-  },
-  {
     "id": "hair_dryer",
     "name": { "str": "hair dryer" },
     "type": "ITEM",
@@ -32,24 +19,5 @@
     "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
     "melee_damage": { "bash": 2 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "toothbrush_electric",
-    "name": { "str": "electric toothbrush", "str_pl": "electric toothbrushes" },
-    "type": "ITEM",
-    "description": "A plastic electric toothbrush.",
-    "symbol": "/",
-    "material": [ "plastic" ],
-    "copy-from": "base_toiletries",
-    "weight": "140 g",
-    "volume": "107 ml",
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" ],
-        "default_magazine": "light_battery_cell"
-      }
-    ]
   }
 ]
