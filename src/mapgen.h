@@ -613,7 +613,8 @@ class mapgen_patch final : private update_mapgen_function_json
                       const std::string &unique_id );
         void remove_npc( const npc_template_id &id, const std::string &unique_id );
         void clear_items( const point &first, const point &last );
-        void add_stamp( const jmapgen_place &where, const mapgen_patch &layout );
+        void set_faction_owner( const jmapgen_place &where, const faction_id &owner );
+        void add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance );
         ret_val<void> run( const tripoint_abs_omt &position, mission *active_mission,
                            bool cancel_on_collision ) const;
 
@@ -622,6 +623,8 @@ class mapgen_patch final : private update_mapgen_function_json
                         const shared_ptr_fast<const jmapgen_piece> &piece,
                         const point &local_extent = point::zero );
         point extent_{ -1, -1 };
+        int min_z_offset_ = 0;
+        int max_z_offset_ = 0;
 };
 
 class mapgen_function_json_nested : public mapgen_function_json_base

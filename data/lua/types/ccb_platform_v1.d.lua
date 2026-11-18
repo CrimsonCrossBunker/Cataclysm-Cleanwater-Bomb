@@ -8415,11 +8415,22 @@ function MapgenPatch:remove_npc(template, unique_id) end
 ---@param y2 integer
 function MapgenPatch:clear_items(x1, y1, x2, y2) end
 
+---Assign native faction ownership to items and vehicles in an inclusive local rectangle.
+---@param faction string Native faction ID.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+function MapgenPatch:set_faction_owner(faction, x, y) end
+
+---@class MapgenPatchStampOptions
+---@field z? integer Z-level offset. Defaults to zero.
+---@field chance? integer Placement chance from 1 to 100 percent. Defaults to 100.
+
 ---Place a snapshot of another patch in the native nested placement phase.
 ---@param layout MapgenPatch
 ---@param x MapgenPatchRange
 ---@param y MapgenPatchRange
-function MapgenPatch:stamp(layout, x, y) end
+---@param options? MapgenPatchStampOptions
+function MapgenPatch:stamp(layout, x, y, options) end
 
 ---@class CcbMapgenRunOptions
 ---@field mission? MissionToken Exact active mission used by mission-target mapgen placements.

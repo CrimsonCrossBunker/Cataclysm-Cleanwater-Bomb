@@ -787,9 +787,30 @@ void install_mapgen_service_api(
     "clear_items", []( mapgen_patch & patch, int x1, int y1, int x2, int y2 ) {
         patch.clear_items( point( x1, y1 ), point( x2, y2 ) );
     },
-    "stamp", []( mapgen_patch &patch, const mapgen_patch &layout,
+    "set_faction_owner", []( mapgen_patch &patch, const std::string &faction,
     const sol::object &x, const sol::object &y ) {
-        patch.add_stamp( patch_at( x, y ), layout );
+        const faction_id owner( faction );
+        if( !owner.is_valid() ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid faction" );
+        }
+        patch.set_faction_owner( patch_at( x, y ), owner );
+    },
+    "stamp", []( mapgen_patch &patch, const mapgen_patch &layout, const sol::object &x,
+    const sol::object &y, const sol::optional<sol::table> &options ) {
+        jmapgen_place where = patch_at( x, y );
+        int chance = 100;
+        if( options ) {
+            const sol::object z = options->raw_get<sol::object>( "z" );
+            const sol::object selected_chance = options->raw_get<sol::object>( "chance" );
+            if( z.valid() ) {
+                constexpr int z_span = OVERMAP_DEPTH + OVERMAP_HEIGHT;
+                where.z = jmapgen_int( patch_integer( z, -z_span, z_span, "stamp z" ) );
+            }
+            if( selected_chance.valid() ) {
+                chance = patch_integer( selected_chance, 1, 100, "stamp chance" );
+            }
+        }
+        patch.add_stamp( where, layout, chance );
     } );
 
     mapgen.set_function( "patch", [require_read]() {

@@ -2324,6 +2324,7 @@ class jmapgen_faction : public jmapgen_piece
         jmapgen_faction( const JsonObject &jsi, std::string_view/*context*/ )
             : id( jsi.get_member( "id" ) ) {
         }
+        explicit jmapgen_faction( const faction_id &owner ) : id( owner ) {}
         mapgen_phase phase() const override {
             return mapgen_phase::faction_ownership;
         }
@@ -8078,9 +8079,12 @@ class jmapgen_patch_stamp final : public jmapgen_piece
 {
     public:
         jmapgen_patch_stamp( jmapgen_objects placements, std::vector<jmapgen_setmap> setmap,
-                             const enum_bitset<jmapgen_flags> &flags )
+                             const enum_bitset<jmapgen_flags> &flags, int chance )
             : placements_( std::move( placements ) ), setmap_( std::move( setmap ) ), flags_( flags ) {
             placements_.finalize();
+            selection_.add( true, dbl_or_var( chance ) );
+            selection_.add( false, dbl_or_var( 100 - chance ) );
+            selection_.precalc();
         }
 
         mapgen_phase phase() const override {
@@ -8089,9 +8093,11 @@ class jmapgen_patch_stamp final : public jmapgen_piece
 
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y,
                     const jmapgen_int &z, const std::string &context ) const override {
-            // Native nested placement draws once for the chunk and once for
-            // its variant, even when both lists contain exactly one entry.
-            static_cast<void>( rng_bits() );
+            const bool *selected = selection_.pick();
+            if( !selected || !*selected ) {
+                return;
+            }
+            // The selected layout has a single variant, which still consumes a draw.
             static_cast<void>( rng_bits() );
             const tripoint_rel_ms offset( x.get(), y.get(), z.get() );
             const mapgendata nested( dat, {}, flags_ );
@@ -8113,6 +8119,7 @@ class jmapgen_patch_stamp final : public jmapgen_piece
         jmapgen_objects placements_;
         std::vector<jmapgen_setmap> setmap_;
         enum_bitset<jmapgen_flags> flags_;
+        weighted_dbl_or_var_list<bool> selection_;
 };
 } // namespace
 
@@ -8188,13 +8195,25 @@ void mapgen_patch::clear_items( const point &first, const point &last )
     extent_ = point( std::max( extent_.x, last.x ), std::max( extent_.y, last.y ) );
 }
 
-void mapgen_patch::add_stamp( const jmapgen_place &where, const mapgen_patch &layout )
+void mapgen_patch::set_faction_owner( const jmapgen_place &where, const faction_id &owner )
+{
+    add_piece( where, make_shared_fast<jmapgen_faction>( owner ) );
+}
+
+void mapgen_patch::add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance )
 {
     if( layout.objects.empty() && layout.setmap_points.empty() ) {
         throw std::invalid_argument( "Mapgen stamp layout must contain a placement" );
     }
+    const int low = std::min( min_z_offset_, where.z.val + layout.min_z_offset_ );
+    const int high = std::max( max_z_offset_, where.z.valmax + layout.max_z_offset_ );
+    if( high - low > OVERMAP_DEPTH + OVERMAP_HEIGHT ) {
+        throw std::invalid_argument( "Mapgen stamp spans more levels than the world contains" );
+    }
     add_piece( where, make_shared_fast<jmapgen_patch_stamp>( layout.objects, layout.setmap_points,
-               layout.flags_ ), layout.extent_ );
+               layout.flags_, chance ), layout.extent_ );
+    min_z_offset_ = low;
+    max_z_offset_ = high;
 }
 
 void mapgen_patch::add_piece( const jmapgen_place &where,
@@ -8213,10 +8232,20 @@ void mapgen_patch::add_piece( const jmapgen_place &where,
 ret_val<void> mapgen_patch::run( const tripoint_abs_omt &position, mission *active_mission,
                                 bool cancel_on_collision ) const
 {
+    if( position.z() + min_z_offset_ < -OVERMAP_DEPTH ||
+        position.z() + max_z_offset_ > OVERMAP_HEIGHT ) {
+        return ret_val<void>::make_failure( "Mapgen patch falls outside the world's z-levels" );
+    }
     mapgen_patch prepared( *this );
     prepared.objects.finalize();
-    return prepared.update_map( position, {}, tripoint_rel_ms::zero, active_mission,
-                                cancel_on_collision );
+    const ret_val<void> result = prepared.update_map( position, {}, tripoint_rel_ms::zero, active_mission,
+                                 cancel_on_collision );
+    for( int offset = min_z_offset_; offset <= max_z_offset_; ++offset ) {
+        if( offset != 0 ) {
+            reality_bubble().invalidate_map_cache( position.z() + offset );
+        }
+    }
+    return result;
 }
 
 mapgen_update_func add_mapgen_update_func( const JsonObject &jo, bool &defer )
