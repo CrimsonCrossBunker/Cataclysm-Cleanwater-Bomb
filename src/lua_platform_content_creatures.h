@@ -35,6 +35,7 @@ struct creatures_content_validation_index {
     std::function<bool( std::string_view )> defines_skill;
     std::function<bool( std::string_view )> defines_proficiency;
     std::function<bool( std::string_view )> defines_vitamin;
+    std::function<bool( std::string_view )> defines_limb_score;
     std::function<bool( std::string_view )> defines_trait;
     std::function<bool(
         const std::vector<std::pair<std::string, std::int64_t>> &,

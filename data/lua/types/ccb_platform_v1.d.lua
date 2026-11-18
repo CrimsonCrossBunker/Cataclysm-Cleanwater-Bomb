@@ -2101,6 +2101,11 @@ function EffectTypeDefinition:description(text) end
 ---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:reduced_description(text) end
+---Append an application message starting at intensity one. This series takes precedence over the single constructor message.
+---@param text string|LocalizedText
+---@param rating 'neutral'|'good'|'bad'|'mixed'
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:apply_message(text, rating) end
 ---Append the message for falling to this intensity, starting at intensity one.
 ---@param text string|LocalizedText
 ---@param rating 'neutral'|'good'|'bad'|'mixed'
@@ -2174,6 +2179,18 @@ function EffectTypeDefinition:modifier(kind, action, options) end
 ---@param options EffectVitaminOptions
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:vitamin(vitamin_id, options) end
+
+---@class EffectLimbScoreOptions
+---@field multiplier? number Native multiplier at intensity one. Defaults to 1.
+---@field per_intensity? number Added to the multiplier for each intensity above one. Defaults to 0.
+---@field resisted_multiplier? number Defaults to multiplier.
+---@field resisted_per_intensity? number Defaults to per_intensity.
+
+---Append a native limb score modifier. The effect flags select local or global application.
+---@param score_id string Existing or same-transaction LimbScore id.
+---@param options EffectLimbScoreOptions
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:limb_score(score_id, options) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
@@ -7353,6 +7370,11 @@ function CcbPlatformContent.MonsterAttack(options) end
 ---@param options EffectTypeDefinitionOptions
 ---@return EffectTypeDefinition
 function CcbPlatformContent.EffectType(options) end
+
+---Register an effect type that may also be defined by another Mod.
+---The last registered definition in native Mod load order takes effect.
+---@param definition EffectTypeDefinition
+function CcbPlatformContent.upsert_effect_type(definition) end
 
 ---@param options WeakpointSetDefinitionOptions
 ---@return WeakpointSetDefinition

@@ -5854,6 +5854,12 @@ bool content_transaction::validate( const runtime &owner_runtime,
         creatures_index.defines_vitamin = [this]( const std::string_view id ) {
             return pimpl_->item_content.defines_vitamin( id );
         };
+        creatures_index.defines_limb_score = [this]( const std::string_view id ) {
+            return std::any_of( pimpl_->limb_scores.begin(), pimpl_->limb_scores.end(),
+            [id]( const limb_score_registration & entry ) {
+                return entry.definition->id == id;
+            } );
+        };
         creatures_index.defines_trait = []( const std::string_view id ) {
             return trait_id( std::string( id ) ).is_valid();
         };
@@ -5955,12 +5961,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } );
         };
-        character_index.defines_limb_score = [this]( const std::string_view id ) {
-            return std::any_of( pimpl_->limb_scores.begin(), pimpl_->limb_scores.end(),
-            [id]( const limb_score_registration & entry ) {
-                return entry.definition->id == id;
-            } );
-        };
+        character_index.defines_limb_score = creatures_index.defines_limb_score;
         if( !pimpl_->character.validate(
                 owner_runtime, check_engine_state, character_index, error ) ) {
             return false;

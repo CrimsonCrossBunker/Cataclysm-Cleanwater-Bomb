@@ -397,12 +397,14 @@ struct effect_type_definition_data {
     authored_text apply_message;
     authored_text death_message;
     std::string rating = "neutral";
+    std::vector<std::pair<authored_text, game_message_type>> apply_messages;
     std::vector<std::pair<authored_text, game_message_type>> decay_messages;
     std::string death_event;
     bool harmful_cough = false;
     std::vector<std::pair<int, int>> death_chances;
     std::vector<std::pair<int, int>> resisted_death_chances;
     std::vector<vitamin_rate_effect> vitamin_modifiers;
+    std::vector<limb_score_effect> limb_score_modifiers;
     std::map<std::pair<std::string, mod_action>, modifier_data> modifiers;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
@@ -1275,16 +1277,16 @@ struct effect_type_definition_handle {
                                 "reduced effect description" );
         }
 
+        effect_type_definition_handle &apply_message( const sol::object &text,
+                std::string_view rating_name ) {
+            return append_rated_message( definition->apply_messages, text, rating_name,
+                                         "effect application message" );
+        }
+
         effect_type_definition_handle &decay_message( const sol::object &text,
                 std::string_view rating_name ) {
-            require_building_handle( token, *definition, "effect type" );
-            const auto rating = effect_message_ratings.find( rating_name );
-            if( rating == effect_message_ratings.end() ) {
-                throw std::runtime_error( "effect decay message requires a valid rating" );
-            }
-            definition->decay_messages.emplace_back(
-                read_singular_text( text, {}, "effect decay message" ), rating->second );
-            return *this;
+            return append_rated_message( definition->decay_messages, text, rating_name,
+                                         "effect decay message" );
         }
 
         effect_type_definition_handle &flag( const std::string &id ) {
@@ -1458,12 +1460,45 @@ struct effect_type_definition_handle {
             return *this;
         }
 
+        effect_type_definition_handle &limb_score( const std::string &id, const sol::table &options ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( id.empty() ) {
+                throw std::invalid_argument( "effect limb score id cannot be empty" );
+            }
+            const auto read_float = [&]( const char *key, float fallback ) {
+                const double value = options.get_or( key, static_cast<double>( fallback ) );
+                if( !std::isfinite( value ) || std::abs( value ) > std::numeric_limits<float>::max() ) {
+                    throw std::invalid_argument( "effect limb score modifiers require finite native floats" );
+                }
+                return static_cast<float>( value );
+            };
+            const float multiplier = read_float( "multiplier", 1.0f );
+            const float scaling = read_float( "per_intensity", 0.0f );
+            definition->limb_score_modifiers.push_back( {
+                limb_score_id( id ), multiplier, read_float( "resisted_multiplier", multiplier ),
+                scaling, read_float( "resisted_per_intensity", scaling )
+            } );
+            return *this;
+        }
+
         std::string id() const {
             require_readable_handle( token, *definition, "effect type" );
             return definition->id;
         }
 
     private:
+        effect_type_definition_handle &append_rated_message(
+            std::vector<std::pair<authored_text, game_message_type>> &target, const sol::object &text,
+            std::string_view rating_name, const std::string &label ) {
+            require_building_handle( token, *definition, "effect type" );
+            const auto rating = effect_message_ratings.find( rating_name );
+            if( rating == effect_message_ratings.end() ) {
+                throw std::runtime_error( label + " requires a valid rating" );
+            }
+            target.emplace_back( read_singular_text( text, {}, label ), rating->second );
+            return *this;
+        }
+
         effect_type_definition_handle &append_text( std::vector<authored_text> &target,
                 const sol::object &text, const std::string &label ) {
             require_building_handle( token, *definition, "effect type" );
@@ -3186,6 +3221,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "name", &effect_type_definition_handle::name,
         "description", &effect_type_definition_handle::description,
         "reduced_description", &effect_type_definition_handle::reduced_description,
+        "apply_message", &effect_type_definition_handle::apply_message,
         "decay_message", &effect_type_definition_handle::decay_message,
         "flag", &effect_type_definition_handle::flag,
         "immune_character_flag", &effect_type_definition_handle::immune_character_flag,
@@ -3197,6 +3233,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "death_chance", &effect_type_definition_handle::death_chance,
         "modifier", &effect_type_definition_handle::modifier,
         "vitamin", &effect_type_definition_handle::vitamin,
+        "limb_score", &effect_type_definition_handle::limb_score,
         "enchantment", &effect_type_definition_handle::enchantment );
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
@@ -3455,6 +3492,14 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->show_intensity = options.get_or( "show_intensity", true );
         definition->part_descriptions = options.get_or( "part_descriptions", false );
         return effect_type_definition_handle{ std::move( definition ), pimpl_->token };
+    } );
+    content.set_function( "upsert_effect_type", [this]( const effect_type_definition_handle & handle ) {
+        if( handle.token != pimpl_->token ) {
+            throw std::runtime_error( "cannot register an effect type definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "effect type" );
+        handle.definition->registered = true;
+        pimpl_->effect_types.push_back( { definition_operation::upsert, handle.definition } );
     } );
     content.set_function( "MonsterAttack", [this]( const sol::table & options ) {
         auto definition = std::make_shared<monster_attack_definition_data>();
@@ -4370,6 +4415,14 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown vitamin '" + entry.vitamin.str() + "'" );
                 }
             }
+            for( const limb_score_effect &modifier : definition.limb_score_modifiers ) {
+                const std::string &id = modifier.score_id.str();
+                if( check_engine_state && !modifier.score_id.is_valid() &&
+                    !( index.defines_limb_score && index.defines_limb_score( id ) ) ) {
+                    throw std::runtime_error( "effect type '" + definition.id +
+                                              "' references unknown limb score '" + id + "'" );
+                }
+            }
             for( const std::string &id : definition.resist_effects ) {
                 if( !effect_exists( id ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
@@ -5126,8 +5179,14 @@ void creatures_content_transaction::impl::apply_effect_type()
         }
         native.remove_message = source.remove_message.empty() ? translation() :
                                 source.remove_message.native();
-        native.apply_msgs.emplace_back( source.apply_message.native(),
-                                        effect_message_ratings.at( source.rating ) );
+        if( source.apply_messages.empty() ) {
+            native.apply_msgs.emplace_back( source.apply_message.native(),
+                                            effect_message_ratings.at( source.rating ) );
+        } else {
+            for( const auto &[text, rating] : source.apply_messages ) {
+                native.apply_msgs.emplace_back( text.native(), rating );
+            }
+        }
         for( const auto &[text, rating] : source.decay_messages ) {
             native.decay_msgs.emplace_back( text.native(), rating );
         }
@@ -5139,6 +5198,7 @@ void creatures_content_transaction::impl::apply_effect_type()
         native.kill_chance = source.death_chances;
         native.red_kill_chance = source.resisted_death_chances;
         native.vitamin_data = source.vitamin_modifiers;
+        native.limb_score_data = source.limb_score_modifiers;
         native.harmful_cough = source.harmful_cough;
         for( const auto &[key, value] : source.modifiers ) {
             native.mod_data[key.first][native.get_effect_modifier_key( key.second, 0 )] =
@@ -7055,6 +7115,11 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.apply_message );
             hash_part( state, value.death_message );
             hash_part( state, value.rating );
+            for( const auto &[text, rating] : value.apply_messages ) {
+                hash_part( state, "apply_message" );
+                hash_part( state, text );
+                hash_part( state, std::to_string( static_cast<int>( rating ) ) );
+            }
             for( const auto &[text, rating] : value.decay_messages ) {
                 hash_part( state, "decay_message" );
                 hash_part( state, text );
@@ -7100,6 +7165,15 @@ void creatures_content_transaction::append_fingerprint(
                 };
                 hash_profile( vitamin.rate, vitamin.tick, vitamin.absorb_mult );
                 hash_profile( vitamin.red_rate, vitamin.red_tick, vitamin.red_absorb_mult );
+            }
+            for( const limb_score_effect &modifier : value.limb_score_modifiers ) {
+                hash_part( state, "limb_score" );
+                hash_part( state, modifier.score_id.str() );
+                std::ostringstream values;
+                values.imbue( std::locale::classic() );
+                values << std::hexfloat << modifier.mod << ',' << modifier.red_mod << ','
+                       << modifier.scaling << ',' << modifier.red_scaling;
+                hash_part( state, values.str() );
             }
             hash_part( state, value.apply_memorial_log );
             hash_part( state, value.remove_memorial_log );
