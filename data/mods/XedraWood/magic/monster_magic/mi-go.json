@@ -12,28 +12,6 @@
     "max_damage": 350
   },
   {
-    "type": "SPELL",
-    "id": "biokinetic_heightened_reflexes_enhanced_monster",
-    "name": { "str": "Heightened Reflexes enemy check", "//~": "NO_I18N" },
-    "description": {
-      "str": "Applies an even stronger version of Heightened Reflexes when a hostile target is detected.",
-      "//~": "NO_I18N"
-    },
-    "flags": [ "SILENT", "NO_HANDS", "NO_LEGS", "MUST_HAVE_CLASS_TO_LEARN" ],
-    "valid_targets": [ "hostile" ],
-    "max_level": 1,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_FERAL_BIOKINESIS_HEIGHTENED_REFLEXES_ENHANCED_APPLIER",
-    "shape": "blast",
-    "min_range": 60,
-    "max_range": 60
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FERAL_BIOKINESIS_HEIGHTENED_REFLEXES_ENHANCED_APPLIER",
-    "effect": [ { "npc_add_effect": "effect_monster_heightened_reflex_enhanced", "duration": { "math": [ "rng(270,1530)" ] } } ]
-  },
-  {
     "id": "photokinetic_illumination_monster",
     "type": "SPELL",
     "name": { "str": "[Ψ]Illumination Monster" },

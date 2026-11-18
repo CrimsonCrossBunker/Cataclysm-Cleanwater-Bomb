@@ -71,63 +71,6 @@
     }
   },
   {
-    "id": "forest_unity_nature",
-    "type": "SPELL",
-    "name": "Unity with Nature",
-    "description": "Reaching out to the forest, you absorb some of its serenity and peace into yourself.",
-    "message": "You close your eyes and listen to the leaves rustling in the wind as you solemnly intone the incantation.",
-    "valid_targets": [ "self" ],
-    "skill": "deduction",
-    "spell_class": "FOREST_MAGIC",
-    "flags": [ "SOMATIC", "VERBAL", "RANDOM_DURATION" ],
-    "max_level": 15,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_FOREST_NATURE_UNITY",
-    "shape": "blast",
-    "difficulty": 3,
-    "min_duration": {
-      "math": [
-        "(35501 + (u_spell_level('forest_unity_nature') * 12681) + (u_skill('deduction') * 23085) ) * xedrawood_forest_magic_modifiers()"
-      ]
-    },
-    "max_duration": {
-      "math": [
-        "(85815 + (u_spell_level('forest_unity_nature') * 38044) + (u_skill('deduction') * 56085) ) * xedrawood_forest_magic_modifiers()"
-      ]
-    },
-    "magic_type": "xedrawood_forest_magic",
-    "base_casting_time": 180000,
-    "base_energy_cost": 600,
-    "final_energy_cost": 400,
-    "energy_increment": -10
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FOREST_NATURE_UNITY",
-    "effect": [
-      {
-        "math": [
-          "_duration_low = (355.01 + (u_spell_level('forest_unity_nature') * 126.81) + (u_skill('deduction') * 230.85) ) * xedrawood_forest_magic_modifiers()"
-        ]
-      },
-      {
-        "math": [
-          "_duration_high = (858.15 + (u_spell_level('forest_unity_nature') * 380.44) + (u_skill('deduction') * 560.85) ) * xedrawood_forest_magic_modifiers()"
-        ]
-      },
-      { "math": [ "_spell_duration = rng(_duration_low,_duration_high)" ] },
-      { "u_add_effect": "natures_commune", "duration": { "math": [ "_spell_duration" ] } },
-      { "u_lose_morale": "morale_forest_unity" },
-      {
-        "u_add_morale": "morale_forest_unity",
-        "bonus": { "math": [ "5 + (u_spell_level('forest_unity_nature') * 3)" ] },
-        "max_bonus": 50,
-        "duration": { "math": [ "_spell_duration" ] },
-        "decay_start": { "math": [ "_spell_duration / 2" ] }
-      }
-    ]
-  },
-  {
     "id": "forest_traverse_the_wilds",
     "type": "SPELL",
     "name": "Weald-Walking",
@@ -216,49 +159,5 @@
       { "u_lose_effect": "effect_forest_traverse_the_wilds" },
       { "u_message": "As you step indoors, your spell fades.", "type": "bad" }
     ]
-  },
-  {
-    "id": "forest_whisper_leaves",
-    "type": "SPELL",
-    "name": "Whisper of the Leaves",
-    "description": "Reach out to the forest spirits and ask them to teach you the lay of the land.  The longer you remain in the trance, the more you will learn.  You must be standing near a tree in a forest or the ritual will fail.",
-    "message": "You place a hand on the tree and close your eyes as you reach out to the spirits of the forest.",
-    "valid_targets": [ "self" ],
-    "skill": "deduction",
-    "spell_class": "FOREST_MAGIC",
-    "flags": [ "VERBAL", "SOMATIC" ],
-    "caster_condition": { "or": [ { "u_at_om_location": "forest" }, { "u_at_om_location": "forest_thick" } ] },
-    "caster_condition_fail_message": "You must be in a forest to commune with the forest spirits.",
-    "max_level": 15,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_FOREST_GAIN_WHISPER_LEAVES",
-    "shape": "blast",
-    "difficulty": 6,
-    "magic_type": "xedrawood_forest_magic",
-    "base_casting_time": 18000,
-    "base_energy_cost": 800,
-    "final_energy_cost": 500,
-    "energy_increment": -40
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_FOREST_GAIN_WHISPER_LEAVES",
-    "condition": { "not": { "u_has_trait": "TREE_COMMUNION" } },
-    "effect": [
-      { "u_add_trait": "TREE_COMMUNION" },
-      { "u_activate_trait": "TREE_COMMUNION" },
-      { "run_eocs": "EOC_LOSE_WHISPER_LEAVES", "time_in_future": [ "1 seconds", "1 seconds" ] }
-    ],
-    "false_effect": [
-      {
-        "u_message": "You are already in tune with the rhythms of the forest.  Further magic cannot deepen your bond.",
-        "type": "good"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_LOSE_WHISPER_LEAVES",
-    "effect": [ { "u_lose_trait": "TREE_COMMUNION" } ]
   }
 ]

@@ -90,6 +90,8 @@ require("practice_recipes")
 require("hedge_research")
 
 require("anima_meditation")
+require("forest_rituals")
+require("mi_go_reflexes")
 
 require("item_groups")
 
