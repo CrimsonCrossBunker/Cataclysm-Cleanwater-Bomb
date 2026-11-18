@@ -8372,6 +8372,12 @@ function ScriptMapgenContext:fill_groundcover() end
 ---@class MapgenPatch
 local MapgenPatch = {}
 
+---Apply local coordinates in the OMT's fixed orientation.
+function MapgenPatch:keep_orientation() end
+
+---Keep existing furniture, traps and items when placing terrain.
+function MapgenPatch:preserve_tile_contents() end
+
 ---Erase furniture, traps and items on squares where this patch places terrain.
 function MapgenPatch:erase_before_terrain() end
 

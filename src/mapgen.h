@@ -599,6 +599,8 @@ class mapgen_patch final : private update_mapgen_function_json
 {
     public:
         mapgen_patch();
+        void keep_orientation();
+        void preserve_tile_contents();
         void erase_before_terrain();
         void add_terrain( const jmapgen_place &where, const ter_str_id &id );
         void add_terrain( const jmapgen_place &where, const std::vector<ter_str_id> &choices );

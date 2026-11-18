@@ -739,6 +739,8 @@ void install_mapgen_service_api(
                         lua.create_table();
     lua.new_usertype<mapgen_patch>(
         "MapgenPatch", sol::no_constructor,
+        "keep_orientation", &mapgen_patch::keep_orientation,
+        "preserve_tile_contents", &mapgen_patch::preserve_tile_contents,
         "erase_before_terrain", &mapgen_patch::erase_before_terrain,
         "terrain", []( mapgen_patch &patch, const sol::object &x, const sol::object &y,
     const sol::object &id ) {

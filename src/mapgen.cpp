@@ -8120,8 +8120,20 @@ mapgen_patch::mapgen_patch() : update_mapgen_function_json( JsonObject(), "Lua m
 {
 }
 
+void mapgen_patch::keep_orientation()
+{
+    flags_.set( jmapgen_flags::no_underlying_rotate );
+}
+
+void mapgen_patch::preserve_tile_contents()
+{
+    flags_.reset( jmapgen_flags::erase_all_before_placing_terrain );
+    flags_.set( jmapgen_flags::allow_terrain_under_other_data );
+}
+
 void mapgen_patch::erase_before_terrain()
 {
+    flags_.reset( jmapgen_flags::allow_terrain_under_other_data );
     flags_.set( jmapgen_flags::erase_all_before_placing_terrain );
 }
 
