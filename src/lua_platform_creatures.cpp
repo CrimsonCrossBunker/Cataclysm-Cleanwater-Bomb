@@ -730,7 +730,7 @@ sol::table nearby_creatures(
 sol::table creature_at(
     sol::this_state lua, const script_tripoint_coord &position,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool allow_hallucination )
 {
     if( position.native_origin() != coords::origin::abs ||
         position.native_scale() != coords::scale::map_square ) {
@@ -743,7 +743,7 @@ sol::table creature_at(
                    state, { "unavailable", "No active game is available" } );
     }
     Creature *creature = get_creature_tracker().creature_at<Creature>(
-                             tripoint_abs_ms( position.to_native() ), true );
+                             tripoint_abs_ms( position.to_native() ), allow_hallucination );
     if( creature == nullptr || creature->is_dead_state() ) {
         return make_game_error_result(
                    state, { "not_found", "No active creature exists at that position" } );
@@ -4510,11 +4510,11 @@ void install_creature_api(
         "at",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state,
-    const script_tripoint_coord & position ) {
+    const script_tripoint_coord & position, const sol::optional<bool> &allow_hallucination ) {
         require_read();
         return creature_at(
                    lua_state, position, current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), allow_hallucination.value_or( true ) );
     } );
     creatures.set_function(
         "can_see",

@@ -178,3 +178,4 @@ require("contemplation_recipes.vitakinesis_practice")
 require("contemplation_recipes.obsolete_recipes")
 
 require("psychic_research")
+require("noetic_detector")

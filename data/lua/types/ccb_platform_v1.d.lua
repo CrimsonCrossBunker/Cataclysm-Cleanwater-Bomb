@@ -8373,12 +8373,11 @@ function CcbTargetingApi.choose_visible_map_square(message, range) end
 ---@param center TripointCoord Absolute map-square center inside the active map.
 ---@param message string Prompt text, at most 1024 UTF-8 bytes; may be empty.
 ---@param failure_message string Failure text, at most 1024 UTF-8 bytes; may be empty.
----@param candidates TripointCoord[] Dense candidate positions, each within one map square of center.
+---@param candidates? TripointCoord[] Dense candidate positions, each within one map square of center. Omit to allow all squares in the native adjacent selection area.
 ---@param allow_vertical? boolean Whether the picker may change z-level; defaults to false.
 ---@param allow_autoselect? boolean Whether to auto-select one valid candidate; defaults to true.
 ---@return TripointCoord|nil selected Absolute map-square selection, or nil on failure/cancel.
-function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_message,
-        candidates, allow_vertical, allow_autoselect) end
+function CcbTargetingApi.choose_adjacent_where_at(center, message, failure_message, candidates, allow_vertical, allow_autoselect) end
 
 ---@class CcbPlatformInteractionApi
 local CcbPlatformInteractionApi = {}
@@ -9811,6 +9810,13 @@ function CcbCharactersApi.prevent_death(character) end
 ---@param character GameHandle Character whose native enchantment cache should be rebuilt.
 ---@return CcbResult
 function CcbCharactersApi.recalculate_enchantments(character) end
+
+---Read the current native enchantment cache's custom value for this character.
+---@param character GameHandle Exact live Character.
+---@param key string Nonempty native custom value key, at most 256 bytes.
+---@param base? number Value before the native modifier is applied. Defaults to zero.
+---@return CcbResult result `value` is the modified number.
+function CcbCharactersApi.enchantment_value(character, key, base) end
 
 ---@class CcbSpellsApi
 local CcbSpellsApi = {}
@@ -14054,8 +14060,9 @@ function CcbCreaturesApi.avatar() end
 function CcbCreaturesApi.snapshot(handle) end
 
 ---@param position TripointCoord Absolute map-square position.
+---@param allow_hallucination? boolean Include hallucinations. Defaults to true.
 ---@return CcbResult result `value` is the live creature handle at the given position.
-function CcbCreaturesApi.at(position) end
+function CcbCreaturesApi.at(position, allow_hallucination) end
 
 ---@param creature GameHandle Exact live Creature handle.
 ---@param flag GameId GameId<json_flag|monster_flag>. Monster flags apply to monsters only.

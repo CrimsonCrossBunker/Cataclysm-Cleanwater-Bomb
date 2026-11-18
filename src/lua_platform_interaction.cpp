@@ -816,7 +816,7 @@ sol::object choose_adjacent_where_at(
     const script_tripoint_coord &requested_center,
     const std::string &message,
     const std::string &failure_message,
-    const sol::table &requested_candidates,
+    const sol::optional<sol::table> &requested_candidates,
     const bool allow_vertical,
     const bool allow_autoselect )
 {
@@ -831,16 +831,15 @@ sol::object choose_adjacent_where_at(
         require_loaded_position(
             here, requested_center,
             std::string( api_name ) );
-    const std::vector<tripoint_bub_ms> candidates =
-        read_adjacent_candidates(
-            here, requested_candidates, center,
-            std::string( api_name ) );
+    const std::vector<tripoint_bub_ms> candidates = requested_candidates ?
+            read_adjacent_candidates( here, *requested_candidates, center, std::string( api_name ) ) :
+            std::vector<tripoint_bub_ms>();
     return absolute_selection(
                sol::state_view( lua ), here,
                choose_adjacent_highlight(
                    here, center, message, failure_message,
-    [&candidates]( const tripoint_bub_ms & position ) {
-        return std::binary_search(
+    [&candidates, &requested_candidates]( const tripoint_bub_ms & position ) {
+        return !requested_candidates || std::binary_search(
                    candidates.begin(), candidates.end(), position );
     },
     allow_vertical, allow_autoselect ) );
@@ -1380,7 +1379,7 @@ void install_game_interaction_api(
             const script_tripoint_coord & center,
             const std::string & message,
             const std::string & failure_message,
-            const sol::table & candidates,
+            const sol::optional<sol::table> &candidates,
             const sol::optional<bool> &allow_vertical,
     const sol::optional<bool> &allow_autoselect ) {
         authorize(
