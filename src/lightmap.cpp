@@ -1435,11 +1435,12 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
                 if( !vision_preparation_ ) {
                     vision_preparation_ = std::make_unique<vision_preparation::frame>( workers );
                 }
-                auto request = vision_preparation_->try_acquire( MAX_VIEW_DISTANCE - penalty );
+                vision_preparation::frame::lease request = vision_preparation_->try_acquire(
+                            MAX_VIEW_DISTANCE - penalty );
                 if( request ) {
                     {
                         CATA_PROFILE_SCOPE_NAMED( "vision.capture" );
-                        auto &values = vision_preparation_->capture();
+                        vision_preparation::snapshot &values = vision_preparation_->capture();
                         values.origin = casting_origin;
                         values.offset_distance = penalty;
                         values.numerator = 1.0f;
