@@ -110,17 +110,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_LILIN_SPEND_RUACH_FOR_POWERS",
-    "condition": { "math": [ "u_vitamin('lilin_ruach_vitamin') >= 240" ] },
-    "effect": [
-      { "math": [ "u_vitamin('lilin_ruach_vitamin') -= 240" ] },
-      { "math": [ "u_lilin_amount_of_ruach_spent_for_powers_increaser += 0.75" ] },
-      { "math": [ "u_lilin_amount_of_ruach_spent_for_powers += u_lilin_amount_of_ruach_spent_for_powers_increaser" ] }
-    ],
-    "false_effect": [ { "u_message": "You don't have enough ruach to dedicate any to increasing your powers!", "type": "bad" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_LILIN_GAIN_POWERS_AT_NIGHT_SETUP",
     "recurrence": { "math": [ "time_until('sunset')" ] },
     "//": "Lilin have a small chance to gain powers if they're outside under the moon, every night. Each time they gain powers it increases the counter until the next time they can gain more powers.",
