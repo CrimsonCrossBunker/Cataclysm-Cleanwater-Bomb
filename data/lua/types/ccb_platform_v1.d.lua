@@ -5470,19 +5470,34 @@ local EventTransformationDefinition = {}
 ---@field id any
 ---@field returns any
 local MathFunctionDefinition = {}
+---@class MissionPhasePayload
+---@field mission MissionToken Exact live mission instance.
+---@field mission_type GameId GameId<mission_type>.
+---@field phase 'start'|'success'|'failure'
+---@field character GameHandle Exact Character supplied by the native mission phase.
+
 ---@class MissionDefinition
 ---@field complete_when any
 ---@field deadline any
 ---@field dialogue any
 ---@field dynamic_deadline any
----@field fail_with any
----@field finish_with any
 ---@field id any
 ---@field origin any
 ---@field place_when any
 ---@field reward any
----@field start_with any
 local MissionDefinition = {}
+
+---@param handler_id string Registered handler receiving MissionPhasePayload when the mission starts.
+---@return MissionDefinition self
+function MissionDefinition:start_with(handler_id) end
+
+---@param handler_id string Registered handler receiving MissionPhasePayload when the mission succeeds.
+---@return MissionDefinition self
+function MissionDefinition:finish_with(handler_id) end
+
+---@param handler_id string Registered handler receiving MissionPhasePayload when the mission fails.
+---@return MissionDefinition self
+function MissionDefinition:fail_with(handler_id) end
 ---@class MutationDefinition
 ---@field name fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition
 ---@field description fun(self:MutationDefinition, text:string|LocalizedText):MutationDefinition

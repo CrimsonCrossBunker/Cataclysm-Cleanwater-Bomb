@@ -7023,9 +7023,9 @@ void character_content_transaction::impl::apply_mission_definition()
         const std::string & handler ) {
             const std::string owner = this->owner;
             const std::string mission_id = source.id;
-            return [owner, mission_id, phase, handler]( mission * active_mission, Character & ) {
+            return [owner, mission_id, phase, handler]( mission * active_mission, Character & character ) {
                 invoke_mission_phase_handler(
-                    owner, mission_id, phase, handler, active_mission );
+                    owner, mission_id, phase, handler, active_mission, character );
             };
         };
         if( !source.start_handler.empty() ) {

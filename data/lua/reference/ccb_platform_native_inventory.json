@@ -720,7 +720,7 @@
         "namespace": "ccb",
         "source": {
           "path": "src/lua_platform_runtime_hooks.cpp",
-          "line": 2114
+          "line": 2116
         },
         "direct_roots": []
       },

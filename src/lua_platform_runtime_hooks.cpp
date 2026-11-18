@@ -1776,7 +1776,7 @@ std::optional<bool> invoke_mission_place_handler(
 void invoke_mission_phase_handler(
     const std::string_view mod_id, const std::string_view mission_type,
     const std::string_view phase, const std::string_view handler_id,
-    mission *active_mission )
+    mission *active_mission, Character &character )
 {
     if( active_mission == nullptr ) {
         return;
@@ -1800,8 +1800,10 @@ void invoke_mission_phase_handler(
         },
         { "phase", std::string( phase ) }
     } );
+    const game_handle character_handle = platform_creature_handle( *owner, character );
+    payload["character"] = character_handle;
     sol::protected_function callback = handler->second.callback;
-    callback_scope callback_guard( *owner );
+    callback_scope callback_guard( *owner, character_handle );
     const sol::protected_function_result result = callback( payload );
     if( !result.valid() ) {
         report_callback_error( *owner, handler_id, result );
