@@ -486,6 +486,20 @@ sol::table creature_has_flag(
                        flag_id( requested.value() ) ) ) );
 }
 
+sol::table creature_has_flag_text(
+    sol::this_state lua, const game_handle &handle, const std::string &flag,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    sol::state_view state( lua );
+    const native_handle_result<Creature> resolved = handle.resolve_creature(
+                runtime_generation, world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    return make_game_value_result( state, sol::make_object( state,
+                                   resolved.value->has_flag( flag_id( flag ) ) ) );
+}
+
 sol::table creature_has_body_type(
     sol::this_state lua, const game_handle &handle,
     const std::string &requested,
@@ -4566,6 +4580,15 @@ void install_creature_api(
                    current_world_generation() );
     } );
     creatures.set_function(
+        "has_flag_text",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::string & flag ) {
+        require_read();
+        return creature_has_flag_text( lua_state, handle, flag,
+                                       current_runtime_generation(), current_world_generation() );
+    } );
+    creatures.set_function(
         "has_body_type",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
@@ -5076,8 +5099,8 @@ void install_creature_api(
         if( !character ) {
             return make_game_error_result( state, *error );
         }
-        const bodypart_id part = character_body_part( *character, body_part,
-                                 "services.characters.hp" );
+        require_id_kind( body_part, "body_part", "services.characters.hp" );
+        const bodypart_id part = bodypart_str_id( body_part.value() ).id();
         return make_game_value_result( state,
                                        sol::make_object( state, character->get_part_hp_cur( part ) ) );
     } );

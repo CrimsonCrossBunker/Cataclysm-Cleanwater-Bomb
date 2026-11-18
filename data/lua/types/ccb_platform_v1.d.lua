@@ -8932,8 +8932,8 @@ function CcbCharactersApi.damage(character, damage_type, amount, options) end
 function CcbCharactersApi.heal(character, body_part, amount) end
 
 ---@param character GameHandle Exact live Character.
----@param body_part GameId GameId<body_part> present on the Character.
----@return CcbResult result value is the body's native current HP.
+---@param body_part GameId Registered GameId<body_part>; current anatomy membership is not required.
+---@return CcbResult result value is the native current HP, including the native null-body-part result when this Character lacks the registered part.
 function CcbCharactersApi.hp(character, body_part) end
 
 ---Assign raw HP directly without healing, affliction removal or a maximum-HP clamp.
@@ -13260,6 +13260,13 @@ function CcbCreaturesApi.at(position) end
 ---@param flag GameId GameId<json_flag|monster_flag>. Monster flags apply to monsters only.
 ---@return CcbResult result `value` is the native flag membership.
 function CcbCreaturesApi.has_flag(creature, flag) end
+
+---Query the native flag text without requiring a definition in one flag registry.
+---Character and Monster virtual flag routing, including Monster effect flags and unknown ids, is preserved.
+---@param creature GameHandle Exact live Creature handle.
+---@param flag string Raw native flag id.
+---@return CcbResult result value is the native flag membership.
+function CcbCreaturesApi.has_flag_text(creature, flag) end
 
 ---@param creature GameHandle Exact live Creature handle.
 ---@param species GameId GameId<species>.
