@@ -463,6 +463,8 @@ require("generic_items")
 
 require("powered_tools")
 
+require("instrument_actions")
+
 require("inherited_items")
 
 require("active_items")

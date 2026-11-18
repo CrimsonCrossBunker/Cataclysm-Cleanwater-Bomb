@@ -83,34 +83,6 @@
     "melee_damage": { "bash": 5 }
   },
   {
-    "id": "mws_HE_sensor_array",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "ambient HE sensor array", "//~": "NO_I18N" },
-    "description": {
-      "str": "Represents the hardware and software to scan for nethery stuff.  You should not see this item in game.",
-      "//~": "NO_I18N"
-    },
-    "weight": "4000 g",
-    "volume": "80000 ml",
-    "longest_side": "55 cm",
-    "price": "400 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "plastic", "aluminum" ],
-    "symbol": "[",
-    "looks_like": "briefcase",
-    "color": "yellow",
-    "charges_per_use": 1,
-    "use_action": [
-      {
-        "type": "effect_on_conditions",
-        "description": "Scan with the advanced sensor array.",
-        "effect_on_conditions": [ "EOC_scan_advanced_weather" ]
-      }
-    ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "oxygen_cylinder",
     "type": "ITEM",
     "subtypes": [ "MAGAZINE" ],
@@ -140,32 +112,6 @@
     "capacity": 300,
     "count": 300,
     "melee_damage": { "bash": 10 }
-  },
-  {
-    "id": "microscope",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "microscope" },
-    "description": "A classic tool for the ages!  This hefty, durable piece of lab equipment makes small things look bigger.  When powered, it allows the user to observe various samples on a microscopic scale.",
-    "weight": "2 kg",
-    "volume": "3800 ml",
-    "price": "30 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "bad", "length": "short", "surface": "any", "balance": "clumsy" },
-    "material": [ "steel", "glass" ],
-    "symbol": "G",
-    "color": "white",
-    "melee_damage": { "bash": 4 },
-    "charges_per_use": 1,
-    "use_action": [
-      { "type": "link_up", "cable_length": 2, "charge_rate": "10 W" },
-      {
-        "type": "effect_on_conditions",
-        "menu_text": "Observe samples",
-        "effect_on_conditions": [ "EOC_use_microscope" ]
-      }
-    ]
   },
   {
     "id": "migo_bio_tech",

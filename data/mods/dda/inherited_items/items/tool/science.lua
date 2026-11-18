@@ -1332,3 +1332,52 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "mws_HE_sensor_array",
+        name = content.plural_text("ambient HE sensor array", "ambient HE sensor arrays"),
+        description = content.text("Represents the hardware and software to scan for nethery stuff.  You should not see this item in game."),
+        mass_milligrams = 4000000,
+        volume_ml = 80000,
+        longest_side_mm = 550,
+        price_cents = 40000,
+        price_postapoc_cents = 50,
+        symbol = "[",
+        looks_like = "briefcase",
+        color = "yellow",
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:clear_use_actions()
+    item:on_use("scan_anomalous_weather", ccb.content.text("Activate"), ccb.content.text("Scan with the advanced sensor array."))
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "microscope",
+        category = "tools",
+        name = ccb.content.plural_text("microscope", "microscopes"),
+        description = ccb.content.text("A classic tool for the ages!  This hefty, durable piece of lab equipment makes small things look bigger.  When powered, it allows the user to observe various samples on a microscopic scale."),
+        mass_milligrams = 2000000,
+        volume_ml = 3800,
+        price_cents = 3000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = "G",
+        color = "white",
+    }
+    item:material("steel", 1)
+    item:material("glass", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 10000 }
+    item:tool { charges_per_use = 1 }
+    item:on_use("observe_microscope_samples", ccb.content.text("Observe samples"), nil, { id = "inspect_sample" })
+    content.add(item)
+end
