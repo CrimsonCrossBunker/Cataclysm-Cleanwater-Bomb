@@ -484,7 +484,7 @@ struct region_settings {
     bool place_specials;
     bool neighbor_connections;
 
-    double npc_spawn_time;
+    double npc_spawn_time = 4.0;
 
     float max_urban;
     // increase nesw

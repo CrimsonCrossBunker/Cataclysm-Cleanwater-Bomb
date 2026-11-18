@@ -4382,11 +4382,6 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             }
             for( const std::string &terrain : definition.default_oter ) {
                 require_valid_id( terrain, "default overmap terrain" );
-                if( check_engine_state && !oter_str_id( terrain ).is_valid() ) {
-                    throw std::runtime_error( "region settings '" + definition.id +
-                                              "' references unknown default overmap terrain '" +
-                                              terrain + "'" );
-                }
             }
             for( const auto &[terrain, weight] : definition.default_groundcover ) {
                 require_valid_id( terrain, "default groundcover terrain" );
@@ -5346,6 +5341,14 @@ bool worldgen_content_transaction::validate_finalized( std::string &error ) cons
             error = "Lua-first region settings '" + entry.definition->id +
                     "' did not survive global finalization";
             return false;
+        }
+        // Concrete overmap terrain variants are generated during global finalization.
+        for( const std::string &terrain : entry.definition->default_oter ) {
+            if( !oter_str_id( terrain ).is_valid() ) {
+                error = "Lua-first region settings '" + entry.definition->id +
+                        "' references unknown default overmap terrain '" + terrain + "'";
+                return false;
+            }
         }
     }
     for( const option_slider_registration &entry : pimpl_->option_sliders ) {
