@@ -1408,3 +1408,489 @@ do
     }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "angle_grinder",
+        name = ccb.content.plural_text("angle grinder", "angle grinders"),
+        description = ccb.content.text("A widespread power tool, often used for removing excess material or polishing surfaces."),
+        mass_milligrams = 2780000,
+        volume_ml = 1750,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "yellow",
+        replace_pockets = true,
+        charged_qualities = { { id = "GRIND", level = 2, speed = 0.6 }, { id = "SAW_M", level = 10, speed = 0.3 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 30, charge_milliwatts = 800000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:melee_damage("cut", 2)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" }, power_milliwatts = 800000 }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "makeshift_vacuum_mold",
+        name = ccb.content.plural_text("makeshift vacuum mold", "makeshift vacuum molds"),
+        description = ccb.content.text("A homemade vacuum-forming machine with an air pump.  It's used for creating plastic molds."),
+        mass_milligrams = 2000000,
+        volume_ml = 5000,
+        longest_side_mm = 350,
+        price_cents = 1000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("plastic", 1)
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 300000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "vac_mold",
+        name = ccb.content.plural_text("vacuum molder", "vacuum molders"),
+        description = ccb.content.text("A vacuum-forming machine with an air pump.  It's used for creating plastic molds."),
+        mass_milligrams = 1770000,
+        volume_ml = 4100,
+        longest_side_mm = 350,
+        price_cents = 2500,
+        price_postapoc_cents = 2000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 600000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "cordless_drill",
+        name = ccb.content.plural_text("cordless drill", "cordless drills"),
+        description = ccb.content.text("A cordless battery-powered drill with a selection of drill bits."),
+        mass_milligrams = 2721000,
+        volume_ml = 750,
+        longest_side_mm = 220,
+        price_cents = 2000,
+        price_postapoc_cents = 250,
+        symbol = ";",
+        color = "yellow",
+        replace_qualities = true,
+        melee_to_hit = -4,
+        replace_pockets = true,
+        charged_qualities = { { id = "DRILL", level = 3 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:quality("SCREW", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:melee_damage("cut", 1)
+    item:tool { charges_per_use = 5, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "corded_powerdrill",
+        name = ccb.content.plural_text("power drill", "power drills"),
+        description = ccb.content.text("A black power drill with a selection of bits.  Uses a power cord, so it will have to be plugged into a power grid or vehicle to function."),
+        mass_milligrams = 2721000,
+        volume_ml = 750,
+        longest_side_mm = 220,
+        price_cents = 2000,
+        price_postapoc_cents = 250,
+        symbol = ";",
+        color = "yellow",
+        replace_qualities = true,
+        melee_to_hit = -4,
+        charged_qualities = { { id = "DRILL", level = 3 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:quality("SCREW", 1)
+    item:clear_use_actions()
+    item:link_cable {
+        cable_length = 3,
+        ammo_scale = 0,
+        charge_milliwatts = 2200000,
+        menu_text = ccb.content.text("Plug in / Unplug"),
+    }
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:melee_damage("cut", 1)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 5, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    -- Loosely based on DeWalt DCF899B 20V 1/2-inch cordless impact wrench, $220 on Amazon, 6.4 pounds.
+    local item = content.Item {
+        id = "cordless_impact_wrench",
+        name = ccb.content.plural_text("cordless impact wrench", "cordless impact wrenches"),
+        description = ccb.content.text("A cordless battery-powered impact wrench, designed to deliver high torque via an internal rotating hammer.  It comes with a standard set of sockets, and makes a loud ratcheting sound when it operates.  You could use it to turn large bolts or change a vehicle wheel."),
+        looks_like = "cordless_drill",
+        mass_milligrams = 2900000,
+        volume_ml = 900,
+        longest_side_mm = 220,
+        price_cents = 20000,
+        price_postapoc_cents = 250,
+        symbol = ";",
+        color = "yellow",
+        replace_qualities = true,
+        melee_to_hit = -4,
+        replace_pockets = true,
+        charged_qualities = { { id = "WRENCH", level = 2 }, { id = "WHEEL_FAST", level = 1 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:quality("WRENCH", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:melee_damage("cut", 1)
+    item:tool { charges_per_use = 10, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    -- Based on the Hilti TE 3000-AVR TE-H heavy-duty electric jackhammer
+    local item = content.Item {
+        id = "elec_jackhammer",
+        name = ccb.content.plural_text("electric jackhammer", "electric jackhammers"),
+        description = ccb.content.text("A construction or mining tool for breaking rock and other hard surfaces.  This model has a cord compatible with a UPS."),
+        mass_milligrams = 27000000,
+        volume_ml = 31000,
+        longest_side_mm = 820,
+        price_cents = 40000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("JACKHAMMER")
+    item:link_cable { cable_length = 33, charge_milliwatts = 2200000 }
+    item:clear_flags()
+    item:flag("DIG_TOOL")
+    item:flag("MULTI_DRILL")
+    item:flag("POWERED")
+    item:flag("USE_UPS")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:melee_damage("stab", 6)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 3960, ammo_types = { "battery" } }
+    item:magazine_pocket { ammo_capacities = { battery = 7920 }, rigid = true }
+    content.add(item)
+end
+
+do
+    -- based on the Makita HM1512
+    local item = content.Item {
+        id = "corded_demolition_hammer",
+        name = ccb.content.plural_text("demolition hammer", "demolition hammers"),
+        description = ccb.content.text("A power tool made for mining rock and demolishing constructed surfaces by hand, somewhat similar to a handheld jackhammer.  It must be plugged in for use."),
+        mass_milligrams = 20000000,
+        volume_ml = 12000,
+        longest_side_mm = 970,
+        price_cents = 99900,
+        price_postapoc_cents = 500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("JACKHAMMER")
+    item:link_cable {
+        cable_length = 6,
+        ammo_scale = 0,
+        charge_milliwatts = 2200000,
+        menu_text = ccb.content.text("Plug in / Unplug"),
+    }
+    item:clear_flags()
+    item:flag("DIG_TOOL")
+    item:flag("MULTI_DRILL")
+    item:flag("NONCONDUCTIVE")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:melee_damage("stab", 6)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 3960, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "kiln",
+        name = ccb.content.plural_text("electric kiln", "electric kilns"),
+        description = ccb.content.text("An electric kiln, powered by your electric grid.  It is designed for firing bricks, but you could use it to fire anything made of clay.  With a little mechanical know-how, you could probably even convert it to run directly off a vehicle's power system."),
+        mass_milligrams = 12000000,
+        volume_ml = 7500,
+        price_cents = 50000,
+        price_postapoc_cents = 750,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "dark_gray",
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 12)
+    item:fault_group("electronic_general", {  })
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    -- power usage: acy torch delivers about 20 kj per gram adjusted for efficiency, needs about 800 degrees c to ignite steel, which is specific heat 420j so to ignite a kg of steel, it is about 16units of acetylene
+    -- above is for 1/2 kg of steel - currently a door is 7 kg of material to cut
+    local item = content.Item {
+        id = "oxy_torch",
+        name = ccb.content.plural_text("acetylene torch", "acetylene torches"),
+        description = ccb.content.text("A compact tool kit intended for welding and cutting metal, this portable oxygen-acetylene torch includes a torch handle and cutting attachment in an easy-to-carry tote.  It needs to be connected to a pressurized cylinder of an appropriate welding gas before use.  In addition to its metalworking uses, you can activate it in order to destroy metal barriers."),
+        mass_milligrams = 1600000,
+        volume_ml = 1000,
+        price_cents = 20000,
+        price_postapoc_cents = 750,
+        symbol = ";",
+        color = "red",
+        melee_to_hit = 0,
+        replace_pockets = true,
+        charged_qualities = { { id = "WELD", level = 2 }, { id = "TEMPER", level = 1, speed = 1.2 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("OXYTORCH")
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { charges_per_use = 8, ammo_types = { "weldgas" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_items = { "weldtank", "smallweldtank", "tinyweldtank" },
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "polisher",
+        name = ccb.content.plural_text("electric polisher", "electric polishers"),
+        description = ccb.content.text("An electric polisher, used to buff metal surfaces until they are reflective like a mirror."),
+        mass_milligrams = 1000000,
+        volume_ml = 3500,
+        price_cents = 35000,
+        price_postapoc_cents = 250,
+        symbol = ";",
+        color = "light_gray",
+        melee_to_hit = -1,
+        replace_pockets = true,
+        charged_qualities = { { id = "GRIND", level = 2 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 5, charge_milliwatts = 1600000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "reciprocating_saw",
+        name = ccb.content.plural_text("reciprocating saw", "reciprocating saws"),
+        description = ccb.content.text("A battery-powered tool, commonly known by the generic trademark Sawzall, that uses an electric motor to push a straight sawblade back and forth to rapidly cut wood or metal.  It is useful for heavy demolition and construction work, but poorly suited to precision tasks."),
+        mass_milligrams = 2000000,
+        volume_ml = 3000,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -3,
+        symbol = "/",
+        color = "yellow",
+        replace_pockets = true,
+        charged_qualities = { { id = "SAW_M", level = 3 }, { id = "SAW_W", level = 2 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 800000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:melee_damage("cut", 2)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" }, power_milliwatts = 800000 }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wire_draw_machine",
+        name = ccb.content.plural_text("wire draw machine", "wire draw machines"),
+        description = ccb.content.text("A machine designed specifically for turning metal rods into wire."),
+        mass_milligrams = 26000000,
+        volume_ml = 20000,
+        price_cents = 1000,
+        price_postapoc_cents = 10,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 7)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "exodii_kiln",
+        name = ccb.content.plural_text("Exodii kiln", "Exodii kilns"),
+        description = ccb.content.text("An electric kiln, powered by your electric grid.  A bit larger than a refrigerator, this Exodii-manufactured kiln is large enough to repair the sheets of ceramic they use for armor.  It is designed for firing sheets of the Exodii's ceramic, but you could use it to fire anything made of clay.  A large and power-hungry appliance."),
+        mass_milligrams = 175000000,
+        volume_ml = 1000000,
+        price_cents = 500000,
+        price_postapoc_cents = 500000,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "dark_gray",
+    }
+    item:material("lc_steel", 1)
+    item:material("exodii_ceramic", 1)
+    item:material("copper", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 2500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 20)
+    content.add(item)
+end
+
+do
+    -- source https://www.amazon.com/Dremel-4300-9-Performance-Attachments-Accessories/dp/B01LZVVA58
+    -- volume is rounded up by less than 200ml to accomodate all the small bits you also need to carry
+    local item = content.Item {
+        id = "dremel",
+        looks_like = "angle_grinder",
+        name = ccb.content.plural_text("dremel", "dremels"),
+        description = ccb.content.text("A rotating tool that can be used with various bits for a large amount of applications."),
+        longest_side_mm = 230,
+        mass_milligrams = 544000,
+        volume_ml = 800,
+        price_cents = 20000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "yellow",
+        charged_qualities = { { id = "GRIND", level = 2, speed = 0.7 }, { id = "SAW_M", level = 1, speed = 0.8 }, { id = "SAW_M_FINE", level = 2, speed = 0.5 }, { id = "SAW_W", level = 1, speed = 0.5 }, { id = "FILE", level = 2, speed = 0.3 }, { id = "CUT", level = 1, speed = 0.5 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:link_cable { cable_length = 4 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" }, power_milliwatts = 175000 }
+    content.add(item)
+end
