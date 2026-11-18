@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <functional>
 #include <iterator>
 #include <optional>
@@ -73,6 +74,7 @@
 #include "map_memory.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "maptile_fwd.h"
 #include "mdarray.h"
 #include "mod_tileset.h"
@@ -712,7 +714,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
     const point min_visible( you_pos.x() % SEEX, you_pos.y() % SEEY );
     const point max_visible( ( you_pos.x() % SEEX ) + ( MAPSIZE - 1 ) * SEEX,
                              ( you_pos.y() % SEEY ) + ( MAPSIZE - 1 ) * SEEY );
-    const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), -OVERMAP_DEPTH );
+    const int draw_min_z = std::max( you_pos.z() - here.observer_z_range( you ), here.min_z() );
 
     // Map memory should be at least the size of the view range
     // so that new tiles can be memorized, and at least the size of the display
@@ -830,6 +832,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         // (profiled: std::map _Erase_tree + vector reserve/realloc churn). All access
         // is via operator[], so leftover empty rows are indistinguishable from absent.
         draw_points_cache_.tiles.soft_clear();
+        draw_points_cache_.tiles.set_first_z( here.min_z() );
         overlay_strings_cache_.clear();
         color_blocks_cache_ = {};
 
@@ -1401,8 +1404,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         m_deferred_glide_critters.clear();
         m_collecting_glide_critters = !m_creature_anims.empty() || !m_creature_hit_anims.empty() ||
                                       !m_creature_attack_anims.empty();
-        int cur_zlevel = std::max( center.z() - get_map().observer_z_range( get_avatar() ),
-                                   -OVERMAP_DEPTH );
+        int cur_zlevel = std::max( center.z() - here.observer_z_range( get_avatar() ), here.min_z() );
         bool draw_aborted = false;
         const cata_shader::variant_pass *const tint_vp = get_shared_variant_pass();
         const bool shader_tint = tint_vp && tint_vp->tint_available();
@@ -1589,32 +1591,67 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                         f == &cata_tiles::draw_critter_at ? layer_critter :
                         f == &cata_tiles::draw_zombie_revival_indicators ? layer_revival : layer_none;
                     if( f == &cata_tiles::draw_furniture && cur_zlevel >= 0 ) {
-                        bool began_snow = false;
+                        bool drew_snow = false;
+                        bool overlay_ready = false;
+                        const bool draw_relief = cur_zlevel == 0 && north_america::elevation_active();
                         const int base = ( cur_zlevel - center.z() ) * zlevel_height;
                         for( const row_sprite_entry &entry : row_sprites ) {
-                            const auto &var = std::get<tile_render_info::sprite>( entry.tile->var );
+                            const tile_render_info::sprite &var = std::get<tile_render_info::sprite>( entry.tile->var );
                             if( var.invisible[0] ) {
                                 continue;
                             }
-                            const auto &position = entry.tile->view.pos;
+                            const tripoint_bub_ms &position = entry.tile->view.pos;
+                            const point slope = draw_relief ?
+                                                north_america::surface_slope( here, position ) : point::zero;
+                            const int shade = north_america::surface_relief_shade( slope );
                             const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
-                            if( cover == snow_cover::none ) {
+                            if( cover == snow_cover::none && std::abs( shade ) < 7 ) {
                                 continue;
                             }
-                            const auto &texture = get_snow_texture();
-                            if( !texture ) {
-                                break;
-                            }
-                            if( !began_snow ) {
+                            if( !overlay_ready ) {
                                 if( cata_shader::variant_pass *vp = get_shared_variant_pass() ) {
                                     if( !vp->flush() ) {
                                         display_buffer_scope_signal_recovery_required();
-                                        throw std::runtime_error( "Snow overlay failed to restore renderer state" );
+                                        throw std::runtime_error( "Ground overlay failed to restore renderer state" );
                                     }
                                 }
-                                began_snow = true;
+                                overlay_ready = true;
                             }
                             const point screen = player_to_screen( position.xy() );
+                            if( std::abs( shade ) >= 7 ) {
+                                const uint8_t gray = shade > 0 ? 255 : 0;
+                                const uint8_t alpha = std::abs( shade ) * ( var.ll == lit_level::LOW ? 1 : 2 );
+                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_BLEND );
+                                if( !iso ) {
+                                    SetRenderDrawColor( renderer, gray, gray, gray, alpha );
+                                    const SDL_Rect area{ screen.x, screen.y - base, tile_width, tile_height };
+                                    RenderFillRect( renderer, &area );
+                                } else {
+                                    const float x = screen.x;
+                                    const float width = tile_width;
+                                    const float height = width / 2.0f;
+                                    const float y = screen.y - base + tile_height - height;
+                                    const float tone = gray / 255.0f;
+                                    const SDL_FColor color{ tone, tone, tone, alpha / 255.0f };
+                                    const SDL_Vertex vertices[] = {
+                                        { { x + width / 2, y }, color, { 0, 0 } },
+                                        { { x + width, y + height / 2 }, color, { 0, 0 } },
+                                        { { x + width / 2, y + height }, color, { 0, 0 } },
+                                        { { x, y + height / 2 }, color, { 0, 0 } }
+                                    };
+                                    static constexpr int indices[] = { 0, 1, 2, 0, 2, 3 };
+                                    SDL_RenderGeometry( renderer.get(), nullptr, vertices, 4, indices, 6 );
+                                }
+                                SetRenderDrawBlendMode( renderer, SDL_BLENDMODE_NONE );
+                            }
+                            if( cover == snow_cover::none ) {
+                                continue;
+                            }
+                            const SDL_Texture_Ptr &texture = get_snow_texture();
+                            if( !texture ) {
+                                continue;
+                            }
+                            drew_snow = true;
                             const SDL_Rect source = snow_sprite( cover, here.get_abs( position ).xy() );
                             const uint8_t light = var.ll == lit_level::LOW ? 145 : 255;
                             if( !iso ) {
@@ -1642,7 +1679,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                                 SDL_RenderGeometry( renderer.get(), texture.get(), vertices, 4, indices, 6 );
                             }
                         }
-                        if( began_snow && !iso ) {
+                        if( drew_snow && !iso ) {
                             SetTextureColorMod( get_snow_texture(), 255, 255, 255 );
                         }
                     }
@@ -2212,6 +2249,12 @@ void cata_tiles::reset_tint_mask()
     tint_mask_h = 0;
 }
 
+void cata_tiles::reset_snow_texture()
+{
+    snow_texture.reset();
+    tried_snow_texture = false;
+}
+
 std::optional<smooth_lighting::lit_failure> smooth_lightmap::ensure_texture(
     const SDL_Renderer_Ptr &renderer )
 {
@@ -2332,7 +2375,7 @@ bool cata_tiles::begin_smooth_lighting( const visibility_variables &cache,
     using smooth_lighting::lighting_status;
     smooth_lighting_active = false;
     const std::string &mode = get_option<std::string>( "LIGHTING_MODE" );
-    if( mode == "classic" ) {
+    if( mode == "classic" || get_map().z_origin() != 0 ) {
         note_lighting_status( lighting_status::classic_by_option );
         return false;
     }
@@ -2883,7 +2926,8 @@ const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
 {
     if( !tried_snow_texture ) {
         tried_snow_texture = true;
-        const auto file = ( PATH_INFO::gfxdir() / "weather" / "snow_cover.png" ).get_unrelative_path();
+        const std::filesystem::path file = ( PATH_INFO::gfxdir() / "weather" /
+                                             "snow_cover.png" ).get_unrelative_path();
         try {
             const SDL_Surface_Ptr surface = load_image( file.u8string().c_str() );
             if( surface->w == snow_sheet_width && surface->h == snow_sheet_height ) {
@@ -2905,9 +2949,23 @@ const SDL_Texture_Ptr &cata_tiles::get_snow_texture()
 SDL_Rect cata_tiles::snow_sprite( snow_cover depth, const point_abs_ms &pos )
 {
     const int row = depth == snow_cover::deep ? 2 : depth == snow_cover::medium ? 1 : 0;
-    // Adjacent map tiles sample adjacent parts of the same snow pattern.
-    return { modulo( pos.x(), 4 ) *snow_tile_pixels,
-             row *snow_sheet_width + modulo( pos.y(), 4 ) *snow_tile_pixels,
+    const uint32_t x = pos.x();
+    const uint32_t y = pos.y();
+    const auto noise = []( uint32_t column, uint32_t line, uint32_t salt ) {
+        uint32_t value = column * 0x9e3779b9u ^ line * 0x85ebca6bu ^ salt;
+        value = ( value ^ ( value >> 16 ) ) * 0x7feb352du;
+        value = ( value ^ ( value >> 15 ) ) * 0x846ca68bu;
+        return value ^ ( value >> 16 );
+    };
+    // Neighboring tiles hash their shared edge to the same profile.
+    constexpr uint32_t horizontal = 0x93282494u;
+    constexpr uint32_t vertical = 0x51d7348du;
+    const int edges = ( noise( x, y, horizontal ) & 1u ) |
+                      ( ( noise( x + 1, y, vertical ) & 1u ) << 1 ) |
+                      ( ( noise( x, y + 1, horizontal ) & 1u ) << 2 ) |
+                      ( ( noise( x, y, vertical ) & 1u ) << 3 );
+    const int rotation = noise( x, y, 0xa08f9e5du ) & 3u;
+    return { edges * snow_tile_pixels, ( row * 4 + rotation ) *snow_tile_pixels,
              snow_tile_pixels, snow_tile_pixels };
 }
 
@@ -5034,7 +5092,7 @@ bool cata_tiles::draw_critter_above( const tripoint_bub_ms &p, lit_level ll, int
     Character &you = get_player_character();
     const Creature *pcritter = nullptr;
     // Search for a creature above
-    while( pcritter == nullptr && scan_p.z() <= OVERMAP_HEIGHT &&
+    while( pcritter == nullptr && scan_p.z() <= here.max_z() &&
            !here.dont_draw_lower_floor( scan_p ) &&
            scan_p.z() - here.observer_position( you ).z() <= here.observer_z_range( you ) ) {
         pcritter = get_creature_tracker().creature_at( scan_p, true );

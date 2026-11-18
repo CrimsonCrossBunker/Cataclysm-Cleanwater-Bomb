@@ -1,6 +1,5 @@
 #include "lightmap.h"
 #include "vision_preparation.h"
-#include <system_error> // IWYU pragma: associated
 #include "shadowcasting.h" // IWYU pragma: associated
 
 #include <algorithm>
@@ -9,38 +8,46 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <list>
 #include <map>
 #include <memory>
+#include <new>
 #include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
 
 #include "avatar.h"
-#include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
 #include "character.h"
-#include "colony.h"
+#include "coordinates.h"
 #include "cuboid_rectangle.h"
 #include "debug.h"
 #include "field.h"
+#include "field_type.h"
 #include "fragment_cloud.h" // IWYU pragma: keep
 #include "game.h"
+#include "game_constants.h"
 #include "item.h"
+#include "item_pocket.h"
 #include "item_stack.h"
 #include "level_cache.h"
 #include "line.h"
+#include "magic_enchantment.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_visibility.h"
 #include "mapdata.h"
-#include "messages.h"
+#include "math_defines.h"
+#include "mdarray.h"
 #include "monster.h"
 #include "mp_gamestate.h"
-#include "mp_client_conn.h"
 #include "mtype.h"
 #include "npc.h"
+#include "options.h"
+#include "overmap_ui.h"
 #include "profiling.h"
 #include "point.h"
 #include "string_formatter.h"
@@ -48,7 +55,6 @@
 #include "tileray.h"
 #include "type_id.h"
 #include "units.h"
-#include "units_utility.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -390,11 +396,11 @@ void map::apply_character_light( Character &p )
 // Once this is complete, additional operations add more dynamic lighting.
 void map::build_sunlight_cache( int pzlev )
 {
-    const int zlev_min = -OVERMAP_DEPTH;
+    const int zlev_min = min_z();
     // Start at the topmost populated zlevel to avoid unnecessary raycasting
     // Plus one zlevel to prevent clipping inside structures
-    const int zlev_max = clamp( calc_max_populated_zlev() + 1, std::min( pzlev + 1, OVERMAP_HEIGHT ),
-                                OVERMAP_HEIGHT );
+    const int zlev_max = clamp( calc_max_populated_zlev() + 1, std::min( pzlev + 1, max_z() ),
+                                max_z() );
 
     // true if all previous z-levels are fully transparent to light (no floors, transparency >= air)
     bool fully_outside = true;
@@ -540,8 +546,8 @@ void map::generate_lightmap( const int zlev )
     auto &lm = map_cache.lm;
     auto &sm = map_cache.sm;
     auto &outside_cache = map_cache.outside_cache;
-    auto &prev_floor_cache = get_cache( clamp( zlev + 1, -OVERMAP_DEPTH, OVERMAP_DEPTH ) ).floor_cache;
-    bool top_floor = zlev == OVERMAP_DEPTH;
+    auto &prev_floor_cache = get_cache( clamp( zlev + 1, min_z(), max_z() ) ).floor_cache;
+    bool top_floor = zlev == max_z();
     lm.fill( four_quadrants{} );
     sm.fill( 0 );
     map_cache.light_color_cache.fill( light_color_rgb{} );
@@ -1403,15 +1409,16 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
     array_of_grids_of<const float> transparency_caches;
     array_of_grids_of<float> seen_caches;
     array_of_grids_of<const bool> floor_caches;
+    const tripoint_bub_ms casting_origin( origin.xy(), origin.z() - z_origin() );
     vertical_direction directions_to_cast = vertical_direction::BOTH;
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = min_z(); z <= max_z(); z++ ) {
         level_cache &cur_cache = get_cache( z );
-        transparency_caches[z + OVERMAP_DEPTH] = &cur_cache.vision_transparency_cache;
-        seen_caches[z + OVERMAP_DEPTH] = camera ? &cur_cache.camera_cache : &cur_cache.seen_cache;
-        floor_caches[z + OVERMAP_DEPTH] = &cur_cache.floor_cache;
+        transparency_caches[layer_for_z( z )] = &cur_cache.vision_transparency_cache;
+        seen_caches[layer_for_z( z )] = camera ? &cur_cache.camera_cache : &cur_cache.seen_cache;
+        floor_caches[layer_for_z( z )] = &cur_cache.floor_cache;
         if( !cumulative ) {
             std::uninitialized_fill_n(
-                &( *seen_caches[z + OVERMAP_DEPTH] )[0][0], map_dimensions, light_transparency_solid );
+                &( *seen_caches[layer_for_z( z )] )[0][0], map_dimensions, light_transparency_solid );
         }
         cur_cache.seen_cache_dirty = false;
         if( origin.z() == z && cur_cache.no_floor_gaps ) {
@@ -1419,7 +1426,7 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
         }
     }
     if( origin.z() == target_z ) {
-        ( *seen_caches[ target_z + OVERMAP_DEPTH ] )[origin.x()][origin.y()] = VISIBILITY_FULL;
+        ( *seen_caches[ layer_for_z( target_z ) ] )[origin.x()][origin.y()] = VISIBILITY_FULL;
     }
 
     {
@@ -1433,12 +1440,13 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
                 if( !vision_preparation_ ) {
                     vision_preparation_ = std::make_unique<vision_preparation::frame>( workers );
                 }
-                auto request = vision_preparation_->try_acquire( MAX_VIEW_DISTANCE - penalty );
+                vision_preparation::frame::lease request = vision_preparation_->try_acquire(
+                            MAX_VIEW_DISTANCE - penalty );
                 if( request ) {
                     {
                         CATA_PROFILE_SCOPE_NAMED( "vision.capture" );
-                        auto &values = vision_preparation_->capture();
-                        values.origin = origin;
+                        vision_preparation::snapshot &values = vision_preparation_->capture();
+                        values.origin = casting_origin;
                         values.offset_distance = penalty;
                         values.numerator = 1.0f;
                         values.direction = directions_to_cast;
@@ -1461,10 +1469,10 @@ void map::build_seen_cache( const tripoint_bub_ms &origin, const int target_z, i
             // Vertical casting remains on the owner; its original exception
             // semantics are not hidden by the parallel allocation fallback.
             vision_preparation::cast_vertical( seen_caches, transparency_caches, floor_caches,
-                                               origin, penalty, 1.0f, directions_to_cast, trigdist );
+                                               casting_origin, penalty, 1.0f, directions_to_cast, trigdist );
         } else {
             cast_zlight<float, sight_calc, sight_check, accumulate_transparency>(
-                seen_caches, transparency_caches, floor_caches, origin, penalty, 1.0,
+                seen_caches, transparency_caches, floor_caches, casting_origin, penalty, 1.0,
                 directions_to_cast, workers > 0 ? &vision_horizontal_cost_ms_ : nullptr );
         }
     }
@@ -1547,16 +1555,16 @@ void map::seen_cache_process_ledges( array_of_grids_of<float> &seen_caches,
     Character &player_character = get_player_character();
     // If override is not given, use player character for calculations
     const tripoint_bub_ms origin = override_p.value_or( observer_position( player_character ) );
-    const int min_z = std::max( origin.z() - observer_z_range( player_character ), -OVERMAP_DEPTH );
+    const int bottom = std::max( origin.z() - observer_z_range( player_character ), min_z() );
     // For each tile
     for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
         for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
             for( int sx = 0; sx < SEEX; ++sx ) {
                 for( int sy = 0; sy < SEEY; ++sy ) {
                     // Iterate down z-levels starting from 1 level below origin
-                    for( int sz = origin.z() - 1; sz >= min_z; --sz ) {
+                    for( int sz = origin.z() - 1; sz >= bottom; --sz ) {
                         const tripoint_bub_ms p( sx + smx * SEEX, sy + smy * SEEY, sz );
-                        const int cache_z = sz + OVERMAP_DEPTH;
+                        const int cache_z = layer_for_z( sz );
                         // Until invisible tile reached
                         if( ( *seen_caches[cache_z] )[p.x()][p.y()] == 0.0f ) {
                             break;

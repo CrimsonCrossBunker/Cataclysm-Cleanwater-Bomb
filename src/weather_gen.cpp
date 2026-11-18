@@ -1,5 +1,4 @@
 #include "weather_gen.h"
-#include "climate_seasons.h"
 
 #include <calendar.h>
 #include <coordinates.h>
@@ -17,6 +16,7 @@
 
 #include "avatar.h"
 #include "cata_utility.h"
+#include "climate_seasons.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
@@ -27,14 +27,25 @@
 #include "lua_platform_runtime.h"
 #include "math_defines.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
+#include "overmap_ui.h"
 #include "pimpl.h"
 #include "point.h"
+#include "regional_climate.h"
 #include "rng.h"
 #include "simplexnoise.h"
 #include "talker.h"
 #include "translation.h"
 #include "weather.h"
 #include "weather_type.h"
+
+static const dimension_id dimension_world_default( "default" );
+
+static const weather_type_id weather_drizzle( "drizzle" );
+static const weather_type_id weather_flurries( "flurries" );
+static const weather_type_id weather_light_drizzle( "light_drizzle" );
+static const weather_type_id weather_rain( "rain" );
+static const weather_type_id weather_snowing( "snowing" );
 
 namespace
 {
@@ -112,6 +123,8 @@ struct weather_gen_common {
     double normal_mean_c = 0;
     double normal_daily_range_c = 0;
     double annual_mean_c = 0;
+    double elevation_delta_c = 0;
+    double wind_factor = 1;
 };
 } // namespace
 
@@ -146,6 +159,13 @@ static weather_gen_common get_common_data( const weather_generator &generator,
     result.season = fixed_season_of_year( t.t );
     result.annual_mean_c = generator.base_temperature;
     const auto climate = known_climate ? *known_climate : generator.climate_at( location );
+    if( north_america::elevation_active() ) {
+        const double surface = north_america::surface_elevation( location.xy() );
+        const double altitude = surface + ( ground ? 0 : location.z() ) * north_america::floor_height_m;
+        const double reference = climate ? climate->reference_elevation_m.value_or( surface ) : surface;
+        result.elevation_delta_c = north_america::temperature_delta_at_height( altitude, reference );
+        result.wind_factor = north_america::wind_speed_factor( altitude, surface );
+    }
     if( climate ) {
         if( ground ) {
             result.annual_mean_c = 0;
@@ -155,15 +175,20 @@ static weather_gen_common get_common_data( const weather_generator &generator,
         }
         // Scale the January-first, 364-day calendar to the configured game year.
         const double model_day = year_fraction * regional_climate::model_year_days;
-        const auto normal = regional_climate::temperature_for_day( *climate, model_day );
+        const regional_climate::temperature_normal normal =
+            regional_climate::temperature_for_day( *climate, model_day );
         result.normal_mean_c = normal.mean_c;
         result.normal_daily_range_c = normal.daily_range_c;
         result.climate_month = climate->months[normal.month];
+        result.normal_mean_c += result.elevation_delta_c;
+        result.climate_month->high_c += result.elevation_delta_c;
+        result.climate_month->low_c += result.elevation_delta_c;
         result.days_in_climate_month = ( normal.month % 3 == 0 ? 31.0 : 30.0 ) *
                                        to_days<double>( calendar::year_length() ) /
                                        regional_climate::model_year_days;
     }
 
+    result.annual_mean_c += result.elevation_delta_c;
     return result;
 }
 
@@ -171,14 +196,14 @@ std::optional<regional_climate::normals> weather_generator::climate_at(
     const tripoint_abs_ms &location ) const
 {
     const auto coordinates = climate_location( location );
-    return coordinates ? regional_climate::at( *coordinates ) : std::nullopt;
+    return coordinates ? regional_climate::at( *coordinates,
+            north_america::elevation_active() ) : std::nullopt;
 }
 
 std::optional<regional_climate::coordinates> weather_generator::climate_location(
     const tripoint_abs_ms &location ) const
 {
-    static const dimension_id earth_dimension( "default" );
-    if( climate_station.empty() || !g || g->get_dimension_prefix() != earth_dimension ) {
+    if( climate_station.empty() || !g || g->get_dimension_prefix() != dimension_world_default ) {
         return std::nullopt;
     }
     if( north_america::active() ) {
@@ -215,7 +240,7 @@ static units::temperature weather_temperature_from_common_data( const weather_ge
         wg.winter_temp_manual_mod
     };
     const double mean = common.climate_month ? common.normal_mean_c :
-                        wg.base_temperature + seasonality * seasonality_magnitude_K;
+                        wg.base_temperature + common.elevation_delta_c + seasonality * seasonality_magnitude_K;
     const double daily_range = common.climate_month ? common.normal_daily_range_c :
                                daily_magnitude_K + daily_seasonal_range_K * ( -seasonality + 1 ) / 2;
     const double baseline = mean + seasonal_temp_mod[season] + dayv * daily_range;
@@ -309,6 +334,7 @@ w_point weather_generator::get_weather( const tripoint_abs_ms &location, const t
         // Background queries must not consume the gameplay RNG or steer the wind.
         W = std::max( 0.0, base_wind * 1.5 + W + cyf * base_wind_season_variation );
     }
+    W *= common.wind_factor;
     std::optional<double> precipitation;
     if( common.climate_month ) {
         const double hour = std::fmod( to_hours<double>( time_past_midnight( real_t ) ) + 24.0, 24.0 );
@@ -348,23 +374,18 @@ weather_type_id weather_generator::get_weather_conditions( const w_point &w ) co
     dialogue d( get_talker_for( get_avatar() ), nullptr );
     d.set_value( "weather_location", w.location );
 
-    static const weather_type_id light_drizzle( "light_drizzle" );
-    static const weather_type_id drizzle( "drizzle" );
-    static const weather_type_id rain( "rain" );
-    static const weather_type_id flurries( "flurries" );
-    static const weather_type_id snowing( "snowing" );
     weather_type_id climate_weather = WEATHER_CLEAR;
     if( w.climate_precipitation_mm_per_hour && *w.climate_precipitation_mm_per_hour > 0 ) {
         const double rate = *w.climate_precipitation_mm_per_hour;
         climate_weather = w.temperature < units::from_fahrenheit( 33 ) ?
-                          ( rate < 2.0 ? flurries : snowing ) :
-                          ( rate < 0.75 ? light_drizzle : rate < 2.0 ? drizzle : rain );
+                          ( rate < 2.0 ? weather_flurries : weather_snowing ) :
+                          ( rate < 0.75 ? weather_light_drizzle : rate < 2.0 ? weather_drizzle : weather_rain );
     }
     for( const weather_type_id &type : sorted_weather ) {
         // The climate model drives ordinary precipitation. Custom weather and
         // Lua overrides still run through their existing priority and conditions.
-        const bool regular_precipitation = type == light_drizzle || type == drizzle || type == rain ||
-                                           type == flurries || type == snowing;
+        const bool regular_precipitation = type == weather_light_drizzle || type == weather_drizzle ||
+                                           type == weather_rain || type == weather_flurries || type == weather_snowing;
         if( w.climate_precipitation_mm_per_hour && regular_precipitation &&
             ( current_conditions->precip == precip_class::none || type != climate_weather ) ) {
             const std::optional<bool> lua_condition =

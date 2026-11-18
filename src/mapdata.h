@@ -19,7 +19,6 @@
 #include "color.h"
 #include "coords_fwd.h"
 #include "enum_bitset.h"
-#include "game_constants.h"
 #include "iexamine.h"
 #include "lightmap.h"
 #include "plant_climate.h"
@@ -46,8 +45,8 @@ class content_transaction;
 const int NUM_TERCONN = 256;
 connect_group get_connect_group( const std::string &name );
 
-template <typename E> struct enum_traits;
 struct map_data_common_t;
+template <typename E> struct enum_traits;
 
 struct map_common_bash_info { //TODO: Half of this shouldn't be common
         // min str(*) required to bash
@@ -178,6 +177,7 @@ struct plant_data {
     float harvest_multiplier;
     // Maximum water storage for irrigable planting furniture (e.g. planters).  0 means not irrigable.
     int max_water_storage = 0;
+    std::string soil_source = "inherit";
     // Multiplier on daily water consumption for plants in this furniture.
     // Values > 1.0 make the plant thirstier; values < 1.0 make it more drought-tolerant.
     // Defaults to 1.0 (normal).

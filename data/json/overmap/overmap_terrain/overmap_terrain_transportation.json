@@ -87,6 +87,18 @@
   },
   {
     "type": "overmap_terrain",
+    "id": "atlas_raised_bridge_deck",
+    "copy-from": "bridge_road",
+    "looks_like": "road",
+    "flags": [ "LINEAR", "BRIDGE", "ROAD", "SIDEWALK" ],
+    "mapgen_straight": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_curved": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_end": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_tee": [ { "object": { "fill_ter": "t_open_air" } } ],
+    "mapgen_four_way": [ { "object": { "fill_ter": "t_open_air" } } ]
+  },
+  {
+    "type": "overmap_terrain",
     "id": "bridgehead_ground",
     "copy-from": "generic_bridge",
     "name": "bridgehead (ground)",

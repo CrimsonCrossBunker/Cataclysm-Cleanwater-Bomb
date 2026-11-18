@@ -1534,11 +1534,19 @@ bool item::process_temperature_rot( float insulation, const tripoint_bub_ms &pos
     int64_t max_air_exposure_hours = decays_in_air ? get_property_int64_t( "max_air_exposure_hours" ) :
                                      0;
 
-    if( now - time > 1_hours ) {
-        // This code is for items that were left out of reality bubble for long time
+    const time_point thermal_history_start = now - 2_days;
+    if( time < thermal_history_start && !process_rot && !decays_in_air ) {
+        // Older temperature samples only affect spoilage and air exposure.
+        time = thermal_history_start;
+        last_temp_check = time;
+    }
 
-        const weather_generator &wgen = get_weather().get_cur_weather_gen();
+    if( now - time > 1_hours ) {
+        weather_manager &weather = get_weather();
+        const weather_generator &wgen = weather.get_cur_weather_gen();
         const unsigned int seed = g->get_seed();
+        const tripoint_abs_ms location = here.get_abs( pos );
+        const auto local_climate = wgen.climate_at( location );
 
         units::temperature_delta temp_mod;
         // Toilets and vending machines will try to get the heat radiation and convection during mapgen and segfault.
@@ -1554,17 +1562,26 @@ bool item::process_temperature_rot( float insulation, const tripoint_bub_ms &pos
             temp_mod += units::from_fahrenheit_delta( 5 ); // body heat increases inventory temperature
         }
 
-        // Process the past of this item in 1h chunks until there is less than 1h left.
-        time_duration time_delta = 1_hours;
-
         while( now - time > 1_hours ) {
+            const bool historical = time < thermal_history_start;
+            time_duration time_delta = 1_hours;
+            time_point sample_time = time + time_delta;
+            if( historical ) {
+                // Sample fixed six-hour bands so items share regional weather work.
+                constexpr time_duration band = 6_hours;
+                const time_duration into_band = ( ( time - calendar::turn_zero ) % band + band ) % band;
+                const time_point band_start = time - into_band;
+                time_delta = std::min( band - into_band, thermal_history_start - time );
+                sample_time = band_start + band / 2;
+            }
             time += time_delta;
 
             // Get the environment temperature
             // Use weather if above ground, use map temp if below
             units::temperature env_temperature;
             if( pos.z() >= 0 && flag != temperature_flag::ROOT_CELLAR ) {
-                env_temperature = wgen.get_weather_temperature( get_map().get_abs( pos ), time, seed );
+                env_temperature = historical ? weather.get_historical_temperature( location, sample_time ) :
+                                  wgen.get_weather_temperature( location, sample_time, seed, &local_climate );
             } else {
                 env_temperature = units::from_celsius( get_weather().get_cur_weather_gen().base_temperature );
             }
@@ -1592,7 +1609,7 @@ bool item::process_temperature_rot( float insulation, const tripoint_bub_ms &pos
 
             // Calculate item temperature from environment temperature
             // If the time was more than 2 d ago we do not care about item temperature.
-            if( now - time < 2_days ) {
+            if( !historical ) {
                 calc_temp( env_temperature, insulation, time_delta );
             }
             last_temp_check = time;

@@ -1,3 +1,4 @@
+#include "north_america_elevation.h"
 #include "overmapbuffer.h"
 
 #include <cata_path.h>
@@ -63,6 +64,9 @@
 #include "worldfactory.h"
 
 enum class ot_match_type : int;
+
+static const oter_str_id oter_deep_rock( "deep_rock" );
+static const oter_str_id oter_open_air( "open_air" );
 
 static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
 static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );
@@ -936,8 +940,31 @@ void overmapbuffer::add_camp( const basecamp &camp )
     om_loc.om->add_camp( omt, camp );
 }
 
+static const oter_id *atlas_outlying_terrain( int z )
+{
+    if( ( z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT ) || !north_america::elevation_active() ) {
+        return nullptr;
+    }
+    // Resolve string IDs again after a data reload. The returned reference has
+    // the same lifetime as other overmap terrain lookups on the owning thread.
+    static thread_local oter_id rock_id; // NOLINT(cata-static-int_id-constants)
+    static thread_local oter_id air_id; // NOLINT(cata-static-int_id-constants)
+    if( z < 0 ) {
+        rock_id = oter_deep_rock.id();
+        return &rock_id;
+    }
+    air_id = oter_open_air.id();
+    return &air_id;
+}
+
 om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )
 {
+    if( atlas_outlying_terrain( p.z() ) ) {
+        if( get_map().inbounds( p ) ) {
+            return om_vision_level::full;
+        }
+        return seen( tripoint_abs_omt( p.xy(), 0 ) );
+    }
     if( const overmap_with_local_coords om_loc = get_existing_om_global( p ) ) {
         return om_loc.om->seen( om_loc.local );
     }
@@ -946,6 +973,9 @@ om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )
 
 void overmapbuffer::set_seen( const tripoint_abs_omt &p, om_vision_level seen )
 {
+    if( atlas_outlying_terrain( p.z() ) ) {
+        return;
+    }
     const overmap_with_local_coords om_loc = get_om_global( p );
     om_loc.om->set_seen( om_loc.local, seen );
 }
@@ -960,12 +990,18 @@ bool overmapbuffer::seen_more_than( const tripoint_abs_omt &p, om_vision_level t
 
 const oter_id &overmapbuffer::ter( const tripoint_abs_omt &p )
 {
+    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
+        return *terrain;
+    }
     const overmap_with_local_coords om_loc = get_om_global( p );
     return om_loc.om->ter( om_loc.local );
 }
 
 const oter_id &overmapbuffer::ter_existing( const tripoint_abs_omt &p )
 {
+    if( const oter_id *terrain = atlas_outlying_terrain( p.z() ) ) {
+        return *terrain;
+    }
     static const oter_id ot_null;
     const overmap_with_local_coords om_loc = get_existing_om_global( p );
     if( !om_loc.om ) {
@@ -990,6 +1026,18 @@ std::vector<pp_resolved_generator> *overmapbuffer::pp_decisions( const tripoint_
 {
     const overmap_with_local_coords om_loc = get_om_global( p );
     return om_loc.om->pp_decisions( om_loc.local );
+}
+
+bool overmapbuffer::has_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    return om_loc.om->has_riot_damage( om_loc.local );
+}
+
+void overmapbuffer::set_riot_damage( const tripoint_abs_omt &p )
+{
+    const overmap_with_local_coords om_loc = get_om_global( p );
+    om_loc.om->set_riot_damage( om_loc.local );
 }
 
 std::string *overmapbuffer::join_used_at( const std::pair<tripoint_abs_omt, cube_direction> &p )
@@ -2239,6 +2287,9 @@ std::string overmapbuffer::get_description_at( const tripoint_abs_sm &where, boo
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         return draw_origin ? ter_name + "\n" + get_origin( oter->get_type_id()->src ) : ter_name;
     }
@@ -2315,6 +2366,9 @@ void overmapbuffer::display_description_at( const tripoint_abs_sm &where, bool d
         ter_name = colorize( blended.name, ter_color );
     }
 
+    if( vision >= om_vision_level::details && has_riot_damage( project_to<coords::omt>( where ) ) ) {
+        ter_name = string_format( _( "%s (riot damaged)" ), ter_name );
+    }
     if( where.z() != 0 ) {
         cataimgui::TextColoredParagraph( ter_color, ter_name );
         draw_origin_line();
@@ -2501,6 +2555,9 @@ horde_entity &overmapbuffer::spawn_monster( const tripoint_abs_ms &p, mtype_id i
 overmapbuffer::t_notes_vector overmapbuffer::get_notes( int z, std::string_view pattern )
 {
     t_notes_vector result;
+    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+        return result;
+    }
     for( auto &it : overmaps ) {
         const overmap &om = *it.second;
         for( int i = 0; i < OMAPX; i++ ) {
@@ -2527,6 +2584,9 @@ overmapbuffer::t_notes_vector overmapbuffer::get_notes( int z, std::string_view 
 overmapbuffer::t_extras_vector overmapbuffer::get_extras( int z, std::string_view pattern )
 {
     overmapbuffer::t_extras_vector result;
+    if( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) {
+        return result;
+    }
     for( auto &it : overmaps ) {
         const overmap &om = *it.second;
         for( int i = 0; i < OMAPX; i++ ) {

@@ -1,31 +1,24 @@
 #include "LargeStackObjectCheck.h"
 
+#include <optional>
+
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/CharUnits.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclBase.h>
-#include <clang/AST/DeclCXX.h>
-#include <clang/AST/ExprCXX.h>
 #include <clang/AST/Type.h>
-#include <clang/AST/TypeLoc.h>
+#include <clang/ASTMatchers/ASTMatchFinder.h>
 #include <clang/ASTMatchers/ASTMatchers.h>
 #include <clang/ASTMatchers/ASTMatchersInternal.h>
 #include <clang/Basic/Diagnostic.h>
-#include <clang/Basic/IdentifierTable.h>
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/Specifiers.h>
-#include <clang/Lex/PPCallbacks.h>
-#include <clang/Lex/Preprocessor.h>
-#include <clang/Lex/Token.h>
-#include <llvm/ADT/STLExtras.h>
-#include <string>
+#include <llvm/Config/llvm-config.h>
+#include <llvm/Support/Casting.h>
 
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Frontend/CompilerInstance.h"
-
-namespace clang
-{
-class MacroArgs;
-class MacroDefinition;
-}  // namespace clang
+#if !defined(LLVM_VERSION_MAJOR) || LLVM_VERSION_MAJOR < 17
+    #include <llvm/ADT/Optional.h>
+#endif
 
 using namespace clang::ast_matchers;
 
@@ -44,7 +37,7 @@ static void CheckDecl( LargeStackObjectCheck &Check, const MatchFinder::MatchRes
         return;
     }
 
-    if( !MatchedDecl->isLocalVarDeclOrParm() ) {
+    if( MatchedDecl->getStorageDuration() != SD_Automatic ) {
         return;
     }
 

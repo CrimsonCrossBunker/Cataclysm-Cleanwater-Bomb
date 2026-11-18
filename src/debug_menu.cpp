@@ -67,6 +67,7 @@
 #include "effect.h"
 #include "effect_on_condition.h"
 #include "end_screen.h"
+#include "enum_conversions.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -108,6 +109,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "npc_opinion.h"
@@ -498,7 +500,7 @@ void write_min_archive()
             std::filesystem::path entry_filename = entry.path().filename();
             if( entry_filename.extension() == ".mm1" ) {  // NOLINT(cata-u8-path)
                 std::shared_ptr<zzip_stack> mmr_stack = zzip_stack::load( ( PATH_INFO::world_base_save_path() /
-                    entry_filename ).get_unrelative_path(), mmr_dict );
+                                                        entry_filename ).get_unrelative_path(), mmr_dict );
                 std::vector<std::filesystem::path> trimmed_mmr_entries;
                 for( const std::filesystem::path &mmr_entry : mmr_stack->get_entries() ) {
                     if( regs.is_point_inside( tripoint{ _from_map_string( mmr_entry.stem().string() ).xy(), 0 } ) ) {
@@ -506,10 +508,10 @@ void write_min_archive()
                     }
                 }
                 std::filesystem::path min_mmr_save_rel = ( std::filesystem::path{ entry_filename } / // NOLINT(cata-u8-path)
-                    entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
+                        entry_filename ).concat( ".cold" + std::string( zzip_suffix ) ); // NOLINT(cata-u8-path)
                 std::filesystem::path min_mmr_temp_zzip_path = ( PATH_INFO::world_base_save_path() /
-                    min_mmr_save_rel +
-                    ".temp" ).get_unrelative_path();
+                        min_mmr_save_rel +
+                        ".temp" ).get_unrelative_path();
                 {
                     std::optional<zzip> min_mmr_temp_zzip = zzip::load( min_mmr_temp_zzip_path, mmr_dict );
                     if( !min_mmr_temp_zzip ||
@@ -558,8 +560,8 @@ class mission_debug
 
 // Used for quick setup
 static std::vector<trait_id> setup_traits{trait_DEBUG_BIONICS, trait_DEBUG_CLAIRVOYANCE, trait_DEBUG_CLOAK,
-    trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
-    trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
+           trait_DEBUG_HS, trait_DEBUG_LIGHT, trait_DEBUG_LS, trait_DEBUG_MANA, trait_DEBUG_MIND_CONTROL,
+           trait_DEBUG_NODMG, trait_DEBUG_NOTEMP, trait_DEBUG_STAMINA, trait_DEBUG_SPEED};
 
 static std::string first_word( const std::string &str )
 {
@@ -734,7 +736,7 @@ static void edit_vars( std::string const &title, global_variables::impl_t &vars 
     for( global_variables::impl_t::value_type &some_global : vars ) {
         keymap_index.emplace_back( some_global.first );
         std::string description = string_format( _( "raw var value: %s" ),
-            some_global.second.to_string( true ) );
+                                  some_global.second.to_string( true ) );
         if( some_global.second.is_dbl() ) {
             double globvar_as_dbl = some_global.second.dbl();
             description += "\n";
@@ -1263,8 +1265,8 @@ static void spell_description(
 
     // Class: Spell Class
     description << string_format( _( "Class: %1$s" ), colorize( spl.spell_class() == trait_NONE ?
-            _( "Classless" ) : chrc.mutation_name( spl.spell_class() ),
-            yellow ) ) << "\n";
+                                  _( "Classless" ) : chrc.mutation_name( spl.spell_class() ),
+                                  yellow ) ) << "\n";
 
     // Spell description
     description << spl.description() << '\n';
@@ -1303,7 +1305,7 @@ static void spell_description(
                     to_string( time_duration::from_moves( spl.casting_time( chrc ) ) ),
                     spl.casting_time_encumbered( chrc ) ? impeded : "",
                     to_string( time_duration::from_moves( std::get<0>( spl_data ).base_casting_time.evaluate(
-                                d ) ) ) ) << '\n';
+                                   d ) ) ) ) << '\n';
 
     std::string targets;
     if( spl.is_valid_target( spell_target::none ) ) {
@@ -1336,7 +1338,7 @@ static void spell_description(
             damage_string = colorize( damage_string, spl.damage_type_color() );
         } else if( damage < 0 ) {
             damage_string = string_format( _( "Healing: %1$s" ), colorize( spl.damage_string( chrc ),
-                light_green ) );
+                                           light_green ) );
         }
 
         if( spl.aoe( chrc ) > 0 ) {
@@ -1435,11 +1437,11 @@ static void spell_description(
     if( spl.has_components() ) {
         if( !spl.components().get_components().empty() ) {
             print_vec_string( spl.components().get_folded_components_list( &chrc, width - 2, gray,
-                    chrc.crafting_inventory(), return_true<item> ) );
+                              chrc.crafting_inventory(), return_true<item> ) );
         }
         if( !( spl.components().get_tools().empty() && spl.components().get_qualities().empty() ) ) {
             print_vec_string( spl.components().get_folded_tools_list( &chrc, width - 2, gray,
-                    chrc.crafting_inventory() ) );
+                              chrc.crafting_inventory() ) );
         }
     }
 
@@ -1660,17 +1662,17 @@ static void change_spells( Character &character )
     // keep the same spell selected
     auto spell_middle_or_id = [&]( const spell_id & spellid ) -> void {
         if( spellid.is_empty() )
-    {
-        spell_selected = 0;
-        return;
-    }
+        {
+            spell_selected = 0;
+            return;
+        }
 
-    // in case we don't find anything, keep selection in the middle of screen
-    const size_t spells_relative_size = spells_relative.size();
-    spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
-    for( size_t i = 0; i < spells_relative_size; ++i )
-    {
-        if( std::get<0>( *spells_relative[i] ).id == spellid ) {
+        // in case we don't find anything, keep selection in the middle of screen
+        const size_t spells_relative_size = spells_relative.size();
+        spell_selected = std::min( ( TERMY - 2 ) / 2, static_cast<int>( spells_relative_size ) / 2 );
+        for( size_t i = 0; i < spells_relative_size; ++i )
+        {
+            if( std::get<0>( *spells_relative[i] ).id == spellid ) {
                 spell_selected = i;
                 break;
             }
@@ -1679,9 +1681,9 @@ static void change_spells( Character &character )
 
     // reset spells_relative vector
     auto reset_spells_relative = [&]() -> void {
-for( spell_tuple &spt : spells_all )
-    {
-        spells_relative.emplace_back( &spt );
+        for( spell_tuple &spt : spells_all )
+        {
+            spells_relative.emplace_back( &spt );
         }
     };
 
@@ -1873,15 +1875,39 @@ static void teleport_short()
     add_msg( _( "You teleport to point %s." ), new_pos.to_string() );
 }
 
+bool teleport_to_overmap( tripoint_abs_omt where )
+{
+    if( north_america::elevation_active() ) {
+        const float selected = north_america::altitude_at( where );
+        number_input_popup<float> altitude( 42, selected, _( "Destination elevation (m)" ) );
+        altitude.set_step_size( 4.0f, 40.0f );
+        altitude.set_description( string_format(
+                                      _( "Ground elevation: %.1f m. Travel uses the nearest 4 m level." ),
+                                      north_america::altitude_at( tripoint_abs_omt( where.xy(), 0 ) ) ) );
+        const float metres = altitude.query();
+        if( altitude.cancelled() ) {
+            return false;
+        }
+        const auto destination = north_america::overmap_at_altitude( where.xy(), metres );
+        if( !destination ) {
+            popup( _( "Choose an elevation between -16384 m and 16384 m." ) );
+            return false;
+        }
+        where = *destination;
+    }
+    g->place_player_overmap( where, true, true );
+    add_msg( _( "You teleport to submap %s." ), display::overmap_position_text( where ) );
+    return true;
+}
+
 static void teleport_long()
 {
     const tripoint_abs_omt where( ui::omap::choose_point( _( "Choose a teleport destination." ),
-            true ) );
+                                  true ) );
     if( where.is_invalid() ) {
         return;
     }
-    g->place_player_overmap( where );
-    add_msg( _( "You teleport to submap %s." ), where.to_string() );
+    debug_menu::teleport_to_overmap( where );
 }
 
 static void teleport_overmap( bool specific_coordinates = false )
@@ -1899,14 +1925,16 @@ static void teleport_overmap( bool specific_coordinates = false )
         where = coord_popup.query_coordinate();
     } else {
         const std::optional<tripoint_rel_ms> dir_ = choose_direction(
-                _( "Where is the desired overmap?" ) );
+                    _( "Where is the desired overmap?" ) );
         if( !dir_ ) {
             return;
         }
         const tripoint offset = tripoint( OMAPX * dir_->x(), OMAPY * dir_->y(), dir_->z() );
         where = player_character.pos_abs_omt() + offset;
     }
-    if( !!where ) {
+    if( specific_coordinates && where && north_america::elevation_active() ) {
+        debug_menu::teleport_to_overmap( *where );
+    } else if( !!where ) {
         g->place_player_overmap( *where );
 
         const tripoint_abs_om new_pos =
@@ -1928,7 +1956,11 @@ static void teleport_city()
     if( c.has_value() ) {
         const tripoint_abs_omt where = tripoint_abs_omt(
                                            project_to<coords::omt>( c->pos_om ) + c->pos.raw(), 0 );
-        g->place_player_overmap( where );
+        if( north_america::elevation_active() ) {
+            debug_menu::teleport_to_overmap( where );
+        } else {
+            g->place_player_overmap( where );
+        }
     }
 }
 
@@ -2013,14 +2045,14 @@ static void character_edit_needs_menu( Character &you )
 
     std::stringstream data;
     data << string_format( _( "Hunger: %d  %s" ), you.get_hunger(), colorize( hunger_pair.first,
-            hunger_pair.second ) ) << std::endl;
+                           hunger_pair.second ) ) << std::endl;
     data << string_format( _( "Thirst: %d  %s" ), you.get_thirst(), colorize( thirst_pair.first,
-            thirst_pair.second ) ) << std::endl;
+                           thirst_pair.second ) ) << std::endl;
     data << string_format( _( "Sleepiness: %d  %s" ), you.get_sleepiness(),
                            colorize( sleepiness_pair.first,
                                      sleepiness_pair.second ) ) << std::endl;
     data << string_format( _( "Weariness: %d  %s" ), you.weariness(), colorize( weariness_pair.first,
-            weariness_pair.second ) ) << std::endl;
+                           weariness_pair.second ) ) << std::endl;
     data << std::endl;
     data << _( "Stored kcal: " ) << you.get_stored_kcal() << std::endl;
     data << _( "Total kcal: " ) << you.get_stored_kcal() + you.stomach.get_calories() +
@@ -2288,7 +2320,7 @@ static void character_edit_desc_menu( Character &you )
 {
     uilist smenu;
     std::string current_bloodt = io::enum_to_string( you.my_blood_type ) + ( you.blood_rh_factor ? "+" :
-        "-" );
+                                 "-" );
     smenu.text = _( "Select a value and press enter to change it." );
     if( you.is_avatar() ) {
         smenu.addentry( 0, true, 's', "%s: %s", _( "Current save file name" ), get_avatar().get_save_id() );
@@ -2735,7 +2767,7 @@ static void character_edit_menu()
             for( const npc_class &cl : npc_class::get_all() ) {
                 ids.push_back( cl.id );
                 classes.addentry( i, true, -1, string_format( _( "%1$s (ID: %2$s)" ), cl.get_name(),
-                        cl.id.c_str() ) );
+                                  cl.id.c_str() ) );
                 i++;
             }
 
@@ -3192,8 +3224,8 @@ static void draw_benchmark( const int max_difference )
     }
 
     DebugLog( D_INFO, DC_ALL ) << "Draw benchmark:\n" <<
-                                  "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
-                                  "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
+                               "\n| USE_TILES |  RENDERER | FRAMEBUFFER_ACCEL | USE_COLOR_MODULATED_TEXTURES | FPS |" <<
+                               "\n|:---:|:---:|:---:|:---:|:---:|\n| " <<
                                get_option<bool>( "USE_TILES" ) << " | " <<
 #if !defined(__ANDROID__)
                                get_option<std::string>( "RENDERER" ) << " | " <<
@@ -3237,7 +3269,7 @@ static void run_shader_tint_self_test()
     }
     const SDL_Texture_Ptr source = CreateTextureFromSurface( renderer, surface );
     const SDL_Texture_Ptr target = CreateTexture( renderer, SDL_PIXELFORMAT_RGBA32,
-        SDL_TEXTUREACCESS_TARGET, st::target_size, st::target_size );
+                                   SDL_TEXTUREACCESS_TARGET, st::target_size, st::target_size );
     if( !source || !target ) {
         add_msg( m_bad, _( "Shader tint self-test did not run.  Details are in debug.log." ) );
         DebugLog( D_INFO, DC_ALL ) << "shader tint self-test: not run: no source or target texture";
@@ -3721,7 +3753,7 @@ static void gen_sound()
     }
 
     sounds::sound( *where, volume, sounds::sound_t::order, string_format( _( "DEBUG SOUND ( %d )" ),
-            volume ) );
+                   volume ) );
 }
 
 static void vfx_preview()
@@ -3802,7 +3834,7 @@ static void import_folower()
 {
     cata_path export_dir{ cata_path::root_path::user,  "export_dir" };
     std::vector<cata_path> npc_files = get_files_from_path( ".npc",
-        export_dir, /* recursive_search */ false, /* match_extension */ true );
+                                       export_dir, /* recursive_search */ false, /* match_extension */ true );
     if( npc_files.empty() ) {
         popup( _( "There's no NPCs to import!" ) );
         return;
@@ -3841,7 +3873,7 @@ static void kill_area()
 
     tripoint_bub_ms initial_pos = get_avatar().pos_bub();
     const look_around_result first = g->look_around( false, initial_pos, initial_pos,
-        false, true, false );
+                                     false, true, false );
 
     if( !first.position ) {
         return;
@@ -3849,14 +3881,14 @@ static void kill_area()
 
     popup.message( "%s", _( "Select second point." ) );
     const look_around_result second = g->look_around( false, initial_pos, *first.position,
-        true, true, false );
+                                      true, true, false );
 
     if( !second.position ) {
         return;
     }
 
     const tripoint_range<tripoint_bub_ms> points = here.points_in_rectangle(
-            tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
+                tripoint_bub_ms( first.position.value() ), tripoint_bub_ms( second.position.value() ) );
 
     std::vector<Creature *> creatures = g->get_creatures_if(
     [&points]( const Creature & critter ) -> bool {
@@ -3958,7 +3990,7 @@ static void set_automove()
     }
 
     std::vector<tripoint_bub_ms> rt = get_map().route( player_character,
-        pathfinding_target::point( *dest ) );
+                                      pathfinding_target::point( *dest ) );
     if( !rt.empty() ) {
         player_character.set_destination( rt );
     } else {
@@ -3977,13 +4009,13 @@ static void spawn_npc()
     temp->form_opinion( player_character );
     temp->mission = NPC_MISSION_NULL;
     temp->add_new_mission( mission::reserve_random( ORIGIN_ANY_NPC, temp->pos_abs_omt(),
-            temp->getID() ) );
+                           temp->getID() ) );
     std::string new_fac_id = "solo_";
     new_fac_id += temp->name;
     new_fac_id += std::to_string( temp->getID().get_value() );
     // create a new "lone wolf" faction for this one NPC
     faction *new_solo_fac = g->faction_manager_ptr->add_new_faction( temp->name,
-        faction_id( new_fac_id ), faction_no_faction );
+                            faction_id( new_fac_id ), faction_no_faction );
     temp->set_fac( new_solo_fac ? new_solo_fac->id : faction_no_faction );
     g->load_npcs();
     cata::lua_platform::dispatch_native_npc_spawn( *temp, "debug" );
@@ -4003,7 +4035,7 @@ static void spawn_npc_follower()
     g->add_npc_follower( temp->getID() );
     temp->mission = NPC_MISSION_NULL;
     temp->add_new_mission( mission::reserve_random( ORIGIN_ANY_NPC, temp->pos_abs_omt(),
-            temp->getID() ) );
+                           temp->getID() ) );
     g->load_npcs();
     cata::lua_platform::dispatch_native_npc_spawn(
         *temp, "debug_follower" );
@@ -4227,7 +4259,7 @@ static void print_overmaps()
                 for( int col = 0; col <= diff.x(); col++ ) {
 
                     const overmap *current_om = overmap_buffer.get_existing( point_abs_om( p1_om.x() + col,
-                        p1_om.y() + row ) );
+                                                p1_om.y() + row ) );
                     std::vector<std::string> om_lines;
                     for( int j = 0; j < OMAPY; j++ ) {
                         std::string om_row;
@@ -4768,7 +4800,7 @@ const std::vector<debug_action_entry> &all_actions()
                     testfile << "|;when;type;key;string_id;strength;map_point;faction_id;" << std::endl;
                     for( const timed_event &te : get_timed_events().get_all() ) {
                         testfile << "|;" << to_string( te.when ) << ";" << static_cast<int>( te.type ) << ";" << te.key <<
-                                    ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
+                                 ";" << te.string_id << ";" << te.strength << ";" << te.map_point << ";" << te.faction_id << ";" <<
                                  std::endl;
                     }
                 }, "timed_event_list" );

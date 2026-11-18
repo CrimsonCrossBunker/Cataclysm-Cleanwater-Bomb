@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -37,6 +38,7 @@
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
+#include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -56,17 +58,17 @@
 #include "mapdata.h"
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
-#include "messages.h"
 #include "mission.h"
 #include "mongroup.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_elevation.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
-#include "north_america.h"
-#include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_debug.h"
 #include "overmap_types.h"
@@ -275,6 +277,10 @@ void overmap_sidebar::draw_tile_info()
 
     const std::string coords = display::overmap_position_text( cursor_pos );
     draw_sidebar_text( coords, c_red );
+    if( north_america::elevation_active() ) {
+        draw_sidebar_text( string_format( _( "Elevation: %.1f m" ),
+                                          north_america::altitude_at( cursor_pos ) ), c_white );
+    }
 }
 
 void overmap_sidebar::draw_settings_info()
@@ -355,7 +361,8 @@ void overmap_sidebar::draw_debug()
         draw_data.debug_info ) {
         draw_sidebar_text( string_format( "current dimension: %s",
                                           g->get_dimension_prefix().str() ), c_white );
-        draw_sidebar_text( string_format( "abs_omt: %s", cursor_pos.to_string() ), c_white );
+        draw_sidebar_text( string_format( "abs_omt: %s", display::overmap_position_text( cursor_pos ) ),
+                           c_white );
         const oter_t &oter = overmap_buffer.ter( cursor_pos ).obj();
         draw_sidebar_text( string_format( "oter: %s (rot %d)", oter.id.str(),
                                           oter.get_rotation() ), c_white );
@@ -1352,6 +1359,10 @@ static void draw( overmap_draw_data_t &data )
 
 static bool create_note( const tripoint_abs_omt &curs, std::optional<std::string> context )
 {
+    if( curs.z() < -OVERMAP_DEPTH || curs.z() > OVERMAP_HEIGHT ) {
+        popup( _( "This overmap layer does not store map notes." ) );
+        return false;
+    }
     const std::string old_note = overmap_buffer.note( curs );
     if( !context ) {
         if( old_note.empty() ) {
@@ -2073,12 +2084,12 @@ static void show_north_america_chart( point_abs_omt center, bool reveal_all )
                 !known( north_america::jurisdiction_at( project_to<coords::ms>( city.position ) ) ) ) {
                 continue;
             }
-            mvwputch( chart, screen + point( 0, 1 ), c_white, 'o' );
+            mvwputch( chart, screen + point::south, c_white, 'o' );
             if( screen == cursor ) {
                 city_name = city.name;
             }
         }
-        mvwputch( chart, cursor + point( 0, 1 ), c_white, '+' );
+        mvwputch( chart, cursor + point::south, c_white, '+' );
         const std::string_view code = north_america::jurisdiction_at( project_to<coords::ms>( center ) );
         const std::string location = city_name.empty() ? std::string( code ) : city_name;
         mvwprintz( chart, point( 0, height + 1 ), c_light_gray, _( "%.1f km/cell  %s" ),
@@ -2377,6 +2388,10 @@ static tripoint_abs_omt display()
         } else if( action == "look" ) {
             tripoint_abs_ms pos = project_combine( curs, g->overmap_data.origin_remainder );
             tripoint_bub_ms pos_rel = here.get_bub( pos );
+            if( !here.inbounds_z( pos_rel.z() ) &&
+                std::abs( pos_rel.z() - here.get_abs_sub().z() ) > here.z_range() ) {
+                continue;
+            }
             uistate.open_menu = [pos_rel]() {
                 tripoint_bub_ms pos_cpy = pos_rel;
                 g->look_around( true, pos_cpy, pos_rel, false, false, false, false, pos_rel );
@@ -2386,10 +2401,11 @@ static tripoint_abs_omt display()
             show_north_america_chart( curs.xy(), debug_mode || data.debug_editor );
         } else if( action == "CENTER" ) {
             curs = orig;
-        } else if( action == "LEVEL_DOWN" && curs.z() > -OVERMAP_DEPTH ) {
-            curs.z() -= 1;
-        } else if( action == "LEVEL_UP" && curs.z() < OVERMAP_HEIGHT ) {
-            curs.z() += 1;
+        } else if( action == "LEVEL_DOWN" || action == "LEVEL_UP" ) {
+            const bool atlas = north_america::elevation_active();
+            const int bottom = atlas ? north_america::minimum_overmap_z( curs.xy() ) : -OVERMAP_DEPTH;
+            const int top = atlas ? north_america::maximum_overmap_z( curs.xy() ) : OVERMAP_HEIGHT;
+            curs.z() = std::clamp( curs.z() + ( action == "LEVEL_UP" ? 1 : -1 ), bottom, top );
         } else if( action == "zoom_out" ) {
             g->zoom_out_overmap();
             ui->mark_resize();
@@ -2524,9 +2540,9 @@ static tripoint_abs_omt display()
         } else if( action == "SET_SPECIAL_ARGS" ) {
             set_special_args( curs );
         } else if( action == "LONG_TELEPORT" && !curs.is_invalid() ) {
-            g->place_player_overmap( curs );
-            add_msg( _( "You teleport to submap %s." ), curs.to_string() );
-            action = "QUIT";
+            if( debug_menu::teleport_to_overmap( curs ) ) {
+                action = "QUIT";
+            }
         } else if( action == "MODIFY_HORDE" ) {
             modify_horde_func( curs );
         } else if( action == "PRINT_NOISE_MAPS" ) {

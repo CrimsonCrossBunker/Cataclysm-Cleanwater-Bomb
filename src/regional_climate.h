@@ -5,6 +5,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <string_view>
 
 class JsonObject;
 
@@ -29,13 +30,14 @@ struct monthly_normal {
 
 struct normals {
     std::array<monthly_normal, 12> months;
+    std::optional<double> reference_elevation_m;
 
     double annual_precipitation_mm() const;
 };
 
 // WGS84 latitude/longitude in degrees. East and north are positive.
 // This coarse lookup is intended for Canada, Mexico, and the United States.
-std::optional<normals> at( coordinates location );
+std::optional<normals> at( coordinates location, bool with_elevation = false );
 std::optional<coordinates> station_location( const std::string &id );
 // Local geodetic offsets from the starting station. One map square is one metre.
 coordinates offset_metres( coordinates origin, double east, double north );
@@ -44,7 +46,7 @@ coordinates offset_metres( coordinates origin, double east, double north );
 double precipitation_rate( const monthly_normal &normal, double days_in_game_month,
                            double hour, int day, unsigned seed, double spatial_phase = 0 );
 
-void load_station( const JsonObject &jo, const std::string &src );
+void load_station( const JsonObject &jo, std::string_view src );
 void reset();
 } // namespace regional_climate
 

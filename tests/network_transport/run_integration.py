@@ -335,13 +335,19 @@ def main():
                 assert recipient.message()['type'] == 'player_joined'
             if number + 1 in checkpoints:
                 for recipient in guests:
-                    assert recipient.command('send ' + json.dumps(action)) == 'OK'
+                    assert recipient.command(
+                        'send ' + json.dumps(action)
+                    ) == 'OK'
                     assert expanded.command('next').startswith('EVENT 2 ')
-                results.append(f'{number + 1}_player_room_admission_and_actions')
+                results.append(
+                    f'{number + 1}_player_room_admission_and_actions'
+                )
         excess = start('expanded-full', 'client', port,
                        'extra-player', '口令"\\', 'abc')
         response = excess.read()
-        assert 'Server is full (32 players including the host)' in response, response
+        assert (
+            'Server is full (32 players including the host)' in response
+        ), response
         assert expanded.command('next') == 'EMPTY'
         excess.close()
         for guest in reversed(guests):

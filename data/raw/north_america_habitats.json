@@ -1,0 +1,513 @@
+{
+  "version": 1,
+  "treelines": [
+    {
+      "regions": [ "1.1", "6.1", "6.2", "7.1" ],
+      "bounds": [ -170, 40, -120, 72 ],
+      "heights": [ [ 40, 2550 ], [ 50, 1750 ], [ 59, 1060 ], [ 64, 820 ], [ 71, 500 ] ]
+    },
+    {
+      "regions": [ "1.1", "6.1", "6.2", "13.1" ],
+      "bounds": [ -123, 30, -102, 72 ],
+      "heights": [ [ 31, 3500 ], [ 39, 3390 ], [ 49, 2290 ], [ 58, 1430 ], [ 65, 920 ], [ 71, 580 ] ]
+    },
+    {
+      "regions": [ "13.2", "13.3", "13.4", "13.5", "13.6" ],
+      "bounds": [ -108, 14, -92, 27 ],
+      "heights": [ [ 15, 3920 ], [ 19.4, 4000 ], [ 26, 3650 ] ]
+    }
+  ],
+  "habitats": [
+    {
+      "overmap": "na_biome_sequoia",
+      "base": "forest_thick",
+      "regions": [],
+      "bounds": [ -121, 35.8, -118, 39 ],
+      "elevation_m": [ 1250, 2480 ],
+      "transition_m": 125,
+      "groves": [
+        [ -120.31, 38.28, 6 ],
+        [ -119.61, 37.51, 7 ],
+        [ -118.95, 36.7, 8 ],
+        [ -118.75, 36.56, 13 ],
+        [ -118.69, 36.23, 8 ]
+      ],
+      "corridor": [],
+      "tree_percent": 25,
+      "shrub_percent": 13,
+      "rock_percent": 1,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_giant_sequoia", 22, "tree" ],
+        [ "t_tree_ponderosa_pine", 18, "tree" ],
+        [ "t_tree_douglas_fir", 12, "tree" ],
+        [ "t_shrub_snowberry", 8, "shrub" ]
+      ],
+      "ground": [ [ "t_dirt", 5 ], [ "t_grass", 3 ], [ "t_fern", 1 ] ]
+    },
+    {
+      "overmap": "na_biome_redwood",
+      "base": "forest_thick",
+      "regions": [],
+      "bounds": [ -124.6, 35.7, -121.1, 42.3 ],
+      "elevation_m": [ -15, 950 ],
+      "corridor": [
+        [ -121.6, 35.86 ],
+        [ -122.07, 37.13 ],
+        [ -122.65, 38.04 ],
+        [ -123.64, 39.33 ],
+        [ -124.0, 40.71 ],
+        [ -124.17, 42.14 ]
+      ],
+      "corridor_width_km": 30,
+      "groves": [],
+      "tree_percent": 30,
+      "shrub_percent": 13,
+      "rock_percent": 0,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_coast_redwood", 30, "tree" ],
+        [ "t_tree_douglas_fir", 19, "tree" ],
+        [ "t_tree_western_hemlock", 10, "tree" ],
+        [ "t_tree_pacific_madrone", 6, "tree" ],
+        [ "t_shrub_snowberry", 5, "shrub" ]
+      ],
+      "ground": [ [ "t_fern", 5 ], [ "t_moss", 4 ], [ "t_grass", 2 ], [ "t_dirt", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_dismal_swamp",
+      "base": "forest_water",
+      "regions": [],
+      "bounds": [ -76.66, 36.42, -76.25, 36.82 ],
+      "elevation_m": [ -20, 32 ],
+      "transition_m": 10,
+      "groves": [ [ -76.45, 36.63, 15 ], [ -76.45, 36.55, 9 ] ],
+      "corridor": [],
+      "tree_percent": 19,
+      "shrub_percent": 24,
+      "rock_percent": 0,
+      "water_percent": 19,
+      "plants": [
+        [ "t_tree_atlantic_white_cedar", 18, "tree" ],
+        [ "t_tree_bald_cypress", 16, "tree" ],
+        [ "t_tree_red_maple", 11, "tree" ],
+        [ "t_shrub_wax_myrtle", 10, "shrub" ]
+      ],
+      "ground": [ [ "t_moss", 5 ], [ "t_dirt", 3 ], [ "t_fern", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_canyon",
+      "base": "field",
+      "regions": [],
+      "bounds": [ -114.2, 35.74, -111.42, 37.04 ],
+      "elevation_m": [ 300, 1900 ],
+      "transition_m": 130,
+      "corridor": [
+        [ -111.59, 36.86 ],
+        [ -111.82, 36.27 ],
+        [ -112.13, 36.11 ],
+        [ -112.45, 36.36 ],
+        [ -112.83, 36.39 ],
+        [ -113.49, 36.08 ],
+        [ -113.92, 36 ]
+      ],
+      "corridor_width_km": 16,
+      "groves": [],
+      "tree_percent": 3,
+      "shrub_percent": 17,
+      "rock_percent": 49,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_colorado_pinyon", 6, "tree" ],
+        [ "t_shrub_prickly_pear", 3, "shrub" ],
+        [ "t_shrub_big_sagebrush", 5, "shrub" ],
+        [ "t_shrub_creosote_bush", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_sand", 5 ], [ "t_dirt", 5 ], [ "t_grass_dead", 1 ] ]
+    },
+    {
+      "overmap": "na_biome_canyon_rim",
+      "base": "forest",
+      "regions": [],
+      "bounds": [ -114.2, 35.74, -111.42, 37.04 ],
+      "elevation_m": [ 1620, 3000 ],
+      "transition_m": 150,
+      "corridor": [
+        [ -111.82, 36.27 ],
+        [ -112.13, 36.11 ],
+        [ -112.45, 36.36 ],
+        [ -112.83, 36.39 ],
+        [ -113.49, 36.08 ],
+        [ -113.92, 36 ]
+      ],
+      "corridor_width_km": 16,
+      "groves": [],
+      "tree_percent": 18,
+      "shrub_percent": 23,
+      "rock_percent": 24,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_ponderosa_pine", 17, "tree" ],
+        [ "t_tree_colorado_pinyon", 14, "tree" ],
+        [ "t_tree_douglas_fir", 6, "tree" ],
+        [ "t_shrub_big_sagebrush", 10, "shrub" ]
+      ],
+      "ground": [ [ "t_dirt", 6 ], [ "t_grass_dead", 3 ], [ "t_grass", 1 ] ]
+    },
+    {
+      "overmap": "na_biome_badlands",
+      "base": "field",
+      "regions": [],
+      "bounds": [ -115, 43, -100, 52 ],
+      "elevation_m": [ 280, 1750 ],
+      "groves": [ [ -102.4, 43.76, 23 ], [ -103.47, 47, 24 ], [ -112.72, 51.46, 21 ], [ -113.28, 49.1, 9 ] ],
+      "corridor": [],
+      "tree_percent": 0,
+      "shrub_percent": 14,
+      "rock_percent": 23,
+      "water_percent": 0,
+      "plants": [ [ "t_shrub_big_sagebrush", 8, "shrub" ], [ "t_shrub_prickly_pear", 3, "shrub" ] ],
+      "ground": [ [ "t_dirt", 5 ], [ "t_clay", 2 ], [ "t_grass_dead", 2 ], [ "t_sand", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_tundra",
+      "base": "field",
+      "regions": [ "2.1", "2.2", "2.3", "2.4" ],
+      "bounds": [ -180, 55, -45, 85 ],
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 0,
+      "shrub_percent": 29,
+      "rock_percent": 10,
+      "water_percent": 0,
+      "plants": [
+        [ "t_shrub_arctic_heather", 12, "shrub" ],
+        [ "t_shrub_dwarf_birch", 8, "shrub" ],
+        [ "t_shrub_lingonberry", 4, "shrub" ],
+        [ "t_shrub_cloudberry", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_moss", 6 ], [ "t_grass_dead", 2 ], [ "t_dirt", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_peatland",
+      "base": "forest_water",
+      "regions": [ "4.1" ],
+      "bounds": [ -97, 49, -76, 59 ],
+      "elevation_m": [ -25, 260 ],
+      "transition_m": 50,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 9,
+      "shrub_percent": 34,
+      "rock_percent": 0,
+      "water_percent": 14,
+      "plants": [
+        [ "t_tree_black_spruce", 15, "tree" ],
+        [ "t_tree_tamarack", 10, "tree" ],
+        [ "t_shrub_cloudberry", 9, "shrub" ],
+        [ "t_shrub_lingonberry", 8, "shrub" ],
+        [ "t_shrub_dwarf_birch", 8, "shrub" ]
+      ],
+      "ground": [ [ "t_moss", 13 ], [ "t_grass_tall", 3 ], [ "t_dirt", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_zacaton",
+      "base": "field",
+      "regions": [ "13.2", "13.3", "13.4", "13.5", "13.6" ],
+      "bounds": [ -108, 14, -92, 27 ],
+      "relative_to_treeline_m": [ -100, 14000 ],
+      "transition_m": 130,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 0,
+      "shrub_percent": 42,
+      "rock_percent": 21,
+      "water_percent": 0,
+      "plants": [ [ "t_shrub_zacaton", 24, "shrub" ] ],
+      "ground": [ [ "t_grass_tall", 8 ], [ "t_grass_dead", 5 ], [ "t_dirt", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_mexican_treeline",
+      "base": "forest",
+      "regions": [ "13.2", "13.3", "13.4", "13.5", "13.6" ],
+      "bounds": [ -108, 14, -92, 27 ],
+      "relative_to_treeline_m": [ -650, 80 ],
+      "transition_m": 140,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 10,
+      "shrub_percent": 29,
+      "rock_percent": 8,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_hartweg_pine", 25, "tree" ],
+        [ "t_tree_montezuma_pine", 5, "tree" ],
+        [ "t_shrub_zacaton", 12, "shrub" ]
+      ],
+      "ground": [ [ "t_grass_tall", 5 ], [ "t_dirt", 4 ], [ "t_moss", 1 ] ]
+    },
+    {
+      "overmap": "na_biome_alpine",
+      "base": "field",
+      "regions": [ "1.1", "6.1", "6.2", "7.1", "13.1" ],
+      "bounds": [ -170, 32, -102, 72 ],
+      "relative_to_treeline_m": [ 40, 14000 ],
+      "transition_m": 145,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 0,
+      "shrub_percent": 14,
+      "rock_percent": 30,
+      "water_percent": 0,
+      "plants": [
+        [ "t_shrub_arctic_heather", 6, "shrub" ],
+        [ "t_shrub_dwarf_birch", 4, "shrub" ],
+        [ "t_shrub_lingonberry", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_rock_floor", 3 ], [ "t_dirt", 3 ], [ "t_moss", 4 ], [ "t_grass_dead", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_subalpine",
+      "base": "forest",
+      "regions": [ "1.1", "6.1", "6.2", "7.1", "13.1" ],
+      "bounds": [ -170, 32, -102, 72 ],
+      "relative_to_treeline_m": [ -550, 120 ],
+      "transition_m": 145,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 13,
+      "shrub_percent": 22,
+      "rock_percent": 11,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_subalpine_fir", 18, "tree" ],
+        [ "t_tree_lodgepole_pine", 12, "tree" ],
+        [ "t_tree_white_spruce", 7, "tree" ],
+        [ "t_shrub_dwarf_birch", 8, "shrub" ],
+        [ "t_shrub_lingonberry", 7, "shrub" ]
+      ],
+      "ground": [ [ "t_grass", 6 ], [ "t_moss", 4 ], [ "t_dirt", 4 ] ]
+    },
+    {
+      "overmap": "na_biome_pacific_rainforest",
+      "base": "forest_thick",
+      "regions": [ "7.1" ],
+      "bounds": [ -153, 42, -121.8, 62 ],
+      "elevation_m": [ -25, 900 ],
+      "corridor": [
+        [ -151.7, 59.9 ],
+        [ -147.1, 60.5 ],
+        [ -140.1, 59.5 ],
+        [ -135.3, 57.1 ],
+        [ -130.9, 55.2 ],
+        [ -128.9, 52.3 ],
+        [ -126.3, 49.9 ],
+        [ -124.3, 47.6 ],
+        [ -124, 44.2 ],
+        [ -124, 42.4 ]
+      ],
+      "corridor_width_km": 83,
+      "groves": [],
+      "tree_percent": 27,
+      "shrub_percent": 19,
+      "rock_percent": 2,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_western_hemlock", 18, "tree" ],
+        [ "t_tree_sitka_spruce", 15, "tree" ],
+        [ "t_tree_western_redcedar", 12, "tree" ],
+        [ "t_tree_douglas_fir", 8, "tree" ],
+        [ "t_shrub_snowberry", 10, "shrub" ]
+      ],
+      "ground": [ [ "t_fern", 8 ], [ "t_moss", 7 ], [ "t_grass", 1 ], [ "t_dirt", 3 ] ]
+    },
+    {
+      "overmap": "na_biome_mojave",
+      "base": "field",
+      "regions": [ "10.2" ],
+      "bounds": [ -118.7, 33.95, -113.4, 37.6 ],
+      "elevation_m": [ -120, 1950 ],
+      "transition_m": 160,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 4,
+      "shrub_percent": 16,
+      "rock_percent": 7,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_joshua_tree", 14, "tree" ],
+        [ "t_shrub_creosote_bush", 18, "shrub" ],
+        [ "t_shrub_prickly_pear", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_sand", 10 ], [ "t_dirt", 5 ], [ "t_grass_dead", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_sonoran",
+      "base": "field",
+      "regions": [ "10.2" ],
+      "bounds": [ -116.2, 25, -109, 34.7 ],
+      "elevation_m": [ -85, 1450 ],
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 3,
+      "shrub_percent": 20,
+      "rock_percent": 4,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_texas_mesquite", 5, "tree" ],
+        [ "t_shrub_saguaro", 14, "shrub" ],
+        [ "t_shrub_creosote_bush", 18, "shrub" ],
+        [ "t_shrub_prickly_pear", 5, "shrub" ]
+      ],
+      "ground": [ [ "t_sand", 9 ], [ "t_dirt", 5 ], [ "t_grass_dead", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_chihuahuan",
+      "base": "field",
+      "regions": [ "10.2", "12.1", "12.2" ],
+      "bounds": [ -108, 24, -100, 34 ],
+      "elevation_m": [ 500, 2050 ],
+      "transition_m": 200,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 3,
+      "shrub_percent": 26,
+      "rock_percent": 4,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_texas_mesquite", 4, "tree" ],
+        [ "t_shrub_creosote_bush", 14, "shrub" ],
+        [ "t_shrub_prickly_pear", 12, "shrub" ]
+      ],
+      "ground": [ [ "t_dirt", 7 ], [ "t_grass_dead", 5 ], [ "t_sand", 4 ] ]
+    },
+    {
+      "overmap": "na_biome_great_basin",
+      "base": "field",
+      "regions": [ "10.1" ],
+      "bounds": [ -122, 34.7, -105, 48 ],
+      "elevation_m": [ 700, 2550 ],
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 2,
+      "shrub_percent": 28,
+      "rock_percent": 6,
+      "water_percent": 0,
+      "plants": [ [ "t_tree_colorado_pinyon", 7, "tree" ], [ "t_shrub_big_sagebrush", 24, "shrub" ] ],
+      "ground": [ [ "t_dirt", 8 ], [ "t_grass_dead", 6 ], [ "t_sand", 1 ] ]
+    },
+    {
+      "overmap": "na_biome_chaparral",
+      "base": "field",
+      "regions": [ "11.1" ],
+      "bounds": [ -124.5, 29, -114, 41.9 ],
+      "elevation_m": [ 50, 1900 ],
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 5,
+      "shrub_percent": 42,
+      "rock_percent": 3,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_blue_oak", 4, "tree" ],
+        [ "t_tree_pacific_madrone", 2, "tree" ],
+        [ "t_shrub_chamise", 19, "shrub" ],
+        [ "t_shrub_snowberry", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_dirt", 4 ], [ "t_grass_dead", 6 ], [ "t_grass", 2 ] ]
+    },
+    {
+      "overmap": "na_biome_pocosin",
+      "base": "forest_water",
+      "regions": [ "8.5" ],
+      "bounds": [ -80.3, 31.8, -75.5, 36.45 ],
+      "elevation_m": [ -15, 47 ],
+      "wet_only": true,
+      "transition_m": 12,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 14,
+      "shrub_percent": 35,
+      "rock_percent": 0,
+      "water_percent": 8,
+      "plants": [
+        [ "t_tree_pond_pine", 19, "tree" ],
+        [ "t_tree_bald_cypress", 7, "tree" ],
+        [ "t_tree_atlantic_white_cedar", 6, "tree" ],
+        [ "t_shrub_wax_myrtle", 13, "shrub" ]
+      ],
+      "ground": [ [ "t_moss", 8 ], [ "t_dirt", 5 ], [ "t_grass_tall", 4 ] ]
+    },
+    {
+      "overmap": "na_biome_oyamel",
+      "base": "forest_thick",
+      "regions": [ "13.2", "13.3", "13.4", "13.5", "13.6" ],
+      "bounds": [ -104, 18.1, -96, 21.2 ],
+      "elevation_m": [ 2450, 3550 ],
+      "transition_m": 175,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 28,
+      "shrub_percent": 14,
+      "rock_percent": 3,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_oyamel", 25, "tree" ],
+        [ "t_tree_montezuma_pine", 13, "tree" ],
+        [ "t_tree_hartweg_pine", 3, "tree" ],
+        [ "t_shrub_snowberry", 3, "shrub" ]
+      ],
+      "ground": [ [ "t_fern", 5 ], [ "t_moss", 4 ], [ "t_dirt", 4 ], [ "t_grass", 3 ] ]
+    },
+    {
+      "overmap": "na_biome_cloud_forest",
+      "base": "forest_thick",
+      "regions": [ "13.2", "13.3", "13.4", "13.5", "13.6", "15.2", "15.3" ],
+      "bounds": [ -100, 15.3, -90, 22 ],
+      "elevation_m": [ 850, 2400 ],
+      "transition_m": 180,
+      "corridor": [
+        [ -98.8, 21.6 ],
+        [ -97, 19.6 ],
+        [ -96.2, 18.5 ],
+        [ -96.4, 17.45 ],
+        [ -94.75, 16.9 ],
+        [ -92.75, 16.45 ],
+        [ -92.25, 15.5 ]
+      ],
+      "corridor_width_km": 47,
+      "groves": [],
+      "tree_percent": 31,
+      "shrub_percent": 19,
+      "rock_percent": 4,
+      "water_percent": 0,
+      "plants": [
+        [ "t_tree_mexican_sweetgum", 16, "tree" ],
+        [ "t_tree_netleaf_oak", 12, "tree" ],
+        [ "t_tree_spanish_cedar", 5, "tree" ],
+        [ "t_shrub_wax_myrtle", 5, "shrub" ]
+      ],
+      "ground": [ [ "t_fern", 9 ], [ "t_moss", 8 ], [ "t_dirt", 4 ] ]
+    },
+    {
+      "overmap": "na_biome_sawgrass",
+      "base": "forest_water",
+      "regions": [ "15.4" ],
+      "bounds": [ -81.52, 25.05, -80.36, 27 ],
+      "elevation_m": [ -8, 18 ],
+      "transition_m": 5,
+      "groves": [],
+      "corridor": [],
+      "tree_percent": 3,
+      "shrub_percent": 46,
+      "rock_percent": 0,
+      "water_percent": 25,
+      "plants": [
+        [ "t_tree_bald_cypress", 5, "tree" ],
+        [ "t_shrub_sawgrass", 27, "shrub" ],
+        [ "t_shrub_wax_myrtle", 2, "shrub" ]
+      ],
+      "ground": [ [ "t_grass_tall", 12 ], [ "t_moss", 4 ], [ "t_dirt", 3 ] ]
+    }
+  ]
+}

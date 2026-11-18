@@ -2,18 +2,42 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "city.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "map_scale_constants.h"
 #include "mongroup.h"
 #include "mp_client_conn.h"
+#include "north_america_elevation.h"
 #include "options.h"
 #include "path_info.h"
+#include "point.h"
+#include "regional_climate.h"
+#include "type_id.h"
 #include "worldfactory.h"
+
+static const dimension_id dimension_world_default( "default" );
+
+static const mtype_id mon_zombie_marine( "mon_zombie_marine" );
+static const mtype_id mon_zombie_marine_ca( "mon_zombie_marine_ca" );
+static const mtype_id mon_zombie_marine_mx( "mon_zombie_marine_mx" );
+static const mtype_id mon_zombie_marine_upgrade( "mon_zombie_marine_upgrade" );
+static const mtype_id mon_zombie_marine_upgrade_ca( "mon_zombie_marine_upgrade_ca" );
+static const mtype_id mon_zombie_marine_upgrade_mx( "mon_zombie_marine_upgrade_mx" );
+static const mtype_id mon_zombie_swat( "mon_zombie_swat" );
+static const mtype_id mon_zombie_swat_ca( "mon_zombie_swat_ca" );
+static const mtype_id mon_zombie_swat_mx( "mon_zombie_swat_mx" );
 
 namespace north_america
 {
@@ -24,7 +48,10 @@ struct regional_loot_table {
     void add_groups( const JsonArray &ids, const std::string &suffix ) {
         for( const JsonValue value : ids ) {
             const std::string base = value.get_string();
-            groups.emplace( item_group_id( base ), item_group_id( base + "-" + suffix ) );
+            std::string regional = base;
+            regional += '-';
+            regional += suffix;
+            groups.emplace( item_group_id( base ), item_group_id( std::move( regional ) ) );
         }
     }
 };
@@ -89,7 +116,7 @@ int edge_band( int y )
 void index_edges( feature &polygon )
 {
     for( const auto &ring : polygon.paths ) {
-        for( size_t i = 1; i < ring.size(); ++i ) {
+        for( std::size_t i = 1; i < ring.size(); ++i ) {
             const point a = ring[i - 1];
             const point b = ring[i];
             if( a.y == b.y ) {
@@ -108,7 +135,7 @@ struct atlas {
     std::vector<feature> lakes;
     std::vector<feature> rivers;
     std::vector<place> cities;
-    std::unordered_map<point_abs_om, std::vector<size_t>> cities_by_overmap;
+    std::unordered_map<point_abs_om, std::vector<std::size_t>> cities_by_overmap;
     bool loaded = false;
 
     atlas() {
@@ -165,29 +192,34 @@ const atlas &get_atlas()
     return instance;
 }
 
+bool contains( const feature &area, point p )
+{
+    if( !area.box.intersects( { p, p } ) ) {
+        return false;
+    }
+    const auto edges = area.edges_by_band.find( edge_band( p.y ) );
+    if( edges == area.edges_by_band.end() ) {
+        return false;
+    }
+    bool inside = false;
+    for( const auto &[a, b] : edges->second ) {
+        if( ( a.y > p.y ) == ( b.y > p.y ) ) {
+            continue;
+        }
+        const double x = a.x + static_cast<double>( b.x - a.x ) * ( p.y - a.y ) / ( b.y - a.y );
+        if( p.x < x ) {
+            inside = !inside;
+        }
+    }
+    return inside;
+}
+
 struct jurisdiction_polygon {
     std::string code;
     feature area;
 
     bool contains( point p ) const {
-        if( !area.box.intersects( { p, p } ) ) {
-            return false;
-        }
-        const auto edges = area.edges_by_band.find( edge_band( p.y ) );
-        if( edges == area.edges_by_band.end() ) {
-            return false;
-        }
-        bool inside = false;
-        for( const auto &[a, b] : edges->second ) {
-            if( ( a.y > p.y ) == ( b.y > p.y ) ) {
-                continue;
-            }
-            const double x = a.x + static_cast<double>( b.x - a.x ) * ( p.y - a.y ) / ( b.y - a.y );
-            if( p.x < x ) {
-                inside = !inside;
-            }
-        }
-        return inside;
+        return north_america::contains( area, p );
     }
 };
 
@@ -203,15 +235,16 @@ point jurisdiction_cell( point p )
 
 struct jurisdiction_index {
     std::vector<jurisdiction_polygon> polygons;
-    std::unordered_map<point, std::vector<size_t>> cells;
+    std::unordered_map<point, std::vector<std::size_t>> cells;
 };
 
 const jurisdiction_index &jurisdictions()
 {
-    static const auto index = [] {
+    static const jurisdiction_index index = [] {
         jurisdiction_index result;
         read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.jurisdictions",
-        [&]( const JsonValue & value ) {
+                             [&]( const JsonValue & value )
+        {
             const JsonObject root = value.get_object();
             if( root.get_int( "version" ) != 1 ) {
                 root.throw_error( "Unknown North America jurisdictions version" );
@@ -251,7 +284,8 @@ const std::unordered_map<std::string, regional_loot_table> &regional_loot_tables
     static const auto tables = [] {
         std::unordered_map<std::string, regional_loot_table> result;
         read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america_loot.json",
-        [&]( const JsonValue & value ) {
+                             [&]( const JsonValue & value )
+        {
             const JsonObject root = value.get_object();
             const JsonArray state_groups = root.get_array( "state_groups" );
             const JsonArray firearm_groups = root.get_array( "firearm_groups" );
@@ -330,7 +364,7 @@ class water_grid
             for( int y = 0; y < height; ++y ) {
                 auto &xs = crossings[y];
                 std::sort( xs.begin(), xs.end() );
-                for( size_t i = 1; i < xs.size(); i += 2 ) {
+                for( std::size_t i = 1; i < xs.size(); i += 2 ) {
                     // Even/odd fill uses all rings, preserving holes and islands.
                     std::fill( tiles.begin() + y * width + column( xs[i - 1] ),
                                tiles.begin() + y * width + column( xs[i] ), type );
@@ -347,7 +381,7 @@ class water_grid
                 return;
             }
             const auto &line = river.paths.front();
-            for( size_t i = 1; i < line.size(); ++i ) {
+            for( std::size_t i = 1; i < line.size(); ++i ) {
                 const point &a = line[i - 1];
                 const point &b = line[i];
                 const point delta = b - a;
@@ -410,18 +444,17 @@ bool available()
 
 bool active()
 {
-    static const dimension_id earth( "default" );
-    return g && g->north_america_world && g->get_dimension_prefix() == earth;
+    return g && g->north_america_world && g->get_dimension_prefix() == dimension_world_default;
 }
 
 std::string_view jurisdiction_at( point_abs_ms position )
 {
-    const auto &index = jurisdictions();
+    const jurisdiction_index &index = jurisdictions();
     const auto candidates = index.cells.find( jurisdiction_cell( position.raw() ) );
     if( candidates == index.cells.end() ) {
         return {};
     }
-    for( size_t candidate : candidates->second ) {
+    for( std::size_t candidate : candidates->second ) {
         const jurisdiction_polygon &polygon = index.polygons[candidate];
         if( polygon.contains( position.raw() ) ) {
             return polygon.code;
@@ -453,15 +486,15 @@ scoped_regional_loot::~scoped_regional_loot()
     current_loot_table = previous;
 }
 
-const item_group_id &regional_item_group( const item_group_id &base )
+const item_group_id *regional_item_group( const item_group_id &base )
 {
     if( current_loot_table ) {
         const auto found = current_loot_table->groups.find( base );
         if( found != current_loot_table->groups.end() ) {
-            return found->second;
+            return &found->second;
         }
     }
-    return base;
+    return nullptr;
 }
 
 const std::string &civic_flag_variant()
@@ -472,16 +505,8 @@ const std::string &civic_flag_variant()
 
 mtype_id regional_monster( const mtype_id &type, point_abs_ms position )
 {
-    static const mtype_id swat( "mon_zombie_swat" );
-    static const mtype_id marine( "mon_zombie_marine" );
-    static const mtype_id stalker( "mon_zombie_marine_upgrade" );
-    static const mtype_id swat_ca( "mon_zombie_swat_ca" );
-    static const mtype_id swat_mx( "mon_zombie_swat_mx" );
-    static const mtype_id marine_ca( "mon_zombie_marine_ca" );
-    static const mtype_id marine_mx( "mon_zombie_marine_mx" );
-    static const mtype_id stalker_ca( "mon_zombie_marine_upgrade_ca" );
-    static const mtype_id stalker_mx( "mon_zombie_marine_upgrade_mx" );
-    if( ( type != swat && type != marine && type != stalker ) || !active() ) {
+    if( ( type != mon_zombie_swat && type != mon_zombie_marine &&
+          type != mon_zombie_marine_upgrade ) || !active() ) {
         return type;
     }
     const std::string_view code = jurisdiction_at( position );
@@ -489,9 +514,10 @@ mtype_id regional_monster( const mtype_id &type, point_abs_ms position )
     if( !canada && code.substr( 0, 3 ) != "MX-" ) {
         return type;
     }
-    const mtype_id &variant = type == swat ? ( canada ? swat_ca : swat_mx ) :
-                             type == marine ? ( canada ? marine_ca : marine_mx ) :
-                             ( canada ? stalker_ca : stalker_mx );
+    const mtype_id &variant = type == mon_zombie_swat ? ( canada ? mon_zombie_swat_ca :
+                              mon_zombie_swat_mx ) :
+                              type == mon_zombie_marine ? ( canada ? mon_zombie_marine_ca : mon_zombie_marine_mx ) :
+                              ( canada ? mon_zombie_marine_upgrade_ca : mon_zombie_marine_upgrade_mx );
     return variant.is_valid() && !MonsterGroupManager::monster_is_blacklisted( variant ) ?
            variant : type;
 }
@@ -507,9 +533,9 @@ const std::vector<place> &cities()
     return get_atlas().cities;
 }
 
-const std::vector<size_t> &cities_in( point_abs_om overmap )
+const std::vector<std::size_t> &cities_in( point_abs_om overmap )
 {
-    static const std::vector<size_t> empty;
+    static const std::vector<std::size_t> empty;
     const auto &index = get_atlas().cities_by_overmap;
     const auto it = index.find( overmap );
     return it == index.end() ? empty : it->second;
@@ -578,6 +604,123 @@ regional_climate::coordinates location( point_abs_ms position )
     const double longitude = std::atan2( east * sin_arc,
                                          distance * cos_lat * cos_arc - north * sin_lat * sin_arc );
     return { latitude / radians, std::remainder( bedford_longitude + longitude / radians, 360.0 ) };
+}
+
+std::optional<water_level> water_surface_elevation( point_abs_ms position )
+{
+    struct river_segment {
+        point from;
+        point to;
+        double upstream;
+        double downstream;
+    };
+    constexpr int river_radius = 3 * tile_metres / 2;
+    const atlas &data = get_atlas();
+    const point p = position.raw();
+    for( const feature &lake : data.lakes ) {
+        if( contains( lake, p ) ) {
+            static thread_local std::unordered_map<const feature *, double> heights;
+            const auto [level, insert] = heights.try_emplace( &lake, 0.0 );
+            if( insert ) {
+                std::vector<double> samples;
+                for( const point &vertex : lake.paths.front() ) {
+                    if( const auto elevation = dem_elevation( point_abs_ms( vertex ) ) ) {
+                        samples.push_back( *elevation );
+                    }
+                }
+                if( !samples.empty() ) {
+                    auto median = samples.begin() + samples.size() / 2;
+                    std::nth_element( samples.begin(), median, samples.end() );
+                    level->second = *median;
+                }
+            }
+            return water_level{ level->second, true };
+        }
+    }
+
+    // Fit a downhill profile along each source river line and index only the
+    // segments near the query. A noisy DEM sample cannot make water run uphill.
+    static const auto rivers = [&data] {
+        std::unordered_map<point, std::vector<river_segment>> result;
+        for( const feature &river : data.rivers )
+        {
+            auto path = river.paths.front();
+            const auto height_at = []( point vertex ) {
+                return dem_elevation( point_abs_ms( vertex ) ).value_or( 0.0 );
+            };
+            if( height_at( path.front() ) < height_at( path.back() ) ) {
+                std::reverse( path.begin(), path.end() );
+            }
+            struct average {
+                double sum;
+                std::size_t count;
+            };
+            std::vector<average> profile;
+            for( const point &vertex : path ) {
+                profile.push_back( { height_at( vertex ), 1 } );
+                while( profile.size() > 1 ) {
+                    const average tail = profile.back();
+                    average &earlier = profile[profile.size() - 2];
+                    if( earlier.sum / earlier.count >= tail.sum / tail.count ) {
+                        break;
+                    }
+                    earlier.sum += tail.sum;
+                    earlier.count += tail.count;
+                    profile.pop_back();
+                }
+            }
+            std::vector<double> levels;
+            for( const average &block : profile ) {
+                levels.insert( levels.end(), block.count, block.sum / block.count );
+            }
+            for( std::size_t i = 1; i < path.size(); ++i ) {
+                const point a = path[i - 1];
+                const point b = path[i];
+                const point lo = jurisdiction_cell( { std::min( a.x, b.x ) - river_radius,
+                                                      std::min( a.y, b.y ) - river_radius } );
+                const point hi = jurisdiction_cell( { std::max( a.x, b.x ) + river_radius,
+                                                      std::max( a.y, b.y ) + river_radius } );
+                for( int y = lo.y; y <= hi.y; ++y ) {
+                    for( int x = lo.x; x <= hi.x; ++x ) {
+                        result[point( x, y )].push_back( { a, b, levels[i - 1], levels[i] } );
+                    }
+                }
+            }
+        }
+        return result;
+    }();
+    if( const auto bucket = rivers.find( jurisdiction_cell( p ) ); bucket != rivers.end() ) {
+        double nearest = river_radius * river_radius;
+        std::optional<double> level;
+        for( const river_segment &segment : bucket->second ) {
+            const point offset = p - segment.from;
+            const point delta = segment.to - segment.from;
+            const double dx = delta.x;
+            const double dy = delta.y;
+            const double length_squared = dx * dx + dy * dy;
+            if( length_squared == 0 ) {
+                continue;
+            }
+            const double t = std::clamp( ( offset.x * dx + offset.y * dy ) / length_squared, 0.0, 1.0 );
+            const double x = offset.x - t * dx;
+            const double y = offset.y - t * dy;
+            const double distance = x * x + y * y;
+            if( distance < nearest ) {
+                nearest = distance;
+                level = segment.upstream + t * ( segment.downstream - segment.upstream );
+            }
+        }
+        if( level ) {
+            return water_level{ *level, false };
+        }
+    }
+    if( dem_elevation( position ).value_or( 0.0 ) < 0 &&
+    std::none_of( data.land.begin(), data.land.end(), [p]( const feature & land ) {
+    return contains( land, p );
+    } ) ) {
+        return water_level{ 0.0, true };
+    }
+    return std::nullopt;
 }
 
 std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride, bool chart )

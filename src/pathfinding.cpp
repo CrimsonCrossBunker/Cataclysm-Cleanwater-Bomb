@@ -5,6 +5,7 @@
 #include <bitset>
 #include <cstdlib>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <numeric>
 #include <optional>
@@ -14,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include "avatar.h"
 #include "cata_utility.h"
 #include "character.h"
 #include "coordinates.h"
@@ -27,12 +27,14 @@
 #include "map.h"
 #include "map_scale_constants.h"
 #include "mapdata.h"
-#include "messages.h"
 #include "maptile_fwd.h"
+#include "mdarray.h"
+#include "messages.h"
 #include "point.h"
 #include "profiling.h"
 #include "submap.h"
 #include "trap.h"
+#include "type_id.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_position.h"
@@ -72,10 +74,11 @@ struct reusable_queue : std::priority_queue<T, std::vector<T>, Compare> {
 struct pathfinder {
     using queue_type = reusable_queue<std::pair<int, tripoint_bub_ms>, pair_greater_cmp_first>;
     queue_type open;
+    int first_z = -OVERMAP_DEPTH;
     std::array< std::unique_ptr< path_data_layer >, OVERMAP_LAYERS > path_data;
 
     path_data_layer &get_layer( const int z ) {
-        std::unique_ptr< path_data_layer > &ptr = path_data[z + OVERMAP_DEPTH];
+        std::unique_ptr< path_data_layer > &ptr = path_data[z - first_z];
         if( ptr != nullptr ) {
             return *ptr;
         }
@@ -83,12 +86,13 @@ struct pathfinder {
         return *ptr;
     }
 
-    void reset( int minz, int maxz ) {
+    void reset( int minz, int maxz, int bottom ) {
+        first_z = bottom;
         for( int i = minz; i <= maxz; ++i ) {
-            std::unique_ptr< path_data_layer > &ptr = path_data[i + OVERMAP_DEPTH];
+            std::unique_ptr< path_data_layer > &ptr = path_data[i - first_z];
             if( ptr != nullptr ) {
                 // NOLINTNEXTLINE(readability-ambiguous-smartptr-reset-call) calls path_data_layer::reset
-                path_data[i + OVERMAP_DEPTH]->reset();
+                path_data[i - first_z]->reset();
             }
         }
         open.clear();
@@ -523,9 +527,9 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
     clip_to_bounds( min.x(), min.y(), min.z() );
     clip_to_bounds( max.x(), max.y(), max.z() );
 
-    auto search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
+    pathfinding_workspace::lease search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
     pathfinder &pf = search.get().ordinary;
-    pf.reset( min.z(), max.z() );
+    pf.reset( min.z(), max.z(), min_z() );
 
     pf.add_point( 0, 0, f, f );
 
@@ -1052,8 +1056,8 @@ std::vector<tripoint_bub_ms> route_with_grab(
 
     const int total_states = MAPSIZE_X * MAPSIZE_Y * GRAB_DIRS;
 
-    auto search = pf_cache.workspace.acquire();
-    auto &state = search.get();
+    pathfinding_workspace::lease search = pf_cache.workspace.acquire();
+    pathfinding_workspace::state &state = search.get();
     auto &closed = state.grab_closed;
     auto &open = state.grab_open;
     auto &gscore = state.grab_gscore;

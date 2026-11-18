@@ -82,7 +82,6 @@ class effect;
 class enchant_cache;
 class faction;
 class gun_mode;
-struct firearm_sweep;
 class inventory;
 class known_magic;
 class ma_technique;

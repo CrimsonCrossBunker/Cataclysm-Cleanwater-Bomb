@@ -2,7 +2,6 @@
 
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
-#include "mp_world_session.h"
 #include "mp_inventory_activity.h"
 #include "translation.h"
 
@@ -31,18 +30,17 @@
 #include "bionics.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "character_turn.h"
+#include "character.h"
 #include "current_map.h"
-#include "player_control.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
 #ifdef TILES
     #include "cata_imgui.h"
 #endif
 #include "cata_variant.h"
-#include "craft_reservation.h"
 #include "clzones.h"
 #include "coordinates.h"
+#include "craft_reservation.h"
 #include "creature_tracker.h"
 #include "debug.h"
 #include "debug_capture.h"
@@ -63,12 +61,15 @@
 #include "map.h"
 #include "map_iterator.h"
 #include "map_scale_constants.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mission.h"
 #include "monster.h"
+#include "mp_world_session.h"
+#include "mp_world_state.h"
 #include "mtype.h"
 #include "music.h"
 #include "npc.h"
@@ -78,6 +79,7 @@
 #include "overmapbuffer.h"
 #include "pimpl.h"
 #include "player_activity.h"
+#include "player_control.h"
 #include "point.h"
 #include "popup.h"
 #include "profiling.h"
@@ -355,7 +357,7 @@ void update_avatar_memory( avatar &u )
 void process_npc_sounds( game &owner, avatar &host )
 {
     map &primary = reality_bubble();
-    const auto &session = owner.multiplayer_session();
+    const cata_mp::world_session &session = owner.multiplayer_session();
     const bool regional = session.has_regions();
     for( npc &actor : owner.all_npcs() ) {
         if( !regional && rl_dist( actor.pos_abs(), host.pos_abs() ) >= MAX_VIEW_DISTANCE ) {
@@ -427,7 +429,7 @@ void process_avatar_activity( avatar &u )
     }
 }
 
-static void monmove()
+void monmove()
 {
     CATA_PROFILE_SCOPE();
     g->cleanup_dead();
@@ -883,7 +885,7 @@ bool game::do_turn()
             get_weather().temperature_cache.clear();
             get_weather().update_weather();
             reset_light_level();
-            for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+            for( int z = get_map().min_z(); z <= get_map().max_z(); ++z ) {
                 get_map().set_lightmap_cache_dirty( z );
             }
             const bool sleeping = u.has_effect( effect_sleep );
@@ -1041,7 +1043,7 @@ void game::simulate_turn_prefix()
     weather.update_weather();
 
     reset_light_level();
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = m.min_z(); z <= m.max_z(); z++ ) {
         m.set_lightmap_cache_dirty( z );
     }
 
@@ -1253,7 +1255,7 @@ void game::simulate_turn_suffix()
     m.build_floor_caches();
 
     m.process_falling();
-    auto &session = multiplayer_session();
+    cata_mp::world_session &session = multiplayer_session();
     if( session.has_regions() ) {
         const map_simulation_regions regions = session.simulation_regions( m );
         const auto views = session.active_maps( m );

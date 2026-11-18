@@ -197,7 +197,7 @@
         { "item": "material_soil", "count": [ 60, 75 ] }
       ]
     },
-    "plant_data": { "transform": "f_planter_seed", "max_water_storage": 100 },
+    "plant_data": { "transform": "f_planter_seed", "max_water_storage": 100, "soil_source": "substrate" },
     "examine_action": "dirtmound"
   },
   {

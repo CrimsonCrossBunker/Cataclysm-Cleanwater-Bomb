@@ -1,5 +1,6 @@
 #include "north_america_transport.h"
 
+#include <weighted_list.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -7,6 +8,8 @@
 #include <cstdlib>
 #include <functional>
 #include <initializer_list>
+#include <map>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -27,6 +30,7 @@
 #include "north_america_ecology.h"
 #include "omdata.h"
 #include "overmap.h"
+#include "overmapbuffer.h"
 #include "path_info.h"
 #include "point.h"
 #include "rng.h"
@@ -34,17 +38,37 @@
 #include "units.h"
 #include "vehicle_group.h"
 
+static const furn_str_id furn_f_street_light( "f_street_light" );
+
+static const nested_mapgen_id
+nested_mapgen_24x24_road_four_way_crossroad_vehicles_city( "24x24_road_four_way_crossroad_vehicles_city" );
+static const nested_mapgen_id
+nested_mapgen_24x24_road_straight_vehicles_city( "24x24_road_straight_vehicles_city" );
+static const nested_mapgen_id
+nested_mapgen_24x24_road_straight_vehicles_city_ew( "24x24_road_straight_vehicles_city_ew" );
+
 static const oter_str_id oter_atlas_avenue_flank_ew( "atlas_avenue_flank_ew" );
 static const oter_str_id oter_atlas_avenue_flank_ns( "atlas_avenue_flank_ns" );
 static const oter_str_id oter_road_ew( "road_ew" );
 static const oter_str_id oter_road_ns( "road_ns" );
 
+static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
+static const oter_type_str_id oter_type_bridge( "bridge" );
+static const oter_type_str_id oter_type_road( "road" );
+
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
+static const ter_str_id ter_t_concrete_wall( "t_concrete_wall" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_guardrail( "t_guardrail" );
+static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
+static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_pavement( "t_pavement" );
+static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
 static const ter_str_id ter_t_pavement_y( "t_pavement_y" );
+static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
 static const ter_str_id ter_t_sidewalk( "t_sidewalk" );
+static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
 static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
 
 static const vgroup_id VehicleGroup_highway( "highway" );
@@ -200,8 +224,7 @@ struct transport_atlas {
     std::unordered_map<point, std::vector<std::size_t>> buckets;
 
     transport_atlas() {
-        read_from_file_json( PATH_INFO::datadir_path() / "raw" / "north_america.transport",
-        [this]( const JsonValue & value ) {
+        const auto load_segments = [this]( const JsonValue & value ) {
             for( const JsonValue row : value.get_array() ) {
                 const JsonArray entry = row.get_array();
                 const road_segment segment{ { entry.get_int( 1 ), entry.get_int( 2 ) },
@@ -217,7 +240,10 @@ struct transport_atlas {
                 }
                 segments.push_back( segment );
             }
-        } );
+        };
+        const cata_path raw = PATH_INFO::datadir_path() / "raw";
+        read_from_file_json( raw / "north_america.transport", load_segments );
+        read_from_file_json( raw / "north_america_nyc.transport", load_segments );
     }
 };
 
@@ -262,7 +288,8 @@ void visit_roads( point from, point to, const Visitor &visit )
 
 } // namespace
 
-std::vector<road_cell> road_network( point_abs_omt origin, int width, int height )
+std::vector<road_cell> road_network( point_abs_omt origin, int width, int height,
+                                     bool include_local_streets )
 {
     std::vector<road_cell> roads( width * height );
     const auto set_link = [&roads, width, height]( point p, point q, unsigned lanes,
@@ -303,6 +330,9 @@ std::vector<road_cell> road_network( point_abs_omt origin, int width, int height
             previous = next;
         }
     } );
+    if( !include_local_streets ) {
+        return roads;
+    }
     // Cache ownership across the one-tile halo. Its geometry has to agree with
     // the separately generated overmap on the other side of every seam.
     const int stride = width + 2;
@@ -434,11 +464,10 @@ static void spawn_atlas_street_vehicles( mapgendata &dat, bool north_south, bool
     if( !( north_south || east_west ) || !x_in_y( 67, 100 ) ) {
         return;
     }
-    static const nested_mapgen_id straight_ns( "24x24_road_straight_vehicles_city" );
-    static const nested_mapgen_id straight_ew( "24x24_road_straight_vehicles_city_ew" );
-    static const nested_mapgen_id crossroads( "24x24_road_four_way_crossroad_vehicles_city" );
-    const nested_mapgen_id &pattern =
-        north_south && east_west ? crossroads : north_south ? straight_ns : straight_ew;
+    const nested_mapgen_id &pattern = north_south && east_west ?
+                                      nested_mapgen_24x24_road_four_way_crossroad_vehicles_city :
+                                      north_south ? nested_mapgen_24x24_road_straight_vehicles_city :
+                                      nested_mapgen_24x24_road_straight_vehicles_city_ew;
     const auto it = nested_mapgens.find( pattern );
     if( it != nested_mapgens.end() ) {
         if( const auto *recipe = it->second.funcs().pick() ) {
@@ -456,66 +485,228 @@ static bool draw_wide_avenue( mapgendata &dat )
         return false;
     }
     const oter_id side = avenue_flank( vertical );
-    // Straight road mapgen rotates its neighbor array so the direction of
-    // travel is always north/south and the flank is always to its right.
-    if( !flank && dat.east() != side ) {
-        return false;
+    const oter_id spine = vertical ? oter_road_ns : oter_road_ew;
+    const point across_step = vertical ? point::east : point::south;
+    const point along_step = vertical ? point::south : point::east;
+    tripoint_abs_omt base = dat.pos();
+    int offset = 0;
+    if( flank ) {
+        for( const int direction : {
+                 -1, 1
+                 } ) {
+            for( int distance = 1; distance <= max_road_flanks; ++distance ) {
+                const int from_flank = direction * distance;
+                const tripoint_abs_omt candidate = dat.pos() + across_step * from_flank;
+                const oter_id terrain_at = overmap_buffer.ter_existing( candidate );
+                if( terrain_at == spine ) {
+                    base = candidate;
+                    offset = -from_flank;
+                    break;
+                }
+                if( terrain_at != side ) {
+                    break;
+                }
+            }
+            if( offset != 0 ) {
+                break;
+            }
+        }
     }
-    const bool continues_before = ( flank ? ( vertical ? dat.north() : dat.west() ) :
-                                    ( vertical ? dat.neast() : dat.seast() ) ) == side;
-    const bool continues_after = ( flank ? ( vertical ? dat.south() : dat.east() ) :
-                                   ( vertical ? dat.seast() : dat.neast() ) ) == side;
+    const auto cross_section = [&]( const tripoint_abs_omt & p ) {
+        std::array<int, 2> limits{};
+        if( overmap_buffer.ter_existing( p ) == spine ) {
+            for( int i = 0; i < 2; ++i ) {
+                const int direction = i == 0 ? -1 : 1;
+                while( std::abs( limits[i] ) < max_road_flanks &&
+                       overmap_buffer.ter_existing( p + across_step * ( limits[i] + direction ) ) == side ) {
+                    limits[i] += direction;
+                }
+            }
+        }
+        return limits;
+    };
+    const auto limits = cross_section( base );
+    const auto same_width = [&]( int along ) {
+        return cross_section( base + along_step * along ) == limits;
+    };
+    const int columns = limits[1] - limits[0] + 1;
+    const bool highway = columns >= 3;
+    int length = 1;
+    // Older saves may already contain short widening strips.
+    if( columns == 2 ) {
+        for( const int direction : {
+                 -1, 1
+                 } ) {
+            for( int i = 1; length < min_wide_road_run && same_width( direction * i ); ++i ) {
+                ++length;
+            }
+        }
+    }
+    if( columns == 1 || ( !highway && length < min_wide_road_run ) ) {
+        if( flank ) {
+            dat.m.draw_fill_background( ter_t_grass.id() );
+        }
+        return flank;
+    }
+    const bool continues_before = same_width( -1 );
+    const bool continues_after = same_width( 1 );
     constexpr int span = SEEX * 2;
     constexpr int taper = span / 2 - 1;
+    const int full_middle = ( limits[0] + limits[1] + 1 ) * span / 2;
+    const int full_half_width = highway ? columns * span / 2 - 2 : 17;
+    const int lanes_per_direction = highway ? columns : 2;
+    const bool alternating = ( vertical ? base.y() : base.x() ) % 2 == 0;
     for( int along = 0; along < span; ++along ) {
         const int before = continues_before ? taper : along;
         const int after = continues_after ? taper : span - 1 - along;
         const int expansion = std::min( { taper, before, after } );
         // A contiguous wide cross-section. Each end tapers to the curb lines
         // and center stripe of the single-tile intersection it meets.
-        const int middle = taper_width( SEEX, 2 * SEEX, expansion, taper );
-        const int half_width = taper_width( 8, 17, expansion, taper );
+        const int middle = taper_width( SEEX, full_middle, expansion, taper );
+        const int half_width = taper_width( 8, full_half_width, expansion, taper );
         const int pavement_start = middle - half_width;
         const int pavement_end = middle + half_width;
+        const int lane_width = ( full_half_width - ( highway ? 3 : 0 ) ) / lanes_per_direction;
         for( int across = 0; across < span; ++across ) {
-            const int position = across + ( flank ? span : 0 );
+            const int position = across + offset * span;
+            const int from_middle = std::abs( position - middle );
             ter_id ground = ter_t_grass.id();
             if( position >= pavement_start && position < pavement_end ) {
-                if( position == middle - 1 ) {
+                if( position == middle - 1 || ( highway && position == middle ) ) {
                     ground = ter_t_pavement_y.id();
-                } else if( along % 6 < 3 && ( position == middle - half_width / 2 ||
-                                              position == middle + half_width / 2 ) ) {
+                } else if( from_middle > 0 && from_middle < lanes_per_direction * lane_width &&
+                           from_middle < half_width - 2 && from_middle % lane_width == 0 &&
+                           along % 6 < 3 ) {
                     ground = ter_t_atlas_pavement_white.id();
                 } else {
                     ground = ter_t_pavement.id();
                 }
-            } else if( position >= pavement_start - 3 && position < pavement_end + 3 ) {
+            } else if( !highway && position >= pavement_start - 3 && position < pavement_end + 3 ) {
                 ground = ter_t_sidewalk.id();
             }
             dat.m.ter_set( vertical ? point_bub_ms( across, along ) : point_bub_ms( along, across ),
                            ground );
         }
+        if( expansion == taper && along == ( alternating ? 11 : 12 ) ) {
+            const int curb = ( alternating ? pavement_start - 1 : pavement_end ) - offset * span;
+            if( curb >= 0 && curb < span ) {
+                const point_bub_ms lamp = vertical ? point_bub_ms( curb, along ) :
+                                          point_bub_ms( along, curb );
+                dat.m.furn_set( lamp, furn_f_street_light.id() );
+            }
+        }
     }
     // The second tile shares the carriageway but generates separately.
-    if( !flank ) {
+    if( !flank && !highway ) {
         spawn_atlas_street_vehicles( dat, vertical, !vertical );
     }
     return true;
 }
 
+static std::vector<point> deck_centerline( std::size_t links )
+{
+    constexpr int center = SEEX;
+    std::vector<point> endpoints;
+    for( const auto direction : om_direction::all ) {
+        if( om_lines::has_segment( links, direction ) ) {
+            endpoints.push_back( point( center, center ) + center * om_direction::displace(
+                                     direction ).raw() );
+        }
+    }
+    const point middle( center, center );
+    std::vector<point> curve;
+    // Edge midpoints and tangents agree with vanilla decks and bridgehead ramps.
+    if( endpoints.size() == 2 && endpoints[0] + endpoints[1] != 2 * middle ) {
+        for( int i = 0; i <= 32; ++i ) {
+            const double t = i / 32.0;
+            const double a = ( 1.0 - t ) * ( 1.0 - t );
+            const double b = 2.0 * t * ( 1.0 - t );
+            const double c = t * t;
+            curve.emplace_back( std::lround( a * endpoints[0].x + b * center + c * endpoints[1].x ),
+                                std::lround( a * endpoints[0].y + b * center + c * endpoints[1].y ) );
+        }
+    } else {
+        for( const point &endpoint : endpoints ) {
+            curve.insert( curve.end(), 1, middle );
+            const auto arm = line_to( middle, endpoint );
+            curve.insert( curve.end(), arm.begin(), arm.end() );
+        }
+    }
+    return curve;
+}
+
+static void draw_bridge_water( mapgendata &dat )
+{
+    if( dat.has_predecessor() && dat.last_predecessor()->is_water() ) {
+        const oter_id predecessor = dat.last_predecessor();
+        mapgendata water_dat( dat, predecessor );
+        water_dat.pop_last_predecessor();
+        if( run_mapgen_func( predecessor->get_mapgen_id(), water_dat ) ) {
+            return;
+        }
+    }
+    dat.m.draw_fill_background( ter_t_water_moving_dp.id() );
+}
+
+static void draw_curve_support( mapgendata &dat, const oter_id &deck )
+{
+    draw_bridge_water( dat );
+    const auto curve = deck_centerline( deck->get_line() );
+    if( !curve.empty() ) {
+        const point pier = curve[curve.size() / 2];
+        dat.m.draw_square_ter( ter_t_concrete_wall.id(), point_bub_ms( pier - point::south_east ),
+                               point_bub_ms( pier + point::south_east ), dat.zlevel() );
+    }
+}
+
+static void draw_raised_deck( mapgendata &dat )
+{
+    constexpr int span = 2 * SEEX;
+    const auto curve = deck_centerline( dat.terrain_type()->get_line() );
+    dat.m.draw_fill_background( ter_t_open_air.id() );
+    for( int y = 0; y < span; ++y ) {
+        for( int x = 0; x < span; ++x ) {
+            const point tile( x, y );
+            int distance = span * span;
+            for( const point &sample : curve ) {
+                const point offset = sample - tile;
+                distance = std::min( distance, offset.x * offset.x + offset.y * offset.y );
+            }
+            if( distance <= 100 ) {
+                const ter_str_id &terrain = distance == 0 && ( x + y ) % 6 < 3 ?
+                                            ter_t_pavement_y_hw_air : distance < 81 ? ter_t_pavement_hw_air :
+                                            distance < 93 ? ter_t_sidewalk_hw_air : ter_t_guardrail_hw_air;
+                dat.m.ter_set( point_bub_ms( tile ), terrain.id() );
+            }
+        }
+    }
+}
+
 bool draw_mapped_road( mapgendata &dat )
 {
-    if( dat.zlevel() != 0 || !active() ) {
+    if( !active() ) {
+        return false;
+    }
+    const oter_type_str_id type = dat.terrain_type()->get_type_id();
+    if( dat.zlevel() == 1 && type == oter_type_atlas_raised_bridge_deck ) {
+        draw_raised_deck( dat );
+        return true;
+    }
+    if( dat.zlevel() <= 0 && type == oter_type_bridge ) {
+        const oter_id deck = overmap_buffer.ter_existing( tripoint_abs_omt( dat.pos().xy(), 1 ) );
+        if( deck->get_type_id() == oter_type_atlas_raised_bridge_deck ) {
+            draw_curve_support( dat, deck );
+            return true;
+        }
+    }
+    if( dat.zlevel() != 0 ) {
         return false;
     }
     if( draw_wide_avenue( dat ) ) {
         return true;
     }
-    static const oter_type_str_id road( "road" );
-    static const oter_type_str_id bridge( "atlas_road_bridge" );
-    const oter_type_str_id type = dat.terrain_type()->get_type_id();
-    const bool on_bridge = type == bridge;
-    if( type != road && !on_bridge ) {
+    const bool on_bridge = type == oter_type_atlas_road_bridge;
+    if( type != oter_type_road && !on_bridge ) {
         return false;
     }
     const auto neighbors = road_network( dat.pos().xy() - point::south_east, 3, 3 );
@@ -527,16 +718,7 @@ bool draw_mapped_road( mapgendata &dat )
     }
 
     if( on_bridge ) {
-        bool has_water = false;
-        if( dat.has_predecessor() && dat.last_predecessor()->is_water() ) {
-            const oter_id predecessor = dat.last_predecessor();
-            mapgendata water_dat( dat, predecessor );
-            water_dat.pop_last_predecessor();
-            has_water = run_mapgen_func( predecessor->get_mapgen_id(), water_dat );
-        }
-        if( !has_water ) {
-            dat.m.draw_fill_background( ter_t_water_moving_dp.id() );
-        }
+        draw_bridge_water( dat );
     }
 
     const auto width_for = []( const road_cell & c ) {
@@ -556,7 +738,8 @@ bool draw_mapped_road( mapgendata &dat )
     constexpr int center = SEEX;
     const int lane_width = boulevard ? 4 : cell.lanes == 12 ? 2 : 3;
     const int maximum_width = on_bridge ? center - 3 : center;
-    const int half_width = std::min( width_for( cell ), maximum_width );
+    const int half_width = cell.lanes >= 6 && !on_bridge ? 8 :
+                           std::min( width_for( cell ), maximum_width );
     const int sidewalk_width = on_bridge ? 2 : boulevard || collector ? 3 : 0;
     std::array<int, 4> edge_width{};
     for( const auto dir : om_direction::all ) {
@@ -566,9 +749,9 @@ bool draw_mapped_road( mapgendata &dat )
         int width = 8;
         // Match the original 16-tile street and the narrow end of an avenue.
         // Keep the wider cross-section across uninterrupted highway or bridge spans.
-        if( on_bridge && adjacent->get_type_id() == bridge ) {
+        if( on_bridge && adjacent->get_type_id() == oter_type_atlas_road_bridge ) {
             width = std::min( { half_width, width_for( other ), center - 3 } );
-        } else if( !on_bridge && adjacent->get_type_id() == road &&
+        } else if( !on_bridge && adjacent->get_type_id() == oter_type_road &&
                    cell.street == urban_road::none && other.street == urban_road::none &&
                    cell.lanes >= 4 && other.lanes >= 4 ) {
             width = std::min( half_width, width_for( other ) );
@@ -620,6 +803,31 @@ bool draw_mapped_road( mapgendata &dat )
                                       has_sidewalk ? ter_t_sidewalk.id() : has_rail ? ter_t_guardrail.id() : ter_t_grass.id();
                 dat.m.ter_set( point_bub_ms( x, y ), ground );
             }
+        }
+    }
+    if( !on_bridge && ( boulevard || collector || cell.lanes >= 4 ) ) {
+        const auto place_lamp = [&]( int across, int along, bool vertical ) {
+            if( across < 0 || across >= 2 * center ) {
+                return;
+            }
+            const point_bub_ms lamp = vertical ? point_bub_ms( across, along ) :
+                                      point_bub_ms( along, across );
+            const ter_id ground = dat.m.ter( lamp );
+            if( ground == ter_t_sidewalk || ground == ter_t_grass ) {
+                dat.m.furn_set( lamp, furn_f_street_light.id() );
+            }
+        };
+        if( north ) {
+            place_lamp( center - vertical_width[3] - 1, 3, true );
+        }
+        if( east ) {
+            place_lamp( center - horizontal_width[2 * center - 4] - 1, 2 * center - 4, false );
+        }
+        if( south ) {
+            place_lamp( center + vertical_width[2 * center - 4], 2 * center - 4, true );
+        }
+        if( west ) {
+            place_lamp( center + horizontal_width[3], 3, false );
         }
     }
     if( !on_bridge && ( boulevard || collector ) ) {

@@ -10,56 +10,74 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <exception>
 #include <fstream>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
+#include <SDL3/SDL_properties.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <imgui/imgui.h>
 
 #include "avatar.h"
-#include "cached_options.h"
 #include "calendar.h"
+#include "cata_path.h"
+#include "cata_shader.h"
 #include "cata_tiles.h"
 #include "character.h"
+#include "color.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "enums.h"
 #include "field.h"
 #include "field_type.h"
 #include "font_loader.h"
 #include "game.h"
 #include "game_constants.h"
+#include "iexamine.h"
 #include "item.h"
 #include "level_cache.h"
 #include "lightmap.h"
 #include "line.h"
 #include "map.h"
 #include "map_memory.h"
+#include "map_scale_constants.h"
 #include "mp_gamestate.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
+#include "maptile_fwd.h"
+#include "mdarray.h"
 #include "monster.h"
 #include "mtype.h"
 #include "mutation.h"
-#include "npc.h"
+#include "options.h"
 #include "path_info.h"
 #include "point.h"
-#include "shadowcasting.h"
 #include "smooth_lighting.h"
 #include "submap.h"
+#include "tile_category.h"
+#include "tileray.h"
+#include "type_id.h"
+#include "units.h"
 #include "units_utility.h"
 #include "vehicle.h"
 #include "veh_type.h"
+#include "vpart_position.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
@@ -158,7 +176,7 @@ constexpr float VEH_WSH_GLASS_FRAC = 12.0f / 32.0f;
 constexpr float VEH_MIRROR_Z = 0.80f;
 
 // the whole rendered z range must be inside map memory's prepared region; the
-// prepare call below anchors that region's z window at 0 (see draw_terrain_window)
+// prepare call below anchors that region at the loaded map's Z origin
 static_assert( fov_3d_z_range >= OVERMAP_DEPTH &&fov_3d_z_range >= OVERMAP_HEIGHT,
                "map memory region must cover every rendered z-level" );
 
@@ -2569,7 +2587,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     // visibility caches outside that range are stale (same formula as
     // map::lowest_vision_level)
     const int lowest_vis_z = std::max( std::min( cz, upos.z() - fov_3d_z_range ),
-                                       -OVERMAP_DEPTH );
+                                       here.min_z() );
     // per-tile visibility, exactly when 2D draws the real tile: LOW/LIT/BRIGHT
     // are the lit levels map::get_visibility maps to CLEAR. everything else
     // draws memory or a vision-effect tile in 2D, so 3D must not show it
@@ -2804,8 +2822,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
     };
     // render every z-level: per-level rules (seen-only below, roof mode above,
     // open air skipped) keep the cost proportional to what actually exists
-    const int zmin = -OVERMAP_DEPTH;
-    const int zmax = OVERMAP_HEIGHT;
+    const int zmin = here.min_z();
+    const int zmax = here.max_z();
 
     // dollhouse cutout: a column whose view-level tile is seen, indoors and
     // walkable gets a translucent roof, so interiors show from inside. limited
@@ -3420,7 +3438,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
 
                 const snow_cover snow = get_weather_const().get_surface_snow_cover( here, p );
                 if( snow != snow_cover::none && tiles->get_snow_texture() ) {
-                    const SDL_Rect rect = tiles->snow_sprite( snow, here.get_abs( p ).xy() );
+                    const SDL_Rect rect = cata_tiles::snow_sprite( snow, here.get_abs( p ).xy() );
                     sprite_info sprite;
                     sprite.atlas = tiles->get_snow_texture().get();
                     sprite.u0 = static_cast<float>( rect.x ) / cata_tiles::snow_sheet_width;
@@ -5145,7 +5163,8 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
         // Generated-map structural LOD beyond the live radius. MAPBUFFER owns all
         // submaps; pointers are borrowed for this gather only and never retained.
         // On or above the surface, include every upper building level. Underground
-        // keeps the original single-level far pass.
+        // keeps the original single-level far pass. These are absolute Z levels:
+        // distant ground must not move with the loaded map's vertical origin.
         const int far_z_min = upos.z() >= 0 ? 0 : std::min( cz, 0 );
         const int far_z_max = upos.z() >= 0 ? OVERMAP_HEIGHT : far_z_min;
         const tripoint_abs_ms center_abs = here.get_abs( center );
@@ -5196,7 +5215,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                                             static_cast<float>( smd.y + SEEY ), wz ) ) {
                         continue;
                     }
-                    z_frustum[zlev + OVERMAP_DEPTH] = bounds_fully_in_frustum(
+                    z_frustum[zlev - far_z_min] = bounds_fully_in_frustum(
                                                           frustum, static_cast<float>( smd.x ),
                                                           static_cast<float>( smd.y ),
                                                           static_cast<float>( smd.x + SEEX ),
@@ -5221,7 +5240,7 @@ int gather_instances( cata_tiles *tiles, const tripoint_bub_ms &center,
                     if( count >= MAX_DRAW_INSTANCES ) {
                         return count;
                     }
-                    const uint8_t frustum_state = z_frustum[zlev + OVERMAP_DEPTH];
+                    const uint8_t frustum_state = z_frustum[zlev - far_z_min];
                     if( frustum_state == 0 ) {
                         continue;
                     }
@@ -5551,10 +5570,7 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
     if( tiles ) {
         avatar &you = get_avatar();
         const tripoint_bub_ms upos = you.pos_bub();
-        // prepare_region caches p1.z +/- fov_3d_z_range; anchoring the window
-        // at z=0 makes it cover the whole rendered range
-        // [-OVERMAP_DEPTH, +OVERMAP_HEIGHT] no matter which level the player is
-        // on (the static_assert above keeps that invariant)
+        // Center each read window on the loaded Z origin to cover every rendered level.
         if( distant_terrain_enabled() ) {
             const tripoint_abs_ms center_abs = here.get_abs( center );
             const tripoint_abs_ms player_abs = here.get_abs( upos );
@@ -5562,12 +5578,12 @@ void draw_terrain_window( SDL_Renderer *renderer, const SDL_FRect &dest,
                                 std::min( center_abs.y(), player_abs.y() ) - FAR_MEMORY_RADIUS );
             const point max_xy( std::max( center_abs.x(), player_abs.x() ) + FAR_MEMORY_RADIUS,
                                 std::max( center_abs.y(), player_abs.y() ) + FAR_MEMORY_RADIUS );
-            you.prepare_map_memory_region( tripoint_abs_ms( min_xy.x, min_xy.y, 0 ),
-                                           tripoint_abs_ms( max_xy.x, max_xy.y, 0 ) );
+            you.prepare_map_memory_region( tripoint_abs_ms( min_xy.x, min_xy.y, here.z_origin() ),
+                                           tripoint_abs_ms( max_xy.x, max_xy.y, here.z_origin() ) );
         } else {
             you.prepare_map_memory_region(
-                here.get_abs( tripoint_bub_ms( 0, 0, 0 ) ),
-                here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, 0 ) ) );
+                here.get_abs( tripoint_bub_ms( 0, 0, here.z_origin() ) ),
+                here.get_abs( tripoint_bub_ms( MAPSIZE_X - 1, MAPSIZE_Y - 1, here.z_origin() ) ) );
         }
         const level_cache &mem_level = here.get_cache_ref( upos.z() );
         static tripoint_bub_ms last_sweep_pos = tripoint_bub_ms( -1, -1, -1 );

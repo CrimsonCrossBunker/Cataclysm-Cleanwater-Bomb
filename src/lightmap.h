@@ -3,14 +3,14 @@
 #define CATA_SRC_LIGHTMAP_H
 
 #include <cmath> // IWYU pragma: keep
-#include <ostream>
-#include <string_view>
-
 #include <cstdint>
+#include <ostream>
+#include <type_traits>
 
 #include "map_scale_constants.h"
-#include "point.h"
 #include "type_id.h"
+
+struct point;
 
 constexpr float LIGHT_SOURCE_LOCAL = 0.1f;
 constexpr float LIGHT_SOURCE_BRIGHT = 10.0f;

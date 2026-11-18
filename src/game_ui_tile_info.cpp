@@ -36,8 +36,8 @@
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_memory.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "omdata.h"
 #include "output.h"
@@ -137,7 +137,7 @@ void game::print_all_tile_info( const tripoint_bub_ms &lp, const catacurses::win
     } else {
         // Check other z-levels
         tripoint_bub_ms tmp = lp;
-        for( tmp.z() = -OVERMAP_DEPTH; tmp.z() <= OVERMAP_HEIGHT; tmp.z()++ ) {
+        for( tmp.z() = get_map().min_z(); tmp.z() <= get_map().max_z(); tmp.z()++ ) {
             if( tmp.z() == lp.z() ) {
                 continue;
             }
@@ -263,6 +263,11 @@ void game::print_terrain_info( const tripoint_bub_ms &lp, const catacurses::wind
         line += lines - 1;
     }
 
+    if( north_america::elevation_active() ) {
+        mvwprintz( w_look, point( column, ++line ), c_light_gray, _( "Elevation: %.1f m" ),
+                   north_america::altitude_at( here, lp ) );
+    }
+
     // Print light level on the selected tile.
     std::pair<std::string, nc_color> ll = get_light_level( std::max( 1.0,
                                           LIGHT_AMBIENT_LIT - here.ambient_light_at( lp ) + 1.0 ) );
@@ -270,7 +275,7 @@ void game::print_terrain_info( const tripoint_bub_ms &lp, const catacurses::wind
     mvwprintz( w_look, point( column + utf8_width( _( "Lighting: " ) ), line ), ll.second, ll.first );
 
     // Print the terrain and any furntiure on the tile below and whether it is walkable.
-    if( lp.z() > -OVERMAP_DEPTH && !here.has_floor( lp ) ) {
+    if( lp.z() > here.min_z() && !here.has_floor( lp ) ) {
         tripoint_bub_ms below( lp + tripoint::below );
         std::string tile_below = here.tername( below );
         if( here.has_furn( below ) ) {

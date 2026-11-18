@@ -1,5 +1,18 @@
+#include <activity_actor.h>
+#include <bodypart.h>
+#include <character.h>
+#include <character_id.h>
+#include <clone_ptr.h>
+#include <handle_liquid.h>
+#include <item_location.h>
+#include <item_source.h>
+#include <item_uid.h>
+#include <item_unload.h>
+#include <plant_climate.h>
+#include <array>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 #include <set>
@@ -19,11 +32,11 @@
 #include "event.h"
 #include "event_bus.h"
 #include "event_subscriber.h"
-#include "global_vars.h"
-#include "game.h"
 #include "farming.h"
-#include "fungal_effects.h"
 #include "flexbuffer_json.h"
+#include "fungal_effects.h"
+#include "game.h"
+#include "global_vars.h"
 #include "iexamine.h"
 #include "item.h"
 #include "itype.h"
@@ -36,25 +49,35 @@
 #include "map_selector.h"
 #include "mapdata.h"
 #include "math_parser_diag_value.h"
+#include "mp_client_conn.h"
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "options.h"
-#include "player_helpers.h"
 #include "player_activity.h"
+#include "player_helpers.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "ret_val.h"
 #include "rng.h"
+#include "rng_helpers.h"
 #include "submap.h"
 #include "type_id.h"
 #include "units.h"
 #include "value_ptr.h"
 #include "vehicle.h"
 #include "vehicle_control.h"
-#include "mp_client_conn.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
+static const activity_id ACT_FORAGE( "ACT_FORAGE" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
+
+static const efftype_id effect_sleep( "sleep" );
+static const efftype_id effect_spores( "spores" );
+
+static const furn_str_id furn_f_dahlia( "f_dahlia" );
+static const furn_str_id furn_f_flower_marloss( "f_flower_marloss" );
+static const furn_str_id furn_f_mutpoppy( "f_mutpoppy" );
 static const furn_str_id furn_f_plant_seed( "f_plant_seed" );
 static const furn_str_id furn_f_planter_seed( "f_planter_seed" );
 static const furn_str_id furn_test_f_plant_harvest( "test_f_plant_harvest" );
@@ -63,39 +86,69 @@ static const furn_str_id furn_test_f_plant_overgrown( "test_f_plant_overgrown" )
 static const furn_str_id furn_test_f_plant_seed( "test_f_plant_seed" );
 static const furn_str_id furn_test_f_plant_seedling( "test_f_plant_seedling" );
 static const furn_str_id
-furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
-static const furn_str_id
-furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
-static const furn_str_id
-furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
+furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
+static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
 static const furn_str_id
 furn_test_f_planter_no_overgrowth_harvest( "test_f_planter_no_overgrowth_harvest" );
 static const furn_str_id
-furn_test_f_planter_high_water_mature( "test_f_planter_high_water_mature" );
-static const furn_str_id furn_test_f_planter_high_water_seed( "test_f_planter_high_water_seed" );
+furn_test_f_planter_no_overgrowth_mature( "test_f_planter_no_overgrowth_mature" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seed( "test_f_planter_no_overgrowth_seed" );
+static const furn_str_id
+furn_test_f_planter_no_overgrowth_seedling( "test_f_planter_no_overgrowth_seedling" );
 
+static const itype_id itype_apple( "apple" );
 static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_dahlia_root( "dahlia_root" );
 static const itype_id itype_debug_backpack( "debug_backpack" );
 static const itype_id itype_fertilizer_commercial( "fertilizer_commercial" );
 static const itype_id itype_fertilizer_liquid( "fertilizer_liquid" );
 static const itype_id itype_fungal_seeds( "fungal_seeds" );
+static const itype_id itype_hammer( "hammer" );
+static const itype_id itype_hand_drill( "hand_drill" );
+static const itype_id itype_maple_sap( "maple_sap" );
 static const itype_id itype_marloss_seed( "marloss_seed" );
+static const itype_id itype_mycus_fruit( "mycus_fruit" );
+static const itype_id itype_remotevehcontrol( "remotevehcontrol" );
+static const itype_id itype_rock( "rock" );
+static const itype_id itype_seed_dahlia( "seed_dahlia" );
+static const itype_id itype_shovel( "shovel" );
 static const itype_id itype_test_seed_eoc( "test_seed_eoc" );
 static const itype_id itype_test_seed_simple( "test_seed_simple" );
+static const itype_id itype_tree_spile( "tree_spile" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
+static const quality_id qual_DIG( "DIG" );
+static const quality_id qual_DRILL( "DRILL" );
+static const quality_id qual_HAMMER( "HAMMER" );
+
 static const skill_id skill_survival( "survival" );
+
 static const spell_id spell_test_spell_fertilize_plant( "test_spell_fertilize_plant" );
+
 static const ter_furn_transform_id
 ter_furn_transform_ter_test_plant_seed_to_harvest( "ter_test_plant_seed_to_harvest" );
 static const ter_furn_transform_id
 ter_furn_transform_ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_to_mature" );
+
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
+static const ter_str_id ter_t_tree_apple( "t_tree_apple" );
+static const ter_str_id ter_t_tree_hickory( "t_tree_hickory" );
+static const ter_str_id ter_t_tree_hickory_dead( "t_tree_hickory_dead" );
+static const ter_str_id ter_t_tree_maple( "t_tree_maple" );
+static const ter_str_id ter_t_tree_maple_tapped( "t_tree_maple_tapped" );
+static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_test_t_terrain_growth_final( "test_t_terrain_growth_final" );
 static const ter_str_id ter_test_t_terrain_growth_middle( "test_t_terrain_growth_middle" );
 static const ter_str_id ter_test_t_terrain_growth_seed( "test_t_terrain_growth_seed" );
-static const ter_str_id ter_t_dirt( "t_dirt" );
-static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
+
+static const trait_id trait_BURROW( "BURROW" );
+static const trait_id trait_THRESH_MARLOSS( "THRESH_MARLOSS" );
+static const trait_id trait_THRESH_MYCUS( "THRESH_MYCUS" );
+
+static const vproto_id vehicle_prototype_autotractor( "autotractor" );
 static const vproto_id vehicle_prototype_oldtractor( "oldtractor" );
 
 namespace
@@ -119,10 +172,47 @@ struct plant_event_subscriber : public event_subscriber {
     std::function<void( const cata::event & )> on_event;
 };
 
+struct consumption_event_subscriber : public event_subscriber {
+    using event_subscriber::notify;
+    std::function<void( const cata::event & )> callback;
+    void notify( const cata::event &event ) override {
+        if( event.type() == event_type::character_consumes_item ) {
+            callback( event );
+        }
+    }
+};
+
+struct damage_event_subscriber : public event_subscriber {
+    using event_subscriber::notify;
+    std::function<void()> callback;
+    int wakes = 0;
+    void notify( const cata::event &event ) override {
+        if( event.type() == event_type::character_takes_damage ) {
+            callback();
+        } else if( event.type() == event_type::character_wakes_up ) {
+            ++wakes;
+        }
+    }
+};
+
 void reset_test_globals()
 {
     global_variables &globvars = get_globals();
     globvars.clear_global_values();
+}
+
+time_point date_in_season( season_type season )
+{
+    time_point date = calendar::turn_zero + 12_hours;
+    const time_point end = date + calendar::year_length();
+    for( ; date < end; date += 1_days ) {
+        if( season_of_year( date ) == season && season_of_year( date - 2_days ) == season &&
+            season_of_year( date + 2_days ) == season ) {
+            break;
+        }
+    }
+    REQUIRE( date < end );
+    return date;
 }
 
 } // namespace
@@ -318,6 +408,7 @@ TEST_CASE( "plant_effective_growth_time_authority", "[plant][growth]" )
     // Use the test (non-irrigated) plant furniture so sub-day growth stages
     // are processed immediately instead of being deferred to the daily loop.
     item seed( itype_test_seed_simple );
+    REQUIRE_FALSE( seed.type->seed->climate.has_value() );
     seed.set_birthday( calendar::turn );
     here.add_item( plot, seed );
     here.furn_set( plot, furn_test_f_plant_seed );
@@ -1406,12 +1497,12 @@ TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
-    calendar::turn = calendar::turn_zero + calendar::season_length();
+    calendar::turn = date_in_season( SUMMER );
     ret_val<void> wrong_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( !wrong_season.success() );
     CHECK( wrong_season.str().find( "correct season" ) != std::string::npos );
 
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     ret_val<void> correct_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( correct_season.success() );
 
@@ -1445,7 +1536,7 @@ TEST_CASE( "terrain_growth_can_fertilize_syncs_expired_growth",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
     terrain_growth_state state;
@@ -1474,7 +1565,7 @@ TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
     here.add_item( plot, item( itype_test_seed_simple ) );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
@@ -1692,7 +1783,7 @@ TEST_CASE( "delayed_planting_owns_the_character_and_unoccupied_plot",
             if( event.type() == event_type::character_plants_seed ) {
                 CHECK( event.get<character_id>( "character" ) == remote.getID() );
                 here.i_clear( plot );
-                remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 321 ) );
+                remote.assign_activity( player_activity( ACT_WAIT, 321 ) );
             }
         };
         get_event_bus().subscribe( &sub );
@@ -1700,7 +1791,7 @@ TEST_CASE( "delayed_planting_owns_the_character_and_unoccupied_plot",
             get_event_bus().unsubscribe( &sub );
         } );
         remote.activity.actor->finish( remote.activity, remote );
-        CHECK( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( remote.activity.id() == ACT_WAIT );
         CHECK( remote.activity.moves_left == 321 );
         CHECK( remote.charges_of( itype_test_seed_eoc ) == 4 );
         CHECK( here.i_at( plot ).empty() );
@@ -1772,7 +1863,7 @@ TEST_CASE( "fertilizing_revalidates_the_original_plant_before_spending_material"
             if( event.type() == event_type::character_fertilizes_plant ) {
                 CHECK( event.get<character_id>( "character" ) == remote.getID() );
                 here.i_clear( plot );
-                remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 432 ) );
+                remote.assign_activity( player_activity( ACT_WAIT, 432 ) );
             }
         };
         get_event_bus().subscribe( &sub );
@@ -1780,7 +1871,7 @@ TEST_CASE( "fertilizing_revalidates_the_original_plant_before_spending_material"
             get_event_bus().unsubscribe( &sub );
         } );
         remote.activity.actor->finish( remote.activity, remote );
-        CHECK( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( remote.activity.id() == ACT_WAIT );
         CHECK( remote.activity.moves_left == 432 );
         CHECK( remote.charges_of( itype_fertilizer_commercial ) == 4 );
         CHECK( here.i_at( plot ).empty() );
@@ -1819,7 +1910,7 @@ TEST_CASE( "harvest_commits_once_before_reentrant_events_and_preserves_new_work"
         // New objects and work installed by the event must survive settlement.
         here.add_item( plot, item( itype_test_seed_simple ) );
         here.furn_set( plot, furn_test_f_plant_seed );
-        who.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 654 ) );
+        who.assign_activity( player_activity( ACT_WAIT, 654 ) );
     };
     get_event_bus().subscribe( &sub );
     const on_out_of_scope cleanup( [&]() {
@@ -1832,7 +1923,7 @@ TEST_CASE( "harvest_commits_once_before_reentrant_events_and_preserves_new_work"
     CHECK( iexamine::get_seed_at( here, plot )->typeId() == itype_test_seed_simple );
     CHECK( here.furn( plot ) == furn_test_f_plant_seed );
     CHECK( product_count() == committed_items );
-    CHECK( who.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( who.activity.id() == ACT_WAIT );
     CHECK( who.activity.moves_left == 654 );
     CHECK( get_globals().get_global_value( "test_harvest_count" ).to_string() ==
            std::to_string( sub.events.front().get<int>( "plant_count" ) ) );
@@ -1863,7 +1954,7 @@ TEST_CASE( "watering_event_can_replace_crop_without_dereferencing_the_old_seed",
             CHECK( event.get<character_id>( "character" ) == remote.getID() );
             here.i_clear( plot );
             here.add_item( plot, item( itype_test_seed_simple ) );
-            remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 456 ) );
+            remote.assign_activity( player_activity( ACT_WAIT, 456 ) );
         }
     };
     get_event_bus().subscribe( &sub );
@@ -1877,7 +1968,7 @@ TEST_CASE( "watering_event_can_replace_crop_without_dereferencing_the_old_seed",
     CHECK( iexamine::get_plant_water( *iexamine::get_seed_at( here, plot ) ) == 0 );
     CHECK( host.charges_of( itype_water_clean ) == 2 );
     CHECK( remote.charges_of( itype_water_clean ) == 1 );
-    CHECK( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+    CHECK( remote.activity.id() == ACT_WAIT );
     CHECK( remote.activity.moves_left == 456 );
 }
 
@@ -1901,21 +1992,20 @@ TEST_CASE( "spore_exposure_uses_each_players_body_with_the_same_native_random_se
     for( int repeat = 0; repeat < 8; ++repeat ) {
         fungal_effects().fungalize( host.pos_bub() );
     }
-    const auto host_rng = rng_get_engine();
+    const std::string host_rng = capture_rng_state();
     rng_set_engine_seed( 713 );
     for( int repeat = 0; repeat < 8; ++repeat ) {
         fungal_effects().fungalize( remote.pos_bub() );
     }
-    CHECK( rng_get_engine() == host_rng );
+    CHECK( capture_rng_state() == host_rng );
     int exposed_parts = 0;
-    const efftype_id spores( "spores" );
     for( const char *name : {
              "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r"
          } ) {
         const bodypart_id part( name );
-        CHECK( remote.get_effect_int( spores, part ) == host.get_effect_int( spores, part ) );
-        CHECK( remote.get_effect_dur( spores, part ) == host.get_effect_dur( spores, part ) );
-        exposed_parts += remote.has_effect( spores, part );
+        CHECK( remote.get_effect_int( effect_spores, part ) == host.get_effect_int( effect_spores, part ) );
+        CHECK( remote.get_effect_dur( effect_spores, part ) == host.get_effect_dur( effect_spores, part ) );
+        exposed_parts += remote.has_effect( effect_spores, part );
     }
     CHECK( exposed_parts > 0 );
 }
@@ -1932,7 +2022,7 @@ TEST_CASE( "vehicle_farming_uses_the_driver_and_commits_before_callbacks",
     vehicle *machine = here.add_vehicle( vehicle_prototype_oldtractor, origin, 0_degrees, 0,
                                          veh_spawn_status::UNDAMAGED );
     REQUIRE( machine );
-    npc &driver = spawn_npc( origin.xy(), "test_talker" );
+    npc &driver = spawn_npc( host.pos_bub().xy(), "test_talker" );
     clear_character( driver, true );
     driver.setpos( here, origin );
     driver.controlling_vehicle = true;
@@ -2086,11 +2176,11 @@ TEST_CASE( "vehicle_farming_uses_the_driver_and_commits_before_callbacks",
     }
     SECTION( "client_replica_cannot_simulate_farming_or_advance_gameplay_rng" ) {
         cata_mp::set_client_mode( true );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         machine->operate_planter( here );
         machine->operate_reaper( here );
         machine->on_move( here );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
         CHECK( sub.events.empty() );
         CHECK( supplies() == 5 );
         CHECK( here.i_at( planting ).empty() );
@@ -2107,13 +2197,13 @@ TEST_CASE( "remote_reaper_collects_its_yield_without_using_the_operators_walking
     map &here = get_map();
     avatar &host = get_avatar();
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::east * 12;
-    vehicle *machine = here.add_vehicle( vproto_id( "autotractor" ), origin, 0_degrees, 100,
+    vehicle *machine = here.add_vehicle( vehicle_prototype_autotractor, origin, 0_degrees, 100,
                                          veh_spawn_status::UNDAMAGED );
     REQUIRE( machine );
     npc &remote = spawn_npc( ( host.pos_bub() + tripoint::south ).xy(), "test_talker" );
     clear_character( remote, true );
     remote.setpos( here, host.pos_bub() + tripoint::south );
-    item controller( itype_id( "remotevehcontrol" ) );
+    item controller( itype_remotevehcontrol );
     controller.active = true;
     remote.i_add( controller );
     REQUIRE( set_remote_vehicle( remote, here, machine ) );
@@ -2168,7 +2258,7 @@ TEST_CASE( "wild_harvest_owns_its_worker_and_depletes_the_observed_plant_once",
     const time_point previous_time = calendar::turn;
     calendar::turn = calendar::turn_zero + 2 * calendar::season_length() + 12_hours;
     const tripoint_bub_ms tree = host.pos_bub() + tripoint::east;
-    here.ter_set( tree, ter_str_id( "t_tree_apple" ) );
+    here.ter_set( tree, ter_t_tree_apple );
     npc &remote = spawn_npc( ( host.pos_bub() + tripoint::south ).xy(), "test_talker" );
     clear_character( remote, true );
     remote.setpos( here, host.pos_bub() + tripoint::south );
@@ -2181,25 +2271,24 @@ TEST_CASE( "wild_harvest_owns_its_worker_and_depletes_the_observed_plant_once",
         calendar::turn = previous_time;
         cata_mp::set_client_mode( false );
     } );
-    const auto command = capture_farming_command( remote, here, here.get_abs( tree ),
-                         farming_action::gather );
+    const farming_command command = capture_farming_command( remote, here, here.get_abs( tree ),
+                                    farming_action::gather );
     REQUIRE( execute_farming_command( remote, command ) );
     REQUIRE( execute_farming_command( host, command ) );
     REQUIRE( remote.activity.actor );
     REQUIRE( host.activity.actor );
     const auto yield_count = [&]() {
         int count = 0;
-        const itype_id apple( "apple" );
         for( Character *who : {
                  static_cast<Character *>( &host ), static_cast<Character *>( &remote )
              } ) {
             for( const item *value : who->items_with( [&]( const item & candidate ) {
-            return candidate.typeId() == apple;
+            return candidate.typeId() == itype_apple;
             } ) ) {
                 count += value->count();
             }
             for( const item &value : here.i_at( who->pos_bub() ) ) {
-                if( value.typeId() == apple ) {
+                if( value.typeId() == itype_apple ) {
                     count += value.count();
                 }
             }
@@ -2211,11 +2300,11 @@ TEST_CASE( "wild_harvest_owns_its_worker_and_depletes_the_observed_plant_once",
         CHECK_FALSE( remote.activity );
         const int harvested = yield_count();
         REQUIRE( harvested > 0 );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         host.activity.actor->finish( host.activity, host );
         CHECK_FALSE( host.activity );
         CHECK( yield_count() == harvested );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
     }
     SECTION( "a_saved_activity_rejects_another_operator_but_can_resume_for_its_owner" ) {
         std::ostringstream saved;
@@ -2234,11 +2323,11 @@ TEST_CASE( "wild_harvest_owns_its_worker_and_depletes_the_observed_plant_once",
     }
     SECTION( "changed_ground_cancels_before_rng_or_yield" ) {
         here.ter_set( tree, ter_t_dirt );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         remote.activity.actor->finish( remote.activity, remote );
         CHECK_FALSE( remote.activity );
         CHECK( yield_count() == 0 );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
         CHECK( here.ter( tree ) == ter_t_dirt );
     }
 }
@@ -2256,9 +2345,9 @@ TEST_CASE( "foraging_duration_and_completion_are_authoritative_and_bound_to_the_
     remote.set_skill_level( skill_survival, 10 );
     remote.set_moves( 100 );
     const tripoint_bub_ms bush = host.pos_bub() + tripoint::east;
-    here.ter_set( bush, ter_str_id( "t_underbrush" ) );
-    const auto choice = capture_farming_command( remote, here, here.get_abs( bush ),
-                        farming_action::forage );
+    here.ter_set( bush, ter_t_underbrush );
+    const farming_command choice = capture_farming_command( remote, here, here.get_abs( bush ),
+                                   farming_action::forage );
     const on_out_of_scope cleanup( [&]() {
         cata_mp::set_client_mode( false );
         host.activity.set_to_null();
@@ -2266,16 +2355,16 @@ TEST_CASE( "foraging_duration_and_completion_are_authoritative_and_bound_to_the_
     } );
     SECTION( "a_client_cannot_start_native_work_or_draw_its_duration" ) {
         cata_mp::set_client_mode( true );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         remote.assign_activity( forage_activity_actor( here.get_abs( bush ) ) );
         CHECK_FALSE( remote.activity );
-        CHECK( rng_get_engine() == random_before );
-        CHECK( here.ter( bush ) == ter_str_id( "t_underbrush" ) );
+        CHECK( capture_rng_state() == random_before );
+        CHECK( here.ter( bush ) == ter_t_underbrush );
     }
     SECTION( "saved_work_finishes_for_the_remote_player_once" ) {
         REQUIRE( execute_farming_command( remote, choice ) );
-        REQUIRE( remote.activity.id() == activity_id( "ACT_FORAGE" ) );
+        REQUIRE( remote.activity.id() == ACT_FORAGE );
         CHECK( remote.activity.execution() == activity_execution::authoritative );
         CHECK( remote.activity.moves_total > 0 );
         CHECK_FALSE( host.activity );
@@ -2286,22 +2375,22 @@ TEST_CASE( "foraging_duration_and_completion_are_authoritative_and_bound_to_the_
         REQUIRE( remote.activity.actor );
         remote.activity.actor->finish( remote.activity, remote );
         CHECK_FALSE( remote.activity );
-        CHECK( here.ter( bush ) != ter_str_id( "t_underbrush" ) );
-        const auto random_before = rng_get_engine();
+        CHECK( here.ter( bush ) != ter_t_underbrush );
+        const std::string random_before = capture_rng_state();
         remote.activity.deserialize( json_loader::from_string( saved.str() ).get_object() );
         REQUIRE( remote.activity.actor );
         remote.activity.actor->finish( remote.activity, remote );
         CHECK_FALSE( remote.activity );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
     }
     SECTION( "moving_away_cancels_before_completion" ) {
         REQUIRE( execute_farming_command( remote, choice ) );
         remote.setpos( here, remote.pos_bub() + tripoint::south * 3 );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         remote.activity.actor->finish( remote.activity, remote );
         CHECK_FALSE( remote.activity );
-        CHECK( here.ter( bush ) == ter_str_id( "t_underbrush" ) );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( here.ter( bush ) == ter_t_underbrush );
+        CHECK( capture_rng_state() == random_before );
     }
 }
 
@@ -2323,19 +2412,10 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     worker.set_skill_level( skill_survival, 10 );
     worker.set_committed_goal( "eat_food" );
     const tripoint_bub_ms tree = origin + tripoint::east;
-    here.ter_set( tree, ter_str_id( "t_tree_apple" ) );
+    here.ter_set( tree, ter_t_tree_apple );
     worker.assign_activity( harvest_activity_actor( tree ) );
     REQUIRE( worker.activity.actor );
-    class observer : public event_subscriber
-    {
-        public:
-            std::function<void( const cata::event & )> callback;
-            void notify( const cata::event &event ) override {
-                if( event.type() == event_type::character_consumes_item ) {
-                    callback( event );
-                }
-            }
-    } sub;
+    consumption_event_subscriber sub;
     int events = 0;
     int remaining_at_callback = 0;
     const character_id worker_id = worker.getID();
@@ -2354,12 +2434,12 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     sub.callback = [&]( const cata::event & event ) {
         ++events;
         CHECK( event.get<character_id>( "character" ) == worker_id );
-        CHECK( here.ter( tree ) != ter_str_id( "t_tree_apple" ) );
+        CHECK( here.ter( tree ) != ter_t_tree_apple );
         remaining_at_callback = ground_yield();
         if( retire ) {
             g->remove_npc( worker_id );
         } else {
-            worker.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 321 ) );
+            worker.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     };
     get_event_bus().subscribe( &sub );
@@ -2372,8 +2452,27 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     REQUIRE( events == 1 );
     CHECK( ground_yield() == remaining_at_callback );
     if( !retire ) {
-        CHECK( worker.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( worker.activity.id() == ACT_WAIT );
         CHECK( worker.activity.moves_left == 321 );
+    }
+}
+
+TEST_CASE( "plant_examine_actions_remain_distinct_after_linking", "[plant][examine]" )
+{
+    const std::array<std::pair<furn_str_id, iexamine_examine_function>, 3> flowers = {{
+            { furn_f_mutpoppy, iexamine::flower_poppy },
+            { furn_f_dahlia, iexamine::flower_dahlia },
+            { furn_f_flower_marloss, iexamine::flower_marloss }
+        }
+    };
+    for( const auto &flower : flowers ) {
+        CAPTURE( flower.first );
+        for( const auto &candidate : flowers ) {
+            CAPTURE( candidate.first );
+            CHECK( flower.first.obj().has_examine( candidate.second ) ==
+                   ( flower.first == candidate.first ) );
+        }
+        CHECK_FALSE( flower.first.obj().has_examine( iexamine::flower_cactus ) );
     }
 }
 
@@ -2382,7 +2481,7 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const restore_on_out_of_scope restore_time( calendar::turn );
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     clear_avatar();
     clear_map_without_vision();
     map &here = get_map();
@@ -2397,8 +2496,7 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
         clear_npcs();
     } );
     const tripoint_bub_ms flower = remote.pos_bub() + tripoint::east;
-    const furn_str_id dahlia( "f_dahlia" );
-    here.furn_set( flower, dahlia );
+    here.furn_set( flower, furn_f_dahlia );
     farming_command choice = capture_farming_command( remote, here, here.get_abs( flower ),
                              farming_action::flower );
     const auto yield = [&]( Character & who, const itype_id & type ) {
@@ -2417,50 +2515,50 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
     };
     SECTION( "client_cannot_run_native_harvest_or_advance_gameplay_rng" ) {
         cata_mp::set_client_mode( true );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_before );
-        CHECK( here.furn( flower ) == dahlia );
-        CHECK( yield( remote, itype_id( "seed_dahlia" ) ) == 0 );
+        CHECK( capture_rng_state() == random_before );
+        CHECK( here.furn( flower ) == furn_f_dahlia );
+        CHECK( yield( remote, itype_seed_dahlia ) == 0 );
     }
     SECTION( "winter_and_forged_nectar_choices_are_rejected_without_rng" ) {
-        calendar::turn = calendar::turn_zero + 3 * calendar::season_length() + 12_hours;
+        calendar::turn = date_in_season( WINTER );
         REQUIRE( season_of_year( calendar::turn ) == WINTER );
-        const auto random_before = rng_get_engine();
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        calendar::turn = calendar::turn_zero + 12_hours;
+        calendar::turn = date_in_season( SPRING );
         choice.drink = true;
         choice.pick = false;
         REQUIRE_FALSE( iexamine_helper::can_drink_nectar( remote ) );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_before );
-        CHECK( here.furn( flower ) == dahlia );
+        CHECK( capture_rng_state() == random_before );
+        CHECK( here.furn( flower ) == furn_f_dahlia );
     }
     SECTION( "changed_surface_rejects_an_old_choice" ) {
-        here.furn_set( flower, furn_str_id( "f_mutpoppy" ) );
-        const auto random_before = rng_get_engine();
+        here.furn_set( flower, furn_f_mutpoppy );
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_before );
-        CHECK( here.furn( flower ) == furn_str_id( "f_mutpoppy" ) );
+        CHECK( capture_rng_state() == random_before );
+        CHECK( here.furn( flower ) == furn_f_mutpoppy );
     }
     SECTION( "native_digging_capability_controls_roots_and_the_other_player_gets_nothing" ) {
         bool dig = false;
         SECTION( "without_digging" ) {}
         SECTION( "burrowing_can_collect_roots" ) {
-            remote.set_mutation( trait_id( "BURROW" ) );
+            remote.set_mutation( trait_BURROW );
             dig = true;
         }
         REQUIRE( execute_farming_command( remote, choice ) );
         CHECK_FALSE( here.has_furn( flower ) );
-        const int seeds = yield( remote, itype_id( "seed_dahlia" ) );
+        const int seeds = yield( remote, itype_seed_dahlia );
         REQUIRE( seeds > 0 );
-        CHECK( ( yield( remote, itype_id( "dahlia_root" ) ) > 0 ) == dig );
-        CHECK( yield( host, itype_id( "seed_dahlia" ) ) == 0 );
-        const auto random_after = rng_get_engine();
+        CHECK( ( yield( remote, itype_dahlia_root ) > 0 ) == dig );
+        CHECK( yield( host, itype_seed_dahlia ) == 0 );
+        const std::string random_after = capture_rng_state();
         CHECK_FALSE( execute_farming_command( host, choice ) );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_after );
-        CHECK( yield( remote, itype_id( "seed_dahlia" ) ) == seeds );
+        CHECK( capture_rng_state() == random_after );
+        CHECK( yield( remote, itype_seed_dahlia ) == seeds );
     }
 }
 
@@ -2480,9 +2578,9 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
     host.set_moves( 100 );
     const character_id remote_id = remote.getID();
     const tripoint_bub_ms flower = origin + tripoint::east;
-    here.furn_set( flower, furn_str_id( "f_flower_marloss" ) );
-    const auto choice = capture_farming_command( remote, here, here.get_abs( flower ),
-                        farming_action::flower );
+    here.furn_set( flower, furn_f_flower_marloss );
+    const farming_command choice = capture_farming_command( remote, here, here.get_abs( flower ),
+                                   farming_action::flower );
     const auto seeds = [&]() {
         int count = 0;
         for( const item &value : here.i_at( origin ) ) {
@@ -2502,16 +2600,16 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
         REQUIRE( sub.events.size() == 1 );
         CHECK( event.get<character_id>( "character" ) == remote_id );
         CHECK_FALSE( here.has_furn( flower ) );
-        CHECK( seeds() == 3 );
-        const auto random_before = rng_get_engine();
+        CHECK( seeds() == item( itype_marloss_seed ).count() );
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK_FALSE( execute_farming_command( host, choice ) );
-        CHECK( rng_get_engine() == random_before );
+        CHECK( capture_rng_state() == random_before );
         if( remove_operator ) {
             g->remove_npc( remote_id );
         } else {
-            here.furn_set( flower, furn_str_id( "f_dahlia" ) );
-            remote.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 321 ) );
+            here.furn_set( flower, furn_f_dahlia );
+            remote.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     };
     get_event_bus().subscribe( &sub );
@@ -2521,12 +2619,12 @@ TEST_CASE( "marloss_flower_commits_before_callbacks_and_keeps_remaining_output",
     } );
     CHECK( execute_farming_command( remote, choice ) );
     REQUIRE( sub.events.size() == 1 );
-    CHECK( seeds() == 3 );
+    CHECK( seeds() == item( itype_marloss_seed ).count() );
     CHECK( here.i_at( origin ).size() == 2 );
     CHECK_FALSE( host.activity );
     if( !remove_operator ) {
-        CHECK( here.furn( flower ) == furn_str_id( "f_dahlia" ) );
-        CHECK( remote.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( here.furn( flower ) == furn_f_dahlia );
+        CHECK( remote.activity.id() == ACT_WAIT );
         CHECK( remote.activity.moves_left == 321 );
     }
 }
@@ -2543,45 +2641,49 @@ TEST_CASE( "special_tree_harvest_uses_native_traits_and_tools_of_the_operator",
     clear_character( remote, true );
     remote.setpos( here, host.pos_bub() + tripoint::south );
     remote.set_moves( 100 );
+    clear_items( 0 );
+    REQUIRE( here.i_at( host.pos_bub() ).empty() );
+    REQUIRE( here.i_at( remote.pos_bub() ).empty() );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = remote.pos_bub() + tripoint::east;
     SECTION( "marloss_offering_depends_on_remote_traits_not_host_traits" ) {
-        here.ter_set( tree, ter_str_id( "t_marloss" ) );
-        host.set_mutation( trait_id( "THRESH_MYCUS" ) );
-        remote.set_mutation( trait_id( "THRESH_MARLOSS" ) );
-        const auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
-                            farming_action::marloss );
+        const bool is_tree = GENERATE( false, true );
+        here.ter_set( tree, ter_str_id( is_tree ? "t_marloss_tree" : "t_marloss" ) );
+        host.set_mutation( trait_THRESH_MYCUS );
+        remote.set_mutation( trait_THRESH_MARLOSS );
+        const farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
+                                       farming_action::marloss );
         REQUIRE( execute_farming_command( remote, choice ) );
-        CHECK( here.ter( tree ) == ter_str_id( "t_fungus" ) );
+        CHECK( here.ter( tree ) == ter_str_id( is_tree ? "t_tree_fungal" : "t_fungus" ) );
         REQUIRE( here.i_at( remote.pos_bub() ).size() == 1 );
-        CHECK( here.i_at( remote.pos_bub() ).begin()->typeId() == itype_id( "mycus_fruit" ) );
+        CHECK( here.i_at( remote.pos_bub() ).begin()->typeId() == itype_mycus_fruit );
         CHECK( here.i_at( host.pos_bub() ).empty() );
-        const auto random_after = rng_get_engine();
+        const std::string random_after = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_after );
+        CHECK( capture_rng_state() == random_after );
     }
     SECTION( "hickory_roots_require_an_actual_tool_and_spend_the_native_time_once" ) {
-        here.ter_set( tree, ter_str_id( "t_tree_hickory" ) );
+        here.ter_set( tree, ter_t_tree_hickory );
         remote.set_skill_level( skill_survival, 3 );
-        const auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
-                            farming_action::hickory_roots );
-        const auto random_before = rng_get_engine();
+        const farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
+                                       farming_action::hickory_roots );
+        const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        CHECK( rng_get_engine() == random_before );
-        remote.wield( remote.i_add( item( itype_id( "shovel" ) ) ) );
-        REQUIRE( remote.has_quality( quality_id( "DIG" ) ) );
+        CHECK( capture_rng_state() == random_before );
+        remote.set_wielded_item( item( itype_shovel ) );
+        REQUIRE( remote.has_quality( qual_DIG ) );
         remote.set_moves( 1000 );
         REQUIRE( execute_farming_command( remote, choice ) );
         CHECK( remote.get_moves() == 1000 - to_moves<int>( 20_seconds ) / 4 + 100 );
-        CHECK( here.ter( tree ) == ter_str_id( "t_tree_hickory_dead" ) );
+        CHECK( here.ter( tree ) == ter_t_tree_hickory_dead );
         CHECK_FALSE( remote.activity );
-        const auto random_after = rng_get_engine();
-        const auto repeated = capture_farming_command( remote, here, here.get_abs( tree ),
-                              farming_action::hickory_roots );
+        const std::string random_after = capture_rng_state();
+        const farming_command repeated = capture_farming_command( remote, here, here.get_abs( tree ),
+                                         farming_action::hickory_roots );
         CHECK_FALSE( execute_farming_command( remote, repeated ) );
-        CHECK( rng_get_engine() == random_after );
+        CHECK( capture_rng_state() == random_after );
         CHECK( here.i_at( host.pos_bub() ).empty() );
     }
 }
@@ -2597,29 +2699,17 @@ TEST_CASE( "plant_damage_events_can_remove_the_victim_or_start_replacement_work"
     clear_character( worker, true );
     worker.setpos( here, host.pos_bub() + tripoint::south );
     const character_id worker_id = worker.getID();
-    const auto reference = g->npc_lifetimes().track_active( worker );
+    const npc_lifetime reference = g->npc_lifetimes().track_active( worker );
     const bodypart_id leg( "leg_l" );
     const int host_hp = host.get_part_hp_cur( leg );
     const int worker_hp = worker.get_part_hp_cur( leg );
-    worker.add_effect( efftype_id( "sleep" ), 2_hours );
+    worker.add_effect( effect_sleep, 2_hours );
     bool remove_worker = false;
     SECTION( "removed_character_is_not_used_after_the_damage_callback" ) {
         remove_worker = true;
     }
     SECTION( "new_activity_is_not_cancelled_by_the_old_damage_operation" ) {}
-    class observer : public event_subscriber
-    {
-        public:
-            std::function<void()> callback;
-            int wakes = 0;
-            void notify( const cata::event &event ) override {
-                if( event.type() == event_type::character_takes_damage ) {
-                    callback();
-                } else if( event.type() == event_type::character_wakes_up ) {
-                    ++wakes;
-                }
-            }
-    } sub;
+    damage_event_subscriber sub;
     int calls = 0;
     sub.callback = [&]() {
         ++calls;
@@ -2627,7 +2717,7 @@ TEST_CASE( "plant_damage_events_can_remove_the_victim_or_start_replacement_work"
         if( remove_worker ) {
             g->remove_npc( worker_id );
         } else {
-            worker.assign_activity( player_activity( activity_id( "ACT_WAIT" ), 321 ) );
+            worker.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     };
     get_event_bus().subscribe( &sub );
@@ -2642,7 +2732,7 @@ TEST_CASE( "plant_damage_events_can_remove_the_victim_or_start_replacement_work"
     if( remove_worker ) {
         CHECK( reference.resolve( g->npc_lifetimes() ) == nullptr );
     } else {
-        CHECK( worker.activity.id() == activity_id( "ACT_WAIT" ) );
+        CHECK( worker.activity.id() == ACT_WAIT );
         CHECK( worker.activity.moves_left == 321 );
     }
 }
@@ -2659,56 +2749,61 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
-    here.ter_set( tree, ter_str_id( "t_tree_maple" ) );
-    host.i_add( item( itype_id( "hand_drill" ) ) );
-    host.i_add( item( itype_id( "hammer" ) ) );
-    item_location tap = remote.i_add( item( itype_id( "tree_spile" ) ) );
-    item &bottle = here.add_item_unprocessed( origin, item( itype_id( "bottle_plastic" ) ) );
+    here.i_clear( tree );
+    here.ter_set( tree, ter_t_tree_maple );
+    host.i_add( item( itype_hand_drill ) );
+    host.i_add( item( itype_hammer ) );
+    item_location tap = remote.i_add( item( itype_tree_spile ) );
+    item &bottle = here.add_item_unprocessed( origin, item( itype_bottle_plastic ) );
     item_location container( map_cursor( origin ), &bottle );
-    auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
-                                           farming_action::maple_tap );
+    farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
+                             farming_action::maple_tap );
     choice.tap = capture_item_source( remote, tap );
     choice.container = capture_item_source( remote, container );
     remote.set_moves( 10000 );
     host.set_moves( 10000 );
-    const auto random_before = rng_get_engine();
+    const std::string random_before = capture_rng_state();
     CHECK_FALSE( execute_farming_command( host, choice ) );
     CHECK_FALSE( execute_farming_command( remote, choice ) );
-    CHECK( rng_get_engine() == random_before );
+    CHECK( capture_rng_state() == random_before );
     REQUIRE( tap );
     REQUIRE( container );
     CHECK( remote.get_moves() == 10000 );
-    remote.i_add( item( itype_id( "hand_drill" ) ) );
-    remote.i_add( item( itype_id( "hammer" ) ) );
+    remote.i_add( item( itype_hand_drill ) );
+    remote.i_add( item( itype_hammer ) );
+    remote.invalidate_crafting_inventory();
+    REQUIRE( remote.has_quality( qual_DRILL ) );
+    REQUIRE( remote.has_quality( qual_HAMMER ) );
     REQUIRE( execute_farming_command( remote, choice ) );
     CHECK( remote.get_moves() == 10000 - to_moves<int>( 20_seconds ) );
     CHECK( host.get_moves() == 10000 );
     CHECK_FALSE( tap );
     CHECK_FALSE( container );
-    const auto installed = inspect_maple_tree( here, here.get_abs( tree ) );
+    const maple_tree_items installed = inspect_maple_tree( here, here.get_abs( tree ) );
     REQUIRE( installed.tap );
     REQUIRE( installed.container );
-    CHECK( here.ter( tree ) == ter_str_id( "t_tree_maple_tapped" ) );
+    CHECK( here.ter( tree ) == ter_t_tree_maple_tapped );
     CHECK_FALSE( execute_farming_command( remote, choice ) );
 
-    item &unrelated = here.add_item_unprocessed( tree, item( itype_id( "rock" ) ) );
+    item &unrelated = here.add_item_unprocessed( tree, item( itype_rock ) );
     const item_location unrelated_location( map_cursor( tree ), &unrelated );
-    auto remove = capture_farming_command( remote, here, here.get_abs( tree ),
-                                           farming_action::maple_untap );
+    farming_command remove = capture_farming_command( remote, here, here.get_abs( tree ),
+                             farming_action::maple_untap );
     remove.tap = capture_item_source( remote, installed.tap );
     remove.container = capture_item_source( remote, installed.container );
     REQUIRE( execute_farming_command( remote, remove ) );
-    CHECK( here.ter( tree ) == ter_str_id( "t_tree_maple" ) );
+    CHECK( here.ter( tree ) == ter_t_tree_maple );
     CHECK( remote.get_moves() == 10000 - to_moves<int>( 40_seconds ) );
     REQUIRE( unrelated_location );
     CHECK( unrelated_location.pos_bub( here ) == tree );
     REQUIRE( here.i_at( tree ).size() == 1 );
-    const auto removed = inspect_maple_tree( here, here.get_abs( origin ) );
+    const maple_tree_items removed = inspect_maple_tree( here, here.get_abs( origin ) );
     REQUIRE( removed.tap );
     REQUIRE( removed.container );
     CHECK_FALSE( execute_farming_command( remote, remove ) );
@@ -2725,6 +2820,7 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
     remote.set_moves( 10000 );
     host.set_moves( 10000 );
@@ -2732,21 +2828,22 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
-    here.ter_set( tree, ter_str_id( "t_tree_maple_tapped" ) );
-    here.add_item_unprocessed( tree, item( itype_id( "tree_spile" ) ) );
-    item bottle( itype_id( "bottle_plastic" ) );
-    item sap( itype_id( "maple_sap" ), calendar::turn, 2 );
+    here.i_clear( tree );
+    here.ter_set( tree, ter_t_tree_maple_tapped );
+    here.add_item_unprocessed( tree, item( itype_tree_spile ) );
+    item bottle( itype_bottle_plastic );
+    item sap( itype_maple_sap, calendar::turn, 2 );
     REQUIRE( bottle.fill_with( sap, 2, true ) == 2 );
     here.add_item_unprocessed( tree, bottle );
-    const auto installed = inspect_maple_tree( here, here.get_abs( tree ) );
+    const maple_tree_items installed = inspect_maple_tree( here, here.get_abs( tree ) );
     REQUIRE( installed.tap );
     REQUIRE( installed.container );
     REQUIRE( installed.sap );
-    auto choice = capture_farming_command( remote, here, here.get_abs( tree ),
-                                           farming_action::maple_sap );
+    farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
+                             farming_action::maple_sap );
     choice.tap = capture_item_source( remote, installed.tap );
     choice.container = capture_item_source( remote, installed.container );
-    item destination( itype_id( "bottle_plastic" ) );
+    item destination( itype_bottle_plastic );
     REQUIRE( destination.fill_with( sap, 1, true ) == 1 );
     item_location receiver = remote.i_add( destination );
     unload_liquid_choice liquid;
@@ -2757,10 +2854,10 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
 
     SECTION( "partial_transfer_leaves_unmoved_sap_and_cannot_repeat_old_identity" ) {
         REQUIRE( execute_farming_command( remote, choice ) );
-        const auto remaining = inspect_maple_tree( here, here.get_abs( tree ) );
+        const maple_tree_items remaining = inspect_maple_tree( here, here.get_abs( tree ) );
         REQUIRE( remaining.sap );
         CHECK( remaining.sap->charges == 1 );
-        CHECK( receiver->charges_of( itype_id( "maple_sap" ) ) == 2 );
+        CHECK( receiver->charges_of( itype_maple_sap ) == 2 );
         CHECK( remote.get_moves() == 9900 );
         CHECK( host.get_moves() == 10000 );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
@@ -2771,7 +2868,7 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
         choice.sap_destination->container = capture_item_source( host, other );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( installed.sap->charges == 2 );
-        CHECK( other->charges_of( itype_id( "maple_sap" ) ) == 1 );
+        CHECK( other->charges_of( itype_maple_sap ) == 1 );
         CHECK( remote.get_moves() == 10000 );
     }
     SECTION( "replacing_the_collecting_container_invalidates_an_old_remove_choice" ) {
@@ -2781,13 +2878,13 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
         replaced.remove_item();
         here.add_item_unprocessed( tree, bottle );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        const auto replacement = inspect_maple_tree( here, here.get_abs( tree ) );
+        const maple_tree_items replacement = inspect_maple_tree( here, here.get_abs( tree ) );
         REQUIRE( replacement.sap );
         CHECK( replacement.sap->charges == 2 );
         CHECK( remote.get_moves() == 10000 );
     }
     SECTION( "client_never_executes_transfer_locally" ) {
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         const bool previous_mode = cata_mp::is_client_mode();
         const on_out_of_scope restore_mode( [previous_mode]() {
             cata_mp::set_client_mode( previous_mode );
@@ -2795,7 +2892,7 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
         cata_mp::set_client_mode( true );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( installed.sap->charges == 2 );
-        CHECK( rng_get_engine() == before );
+        CHECK( capture_rng_state() == before );
         CHECK( remote.get_moves() == 10000 );
     }
 }

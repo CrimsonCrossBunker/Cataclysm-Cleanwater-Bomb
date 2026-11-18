@@ -65,7 +65,7 @@ jobs:
         COMPILER: clang++-19
     steps:
     - name: install LLVM 19
-      timeout-minutes: 10
+      timeout-minutes: 15
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |

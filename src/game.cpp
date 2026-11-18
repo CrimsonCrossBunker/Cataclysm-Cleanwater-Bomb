@@ -7,7 +7,6 @@
 #include "character_action_guard.h"
 #include "item_uid.h"
 #include "vehicle_uid.h"
-#include "map_memory.h"
 #include "render_backend.h"
 #include "mp_world_session.h"
 #include "npc_lifetime.h"
@@ -20,33 +19,30 @@
 #include <climits>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <cwctype>
 #include <exception>
 #include <functional>
+#include <initializer_list>
 #include <iomanip>
-#include <iostream>
 #include <iterator>
 #include <limits>
 #include <list>
-#include <locale>
 #include <map>
 #include <memory>
 #include <numeric>
-#include <queue>
 #include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <tuple>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+
+#include <imgui/imgui.h>
 
 #if defined(EMSCRIPTEN)
     #include <emscripten.h>
@@ -56,13 +52,12 @@
 #include "action.h"
 #if defined(__ANDROID__)
     #include "android_hud.h"
+    #include "android_ui_mode.h"
 #endif
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
 #include "activity_handlers.h"
 #include "activity_item_handling.h"
-#include "activity_type.h"
-#include "android_ui_mode.h"
-#include "ascii_art.h"
 #include "auto_note.h"
 #include "auto_pickup.h"
 #include "avatar.h"
@@ -73,41 +68,40 @@
 #include "bodygraph.h"
 #include "bodypart.h"
 #include "butchery.h"
-#include "butchery_requirements.h"
 #include "cached_options.h"
+#include "calendar.h"
 #include "cata_imgui.h"
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
-#include "cata_variant.h"
 #include "catacharset.h"
-#include "char_validity_check.h"
 #include "character.h"
 #include "character_attire.h"
+#include "character_id.h"
 #include "character_martial_arts.h"
 #include "city.h"
 #include "climbing.h"
+#include "clone_ptr.h"
 #include "clzones.h"
-#include "colony.h"
 #include "color.h"
 #include "computer.h"
 #include "computer_session.h"
 #include "condition.h"
-#include "construction.h"
-#include "construction_group.h"
 #include "contents_change_handler.h"
 #include "coordinates.h"
+#include "creature.h"
 #include "creature_tracker.h"
 #include "cuboid_rectangle.h"
 #include "current_map.h"
+#include "cursesdef.h"
 #include "cursesport.h" // IWYU pragma: keep
 #include "damage.h"
 #include "debug.h"
 #include "debug_capture.h"
 #include "debug_menu.h"
-#include "dependency_tree.h"
 #include "dialogue.h"
 #include "dialogue_chatbin.h"
+#include "dialogue_helpers.h"
 #include "diary.h"
 #include "distraction_manager.h"
 #include "editmap.h"
@@ -118,64 +112,55 @@
 #include "event.h"
 #include "event_bus.h"
 #include "faction.h"
-#include "fault.h"
 #include "field.h"
 #include "field_type.h"
 #include "filesystem.h"
 #include "flag.h"
-#include "flexbuffer_json-inl.h"
-#include "flexbuffer_json.h"
 #include "flood_fill.h"
 #include "game_constants.h"
 #include "game_inventory.h"
 #include "game_ui.h"
 #include "gamemode.h"
 #include "gates.h"
+#include "global_vars.h"
 #include "get_version.h"
-#include "harvest.h"
 #include "iexamine.h"
-#include "imgui/imgui_stdlib.h"
-#include "init.h"
 #include "input.h"
 #include "input_context.h"
 #include "input_enums.h"
 #include "input_popup.h"
-#include "inventory.h"
+#include "inventory_ui.h"
 #include "item.h"
-#include "item_category.h"
-#include "item_contents.h"
 #include "item_insert.h"
 #include "item_location.h"
 #include "item_pocket.h"
 #include "item_reload.h"
 #include "item_search.h"
-#include "item_stack.h"
 #include "item_wakeup.h"
-#include "iteminfo_query.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
-#include "json.h"
+#include "kill_statistics.h"
 #include "kill_tracker.h"
 #include "level_cache.h"
 #include "lightmap.h"
 #include "line.h"
 #include "live_view.h"
-#include "loading_ui.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_loader.h"
 #include "lua_platform_runtime.h"
 #include "magic.h"
 #include "magic_enchantment.h"
-#include "main_menu.h"
 #include "map.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
+#include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
-#include "mapsharing.h"
 #include "maptile_fwd.h"
 #include "memorial_logger.h"
+#include "memory_fast.h"
 #include "messages.h"
 #include "mission.h"
 #include "mod_manager.h"
@@ -188,7 +173,6 @@
 #include "mp_inventory_activity.h"
 #include "item_activation.h"
 #include "tool_activity_target.h"
-#include "thread_pool.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
     #include "mp_melee.h"
@@ -197,6 +181,7 @@
 #endif
 #include "mtype.h"
 #include "npc.h"
+#include "npc_opinion.h"
 #include "npctrade.h"
 #include "omdata.h"
 #include "options.h"
@@ -204,14 +189,18 @@
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "north_america.h"
+#include "north_america_elevation.h"
 #include "overmapbuffer.h"
 #include "panels.h"
 #include "past_achievements_info.h"
 #include "path_info.h"
 #include "pathfinding.h"
-#include "perf.h"
 #include "pickup.h"
+#include "pimpl.h"
 #include "player_activity.h"
+#include "player_identity.h"
+#include "pocket_type.h"
+#include "point.h"
 #include "popup.h"
 #include "power_network.h"
 #include "profession.h"
@@ -232,17 +221,18 @@
 #include "start_location.h"
 #include "stats_tracker.h"
 #include "string_formatter.h"
-#include "string_input_popup.h"
+#include "submap.h"
 #include "surroundings_menu.h"
 #include "talker.h"
-#include "temp_crafting_inventory.h"
 #include "text_snippets.h"
 #include "tileray.h"
 #include "timed_event.h"
 #include "translation.h"
 #include "translation_cache.h"
+#include "translation_manager.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "ui_helpers.h"
 #include "ui_extended_description.h"
 #include "ui_manager.h"
@@ -256,18 +246,19 @@
 #include "vehicle.h"
 #include "vehicle_control.h"
 #include "vehicle_turning.h"
+#include "view_action.h"
 #include "viewer.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
-#include "wcwidth.h"
 #include "weakpoint.h"
 #include "weather.h"
 #include "weather_type.h"
 #include "worldfactory.h"
-#include "zzip.h"
 
 #if defined(TILES)
+    #include <SDL3/SDL.h>
+
     #include "sdl_utils.h"
 #endif // TILES
 
@@ -276,6 +267,8 @@
 #else
     #define UNUSED
 #endif
+
+class temp_crafting_inventory;
 
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
 static const activity_id ACT_TRAVELLING( "ACT_TRAVELLING" );
@@ -396,6 +389,8 @@ static const ter_str_id ter_t_elevator( "t_elevator" );
 static const ter_str_id ter_t_lava( "t_lava" );
 static const ter_str_id ter_t_manhole( "t_manhole" );
 static const ter_str_id ter_t_manhole_cover( "t_manhole_cover" );
+static const ter_str_id ter_t_rock( "t_rock" );
+static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 
 static const trait_id trait_BADKNEES( "BADKNEES" );
 static const trait_id trait_CENOBITE( "CENOBITE" );
@@ -810,6 +805,7 @@ void game::reset_game_state()
     weather.weather_id = WEATHER_CLEAR;
     weather.climate_origin.reset();
     weather.climate_precipitation_mm_per_hour.reset();
+    weather.reset_room_heat();
     // Weather shift in 30
     weather.nextweather = calendar::start_of_game + 30_minutes;
 
@@ -4151,13 +4147,14 @@ void game::draw_veh_dir_indicator( bool next )
 float game::natural_light_level( const int zlev ) const
 {
     // ignore while underground or above limits
-    if( zlev > OVERMAP_HEIGHT || zlev < 0 ) {
+    if( zlev < 0 || ( zlev > OVERMAP_HEIGHT && !north_america::elevation_active() ) ) {
         return LIGHT_AMBIENT_MINIMAL;
     }
 
-    if( latest_lightlevels[zlev] > std::numeric_limits<float>::lowest() ) {
+    const int cache_level = std::min( zlev, OVERMAP_HEIGHT );
+    if( latest_lightlevels[cache_level] > std::numeric_limits<float>::lowest() ) {
         // Already found the light level for now?
-        return latest_lightlevels[zlev];
+        return latest_lightlevels[cache_level];
     }
 
     float ret = LIGHT_AMBIENT_MINIMAL;
@@ -4200,7 +4197,7 @@ float game::natural_light_level( const int zlev ) const
     // Cap everything to our minimum light level
     ret = std::max<float>( LIGHT_AMBIENT_MINIMAL, ret );
 
-    latest_lightlevels[zlev] = ret;
+    latest_lightlevels[cache_level] = ret;
 
     return ret;
 }
@@ -6771,6 +6768,10 @@ look_around_result game::look_around(
     bool change_lv )
 {
     map &here = get_map();
+    const int old_origin = here.z_origin();
+    if( !here.ensure_z_in_window( center ) ) {
+        return {};
+    }
     const int view_z_range = here.observer_z_range( u );
 
     bVMonsterLookFire = false;
@@ -6869,8 +6870,8 @@ look_around_result game::look_around(
     ctxt.register_action( "toggle_pixel_minimap" );
 
     const int old_levz = peeking ? here.observer_position( u ).z() : here.get_abs_sub().z();
-    const int min_levz = std::max( old_levz - view_z_range, -OVERMAP_DEPTH );
-    const int max_levz = std::min( old_levz + view_z_range, OVERMAP_HEIGHT );
+    const int min_levz = old_levz - view_z_range;
+    const int max_levz = old_levz + view_z_range;
 
     here.update_visibility_cache( old_levz );
     const visibility_variables &cache = here.get_visibility_variables_cache();
@@ -7019,8 +7020,12 @@ look_around_result game::look_around(
             }
         } else if( action == "LEVEL_UP" || action == "LEVEL_DOWN" ) {
             const int dz = action == "LEVEL_UP" ? 1 : -1;
+            const int next_z = clamp( center.z() + dz, min_levz, max_levz );
+            if( !here.ensure_z_in_window( tripoint_bub_ms( center.xy(), next_z ) ) ) {
+                continue;
+            }
             lz = clamp( lz + dz, min_levz, max_levz );
-            center.z() = clamp( center.z() + dz, min_levz, max_levz );
+            center.z() = next_z;
 
             add_msg_debug( debugmode::DF_GAME, "levx: %d, levy: %d, levz: %d",
                            here.get_abs_sub().x(), here.get_abs_sub().y(), center.z() );
@@ -7109,7 +7114,13 @@ look_around_result game::look_around(
     } while( action != "QUIT" && action != "CONFIRM" && action != "SELECT" && action != "TRAVEL_TO" &&
              action != "throw_blind" && action != "throw_blind_wielded" );
 
-    if( center.z() != old_levz ) {
+    const bool restore_window = here.z_origin() != old_origin &&
+                                ( action == "QUIT" || action == "map" );
+    if( restore_window ) {
+        here.save();
+        here.load( here.get_abs_sub(), true, false, nullptr, old_origin );
+    }
+    if( restore_window || center.z() != old_levz ) {
         here.invalidate_map_cache( old_levz );
         here.build_map_cache( old_levz );
         u.view_offset.z() = 0;
@@ -8510,7 +8521,9 @@ bool game::walk_move( Character &who, const tripoint_bub_ms &dest_loc, const boo
 {
     map &here = get_map();
     const character_action_guard lifetime( who );
-    if( !lifetime || !here.inbounds( dest_loc ) ) {
+    if( !lifetime || !here.inbounds( dest_loc ) ||
+        ( north_america::elevation_active() &&
+          !north_america::within_altitude_limits( north_america::altitude_at( here, dest_loc ) ) ) ) {
         return false;
     }
     if( !furniture_move && who.get_grab_type() != object_type::NONE &&
@@ -9644,9 +9657,15 @@ point_rel_sm game::place_character( Character &who, const tripoint_bub_ms &dest_
     return submap_shift;
 }
 
-void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player )
+void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_player,
+                                 bool debug_landing )
 {
     map &here = get_map();
+    const bool atlas = north_america::elevation_active();
+    if( atlas && !north_america::within_altitude_limits( north_america::altitude_at( om_dest ) ) ) {
+        add_msg( m_bad, _( "The destination is outside the supported elevation range." ) );
+        return;
+    }
 
     // if player is teleporting around, they don't bring their horse with them
     if( u.is_mounted() ) {
@@ -9667,7 +9686,7 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     if( u.in_vehicle ) {
         here.unboard_vehicle( u.pos_bub() );
     }
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = here.min_z(); z <= here.max_z(); z++ ) {
         here.clear_vehicle_list( z );
     }
     here.rebuild_vehicle_level_caches();
@@ -9677,8 +9696,10 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     // player will be centered in the middle of the map.
     const tripoint_abs_sm map_sm_pos =
         project_to<coords::sm>( om_dest ) - point( HALF_MAPSIZE, HALF_MAPSIZE );
-    const tripoint_bub_ms player_pos( u.pos_bub().xy(), map_sm_pos.z() );
+    const tripoint_bub_ms previous_local_pos( u.pos_bub().xy(), map_sm_pos.z() );
     load_map( map_sm_pos );
+    const tripoint_bub_ms player_pos = atlas && debug_landing ?
+                                       here.get_bub( project_to<coords::ms>( om_dest ) + point( SEEX, SEEY ) ) : previous_local_pos;
     if( hosting ) {
         unload_creatures_outside_resident_maps();
     }
@@ -9693,6 +9714,10 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     // update weather now as it could be different on the new location
     weather.set_nextweather( calendar::turn );
     if( move_player ) {
+        if( debug_landing && atlas && om_dest.z() < -OVERMAP_DEPTH &&
+            here.ter( player_pos ) == ter_t_rock.id() ) {
+            here.ter_set( player_pos, ter_t_rock_floor.id() );
+        }
         place_player( player_pos );
     }
 }
@@ -10627,7 +10652,10 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         return lifetime && who.pos_abs() == origin && who.mounted_creature == mount;
     };
     const int64_t requested_z = static_cast<int64_t>( who.posz() ) + movez;
-    if( requested_z < -OVERMAP_DEPTH || requested_z > OVERMAP_HEIGHT ) {
+    map &here = get_map();
+    if( ( requested_z < here.min_z() || requested_z > here.max_z() ) &&
+        ( !who.is_avatar() || std::abs( movez ) > 2 ||
+          !here.ensure_z_in_window( tripoint_bub_ms( who.pos_bub( here ).xy(), requested_z ) ) ) ) {
         who.add_msg_if_player( _( "The way is blocked off." ) );
         return;
     }
@@ -10646,9 +10674,14 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
         }
     }
 
-    map &here = get_map();
     const auto map_context = here.get_context_reference();
     tripoint_bub_ms pos = who.pos_bub( here );
+    if( north_america::elevation_active() &&
+        !north_america::within_altitude_limits(
+            north_america::altitude_at( here, tripoint_bub_ms( pos.xy(), requested_z ) ) ) ) {
+        who.add_msg_if_player( _( "The way is blocked off." ) );
+        return;
+    }
     const optional_vpart_position vehicle_here = here.veh_at( pos );
     const std::optional<tripoint_bub_ms> vehicle_stairs = !force && vehicle_here ?
             vehicle_here->vehicle().deck_transition( here, pos, movez ) : std::nullopt;
@@ -10795,10 +10828,10 @@ void game::vertical_move( Character &who, int movez, bool force, bool peeking,
     }
 
     const int z_after = static_cast<int>( requested_z );
-    if( z_after < -OVERMAP_DEPTH ) {
+    if( z_after < here.min_z() ) {
         who.add_msg_if_player( m_info, _( "Halfway down, the way down becomes blocked off." ) );
         return;
-    } else if( z_after > OVERMAP_HEIGHT ) {
+    } else if( z_after > here.max_z() ) {
         who.add_msg_if_player( m_info, _( "Halfway up, the way up becomes blocked off." ) );
         return;
     }
@@ -11239,7 +11272,7 @@ bool game::travel_to_dimension( dimension_id dimension_destination,
         return false;
     }
     player.save_map_memory();
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = here.min_z(); z <= here.max_z(); z++ ) {
         here.clear_vehicle_list( z );
     }
     here.rebuild_vehicle_level_caches();
@@ -11644,9 +11677,9 @@ bool game::vertical_shift( const int z_after )
 {
     map &here = get_map();
 
-    if( z_after < -OVERMAP_DEPTH || z_after > OVERMAP_HEIGHT ) {
+    if( !here.inbounds_z( z_after ) ) {
         debugmsg( "Tried to get z-level %d outside allowed range of %d-%d",
-                  z_after, -OVERMAP_DEPTH, OVERMAP_HEIGHT );
+                  z_after, here.min_z(), here.max_z() );
         return false;
     }
 
@@ -11747,8 +11780,8 @@ static void prefetch_leading_edge( const map &here, const point_rel_sm &shift )
     // real edge immediately. Cost: a z-change (stairs) gets no prefetch, but that
     // is rare and one level at a time. Widen this if vertical travel needs it.
     constexpr int Z_RADIUS = 0;
-    const int z_lo = std::max( -OVERMAP_DEPTH, player_z - Z_RADIUS );
-    const int z_hi = std::min( OVERMAP_HEIGHT, player_z + Z_RADIUS );
+    const int z_lo = std::max( get_map().min_z(), player_z - Z_RADIUS );
+    const int z_hi = std::min( get_map().max_z(), player_z + Z_RADIUS );
 
     // Free any previously buffered quads the player has now moved away from, so a
     // turn or reversal doesn't leave a stale frontier pinned in memory and the
@@ -11906,7 +11939,7 @@ point_rel_sm game::update_map( int &x, int &y, bool z_level_changed )
     load_npcs();
 
     // Make sure map cache is consistent since it may have shifted.
-    for( int zlev = -OVERMAP_DEPTH; zlev <= OVERMAP_HEIGHT; ++zlev ) {
+    for( int zlev = here.min_z(); zlev <= here.max_z(); ++zlev ) {
         here.invalidate_map_cache( zlev );
     }
     here.build_map_cache( here.get_abs_sub().z() );

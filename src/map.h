@@ -8,50 +8,46 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <iosfwd>
 #include <list>
 #include <map>
 #include <memory>
-#include <new>
 #include <optional>
 #include <set>
+#include <string>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
-#include "map_viewpoint.h"
 #include "active_item_cache.h"
-#include "ai_reachability_fwd.h"
+#include "ai_reachability_fwd.h" // IWYU pragma: keep
+#include "bodypart.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "cata_assert.h"
-#include "cata_small_literal_vector.h"
 #include "cata_type_traits.h"
 #include "cata_utility.h"
 #include "colony.h"
-#include "coords_fwd.h"
+#include "coordinates.h"
 #include "creature.h"
+#include "effect_source.h"
 #include "enums.h"
-#include "game_constants.h"
 #include "item.h"
 #include "item_stack.h"
 #include "level_cache.h"
 #include "lightmap.h"
-#include "line.h"
 #include "lru_cache.h"
 #include "map_iterator.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
+#include "map_viewpoint.h"
 #include "mapdata.h"
 #include "maptile_fwd.h"
-#include "options.h"
+#include "mdarray.h"
 #include "point.h"
-#include "rng.h"
 #include "safe_reference.h"
+#include "shadowcasting.h"
 #include "type_id.h"
 #include "units.h"
-#include "value_ptr.h"
 #include "vpart_position.h"
 
 struct scent_block;
@@ -71,7 +67,6 @@ namespace cata::lua_platform
 class script_mapgen_context;
 } // namespace cata::lua_platform
 class Character;
-class Creature;
 class avatar;
 class basecamp;
 class character_id;
@@ -79,25 +74,26 @@ class computer;
 class field;
 class field_entry;
 class item_location;
+class map;
 class mapgendata;
 class map_simulation_regions;
 class monster;
-class relic_procgen_data;
 class scent_map;
 class submap;
 class vehicle;
 class zone_data;
+struct field_effect;
+struct field_type;
 struct fragment_cloud;
 struct partial_con;
+struct rl_vec2d;
 struct spawn_data;
 struct trap;
-template<typename Tripoint>
-class tripoint_range;
+struct vehicle_part;
 
-enum class special_item_type : int;
+enum class direction : unsigned int;
 class npc_template;
 class tileray;
-class vpart_reference;
 struct MonsterGroupResult;
 struct mongroup;
 struct projectile;
@@ -110,9 +106,7 @@ struct wrapped_vehicle {
 
 using VehicleList = std::vector<wrapped_vehicle>;
 
-class weather_generator;
 
-enum class ter_furn_flag : int;
 struct pathfinding_cache;
 struct pathfinding_settings;
 struct pathfinding_target;
@@ -189,6 +183,8 @@ struct bash_params {
      * have a roof either.
     */
     bool bashing_from_above = false;
+    // Did the bash change terrain, furniture, items, fields or vehicle parts?
+    bool did_damage = false;
 };
 
 /** Draw parameters used by map::drawsq() and similar methods. */
@@ -565,7 +561,8 @@ class map
          * @param regions Active simulation views, if loading for co-op.
          */
         void load( const tripoint_abs_sm &w, bool update_vehicles,
-                   bool pump_events = false, const map_simulation_regions *regions = nullptr );
+                   bool pump_events = false, const map_simulation_regions *regions = nullptr,
+                   std::optional<int> z_origin_override = std::nullopt );
         /**
          * Shift the map along the vector s.
          * This is like loading the map with coordinates derived from the current
@@ -840,7 +837,7 @@ class map
         void clean_vehicle_parts( const std::vector<safe_reference<vehicle>> &vehicles );
         void idle_vehicles( std::unordered_set<int64_t> *advanced,
                             const map_simulation_regions *regions );
-        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicles,
+        bool vehproceed( std::vector<safe_reference<vehicle>> &vehicle_list,
                          const std::unordered_set<int64_t> *assigned );
     public:
 
@@ -1465,7 +1462,7 @@ class map
         // from a sealed adjacent rack to the operator's tile.
         int unload_furniture_item( item_location source, Character &who, item_location *placed = nullptr );
         // The same operation can place a selected portion at another reachable tile.
-        int unload_furniture_item( const tripoint_bub_ms &destination, item_location source,
+        int unload_furniture_item( const tripoint_bub_ms &destination, const item_location &source,
                                    item portion, Character &who, item_location *placed = nullptr );
         // Machinery already owns the operation at this tile. Only a root item
         // at pos may be settled; the operator need not be within walking reach.
@@ -1986,11 +1983,25 @@ class map
         }
         bool inbounds( const tripoint_abs_omt &p ) const;
         bool inbounds( const point_bub_ms &p ) const {
-            return inbounds( tripoint_bub_ms( p, 0 ) );
+            return inbounds( tripoint_bub_ms( p, abs_sub.z() ) );
         }
 
-        bool inbounds_z( const int z ) const {
-            return z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT;
+        bool ensure_z_in_window( const tripoint_bub_ms &destination );
+        int z_range() const;
+        int min_z() const {
+            return vertical_origin - OVERMAP_DEPTH;
+        }
+        int max_z() const {
+            return vertical_origin + OVERMAP_HEIGHT;
+        }
+        int layer_for_z( int z ) const {
+            return z - min_z();
+        }
+        int z_origin() const {
+            return vertical_origin;
+        }
+        bool inbounds_z( int z ) const {
+            return z >= min_z() && z <= max_z();
         }
 
         /** Clips the coordinates of p to fit the map bounds */
@@ -2115,7 +2126,8 @@ class map
         void grow_plant( const tripoint_bub_ms &p );
         // An explicit nullptr advances unattended machinery's crops without
         // attributing character lifecycle effects to the local avatar.
-        void grow_plant( const tripoint_bub_ms &p, Character *grower );
+        void grow_plant( const tripoint_bub_ms &p, Character *grower,
+                         bool finish_crop_interval = false );
         void grow_terrain_plant( const tripoint_bub_ms &p );
         /**
          * Produce sap on tapped maple trees
@@ -2185,6 +2197,7 @@ class map
         int my_MAPSIZE;
         int my_HALF_MAPSIZE;
         bool zlevels;
+        int vertical_origin = 0;
 
         /**
          * Absolute coordinates of first submap (get_submap_at(0,0))
@@ -2477,7 +2490,7 @@ class map
 
         // Note: no bounds check
         level_cache &get_cache( int zlev ) const {
-            std::unique_ptr < level_cache, level_cache_free > &cache = caches[zlev + OVERMAP_DEPTH];
+            std::unique_ptr < level_cache, level_cache_free > &cache = caches[layer_for_z( zlev )];
             if( !cache ) {
                 cache = alloc_cache();
             }
@@ -2487,7 +2500,7 @@ class map
         static std::unique_ptr < level_cache, level_cache_free > alloc_cache();
 
         level_cache *get_cache_lazy( int zlev ) const {
-            return caches[zlev + OVERMAP_DEPTH].get();
+            return caches[layer_for_z( zlev )].get();
         }
 
         pathfinding_cache &get_pathfinding_cache( int zlev ) const;

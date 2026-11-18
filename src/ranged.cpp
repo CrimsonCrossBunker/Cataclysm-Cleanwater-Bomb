@@ -1,16 +1,9 @@
-#include "map_viewpoint.h"
 #include "ranged.h"
-#include "ranged_actions.h"
-#include "sling.h"
-#include "mp_gamestate.h"
-#include "mp_client_conn.h"
-#include "fault.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
-#include <coordinates.h>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -38,6 +31,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "color.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
@@ -50,6 +44,7 @@
 #include "event_bus.h"
 #include "explosion.h"
 #include "explosion_light.h"
+#include "fault.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
@@ -68,13 +63,15 @@
 #include "magic_enchantment.h"
 #include "magic_type.h"
 #include "map.h"
-#include "map_scale_constants.h"
+#include "map_viewpoint.h"
 #include "mapdata.h"
 #include "math_defines.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -84,10 +81,12 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "projectile.h"
+#include "ranged_actions.h"
 #include "ret_val.h"
 #include "riding_config.h"
 #include "rng.h"
 #include "skill.h"
+#include "sling.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "translation.h"
@@ -4174,11 +4173,8 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
     }
     map &here = get_map();
     if( new_pos != src ) {
-        // On Z axis, make sure we do not exceed map boundaries
-        valid_pos.z() = clamp( valid_pos.z(), -OVERMAP_DEPTH, OVERMAP_HEIGHT );
-        // Or current view range
-        valid_pos.z() = clamp( valid_pos.z() - src.z(), -get_map().observer_z_range( *you ),
-                               get_map().observer_z_range( *you ) ) + src.z();
+        const int vertical_range = std::min( range, here.observer_z_range( *you ) );
+        valid_pos.z() = clamp( valid_pos.z(), src.z() - vertical_range, src.z() + vertical_range );
         // Or across z-levels (in melee)
         if( mode == TargetMode::Reach && src.z() != valid_pos.z() ) {
             // CCB: keep cursor movement aligned with can_reach_attack and
@@ -4195,6 +4191,13 @@ bool target_ui::set_cursor_pos( const tripoint_bub_ms &new_pos )
             }
         }
 
+        const int previous_origin = here.z_origin();
+        if( !here.ensure_z_in_window( valid_pos ) ) {
+            return false;
+        }
+        if( here.z_origin() != previous_origin ) {
+            here.build_map_cache( here.observer_position( *you ).z() );
+        }
         new_traj = here.find_clear_path( src, valid_pos );
         if( range == 1 ) {
             // We should always be able to hit adjacent squares
@@ -4633,15 +4636,23 @@ void target_ui::cycle_targets( int direction )
 
 void target_ui::set_view_offset( const tripoint_rel_ms &new_offset ) const
 {
+    map &here = get_map();
     const int desired_z = you->posz() + new_offset.z();
-    const int target_z = clamp( desired_z, std::max( src.z() - get_map().observer_z_range( *you ),
-                                -OVERMAP_DEPTH ),
-                                std::min( src.z() + get_map().observer_z_range( *you ), OVERMAP_HEIGHT ) );
+    const int vertical_range = here.observer_z_range( *you );
+    const int target_z = clamp( desired_z, src.z() - vertical_range, src.z() + vertical_range );
+    const int previous_origin = here.z_origin();
+    if( !here.ensure_z_in_window( tripoint_bub_ms( you->pos_bub( here ).xy() + new_offset.xy(),
+                                  target_z ) ) ) {
+        return;
+    }
+    if( here.z_origin() != previous_origin ) {
+        here.build_map_cache( here.observer_position( *you ).z() );
+    }
     tripoint_rel_ms new_( new_offset.xy(), target_z - you->posz() );
     const bool changed_z = you->view_offset.z() != new_.z();
     you->view_offset = new_;
     if( changed_z ) {
-        get_map().invalidate_map_cache( target_z );
+        here.invalidate_map_cache( target_z );
     }
 }
 
