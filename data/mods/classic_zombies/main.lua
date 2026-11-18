@@ -2,6 +2,17 @@ local ccb = require("ccb")
 local content = ccb.content
 local services = ccb.services
 
+-- The computer still lists this mission, but this world has no refugee center.
+local refugee_center = content.Mission {
+    id = "MISSION_REACH_REFUGEE_CENTER",
+    name = ccb.content.text("Reach Refugee Center"),
+    goal = "MGOAL_NULL",
+    difficulty = 0,
+    value = 0,
+}
+refugee_center:deadline(1)
+content.replace(refugee_center)
+
 local definition = content.Blacklist {
     kind = "monster",
     whitelist = true,

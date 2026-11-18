@@ -211,6 +211,7 @@ struct terrain_selector {
 
 struct overmap_target_options {
     bool random = false;
+    bool fallback_to_origin = true;
     int search_range = OMAPX * 3;
     int min_distance = 0;
     std::optional<int> z;
@@ -607,6 +608,8 @@ overmap_target_options read_overmap_target_options(
         if( key == "random" ) {
             result.random = require_boolean(
                                 entry.second, api_name, key );
+        } else if( key == "fallback_to_origin" ) {
+            result.fallback_to_origin = require_boolean( entry.second, api_name, key );
         } else if( key == "special" ) {
             if( !entry.second.is<script_game_id>() ) {
                 throw std::invalid_argument( api_name + " option 'special' requires GameId<overmap_special>" );
@@ -1296,7 +1299,7 @@ sol::table overmap_closest(
                    state, std::move( value ) ) );
 }
 
-script_tripoint_coord overmap_find_target(
+std::optional<script_tripoint_coord> overmap_find_target(
     const script_tripoint_coord &origin,
     const sol::object &requested_selector,
     const sol::optional<sol::table> &requested_options,
@@ -1353,6 +1356,9 @@ script_tripoint_coord overmap_find_target(
             }
         }
         if( target.is_invalid() ) {
+            if( !options.fallback_to_origin ) {
+                return std::nullopt;
+            }
             target = search_origin;
         }
     }

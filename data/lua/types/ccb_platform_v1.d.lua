@@ -579,6 +579,7 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@field special? GameId Restrict matches to a registered GameId<overmap_special>; an already placed globally unique special uses the native global lookup.
 ---@field create_special? boolean Attempt native special placement when a search misses; defaults to false and requires special. Each attempt requires an active writable runtime callback; successful placement is followed by a closest-match search.
 ---@field random? boolean Use native random selection instead of closest selection; defaults to false.
+---@field fallback_to_origin? boolean Use the search origin on a miss. When false, a miss returns nil before applying an offset. Defaults to true.
 ---@field search_range? number Raw native search range; defaults to three OMAPX. Values truncate toward zero. Zero uses the native mode-specific default.
 ---@field min_distance? number Native minimum distance; defaults to zero. Values truncate toward zero.
 ---@field z? number Replace the search origin z before searching; native matching still considers every legal overmap z level. Values truncate toward zero.
@@ -587,7 +588,7 @@ function CcbOvermapApi.edit(token, expected_revision, changes) end
 ---@param origin TripointCoord Explicit absolute overmap-terrain (`abs_omt`) search origin.
 ---@param selector CcbOvermapTargetSelector|string|GameId Static terrain selector; string and GameId forms default to native match type `type`.
 ---@param options? CcbOvermapTargetOptions
----@return TripointCoord Selected absolute OMT, or the search origin when no terrain matched, with `offset` applied. The retry may generate overmaps and needs an active runtime callback after the existing-overmap search misses.
+---@return TripointCoord|nil Selected absolute OMT with `offset` applied. A miss uses the origin by default, or nil if fallback_to_origin is false. The retry may generate overmaps and needs an active runtime callback.
 function CcbOvermapApi.find_target(origin, selector, options) end
 
 ---@class CcbOvermapRevealResult

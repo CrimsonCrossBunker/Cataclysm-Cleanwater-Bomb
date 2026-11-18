@@ -257,3 +257,32 @@ expedition({
     monster_species = "MAMMAL",
     monster_kill_goal = 5,
 }, nil, slaughter_reward(1), true)
+
+ccb.runtime.handler("sky_refugee_center_start", function(payload)
+    local origin = state.position(payload.character):project_to("omt")
+    local target = services.overmap.find_target(origin, "field", { fallback_to_origin = false })
+    if target then
+        services.overmap.reveal_native(target, 0)
+        state.checked(services.missions.set_target(payload.character, payload.mission, target))
+    end
+end)
+
+ccb.runtime.handler("sky_refugee_center_finish", function(payload)
+    state.message(payload.character,
+        ccb.services.translate("Wait, where is this?  What happened?  Why am I here?"), "neutral", true)
+end)
+
+local refugee_center = ccb.content.Mission {
+    id = "MISSION_REACH_REFUGEE_CENTER",
+    name = ccb.content.text("Reach Refugee Center?"),
+    description = ccb.content.text("Something is telling you to find this location but something else is telling you that there is nothing there."),
+    goal = "MGOAL_GO_TO_TYPE",
+    difficulty = 1,
+    value = 0,
+    invisible_on_complete = true,
+    origins = { "ORIGIN_COMPUTER" },
+    destination = "field",
+}
+refugee_center:start_with("sky_refugee_center_start")
+refugee_center:finish_with("sky_refugee_center_finish")
+ccb.content.replace(refugee_center)
