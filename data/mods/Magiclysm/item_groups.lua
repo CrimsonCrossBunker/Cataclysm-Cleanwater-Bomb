@@ -1,0 +1,6 @@
+require("item_groups.itemgroups")
+require("item_groups.items")
+require("item_groups.misc")
+require("item_groups.npc")
+require("item_groups.vehicleparts")
+require("item_groups.worldgen")

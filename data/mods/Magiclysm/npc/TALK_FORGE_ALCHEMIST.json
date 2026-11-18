@@ -54,29 +54,6 @@
   },
   {
     "type": "item_group",
-    "id": "NC_FORGE_ALCHEMIST_clothes",
-    "subtype": "collection",
-    "entries": [
-      { "item": "boxer_briefs", "prob": 100 },
-      { "item": "socks", "prob": 100 },
-      { "item": "tshirt", "prob": 100 },
-      { "item": "apron_plastic", "prob": 100 },
-      { "item": "boots_rubber", "prob": 100 },
-      { "item": "gloves_medical", "prob": 100 },
-      { "item": "goggles_chem", "prob": 100 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "NC_FORGE_LORD_STORE_POTION_SHOP",
-    "items": [
-      { "group": "NC_FORGE_LORD_STORE_ALCHEMIST", "prob": 100, "count": [ 15, 24 ] },
-      { "item": "denarius", "count": [ 5, 20 ], "prob": 100 }
-    ]
-  },
-  {
-    "type": "item_group",
     "subtype": "collection",
     "id": "NC_FORGE_LORD_STORE_ALCHEMIST",
     "//": "Does not sell illegal potions, but will buy them.",

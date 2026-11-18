@@ -1,23 +1,5 @@
 [
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "pouch_wild_druid",
-    "entries": [ { "item": "fur", "count": 3 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_mooserider",
-    "entries": [ { "item": "arrow_heavy_fire_hardened_fletched", "charges": 20 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_elven_ceremonial_guard",
-    "entries": [ { "item": "arrow_cf", "count": 40 } ]
-  },
-  {
     "type": "profession",
     "id": "wizard_novice",
     "name": "Would-be Wizard",

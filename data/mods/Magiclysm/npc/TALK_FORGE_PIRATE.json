@@ -41,25 +41,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_FORGE_PIRATE_clothes",
-    "subtype": "collection",
-    "entries": [
-      { "item": "cavalry_sabre_plus_one", "prob": 100, "container-item": "scabbard" },
-      { "item": "bandana", "prob": 100 },
-      { "item": "boots", "prob": 100 },
-      { "item": "parabolan_enchanted_breeches", "prob": 100 },
-      { "item": "enchanted_pirate_blouse", "prob": 100 },
-      { "item": "flintlock_pouch", "contents-group": "flintlock_pouch_reenactor" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_FORGE_PIRATE_wield",
-    "subtype": "collection",
-    "items": [ { "item": "enchanted_blackpowder_pistol", "prob": 100, "charges": 1 } ]
-  },
-  {
     "id": "TALK_FORGE_PIRATE",
     "type": "talk_topic",
     "dynamic_line": {

@@ -50,25 +50,6 @@
     ]
   },
   {
-    "id": "orc_village_storage",
-    "//": "stuff the goblins are storing in their racks, weapons, utils and such",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "orc_village_foodstuffs", "count": [ 0, 3 ], "prob": 70 },
-      { "item": "spell_scroll_bio_bonespear", "prob": 1 },
-      { "item": "arrow_wood_heavy", "count": [ 0, 5 ], "prob": 40 },
-      { "item": "bone_knife", "prob": 40 },
-      { "item": "bowl_skull", "prob": 30 },
-      { "item": "bowl_wood", "prob": 60 },
-      { "item": "skewer_bone", "prob": 20 },
-      { "item": "copper_ax", "prob": 10 },
-      { "item": "throwing_axe", "count": [ 2, 8 ], "prob": 10 },
-      { "item": "spear_wood", "prob": 10 },
-      { "item": "spear_copper", "prob": 10 }
-    ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "human_gore",
     "//": "lore: brutally slaughtered human, only scraps of it remain. the goblins have taken everything they need from it and left the rest there to frighten every human that comes close to their outpost. can be reused for other purposes, such as humans eaten by animals.",

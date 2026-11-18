@@ -1,30 +1,5 @@
 [
   {
-    "id": "balrog_mine_weapons",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [
-      [ "longsword", 100 ],
-      [ "arming_sword", 100 ],
-      [ "zweihander", 100 ],
-      [ "broadsword", 100 ],
-      [ "spear_knife_superior", 100 ],
-      [ "spear_copper", 100 ],
-      [ "spear_steel", 100 ],
-      [ "halberd", 100 ],
-      [ "glaive", 100 ],
-      [ "pike", 100 ],
-      [ "pike_copper", 100 ],
-      [ "poleaxe", 100 ],
-      [ "2h_flail_steel", 100 ],
-      [ "battleaxe", 100 ],
-      [ "lucern_hammer", 100 ],
-      [ "mace", 100 ],
-      [ "morningstar", 100 ],
-      [ "warhammer", 100 ]
-    ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ [ "mine_balrog_west", "mine_balrog_central", "mine_balrog_east" ] ],
     "object": {

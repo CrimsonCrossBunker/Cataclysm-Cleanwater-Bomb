@@ -50,12 +50,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "mushroom_collection",
-    "subtype": "distribution",
-    "entries": [ { "item": "mushroom", "count": 1 }, { "item": "mushroom_morel", "count": 1 } ]
-  },
-  {
     "type": "material",
     "id": "mag_awakened_water",
     "name": "Awakened Water",
