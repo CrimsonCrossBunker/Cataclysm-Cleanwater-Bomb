@@ -2759,3 +2759,39 @@ do
     recipe:component_any { { id = "warptoken_material", count = 250 } }
     content.upsert(recipe)
 end
+
+content.add(content.Recipe {
+    id = "quickheal",
+    result = "quickheal",
+    uncraft = true,
+    reversible = true,
+    autolearn = false,
+    duration_moves = 200,
+    activity_level = 1,
+}
+    :tool("fakeitem_statue", 1)
+    :component("warptoken", 4))
+
+content.add(content.Recipe {
+    id = "warpmetalbag",
+    result = "warpmetalbag",
+    uncraft = true,
+    reversible = true,
+    autolearn = false,
+    duration_moves = 200,
+    activity_level = 1,
+}
+    :tool("fakeitem_statue", 1)
+    :component("warptoken", 5))
+
+content.add(content.Recipe {
+    id = "warpdirtbag",
+    result = "warpdirtbag",
+    uncraft = true,
+    reversible = true,
+    autolearn = false,
+    duration_moves = 200,
+    activity_level = 1,
+}
+    :tool("fakeitem_statue", 1)
+    :component("warptoken", 5))
