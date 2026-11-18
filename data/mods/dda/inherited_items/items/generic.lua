@@ -325,3 +325,30 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "book_binder",
+        category = "books",
+        symbol = "/",
+        looks_like = "story_book",
+        color = "light_gray",
+        name = ccb.content.plural_text("book binder", "book binders"),
+        description = ccb.content.text("A book binder.  With a pen and some paper you could copy some recipes from books into it."),
+        mass_milligrams = 200000,
+        volume_ml = 640,
+        price_cents = 500,
+        price_postapoc_cents = 50,
+        replace_pockets = true,
+    }
+    item:clear_use_actions()
+    item:native_use("BINDER_ADD_RECIPE")
+    item:native_use("BINDER_MANAGE_RECIPE")
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:tool()
+    item:magazine_pocket { ammo_capacities = { paper = 90 }, rigid = false }
+    content.add(item)
+end

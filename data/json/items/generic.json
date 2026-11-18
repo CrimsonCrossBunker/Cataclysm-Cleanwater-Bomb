@@ -73,25 +73,6 @@
     "ammo_type": "paper"
   },
   {
-    "id": "book_binder",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "books",
-    "use_action": [ "BINDER_ADD_RECIPE", "BINDER_MANAGE_RECIPE" ],
-    "symbol": "/",
-    "looks_like": "story_book",
-    "color": "light_gray",
-    "name": { "str": "book binder" },
-    "description": "A book binder.  With a pen and some paper you could copy some recipes from books into it.",
-    "weight": "200 g",
-    "volume": "640 ml",
-    "material": [ "plastic" ],
-    "price": "5 USD",
-    "price_postapoc": "50 cent",
-    "flags": [ "NO_UNLOAD", "NO_RELOAD" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": false, "ammo_restriction": { "paper": 90 } } ]
-  },
-  {
     "type": "ITEM",
     "id": "lens",
     "symbol": ".",
