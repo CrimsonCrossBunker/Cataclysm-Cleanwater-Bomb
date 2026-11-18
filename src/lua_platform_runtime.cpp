@@ -3240,7 +3240,7 @@ void validate_monster_group_entry( const std::string &id,
         throw std::runtime_error( "monster group entry id cannot be empty" );
     }
     const int native_int_max = std::numeric_limits<int>::max();
-    if( weight <= 0 || cost < 0 ||
+    if( weight <= 0 || weight > native_int_max || cost < 0 || cost > native_int_max ||
         pack_minimum < 1 || pack_maximum < 1 ||
         pack_minimum > native_int_max || pack_maximum > native_int_max ||
         pack_minimum > pack_maximum ) {
@@ -9416,16 +9416,22 @@ bool content_transaction::apply( std::string &error )
             int highest_frequency_value = 0;
             for( const monster_group_entry_definition_data &monster_entry :
                  entry.definition->entries ) {
+                const int weight = static_cast<int>( monster_entry.weight );
+                if( weight > std::numeric_limits<int>::max() - native.freq_total ) {
+                    throw std::runtime_error( "monster group '" + id.str() +
+                                              "' exceeds the native spawn weight limit" );
+                }
+                native.freq_total += weight;
                 spawn_data data;
                 if( !monster_entry.monster.empty() ) {
                     const mtype_id monster( monster_entry.monster );
-                    if( monster_entry.weight > highest_frequency_value ) {
-                        highest_frequency_value = static_cast<int>( monster_entry.weight );
+                    if( weight > highest_frequency_value ) {
+                        highest_frequency_value = weight;
                         highest_frequency = monster;
                     }
                     native.monsters.emplace_back(
                         monster,
-                        static_cast<int>( monster_entry.weight ),
+                        weight,
                         static_cast<int>( monster_entry.cost ),
                         static_cast<int>( monster_entry.pack_minimum ),
                         static_cast<int>( monster_entry.pack_maximum ),
@@ -9433,14 +9439,15 @@ bool content_transaction::apply( std::string &error )
                 } else {
                     native.monsters.emplace_back(
                         mongroup_id( monster_entry.group ),
-                        static_cast<int>( monster_entry.weight ),
+                        weight,
                         static_cast<int>( monster_entry.cost ),
                         static_cast<int>( monster_entry.pack_minimum ),
                         static_cast<int>( monster_entry.pack_maximum ),
                         data, 0_turns, 0_turns, holiday::none );
                 }
             }
-            if( native.defaultMonster == mtype_id() && highest_frequency_value > 0 ) {
+            native.event_freq[holiday::none] = native.freq_total;
+            if( entry.definition->default_monster.empty() && highest_frequency_value > 0 ) {
                 // Mirrors the legacy fallback: without an explicit default,
                 // the highest-frequency monster entry becomes the default.
                 native.defaultMonster = highest_frequency;
