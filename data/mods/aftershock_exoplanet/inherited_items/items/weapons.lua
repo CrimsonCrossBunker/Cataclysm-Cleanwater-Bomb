@@ -105,3 +105,76 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "afs_energy_saber_off",
+        name = ccb.content.plural_text("CE-4 \"The Claw\" (Non-Lethal)", "CE-4 \"The Claws\" (Non-Lethal)"),
+        description = ccb.content.text("The CE-4, commonly known as \"The Claw\", is a popular self-defense weapon used by corporate enforcers everywhere, especially on dangerous frontier worlds.  Made from a cylinder of heat activated memory-alloy, the flick of a switch allows it to morph between a less-lethal bludgeon form and a sharpened, super heated blade.  Currently, it is in its less-lethal configuration, and looks like a sleek side-handle metal baton."),
+        mass_milligrams = 760000,
+        volume_ml = 2000,
+        longest_side_mm = 900,
+        price_cents = 100000,
+        price_postapoc_cents = 2000,
+        symbol = "[",
+        looks_like = "PR24-extended",
+        color = "light_gray",
+        techniques = { "WBLOCK_2", "RAPID" },
+        melee_to_hit = 3,
+        replace_pockets = true,
+    }
+    item:material("superalloy", 1)
+    item:material("qt_steel", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "afs_energy_saber_on" },
+        menu_text = ccb.content.text("Activate"),
+        message = ccb.content.text("You activate the claw, and its bludgeoning surface slowly flattens into an edge as it begins to glow red-hot"),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_flags()
+    item:flag("BELT_CLIP")
+    item:flag("DURABLE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 22)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 20000,
+        max_weight_milligrams = 20000000,
+        holster = true,
+        allowed_items = { "light_battery_cell", "light_minus_battery_cell", "light_minus_disposable_cell" },
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "afs_energy_saber_on",
+        copy_from = "afs_energy_saber_off",
+        name = ccb.content.plural_text("CE-4 \"The Claw\" (Lethal)", "CE-4 \"The Claws\" (Lethal)"),
+        description = ccb.content.text("The CE-4, commonly known as \"The Claw\", is a popular self-defense weapon used by corporate enforcers everywhere, especially on dangerous frontier planets.  Made from a cylinder of heat activated memory-alloy, the flick of a switch allows it to morph between a less-lethal bludgeon form and a sharpened, super heated blade.  Currently, it is in its lethal configuration, and looks like a sleek sword, humming softly as its blade glows from heat."),
+        mass_milligrams = 760000,
+        volume_ml = 2000,
+        longest_side_mm = 900,
+        color = "light_blue",
+        looks_like = "arming_sword",
+        techniques = { "WBLOCK_2" },
+    }
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "afs_energy_saber_off" },
+        menu_text = ccb.content.text("Deactivate"),
+        message = ccb.content.text("The blade stops humming, and its edge dissipates into a smooth curve as it cools."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:melee_damage("cut", 18)
+    item:melee_damage("afs_heat_melee", 35)
+    item:transform_into { target = "afs_energy_saber_off" }
+    item:tool { turns_per_charge = 4 }
+    content.add(item)
+end
