@@ -137,3 +137,5 @@ require("inherited_items")
 require("active_items")
 
 require("denarius")
+
+require("spell_traps")

@@ -141,19 +141,5 @@
     "countdown_action": { "type": "explosion", "explosion": { "power": 200 } },
     "flags": [ "TRADER_AVOID" ],
     "melee_damage": { "bash": 14 }
-  },
-  {
-    "type": "trap",
-    "id": "tr_alchemist_mine",
-    "trigger_weight": "1 g",
-    "name": "alchemical mine",
-    "color": "yellow",
-    "symbol": "^",
-    "visibility": 1,
-    "avoidance": 99,
-    "difficulty": 0,
-    "action": "spell",
-    "spell_data": { "id": "alchemist_mine_pull" },
-    "drops": [ "alchemist_mine" ]
   }
 ]
