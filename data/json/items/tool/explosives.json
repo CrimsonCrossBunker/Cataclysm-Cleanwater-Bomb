@@ -179,39 +179,6 @@
     "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ]
   },
   {
-    "id": "firecracker_pack",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "pack of firecrackers", "str_pl": "packs of firecrackers" },
-    "description": "A pack of 25 firecrackers with a starter fuse.  Use this item to light the fuse.  Of course, you will need a lighter or some matches to do so.  Shortly after you light the fuse they will begin to explode, so throw them quickly!",
-    "weight": "80 g",
-    "volume": "630 ml",
-    "price": "1 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "paper" ],
-    "symbol": "*",
-    "color": "red",
-    "use_action": {
-      "type": "transform",
-      "target": "firecracker_pack_act",
-      "target_timer": "27 seconds",
-      "msg": "You light the pack of firecrackers.",
-      "need_fire": 1,
-      "need_wielding": true,
-      "menu_text": "Light up"
-    }
-  },
-  {
-    "id": "firecracker_pack_act",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "firecracker_pack",
-    "description": "A pack of 25 firecrackers that has been lit; the fuse is hissing.  Throw them quickly before they start to explode.",
-    "tick_action": [ "FIRECRACKER_PACK_ACT" ],
-    "use_action": { "type": "message", "message": "You've already lit the fuse, try throwing it instead.", "name": "Light up" },
-    "flags": [ "DANGEROUS", "SPAWN_ACTIVE" ]
-  },
-  {
     "id": "flashbang",
     "//": "Based on the M84 stun grenade",
     "type": "ITEM",
@@ -356,16 +323,6 @@
     },
     "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "ACT_IN_FIRE", "GRENADE", "CYLINDER_GRENADE" ],
     "melee_damage": { "bash": 1 }
-  },
-  {
-    "id": "grenade_inc_act",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "grenade_inc",
-    "description": "An active incendiary grenade, likely to burst into an inferno any second now.  Better throw it!",
-    "countdown_interval": "5 seconds",
-    "countdown_action": "GRENADE_INC_ACT",
-    "flags": [ "ACT_IN_FIRE", "DANGEROUS", "SPAWN_ACTIVE" ]
   },
   {
     "id": "mininuke",
