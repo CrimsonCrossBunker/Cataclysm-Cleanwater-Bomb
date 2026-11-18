@@ -1,26 +1,5 @@
 [
   {
-    "//": "EoCs related to learning new powers and practicing existing powers are stored below",
-    "type": "effect_on_condition",
-    "id": "EOC_PSI_STUDYING_POWER",
-    "condition": { "u_has_effect": "effect_psi_studying_power" },
-    "effect": [
-      { "math": [ "u_psi_studying_tick_experience_counter += contemplation_factor()" ] },
-      {
-        "run_eocs": [
-          {
-            "id": "EOC_PSI_STUDYING_POWER_INTEGER_TICK_OVER",
-            "condition": { "math": [ "u_psi_studying_tick_experience_counter >= 1" ] },
-            "effect": [
-              { "math": [ "u_spell_exp(u_latest_studied_power_name) += 1" ] },
-              { "math": [ "u_psi_studying_tick_experience_counter -= 1" ] }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PSI_STUDYING_POWER_INITIAL_SETUP",
     "condition": { "not": { "u_has_any_effect": [ "weary_7", "weary_8" ] } },
@@ -128,68 +107,6 @@
     "id": "EOC_PSI_STUDYING_DUST_CONVERSION",
     "condition": { "math": [ "u_latest_studied_power_difficulty > 3" ] },
     "effect": [ { "u_spawn_item": "matrix_crystal_drained_dust", "suppress_message": true } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PSI_MOVING_CANCELS_RESEARCH",
-    "eoc_type": "EVENT",
-    "required_event": "avatar_moves",
-    "condition": { "or": [ { "u_has_effect": "effect_psi_learning_new_power" }, { "u_has_effect": "effect_psi_studying_power" } ] },
-    "effect": [ { "u_lose_effect": [ "effect_psi_learning_new_power", "effect_psi_studying_power" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PSI_CHANNELING_CANCELS_RESEARCH",
-    "eoc_type": "EVENT",
-    "required_event": "spellcasting_finish",
-    "condition": { "or": [ { "u_has_effect": "effect_psi_learning_new_power" }, { "u_has_effect": "effect_psi_studying_power" } ] },
-    "effect": [ { "u_lose_effect": [ "effect_psi_learning_new_power", "effect_psi_studying_power" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PSI_CANCELLING_ACTIVITY_CANCELS_RESEARCH",
-    "eoc_type": "EVENT",
-    "required_event": "character_finished_activity",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "ACT_PSI_LEARNING_NEW_POWER", { "context_val": "activity" } ] },
-            { "compare_string": [ "ACT_PSI_STUDYING_POWER", { "context_val": "activity" } ] }
-          ]
-        },
-        {
-          "or": [ { "u_has_effect": "effect_psi_learning_new_power" }, { "u_has_effect": "effect_psi_studying_power" } ]
-        }
-      ]
-    },
-    "effect": [ { "u_lose_effect": [ "effect_psi_learning_new_power", "effect_psi_studying_power" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PSI_TOO_TIRED_TO_STUDY",
-    "eoc_type": "EVENT",
-    "required_event": "character_gains_effect",
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "compare_string": [ "weary_7", { "context_val": "effect" } ] },
-            { "compare_string": [ "weary_8", { "context_val": "effect" } ] }
-          ]
-        },
-        {
-          "or": [ { "u_has_effect": "effect_psi_learning_new_power" }, { "u_has_effect": "effect_psi_studying_power" } ]
-        }
-      ]
-    },
-    "effect": [
-      { "u_lose_effect": [ "effect_psi_learning_new_power", "effect_psi_studying_power" ] },
-      {
-        "u_message": "You're so exhausted you can barely think straight, and certainly can't concentrate on studying your powers.",
-        "popup": true
-      }
-    ]
   },
   {
     "type": "effect_on_condition",
