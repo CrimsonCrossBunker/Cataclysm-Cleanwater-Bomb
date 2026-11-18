@@ -2,12 +2,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "army_mags_m4",
-    "entries": [ { "item": "stanag30", "ammo-item": "556", "charges": 30 }, { "item": "stanag30", "ammo-item": "556", "charges": 30 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "quiver_bow_hunter",
     "entries": [ { "item": "arrow_cf", "count": 10 } ]
   },
@@ -16,12 +10,6 @@
     "subtype": "collection",
     "id": "quiver_crossbow_hunter",
     "entries": [ { "item": "bolt_steel", "charges": 4 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "flintlock_pouch_reenactor",
-    "entries": [ { "item": "flintlock_ammo", "charges": 14 } ]
   },
   {
     "type": "profession_item_substitutions",

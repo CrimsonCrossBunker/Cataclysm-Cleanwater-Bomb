@@ -410,3 +410,87 @@ do
     group:entry { item = "pickle", count = { 1, -1 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cannedfood", kind = "distribution" }
+    group:group("beans_in_can", 40)
+    group:group("pork_beans_in_can", 40)
+    group:item("can_tomato", 40)
+    group:group("corn_in_can", 35)
+    group:item("cooked_pumpkin", 25)
+    group:item("con_milk", 30)
+    group:group("spam_in_can", 30)
+    group:group("pineapple_in_can", 30)
+    group:item("can_peach", 30)
+    group:group("coconut_milk_in_can", 10)
+    group:item("can_sardine", 14)
+    group:group("tuna_in_can", 35)
+    group:group("clams_in_can", 25)
+    group:group("chowder_in_can", 35)
+    group:group("can_herring_jar_glass_sealed_2", 30)
+    group:group("chicken_in_can", 40)
+    group:group("brown_bread_can_medium_14", 20)
+    group:item("broth", 15)
+    group:entry { item = "crackers", count = { -1, -1 }, probability = 10 }
+    group:group("oyster_crackers_plastic_bag_vac_8", 10)
+    group:entry { item = "grahmcrackers", count = { -1, -1 }, probability = 10 }
+    group:entry { item = "marshmallow", count = { -1, -1 }, probability = 10 }
+    group:entry { item = "syrup", charges = { -1, -1 }, probability = 10 }
+    group:entry { item = "syrup_corn", charges = { -1, -1 }, probability = 4 }
+    group:entry { item = "syrup_simple", charges = { -1, -1 }, probability = 1 }
+    group:entry { item = "coffee_syrup", charges = { -1, -1 }, probability = 15 }
+    group:item("instant_coffee", 15)
+    group:item("soup_veggy", 15)
+    group:item("soup_meat", 15)
+    group:item("soup_chicken", 15)
+    group:item("soup_mushroom", 15)
+    group:item("soup_tomato", 15)
+    group:item("soup_dumplings", 15)
+    group:item("curry_veggy", 15)
+    group:item("curry_meat", 15)
+    group:group("flour_various", 80)
+    group:group("milk_powder_various", 20)
+    group:group("cocoa_powder_various", 20)
+    group:group("milk_cocoa_powder_various", 20)
+    group:group("cornmeal_box_full", 30)
+    group:group("tortilla_corn_bag_plastic_full", 20)
+    group:group("tortilla_flour_bag_plastic_full", 20)
+    group:group("powder_eggs_bottle_plastic_small_16", 20)
+    group:group("protein_powder_bottle_plastic_small_1_9", 12)
+    group:item("dry_meat", 10)
+    group:entry { item = "dry_fish", container = "wrapper", probability = 10 }
+    group:item("dry_lobster", 10)
+    group:entry { item = "dry_veggy", count = { 2, 2 }, probability = 10 }
+    group:item("dry_corn", 1)
+    group:item("dry_fruit", 10)
+    group:group("oatmeal_box_1lb", 40)
+    group:group("toastem_box_small_8", 90)
+    group:group("sugar_various", 20)
+    group:group("artificial_sweetener_box_small_71", 5)
+    group:group("lemonade_powder_bottle_plastic_small_10", 5)
+    group:entry { item = "molasses", charges = { -1, -1 }, probability = 10 }
+    group:group("cheese_in_can", 40)
+    group:group("cheese_hard_wrapper_8", 5)
+    group:group("salt_various", 20)
+    group:group("pepper_various", 20)
+    group:group("seasoning_salt_various", 25)
+    group:entry { item = "vinegar", charges = { -1, -1 }, probability = 15 }
+    group:group("vegetable_oil_bottle", 30)
+    group:group("veggy_pickled_jar_glass_sealed_2", 8)
+    group:group("sauerkraut_jar_glass_sealed_2", 5)
+    group:item("sports_drink", 10)
+    group:item("protein_shake", 10)
+    group:entry { item = "dogfood", container = "can_medium", probability = 5 }
+    group:entry { item = "catfood", container = "can_food", probability = 5 }
+    group:group("fish_pickled_jar_glass_sealed_2", 8)
+    group:item("lutefisk", 1)
+    group:group("dry_beans_bag_plastic_full", 40)
+    group:group("dry_lentils_bag_plastic_full", 40)
+    group:group("dry_rice_various", 60)
+    group:group("meat_pickled_jar_glass_sealed_2", 6)
+    group:group("kitchen_sealed_3L_jar", 2)
+    group:group("big_canned_food", 1)
+    group:group("teabag_box", 20)
+    group:group("soup_box", 20)
+    content.add(group)
+end

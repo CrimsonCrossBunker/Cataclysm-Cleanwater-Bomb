@@ -107,47 +107,6 @@
     ]
   },
   {
-    "id": "clothing_outdoor_set",
-    "type": "item_group",
-    "subtype": "collection",
-    "//": "Standard (non-winter) set of clothes for wearing outdoors.",
-    "items": [
-      { "group": "clothing_outdoor_torso" },
-      { "group": "clothing_outdoor_pants" },
-      { "group": "clothing_outdoor_shoes" },
-      { "group": "underwear" },
-      { "group": "clothing_glasses", "prob": 5 },
-      { "group": "clothing_watch", "prob": 5 }
-    ]
-  },
-  {
-    "id": "clothing_outdoor_pants",
-    "type": "item_group",
-    "//": "Standard (non-winter) pants suitable for wearing outdoors.",
-    "subtype": "distribution",
-    "entries": [
-      {
-        "collection": [
-          {
-            "distribution": [
-              { "item": "jeans", "prob": 60 },
-              { "item": "jeans_ripped", "prob": 5 },
-              { "item": "jeans_skinny", "prob": 10 },
-              { "item": "pants", "prob": 100 },
-              { "item": "pants_leather", "prob": 30 },
-              { "item": "pants_tactical", "prob": 20 },
-              { "item": "pants_cargo", "prob": 30 },
-              { "item": "shorts_cargo", "prob": 60 },
-              { "item": "pants", "variant": "pants_flag", "prob": 1 },
-              { "item": "pants", "variant": "pants_flag", "prob": 70, "event": "independence_day" }
-            ]
-          },
-          { "item": "leather_belt", "prob": 30 }
-        ]
-      }
-    ]
-  },
-  {
     "id": "clothing_watch",
     "type": "item_group",
     "subtype": "distribution",
@@ -164,52 +123,6 @@
       { "item": "smart_watch", "prob": 50, "charges": [ 0, 80 ] },
       { "item": "smart_watch_adv", "prob": 25, "charges": [ 0, 40 ] }
     ]
-  },
-  {
-    "id": "hardware_clothing",
-    "type": "item_group",
-    "//": "wearable utility or protective gear you can buy in a common hardware store or find on a jobsite",
-    "//2": "Not intended to be a set of clothing for NPCs or monsters",
-    "items": [
-      [ "boots_steel", 40 ],
-      { "item": "toecaps", "prob": 30 },
-      [ "sneakers_steel", 28 ],
-      [ "hat_hard", 40 ],
-      [ "mesh_nape_protector", 10 ],
-      [ "nape_protector", 10 ],
-      [ "face_shield_plastic", 10 ],
-      [ "sun_shield", 15 ],
-      [ "attachable_ear_muffs", 5 ],
-      [ "mask_dust", 30 ],
-      { "item": "mask_filter", "prob": 30, "charges": [ 0, 100 ] },
-      {
-        "distribution": [ { "item": "mask_gas", "charges": [ 0, -1 ], "prob": 50 }, { "group": "gasmask_bag_full", "prob": 50 } ],
-        "prob": 15
-      },
-      { "item": "mask_gas_half", "prob": 30, "charges": [ 0, 100 ] },
-      [ "glasses_safety", 30 ],
-      [ "ear_plugs", 35 ],
-      [ "apron_cut_resistant", 5 ],
-      [ "gloves_cut_resistant", 10 ],
-      [ "chaps_cut_resistant", 5 ],
-      [ "armguard_cut_resistant", 5 ],
-      [ "balaclava_cut_resistant", 2 ],
-      [ "throat_guard_cut_resistant", 2 ],
-      [ "apron_leather", 10 ],
-      [ "tool_belt", 30 ],
-      [ "knee_pads", 20 ],
-      [ "sheath", 10 ],
-      [ "bootsheath", 3 ],
-      [ "gloves_leather", 40 ],
-      [ "gloves_work", 45 ],
-      { "item": "wearable_light", "prob": 10, "charges": [ 0, 100 ] },
-      { "group": "hat_hard_flashlight", "prob": 1 }
-    ]
-  },
-  {
-    "id": "dress_shoes",
-    "type": "item_group",
-    "items": [ [ "dress_shoes", 50 ], [ "heels", 50 ], [ "espadrilles", 20 ] ]
   },
   {
     "type": "item_group",

@@ -1,36 +1,5 @@
 [
   {
-    "id": "dollar_food",
-    "type": "item_group",
-    "items": [
-      { "group": "candy_chocolate", "prob": 45 },
-      { "prob": 15, "group": "licorice_bag_plastic_4" },
-      { "group": "salty_snacks", "prob": 80 },
-      { "item": "peanut_shelled", "count": -1, "prob": 20 },
-      { "item": "almond_shelled", "count": -1, "prob": 20 },
-      { "group": "breakfast_cereal_in_box_full", "prob": 25 },
-      { "group": "breakfast_cereal_in_box_full", "prob": 25 },
-      [ "soup_tomato", 25 ],
-      [ "soup_chicken", 25 ],
-      { "group": "box_lasagne_1lb", "prob": 5 },
-      { "group": "box_spaghetti_1lb", "prob": 10 },
-      { "group": "box_macaroni_1lb", "prob": 10 },
-      { "group": "box_macncheese", "prob": 25 },
-      [ "can_beans", 20 ],
-      [ "can_spam", 20 ],
-      [ "can_pineapple", 20 ],
-      { "group": "tuna_in_can", "prob": 20 },
-      [ "can_cheese", 20 ],
-      { "group": "peanutbutter_jar_sealed", "prob": 20 },
-      { "group": "jam_fruit_jar_sealed", "prob": 20 },
-      { "item": "dry_rice", "count": -1, "prob": 20 },
-      { "item": "dry_beans", "count": -1, "prob": 20 },
-      { "item": "dry_lentils", "count": -1, "prob": 20 },
-      { "item": "cookies", "count": -1, "prob": 25 },
-      { "prob": 40, "group": "bread_in_bag" }
-    ]
-  },
-  {
     "type": "item_group",
     "id": "coffee_shop",
     "items": [

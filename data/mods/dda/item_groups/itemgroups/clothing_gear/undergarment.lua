@@ -65,3 +65,34 @@ do
     group:item("speedo", 1)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "underwear", kind = "distribution" }
+    group:group("female_underwear", 50)
+    group:group("male_underwear", 50)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "female_underwear", kind = "collection" }
+    group:group("female_underwear_top")
+    group:group("female_underwear_bottom")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "male_underwear", kind = "collection" }
+    group:group("male_underwear_top")
+    group:group("male_underwear_bottom")
+    content.add(group)
+end
+
+do
+    -- unisex socks
+    local group = content.ItemGroup { id = "socks_unisex", kind = "distribution" }
+    group:item("socks", 70)
+    group:item("socks_ankle", 50)
+    group:item("socks_wool", 30)
+    group:item("thermal_socks", 1)
+    content.add(group)
+end

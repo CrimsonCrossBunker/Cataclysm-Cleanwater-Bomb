@@ -90,3 +90,33 @@ do
     group:entry { item = "geiger_off", charges = { 0, 100 }, probability = 15 }
     content.add(group)
 end
+
+do
+    -- Full face protection worn with hazmat suits
+    local group = content.ItemGroup { id = "hazmat_masks", kind = "distribution" }
+    group:entry {
+        collection = {
+            { item = "glasses_safety" },
+            { item = "mask_filter", charges = { 0, -1 } },
+        },
+        probability = 40,
+    }
+    group:entry {
+        distribution = {
+            { item = "mask_gas", charges = { 0, -1 }, probability = 50 },
+            {
+                item = "mask_gas",
+                charges = { 0, -1 },
+                contents = {
+                    { group = "gasmask_inserts_in_use" },
+                },
+                probability = 25,
+            },
+            { group = "gasmask_bag_full", probability = 25 },
+            { group = "gasmask_bag_used", probability = 60 },
+        },
+        probability = 60,
+    }
+    group:entry { item = "mask_gas_half", charges = { 0, -1 }, probability = 60 }
+    content.add(group)
+end

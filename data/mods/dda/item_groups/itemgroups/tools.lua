@@ -695,3 +695,312 @@ do
     group:item("kevlar_shears", 40)
     content.add(group)
 end
+
+do
+    -- Portable tools used for carpentry
+    local group = content.ItemGroup { id = "tools_carpentry", kind = "collection" }
+    group:group("tools_common")
+    group:entry { item = "circsaw_off", charges = { 0, 500 } }
+    group:entry {
+        distribution = {
+            { item = "cordless_drill", charges = { 0, 500 }, probability = 80 },
+            { item = "corded_powerdrill", probability = 80 },
+            { item = "hand_drill", probability = 20 },
+        },
+        probability = 80,
+    }
+    group:entry { item = "reciprocating_saw", charges = { 0, 500 }, probability = 80 }
+    group:entry { item = "cordless_impact_wrench", charges = { 0, 500 }, probability = 20 }
+    group:entry { item = "nailgun", charges = { 0, 20 } }
+    group:item("chisel", 10)
+    group:entry {
+        distribution = {
+            { group = "tools_toolbox", probability = 12 },
+            { group = "tools_workshop", probability = 5 },
+        },
+        probability = 20,
+    }
+    group:item("tape_measure")
+    group:item("sandpaper")
+    content.add(group)
+end
+
+do
+    -- Industrial machinery used for construction
+    local group = content.ItemGroup { id = "tools_construction", kind = "collection" }
+    group:item("con_mix_foldable")
+    group:entry { item = "reciprocating_saw", charges = { 0, 500 }, probability = 80 }
+    group:entry { item = "cordless_impact_wrench", charges = { 0, 500 }, probability = 20 }
+    group:item("metal_smoother", 90)
+    group:group("graphite_small_bottle_part", 10)
+    group:entry {
+        distribution = {
+            { item = "elec_jackhammer", charges = { 0, 6600 }, probability = 40 },
+            { item = "elec_jackhammer_mining", charges = { 0, 6600 }, probability = 8 },
+            { item = "jackhammer", charges = { 0, 1200 }, probability = 40 },
+            { item = "jackhammer_mining", charges = { 0, 1200 }, probability = 8 },
+            { item = "corded_demolition_hammer", probability = 40 },
+        },
+        probability = 40,
+    }
+    group:entry {
+        distribution = {
+            { group = "tools_toolbox", probability = 20 },
+            { group = "tools_workshop", probability = 5 },
+        },
+        probability = 20,
+    }
+    group:item("recharge_station", 10)
+    group:entry { item = "angle_grinder", charges = { 0, 500 }, probability = 30 }
+    group:item("grinder_cutoff_disc", 15)
+    group:item("grinder_metal_grinding_disc", 15)
+    content.add(group)
+end
+
+do
+    -- Common household tools
+    local group = content.ItemGroup { id = "tools_common", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "bucket", probability = 5 },
+            { item = "bucket_5gal", probability = 5 },
+        },
+        probability = 5,
+    }
+    group:entry {
+        distribution = {
+            { item = "jerrycan", probability = 10 },
+            { item = "jerrycan_big", probability = 10 },
+        },
+        probability = 10,
+    }
+    group:item("tape_measure", 25)
+    group:item("funnel", 20)
+    group:entry {
+        distribution = {
+            { item = "rake", probability = 15 },
+            { item = "rake_plastic", probability = 25 },
+        },
+        probability = 20,
+    }
+    group:item("aluminum_stepladder", 5)
+    group:entry {
+        distribution = {
+            { item = "machete", probability = 10 },
+            { item = "brush_handaxe", probability = 5 },
+        },
+        probability = 15,
+    }
+    group:item("misc_repairkit", 25)
+    group:entry {
+        distribution = {
+            { item = "saw", probability = 60 },
+            { item = "bow_saw", probability = 50 },
+        },
+        probability = 40,
+    }
+    group:group("tools_common_small", 50)
+    content.add(group)
+end
+
+do
+    -- A typical toolbox filled with tools.
+    local group = content.ItemGroup {
+        id = "tools_toolbox",
+        kind = "collection",
+        container = "toolbox_empty",
+        overflow = "discard",
+    }
+    group:item("hammer", 80)
+    group:entry {
+        distribution = {
+            { item = "screwdriver", probability = 80 },
+            { item = "screwdriver_set", probability = 50 },
+            { item = "socket_screwdriver_set", probability = 10 },
+        },
+        probability = 65,
+    }
+    group:item("pliers_locking", 40)
+    group:entry {
+        distribution = {
+            { item = "wrench", probability = 20 },
+            { item = "wrench_small", probability = 20 },
+            { item = "socket_wrench_set", probability = 20 },
+        },
+        probability = 20,
+    }
+    group:item("hand_pump", 1)
+    group:item("funnel", 20)
+    group:item("metal_file", 40)
+    group:group("graphite_small_bottle_part", 50)
+    group:item("tape_measure", 70)
+    group:item("sandpaper", 65)
+    content.add(group)
+end
+
+do
+    -- Portable tools for earthworking or farming
+    local group = content.ItemGroup { id = "tools_earthworking", kind = "collection" }
+    group:item("ax", 80)
+    group:item("hatchet")
+    group:item("bucket_5gal", 40)
+    group:entry {
+        distribution = {
+            { item = "chainsaw_off", charges = { 0, 450 }, probability = 30 },
+            { item = "elec_chainsaw_off", charges = { 0, 500 }, probability = 30 },
+            { item = "polesaw_off", charges = { 0, 450 }, probability = 10 },
+        },
+        probability = 20,
+    }
+    group:item("g_shovel", 40)
+    group:item("hand_drill", 20)
+    group:item("hoe", 60)
+    group:item("pickaxe", 80)
+    group:item("pitchfork", 60)
+    group:entry { item = "trimmer_off", charges = { 0, 600 }, probability = 20 }
+    group:item("scythe", 40)
+    group:item("shovel")
+    group:item("sickle", 40)
+    group:item("machete", 25)
+    group:item("hose_garden", 20)
+    group:entry {
+        distribution = {
+            { item = "brush_handaxe", probability = 15 },
+            { item = "brush_axe", probability = 10 },
+            { item = "brush_pole", probability = 5 },
+        },
+        probability = 15,
+    }
+    group:entry {
+        distribution = {
+            { item = "rake", probability = 20 },
+            { item = "rake_plastic", probability = 40 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "shovel_snow", probability = 20 },
+            { item = "shovel_snow_plastic", probability = 40 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "shears", probability = 40 },
+            { item = "forged_shears", probability = 40 },
+        },
+        probability = 40,
+    }
+    content.add(group)
+end
+
+do
+    -- Tools commonly found in the home or other domestic settings
+    local group = content.ItemGroup { id = "tools_home", kind = "distribution" }
+    group:group("tools_common")
+    group:group("tools_lighting", 50)
+    group:group("tools_tailor", 50)
+    group:group("tools_toolbox", 4)
+    group:group("tools_workshop", 1)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "full_1st_aid", kind = "collection", container = "1st_aid_box" }
+    group:group("medical_tape_roll_part")
+    group:entry { item = "gloves_medical", count = { 2, 2 } }
+    group:group("bottle_otc_painkiller_10")
+    group:item("disinfectant")
+    group:item("saline")
+    group:entry { item = "adhesive_bandages", count = { 16, 16 } }
+    group:entry { item = "bandages", count = { 3, 3 } }
+    group:entry { item = "medical_gauze", count = { 6, 6 } }
+    group:item("booklet_firstaid")
+    group:item("scissors_medical")
+    content.add(group)
+end
+
+do
+    -- Light sources used as industrial working equipment.
+    local group = content.ItemGroup { id = "tools_lighting_industrial", kind = "collection" }
+    group:entry { item = "flashlight", charges = { 0, 300 } }
+    group:entry { item = "heavy_flashlight", charges = { 0, 300 }, probability = 40 }
+    group:entry { item = "wearable_light", charges = { 0, 100 }, probability = 60 }
+    content.add(group)
+end
+
+do
+    -- Practical, small and light-weight tools for survival excluding camping gear.
+    local group = content.ItemGroup { id = "tools_survival", kind = "collection" }
+    group:item("binoculars", 30)
+    group:item("canteen", 15)
+    group:item("e_tool", 10)
+    group:entry {
+        collection = {
+            { item = "flaregun" },
+            { item = "signal_flare", count = { 1, 3 } },
+        },
+        probability = 20,
+    }
+    group:entry { item = "handflare", charges = { 300, 300 }, probability = 20 }
+    group:item("hatchet", 10)
+    group:entry {
+        distribution = {
+            { item = "knife_hunting", probability = 10 },
+            { group = "knife_rambo_cont", probability = 10 },
+            { item = "knife_swissarmy", probability = 5 },
+            { item = "knife_trench", probability = 10 },
+        },
+        probability = 10,
+    }
+    group:item("mess_kit", 20)
+    group:entry { item = "portable_stove", sealed = false, container = "nylon_bag", probability = 2 }
+    group:item("multitool", 5)
+    group:entry {
+        distribution = {
+            { item = "pockknife", probability = 50 },
+            { item = "knife_folding", probability = 30 },
+            { item = "utility_knife_folding", probability = 2 },
+        },
+        probability = 50,
+    }
+    group:group("pur_tablets_bottle_plastic_small_75_100", 10)
+    group:entry { item = "ref_lighter", charges = { 0, 50 }, probability = 20 }
+    group:entry {
+        collection = {
+            { item = "ref_lighter_butane" },
+            { item = "butane_can", charges = { 350, 400 } },
+        },
+        probability = 5,
+    }
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 20 }
+    group:item("whistle", 20)
+    group:item("hand_crank_charger", 15)
+    group:item("flint_steel", 5)
+    group:entry { item = "tinderbox", charges = { 0, 100 }, probability = 2 }
+    group:item("whistle_multitool", 1)
+    group:item("chem_hexamine", 10)
+    group:entry { item = "esbit_stove", charges = { 0, 50 }, probability = 15 }
+    group:item("lifestraw", 3)
+    group:item("light_snare_kit", 3)
+    group:entry { item = "propane_lantern", charges = { 2000, 3000 }, probability = 15 }
+    group:entry { item = "propane_cooker", charges = { 2000, 3000 }, probability = 15 }
+    group:item("camping_multitool", 2)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "glue_weak_domestic", kind = "distribution" }
+    group:entry { item = "glue_weak", charges = { 0, 30 }, container = "bottle_plastic_tiny_glue" }
+    group:entry { item = "glue_weak", charges = { 0, 250 }, container = "bottle_plastic_small_glue" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "glue_strong_domestic", kind = "distribution" }
+    group:entry { item = "glue_strong", charges = { 0, 4 }, container = "small_squeeze_tube" }
+    group:entry { item = "glue_strong", charges = { 0, 30 }, container = "bottle_plastic_tiny_glue" }
+    group:entry { item = "glue_strong", charges = { 0, 250 }, container = "bottle_plastic_small_glue" }
+    content.add(group)
+end

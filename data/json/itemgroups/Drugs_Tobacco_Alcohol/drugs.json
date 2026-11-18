@@ -1,21 +1,5 @@
 [
   {
-    "id": "drugs_analgesic",
-    "type": "item_group",
-    "//": "Painkillers balanced according to rarity excluding illicit drugs",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "aspirin_ad_group", "prob": 50 },
-      { "group": "ibuprofen_ad_group", "prob": 100 },
-      { "group": "acetaminophen_ad_group", "prob": 100 },
-      { "group": "naproxen_ad_group", "prob": 50 },
-      { "group": "codeine_ad_group", "prob": 60 },
-      { "group": "tramadol_ad_group", "prob": 60 },
-      { "item": "morphine", "count": [ 1, 12 ], "container-item": "null", "prob": 10 },
-      { "group": "oxycodone_ad_group", "prob": 200 }
-    ]
-  },
-  {
     "id": "virology_lab_fridge",
     "type": "item_group",
     "items": [
@@ -45,18 +29,6 @@
     ]
   },
   {
-    "id": "drugs_pharmacy",
-    "type": "item_group",
-    "//": "Drugs stocked by a pharmacy including prescription medications",
-    "items": [
-      { "group": "drugs_analgesic", "prob": 100 },
-      { "group": "drugs_emergency", "prob": 100 },
-      { "group": "drugs_heal_simple", "prob": 100 },
-      { "group": "drugs_misc", "prob": 100 },
-      { "group": "drugs_rare", "prob": 100 }
-    ]
-  },
-  {
     "id": "drugs_rare",
     "type": "item_group",
     "//": "Rare and/or valuable drugs excluding painkillers",
@@ -72,21 +44,6 @@
       { "group": "prozac_dr_group", "prob": 10 },
       { "group": "thorazine_dr_group", "prob": 10 },
       { "group": "xanax_dr_group", "prob": 10 }
-    ]
-  },
-  {
-    "id": "drugs_soldier",
-    "type": "item_group",
-    "subtype": "distribution",
-    "//": "Healing items appropriate for soldiers and other paramilitary forces",
-    "entries": [
-      { "distribution": [ { "group": "full_ifak" }, { "group": "used_ifak" } ], "prob": 50 },
-      { "prob": 20, "group": "antibiotics_bottle_plastic_pill_prescription_1_15" },
-      { "item": "bandages", "prob": 100, "count": [ 1, 3 ] },
-      { "item": "morphine", "prob": 20, "count": [ 1, 4 ] },
-      { "prob": 20, "group": "quikclot_bag_plastic_1_6" },
-      { "item": "smoxygen_tank", "prob": 20, "charges": [ 0, 12 ] },
-      { "prob": 20, "group": "tramadol_bottle_plastic_pill_prescription_1_10" }
     ]
   },
   {

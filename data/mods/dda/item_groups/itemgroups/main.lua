@@ -169,3 +169,17 @@ do
     group:entry { item = "bolt_wood_small_game", count = { 10, 30 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "archery_ammo", kind = "distribution" }
+    group:entry { item = "arrow_wood", count = { 10, 30 } }
+    group:entry { item = "arrow_field_point_fletched", count = { 10, 30 }, probability = 50 }
+    group:entry { item = "arrow_cf", count = { 10, 30 } }
+    group:entry { item = "arrow_small_game_fletched", count = { 10, 30 } }
+    group:entry { item = "arrow_heavy_field_point_fletched", count = { 10, 30 } }
+    group:entry { item = "arrow_metal", count = { 10, 30 } }
+    group:entry { item = "arrow_metal_bodkin", count = { 10, 30 } }
+    group:entry { item = "arrow_metal_target", count = { 10, 30 } }
+    group:entry { item = "arrow_plastic", count = { 10, 30 } }
+    content.add(group)
+end

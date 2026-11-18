@@ -10,44 +10,5 @@
       { "group": "wallet_stylish_full", "prob": 25 },
       { "group": "wallets_industrial", "prob": 5 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "wallets_science",
-    "items": [
-      { "group": "wallet_science_full", "prob": 45 },
-      { "group": "wallet_science_leather_full", "prob": 20 },
-      { "group": "wallet_science_stylish_full", "prob": 20 },
-      { "group": "lanyard_science_full", "prob": 15 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "banknotes",
-    "items": [
-      { "item": "money_one", "prob": 26 },
-      { "item": "money_two", "prob": 2 },
-      { "item": "money_five", "prob": 6 },
-      { "item": "money_ten", "prob": 5 },
-      { "item": "money_twenty", "prob": 23 },
-      { "item": "money_fifty", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "coins",
-    "items": [
-      { "item": "coin_penny", "prob": 57 },
-      { "item": "coin_nickel", "prob": 10 },
-      { "item": "coin_dime", "prob": 19 },
-      { "item": "coin_quarter", "prob": 13 },
-      { "item": "coin_half_dollar", "prob": 1 },
-      { "item": "coin_dollar", "prob": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "discount_cards",
-    "items": [ [ "fp_loyalty_card", 40 ], [ "gasdiscount_silver", 20 ], [ "gasdiscount_gold", 10 ], [ "gasdiscount_platinum", 5 ] ]
   }
 ]

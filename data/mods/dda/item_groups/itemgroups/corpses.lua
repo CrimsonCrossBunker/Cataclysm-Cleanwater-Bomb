@@ -345,3 +345,99 @@ do
     group:group("accesories_personal_unisex", 15)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "remains_human_generic", kind = "collection" }
+    group:entry { item = "bone_human", count = { 5, 8 } }
+    group:item("skull_human")
+    group:entry { item = "human_flesh", count = { 5, 8 } }
+    group:item("hstomach", 50)
+    content.add(group)
+end
+
+do
+    -- Adjusted mon_zombie_military_pilot_death_drops with bloody remains instead of a corpse.
+    local group = content.ItemGroup { id = "remains_pilot", kind = "collection", with_ammo = 60, with_magazine = 100 }
+    group:entry { group = "clothing_military_pilot", damage = { 1, 4 }, probability = 65 }
+    group:entry { group = "gear_soldier_sidearm", damage = { 1, 4 }, probability = 30 }
+    group:entry { group = "military_patrol_food", damage = { 1, 4 }, probability = 50 }
+    group:entry { item = "two_way_radio", charges = { 0, 100 }, damage = { 1, 4 }, probability = 50 }
+    group:group("adderall_bottle_plastic_pill_prescription_10", 40)
+    group:group("wallets_military", 5)
+    group:item("militarymap", 5)
+    group:group("mil_food", 15)
+    group:entry { item = "bone_human", count = { 5, 8 } }
+    group:entry { item = "human_flesh", count = { 5, 8 } }
+    group:item("hstomach")
+    group:group("pocket_cigar", 15)
+    group:group("misc_smoking_legal", 30)
+    group:item("dog_tag", 40)
+    content.add(group)
+end
+
+do
+    -- Adjusted mon_zombie_soldier_death_drops with bloody remains instead of a corpse and less heavy gear.
+    local group = content.ItemGroup { id = "remains_soldier", kind = "collection", with_ammo = 60, with_magazine = 100 }
+    group:entry {
+        distribution = {
+            { group = "clothing_soldier_set", damage = { 1, 4 }, probability = 65 },
+            { group = "clothing_soldier_winter_set", damage = { 1, 4 }, probability = 35 },
+        },
+    }
+    group:entry { group = "gear_soldier_sidearm", damage = { 1, 4 }, probability = 30 }
+    group:entry { group = "military_patrol_food", damage = { 1, 4 }, probability = 90 }
+    group:entry {
+        collection = {
+            {
+                distribution = {
+                    { group = "guns_rifle_milspec", damage = { 1, 4 }, probability = 75 },
+                    { group = "guns_shotgun_milspec", damage = { 1, 4 }, probability = 25 },
+                },
+            },
+            {
+                distribution = {
+                    { item = "red_dot_sight" },
+                    { item = "suppressor" },
+                    { item = "laser_sight", probability = 50 },
+                    {
+                        collection = {
+                            { item = "m320" },
+                            { group = "ammo_launcher_grenade" },
+                        },
+                    },
+                },
+                probability = 30,
+            },
+        },
+        probability = 20,
+    }
+    group:entry {
+        distribution = {
+            {
+                distribution = {
+                    { item = "mask_gas", charges = { 0, 100 }, damage = { 1, 4 }, probability = 25 },
+                    { group = "gasmask_bag_full", damage = { 1, 4 }, probability = 25 },
+                    { group = "gasmask_bag_used", damage = { 1, 4 }, probability = 50 },
+                },
+                probability = 10,
+            },
+            { item = "two_way_radio", charges = { 0, 100 }, probability = 50 },
+            { item = "grenade", probability = 5 },
+            { group = "wallets_military", probability = 5 },
+            { group = "pocket_cigar", probability = 15 },
+            { group = "misc_smoking_legal", probability = 30 },
+        },
+    }
+    group:entry { item = "bone_human", count = { 5, 8 } }
+    group:entry { item = "human_flesh", count = { 5, 8 } }
+    group:item("hstomach")
+    group:item("dog_tag", 40)
+    content.add(group)
+end
+
+do
+    -- Bc of corpses being partially hardcoded container-item in entries doesn't work so these get to be one group per corpse for now
+    local group = content.ItemGroup { id = "corpse_generic_human", kind = "distribution", container = "corpse_generic_human" }
+    group:group("default_zombie_death_drops")
+    content.add(group)
+end

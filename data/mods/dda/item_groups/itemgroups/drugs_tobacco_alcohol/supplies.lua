@@ -173,3 +173,9 @@ do
     group:entry { item = "cotton_ball", count = { 1, -1 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "quikclot_bag_plastic_5", kind = "collection", container = "bag_plastic_small" }
+    group:entry { item = "quikclot", count = { 5, 5 }, container = "null" }
+    content.add(group)
+end

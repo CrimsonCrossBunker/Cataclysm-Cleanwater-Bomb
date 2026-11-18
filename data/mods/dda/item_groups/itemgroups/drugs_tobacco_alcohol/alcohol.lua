@@ -120,3 +120,12 @@ do
     group:entry { group = "any_beer", charges = { 1, -1 }, container = "can_drink" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "alcohol_bottled_canned", kind = "distribution" }
+    group:group("liquor_and_spirits", 108)
+    group:group("wines_worthy", 39)
+    group:group("beer_in_container", 141)
+    group:group("misc_alcohol", 88)
+    content.add(group)
+end

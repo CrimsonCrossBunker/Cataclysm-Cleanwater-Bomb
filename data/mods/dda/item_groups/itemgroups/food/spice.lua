@@ -1122,3 +1122,50 @@ do
     group:entry { item = "barbecue_sauce", charges = { 32, 32 }, container = "condiment_bottle_sealed", probability = 1 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "condiments", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:group("yeast_various", 50)
+    group:group("sugar_various", 40)
+    group:group("artificial_sweetener_box_small_71", 10)
+    group:group("sprinkles_bottle_plastic_small_62", 5)
+    group:group("salt_various", 40)
+    group:group("pepper_various", 30)
+    group:group("cinnamon_various", 15)
+    group:group("seasoning_italian_various", 25)
+    group:group("seasoning_salt_various", 25)
+    group:item("cookbook_italian", 25)
+    group:item("cookbook_daintydishes", 20)
+    group:item("cookbook_liverforkids", 12)
+    group:item("sweets_book", 6)
+    group:item("family_cookbook", 6)
+    group:item("brewing_cookbook", 4)
+    group:group("ketchup_sealed_rng", 35)
+    group:group("mustard_sealed_rng", 35)
+    group:group("barbecue_sauce_sealed_rng", 25)
+    group:group("honey_mustard_sealed_rng", 20)
+    group:entry { item = "soysauce", charges = { 1, -1 }, probability = 25 }
+    group:entry { item = "hot_sauce", charges = { 1, -1 }, probability = 25 }
+    group:entry { item = "horseradish", charges = { 1, -1 }, probability = 15 }
+    group:entry { item = "spread_peanutbutter", count = { 1, -1 }, probability = 10 }
+    group:entry { item = "marshmallow_fluff", charges = { 1, -1 }, probability = 10 }
+    group:entry { item = "honey_bottled", charges = { 1, -1 }, probability = 35 }
+    group:entry { item = "honey_glassed", count = { 1, -1 }, probability = 35 }
+    group:group("oyster_crackers_plastic_bag_vac_8", 15)
+    group:group("instant_gravy", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "ketchup_sealed_rng", kind = "distribution" }
+    group:entry { item = "ketchup", charges = { 1, -1 }, probability = 6 }
+    group:entry { item = "ketchup", charges = { 32, 32 }, container = "condiment_bottle_sealed", probability = 1 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mustard_sealed_rng", kind = "distribution" }
+    group:entry { item = "mustard", charges = { 1, -1 }, probability = 6 }
+    group:entry { item = "mustard", charges = { 96, 96 }, container = "condiment_bottle_sealed", probability = 1 }
+    content.add(group)
+end

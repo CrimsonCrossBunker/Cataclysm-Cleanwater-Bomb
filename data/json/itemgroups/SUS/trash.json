@@ -178,36 +178,5 @@
       { "item": "log", "prob": 3 },
       { "item": "pebble", "prob": 10, "count": [ 1, 10 ] }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "SUS_trash_forest_manmade",
-    "//1": "SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.",
-    "//2": "This group is for forests with manmade trash in",
-    "subtype": "collection",
-    "items": [
-      { "group": "SUS_trash_forest_no_manmade", "prob": 20 },
-      { "group": "SUS_trash_floor_light", "prob": 10 },
-      { "group": "ammo_casings", "prob": 5 },
-      { "item": "fuel_tin", "prob": 1 },
-      { "item": "material_styrofoam_chunk", "prob": 2, "count": 1 },
-      { "item": "jar_glass_sealed", "prob": 5 },
-      { "item": "jar_3l_glass_sealed", "prob": 5 },
-      { "item": "box_small", "prob": 3 },
-      { "item": "box_medium", "prob": 3 },
-      { "item": "box_large", "prob": 3 },
-      { "item": "box_oversize", "prob": 3 },
-      { "item": "box_small_folded", "prob": 3 },
-      { "item": "box_medium_folded", "prob": 3 },
-      { "item": "box_large_folded", "prob": 3 },
-      { "item": "box_oversize_folded", "prob": 3 },
-      { "item": "lc_steel_lump", "prob": 3 },
-      { "item": "lc_steel_chunk", "prob": 3 },
-      { "item": "wire_barbed", "prob": 3 },
-      { "item": "syringe", "prob": 3 },
-      { "item": "spike", "prob": 3 },
-      { "item": "thermos", "prob": 3 },
-      { "item": "bag_body_bag", "prob": 1 }
-    ]
   }
 ]

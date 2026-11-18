@@ -72,3 +72,18 @@ do
     group:entry { item = "string_36", count = { 2, 8 }, probability = 60 }
     content.add(group)
 end
+
+do
+    -- A generic group for all not-eoc notes and files to add some random clutter to old/microlabs.  Prefer more selective placement.
+    local group = content.ItemGroup { id = "lab_files_generic", kind = "distribution" }
+    group:item("lab_postit_bio", 3)
+    group:item("lab_postit_blob", 3)
+    group:item("lab_postit_migo", 3)
+    group:item("lab_postit_portal", 3)
+    group:item("lab_postit_tech", 3)
+    group:item("lab_file_bio", 1)
+    group:item("lab_file_portal", 1)
+    group:item("lab_file_psych", 1)
+    group:item("lab_file_sec", 1)
+    content.add(group)
+end

@@ -12,17 +12,5 @@
     "subtype": "distribution",
     "//": "For shotguns that haven't been 'made ready', e.g sitting in a store or garage.",
     "entries": [ { "group": "sights_shotgun", "prob": 20 }, { "group": "EMPTY_GROUP", "prob": 80 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "gunmod_energy",
-    "//": "Gunmods for energy weaponry found only at military sites and laboratories.",
-    "items": [
-      [ "beam_scatterer", 80 ],
-      [ "focusing_lens", 60 ],
-      [ "electrolaser_conversion", 40 ],
-      [ "effective_emitter", 40 ],
-      [ "high_density_capacitor", 60 ]
-    ]
   }
 ]

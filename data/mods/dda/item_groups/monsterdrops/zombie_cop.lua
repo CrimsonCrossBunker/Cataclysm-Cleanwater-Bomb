@@ -326,3 +326,12 @@ do
     group:group("guns_swat", 75)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "cop_gloves", kind = "distribution" }
+    group:item("gloves_leather", 45)
+    group:item("gloves_medical", 20)
+    group:item("gloves_cut_resistant", 20)
+    group:item("gloves_tactical", 10)
+    content.add(group)
+end

@@ -1405,3 +1405,183 @@ do
     group:entry { item = "grenade", count = { 1, 10 }, probability = 20 }
     content.add(group)
 end
+
+do
+    -- for the steel mill in the well, steel mill
+    local group = content.ItemGroup { id = "steel_mill_mill", kind = "distribution" }
+    group:entry { item = "scrap", charges = { 1, 3 }, probability = 50 }
+    group:entry { item = "lc_steel_chunk", charges = { 1, 2 }, probability = 50 }
+    group:entry { item = "lc_steel_lump", charges = { 1, 2 }, probability = 50 }
+    group:entry { item = "lc_wire", count = { 0, 40 }, probability = 80 }
+    group:entry { item = "mc_wire", count = { 0, 40 }, probability = 20 }
+    group:entry { item = "hc_wire", count = { 0, 40 }, probability = 20 }
+    group:entry { item = "qt_wire", count = { 0, 40 }, probability = 10 }
+    group:entry { group = "supplies_machining", count = { 3, -1 }, probability = 50 }
+    group:item("chain", 35)
+    group:item("rebar", 35)
+    group:item("pipe", 40)
+    group:item("sheet_metal", 25)
+    group:item("sheet_metal_small", 25)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "school", kind = "distribution" }
+    group:group("candy_chocolate", 292)
+    group:item("glasses_reading", 90)
+    group:item("purse", 40)
+    group:item("mbag", 20)
+    group:group("box_of_batteries_random", 50)
+    group:item("file", 20)
+    group:item("howto_computer", 20)
+    group:item("manual_fabrication", 30)
+    group:entry {
+        group = "used_usb_drives",
+        contents = {
+            { group = "efiles_school" },
+        },
+        probability = 5,
+    }
+    group:group("book_mag_tech", 70)
+    group:group("book_mag_gen", 150)
+    group:group("book_mag_interests", 20)
+    group:item("breadboard", 70)
+    group:item("voltmeter", 50)
+    group:entry { item = "multimeter", charges = { 0, 100 }, probability = 50 }
+    group:entry {
+        item = "mask_hockey",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 10,
+    }
+    group:item("throat_guard_nylon", 2)
+    group:item("throat_guard_canvas", 2)
+    group:item("hockey_stick", 20)
+    group:item("puck", 20)
+    group:item("jersey", 40)
+    group:item("baseball", 20)
+    group:item("shuttlecock", 5)
+    group:item("manual_mechanics", 35)
+    group:item("manual_driving", 5)
+    group:item("manual_speech", 50)
+    group:item("manual_business", 40)
+    group:item("manual_first_aid", 40)
+    group:item("manual_computer", 20)
+    group:item("hackerman_computer", 10)
+    group:item("webbasics_computer", 10)
+    group:item("cookbook", 35)
+    group:item("mask_skull", 5, "guy_fawkes")
+    group:item("cookbook_italian", 25)
+    group:item("cookbook_mexican", 14)
+    group:item("manual_electronics", 20)
+    group:item("manual_tailor", 15)
+    group:item("manual_carpentry", 10)
+    group:item("101_carpentry", 10)
+    group:item("textbook_speech", 12)
+    group:group("novels", 439)
+    group:group("kids_books", 50)
+    group:group("literature", 60)
+    group:item("atomic_survival", 1)
+    group:item("jewelry_book", 8)
+    group:item("ZSG", 2)
+    group:item("cookies", 50)
+    group:item("backpack_small", 38)
+    group:item("backpack", 18)
+    group:item("backpack_denim", 8)
+    group:item("backpack_leather", 18)
+    group:item("slingpack", 18)
+    group:item("briefcase", 5)
+    group:item("pockknife", 14)
+    group:item("knife_swissarmy", 10)
+    group:item("mag_comic", 20)
+    group:item("umbrella", 5)
+    group:item("teleumbrella", 2)
+    group:item("frisbee", 10)
+    group:item("disc_golf", 10)
+    group:item("pom_poms", 10)
+    group:entry {
+        item = "tank_top",
+        variant = "tank_top_cheerleader",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "cheerleader_top_short",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 1,
+    }
+    group:entry {
+        item = "cheerleader_skirt",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "cheerleader_skirt_short",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 1,
+    }
+    group:entry {
+        item = "football_armor",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 5,
+    }
+    group:entry {
+        item = "helmet_football",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 5,
+    }
+    group:item("mouthpiece", 5)
+    group:item("football", 5)
+    group:entry {
+        item = "roller_blades",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:entry {
+        item = "rollerskates",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:entry {
+        item = "roller_shoes_off",
+        flags = {
+            "UNDERSIZE",
+        },
+        probability = 20,
+    }
+    group:item("folded_skateboard_generic", 20)
+    group:item("survnote", 3)
+    group:group("toy_radio_car", 3)
+    group:group("toy_makerspace_kit", 1)
+    group:group("toy_robot_kit", 1)
+    group:group("toy_engine_kit", 1)
+    group:item("air_launcher", 1)
+    group:entry { item = "radiocontrol", charges = { 0, 50 }, probability = 10 }
+    group:item("scots_cookbook", 1)
+    group:item("scots_tailor", 1)
+    group:item("eclipse_glasses", 1)
+    group:item("sandbox_kit", 1)
+    group:item("dnd_handbook", 1)
+    group:item("balloon", 5)
+    group:item("scissors_wavy", 7)
+    group:group("pencil_case_contents", 50)
+    group:group("pencil_case_with_contents", 30)
+    content.add(group)
+end

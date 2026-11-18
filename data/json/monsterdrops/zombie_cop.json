@@ -1,7 +1,0 @@
-[
-  {
-    "id": "cop_gloves",
-    "type": "item_group",
-    "items": [ [ "gloves_leather", 45 ], [ "gloves_medical", 20 ], [ "gloves_cut_resistant", 20 ], [ "gloves_tactical", 10 ] ]
-  }
-]

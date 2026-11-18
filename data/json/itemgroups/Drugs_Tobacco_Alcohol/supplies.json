@@ -1,9 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "quikclot_bag_plastic_5",
-    "subtype": "collection",
-    "container-item": "bag_plastic_small",
-    "entries": [ { "item": "quikclot", "container-item": "null", "count": 5 } ]
-  }
-]

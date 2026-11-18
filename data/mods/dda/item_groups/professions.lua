@@ -450,3 +450,16 @@ do
     group:entry { item = "762R_clip", charges = { 5, 5 }, ammo = { item = "762_54R" } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "army_mags_m4", kind = "collection" }
+    group:entry { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556" } }
+    group:entry { item = "stanag30", charges = { 30, 30 }, ammo = { item = "556" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "flintlock_pouch_reenactor", kind = "collection" }
+    group:entry { item = "flintlock_ammo", charges = { 14, 14 } }
+    content.add(group)
+end

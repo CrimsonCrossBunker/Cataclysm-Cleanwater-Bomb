@@ -345,3 +345,32 @@ do
     group:entry { item = "godco_flier", count = { 1, 3 }, probability = 1 }
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given spot.
+    -- This group is for forests with manmade trash in
+    local group = content.ItemGroup { id = "SUS_trash_forest_manmade", kind = "collection" }
+    group:group("SUS_trash_forest_no_manmade", 20)
+    group:group("SUS_trash_floor_light", 10)
+    group:group("ammo_casings", 5)
+    group:item("fuel_tin", 1)
+    group:entry { item = "material_styrofoam_chunk", count = { 1, 1 }, probability = 2 }
+    group:item("jar_glass_sealed", 5)
+    group:item("jar_3l_glass_sealed", 5)
+    group:item("box_small", 3)
+    group:item("box_medium", 3)
+    group:item("box_large", 3)
+    group:item("box_oversize", 3)
+    group:item("box_small_folded", 3)
+    group:item("box_medium_folded", 3)
+    group:item("box_large_folded", 3)
+    group:item("box_oversize_folded", 3)
+    group:item("lc_steel_lump", 3)
+    group:item("lc_steel_chunk", 3)
+    group:item("wire_barbed", 3)
+    group:item("syringe", 3)
+    group:item("spike", 3)
+    group:item("thermos", 3)
+    group:item("bag_body_bag", 1)
+    content.add(group)
+end

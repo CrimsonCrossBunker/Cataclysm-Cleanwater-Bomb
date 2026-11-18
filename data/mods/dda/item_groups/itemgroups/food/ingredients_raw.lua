@@ -256,3 +256,29 @@ do
     group:entry { item = "cooking_oil", container_group = "oil_bottle_empty" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "pasta_ingredients", kind = "distribution" }
+    group:group("groce_pasta", 200)
+    group:group("ravioli_in_can", 25)
+    group:item("sauce_red", 20)
+    group:item("sauce_pesto", 15)
+    group:group("bread_in_bag", 14)
+    group:group("bread_wheat_free_bag_plastic_14", 14)
+    group:group("cornbread_in_bag", 7)
+    group:group("flatbread_in_bag", 7)
+    group:entry { item = "crackers", count = { -1, -1 }, probability = 20 }
+    group:group("oyster_crackers_plastic_bag_vac_8", 15)
+    group:entry { item = "grahmcrackers", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "marshmallow", count = { -1, -1 }, probability = 20 }
+    group:group("biscuit_box_small_10", 12)
+    group:entry { item = "hardtack", count = { -1, -1 }, container = "box_small", probability = 2 }
+    group:group("seasoning_salt_various", 25)
+    group:group("seasoning_italian_various", 25)
+    group:group("pecorino_cheese_wrapper_4", 30)
+    group:item("cauliflower_head", 25)
+    group:item("eggplant", 25)
+    group:item("raw_artichoke", 25)
+    group:item("raw_asparagus", 25)
+    content.add(group)
+end

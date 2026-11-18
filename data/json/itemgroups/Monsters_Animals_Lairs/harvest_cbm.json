@@ -1,19 +1,5 @@
 [
   {
-    "id": "Zomborg_CBM_harvest_power",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "group": "Zomborg_CBM_harvest_charging_tools", "prob": 25 },
-      {
-        "distribution": [ { "item": "bio_power_storage", "prob": 90 }, { "item": "bio_power_storage_mkII", "prob": 10 } ],
-        "prob": 50
-      },
-      { "item": "bio_power_storage", "prob": 20 },
-      { "item": "burnt_out_bionic", "prob": 50 }
-    ]
-  },
-  {
     "id": "Zomborg_CBM_harvest_structural",
     "type": "item_group",
     "subtype": "distribution",
@@ -97,23 +83,6 @@
         ],
         "prob": 20
       }
-    ]
-  },
-  {
-    "id": "Zomborg_CBM_harvest_combat",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      {
-        "distribution": [
-          { "group": "Zomborg_CBM_harvest_expensive_combat_systems", "prob": 50 },
-          { "group": "Zomborg_CBM_harvest_fancy_defense", "prob": 50 }
-        ],
-        "prob": 2
-      },
-      { "group": "Zomborg_CBM_harvest_melee_weapons", "prob": 70 },
-      { "group": "Zomborg_CBM_harvest_ranged_weapons", "prob": 40 },
-      { "item": "burnt_out_bionic", "prob": 50 }
     ]
   },
   {

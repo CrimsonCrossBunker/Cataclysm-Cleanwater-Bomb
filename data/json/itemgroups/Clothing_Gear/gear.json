@@ -37,24 +37,6 @@
     ]
   },
   {
-    "id": "gear_survival",
-    "type": "item_group",
-    "//": "Lightweight, simple and portable items useful for survival.",
-    "items": [
-      { "group": "drugs_heal_simple", "prob": 60 },
-      { "group": "tools_lighting", "prob": 50 },
-      { "group": "tools_survival", "prob": 100 },
-      { "group": "tools_tailor", "prob": 20 },
-      { "group": "box_of_batteries_random", "prob": 10 },
-      { "group": "duct_tape_roll", "prob": 10 },
-      { "group": "glue_weak_domestic", "prob": 5 },
-      { "group": "glue_strong_domestic", "prob": 5 },
-      [ "plastichoboreel", 5 ],
-      [ "survivormap", 5 ],
-      { "item": "teargas_sprayer", "prob": 25, "charges": [ 9, 10 ] }
-    ]
-  },
-  {
     "type": "item_group",
     "id": "fireman_gear",
     "items": [
@@ -120,20 +102,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "rad_gear",
-    "items": [
-      [ "wrapped_rad_badge", 80 ],
-      { "item": "geiger_off", "prob": 20, "charges": [ 0, 100 ] },
-      { "item": "rad_monitor", "prob": 10, "charges": [ 0, 100 ] },
-      { "item": "oxygen_tank", "prob": 10, "charges": [ 4, -1 ] },
-      { "item": "smoxygen_tank", "prob": 15, "charges": [ 2, -1 ] },
-      [ "UPS_OFF", 2 ],
-      { "prob": 25, "group": "prussian_blue_bottle_plastic_pill_supplement_1_10" },
-      { "prob": 50, "group": "iodine_bottle_plastic_pill_supplement_1_10" }
-    ]
-  },
-  {
     "id": "SUS_scuba_gear",
     "type": "item_group",
     "//": "This group is for an area storing diving equipment.  SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.",
@@ -176,35 +144,6 @@
       {
         "collection": [ { "item": "folded_inflatable_boat", "prob": 30 }, { "item": "hand_pump", "prob": 60 } ],
         "prob": 15
-      }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "civilian_body_armor",
-    "subtype": "distribution",
-    "//": "armor that a civilian might have.",
-    "entries": [
-      { "item": "kevlar", "prob": 20 },
-      { "item": "soft_3a_vest", "prob": 15 },
-      { "item": "stab_vest", "prob": 15 },
-      { "item": "chestguard_hard", "prob": 5 },
-      { "item": "vest_leather", "prob": 10 },
-      {
-        "collection": [ { "item": "ballistic_vest_light" }, { "group": "civilian_ballistic_inserts", "prob": 50 } ],
-        "prob": 10
-      },
-      {
-        "collection": [ { "item": "ballistic_vest_light_pouches" }, { "group": "civilian_ballistic_inserts", "prob": 50 } ],
-        "prob": 10
-      },
-      {
-        "collection": [ { "item": "ballistic_vest_light_operator" }, { "group": "civilian_ballistic_inserts", "prob": 50 } ],
-        "prob": 10
-      },
-      {
-        "collection": [ { "item": "level_3_vest", "variant": "fema_armor_vest" }, { "group": "civilian_ballistic_inserts", "prob": 75 } ],
-        "prob": 5
       }
     ]
   }

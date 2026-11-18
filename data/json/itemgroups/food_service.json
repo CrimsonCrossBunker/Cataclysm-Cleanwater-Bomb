@@ -142,45 +142,5 @@
       { "item": "tonic_water", "prob": 2, "container-item": "bottle_twoliter", "charges": -1 },
       { "item": "rootbeer", "prob": 15, "container-item": "bottle_twoliter", "charges": -1 }
     ]
-  },
-  {
-    "id": "groce_condiment",
-    "type": "item_group",
-    "//": "might split this into two categories; condiments and seasonings, and preserves",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "mayonnaise", "prob": 40 },
-      { "group": "ketchup_sealed_rng", "prob": 60 },
-      { "group": "mustard_sealed_rng", "prob": 60 },
-      { "group": "barbecue_sauce_sealed_rng", "prob": 40 },
-      { "group": "honey_mustard_sealed_rng", "prob": 30 },
-      { "item": "horseradish", "prob": 10 },
-      { "prob": 20, "group": "sprinkles_bottle_plastic_small_62" },
-      { "item": "honey_bottled", "prob": 35 },
-      { "prob": 35, "item": "honey_glassed", "count": -1 },
-      { "group": "peanutbutter_jar_sealed", "prob": 60 },
-      { "group": "jam_fruit_jar_sealed", "prob": 60 },
-      { "item": "marshmallow_fluff", "prob": 35 },
-      { "prob": 40, "group": "pickle_jar_glass_sealed_2" },
-      { "item": "coffee_syrup", "prob": 35 },
-      { "prob": 45, "group": "coffee_raw_bag_plastic_20" },
-      { "prob": 45, "group": "tea_raw_bag_plastic_33" },
-      { "prob": 20, "group": "tea_green_raw_bag_plastic_33" },
-      { "prob": 50, "group": "salt_various_full" },
-      { "prob": 50, "group": "pepper_various_full" },
-      { "item": "soysauce", "prob": 50 },
-      { "item": "hot_sauce", "prob": 50 },
-      { "prob": 20, "group": "cinnamon_various_full" },
-      { "item": "syrup", "prob": 50 },
-      { "item": "syrup_corn", "prob": 5 },
-      { "prob": 45, "group": "seasoning_salt_various_full" },
-      { "prob": 50, "group": "seasoning_italian_various_full" },
-      { "prob": 40, "group": "curry_powder_various_full" },
-      { "prob": 30, "group": "cheese_in_can" },
-      { "item": "sauce_red", "prob": 40 },
-      { "item": "sauce_pesto", "prob": 20 },
-      { "prob": 30, "group": "oyster_crackers_plastic_bag_vac_1_inf" },
-      { "group": "teabag_box", "prob": 45 }
-    ]
   }
 ]

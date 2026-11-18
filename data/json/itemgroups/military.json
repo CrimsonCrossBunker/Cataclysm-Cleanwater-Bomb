@@ -11,36 +11,6 @@
     ]
   },
   {
-    "id": "military_ballistic_vest_pristine",
-    "type": "item_group",
-    "//": "ESAPI vest plus plates",
-    "subtype": "collection",
-    "entries": [
-      {
-        "distribution": [
-          { "item": "ballistic_vest_esapi", "variant": "us_ballistic_vest", "contents-group": "kitted_medium_vest", "prob": 100 },
-          {
-            "collection": [
-              { "item": "ballistic_vest_esapi", "variant": "us_ballistic_vest", "contents-group": "pristine_esapi_plates" },
-              { "group": "loaded_lbv" }
-            ],
-            "prob": 50
-          }
-        ],
-        "prob": 40
-      },
-      {
-        "collection": [
-          { "item": "level_3_vest", "variant": "national_guard_armor_vest", "contents-group": "pristine_esapi_front_plates" },
-          { "group": "loaded_lbv" }
-        ],
-        "prob": 50
-      },
-      { "group": "military_ballistic_vest_light_pristine", "prob": 10 },
-      { "group": "military_ballistic_vest_heavy_pristine", "prob": 5 }
-    ]
-  },
-  {
     "type": "item_group",
     "id": "military_standard_shotguns",
     "subtype": "distribution",
@@ -225,27 +195,6 @@
       { "item": "thermos", "prob": 15 },
       { "item": "kevlar_nape_protector", "prob": 5 },
       { "item": "counterweight_pouch", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "mil_food",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "mil_food_nodrugs", "prob": 1410 },
-      { "prob": 15, "group": "codeine_bottle_plastic_pill_painkiller_1_10" },
-      { "prob": 25, "group": "antibiotics_bottle_plastic_pill_prescription_1_15" },
-      { "item": "purifier", "prob": 12 },
-      { "item": "heatpack", "prob": 60 },
-      { "prob": 20, "group": "pur_tablets_bottle_plastic_small_1_50" },
-      { "prob": 5, "group": "fungicide_bag_plastic_400" },
-      { "group": "insecticide_bag_plastic", "prob": 5 },
-      { "item": "oxygen_tank", "prob": 10, "charges": [ 0, 24 ] },
-      { "item": "smoxygen_tank", "prob": 20, "charges": [ 0, 12 ] },
-      { "prob": 15, "group": "bfipowder_bottle_plastic_small_1_4" },
-      { "prob": 10, "group": "quikclot_bag_plastic_1_6" },
-      { "prob": 40, "group": "weak_antibiotic_bottle_plastic_pill_prescription_1_5" },
-      { "item": "prophylactic_antivenom", "prob": 5, "count": 5 }
     ]
   },
   {

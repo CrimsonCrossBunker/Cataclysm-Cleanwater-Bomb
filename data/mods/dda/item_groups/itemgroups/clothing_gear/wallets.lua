@@ -230,3 +230,43 @@ do
     group:entry { group = "coins", count = { 1, 5 }, probability = 80 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "wallets_science", kind = "distribution" }
+    group:group("wallet_science_full", 45)
+    group:group("wallet_science_leather_full", 20)
+    group:group("wallet_science_stylish_full", 20)
+    group:group("lanyard_science_full", 15)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "banknotes", kind = "distribution" }
+    group:item("money_one", 26)
+    group:item("money_two", 2)
+    group:item("money_five", 6)
+    group:item("money_ten", 5)
+    group:item("money_twenty", 23)
+    group:item("money_fifty", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "coins", kind = "distribution" }
+    group:item("coin_penny", 57)
+    group:item("coin_nickel", 10)
+    group:item("coin_dime", 19)
+    group:item("coin_quarter", 13)
+    group:item("coin_half_dollar", 1)
+    group:item("coin_dollar", 1)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "discount_cards", kind = "distribution" }
+    group:item("fp_loyalty_card", 40)
+    group:item("gasdiscount_silver", 20)
+    group:item("gasdiscount_gold", 10)
+    group:item("gasdiscount_platinum", 5)
+    content.add(group)
+end

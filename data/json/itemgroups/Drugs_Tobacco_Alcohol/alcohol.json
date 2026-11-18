@@ -1,17 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "alcohol_bottled_canned",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "liquor_and_spirits", "prob": 108 },
-      { "group": "wines_worthy", "prob": 39 },
-      { "group": "beer_in_container", "prob": 141 },
-      { "group": "misc_alcohol", "prob": 88 }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "liquor_and_spirits",
     "subtype": "distribution",
     "entries": [

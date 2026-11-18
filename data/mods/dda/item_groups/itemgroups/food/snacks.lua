@@ -553,3 +553,53 @@ do
     group:entry { item = "onion_rings", count = { 1, -1 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup {
+        id = "chewing_gum_used",
+        kind = "distribution",
+        container = "blister_pack_small",
+        container_variant = "blister_pack_gum",
+    }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_peppermint", probability = 70 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_spearmint", probability = 60 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_wintergreen", probability = 60 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_bubblegum", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_strawberry", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_cherry", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_orange", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_watermelon", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_blueberry", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_pineapple", probability = 30 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_greenapple", probability = 30 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_mango", probability = 17 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_lemonade", probability = 40 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_pomegranate", probability = 30 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_raspberry", probability = 50 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_kiwi", probability = 20 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_peach", probability = 20 }
+    group:entry { item = "gum", count = { 0, 12 }, variant = "gum_blackberry", probability = 35 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "chewing_gum_used_caff",
+        kind = "distribution",
+        container = "blister_pack_small",
+        container_variant = "blister_pack_gum",
+    }
+    group:entry { item = "caff_gum", count = { 0, 12 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "chewing_gum_used_nic",
+        kind = "distribution",
+        container = "blister_pack_small",
+        container_variant = "blister_pack_gum",
+    }
+    group:entry { item = "caff_gum", count = { 0, 12 } }
+    content.add(group)
+end

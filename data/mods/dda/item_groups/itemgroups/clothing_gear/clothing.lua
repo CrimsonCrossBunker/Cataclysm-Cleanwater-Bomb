@@ -1633,3 +1633,91 @@ do
     group:entry { group = "christmas_dresses", event = "christmas", probability = 50 }
     content.add(group)
 end
+
+do
+    -- Standard (non-winter) set of clothes for wearing outdoors.
+    local group = content.ItemGroup { id = "clothing_outdoor_set", kind = "collection" }
+    group:group("clothing_outdoor_torso")
+    group:group("clothing_outdoor_pants")
+    group:group("clothing_outdoor_shoes")
+    group:group("underwear")
+    group:group("clothing_glasses", 5)
+    group:group("clothing_watch", 5)
+    content.add(group)
+end
+
+do
+    -- Standard (non-winter) pants suitable for wearing outdoors.
+    local group = content.ItemGroup { id = "clothing_outdoor_pants", kind = "distribution" }
+    group:entry {
+        collection = {
+            {
+                distribution = {
+                    { item = "jeans", probability = 60 },
+                    { item = "jeans_ripped", probability = 5 },
+                    { item = "jeans_skinny", probability = 10 },
+                    { item = "pants" },
+                    { item = "pants_leather", probability = 30 },
+                    { item = "pants_tactical", probability = 20 },
+                    { item = "pants_cargo", probability = 30 },
+                    { item = "shorts_cargo", probability = 60 },
+                    { item = "pants", variant = "pants_flag", probability = 1 },
+                    { item = "pants", variant = "pants_flag", event = "independence_day", probability = 70 },
+                },
+            },
+            { item = "leather_belt", probability = 30 },
+        },
+    }
+    content.add(group)
+end
+
+do
+    -- wearable utility or protective gear you can buy in a common hardware store or find on a jobsite
+    -- Not intended to be a set of clothing for NPCs or monsters
+    local group = content.ItemGroup { id = "hardware_clothing", kind = "distribution" }
+    group:item("boots_steel", 40)
+    group:item("toecaps", 30)
+    group:item("sneakers_steel", 28)
+    group:item("hat_hard", 40)
+    group:item("mesh_nape_protector", 10)
+    group:item("nape_protector", 10)
+    group:item("face_shield_plastic", 10)
+    group:item("sun_shield", 15)
+    group:item("attachable_ear_muffs", 5)
+    group:item("mask_dust", 30)
+    group:entry { item = "mask_filter", charges = { 0, 100 }, probability = 30 }
+    group:entry {
+        distribution = {
+            { item = "mask_gas", charges = { 0, -1 }, probability = 50 },
+            { group = "gasmask_bag_full", probability = 50 },
+        },
+        probability = 15,
+    }
+    group:entry { item = "mask_gas_half", charges = { 0, 100 }, probability = 30 }
+    group:item("glasses_safety", 30)
+    group:item("ear_plugs", 35)
+    group:item("apron_cut_resistant", 5)
+    group:item("gloves_cut_resistant", 10)
+    group:item("chaps_cut_resistant", 5)
+    group:item("armguard_cut_resistant", 5)
+    group:item("balaclava_cut_resistant", 2)
+    group:item("throat_guard_cut_resistant", 2)
+    group:item("apron_leather", 10)
+    group:item("tool_belt", 30)
+    group:item("knee_pads", 20)
+    group:item("sheath", 10)
+    group:item("bootsheath", 3)
+    group:item("gloves_leather", 40)
+    group:item("gloves_work", 45)
+    group:entry { item = "wearable_light", charges = { 0, 100 }, probability = 10 }
+    group:group("hat_hard_flashlight", 1)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dress_shoes", kind = "distribution" }
+    group:item("dress_shoes", 50)
+    group:item("heels", 50)
+    group:item("espadrilles", 20)
+    content.add(group)
+end

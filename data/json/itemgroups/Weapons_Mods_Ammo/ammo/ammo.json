@@ -214,15 +214,5 @@
       { "item": "556", "prob": 10, "charges": [ 1, 30 ] },
       { "item": "shot_slug", "prob": 20, "charges": [ 1, 20 ] }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "ammo_any_batteries_full",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "ammo_light_batteries_full", "prob": 5 },
-      { "group": "ammo_medium_batteries_full", "prob": 5 },
-      { "group": "ammo_heavy_batteries_full", "prob": 5 }
-    ]
   }
 ]

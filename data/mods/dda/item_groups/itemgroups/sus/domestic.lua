@@ -606,3 +606,463 @@ do
     group:item("long_glove_white", 2)
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a utensils drawer.
+    local group = content.ItemGroup { id = "SUS_utensils", kind = "collection" }
+    group:item("tongs", 95)
+    group:item("tongs", 50)
+    group:item("ladle", 95)
+    group:item("ladle", 50)
+    group:entry { item = "spatula", count = { 1, 2 }, probability = 95 }
+    group:entry { item = "spatula", count = { 1, 2 }, probability = 40 }
+    group:item("whisk", 95)
+    group:item("whisk", 50)
+    group:item("rolling_pin", 80)
+    group:item("rolling_pin", 30)
+    group:item("can_opener", 95)
+    group:item("can_opener", 70)
+    group:entry { item = "peeler", count = { 1, 2 }, probability = 95 }
+    group:item("peeler", 75)
+    group:item("garlic_press", 65)
+    group:item("potato_masher", 85)
+    group:item("carving_fork", 50)
+    group:item("corkscrew", 90)
+    group:item("bottle_opener", 95)
+    group:item("pizza_cutter", 30)
+    group:item("icecream_scoop", 25)
+    group:item("cheese_grater", 40)
+    group:item("mortar_pestle", 50)
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a drawer full of knives and related implements.
+    local group = content.ItemGroup { id = "SUS_knife_drawer", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "knife_large", variant = "knife_chef", probability = 10 },
+            { item = "knife_cleaver", variant = "knife_vegetable_cleaver", probability = 3 },
+        },
+    }
+    group:item("knife_small", 100, "knife_paring")
+    group:item("knife_small", 75, "knife_paring")
+    group:item("knife_large", 95, "knife_bread")
+    group:item("knife_large", 45, "knife_bread")
+    group:entry {
+        distribution = {
+            { item = "knife_huge", variant = "knife_butcher", probability = 10 },
+            { item = "knife_cleaver", variant = "knife_meat_cleaver", probability = 10 },
+        },
+        probability = 65,
+    }
+    group:entry { item = "knife_small", count = { 2, 4 }, variant = "knife_steak", probability = 75 }
+    group:entry {
+        collection = {
+            { item = "knife_large", variant = "knife_carving" },
+            { item = "carving_fork", probability = 90 },
+        },
+        probability = 85,
+    }
+    group:item("scissors", 80)
+    group:entry { item = "peeler", count = { 1, 2 }, probability = 75 }
+    group:entry { item = "cutting_board", count = { 1, 2 } }
+    group:item("cutting_board", 75)
+    group:entry {
+        distribution = {
+            { item = "metal_honing_rod", probability = 35 },
+            { item = "knife_sharpener_handheld", probability = 60 },
+        },
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a cupboard full of dining dishes.
+    local group = content.ItemGroup { id = "SUS_dishes", kind = "distribution" }
+    group:entry { item = "wine_glass", count = { 1, 4 }, probability = 50 }
+    group:entry { item = "shot_glass", count = { 2, 4 }, probability = 50 }
+    group:entry { item = "bowl_pewter", count = { 1, 4 }, probability = 50 }
+    group:entry { item = "ceramic_cup", count = { 1, 4 }, probability = 75 }
+    group:entry { item = "glass", count = { 1, 6 } }
+    group:entry { item = "ceramic_mug", count = { 1, 6 } }
+    group:entry { item = "ceramic_plate", count = { 1, 6 } }
+    group:entry { item = "ceramic_bowl", count = { 1, 6 } }
+    group:entry {
+        collection = {
+            { item = "glass_plate", count = { 1, 4 } },
+            { item = "glass_bowl", count = { 1, 4 } },
+        },
+        probability = 60,
+    }
+    group:entry {
+        collection = {
+            { item = "tumbler_plastic", count = { 1, 4 } },
+            { item = "plastic_plate", count = { 1, 4 } },
+        },
+        probability = 60,
+    }
+    group:entry {
+        collection = {
+            { item = "plastic_bowl_kids", count = { 1, 4 } },
+            { item = "sippy_cup", count = { 1, 4 } },
+            { item = "plastic_spoon_kids", count = { 1, 4 } },
+        },
+        probability = 60,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a cupboard full of pots and pans.
+    local group = content.ItemGroup { id = "SUS_cookware", kind = "distribution" }
+    group:entry { item = "pot", count = { 1, 2 } }
+    group:item("pot", 50)
+    group:entry {
+        collection = {
+            { item = "iron_pot" },
+            { item = "iron_pot", probability = 60 },
+        },
+        probability = 70,
+    }
+    group:item("casserole", 90)
+    group:item("pot_copper", 75)
+    group:item("stock_pot", 50)
+    group:item("pot_canning", 25)
+    group:item("pressure_cooker", 15)
+    group:item("colander_steel", 80)
+    group:item("splatter_guard", 20)
+    group:entry { item = "pan", count = { 1, 2 } }
+    group:item("steel_pan", 80)
+    group:item("copper_pan", 30)
+    group:item("dutch_oven", 5)
+    group:item("kettle", 80)
+    group:item("coffeepot", 50)
+    group:item("aluminum_pan", 15)
+    group:item("pot_aluminum", 15)
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for the cleaning materials under a kitchen sink.
+    local group = content.ItemGroup { id = "SUS_kitchen_sink", kind = "collection" }
+    group:group("detergent_small_box_part", 40)
+    group:group("borax_box_part", 60)
+    group:entry { item = "cotton_patchwork", count = { 1, 3 } }
+    group:entry { item = "dish_towel", count = { 1, 6 } }
+    group:item("brush")
+    group:item("sponge")
+    group:item("brush", 85)
+    group:entry { item = "plastic_shopping_bag", count = { 1, 3 }, probability = 10 }
+    group:entry { item = "methed_alcohol", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "denat_alcohol", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "chem_methanol", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "chem_washing_soda", count = { 1, -1 }, probability = 50 }
+    group:group("bleach_jug_part", 75)
+    group:group("ammonia_hydroxide_bottle_twoliter_part", 65)
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a cupboard where various appliances are stored.
+    local group = content.ItemGroup { id = "SUS_appliances_cupboard", kind = "collection" }
+    group:item("microwave", 90)
+    group:item("food_processor", 70)
+    group:item("waffleiron", 45)
+    group:item("multi_cooker", 25)
+    group:item("pastaextruder", 10)
+    group:item("dehydrator", 10)
+    group:item("hotplate", 10)
+    group:item("hotplate_induction", 1)
+    group:item("snow_machine_home", 5)
+    group:entry {
+        collection = {
+            { group = "charcoal_bag_part", probability = 70 },
+            { item = "char_smoker" },
+        },
+        probability = 5,
+    }
+    group:entry {
+        collection = {
+            { item = "small_propane_tank", count = { 1, 2 }, charges = { 1000, 3000 }, probability = 70 },
+            { item = "propane_cooker", probability = 80 },
+        },
+        probability = 1,
+    }
+    group:item("can_sealer", 2)
+    group:item("oil_press_manual", 2)
+    group:entry { group = "dishes_utility", count = { 1, 3 }, probability = 50 }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a cupboard where breakfast supplies are kept.
+    local group = content.ItemGroup { id = "SUS_breakfast_cupboard", kind = "collection" }
+    group:entry {
+        collection = {
+            { item = "toaster" },
+            {
+                distribution = {
+                    { group = "bread_in_bag", probability = 70 },
+                    { group = "sourdough_bread_in_bag", probability = 30 },
+                },
+                probability = 80,
+            },
+            { item = "toastem", count = { 1, 8 }, wrapper = "box_small", container = "null", probability = 60 },
+        },
+        probability = 80,
+    }
+    group:entry { item = "jam_fruit", charges = { -1, -1 }, probability = 80 }
+    group:entry { item = "peanutbutter", charges = { 1, -1 }, probability = 80 }
+    group:entry { item = "marshmallow_fluff", charges = { 1, -1 }, probability = 80 }
+    group:entry { item = "syrup", charges = { 1, -1 }, probability = 50 }
+    group:entry { item = "oatmeal", count = { 2, 16 }, wrapper = "box_small", container = "null", probability = 80 }
+    group:group("breakfast_cereal_in_box")
+    group:group("breakfast_cereal_in_box", 75)
+    group:entry {
+        distribution = {
+            {
+                item = "milk_powder",
+                count = { 5, 20 },
+                sealed = false,
+                wrapper = "jar_3l_glass_sealed",
+                container = "null",
+                probability = 60,
+            },
+            { item = "milk_evap", count = { 1, 6 }, probability = 20 },
+            { group = "milk_in_container", probability = 20 },
+        },
+        probability = 20,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a bathroom sink.
+    local group = content.ItemGroup { id = "SUS_bathroom_sink", kind = "collection" }
+    group:entry { item = "soap", count = { 1, 4 }, charges = { 1, 10 }, probability = 75 }
+    group:item("soap_holder", 40)
+    group:entry { item = "razor_shaving", count = { 1, 2 }, probability = 20 }
+    group:group("cotton_ball_bag_used", 50)
+    group:group("cotton_ball_bag_full", 5)
+    group:item("comb_lice", 2)
+    group:group("bleach_jug_part", 15)
+    group:group("ammonia_hydroxide_bottle_twoliter_part", 20)
+    group:entry { item = "chem_washing_soda", count = { 1, -1 }, probability = 10 }
+    group:group("borax_box_part", 10)
+    group:entry { item = "string_floss", count = { 1, 2 }, probability = 60 }
+    group:group("tampon_box_used", 10)
+    group:group("menstrual_pad_box_used", 10)
+    group:item("menstrual_cup", 1)
+    group:item("emery_board", 30)
+    group:entry { item = "toothbrush_plain", count = { 1, 3 }, probability = 45 }
+    group:entry { item = "dentures", count = { 1, 2 }, probability = 15 }
+    group:entry { item = "toothbrush_electric", count = { 1, 3 }, probability = 25 }
+    group:group("sunscreen_bottle", 25)
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for the medicine cabinet.
+    local group = content.ItemGroup { id = "SUS_bathroom_medicine", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                item = "aspirin",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 50,
+            },
+            {
+                item = "acetaminophen",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 70,
+            },
+            {
+                item = "ibuprofen",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 80,
+            },
+            {
+                item = "naproxen",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 20,
+            },
+            {
+                item = "codeine",
+                count = { 1, 15 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 30,
+            },
+            {
+                item = "tramadol",
+                count = { 1, 15 },
+                wrapper = "bottle_plastic_pill_painkiller",
+                container = "null",
+                probability = 10,
+            },
+            { group = "birth_control", probability = 50 },
+            { group = "estrogen_hrt", probability = 2 },
+            { group = "testosterone_hrt", probability = 1 },
+        },
+        probability = 95,
+    }
+    group:item("comb_lice", 10)
+    group:entry { item = "eyedrops", count = { 10, 10 }, probability = 15 }
+    group:entry { item = "steroid_eyedrops", count = { 5, 5 }, probability = 5 }
+    group:entry { item = "pepto", charges = { 1, -1 }, container = "bottle_plastic_small", probability = 60 }
+    group:group("tums_bottle_plastic_small_1_20", 60)
+    group:entry { item = "inhaler", charges = { 10, 100 }, probability = 25 }
+    group:group("tampon_box_used", 20)
+    group:group("menstrual_pad_box_used", 20)
+    group:item("menstrual_cup", 2)
+    group:entry { item = "disinfectant", charges = { 1, -1 }, probability = 40 }
+    group:group("alcohol_wipes_box_used", 60)
+    group:group("alcohol_wipes_box_full", 20)
+    group:entry {
+        distribution = {
+            {
+                item = "pills_sleep",
+                count = { 1, 10 },
+                wrapper = "bottle_plastic_pill_prescription",
+                container = "null",
+                probability = 60,
+            },
+            {
+                item = "melatonin_tablet",
+                count = { 1, 30 },
+                wrapper = "bottle_plastic_pill_prescription",
+                container = "null",
+                probability = 40,
+            },
+        },
+        probability = 10,
+    }
+    group:group("any_cough_syrup_in_bottle", 70)
+    group:entry {
+        distribution = {
+            { group = "adhesive_bandages_box_used", probability = 30 },
+            { item = "bandages", count = { 1, 6 }, probability = 30 },
+            { item = "liq_bandage_spray", charges = { 1, -1 }, probability = 5 },
+            { item = "medical_gauze", probability = 20 },
+            { group = "full_1st_aid", probability = 10 },
+        },
+        probability = 50,
+    }
+    group:entry {
+        distribution = {
+            {
+                item = "vitamins",
+                count = { 1, 40 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 60,
+            },
+            {
+                item = "gummy_vitamins",
+                count = { 1, 20 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 20,
+            },
+            { item = "vitc_tablet", count = { 1, 30 }, wrapper = "bottle_plastic_small", probability = 7 },
+            {
+                item = "calcium_tablet",
+                count = { 1, 40 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 10,
+            },
+        },
+        probability = 80,
+    }
+    group:entry {
+        distribution = {
+            {
+                item = "weak_antibiotic",
+                count = { 1, 20 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 40,
+            },
+            {
+                item = "antibiotics",
+                count = { 1, 20 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 10,
+            },
+        },
+        probability = 10,
+    }
+    group:entry {
+        distribution = {
+            {
+                item = "antifungal",
+                count = { 1, 10 },
+                wrapper = "bottle_plastic_small",
+                container = "null",
+                probability = 5,
+            },
+            {
+                item = "antiparasitic",
+                count = { 1, 10 },
+                wrapper = "bottle_plastic_pill_prescription",
+                container = "null",
+                probability = 20,
+            },
+        },
+        probability = 5,
+    }
+    content.add(group)
+end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a bathroom cabinet under the sink.
+    local group = content.ItemGroup { id = "SUS_bathroom_cabinet", kind = "collection" }
+    group:entry { item = "soap", count = { 1, 4 }, charges = { 1, 10 }, probability = 70 }
+    group:entry { item = "liquid_soap", count = { 1, 6 }, charges = { 1, -1 }, probability = 70 }
+    group:entry { item = "bath_toy", count = { 1, 4 }, probability = 40 }
+    group:entry {
+        distribution = {
+            { item = "razor_shaving", count = { 1, 2 }, probability = 50 },
+            { item = "shavingkit", charges = { 0, 10 }, probability = 50 },
+        },
+        probability = 75,
+    }
+    group:item("mirror", 25)
+    group:entry { item = "sponge", count = { 1, 3 }, probability = 75 }
+    group:entry { item = "moisturizer", charges = { 1, -1 }, container = "bottle_plastic_small", probability = 60 }
+    group:item("makeup_kit", 50)
+    group:entry { item = "chem_hydrogen_peroxide", charges = { 1, -1 }, probability = 40 }
+    group:entry {
+        collection = {
+            { item = "candle", count = { 1, 2 }, charges = { 10, -1 } },
+            { item = "matches", charges = { 1, -1 } },
+            { item = "ref_matches", charges = { 1, -1 } },
+        },
+        probability = 20,
+    }
+    group:item("toilet_paper", 80)
+    group:entry { item = "towel", count = { 1, 4 }, probability = 90 }
+    group:group("bathroom_hair_dye_kit", 35)
+    content.add(group)
+end

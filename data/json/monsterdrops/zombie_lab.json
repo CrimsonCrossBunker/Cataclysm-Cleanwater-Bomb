@@ -27,22 +27,5 @@
       },
       { "group": "wallets_science", "damage": [ 1, 4 ], "prob": 5 }
     ]
-  },
-  {
-    "id": "security_pants",
-    "type": "item_group",
-    "items": [ [ "technician_pants_gray", 75 ], [ "leather_belt", 30 ] ]
-  },
-  {
-    "id": "security_shoes",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ [ "boots", 70 ], [ "boots_steel", 50 ], [ "sneakers_steel", 35 ], [ "boots_hiking", 20 ], [ "boots_combat", 10 ] ]
-  },
-  {
-    "id": "security_torso",
-    "type": "item_group",
-    "subtype": "distribution",
-    "items": [ [ "dress_shirt", 50 ], [ "technician_shirt_gray", 45 ], [ "jacket_windbreaker", 40 ] ]
   }
 ]

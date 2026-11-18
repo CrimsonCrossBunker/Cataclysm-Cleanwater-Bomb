@@ -1191,3 +1191,54 @@ do
     group:entry { item = "chem_acrylamide", count = { 1, -1 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "duct_tape_roll_part", kind = "distribution", container = "cardboard_roll" }
+    group:entry { item = "duct_tape", charges = { 20, 200 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "medical_tape_roll_part", kind = "distribution", container = "cardboard_roll" }
+    group:entry { item = "medical_tape", count = { 3, 25 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "nicotine_liquid_bottle_part",
+        kind = "distribution",
+        container = "bottle_plastic_tiny",
+    }
+    group:entry { item = "nicotine_liquid", charges = { 5, -1 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "solder_wire_spool_part", kind = "distribution", container = "spool_small" }
+    group:entry { item = "solder_wire", count = { 0, 113 } }
+    content.add(group)
+end
+
+do
+    -- Combustible fuels within their default containers
+    local group = content.ItemGroup { id = "supplies_fuel", kind = "distribution" }
+    group:group("ethanol_bottle_liter_part", 10)
+    group:item("denat_alcohol", 12)
+    group:item("denat_alcohol", 8)
+    group:item("chem_methanol", 10)
+    group:item("diesel", 20)
+    group:item("gasoline", 50)
+    group:item("motor_oil")
+    group:item("lamp_oil")
+    group:item("propane", 75)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "writing_utensils", kind = "distribution" }
+    group:entry { item = "permanent_marker", charges = { 0, 500 }, probability = 8 }
+    group:item("pencil", 28)
+    group:entry { group = "pens", charges = { 80, 100 }, probability = 64 }
+    content.add(group)
+end

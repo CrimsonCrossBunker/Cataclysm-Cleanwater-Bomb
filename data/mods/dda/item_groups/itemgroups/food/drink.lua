@@ -55,3 +55,11 @@ do
     group:entry { group = "any_soda", charges = { 1, -1 }, container = "can_aluminum_250ml" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "soda_in_small_container", kind = "distribution" }
+    group:entry { group = "any_soda", charges = { 1, -1 }, container = "bottle_plastic_355ml" }
+    group:entry { group = "any_soda", charges = { 1, -1 }, container = "can_drink" }
+    group:entry { group = "any_soda", charges = { 1, -1 }, container = "can_aluminum_250ml" }
+    content.add(group)
+end

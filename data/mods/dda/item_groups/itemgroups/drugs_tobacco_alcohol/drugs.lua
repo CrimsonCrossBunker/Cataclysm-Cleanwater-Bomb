@@ -997,3 +997,47 @@ do
     group:group("nondrowsy_cough_syrup_in_bottle")
     content.add(group)
 end
+
+do
+    -- Painkillers balanced according to rarity excluding illicit drugs
+    local group = content.ItemGroup { id = "drugs_analgesic", kind = "distribution" }
+    group:group("aspirin_ad_group", 50)
+    group:group("ibuprofen_ad_group")
+    group:group("acetaminophen_ad_group")
+    group:group("naproxen_ad_group", 50)
+    group:group("codeine_ad_group", 60)
+    group:group("tramadol_ad_group", 60)
+    group:entry { item = "morphine", count = { 1, 12 }, container = "null", probability = 10 }
+    group:group("oxycodone_ad_group", 200)
+    content.add(group)
+end
+
+do
+    -- Drugs stocked by a pharmacy including prescription medications
+    local group = content.ItemGroup { id = "drugs_pharmacy", kind = "distribution" }
+    group:group("drugs_analgesic")
+    group:group("drugs_emergency")
+    group:group("drugs_heal_simple")
+    group:group("drugs_misc")
+    group:group("drugs_rare")
+    content.add(group)
+end
+
+do
+    -- Healing items appropriate for soldiers and other paramilitary forces
+    local group = content.ItemGroup { id = "drugs_soldier", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { group = "full_ifak" },
+            { group = "used_ifak" },
+        },
+        probability = 50,
+    }
+    group:group("antibiotics_bottle_plastic_pill_prescription_1_15", 20)
+    group:entry { item = "bandages", count = { 1, 3 } }
+    group:entry { item = "morphine", count = { 1, 4 }, probability = 20 }
+    group:group("quikclot_bag_plastic_1_6", 20)
+    group:entry { item = "smoxygen_tank", charges = { 0, 12 }, probability = 20 }
+    group:group("tramadol_bottle_plastic_pill_prescription_1_10", 20)
+    content.add(group)
+end

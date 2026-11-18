@@ -281,3 +281,72 @@ do
     group:entry { item = "oxygen_tank", charges = { 24, 24 } }
     content.add(group)
 end
+
+do
+    -- Lightweight, simple and portable items useful for survival.
+    local group = content.ItemGroup { id = "gear_survival", kind = "distribution" }
+    group:group("drugs_heal_simple", 60)
+    group:group("tools_lighting", 50)
+    group:group("tools_survival")
+    group:group("tools_tailor", 20)
+    group:group("box_of_batteries_random", 10)
+    group:group("duct_tape_roll", 10)
+    group:group("glue_weak_domestic", 5)
+    group:group("glue_strong_domestic", 5)
+    group:item("plastichoboreel", 5)
+    group:item("survivormap", 5)
+    group:entry { item = "teargas_sprayer", charges = { 9, 10 }, probability = 25 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "rad_gear", kind = "distribution" }
+    group:item("wrapped_rad_badge", 80)
+    group:entry { item = "geiger_off", charges = { 0, 100 }, probability = 20 }
+    group:entry { item = "rad_monitor", charges = { 0, 100 }, probability = 10 }
+    group:entry { item = "oxygen_tank", charges = { 4, -1 }, probability = 10 }
+    group:entry { item = "smoxygen_tank", charges = { 2, -1 }, probability = 15 }
+    group:item("UPS_OFF", 2)
+    group:group("prussian_blue_bottle_plastic_pill_supplement_1_10", 25)
+    group:group("iodine_bottle_plastic_pill_supplement_1_10", 50)
+    content.add(group)
+end
+
+do
+    -- armor that a civilian might have.
+    local group = content.ItemGroup { id = "civilian_body_armor", kind = "distribution" }
+    group:item("kevlar", 20)
+    group:item("soft_3a_vest", 15)
+    group:item("stab_vest", 15)
+    group:item("chestguard_hard", 5)
+    group:item("vest_leather", 10)
+    group:entry {
+        collection = {
+            { item = "ballistic_vest_light" },
+            { group = "civilian_ballistic_inserts", probability = 50 },
+        },
+        probability = 10,
+    }
+    group:entry {
+        collection = {
+            { item = "ballistic_vest_light_pouches" },
+            { group = "civilian_ballistic_inserts", probability = 50 },
+        },
+        probability = 10,
+    }
+    group:entry {
+        collection = {
+            { item = "ballistic_vest_light_operator" },
+            { group = "civilian_ballistic_inserts", probability = 50 },
+        },
+        probability = 10,
+    }
+    group:entry {
+        collection = {
+            { item = "level_3_vest", variant = "fema_armor_vest" },
+            { group = "civilian_ballistic_inserts", probability = 75 },
+        },
+        probability = 5,
+    }
+    content.add(group)
+end

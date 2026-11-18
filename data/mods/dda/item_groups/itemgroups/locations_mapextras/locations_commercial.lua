@@ -1287,3 +1287,33 @@ do
     group:item("textbook_tailor", 3)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "dollar_food", kind = "distribution" }
+    group:group("candy_chocolate", 45)
+    group:group("licorice_bag_plastic_4", 15)
+    group:group("salty_snacks", 80)
+    group:entry { item = "peanut_shelled", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "almond_shelled", count = { -1, -1 }, probability = 20 }
+    group:group("breakfast_cereal_in_box_full", 25)
+    group:group("breakfast_cereal_in_box_full", 25)
+    group:item("soup_tomato", 25)
+    group:item("soup_chicken", 25)
+    group:group("box_lasagne_1lb", 5)
+    group:group("box_spaghetti_1lb", 10)
+    group:group("box_macaroni_1lb", 10)
+    group:group("box_macncheese", 25)
+    group:item("can_beans", 20)
+    group:item("can_spam", 20)
+    group:item("can_pineapple", 20)
+    group:group("tuna_in_can", 20)
+    group:item("can_cheese", 20)
+    group:group("peanutbutter_jar_sealed", 20)
+    group:group("jam_fruit_jar_sealed", 20)
+    group:entry { item = "dry_rice", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "dry_beans", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "dry_lentils", count = { -1, -1 }, probability = 20 }
+    group:entry { item = "cookies", count = { -1, -1 }, probability = 25 }
+    group:group("bread_in_bag", 40)
+    content.add(group)
+end

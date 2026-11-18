@@ -676,3 +676,68 @@ do
     }
     content.add(group)
 end
+
+do
+    -- ESAPI vest plus plates
+    local group = content.ItemGroup { id = "military_ballistic_vest_pristine", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                item = "ballistic_vest_esapi",
+                variant = "us_ballistic_vest",
+                contents = {
+                    { group = "kitted_medium_vest" },
+                },
+            },
+            {
+                collection = {
+                    {
+                        item = "ballistic_vest_esapi",
+                        variant = "us_ballistic_vest",
+                        contents = {
+                            { group = "pristine_esapi_plates" },
+                        },
+                    },
+                    { group = "loaded_lbv" },
+                },
+                probability = 50,
+            },
+        },
+        probability = 40,
+    }
+    group:entry {
+        collection = {
+            {
+                item = "level_3_vest",
+                variant = "national_guard_armor_vest",
+                contents = {
+                    { group = "pristine_esapi_front_plates" },
+                },
+            },
+            { group = "loaded_lbv" },
+        },
+        probability = 50,
+    }
+    group:group("military_ballistic_vest_light_pristine", 10)
+    group:group("military_ballistic_vest_heavy_pristine", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mil_food", kind = "distribution" }
+    group:group("mil_food_nodrugs", 1410)
+    group:group("codeine_bottle_plastic_pill_painkiller_1_10", 15)
+    group:group("antibiotics_bottle_plastic_pill_prescription_1_15", 25)
+    group:item("purifier", 12)
+    group:item("heatpack", 60)
+    group:group("pur_tablets_bottle_plastic_small_1_50", 20)
+    group:group("fungicide_bag_plastic_400", 5)
+    group:group("insecticide_bag_plastic", 5)
+    group:entry { item = "oxygen_tank", charges = { 0, 24 }, probability = 10 }
+    group:entry { item = "smoxygen_tank", charges = { 0, 12 }, probability = 20 }
+    group:group("bfipowder_bottle_plastic_small_1_4", 15)
+    group:group("quikclot_bag_plastic_1_6", 10)
+    group:group("weak_antibiotic_bottle_plastic_pill_prescription_1_5", 40)
+    group:entry { item = "prophylactic_antivenom", count = { 5, 5 }, probability = 5 }
+    content.add(group)
+end

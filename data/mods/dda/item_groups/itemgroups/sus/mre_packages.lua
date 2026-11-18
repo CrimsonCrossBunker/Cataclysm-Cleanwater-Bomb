@@ -187,3 +187,38 @@ do
     group:entry { item = "crackers", count = { 0, 2 }, container = "null" }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "mre_entrees", kind = "distribution" }
+    group:item("mre_asianbeef")
+    group:item("mre_bbqbeef")
+    group:item("mre_beef")
+    group:item("mre_beefstew")
+    group:item("mre_beeftaco")
+    group:item("mre_cheesetort")
+    group:item("mre_chicken")
+    group:item("mre_chickenburritobowl")
+    group:item("mre_chickennoodle")
+    group:item("mre_chickenpesto")
+    group:item("mre_chilibeans")
+    group:item("mre_chilimac")
+    group:item("mre_hashbrownbacon")
+    group:item("mre_hotdog")
+    group:item("mre_lemontuna")
+    group:item("mre_lobstermedley")
+    group:item("mre_macaronimarinara")
+    group:item("mre_maplesausage")
+    group:item("mre_meatball")
+    group:item("mre_mexicanchickenstew")
+    group:item("mre_mushroomfettuccine")
+    group:item("mre_pepperjackbeef")
+    group:item("mre_ratatouille")
+    group:item("mre_ravioli")
+    group:item("mre_sfettuccine")
+    group:item("mre_southwestbeef")
+    group:item("mre_spaghetti")
+    group:item("mre_pizza")
+    group:item("mre_cheesepizza")
+    group:item("mre_veggy")
+    content.add(group)
+end

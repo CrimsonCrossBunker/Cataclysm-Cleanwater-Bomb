@@ -55,21 +55,5 @@
       { "item": "slingshot", "prob": 50 },
       { "item": "wristrocket", "prob": 50 }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "archery_ammo",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "arrow_wood", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_field_point_fletched", "prob": 50, "count": [ 10, 30 ] },
-      { "item": "arrow_cf", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_small_game_fletched", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_heavy_field_point_fletched", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_metal", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_metal_bodkin", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_metal_target", "prob": 100, "count": [ 10, 30 ] },
-      { "item": "arrow_plastic", "prob": 100, "count": [ 10, 30 ] }
-    ]
   }
 ]

@@ -194,3 +194,14 @@ do
     group:item("laser_sight")
     content.add(group)
 end
+
+do
+    -- Gunmods for energy weaponry found only at military sites and laboratories.
+    local group = content.ItemGroup { id = "gunmod_energy", kind = "distribution" }
+    group:item("beam_scatterer", 80)
+    group:item("focusing_lens", 60)
+    group:item("electrolaser_conversion", 40)
+    group:item("effective_emitter", 40)
+    group:item("high_density_capacitor", 60)
+    content.add(group)
+end

@@ -249,3 +249,143 @@ do
     group:entry { group = "nicotine_liquid_bottle_part", count = { 1, 2 }, probability = 80 }
     content.add(group)
 end
+
+do
+    -- Small common items carried in a person's pockets, purse, etc.
+    local group = content.ItemGroup { id = "everyday_gear", kind = "collection", with_ammo = 75, with_magazine = 100 }
+    group:group("wallets", 90)
+    group:group("civilian_phones", 90)
+    group:group("everyday_smoker", 15)
+    group:group("stoner", 10)
+    group:group("everyday_knives", 10)
+    group:entry { item = "permanent_marker", charges = { 0, -1 }, probability = 10 }
+    group:item("dog_whistle", 5)
+    group:item("cane", 10)
+    group:item("pocketwatch", 1)
+    group:item("teleumbrella", 20)
+    group:item("umbrella", 20)
+    group:group("bottle_otc_painkiller_1_20", 5)
+    group:group("vitamins_bottle_plastic_pill_supplement_1_20", 1)
+    group:item("eyedrops", 10)
+    group:item("steroid_eyedrops", 2)
+    group:entry { item = "inhaler", charges = { 10, 100 }, probability = 10 }
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 2 }
+    group:entry { item = "heavy_flashlight", charges = { 0, 300 }, probability = 1 }
+    group:entry {
+        distribution = {
+            { item = "camera", charges = { 0, 150 }, probability = 25 },
+            { item = "camera", charges = { 0, 150 }, container = "camera_bag", probability = 40 },
+            { item = "camera_pro", charges = { 0, 150 }, probability = 5 },
+            { item = "camera_pro", charges = { 0, 150 }, container = "camera_bag", probability = 15 },
+            { item = "camera_bag", probability = 15 },
+        },
+        probability = 1,
+    }
+    group:group("civilian_eink_tablet_pcs", 10)
+    group:group("civilian_laptops", 15)
+    group:group("civilian_memory_cards", 5)
+    group:group("civilian_usb_drives", 5)
+    group:entry { item = "mp3", charges = { 0, 100 }, probability = 2 }
+    group:entry { item = "portable_game", charges = { 0, 100 }, probability = 10 }
+    group:group("chewing_gum_any", 25)
+    group:group("ammo_pocket_batteries", 5)
+    group:item("wrapper", 15)
+    group:item("wrapper_foil", 5)
+    group:item("string_6", 3)
+    group:item("pocket_firstaid", 2)
+    group:item("pocket_survival", 2)
+    group:item("pocket_firearms", 2)
+    group:item("newest_newspaper", 30)
+    group:item("flyer", 10)
+    group:item("thermos", 5)
+    group:item("hairbrush", 25)
+    group:item("comb_pocket", 25)
+    group:item("ankle_wallet_pouch", 1)
+    group:group("lunchbox_with_contents", 20)
+    group:entry { item = "teargas_sprayer", charges = { 1, 10 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "traveler", kind = "distribution" }
+    group:item("daypack", 20)
+    group:group("roadmap_stock", 6)
+    group:item("trailmap", 6)
+    group:item("touristmap", 4)
+    group:entry { item = "lighter", charges = { 0, -1 }, probability = 60 }
+    group:group("cig_box_cigarette_1_20", 40)
+    group:item("blazer", 15)
+    group:item("jeans", 90)
+    group:item("under_armor", 15)
+    group:item("under_armor_shorts", 15)
+    group:item("shorts", 80)
+    group:item("tshirt", 80)
+    group:item("bandana", 15)
+    group:item("towel", 90)
+    group:group("wallets", 90)
+    group:item("ankle_wallet_pouch", 40)
+    group:item("longshirt", 80)
+    group:item("shorts_cargo", 50)
+    group:item("pants_cargo", 70)
+    group:item("hoodie", 65)
+    group:item("skirt", 75)
+    group:item("skirt_long", 60)
+    group:item("skirt_denim", 10)
+    group:item("jacket_light", 50)
+    group:item("jacket_windbreaker", 25)
+    group:item("jacket_varsity", 20)
+    group:item("jacket_jean", 30)
+    group:item("vest_jean", 15)
+    group:item("jacket_leather", 30)
+    group:item("leather_police_jacket", 10)
+    group:item("bra", 30)
+    group:item("undershirt", 30)
+    group:item("boxer_shorts", 30)
+    group:item("briefs", 15)
+    group:item("boxer_briefs", 20)
+    group:item("swim_briefs", 10)
+    group:item("speedo", 5)
+    group:group("bikini", 15)
+    group:item("panties", 30)
+    group:item("boy_shorts", 25)
+    group:item("sweatshirt", 75)
+    group:item("backpack", 38)
+    group:item("backpack_denim", 8)
+    group:item("travelpack", 10)
+    group:item("slingpack", 19)
+    group:item("suitcase_m", 99)
+    group:item("suitcase_l", 55)
+    group:item("duffelbag", 20)
+    group:item("pockknife", 14)
+    group:item("knife_folding", 6)
+    group:item("knife_swissarmy", 6)
+    group:item("multitool", 8)
+    group:entry {
+        distribution = {
+            { group = "full_survival_kit" },
+            { group = "used_survival_kit" },
+        },
+        probability = 3,
+    }
+    group:item("touring_suit", 20)
+    group:item("helmet_motor", 14)
+    group:item("motorbike_armor", 10)
+    group:item("motorbike_pants", 10)
+    group:item("motorbike_boots", 10)
+    group:item("leg_bag", 10)
+    group:entry { item = "shavingkit", charges = { 0, -1 }, probability = 30 }
+    group:entry { item = "elec_hairtrimmer", charges = { 0, 50 }, probability = 15 }
+    group:item("razor_blade", 5)
+    group:item("razor_shaving", 5)
+    group:item("toothbrush_plain", 10)
+    group:item("string_floss", 10)
+    group:item("kilt", 4)
+    group:item("hobo_stove", 1)
+    group:item("tinder", 1)
+    group:entry { item = "tinderbox", charges = { 0, 100 }, probability = 1 }
+    group:item("flint_steel", 5)
+    group:item("bottle_metal", 5)
+    group:item("wallet_travel", 10)
+    group:entry { item = "teargas_sprayer", charges = { 10, 10 }, probability = 5 }
+    content.add(group)
+end

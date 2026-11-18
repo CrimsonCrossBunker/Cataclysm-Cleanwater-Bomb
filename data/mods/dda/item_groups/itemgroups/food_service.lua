@@ -1308,3 +1308,41 @@ do
     group:group("dry_goods", 30)
     content.add(group)
 end
+
+do
+    -- might split this into two categories; condiments and seasonings, and preserves
+    local group = content.ItemGroup { id = "groce_condiment", kind = "distribution" }
+    group:item("mayonnaise", 40)
+    group:group("ketchup_sealed_rng", 60)
+    group:group("mustard_sealed_rng", 60)
+    group:group("barbecue_sauce_sealed_rng", 40)
+    group:group("honey_mustard_sealed_rng", 30)
+    group:item("horseradish", 10)
+    group:group("sprinkles_bottle_plastic_small_62", 20)
+    group:item("honey_bottled", 35)
+    group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 35 }
+    group:group("peanutbutter_jar_sealed", 60)
+    group:group("jam_fruit_jar_sealed", 60)
+    group:item("marshmallow_fluff", 35)
+    group:group("pickle_jar_glass_sealed_2", 40)
+    group:item("coffee_syrup", 35)
+    group:group("coffee_raw_bag_plastic_20", 45)
+    group:group("tea_raw_bag_plastic_33", 45)
+    group:group("tea_green_raw_bag_plastic_33", 20)
+    group:group("salt_various_full", 50)
+    group:group("pepper_various_full", 50)
+    group:item("soysauce", 50)
+    group:item("hot_sauce", 50)
+    group:group("cinnamon_various_full", 20)
+    group:item("syrup", 50)
+    group:item("syrup_corn", 5)
+    group:group("seasoning_salt_various_full", 45)
+    group:group("seasoning_italian_various_full", 50)
+    group:group("curry_powder_various_full", 40)
+    group:group("cheese_in_can", 30)
+    group:item("sauce_red", 40)
+    group:item("sauce_pesto", 20)
+    group:group("oyster_crackers_plastic_bag_vac_1_inf", 30)
+    group:group("teabag_box", 45)
+    content.add(group)
+end

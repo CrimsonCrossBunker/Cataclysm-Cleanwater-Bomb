@@ -47,30 +47,6 @@
     ]
   },
   {
-    "id": "duct_tape_roll_part",
-    "type": "item_group",
-    "container-item": "cardboard_roll",
-    "items": [ { "item": "duct_tape", "charges": [ 20, 200 ] } ]
-  },
-  {
-    "id": "medical_tape_roll_part",
-    "type": "item_group",
-    "container-item": "cardboard_roll",
-    "items": [ { "item": "medical_tape", "count": [ 3, 25 ] } ]
-  },
-  {
-    "id": "nicotine_liquid_bottle_part",
-    "type": "item_group",
-    "container-item": "bottle_plastic_tiny",
-    "items": [ { "item": "nicotine_liquid", "charges": [ 5, -1 ] } ]
-  },
-  {
-    "id": "solder_wire_spool_part",
-    "type": "item_group",
-    "container-item": "spool_small",
-    "items": [ { "item": "solder_wire", "count": [ 0, 113 ] } ]
-  },
-  {
     "id": "paint",
     "type": "item_group",
     "items": [
@@ -330,22 +306,6 @@
     ]
   },
   {
-    "id": "supplies_fuel",
-    "type": "item_group",
-    "//": "Combustible fuels within their default containers",
-    "items": [
-      { "group": "ethanol_bottle_liter_part", "prob": 10 },
-      [ "denat_alcohol", 12 ],
-      [ "denat_alcohol", 8 ],
-      [ "chem_methanol", 10 ],
-      [ "diesel", 20 ],
-      [ "gasoline", 50 ],
-      [ "motor_oil", 100 ],
-      [ "lamp_oil", 100 ],
-      [ "propane", 75 ]
-    ]
-  },
-  {
     "id": "supplies_metal",
     "type": "item_group",
     "//": "metal for metalworkers, machine shops, blacksmiths, etc.",
@@ -472,15 +432,6 @@
       [ "gas_forge", 2 ],
       [ "pedal_extenders", 1 ],
       [ "hand_controls", 1 ]
-    ]
-  },
-  {
-    "id": "writing_utensils",
-    "type": "item_group",
-    "items": [
-      { "item": "permanent_marker", "prob": 8, "charges": [ 0, 500 ] },
-      { "item": "pencil", "prob": 28 },
-      { "group": "pens", "prob": 64, "charges": [ 80, 100 ] }
     ]
   }
 ]

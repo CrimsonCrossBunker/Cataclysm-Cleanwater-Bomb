@@ -103,3 +103,28 @@ do
     group:entry { item = "xedra_enviro_suit", damage = { 1, 4 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "security_pants", kind = "distribution" }
+    group:item("technician_pants_gray", 75)
+    group:item("leather_belt", 30)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "security_shoes", kind = "distribution" }
+    group:item("boots", 70)
+    group:item("boots_steel", 50)
+    group:item("sneakers_steel", 35)
+    group:item("boots_hiking", 20)
+    group:item("boots_combat", 10)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "security_torso", kind = "distribution" }
+    group:item("dress_shirt", 50)
+    group:item("technician_shirt_gray", 45)
+    group:item("jacket_windbreaker", 40)
+    content.add(group)
+end

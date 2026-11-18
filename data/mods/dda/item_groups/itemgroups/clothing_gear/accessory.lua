@@ -182,3 +182,20 @@ do
     group:entry { group = "costume_jewelry", event = "halloween", probability = 30 }
     content.add(group)
 end
+
+do
+    -- women's personal accessories
+    local group = content.ItemGroup { id = "accesories_personal_womens", kind = "distribution" }
+    group:group("accesories_personal_womens_child", 380)
+    group:item("ring_engagement", 5)
+    group:item("ring_purity", 10)
+    group:item("gold_lip_ring_loop", 2)
+    group:item("silver_lip_ring_stud", 3)
+    group:item("silver_lip_ring_loop", 3)
+    group:item("gold_lip_ring_stud", 2)
+    group:item("gold_nose_ring_loop", 2)
+    group:item("gold_nose_ring_stud", 2)
+    group:item("silver_nose_ring_loop", 3)
+    group:item("silver_nose_ring_stud", 3)
+    content.add(group)
+end

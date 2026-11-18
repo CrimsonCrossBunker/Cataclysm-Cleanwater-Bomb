@@ -294,3 +294,71 @@ do
     group:entry { item = "honey_glassed", count = { -1, -1 }, probability = 10 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "pantry_liquids", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:entry { item = "syrup", charges = { 1, -1 }, probability = 15 }
+    group:entry { item = "syrup_simple", charges = { 1, -1 }, probability = 1 }
+    group:entry { item = "syrup_corn", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "molasses", charges = { 1, -1 }, probability = 15 }
+    group:group("vegetable_oil_bottle", 60)
+    group:entry { item = "honey_bottled", charges = { 1, -1 }, probability = 15 }
+    group:entry { item = "honey_glassed", count = { 1, -1 }, probability = 5 }
+    group:item("jar_glass_sealed", 20)
+    group:item("jar_3l_glass_sealed", 30)
+    group:entry { item = "vinegar", charges = { 1, -1 }, probability = 15 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "fresh_produce", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:item("apple", 10)
+    group:item("orange", 65)
+    group:item("lemon", 50)
+    group:item("pear", 50)
+    group:item("grapefruit", 5)
+    group:item("cherries", 10)
+    group:item("plums", 10)
+    group:item("grapes", 20)
+    group:item("pineapple", 5)
+    group:item("peach", 10)
+    group:entry { item = "cranberries", count = { 3, 3 }, probability = 7 }
+    group:item("watermelon", 5)
+    group:item("melon", 5)
+    group:item("mango", 10)
+    group:item("pomegranate", 5)
+    group:item("rhubarb", 10)
+    group:item("papaya", 3)
+    group:item("kiwi", 5)
+    group:item("apricot", 5)
+    group:item("mushroom", 20)
+    group:item("tomato", 20)
+    group:entry { item = "lettuce", count = { 5, 5 }, probability = 15 }
+    group:entry { item = "cabbage", count = { 8, 8 }, probability = 10 }
+    group:entry { item = "radish_taproot", count = { 2, 2 }, probability = 5 }
+    group:entry { item = "spinach", count = { 9, 9 }, probability = 6 }
+    group:item("cucumber", 10)
+    group:item("pumpkin", 10)
+    group:item("celery", 3)
+    group:item("broccoli", 9)
+    group:item("zucchini", 15)
+    group:item("onion", 15)
+    group:entry { item = "chili_pepper", count = { 3, 3 }, probability = 15 }
+    group:entry { item = "carrot", count = { 6, 6 }, probability = 15 }
+    group:item("potato", 15)
+    group:item("blueberries", 3)
+    group:item("strawberries", 2)
+    group:item("raspberries", 7)
+    group:item("blackberries", 7)
+    group:item("cholla_bud", 3)
+    group:item("garlic", 3)
+    group:group("pine_nuts_bag_plastic_4", 10)
+    group:item("eggplant", 10)
+    group:item("cauliflower_head", 10)
+    group:item("kale_head", 10)
+    group:item("raw_artichoke", 10)
+    group:item("raw_asparagus", 10)
+    group:item("brussels_sprout", 10)
+    group:item("pea_pods", 10)
+    content.add(group)
+end
