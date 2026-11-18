@@ -43,6 +43,7 @@ extern "C" {
 #include <lua.h>
 }
 #include <limits>
+#include <locale>
 #include <map>
 #include <set>
 #include <sstream>
@@ -100,6 +101,7 @@ extern "C" {
 #include "mapgen_post_process.h"
 #include "martialarts.h"
 #include "mod_tileset.h"
+#include "mod_tracker.h"
 #include "mongroup.h"
 #include "mood_face.h"
 #include "mutation.h"
@@ -881,6 +883,16 @@ struct construction_definition_data {
     bool registered = false;
 };
 
+struct tile_bash_definition_data {
+    int minimum_strength = -1;
+    int maximum_strength = -1;
+    detail::authored_text sound;
+    detail::authored_text failure_sound;
+    std::string drops = "EMPTY_GROUP";
+    std::string result;
+    std::string result_from_above;
+};
+
 struct furniture_definition_data {
     std::string id;
     detail::authored_text name;
@@ -904,6 +916,9 @@ struct furniture_definition_data {
     std::string crafting_pseudo_item;
     std::string deployed_item;
     std::string builtin_examine;
+    std::optional<float> surgery_skill_multiplier;
+    std::optional<tile_bash_definition_data> bash;
+    std::optional<std::string> deconstruct_drops;
     std::string examine_handler;
     std::string examine_name;
     bool registered = false;
@@ -911,27 +926,94 @@ struct furniture_definition_data {
 
 struct terrain_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    std::string copy_from;
+    detail::authored_text name;
+    std::optional<detail::authored_text> description;
     std::string color;
     std::string symbol;
-    std::int64_t movecost = 0;
-    std::int64_t light_emitted = 0;
-    std::int64_t comfort = 0;
-    std::int64_t max_volume_ml = 0;
-    std::int64_t heat_radiation = 0;
-    bool transparent = false;
+    std::optional<std::string> looks_like;
+    std::optional<std::int64_t> coverage;
+    std::optional<std::int64_t> movecost;
+    std::optional<std::int64_t> light_emitted;
+    std::optional<std::int64_t> comfort;
+    std::optional<std::int64_t> max_volume_ml;
+    std::optional<std::int64_t> heat_radiation;
+    std::optional<bool> transparent;
     std::set<std::string> flags;
+    std::optional<std::vector<std::string>> connect_groups;
+    std::optional<std::vector<std::string>> connects_to;
+    std::optional<std::array<int, 3>> light_color;
+    std::optional<tile_bash_definition_data> bash;
+    std::optional<map_shoot_info> shoot;
     std::string open;
     std::string close;
     std::string transforms_into;
-    std::string roof;
-    std::string lockpick_result;
-    std::string trap;
+    std::optional<std::string> roof;
+    std::optional<std::string> lockpick_result;
+    std::optional<std::string> trap;
     std::string examine_handler;
     std::string examine_name;
     bool registered = false;
 };
+
+tile_bash_definition_data read_tile_bash( const sol::table &options )
+{
+    tile_bash_definition_data definition;
+    const auto minimum = options.get_or<std::int64_t>( "minimum_strength", -1 );
+    const auto maximum = options.get_or<std::int64_t>( "maximum_strength", -1 );
+    if( minimum < -1 || maximum < minimum || maximum > std::numeric_limits<int>::max() ) {
+        throw std::runtime_error( "tile bash strength must be an ordered native integer range" );
+    }
+    definition.minimum_strength = static_cast<int>( minimum );
+    definition.maximum_strength = static_cast<int>( maximum );
+    const detail::authored_text default_sound{ "smash!", detail::localized_text{ "smash!", {}, {} } };
+    const detail::authored_text default_failure{ "thump!", detail::localized_text{ "thump!", {}, {} } };
+    definition.sound = detail::read_singular_text_or( options["sound"], default_sound, "bash sound" );
+    definition.failure_sound = detail::read_singular_text_or(
+                                   options["failure_sound"], default_failure, "bash failure sound" );
+    definition.drops = options.get_or( "drops", std::string( "EMPTY_GROUP" ) );
+    definition.result = options.get_or( "result", std::string() );
+    definition.result_from_above = options.get_or( "result_from_above", definition.result );
+    return definition;
+}
+
+map_shoot_info read_tile_shoot( const sol::table &options )
+{
+    const auto read_damage = [&options]( const char *key ) {
+        const sol::table range = options.get<sol::table>( key );
+        require_dense_array( range, key, 2, 2 );
+        const auto minimum = range.raw_get<std::int64_t>( 1 );
+        const auto maximum = range.raw_get<std::int64_t>( 2 );
+        if( minimum < 0 || maximum < minimum || maximum > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( std::string( key ) + " must be an ordered native damage range" );
+        }
+        return std::pair( static_cast<int>( minimum ), static_cast<int>( maximum ) );
+    };
+    const auto chance = options.get_or<std::int64_t>( "chance_to_hit", 100 );
+    if( chance < 0 || chance > 100 ) {
+        throw std::runtime_error( "tile projectile hit chance must be a percentage" );
+    }
+    map_shoot_info shoot;
+    shoot.chance_to_hit = static_cast<int>( chance );
+    std::tie( shoot.reduce_dmg_min, shoot.reduce_dmg_max ) = read_damage( "reduce_damage" );
+    std::tie( shoot.reduce_dmg_min_laser, shoot.reduce_dmg_max_laser ) =
+        read_damage( "reduce_damage_laser" );
+    std::tie( shoot.destroy_dmg_min, shoot.destroy_dmg_max ) = read_damage( "destroy_damage" );
+    shoot.no_laser_destroy = options.get_or( "no_laser_destroy", false );
+    return shoot;
+}
+
+void apply_tile_bash( map_common_bash_info &native, const tile_bash_definition_data &source )
+{
+    native.str_min = source.minimum_strength;
+    native.str_max = source.maximum_strength;
+    native.sound = source.sound.native();
+    native.sound_fail = source.failure_sound.native();
+    native.drop_group = item_group_id( source.drops );
+    native.damage_profile = bash_damage_profile_id( "default" );
+    native.hit_field = { field_type_str_id::NULL_ID(), 0 };
+    native.destroyed_field = { field_type_str_id::NULL_ID(), 0 };
+}
 
 struct fault_definition_data {
     std::string id;
@@ -4618,6 +4700,17 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
             options.get_or( "crafting_pseudo_item", std::string() );
         definition->deployed_item = options.get_or( "deployed_item", std::string() );
         definition->builtin_examine = options.get_or( "builtin_examine", std::string() );
+        if( const auto multiplier = options.get<std::optional<double>>( "surgery_skill_multiplier" ) ) {
+            if( !std::isfinite( *multiplier ) || *multiplier <= 0 ||
+                *multiplier > std::numeric_limits<float>::max() ) {
+                throw std::runtime_error( "furniture surgery skill multiplier must be a positive native number" );
+            }
+            definition->surgery_skill_multiplier = static_cast<float>( *multiplier );
+        }
+        if( const auto bash = options.get<std::optional<sol::table>>( "bash" ) ) {
+            definition->bash = read_tile_bash( *bash );
+        }
+        definition->deconstruct_drops = options.get<std::optional<std::string>>( "deconstruct_drops" );
         definition->examine_handler = options.get_or(
                                           "on_examine",
                                           options.get_or( "examine_handler", std::string() ) );
@@ -4632,22 +4725,61 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<terrain_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->copy_from = options.get_or( "copy_from", std::string() );
+        definition->name = detail::read_singular_text( options["name"], {}, "Terrain.name" );
+        if( const sol::object description = options["description"];
+            description.get_type() != sol::type::nil ) {
+            definition->description = detail::read_singular_text( description, {}, "Terrain.description" );
+        }
         definition->color = options.get_or( "color", std::string() );
         definition->symbol = options.get_or( "symbol", std::string() );
-        definition->movecost = options.get_or<std::int64_t>( "move_cost", 0 );
-        definition->light_emitted = options.get_or<std::int64_t>( "light_emitted", 0 );
-        definition->comfort = options.get_or<std::int64_t>( "comfort", 0 );
-        definition->max_volume_ml = options.get_or<std::int64_t>( "max_volume_ml", 0 );
-        definition->heat_radiation = options.get_or<std::int64_t>( "heat_radiation", 0 );
-        definition->transparent = options.get_or( "transparent", false );
+        definition->looks_like = options.get<std::optional<std::string>>( "looks_like" );
+        definition->coverage = options.get<std::optional<std::int64_t>>( "coverage" );
+        definition->movecost = options.get<std::optional<std::int64_t>>( "move_cost" );
+        definition->light_emitted = options.get<std::optional<std::int64_t>>( "light_emitted" );
+        definition->comfort = options.get<std::optional<std::int64_t>>( "comfort" );
+        definition->max_volume_ml = options.get<std::optional<std::int64_t>>( "max_volume_ml" );
+        definition->heat_radiation = options.get<std::optional<std::int64_t>>( "heat_radiation" );
+        definition->transparent = options.get<std::optional<bool>>( "transparent" );
         definition->open = options.get_or( "open", std::string() );
         definition->close = options.get_or( "close", std::string() );
         definition->transforms_into = options.get_or( "transforms_into", std::string() );
-        definition->roof = options.get_or( "roof", std::string() );
-        definition->lockpick_result = options.get_or( "lockpick_result", std::string() );
-        definition->trap = options.get_or( "trap", std::string() );
+        definition->roof = options.get<std::optional<std::string>>( "roof" );
+        definition->lockpick_result = options.get<std::optional<std::string>>( "lockpick_result" );
+        definition->trap = options.get<std::optional<std::string>>( "trap" );
+        const auto read_groups = [&options]( const char *key ) -> std::optional<std::vector<std::string>> {
+            const auto groups = options.get<std::optional<sol::table>>( key );
+            if( !groups ) {
+                return std::nullopt;
+            }
+            const std::size_t count = require_dense_array( *groups, key, 0, 1024 );
+            std::vector<std::string> result;
+            result.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                result.push_back( groups->raw_get<std::string>( index ) );
+            }
+            return result;
+        };
+        definition->connect_groups = read_groups( "connect_groups" );
+        definition->connects_to = read_groups( "connects_to" );
+        if( const auto rgb = options.get<std::optional<sol::table>>( "light_color" ) ) {
+            require_dense_array( *rgb, "terrain light color", 3, 3 );
+            std::array<int, 3> channels;
+            for( std::size_t index = 0; index < channels.size(); ++index ) {
+                const auto value = rgb->raw_get<std::int64_t>( index + 1 );
+                if( value < 0 || value > 255 ) {
+                    throw std::runtime_error( "terrain light color requires RGB channels from 0 to 255" );
+                }
+                channels[index] = static_cast<int>( value );
+            }
+            definition->light_color = channels;
+        }
+        if( const auto bash = options.get<std::optional<sol::table>>( "bash" ) ) {
+            definition->bash = read_tile_bash( *bash );
+        }
+        if( const auto shoot = options.get<std::optional<sol::table>>( "shoot" ) ) {
+            definition->shoot = read_tile_shoot( *shoot );
+        }
         definition->examine_handler = options.get_or(
                                           "on_examine",
                                           options.get_or( "examine_handler", std::string() ) );
@@ -6781,6 +6913,11 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                 definition.id, "construction" );
         }
 
+        const auto valid_tile_drops = [&item_group_ids, check_engine_state]( const std::string & id ) {
+            return !id.empty() && ( !check_engine_state || id == "EMPTY_GROUP" ||
+                                    item_group_ids.count( id ) != 0 ||
+                                    item_group::group_is_defined( item_group_id( id ) ) );
+        };
         std::set<std::string> furniture_ids;
         for( const furniture_registration &entry : pimpl_->furniture ) {
             const furniture_definition_data &definition = *entry.definition;
@@ -6825,6 +6962,18 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' references an invalid deployed item" );
                 }
             }
+            if( ( definition.bash && !valid_tile_drops( definition.bash->drops ) ) ||
+                ( definition.deconstruct_drops && !valid_tile_drops( *definition.deconstruct_drops ) ) ) {
+                throw std::runtime_error( "furniture '" + definition.id + "' references unknown drops" );
+            }
+            if( check_engine_state && definition.bash && !definition.bash->result.empty() &&
+                !furn_str_id( definition.bash->result ).is_valid() &&
+                std::none_of( pimpl_->furniture.begin(), pimpl_->furniture.end(),
+            [&definition]( const furniture_registration & candidate ) {
+                return candidate.definition->id == definition.bash->result;
+            } ) ) {
+                throw std::runtime_error( "furniture '" + definition.id + "' references an invalid bash result" );
+            }
             if( !definition.builtin_examine.empty() &&
                 !find_iexamine_functions( definition.builtin_examine ) ) {
                 throw std::runtime_error( "furniture '" + definition.id +
@@ -6851,19 +7000,32 @@ bool content_transaction::validate( const runtime &owner_runtime,
         for( const terrain_registration &entry : pimpl_->terrain ) {
             const terrain_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "terrain" );
-            if( definition.name.empty() || definition.color.empty() ||
-                definition.symbol.empty() ||
-                !terrain_ids.insert( definition.id ).second ||
-                definition.movecost < 0 ||
-                definition.light_emitted < 0 ||
-                definition.max_volume_ml < 0 ) {
+            const auto in_native_range = []( const std::optional<std::int64_t> & value,
+            const int minimum ) {
+                return !value || ( *value >= minimum && *value <= std::numeric_limits<int>::max() );
+            };
+            if( ( definition.copy_from.empty() &&
+                  ( definition.name.empty() || definition.color.empty() || definition.symbol.empty() ) ) ||
+                definition.symbol.size() > 1 || !terrain_ids.insert( definition.id ).second ||
+                !in_native_range( definition.movecost, 0 ) ||
+                !in_native_range( definition.light_emitted, 0 ) ||
+                !in_native_range( definition.comfort, 0 ) ||
+                !in_native_range( definition.heat_radiation, 0 ) ||
+                !in_native_range( definition.coverage, std::numeric_limits<int>::min() ) ||
+                !in_native_range( definition.max_volume_ml, 0 ) ) {
                 throw std::runtime_error( "terrain '" + definition.id +
                                           "' has invalid ranges or a duplicate registration" );
+            }
+            if( definition.bash && ( definition.bash->result.empty() ||
+                                     !valid_tile_drops( definition.bash->drops ) ) ) {
+                throw std::runtime_error( "terrain '" + definition.id + "' needs a bash result and valid drops" );
             }
             if( check_engine_state ) {
                 for( const std::string &target : {
                          definition.open, definition.close, definition.transforms_into,
-                         definition.roof, definition.lockpick_result
+                         definition.roof.value_or( "" ), definition.lockpick_result.value_or( "" ),
+                         definition.bash ? definition.bash->result : "",
+                         definition.bash ? definition.bash->result_from_above : ""
                      } ) {
                     if( !target.empty() && !terrain_is_staged( target ) &&
                         !ter_str_id( target ).is_valid() ) {
@@ -6872,11 +7034,11 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                                   target + "'" );
                     }
                 }
-                if( !definition.trap.empty() &&
-                    !trap_str_id( definition.trap ).is_valid() ) {
+                if( definition.trap && !definition.trap->empty() &&
+                    !trap_str_id( *definition.trap ).is_valid() ) {
                     throw std::runtime_error( "terrain '" + definition.id +
                                               "' references an invalid trap id '" +
-                                              definition.trap + "'" );
+                                              *definition.trap + "'" );
                 }
             }
             if( !definition.examine_handler.empty() &&
@@ -8824,6 +8986,20 @@ bool content_transaction::apply( std::string &error )
             native.boltcut = cata::make_value<activity_data_furn>();
             native.hacksaw = cata::make_value<activity_data_furn>();
             native.prying = cata::make_value<activity_data_furn>();
+            if( source.surgery_skill_multiplier ) {
+                native.surgery_skill_multiplier = cata::make_value<float>( *source.surgery_skill_multiplier );
+            }
+            if( source.bash ) {
+                native.bash.emplace();
+                apply_tile_bash( *native.bash, *source.bash );
+                if( !source.bash->result.empty() ) {
+                    native.bash->furn_set = furn_str_id( source.bash->result );
+                }
+            }
+            if( source.deconstruct_drops ) {
+                native.deconstruct.emplace();
+                native.deconstruct->drop_group = item_group_id( *source.deconstruct_drops );
+            }
             if( !source.builtin_examine.empty() ) {
                 native.set_examine( iexamine_functions_from_string( source.builtin_examine ) );
             }
@@ -8840,59 +9016,115 @@ bool content_transaction::apply( std::string &error )
             detail::furniture_registry().finalize();
         }
 
-        for( const terrain_registration &entry : pimpl_->terrain ) {
-            const ter_str_id id( entry.definition->id );
+        auto &terrain_registry = detail::terrain_registry();
+        const auto find_terrain_parent = [&terrain_registry]( const std::string & id ) -> const ter_t * {
+            const ter_str_id native_id( id );
+            return terrain_registry.is_valid( native_id ) ? &terrain_registry.obj( native_id ) :
+                   terrain_registry.find_abstract( id );
+        };
+        std::vector<std::size_t> terrain_order;
+        std::string terrain_error;
+        if( !detail::resolve_platform_inheritance_order( pimpl_->terrain,
+        []( const terrain_registration & entry ) {
+            return entry.definition->id;
+        }, []( const terrain_registration & entry ) {
+            return entry.definition->copy_from;
+        }, [&find_terrain_parent]( const std::string & id ) {
+            return find_terrain_parent( id ) != nullptr;
+        }, terrain_order, terrain_error, "terrain" ) ) {
+            throw std::runtime_error( terrain_error );
+        }
+        for( const std::size_t index : terrain_order ) {
+            const terrain_definition_data &source = *pimpl_->terrain[index].definition;
+            const ter_str_id id( source.id );
             pimpl_->terrain_undo.emplace_back(
-                id, id.is_valid() ? std::optional<ter_t>( id.obj() ) :
-                std::nullopt );
-            const terrain_definition_data &source = *entry.definition;
+                id, id.is_valid() ? std::optional<ter_t>( id.obj() ) : std::nullopt );
             ter_t native;
+            if( !source.copy_from.empty() ) {
+                native = *find_terrain_parent( source.copy_from );
+            } else {
+                native.max_volume = default_tile_volume;
+                native.oxytorch = cata::make_value<activity_data_ter>();
+                native.boltcut = cata::make_value<activity_data_ter>();
+                native.hacksaw = cata::make_value<activity_data_ter>();
+                native.prying = cata::make_value<activity_data_ter>();
+            }
             native.id = id;
-            native.name_ = no_translation( source.name );
-            native.description = no_translation( source.description );
-            native.color_.fill( color_from_string( source.color,
-                                                   report_color_error::no ) );
-            native.symbol_.fill( static_cast<int>( source.symbol[0] ) );
-            native.movecost = static_cast<int>( source.movecost );
-            native.light_emitted = static_cast<int>( source.light_emitted );
-            native.comfort = static_cast<int>( source.comfort );
-            native.max_volume = units::from_milliliter(
-                                    static_cast<int>( source.max_volume_ml ) );
-            native.heat_radiation = static_cast<int>( source.heat_radiation );
-            native.transparent = source.transparent;
+            mod_tracker::assign_src( native, pimpl_->owner );
+            if( !source.name.empty() ) {
+                native.name_ = source.name.native();
+            }
+            if( source.description ) {
+                native.description = source.description->native();
+            }
+            if( !source.color.empty() ) {
+                native.color_.fill( color_from_string( source.color, report_color_error::no ) );
+            }
+            if( !source.symbol.empty() ) {
+                native.symbol_.fill( static_cast<int>( source.symbol[0] ) );
+            }
+            native.looks_like = source.looks_like.value_or( source.copy_from );
+            native.coverage = static_cast<int>( source.coverage.value_or( native.coverage ) );
+            native.movecost = static_cast<int>( source.movecost.value_or( native.movecost ) );
+            native.light_emitted = static_cast<int>( source.light_emitted.value_or( native.light_emitted ) );
+            native.comfort = static_cast<int>( source.comfort.value_or( native.comfort ) );
+            if( source.max_volume_ml ) {
+                native.max_volume = units::from_milliliter( static_cast<int>( *source.max_volume_ml ) );
+            }
+            native.heat_radiation = static_cast<int>( source.heat_radiation.value_or( native.heat_radiation ) );
+            native.transparent = source.transparent.value_or( native.transparent );
             for( const std::string &flag : source.flags ) {
                 native.set_flag( flag );
             }
-            if( !source.open.empty() ) {
-                native.open = ter_str_id( source.open );
+            if( source.connect_groups ) {
+                native.connect_groups.reset();
+                native.set_connect_groups( *source.connect_groups );
             }
-            if( !source.close.empty() ) {
-                native.close = ter_str_id( source.close );
+            if( source.connects_to ) {
+                native.connect_to_groups.reset();
+                native.set_connects_to( *source.connects_to );
             }
-            if( !source.transforms_into.empty() ) {
-                native.transforms_into = ter_str_id( source.transforms_into );
+            if( source.light_color ) {
+                native.light_color.r = ( *source.light_color )[0] / 255.0f;
+                native.light_color.g = ( *source.light_color )[1] / 255.0f;
+                native.light_color.b = ( *source.light_color )[2] / 255.0f;
             }
-            if( !source.roof.empty() ) {
-                native.roof = ter_str_id( source.roof );
+            if( source.shoot ) {
+                native.shoot = cata::make_value<map_shoot_info>( *source.shoot );
             }
-            if( !source.lockpick_result.empty() ) {
-                native.lockpick_result = ter_str_id( source.lockpick_result );
+            if( source.bash ) {
+                native.bash.emplace();
+                apply_tile_bash( *native.bash, *source.bash );
+                native.bash->ter_set = ter_str_id( source.bash->result );
+                native.bash->ter_set_bashed_from_above = ter_str_id( source.bash->result_from_above );
             }
-            native.trap_id_str = source.trap;
-            if( !source.trap.empty() ) {
-                native.trap = trap_str_id( source.trap );
+            native.open = source.open.empty() ? ter_str_id::NULL_ID() : ter_str_id( source.open );
+            native.close = source.close.empty() ? ter_str_id::NULL_ID() : ter_str_id( source.close );
+            native.transforms_into = source.transforms_into.empty() ?
+                                     ter_str_id::NULL_ID() : ter_str_id( source.transforms_into );
+            if( source.roof ) {
+                native.roof = ter_str_id( *source.roof );
+            }
+            if( source.lockpick_result ) {
+                native.lockpick_result = ter_str_id( *source.lockpick_result );
+            }
+            if( source.trap ) {
+                native.trap_id_str = *source.trap;
+                native.trap = trap_str_id( *source.trap );
             }
             if( !source.examine_handler.empty() ) {
+                native.examine_func.clear();
+                native.examine_actor.clear();
                 native.examine_actor.emplace_back(
                     std::make_unique<lua_platform_examine_actor>(
                         "terrain", source.id, pimpl_->owner,
                         source.examine_handler, source.examine_name ) );
             }
             native.was_loaded = true;
-            detail::terrain_registry().insert( native );
+            terrain_registry.insert( native );
         }
-        if( !pimpl_->terrain.empty() ) {
-            detail::terrain_registry().finalize();
+        if( !terrain_order.empty() ) {
+            terrain_registry.resolve_deferred();
         }
 
         for( const gate_registration &entry : pimpl_->gates ) {
@@ -10456,13 +10688,10 @@ void content_transaction::rollback()
     for( auto it = pimpl_->terrain_undo.rbegin();
          it != pimpl_->terrain_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::terrain_registry().insert( *it->second );
+            detail::terrain_registry().restore( *it->second );
         } else {
             detail::terrain_registry().erase( it->first );
         }
-    }
-    if( !pimpl_->terrain_undo.empty() ) {
-        detail::terrain_registry().finalize();
     }
     pimpl_->terrain_undo.clear();
 
@@ -11106,6 +11335,16 @@ std::string content_transaction::fingerprint() const
         character_content_fingerprint_phase::technique, state );
     pimpl_->character.append_fingerprint(
         character_content_fingerprint_phase::martial_art, state );
+    const auto hash_bash = [&state]( const tile_bash_definition_data & value ) {
+        hash_part( state, "bash" );
+        hash_part( state, std::to_string( value.minimum_strength ) );
+        hash_part( state, std::to_string( value.maximum_strength ) );
+        hash_part( state, value.sound );
+        hash_part( state, value.failure_sound );
+        hash_part( state, value.drops );
+        hash_part( state, value.result );
+        hash_part( state, value.result_from_above );
+    };
     for( const furniture_registration &entry : pimpl_->furniture ) {
         hash_part( state, "furniture" );
         hash_part( state, operation_name( entry.operation ) );
@@ -11135,6 +11374,20 @@ std::string content_transaction::fingerprint() const
             hash_part( state, "builtin_examine" );
             hash_part( state, value.builtin_examine );
         }
+        if( value.surgery_skill_multiplier ) {
+            hash_part( state, "surgery_skill_multiplier" );
+            std::ostringstream number;
+            number.imbue( std::locale::classic() );
+            number << std::hexfloat << *value.surgery_skill_multiplier;
+            hash_part( state, number.str() );
+        }
+        if( value.bash ) {
+            hash_bash( *value.bash );
+        }
+        if( value.deconstruct_drops ) {
+            hash_part( state, "deconstruct_drops" );
+            hash_part( state, *value.deconstruct_drops );
+        }
         hash_part( state, value.examine_handler );
         hash_part( state, value.examine_name );
         for( const std::string &flag : value.flags ) {
@@ -11146,22 +11399,76 @@ std::string content_transaction::fingerprint() const
         hash_part( state, operation_name( entry.operation ) );
         const terrain_definition_data &value = *entry.definition;
         hash_part( state, value.id );
+        hash_part( state, value.copy_from );
         hash_part( state, value.name );
-        hash_part( state, value.description );
+        if( value.description ) {
+            hash_part( state, "description" );
+            hash_part( state, *value.description );
+        }
         hash_part( state, value.color );
         hash_part( state, value.symbol );
-        hash_part( state, std::to_string( value.movecost ) );
-        hash_part( state, std::to_string( value.light_emitted ) );
-        hash_part( state, std::to_string( value.comfort ) );
-        hash_part( state, std::to_string( value.max_volume_ml ) );
-        hash_part( state, std::to_string( value.heat_radiation ) );
-        hash_part( state, value.transparent ? "transparent" : "opaque" );
+        const auto hash_option = [&state]( std::string_view key,
+        const std::optional<std::string> & option ) {
+            if( option ) {
+                hash_part( state, key );
+                hash_part( state, *option );
+            }
+        };
+        const auto hash_integer = [&state]( std::string_view key,
+        const std::optional<std::int64_t> & option ) {
+            if( option ) {
+                hash_part( state, key );
+                hash_part( state, std::to_string( *option ) );
+            }
+        };
+        hash_option( "looks_like", value.looks_like );
+        hash_integer( "coverage", value.coverage );
+        hash_integer( "move_cost", value.movecost );
+        hash_integer( "light_emitted", value.light_emitted );
+        hash_integer( "comfort", value.comfort );
+        hash_integer( "max_volume_ml", value.max_volume_ml );
+        hash_integer( "heat_radiation", value.heat_radiation );
+        if( value.transparent ) {
+            hash_part( state, *value.transparent ? "transparent" : "opaque" );
+        }
+        const auto hash_groups = [&state]( std::string_view key,
+        const std::optional<std::vector<std::string>> & list ) {
+            if( list ) {
+                hash_part( state, key );
+                hash_part( state, std::to_string( list->size() ) );
+                for( const std::string &group : *list ) {
+                    hash_part( state, group );
+                }
+            }
+        };
+        hash_groups( "connect_groups", value.connect_groups );
+        hash_groups( "connects_to", value.connects_to );
+        if( value.light_color ) {
+            hash_part( state, "light_color" );
+            for( const int channel : *value.light_color ) {
+                hash_part( state, std::to_string( channel ) );
+            }
+        }
+        if( value.bash ) {
+            hash_bash( *value.bash );
+        }
+        if( value.shoot ) {
+            const map_shoot_info &shoot = *value.shoot;
+            hash_part( state, "shoot" );
+            for( const int field : { shoot.chance_to_hit, shoot.reduce_dmg_min,
+                                     shoot.reduce_dmg_max, shoot.reduce_dmg_min_laser,
+                                     shoot.reduce_dmg_max_laser, shoot.destroy_dmg_min,
+                                     shoot.destroy_dmg_max } ) {
+                hash_part( state, std::to_string( field ) );
+            }
+            hash_part( state, shoot.no_laser_destroy ? "no_laser_destroy" : "laser_destroy" );
+        }
         hash_part( state, value.open );
         hash_part( state, value.close );
         hash_part( state, value.transforms_into );
-        hash_part( state, value.roof );
-        hash_part( state, value.lockpick_result );
-        hash_part( state, value.trap );
+        hash_option( "roof", value.roof );
+        hash_option( "lockpick_result", value.lockpick_result );
+        hash_option( "trap", value.trap );
         hash_part( state, value.examine_handler );
         hash_part( state, value.examine_name );
         for( const std::string &flag : value.flags ) {

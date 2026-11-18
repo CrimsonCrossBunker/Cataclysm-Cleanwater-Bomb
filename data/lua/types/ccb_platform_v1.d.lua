@@ -3344,6 +3344,25 @@ function ConstructionDefinition:pre_flag(flag_id, force_terrain) end
 ---@return ConstructionDefinition self
 function ConstructionDefinition:post_flag(flag_id) end
 
+---@class TileBashOptions
+---@field minimum_strength? integer Native minimum bash strength; defaults to -1.
+---@field maximum_strength? integer Native maximum bash strength; defaults to -1.
+---@field sound? string|LocalizedText Sound on success.
+---@field failure_sound? string|LocalizedText Sound on failure.
+---@field drops? string Existing or same-transaction item group id; defaults to EMPTY_GROUP.
+---@field result? string Tile of the same kind placed on success. Furniture defaults to f_null.
+
+---@class TerrainBashOptions: TileBashOptions
+---@field result string Terrain placed on success.
+---@field result_from_above? string Terrain placed when bashed from above; defaults to result.
+
+---@class TerrainShootOptions
+---@field chance_to_hit? integer Percentage chance to be hit; defaults to 100.
+---@field reduce_damage integer[] Inclusive minimum and maximum projectile reduction.
+---@field reduce_damage_laser integer[] Inclusive minimum and maximum laser reduction.
+---@field destroy_damage integer[] Inclusive damage thresholds for destroying the terrain.
+---@field no_laser_destroy? boolean Whether a laser is prevented from destroying the terrain.
+
 ---@class FurnitureDefinitionOptions
 ---@field id string Stable furniture id.
 ---@field name string|LocalizedText Player-facing furniture name.
@@ -3366,6 +3385,9 @@ function ConstructionDefinition:post_flag(flag_id) end
 ---@field crafting_pseudo_item? string Item id used for in-place crafting.
 ---@field deployed_item? string Item id that deploys this furniture.
 ---@field builtin_examine? string Native examine action, such as deployed_furniture.
+---@field surgery_skill_multiplier? number Positive native surgery skill multiplier for autodocs.
+---@field bash? TileBashOptions
+---@field deconstruct_drops? string Item group recovered by deconstructing the furniture.
 
 ---@class FurnitureDefinition
 ---@field id string
@@ -3380,16 +3402,24 @@ function FurnitureDefinition:on_examine(handler_id) end
 
 ---@class TerrainDefinitionOptions
 ---@field id string Stable terrain id.
----@field name string Player-facing terrain name.
----@field description? string Terrain description.
----@field color string Native color name.
----@field symbol string Single map symbol character.
+---@field copy_from? string Concrete terrain or native abstract to inherit. An earlier Lua terrain may also be inherited.
+---@field name? string|LocalizedText Player-facing terrain name. Required without copy_from.
+---@field description? string|LocalizedText Terrain description.
+---@field color? string Native color name. Required without copy_from.
+---@field symbol? string Single map symbol character. Required without copy_from.
+---@field looks_like? string Native tileset fallback id; defaults to the parent id when inherited.
 ---@field move_cost? integer Non-negative move cost modifier.
+---@field coverage? integer Native signed-int concealment coverage.
 ---@field light_emitted? integer Non-negative light emitted.
+---@field light_color? integer[] Three RGB channels from 0 through 255.
 ---@field comfort? integer Non-negative sleeping comfort.
----@field max_volume_ml? integer Non-negative tile storage volume in milliliters.
+---@field max_volume_ml? integer Non-negative tile storage volume in milliliters. Fresh terrain defaults to DEFAULT_TILE_VOLUME.
 ---@field heat_radiation? integer Non-negative heat radiated.
 ---@field transparent? boolean Whether sight passes through.
+---@field connect_groups? string[] Replaces inherited groups that other terrain can connect to.
+---@field connects_to? string[] Replaces inherited target groups this terrain connects to.
+---@field bash? TerrainBashOptions Replaces the inherited bash behavior.
+---@field shoot? TerrainShootOptions Replaces the inherited projectile resistance.
 ---@field open? string Terrain id to transform into when opened.
 ---@field close? string Terrain id to transform into when closed.
 ---@field transforms_into? string Terrain id to transform into.
