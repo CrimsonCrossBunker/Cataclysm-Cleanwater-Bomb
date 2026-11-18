@@ -1,14 +1,5 @@
 [
   {
-    "type": "ITEM",
-    "id": "iso_science_security_black",
-    "symbol": ",",
-    "copy-from": "id_science",
-    "name": { "str": "Security: black zone badge" },
-    "description": "Your black clearance security badge, it should unlock most doors in the facility.",
-    "flags": [ "SCIENCE_CARD_SECURITY_BLACK", "CREDIT_CARD_SHAPED" ]
-  },
-  {
     "id": "iso_armor_anchor",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],

@@ -27,3 +27,5 @@ require("overmap_locations")
 require("craft_recipes")
 
 require("item_groups")
+
+require("generic_items")
