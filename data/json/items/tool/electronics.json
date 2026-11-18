@@ -199,22 +199,6 @@
     "flags": [ "NO_UNLOAD", "NO_RELOAD", "WATCH", "CHARGEDIM", "TRADER_AVOID", "WATER_BREAK", "ELECTRONIC", "SPAWN_ACTIVE" ]
   },
   {
-    "id": "directional_antenna",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "directional antenna" },
-    "description": "An antenna designed to pick up signals better when pointed at the source.  You could use this with a radio to receive faint signals.",
-    "weight": "454 g",
-    "volume": "500 ml",
-    "longest_side": "60 cm",
-    "price": "8 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "copper", "wood" ],
-    "symbol": ",",
-    "color": "light_gray",
-    "use_action": [ "DIRECTIONAL_ANTENNA" ]
-  },
-  {
     "id": "e_handcuffs",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -418,88 +402,6 @@
     ]
   },
   {
-    "id": "exodii_usb_stick",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Exodii digital storage device" },
-    "material": [ "plastic", "aluminum" ],
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "symbol": ",",
-    "color": "light_green",
-    "description": "A bundle of electronics shielded in scrap metal.  It has an otherworldly connection for Exodii computers.",
-    "price": "1 USD",
-    "price_postapoc": "1 cent",
-    "weight": "190 g",
-    "volume": "138 ml",
-    "longest_side": "12 cm",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
-    "id": "exodii_usb_stick_full",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Exodii digital storage device (data)", "str_pl": "Exodii digital storage devices (data)" },
-    "material": [ "plastic", "aluminum" ],
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "symbol": ",",
-    "color": "light_green",
-    "description": "A bundle of electronics shielded in scrap metal.  It has an otherworldly connection for Exodii computers.  This one is filled with data downloaded from an Exodii computer.",
-    "price": "1 USD",
-    "price_postapoc": "1 cent",
-    "weight": "190 g",
-    "volume": "138 ml",
-    "longest_side": "12 cm",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
-    "id": "exodii_portable_tv",
-    "//": "Based on Panasonic Ranger 505",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Exodii TV-radio" },
-    "material": [ "plastic", "aluminum" ],
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "symbol": ",",
-    "color": "light_green",
-    "description": "This looks like a travel TV from the 1970s, styled to resemble military field equipment.  The bulbous CRT is encased in a drab plastic shell with an oversized carrying handle.  The switches and chunky tuning controls look like they were salvaged from an abandoned Cold War command center.  A single camera lens is visible above the screen, slightly off center.",
-    "price": "1 USD",
-    "price_postapoc": "1 cent",
-    "weight": "3600 g",
-    "volume": "15360 ml",
-    "longest_side": "32 cm",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
-    "id": "electrohack",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "electrohack" },
-    "description": "This device has many ports attached, allowing it to connect to almost any control panel or other electronic machine (but not computers).  With a little skill, it can be used to crack passwords and more.",
-    "//": "hackrf one, + 300 ml for cables and antenna + slot for battery because real hackrf works from usb, not something we can emulate here",
-    "weight": "114 g",
-    "volume": "478 ml",
-    "price": "340 USD",
-    "price_postapoc": "2 USD",
-    "material": [ "plastic", "aluminum" ],
-    "ascii_picture": "electrohack",
-    "symbol": ",",
-    "color": "green",
-    "flags": [ "WATER_BREAK", "ELECTRONIC" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "charges_per_use": 1,
-    "qualities": [ [ "HACK", 2 ] ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "geiger_off",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -565,32 +467,6 @@
     "//": "Battery only, intentionally. Meant for field expeditions to other dimensions where grid power is unavailable. Too advanced for the player to make grid-useable.",
     "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "rigid": true, "item_restriction": [ "heavy_atomic_battery_cell" ] } ],
     "melee_damage": { "bash": 2 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "hand_crank_charger",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "hand-crank charger" },
-    "description": "A hand-powered battery charger.  It has an adjustable receptacle designed to accept a wide variety of rechargeable battery cells.",
-    "weight": "2000 g",
-    "volume": "500 ml",
-    "price": "10 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "plastic" ],
-    "symbol": ":",
-    "color": "light_gray",
-    "flags": [ "WATER_BREAK" ],
-    "use_action": [ "HAND_CRANK" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM", "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" ],
-        "default_magazine": "light_battery_cell"
-      }
-    ],
     "tool_ammo": [ "battery" ]
   },
   {
@@ -992,31 +868,6 @@
     "extend": { "flags": [ "CHARGEDIM", "TRADER_AVOID", "SPAWN_ACTIVE" ] }
   },
   {
-    "id": "UPS_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "UPS", "str_pl": "UPSes" },
-    "description": "A unified power supply, or UPS.  It is a device developed jointly by military and scientific interests for use in combat and the field.  The UPS is designed to power tools, smartphones, armor, and some guns, but drains batteries quickly.",
-    "weight": "680 g",
-    "volume": "2500 ml",
-    "price": "2 kUSD 800 USD",
-    "price_postapoc": "15 USD",
-    "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "uneven" },
-    "material": [ "aluminum", "plastic" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "flags": [ "IS_UPS" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_plus_battery_cell"
-      }
-    ],
-    "melee_damage": { "bash": 8 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "UPS_ON",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1077,24 +928,6 @@
     },
     "melee_damage": { "bash": 8 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "methanol_fuel_cell",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "methanol fuel cell UPS", "str_pl": "methanol fuel cell UPSes" },
-    "description": "A direct methanol fuel cell which can provide power to UPS-compatible electronic devices by oxidizing methanol supplied from a specialized fuel tank to produce electricity.",
-    "weight": "7800 g",
-    "volume": "24390 ml",
-    "longest_side": "448 mm",
-    "price": "2 kUSD 800 USD",
-    "price_postapoc": "15 USD",
-    "material": [ "aluminum", "plastic" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "flags": [ "IS_UPS" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "flag_restriction": [ "METHANOL_TANK" ], "default_magazine": "5l_methanol_tank" } ],
-    "tool_ammo": [ "methanol_fuelcell" ]
   },
   {
     "id": "vibrator",
