@@ -947,6 +947,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 
 ---@class RecipeDefinitionOptions
 ---@field id string Stable recipe id.
+---@field obsolete? boolean Retire the recipe while keeping its ID and result for native lookup.
 ---@field result_multiplier? integer Positive native signed-int multiplier for the produced results; defaults to one.
 ---@field result? string Stable result item id. Omit for a named recipe with a completion handler and no item output.
 ---@field name? string|LocalizedText Display name. Required when the recipe has no item output.
@@ -959,6 +960,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field duration_moves? integer Non-negative base duration in moves.
 ---@field autolearn? boolean Whether the recipe is automatically learnable.
 ---@field reversible? boolean Whether the recipe supplies disassembly data.
+---@field disassembly_moves? integer Explicit disassembly duration in moves. A positive value makes the recipe reversible.
 ---@field variant? string Item variant of the crafted result.
 ---@field contained? boolean Wrap the result in its default container.
 ---@field container? string Use this item as the result container.
@@ -1050,6 +1052,8 @@ function RecipeDefinition:requirement(requirement_id, multiplier) end
 ---@field required? boolean Whether crafting is forbidden without this proficiency.
 ---@field time_multiplier? number Native time multiplier when missing.
 ---@field skill_penalty? number Native skill penalty when missing.
+---@field learning_time_multiplier? number Native multiplier for proficiency learning time.
+---@field max_experience_turns? integer Native cap on proficiency experience in turns.
 
 ---@param proficiency_id string Existing proficiency id.
 ---@param options? RecipeProficiencyOptions
@@ -1080,6 +1084,41 @@ function RecipeDefinition:batch_discount(maximum_percent, at_batch) end
 ---@param max_batch? integer Maximum number of units that share one setup.
 ---@return RecipeDefinition self
 function RecipeDefinition:batch_setup(setup_moves, max_batch) end
+
+---@class RecipeStepBatchDiscount
+---@field discount_percent number Maximum crafting time discount in percent.
+---@field at_batch integer Positive batch size at which the discount curve reaches its target.
+
+---@class RecipeStepBatchSetup
+---@field setup_moves integer Work in moves shared across a batch.
+---@field max_batch? integer Maximum number of units that share one setup.
+
+---@class RecipeStepRequirement
+---@field id string Native requirement ID.
+---@field multiplier? integer Positive requirement multiplier; defaults to one.
+
+---@class RecipeStepProficiency: RecipeProficiencyOptions
+---@field id string Native proficiency ID.
+
+---@class RecipeStepOptions
+---@field name string|LocalizedText Player-facing label for this stage.
+---@field duration_moves integer Positive duration before batch discounts.
+---@field activity_level number Positive native exertion multiplier.
+---@field attention? "none"|"unattended" Whether the craft can progress while the crafter leaves.
+---@field max_time_turns? integer Unattended deadline, strictly longer than the stage duration.
+---@field grace_period_turns? integer Grace period after the deadline, which must be set.
+---@field unattended_message? string|LocalizedText Message displayed when leaving the craft unattended.
+---@field batch? RecipeStepBatchDiscount|RecipeStepBatchSetup Batch savings for this stage.
+---@field tools? RecipeToolAlternative[][] Each group contains interchangeable tools.
+---@field qualities? RequirementQualityAlternative[][] Each group contains interchangeable tool qualities.
+---@field requirements? RecipeStepRequirement[] Ordered external requirements for this stage.
+---@field proficiencies? RecipeStepProficiency[] Required or helpful proficiencies for this stage.
+
+---Append one native crafting stage. Root components and shared requirements remain on the recipe.
+---The native crafter derives the total duration and exertion from the stages.
+---@param options RecipeStepOptions
+---@return RecipeDefinition self
+function RecipeDefinition:step(options) end
 
 ---@param item_id string Item produced alongside the result.
 ---@param count integer Positive byproduct count per craft.
