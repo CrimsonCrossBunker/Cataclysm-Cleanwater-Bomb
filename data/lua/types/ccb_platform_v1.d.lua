@@ -945,6 +945,15 @@ function ItemDefinition:passive_enchantment(enchantment_id) end
 ---@return ItemDefinition self
 function ItemDefinition:on_consume(handler_id, label) end
 
+---@class RecipePracticeOptions
+---@field min_difficulty integer Minimum challenge level.
+---@field max_difficulty? integer Maximum challenge level; defaults to one below the native maximum.
+---@field skill_limit? integer Maximum primary skill that can be reached by practicing; defaults to the native maximum.
+
+---@class RecipeCharacterResources
+---@field mana? integer Non-negative native mana cost per craft.
+---@field stamina? integer Non-negative native stamina cost per craft.
+
 ---@class RecipeDefinitionOptions
 ---@field id string Stable recipe id.
 ---@field obsolete? boolean Retire the recipe while keeping its ID and result for native lookup.
@@ -968,8 +977,8 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field container? string Use this item as the result container.
 ---@field container_variant? string Item variant of the result container.
 ---@field sealed? boolean Seal the result container; defaults to true.
----@field practice? boolean Whether this is a practice recipe; native practice
----progression data stays author-owned Lua behaviour.
+---@field practice? boolean|RecipePracticeOptions Native practice progression when supplied as options. The boolean form retains its existing scripted-recipe behavior.
+---@field character_resources? RecipeCharacterResources Resources charged through native crafting progress.
 ---@field uncraft? boolean Whether this is a disassembly recipe staged into the
 ---native uncraft dictionary.
 ---@field activity_level? number Positive native exertion multiplier.

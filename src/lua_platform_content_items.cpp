@@ -418,7 +418,8 @@ struct recipe_blueprint_data {
 struct recipe_definition_data {
     std::string id;
     bool nested_category = false;
-    bool practice = false;
+    std::optional<practice_recipe_data> practice;
+    character_resource_costs character_resources;
     bool uncraft = false;
     bool obsolete = false;
     std::string result;
@@ -476,6 +477,14 @@ struct recipe_definition_data {
         required_skills[skill_name] = level;
     }
 };
+
+requirement_id recipe_root_requirement_id( const recipe_id &id,
+        const recipe_definition_data &definition )
+{
+    const char *prefix = definition.uncraft ? "inline_uncraft_" :
+                         definition.practice ? "inline_practice_" : "inline_recipe_";
+    return requirement_id( prefix + id.str() );
+}
 
 struct plant_lifecycle_definition_data {
     std::string id;
@@ -1533,6 +1542,17 @@ recipe_blueprint_needs_data read_blueprint_needs( const sol::table &options )
         }
     }
     return needs;
+}
+
+practice_recipe_data read_practice_recipe( const sol::table &options )
+{
+    const auto min = options.get<std::int64_t>( "min_difficulty" );
+    const auto max = options.get_or<std::int64_t>( "max_difficulty", MAX_SKILL - 1 );
+    const auto limit = options.get_or<std::int64_t>( "skill_limit", MAX_SKILL );
+    if( min < 0 || max < min || max > MAX_SKILL || limit < 0 || limit > MAX_SKILL ) {
+        throw std::runtime_error( "practice recipe has an invalid difficulty or skill limit" );
+    }
+    return { static_cast<int>( min ), static_cast<int>( max ), static_cast<int>( limit ) };
 }
 
 struct recipe_definition_handle {
@@ -3847,7 +3867,22 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->contained = !definition->container.empty() || options.get_or( "contained", false );
         definition->sealed = options.get_or( "sealed", true );
         definition->container_variant = options.get_or( "container_variant", std::string() );
-        definition->practice = options.get_or( "practice", false );
+        const sol::object practice = options["practice"];
+        if( practice.is<sol::table>() ) {
+            definition->practice = read_practice_recipe( practice.as<sol::table>() );
+        } else if( practice.valid() && practice.get_type() != sol::type::nil && !practice.is<bool>() ) {
+            throw std::runtime_error( "practice recipe needs a practice definition" );
+        }
+        if( const auto resources = options.get<sol::optional<sol::table>>( "character_resources" ) ) {
+            const auto mana = resources->get_or<std::int64_t>( "mana", 0 );
+            const auto stamina = resources->get_or<std::int64_t>( "stamina", 0 );
+            if( mana < 0 || mana > std::numeric_limits<int>::max() ||
+                stamina < 0 || stamina > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "recipe character resource cost is outside the native range" );
+            }
+            definition->character_resources.mana = static_cast<int>( mana );
+            definition->character_resources.stamina = static_cast<int>( stamina );
+        }
         definition->activity_level = options.get_or( "activity_level", 1.0 );
         const std::int64_t morale_bonus = options.get_or<std::int64_t>( "morale_bonus", 0 );
         const std::int64_t morale_turns = options.get_or<std::int64_t>( "morale_duration_turns", 0 );
@@ -5623,9 +5658,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
                 continue;
             }
+            if( definition.practice &&
+                ( !definition.result.empty() || definition.name.empty() || definition.skill.empty() ||
+                  definition.blueprint || !definition.steps.empty() ) ) {
+                throw std::runtime_error( "practice recipe '" + definition.id +
+                                          "' needs a name and skill without an item result, blueprint or steps" );
+            }
             if( definition.result.empty() &&
-                ( definition.name.empty() || definition.result_handler.empty() || definition.uncraft ||
-                  definition.reversible || definition.result_charges ) ) {
+                ( definition.name.empty() || ( !definition.practice && definition.result_handler.empty() ) ||
+                  definition.uncraft || definition.reversible || definition.result_charges ) ) {
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' without an item result requires a name and completion handler, and cannot supply disassembly or result charges" );
             }
@@ -7330,6 +7371,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.flags_to_delete.emplace( flag );
                     }
                     native.morale_modifier = { entry.definition->morale_bonus, entry.definition->morale_duration };
+                    native.practice_data = entry.definition->practice;
+                    native.character_resources = entry.definition->character_resources;
                     for( const auto &[skill, level] : entry.definition->disassembly_learning ) {
                         native.learn_by_disassembly[skill_id( skill )] = static_cast<int>( level );
                     }
@@ -7349,8 +7392,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             properties.hidden
                         } );
                     }
-                    const requirement_id inline_id( ( targets_uncraft ? "inline_uncraft_" : "inline_recipe_" ) +
-                                                    id.str() );
+                    const requirement_id inline_id = recipe_root_requirement_id( id, *entry.definition );
                     const auto stage_requirements = [&]( const requirement_id & req_id,
                                                          requirement_data inline_requirements ) {
                         const auto old_requirements = requirement_data::registry().find( req_id );
@@ -7619,19 +7661,18 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         const auto &native_dict = entry.definition->uncraft ? recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ? recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
-        if( !entry.definition->nested_category && !entry.definition->result.empty() &&
-            native_dict.count( id ) == 0 ) {
+        if( !entry.definition->nested_category && native_dict.count( id ) == 0 ) {
             const itype_id result( entry.definition->result );
-            const requirement_id inline_id( ( entry.definition->uncraft ? "inline_uncraft_" : "inline_recipe_" ) +
-                                            id.str() );
+            const requirement_id inline_id = recipe_root_requirement_id( id, *entry.definition );
             const auto uses_blacklisted_requirement = []( const recipe_requirement_sets &requirements ) {
                 return std::any_of( requirements.begin(), requirements.end(), []( const auto & req ) {
                     return requirement_id( req.first )->is_blacklisted();
                 } );
             };
             // The native finalizer discards recipes affected by item blacklists or migrations.
-            if( item_is_blacklisted( result ) || item_controller->has_template_migration( result ) ||
-                inline_id->is_blacklisted() ||
+            if( ( !entry.definition->result.empty() &&
+                  ( item_is_blacklisted( result ) || item_controller->has_template_migration( result ) ) ) ||
+                ( inline_id.is_valid() && inline_id->is_blacklisted() ) ||
                 uses_blacklisted_requirement( entry.definition->external_requirements ) ) {
                 continue;
             }
@@ -8900,6 +8941,14 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.time_moves ) );
                 hash_part( state, v.autolearn ? "autolearn" : "manual" );
                 hash_part( state, v.never_learn ? "never_learn" : "learnable" );
+                if( const auto &practice = v.practice ) {
+                    hash_part( state, "recipe_practice" );
+                    hash_part( state, std::to_string( practice->min_difficulty ) );
+                    hash_part( state, std::to_string( practice->max_difficulty ) );
+                    hash_part( state, std::to_string( practice->skill_limit ) );
+                }
+                hash_part( state, std::to_string( v.character_resources.mana ) );
+                hash_part( state, std::to_string( v.character_resources.stamina ) );
                 hash_part( state, v.reversible ? "reversible" : "irreversible" );
                 hash_part( state, v.variant );
                 hash_part( state, v.container );
