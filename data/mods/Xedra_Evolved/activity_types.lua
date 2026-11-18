@@ -86,3 +86,32 @@ content.add(content.ActivityType {
     can_resume = false,
     rooted = true,
 }:on_finish("finish_chronomancer_meditation"))
+
+ccb.runtime.handler("finish_keypad_entry", function(activity)
+    local character = activity.character
+    -- The original dialogue skill check truncates the effective skill level.
+    local deduction = math.modf(checked(services.skills.level(character, "deduction")))
+    local unlocked = services.random.native_int(1, 10) + deduction > 12
+    if unlocked then
+        local position = checked(services.creatures.snapshot(character)).position
+        checked(services.world.transform_radius(position, 2,
+            services.types.id("terrain_furniture_transform", "unlock_elock")))
+    end
+    if character.subtype == "avatar" then
+        if unlocked then
+            ccb.presentation.notice(services.translate("The numpad glows green and emits a happy chirp as the door unlocks."))
+        else
+            ccb.presentation.notice(services.translate("The numpad flashes while beeping angrily at you."))
+        end
+        services.activities.offer_interruption("")
+    end
+end, 1)
+
+content.add(content.ActivityType {
+    id = "ACT_KEYPAD_ENTRY",
+    verb = ccb.content.text("pressing keys"),
+    based_on = "speed",
+    can_resume = false,
+    interruptable = false,
+    interruptable_with_keyboard = false,
+}:on_finish("finish_keypad_entry"))
