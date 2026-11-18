@@ -114,3 +114,5 @@ require("practice_recipes")
 require("shapeshifting_recipes")
 
 require("item_groups")
+
+require("item_group_changes")

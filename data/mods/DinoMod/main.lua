@@ -17,3 +17,5 @@ require("armor_recipes")
 require("craft_recipes")
 
 require("item_groups")
+
+require("item_group_changes")

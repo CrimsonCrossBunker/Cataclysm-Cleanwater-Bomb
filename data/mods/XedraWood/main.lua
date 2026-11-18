@@ -91,3 +91,5 @@ require("hedge_research")
 require("anima_meditation")
 
 require("item_groups")
+
+require("item_group_changes")

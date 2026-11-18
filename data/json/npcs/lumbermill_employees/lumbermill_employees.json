@@ -94,17 +94,5 @@
     "id": "LUMBERMILL_MERCHANT_blacklist",
     "type": "shopkeeper_blacklist",
     "entries": [ { "group": "LUMBERMILL_MERCHANT_trade" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_LUMBERJACK_tools",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "ax", "damage": [ 0, 2 ], "prob": 70 },
-      { "item": "hatchet", "damage": [ 0, 2 ], "prob": 30 },
-      { "item": "saw", "damage": [ 0, 2 ], "prob": 10 },
-      { "item": "chainsaw_off", "damage": [ 0, 2 ], "prob": 25, "charges": [ 250, 500 ] },
-      { "item": "elec_chainsaw_off", "damage": [ 0, 2 ], "prob": 25, "charges": [ 250, 500 ] }
-    ]
   }
 ]

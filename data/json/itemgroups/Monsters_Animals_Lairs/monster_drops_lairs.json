@@ -60,42 +60,5 @@
     "id": "ant_egg",
     "subtype": "distribution",
     "entries": [ { "item": "ant_egg", "prob": 5 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "hive",
-    "//": "Beekeeper gear, as spawned on beekeeper zombie",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "honeycomb", "prob": 10 },
-      { "item": "honey_scraper", "prob": 2 },
-      { "item": "beekeeping_hood", "prob": 5 },
-      { "item": "beekeeping_suit", "prob": 5 },
-      { "item": "beekeeping_gloves", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "wasp_lair",
-    "//": "Damaged generic/military/science drops, nothing fancy",
-    "subtype": "distribution",
-    "ammo": 10,
-    "entries": [
-      { "group": "allclothes", "damage": [ 2, 4 ], "prob": 150 },
-      { "group": "clothing_outdoor_set", "damage": [ 2, 4 ], "prob": 10 },
-      { "group": "clothing_hunting", "damage": [ 2, 4 ], "prob": 10 },
-      { "group": "clothing_work_set", "damage": [ 2, 4 ], "prob": 10 },
-      { "group": "everyday_gear", "damage": [ 2, 4 ], "prob": 50 },
-      { "group": "gear_homeless", "damage": [ 2, 4 ], "prob": 30 },
-      { "group": "child_items", "damage": [ 2, 4 ], "prob": 30 },
-      { "group": "traveler", "damage": [ 2, 4 ], "prob": 10 },
-      { "group": "default_zombie_clothes", "damage": [ 2, 4 ], "prob": 30 },
-      { "group": "default_zombie_items_bags", "damage": [ 2, 4 ], "prob": 30 },
-      { "group": "default_zombie_items_pockets", "damage": [ 2, 4 ], "prob": 30 },
-      { "group": "mon_zombie_scientist_death_drops", "damage": [ 2, 4 ], "prob": 5 },
-      { "group": "mon_zombie_labsecurity_death_drops", "damage": [ 2, 4 ], "prob": 5 },
-      { "group": "mon_zombie_kevlar_death_drops", "damage": [ 2, 4 ], "prob": 15 },
-      { "group": "mon_zombie_military_pilot_death_drops", "damage": [ 2, 4 ], "prob": 5 }
-    ]
   }
 ]

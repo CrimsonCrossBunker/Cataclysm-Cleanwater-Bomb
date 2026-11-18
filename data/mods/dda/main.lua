@@ -454,3 +454,5 @@ require("activity_types")
 require("phone_recovery")
 
 require("item_groups")
+
+require("item_group_changes")

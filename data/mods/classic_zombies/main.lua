@@ -60,3 +60,5 @@ require("construction_groups")
 require("retired_recipes")
 
 require("craft_recipes")
+
+require("item_group_changes")

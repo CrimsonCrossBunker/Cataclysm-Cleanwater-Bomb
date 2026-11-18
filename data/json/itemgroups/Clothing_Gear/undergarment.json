@@ -1,47 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "female_underwear_top",
-    "items": [ [ "corset", 5 ], [ "binder_top", 1 ], [ "corset_waist", 5 ], { "group": "female_underwear_top_child", "prob": 190 } ]
-  },
-  {
-    "type": "item_group",
-    "id": "female_underwear_bottom",
-    "items": [
-      [ "panties", 70 ],
-      [ "boy_shorts", 50 ],
-      { "item": "boy_shorts", "variant": "flag_boy_shorts", "prob": 2 },
-      { "item": "boy_shorts", "variant": "flag_boy_shorts", "prob": 70, "event": "independence_day" },
-      { "item": "bikini_bottom", "variant": "flag_bikini_bottom", "prob": 70, "event": "independence_day" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "male_underwear_top",
-    "items": [
-      [ "undershirt", 50 ],
-      [ "binder_top", 2 ],
-      [ "long_undertop", 20 ],
-      [ "thermal_shirt", 10 ],
-      [ "under_armor", 20 ],
-      [ "tank_top", 50 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "male_underwear_bottom",
-    "items": [
-      [ "boxer_shorts", 70 ],
-      { "item": "boxer_shorts", "variant": "flag_boxer_shorts", "prob": 5 },
-      { "item": "boxer_shorts", "variant": "flag_boxer_shorts", "prob": 100, "event": "independence_day" },
-      [ "briefs", 30 ],
-      [ "boxer_briefs", 50 ],
-      [ "long_underpants", 20 ],
-      [ "under_armor_shorts", 20 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "loincloth",
     "items": [ [ "loincloth", 2 ], [ "loincloth_wool", 1 ], [ "loincloth_fur", 1 ], [ "loincloth_leather", 1 ] ]
   }

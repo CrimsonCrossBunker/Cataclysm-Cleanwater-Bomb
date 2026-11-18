@@ -36,22 +36,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_meteorologist_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "coat_lab" },
-      { "item": "dress_shirt" },
-      { "item": "pants" },
-      { "item": "socks" },
-      { "item": "boots" },
-      { "item": "gloves_rubber" },
-      { "item": "wristwatch" },
-      { "item": "glasses_safety" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": [ "TALK_meteorologist_1" ],
     "dynamic_line": {

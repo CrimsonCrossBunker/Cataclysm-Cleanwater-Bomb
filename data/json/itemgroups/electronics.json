@@ -130,24 +130,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "new_laptops",
-    "items": [ { "item": "laptop", "charges": 200 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "used_laptops",
-    "items": [ { "item": "laptop", "charges": [ 0, -1 ] } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "distribution",
-    "id": "civilian_laptops",
-    "items": [ { "item": "laptop", "charges": [ 0, -1 ], "contents-group": "civilian_laptop_efiles" } ]
-  },
-  {
     "id": "box_of_batteries_random",
     "type": "item_group",
     "subtype": "distribution",

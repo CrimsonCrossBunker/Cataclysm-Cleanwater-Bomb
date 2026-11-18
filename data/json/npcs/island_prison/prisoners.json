@@ -61,62 +61,6 @@
     "weapon_override": "NC_THUG_PRISONER_wield"
   },
   {
-    "type": "item_group",
-    "id": "NC_THUG_PRISONER_worn",
-    "subtype": "collection",
-    "entries": [
-      { "group": "male_underwear" },
-      { "distribution": [ { "group": "clothing_prisoner_shoes" }, { "group": "cop_shoes" } ] },
-      { "distribution": [ { "item": "buttonshirt", "variant": "striped" }, { "group": "cop_torso" } ] },
-      { "distribution": [ { "item": "striped_pants" }, { "group": "cop_pants" } ] },
-      { "distribution": [ { "item": "tacvest" }, { "item": "kevlar" } ], "prob": 15 },
-      { "group": "socks_unisex" },
-      { "group": "cop_gloves", "prob": 20 },
-      { "distribution": [ { "item": "bandana" }, { "group": "cop_helmet" } ], "prob": 50 },
-      { "group": "clothing_glasses", "prob": 20 },
-      { "group": "clothing_watch", "prob": 20 },
-      { "item": "police_belt", "prob": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_THUG_PRISONER_wield",
-    "items": [
-      [ "baton-extended", 50 ],
-      [ "PR24-retracted", 50 ],
-      { "item": "knife_small", "variant": "knife_steak", "prob": 30 },
-      { "item": "knife_large", "variant": "knife_chef", "prob": 30 },
-      { "item": "knife_small", "variant": "knife_paring", "prob": 30 },
-      { "item": "knife_huge", "variant": "knife_butcher", "prob": 30 },
-      { "item": "knife_cleaver", "variant": "knife_meat_cleaver", "prob": 30 },
-      { "item": "knife_large", "variant": "knife_carving", "prob": 30 },
-      [ "pointy_stick", 30 ],
-      [ "cudgel", 20 ],
-      [ "knuckle_nail", 20 ],
-      [ "spear_spike", 20 ],
-      [ "spear_knife", 15 ],
-      [ "makeshift_sap", 15 ],
-      [ "makeshift_knife", 15 ],
-      [ "nailboard", 15 ],
-      [ "sword_wood", 10 ],
-      [ "glass_shiv", 5 ],
-      [ "rock_sock", 5 ],
-      [ "sharp_toothbrush", 5 ],
-      [ "chisel", 5 ],
-      [ "scissors", 5 ],
-      [ "screwdriver", 5 ],
-      { "item": "knife_small", "variant": "knife_steak", "prob": 5 },
-      [ "knuckle_brass", 3 ],
-      [ "knuckle_steel_forged", 2 ],
-      [ "switchblade", 5 ],
-      [ "throwing_knife", 5 ],
-      {
-        "distribution": [ { "group": "longguns_cop", "prob": 20, "contents-item": "shoulder_strap" }, { "group": "sidearms_cop", "prob": 80 } ],
-        "prob": 50
-      }
-    ]
-  },
-  {
     "id": "TALK_PRISONER_GENERIC",
     "type": "talk_topic",
     "dynamic_line": "Get the fuck out of here.",

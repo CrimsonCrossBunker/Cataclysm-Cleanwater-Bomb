@@ -24,18 +24,5 @@
       { "item": "p226mag_15rd_9x19mm", "prob": 50 },
       { "group": "on_hand_9mm" }
     ]
-  },
-  {
-    "id": "nested_mk47",
-    "type": "item_group",
-    "//": "this is a distribution for the gun, reasonable number of backup mags, and some ammo to repack",
-    "subtype": "collection",
-    "ammo": 100,
-    "entries": [
-      { "item": "mk47", "charges": [ 0, 30 ] },
-      { "item": "akmag30" },
-      { "item": "akmag30", "prob": 50 },
-      { "group": "on_hand_762" }
-    ]
   }
 ]

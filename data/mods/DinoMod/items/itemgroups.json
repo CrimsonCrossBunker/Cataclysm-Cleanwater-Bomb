@@ -30,30 +30,6 @@
     }
   },
   {
-    "id": "raptor_sample_single",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "raptor_sample" } ]
-  },
-  {
-    "id": "raptor_sample_small",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "raptor_sample", "count": [ 1, 3 ] } ]
-  },
-  {
-    "id": "raptor_sample_large",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "raptor_sample", "count": [ 3, 6 ] } ]
-  },
-  {
-    "id": "raptor_sample_huge",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [ { "item": "raptor_sample", "count": [ 10, 20 ] } ]
-  },
-  {
     "type": "item_group",
     "id": "bionics_sci",
     "subtype": "distribution",

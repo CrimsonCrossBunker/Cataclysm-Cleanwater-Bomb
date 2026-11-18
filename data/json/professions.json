@@ -1,17 +1,5 @@
 [
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_bow_hunter",
-    "entries": [ { "item": "arrow_cf", "count": 10 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_crossbow_hunter",
-    "entries": [ { "item": "bolt_steel", "charges": 4 } ]
-  },
-  {
     "type": "profession_item_substitutions",
     "item": "blazer",
     "sub": [ { "present": [ "WOOLALLERGY" ], "new": [ "jacket_leather" ] }, { "present": [ "VEGAN" ], "new": [ "jacket_light" ] } ]
