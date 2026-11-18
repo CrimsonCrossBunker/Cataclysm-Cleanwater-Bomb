@@ -286,6 +286,30 @@ struct quality_requirement_definition {
     std::int64_t count = 1;
 };
 
+std::vector<quality_requirement_definition> read_quality_alternatives( const sol::table &choices,
+        const std::string_view description )
+{
+    const std::size_t count = require_dense_array(
+                                  choices, description, 1 );
+    std::vector<quality_requirement_definition> group;
+    group.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::table choice = choices.raw_get<sol::table>( index );
+        quality_requirement_definition entry;
+        entry.id = choice.get_or( "id", std::string() );
+        entry.level = choice.get_or<std::int64_t>( "level", 1 );
+        entry.count = choice.get_or<std::int64_t>( "count", 1 );
+        if( entry.id.empty() || entry.level <= 0 || entry.count <= 0 ||
+            entry.level > std::numeric_limits<int>::max() ||
+            entry.count > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error(
+                std::string( description ) + " contain invalid values" );
+        }
+        group.push_back( std::move( entry ) );
+    }
+    return group;
+}
+
 struct component_requirement {
     std::string id;
     std::int64_t count = 1;
@@ -312,11 +336,14 @@ struct recipe_definition_data {
     bool reversible = false;
     std::optional<std::int64_t> result_charges;
     std::int64_t result_multiplier = 1;
-    std::vector<quality_requirement_definition> qualities;
+    std::vector<std::vector<quality_requirement_definition>> qualities;
     std::vector<std::vector<component_requirement>> components;
     std::vector<std::vector<component_requirement>> tools;
     std::map<std::string, std::int64_t> required_skills;
-    std::map<std::string, std::int64_t> external_requirements;
+    std::vector<std::pair<std::string, std::int64_t>> external_requirements;
+    std::map<std::string, std::int64_t> disassembly_learning;
+    int morale_bonus = 0;
+    time_duration morale_duration;
     struct proficiency_data {
         std::string id;
         bool required = false;
@@ -1340,7 +1367,23 @@ struct recipe_definition_handle {
             count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "recipe quality needs an id, positive level, and positive count" );
         }
-        definition->qualities.push_back( { id, level, count } );
+        definition->qualities.push_back( { { id, level, count } } );
+        return *this;
+    }
+
+    recipe_definition_handle &quality_any( const sol::table &choices ) {
+        require_building_handle( token, *definition, "recipe" );
+        definition->qualities.push_back( read_quality_alternatives( choices,
+                                         "recipe quality alternatives" ) );
+        return *this;
+    }
+
+    recipe_definition_handle &learn_by_disassembly( const std::string &id, std::int64_t level ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() || level < 0 || level > MAX_SKILL ) {
+            throw std::runtime_error( "disassembly learning needs a skill id and a valid skill level" );
+        }
+        definition->disassembly_learning[id] = level;
         return *this;
     }
 
@@ -1357,7 +1400,20 @@ struct recipe_definition_handle {
             throw std::runtime_error(
                 "recipe external requirement needs a non-empty id and positive multiplier" );
         }
-        definition->external_requirements[id] = multiplier;
+        auto &requirements = definition->external_requirements;
+        // Preserve the authored order for disassembly and the existing ID order for crafting.
+        const auto position = definition->uncraft ?
+                              std::find_if( requirements.begin(), requirements.end(), [&]( const auto &entry ) {
+            return entry.first == id;
+        } ) : std::lower_bound( requirements.begin(), requirements.end(), id,
+        []( const auto & entry, const std::string & key ) {
+            return entry.first < key;
+        } );
+        if( position != requirements.end() && position->first == id ) {
+            position->second = multiplier;
+        } else {
+            requirements.emplace( position, id, multiplier );
+        }
         return *this;
     }
 
@@ -1559,25 +1615,8 @@ struct requirement_definition_handle {
 
     requirement_definition_handle &quality_any( const sol::table &choices ) {
         require_building_handle( token, *definition, "requirement" );
-        const std::size_t count = require_dense_array(
-                                      choices, "requirement quality alternatives", 1 );
-        std::vector<quality_requirement_definition> group;
-        group.reserve( count );
-        for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::table choice = choices.raw_get<sol::table>( index );
-            quality_requirement_definition entry;
-            entry.id = choice.get_or( "id", std::string() );
-            entry.level = choice.get_or<std::int64_t>( "level", 1 );
-            entry.count = choice.get_or<std::int64_t>( "count", 1 );
-            if( entry.id.empty() || entry.level <= 0 || entry.count <= 0 ||
-                entry.level > std::numeric_limits<int>::max() ||
-                entry.count > std::numeric_limits<int>::max() ) {
-                throw std::runtime_error(
-                    "requirement quality alternative has invalid values" );
-            }
-            group.push_back( std::move( entry ) );
-        }
-        definition->qualities.push_back( std::move( group ) );
+        definition->qualities.push_back( read_quality_alternatives( choices,
+                                         "requirement quality alternatives" ) );
         return *this;
     }
 
@@ -2770,6 +2809,7 @@ struct items_content_transaction::impl {
     std::vector<std::pair<itype_id, std::optional<itype>>> item_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> recipe_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> uncraft_undo;
+    std::vector<std::pair<requirement_id, std::optional<requirement_data>>> uncraft_requirement_undo;
 
     mutable bool finalization_validated = false;
     items_content_apply_phase next_apply_phase = items_content_apply_phase::foundations;
@@ -2913,6 +2953,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "tool_charges", &recipe_definition_handle::tool_charges,
         "tool_any", &recipe_definition_handle::tool_any,
         "quality", &recipe_definition_handle::quality,
+        "quality_any", &recipe_definition_handle::quality_any,
+        "learn_by_disassembly", &recipe_definition_handle::learn_by_disassembly,
         "requires_skill", &recipe_definition_handle::requires_skill,
         "requirement", &recipe_definition_handle::requirement,
         "proficiency", &recipe_definition_handle::proficiency,
@@ -3396,10 +3438,27 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->reversible = options.get_or( "reversible", false );
         definition->practice = options.get_or( "practice", false );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
+        const std::int64_t morale_bonus = options.get_or<std::int64_t>( "morale_bonus", 0 );
+        const std::int64_t morale_turns = options.get_or<std::int64_t>( "morale_duration_turns", 0 );
+        if( morale_bonus < std::numeric_limits<int>::min() ||
+            morale_bonus > std::numeric_limits<int>::max() ||
+            morale_turns < 0 || morale_turns > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe morale bonus or duration is outside the native range" );
+        }
+        definition->morale_bonus = static_cast<int>( morale_bonus );
+        definition->morale_duration = time_duration::from_turns( static_cast<int>( morale_turns ) );
         definition->result_handler = options.get_or(
                                          "on_complete",
                                          options.get_or( "result_handler", std::string() ) );
         return recipe_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "upsert_uncraft", [transaction]( const recipe_definition_handle & handle ) {
+        if( handle.token != transaction->token || !handle.definition->uncraft ) {
+            throw std::runtime_error( "upsert_uncraft requires a disassembly definition owned by this Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "recipe" );
+        handle.definition->registered = true;
+        transaction->recipes.push_back( { definition_operation::upsert, handle.definition } );
     } );
     content.set_function( "PlantLifecycle", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
@@ -4194,7 +4253,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         }
         std::set<std::string> declared_recipe_ids;
         for( const recipe_registration &entry : pimpl_->recipes ) {
-            declared_recipe_ids.insert( entry.definition->id );
+            if( !entry.definition->uncraft ) {
+                declared_recipe_ids.insert( entry.definition->id );
+            }
         }
 
         std::set<std::string> material_ids;
@@ -5073,14 +5134,14 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
         }
 
-        const auto validate_recipe_skills = [&skill_ids]( const recipe_definition_data & definition ) {
-            if( !definition.skill.empty() && skill_ids.count( definition.skill ) == 0 &&
+        const auto validate_recipe_skills = [&]( const recipe_definition_data & definition ) {
+            if( check_engine_state && !definition.skill.empty() && skill_ids.count( definition.skill ) == 0 &&
                 !skill_id( definition.skill ).is_valid() ) {
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' references unknown skill '" + definition.skill + "'" );
             }
             for( const auto &[skill, level] : definition.required_skills ) {
-                if( ( skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
+                if( ( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
                     level < 0 || level > MAX_SKILL ) {
                     throw std::runtime_error( "recipe '" + definition.id +
                                               "' has an invalid required skill '" + skill + "'" );
@@ -5088,12 +5149,17 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
         };
         std::set<std::string> recipe_ids;
+        std::set<std::string> uncraft_results;
         for( const recipe_registration &entry : pimpl_->recipes ) {
             const recipe_definition_data &definition = *entry.definition;
             require_valid_id( definition.id,
                               definition.nested_category ? "nested recipe category" : "recipe" );
             if( !recipe_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "recipe '" + definition.id +
+                                          "' is registered more than once in one transaction" );
+            }
+            if( definition.uncraft && !uncraft_results.insert( definition.result ).second ) {
+                throw std::runtime_error( "disassembly result '" + definition.result +
                                           "' is registered more than once in one transaction" );
             }
             const bool exists = definition.uncraft ?
@@ -5145,9 +5211,16 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' references unknown category '" + definition.category + "'" );
             }
             validate_recipe_skills( definition );
+            for( const auto &[skill, level] : definition.disassembly_learning ) {
+                if( ( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
+                    level < 0 || level > MAX_SKILL ) {
+                    throw std::runtime_error( "recipe '" + definition.id +
+                                              "' has an invalid disassembly learning skill '" + skill + "'" );
+                }
+            }
             for( const auto &[requirement, multiplier] : definition.external_requirements ) {
-                if( multiplier <= 0 || !native_int( multiplier ) ||
-                    ( requirement_ids.count( requirement ) == 0 &&
+                if( requirement.empty() || multiplier <= 0 || !native_int( multiplier ) ||
+                    ( check_engine_state && requirement_ids.count( requirement ) == 0 &&
                       requirement_data::registry().count( requirement_id( requirement ) ) == 0 ) ) {
                     throw std::runtime_error( "recipe '" + definition.id +
                                               "' references invalid requirement '" + requirement + "'" );
@@ -5170,7 +5243,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                            requirement_ids.count( component.id ) != 0 ||
                                            requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                            declared_item_ids.count( component.id ) != 0 ||
-                                           item::type_is_defined( itype_id( component.id ) );
+                                           item::type_is_defined( itype_id( component.id ) ) ||
+                                           ( definition.uncraft &&
+                                             item_controller->has_template_migration( itype_id( component.id ) ) );
                         // Native item inheritance is resolved before the engine-state pass.
                         if( check_engine_state && !valid ) {
                             throw std::runtime_error( "recipe '" + definition.id +
@@ -5190,12 +5265,12 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.result_multiplier <= 0 || !native_int( definition.result_multiplier ) ) {
                 throw std::runtime_error( "recipe '" + definition.id + "' has an invalid result multiplier" );
             }
-            for( const quality_requirement_definition &quality : definition.qualities ) {
-                if( quality.id.empty() || quality.level <= 0 || !native_int( quality.level ) ||
-                    quality.count <= 0 || !native_int( quality.count ) ||
-                    ( check_engine_state && tool_quality_ids.count( quality.id ) == 0 &&
-                      !quality_id( quality.id ).is_valid() ) ) {
-                    throw std::runtime_error( "recipe '" + definition.id + "' references an invalid quality" );
+            for( const auto &group : definition.qualities ) {
+                for( const quality_requirement_definition &quality : group ) {
+                    if( check_engine_state && tool_quality_ids.count( quality.id ) == 0 &&
+                        !quality_id( quality.id ).is_valid() ) {
+                        throw std::runtime_error( "recipe '" + definition.id + "' references an invalid quality" );
+                    }
                 }
             }
             validate_recipe_groups( definition.components, "component", false );
@@ -6700,6 +6775,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.subcategory = entry.definition->subcategory;
                     native.autolearn = entry.definition->autolearn;
                     native.reversible = entry.definition->reversible;
+                    native.morale_modifier = { entry.definition->morale_bonus, entry.definition->morale_duration };
+                    for( const auto &[skill, level] : entry.definition->disassembly_learning ) {
+                        native.learn_by_disassembly[skill_id( skill )] = static_cast<int>( level );
+                    }
                     native.exertion = static_cast<float>( entry.definition->activity_level );
                     native.was_loaded = true;
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
@@ -6739,20 +6818,36 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         tools.push_back( std::move( alternatives ) );
                     }
                     requirement_data::alter_quali_req_vector qualities;
-                    for( const quality_requirement_definition &quality : entry.definition->qualities ) {
-                        qualities.push_back( { quality_requirement( quality_id( quality.id ),
-                                               static_cast<int>( quality.count ),
-                                               static_cast<int>( quality.level ) ) } );
-                    }
-                    native.requirements_ = requirement_data( tools, qualities, components );
-                    if( !entry.definition->external_requirements.empty() ) {
-                        std::map<requirement_id, int> external;
-                        for( const auto &[requirement_key, multiplier] : entry.definition->external_requirements ) {
-                            external[requirement_id( requirement_key )] = static_cast<int>( multiplier );
+                    for( const auto &group : entry.definition->qualities ) {
+                        auto &alternatives = qualities.emplace_back();
+                        for( const quality_requirement_definition &quality : group ) {
+                            alternatives.emplace_back( quality_id( quality.id ), static_cast<int>( quality.count ),
+                                                       static_cast<int>( quality.level ) );
                         }
-                        native.requirements_ = native.requirements_ + requirement_data( external );
                     }
-                    native.root_requirements_ = native.requirements_;
+                    requirement_data inline_requirements( tools, qualities, components );
+                    std::vector<std::pair<requirement_id, int>> external;
+                    for( const auto &[requirement, multiplier] : entry.definition->external_requirements ) {
+                        external.emplace_back( requirement_id( requirement ), static_cast<int>( multiplier ) );
+                    }
+                    if( targets_uncraft ) {
+                        const requirement_id inline_id( "inline_uncraft_" + id.str() );
+                        const auto old_requirements = requirement_data::registry().find( inline_id );
+                        pimpl_->uncraft_requirement_undo.emplace_back(
+                            inline_id, old_requirements == requirement_data::registry().end() ?
+                            std::nullopt : std::make_optional( old_requirements->second ) );
+                        inline_requirements.id_ = inline_id;
+                        requirement_data::register_requirement_layer( {
+                            std::move( inline_requirements ), std::nullopt, pimpl_->owner, false
+                        } );
+                        pimpl_->requirement_changes = true;
+                        native.reqs_internal.emplace_back( inline_id, 1 );
+                        native.reqs_external = std::move( external );
+                    } else {
+                        native.requirements_ = external.empty() ? std::move( inline_requirements ) :
+                                               inline_requirements + requirement_data( external );
+                        native.root_requirements_ = native.requirements_;
+                    }
                     native_dict[id] = std::move( native );
                 }
                 for( const plant_lifecycle_registration &entry : pimpl_->plant_lifecycles ) {
@@ -6940,6 +7035,19 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         const auto &native_dict = entry.definition->uncraft ? recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ? recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
+        if( entry.definition->uncraft && native_dict.count( id ) == 0 ) {
+            const itype_id result( entry.definition->result );
+            const requirement_id inline_id( "inline_uncraft_" + id.str() );
+            // Native finalization filters recipes that use blacklisted items or produce migrated items.
+            if( item_is_blacklisted( result ) || item_controller->has_template_migration( result ) ||
+                inline_id->is_blacklisted() ||
+                std::any_of( entry.definition->external_requirements.begin(),
+            entry.definition->external_requirements.end(), []( const auto & requirement ) {
+                return requirement_id( requirement.first )->is_blacklisted();
+            } ) ) {
+                continue;
+            }
+        }
         if( !check( native_dict.count( id ) != 0, "recipe", entry.definition->id ) ) {
             return false;
         }
@@ -6957,6 +7065,16 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
                 factory.restore( *it->second );
             } else {
                 factory.erase( it->first );
+            }
+        }
+        undo.clear();
+    };
+    const auto restore_requirements = []( auto & undo ) {
+        for( auto it = undo.rbegin(); it != undo.rend(); ++it ) {
+            requirement_data::pop_requirement_layer( it->first );
+            requirement_data::registry().erase( it->first );
+            if( it->second ) {
+                requirement_data::registry()[it->first] = *it->second;
             }
         }
         undo.clear();
@@ -7028,6 +7146,7 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
                 }
             }
             pimpl_->uncraft_undo.clear();
+            restore_requirements( pimpl_->uncraft_requirement_undo );
             break;
         case items_content_rollback_phase::definitions:
             for( auto it = pimpl_->item_undo.rbegin(); it != pimpl_->item_undo.rend(); ++it ) {
@@ -7045,14 +7164,7 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
             pimpl_->item_undo.clear();
             break;
         case items_content_rollback_phase::requirements:
-            for( auto it = pimpl_->requirement_undo.rbegin(); it != pimpl_->requirement_undo.rend(); ++it ) {
-                requirement_data::pop_requirement_layer( it->first );
-                requirement_data::registry().erase( it->first );
-                if( it->second ) {
-                    requirement_data::registry()[it->first] = *it->second;
-                }
-            }
-            pimpl_->requirement_undo.clear();
+            restore_requirements( pimpl_->requirement_undo );
             break;
         case items_content_rollback_phase::recipe_groups:
             for( auto it = pimpl_->recipe_group_undo.rbegin(); it != pimpl_->recipe_group_undo.rend(); ++it ) {
@@ -7176,6 +7288,7 @@ void items_content_transaction::commit()
     pimpl_->item_undo.clear();
     pimpl_->recipe_undo.clear();
     pimpl_->uncraft_undo.clear();
+    pimpl_->uncraft_requirement_undo.clear();
     pimpl_->token->lifecycle = handle_lifecycle::committed;
 }
 
@@ -8093,16 +8206,26 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, "recipe" );
                 hash_part( state, operation_name( entry.operation ) );
                 hash_part( state, v.id );
-                hash_part( state, v.nested_category ? "nested_category" : "craft_recipe" );
+                hash_part( state, v.nested_category ? "nested_category" :
+                           v.uncraft ? "uncraft_recipe" : "craft_recipe" );
                 hash_part( state, v.result );
                 hash_part( state, v.result_charges ?
                            std::to_string( *v.result_charges ) : "default_charges" );
                 hash_part( state, std::to_string( v.result_multiplier ) );
-                for( const quality_requirement_definition &quality : v.qualities ) {
-                    hash_part( state, "quality" );
-                    hash_part( state, quality.id );
-                    hash_part( state, std::to_string( quality.level ) );
-                    hash_part( state, std::to_string( quality.count ) );
+                for( const auto &group : v.qualities ) {
+                    hash_part( state, "quality_group" );
+                    for( const quality_requirement_definition &quality : group ) {
+                        hash_part( state, quality.id );
+                        hash_part( state, std::to_string( quality.level ) );
+                        hash_part( state, std::to_string( quality.count ) );
+                    }
+                }
+                hash_part( state, std::to_string( v.morale_bonus ) );
+                hash_part( state, std::to_string( to_turns<int>( v.morale_duration ) ) );
+                for( const auto &[id, level] : v.disassembly_learning ) {
+                    hash_part( state, "disassembly_learning" );
+                    hash_part( state, id );
+                    hash_part( state, std::to_string( level ) );
                 }
                 hash_part( state, v.name );
                 hash_part( state, v.description );

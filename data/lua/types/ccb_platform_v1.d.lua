@@ -964,6 +964,8 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field uncraft? boolean Whether this is a disassembly recipe staged into the
 ---native uncraft dictionary.
 ---@field activity_level? number Positive native exertion multiplier.
+---@field morale_bonus? integer Signed native morale modifier.
+---@field morale_duration_turns? integer Non-negative duration of the recipe morale modifier in turns.
 
 ---@class RecipeComponentAlternative
 ---@field id string Item type id.
@@ -1019,6 +1021,15 @@ function RecipeDefinition:tool_any(choices) end
 ---@param count integer Positive native signed-int number of tools providing the quality.
 ---@return RecipeDefinition self
 function RecipeDefinition:quality(id, level, count) end
+
+---@param choices RequirementQualityAlternative[] Dense one-based array of interchangeable qualities.
+---@return RecipeDefinition self
+function RecipeDefinition:quality_any(choices) end
+
+---@param skill_id string Native skill required to learn the crafting recipe through disassembly.
+---@param level integer Minimum skill level.
+---@return RecipeDefinition self
+function RecipeDefinition:learn_by_disassembly(skill_id, level) end
 
 ---@param id string
 ---@param level integer
@@ -7168,6 +7179,11 @@ function CcbPlatformContent.edit_ammunition_type(id) end
 ---Registers an ammunition type in Mod load order, preserving fields from later JSON overlays.
 ---@param definition AmmunitionTypeDefinition
 function CcbPlatformContent.upsert_ammunition_type(definition) end
+
+---Registers a disassembly definition even if another loaded Mod already defines the result.
+---Nonempty inline requirements replace the matching groups from the previous definition.
+---@param definition RecipeDefinition A recipe with `uncraft = true`.
+function CcbPlatformContent.upsert_uncraft(definition) end
 
 ---@param id string Item-category id staged earlier by this Mod.
 ---@return ItemCategoryDefinition
