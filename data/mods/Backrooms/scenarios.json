@@ -23,10 +23,5 @@
     "id": "sloc_backrooms",
     "name": "The Backrooms",
     "terrain": [ "backfloorchamber" ]
-  },
-  {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "whitelist",
-    "scenarios": [ "backroom_dweller", "backroom_dweller_starternpc" ]
   }
 ]

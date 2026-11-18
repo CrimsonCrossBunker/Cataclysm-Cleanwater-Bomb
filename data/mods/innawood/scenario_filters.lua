@@ -1,0 +1,21 @@
+local content = require("ccb").content
+
+local filter = content.Blacklist { kind = "scenario", whitelist = true }
+filter:entry("evacuee")
+filter:entry("cave_lonesome")
+filter:entry("medieval")
+filter:entry("migo_prisoner")
+filter:entry("mutant")
+filter:entry("wilderness")
+filter:entry("strong_portal_storm")
+filter:entry("portal_dependent")
+filter:entry("heli_crash")
+filter:entry("infected")
+filter:entry("hunted_start")
+filter:entry("fungal_start")
+filter:entry("bad_day")
+filter:entry("bordered")
+filter:entry("ambushed")
+filter:entry("summer_advanced_start")
+filter:entry("car_crash")
+content.replace(filter)

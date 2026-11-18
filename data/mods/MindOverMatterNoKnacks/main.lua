@@ -26,3 +26,5 @@ definition:entry("mon_feral_human_vita3")
 content.add(definition)
 
 require("attribute_scaling")
+
+require("scenario_filters")

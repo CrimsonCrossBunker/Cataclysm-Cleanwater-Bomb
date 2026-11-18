@@ -180,3 +180,5 @@ require("portal_storm_dialogue")
 require("highland_incense_content")
 
 require("highland_incense")
+
+require("scenario_filters")

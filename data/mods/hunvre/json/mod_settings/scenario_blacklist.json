@@ -1,10 +1,5 @@
 [
   {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "whitelist",
-    "scenarios": [ "awakened" ]
-  },
-  {
     "type": "profession_blacklist",
     "subtype": "whitelist",
     "professions": [

@@ -77,10 +77,5 @@
       "VAMPIRE_BLOOD_FOR_POTENCY",
       "ANATHEMA_WEAKNESS_SUN_BURN"
     ]
-  },
-  {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "whitelist",
-    "scenarios": [ "evacuee", "scavenger", "survivor", "vampire" ]
   }
 ]

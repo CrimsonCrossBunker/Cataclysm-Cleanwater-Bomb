@@ -8,10 +8,5 @@
     "description": "",
     "allowed_locs": [ "sloc_bar" ],
     "start_name": ""
-  },
-  {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "blacklist",
-    "scenarios": [ "defense_mode_fortified" ]
   }
 ]

@@ -19,3 +19,5 @@ require("effect_enchantments")
 require("item_enchantments")
 
 require("sidebar_extensions")
+
+require("scenario_filters")

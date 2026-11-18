@@ -3515,3 +3515,5 @@ add_city {
     pos_om = { 63, 31 },
     pos = { 7, 137 },
 }
+
+require("scenario_filters")

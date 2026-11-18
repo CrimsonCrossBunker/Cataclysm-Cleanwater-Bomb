@@ -19,3 +19,5 @@ require("portal_storm_scenario")
 require("portal_storm_strength")
 
 require("xp_progression")
+
+require("scenario_filters")

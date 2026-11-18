@@ -1,10 +1,5 @@
 [
   {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "whitelist",
-    "scenarios": [ "defense_mode_fortified" ]
-  },
-  {
     "copy-from": "defense_mode_fortified",
     "type": "scenario",
     "id": "defense_mode_fortified",

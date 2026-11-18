@@ -11,11 +11,6 @@
     "dependencies": [ "ccb" ]
   },
   {
-    "type": "SCENARIO_BLACKLIST",
-    "subtype": "whitelist",
-    "scenarios": [ "evacuee", "scavenger", "survivor" ]
-  },
-  {
     "type": "scenario",
     "id": "evacuee",
     "name": "Evacuee",
