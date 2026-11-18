@@ -194,3 +194,6 @@ require("field_emissions")
 require("sub_body_parts")
 require("bionic_sub_body_parts")
 require("mutation_sub_body_parts")
+
+require("anatomies")
+require("body_graphs")

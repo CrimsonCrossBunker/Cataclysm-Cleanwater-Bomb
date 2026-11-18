@@ -13971,34 +13971,6 @@ definition:skill("firstaid")
 content.replace(definition)
 end
 
--- Native anatomy definitions
-do
-local definition = content.Anatomy {
-    id = "human_anatomy",
-}
-definition:part("eyes")
-definition:part("head")
-definition:part("mouth")
-definition:part("torso")
-definition:part("arm_l")
-definition:part("arm_r")
-definition:part("hand_l")
-definition:part("hand_r")
-definition:part("leg_l")
-definition:part("leg_r")
-definition:part("foot_l")
-definition:part("foot_r")
-content.replace(definition)
-end
-do
-local definition = content.Anatomy {
-    id = "default_anatomy",
-}
-definition:part("torso")
-definition:part("head")
-content.replace(definition)
-end
-
 -- Native global hit-range configuration
 do
 local definition = content.HitRange {

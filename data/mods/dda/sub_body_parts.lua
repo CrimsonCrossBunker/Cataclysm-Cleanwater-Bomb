@@ -569,6 +569,7 @@ content.add(content.SubBodyPart {
 
 local function inherit(base, options)
     local parent = assert(templates[base], base)
+    -- The opposite defaults to the derived ID and lower locations inherit from the base.
     options.opposite = options.opposite or options.id
     options.locations_under = options.locations_under or parent.locations_under or { parent.id }
     for key, value in pairs(parent) do
