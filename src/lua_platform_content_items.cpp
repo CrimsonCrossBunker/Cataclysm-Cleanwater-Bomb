@@ -3550,6 +3550,22 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     static_cast<void>( lua );
 }
 
+requirement_data items_content_transaction::read_inline_requirement( const sol::object &value ) const
+{
+    if( !value.is<requirement_definition_handle>() ) {
+        throw std::runtime_error( "inline requirements must use a Requirement builder" );
+    }
+    const auto handle = value.as<requirement_definition_handle>();
+    if( handle.token != pimpl_->token ) {
+        throw std::runtime_error( "inline requirements must come from the same Mod" );
+    }
+    require_building_handle( handle.token, *handle.definition, "inline requirement" );
+    if( !handle.definition->id.empty() || !handle.definition->name.empty() ) {
+        throw std::runtime_error( "inline requirements cannot have an id or a name" );
+    }
+    return native_requirement_groups( *handle.definition );
+}
+
 bool items_content_transaction::register_definition( const sol::object &value,
         const int raw_operation )
 {

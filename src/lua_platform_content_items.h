@@ -16,6 +16,8 @@
     #include "lua_platform_sol.h"
 #endif
 
+class requirement_data;
+
 namespace cata::lua_platform
 {
 
@@ -116,6 +118,7 @@ class items_content_transaction
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
         void install_lua_api( sol::state &lua, sol::table &ccb, sol::table &content );
         bool register_definition( const sol::object &value, int operation );
+        requirement_data read_inline_requirement( const sol::object &value ) const;
 #endif
 
         bool validate( const runtime &owner_runtime, bool check_engine_state,

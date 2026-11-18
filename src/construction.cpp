@@ -9,6 +9,7 @@
 #include <memory>
 #include <numeric>
 #include <queue>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -2674,6 +2675,57 @@ struct construction_special_reader : generic_typed_reader < construction_special
 };
 } // namespace
 
+static const auto &construction_preconditions()
+{
+    static const std::map<std::string, bool ( * )( const tripoint_bub_ms & )> checks = {
+        { "", construct::check_nothing },
+        { "check_channel", construct::check_channel },
+        { "check_empty_lite", construct::check_empty_lite },
+        { "check_empty", construct::check_empty },
+        { "check_unblocked", construct::check_unblocked },
+        { "check_support", construct::check_support },
+        { "check_support_below", construct::check_support_below },
+        { "check_single_support", construct::check_single_support },
+        { "check_stable", construct::check_stable },
+        { "check_floor_above", construct::check_floor_above },
+        { "check_nofloor_above", construct::check_nofloor_above },
+        { "check_deconstruct", construct::check_deconstruct },
+        { "check_up_OK", construct::check_up_OK },
+        { "check_down_OK", construct::check_down_OK },
+        { "check_dig_pit", construct::check_dig_pit },
+        { "check_no_trap", construct::check_no_trap },
+        { "check_ramp_high", construct::check_ramp_high },
+        { "check_no_wiring", construct::check_no_wiring },
+        { "check_matching_down_above", construct::check_matching_down_above }
+    };
+    return checks;
+}
+
+construction::construction() :
+    pre_specials{ construct::check_nothing },
+    do_turn_special( construct::done_nothing ),
+    post_specials{ construct::done_nothing },
+    explain_failure( construct::failure_standard )
+{
+}
+
+void construction::set_builtin_preconditions( const std::vector<std::string> &names )
+{
+    const auto &checks = construction_preconditions();
+    pre_specials.clear();
+    for( const std::string &name : names ) {
+        const auto found = checks.find( name );
+        if( found == checks.end() ) {
+            throw std::runtime_error( "construction '" + id.str() +
+                                      "' has unknown precondition '" + name + "'" );
+        }
+        pre_specials.push_back( found->second );
+        if( found->second == construct::check_deconstruct ) {
+            explain_failure = construct::failure_deconstruct;
+        }
+    }
+}
+
 void load_construction( const JsonObject &jo, const std::string &src )
 {
     construction_factory.load( jo, src );
@@ -2736,28 +2788,6 @@ void construction::load( const JsonObject &jo, const std::string_view )
                                "collection", "byproducts of construction " + id.str() );
     }
 
-    static const std::map < std::string, bool( * )( const tripoint_bub_ms & ) > pre_special_map = {{
-            { "", construct::check_nothing },
-            { "check_channel", construct::check_channel },
-            { "check_empty_lite", construct::check_empty_lite },
-            { "check_empty", construct::check_empty },
-            { "check_unblocked", construct::check_unblocked },
-            { "check_support", construct::check_support },
-            { "check_support_below", construct::check_support_below },
-            { "check_single_support", construct::check_single_support },
-            { "check_stable", construct::check_stable },
-            { "check_floor_above", construct::check_floor_above },
-            { "check_nofloor_above", construct::check_nofloor_above },
-            { "check_deconstruct", construct::check_deconstruct },
-            { "check_up_OK", construct::check_up_OK },
-            { "check_down_OK", construct::check_down_OK },
-            { "check_dig_pit", construct::check_dig_pit },
-            { "check_no_trap", construct::check_no_trap },
-            { "check_ramp_high", construct::check_ramp_high },
-            { "check_no_wiring", construct::check_no_wiring },
-            { "check_matching_down_above", construct::check_matching_down_above }
-        }
-    };
     static const std::map < std::string, void( * )( const tripoint_bub_ms &, Character & ) >
     post_special_map = {{
             { "", construct::done_nothing },
@@ -2802,8 +2832,8 @@ void construction::load( const JsonObject &jo, const std::string_view )
             { "deconstruct", construct::failure_deconstruct },
         }
     };
-    optional( jo, was_loaded, "pre_special", pre_specials, construction_special_reader{ pre_special_map },
-    { construct::check_nothing } );
+    optional( jo, was_loaded, "pre_special", pre_specials,
+              construction_special_reader{ construction_preconditions() }, { construct::check_nothing } );
     optional( jo, was_loaded, "post_special", post_specials, construction_special_reader{ post_special_map },
     { construct::done_nothing } );
     optional( jo, was_loaded, "do_turn_special", do_turn_special, construction_special_reader{ do_turn_special_map },

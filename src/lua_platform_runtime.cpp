@@ -81,6 +81,7 @@ extern "C" {
 #include "hsv_color.h"
 #include "item.h"
 #include "item_group.h"
+#include "json.h"
 #include "lua_platform_content.h"
 #include "lua_platform_content_character.h"
 #include "lua_platform_content_creatures.h"
@@ -445,7 +446,7 @@ struct construction_category_definition_data {
 
 struct construction_group_definition_data {
     std::string id;
-    std::string name;
+    detail::authored_text name;
     bool registered = false;
 };
 
@@ -867,6 +868,9 @@ struct construction_definition_data {
     std::string category;
     std::string pre_note;
     std::string post_terrain;
+    std::string byproducts;
+    requirement_data inline_requirements;
+    std::vector<std::string> preconditions;
     std::int64_t time_moves = 0;
     double activity_level = 1.0;
     std::vector<std::pair<std::string, std::int64_t>> required_skills;
@@ -2617,6 +2621,15 @@ struct construction_definition_handle {
         return *this;
     }
 
+    construction_definition_handle &precheck( const std::string &name ) {
+        require_building_handle( token, *definition, "construction" );
+        if( name.empty() ) {
+            throw std::runtime_error( "construction precondition cannot be empty" );
+        }
+        definition->preconditions.push_back( name );
+        return *this;
+    }
+
     construction_definition_handle &pre_terrain( const std::string &value ) {
         require_building_handle( token, *definition, "construction" );
         if( value.empty() ) {
@@ -2627,12 +2640,12 @@ struct construction_definition_handle {
     }
 
     construction_definition_handle &pre_flag( const std::string &flag,
-            const bool force_terrain ) {
+            const sol::optional<bool> &force_terrain ) {
         require_building_handle( token, *definition, "construction" );
         if( flag.empty() ) {
             throw std::runtime_error( "construction pre-flag id cannot be empty" );
         }
-        definition->pre_flags.emplace_back( flag, force_terrain );
+        definition->pre_flags.emplace_back( flag, force_terrain.value_or( false ) );
         return *this;
     }
 
@@ -3847,6 +3860,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         "id", sol::property( &construction_definition_handle::id ),
         "requires_skill", &construction_definition_handle::requires_skill,
         "using_requirement", &construction_definition_handle::using_requirement,
+        "precheck", &construction_definition_handle::precheck,
         "pre_terrain", &construction_definition_handle::pre_terrain,
         "pre_flag", &construction_definition_handle::pre_flag,
         "post_flag", &construction_definition_handle::post_flag );
@@ -4099,7 +4113,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<construction_group_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = detail::read_singular_text( options["name"], definition->id,
+                           "ConstructionGroup.name" );
         return construction_group_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -4562,6 +4577,12 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->post_terrain = options.get_or( "post_terrain", std::string() );
         definition->time_moves = options.get_or<std::int64_t>( "duration_moves", 0 );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
+        definition->byproducts = options.get_or( "byproducts", std::string() );
+        const sol::object requirements = options["requirements"];
+        if( requirements.valid() && requirements.get_type() != sol::type::nil ) {
+            definition->inline_requirements = transaction->item_content.read_inline_requirement(
+                                                  requirements );
+        }
         return construction_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -6723,24 +6744,35 @@ bool content_transaction::validate( const runtime &owner_runtime,
             if( definition.group.empty() || definition.category.empty() ||
                 !construction_ids.insert( definition.id ).second ||
                 definition.time_moves < 0 ||
+                definition.time_moves > std::numeric_limits<int>::max() ||
                 !std::isfinite( definition.activity_level ) ||
                 definition.activity_level < 0.0 ) {
                 throw std::runtime_error( "construction '" + definition.id +
                                           "' has invalid ranges or a duplicate registration" );
             }
             for( const auto &[skill, level] : definition.required_skills ) {
-                if( skill.empty() || level < 0 ||
-                    ( check_engine_state && !skill_id( skill ).is_valid() ) ) {
+                if( skill.empty() || level < 0 || level > std::numeric_limits<int>::max() ||
+                    ( check_engine_state && skill_ids.count( skill ) == 0 &&
+                      !skill_id( skill ).is_valid() ) ) {
                     throw std::runtime_error( "construction '" + definition.id +
                                               "' references an invalid skill requirement" );
                 }
             }
             for( const auto &[requirement, multiplier] : definition.reqs_using ) {
                 if( requirement.empty() || multiplier <= 0 ||
-                    ( check_engine_state && !requirement_id( requirement ).is_valid() ) ) {
+                    multiplier > std::numeric_limits<int>::max() ||
+                    ( check_engine_state && staged_items.requirements.count( requirement ) == 0 &&
+                      !requirement_id( requirement ).is_valid() ) ) {
                     throw std::runtime_error( "construction '" + definition.id +
                                               "' references an invalid requirement" );
                 }
+            }
+            if( check_engine_state && !definition.byproducts.empty() &&
+                item_group_ids.count( definition.byproducts ) == 0 &&
+                !item_group::group_is_defined( item_group_id( definition.byproducts ) ) ) {
+                throw std::runtime_error( "construction '" + definition.id +
+                                          "' references unknown byproduct item group '" +
+                                          definition.byproducts + "'" );
             }
             validate_operation( entry.operation,
                                 construction_str_id( definition.id ).is_valid(),
@@ -7935,7 +7967,7 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native._name = no_translation( entry.definition->name );
+            native._name = entry.definition->name.native();
             detail::construction_group_registry().insert( native );
         }
 
@@ -8680,6 +8712,7 @@ bool content_transaction::apply( std::string &error )
             detail::trap_registry().finalize();
         }
 
+        // The global finalizer combines requirements after Mods and vehicle frames are loaded.
         for( const construction_registration &entry : pimpl_->constructions ) {
             const construction_str_id id( entry.definition->id );
             pimpl_->construction_undo.emplace_back(
@@ -8695,10 +8728,9 @@ bool content_transaction::apply( std::string &error )
                 previous_requirement == requirement_data::registry().end() ?
                 std::optional<requirement_data>() :
                 std::optional<requirement_data>( previous_requirement->second ) );
-            requirement_data empty_requirement;
-            empty_requirement.id_ = inline_requirement;
-            requirement_data::registry()[inline_requirement] =
-                std::move( empty_requirement );
+            requirement_data requirements = source.inline_requirements;
+            requirements.id_ = inline_requirement;
+            requirement_data::registry()[inline_requirement] = std::move( requirements );
             construction native;
             native.id = id;
             native.group = construction_group_str_id( source.group );
@@ -8709,8 +8741,15 @@ bool content_transaction::apply( std::string &error )
                 native.pre_note = no_translation( source.pre_note );
             }
             native.post_terrain = source.post_terrain;
-            for( const std::string &terrain : source.pre_terrain ) {
-                native.pre_terrain.insert( terrain );
+            native.post_is_furniture = native.post_terrain.rfind( "f_", 0 ) == 0;
+            native.pre_terrain.insert( source.pre_terrain.begin(), source.pre_terrain.end() );
+            native.pre_is_furniture = !native.pre_terrain.empty() &&
+                                      native.pre_terrain.begin()->rfind( "f_", 0 ) == 0;
+            if( !source.preconditions.empty() ) {
+                native.set_builtin_preconditions( source.preconditions );
+            }
+            if( !source.byproducts.empty() ) {
+                native.byproduct_item_group = item_group_id( source.byproducts );
             }
             for( const std::string &flag : source.post_flags ) {
                 native.post_flags.insert( flag );
@@ -8728,9 +8767,6 @@ bool content_transaction::apply( std::string &error )
             native.requirements = inline_requirement;
             native.was_loaded = true;
             detail::construction_registry().insert( native );
-        }
-        if( !pimpl_->constructions.empty() ) {
-            detail::construction_registry().finalize();
         }
 
         for( const furniture_registration &entry : pimpl_->furniture ) {
@@ -10373,13 +10409,10 @@ void content_transaction::rollback()
     for( auto it = pimpl_->construction_undo.rbegin();
          it != pimpl_->construction_undo.rend(); ++it ) {
         if( it->second ) {
-            detail::construction_registry().insert( *it->second );
+            detail::construction_registry().restore( *it->second );
         } else {
             detail::construction_registry().erase( it->first );
         }
-    }
-    if( !pimpl_->construction_undo.empty() ) {
-        detail::construction_registry().finalize();
     }
     pimpl_->construction_undo.clear();
 
@@ -11186,6 +11219,50 @@ std::string content_transaction::fingerprint() const
         hash_part( state, operation_name( entry.operation ) );
         hash_part( state, entry.definition->id );
         hash_part( state, entry.definition->name );
+    }
+    for( const construction_registration &entry : pimpl_->constructions ) {
+        hash_part( state, "construction" );
+        hash_part( state, operation_name( entry.operation ) );
+        const construction_definition_data &value = *entry.definition;
+        hash_part( state, value.id );
+        hash_part( state, value.group );
+        hash_part( state, value.category );
+        hash_part( state, value.pre_note );
+        hash_part( state, value.post_terrain );
+        hash_part( state, value.byproducts );
+        hash_part( state, std::to_string( value.time_moves ) );
+        hash_part( state, std::to_string( value.activity_level ) );
+        for( const auto &[skill, level] : value.required_skills ) {
+            hash_part( state, "skill" );
+            hash_part( state, skill );
+            hash_part( state, std::to_string( level ) );
+        }
+        for( const auto &[id, multiplier] : value.reqs_using ) {
+            hash_part( state, "requirement" );
+            hash_part( state, id );
+            hash_part( state, std::to_string( multiplier ) );
+        }
+        for( const std::string &name : value.preconditions ) {
+            hash_part( state, "precheck" );
+            hash_part( state, name );
+        }
+        for( const std::string &terrain : value.pre_terrain ) {
+            hash_part( state, "pre_terrain" );
+            hash_part( state, terrain );
+        }
+        for( const auto &[flag, force] : value.pre_flags ) {
+            hash_part( state, "pre_flag" );
+            hash_part( state, flag );
+            hash_part( state, force ? "terrain" : "surface" );
+        }
+        for( const std::string &flag : value.post_flags ) {
+            hash_part( state, "post_flag" );
+            hash_part( state, flag );
+        }
+        std::ostringstream requirements;
+        JsonOut writer( requirements );
+        value.inline_requirements.dump( writer );
+        hash_part( state, requirements.str() );
     }
     for( const vehicle_part_location_registration &entry :
          pimpl_->vehicle_part_locations ) {

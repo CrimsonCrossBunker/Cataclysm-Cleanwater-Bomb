@@ -45,6 +45,8 @@ struct partial_con {
 };
 
 struct construction {
+        construction();
+
         // Construction type category
         construction_category_id category;
         // Which group does this construction belong to.
@@ -120,6 +122,7 @@ struct construction {
 
         float activity_level = MODERATE_EXERCISE;
     private:
+        void set_builtin_preconditions( const std::vector<std::string> &names );
         std::string get_time_string() const;
 };
 
