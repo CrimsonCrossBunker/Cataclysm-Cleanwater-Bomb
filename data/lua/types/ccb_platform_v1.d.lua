@@ -9865,6 +9865,13 @@ function CcbSpellsApi.forget(character, spell) end
 ---@return CcbResult result value is the number of matching known spells.
 function CcbSpellsApi.count(character, school) end
 
+---Sum effective levels of known spells at or above the minimum level.
+---@param character GameHandle Exact live Character.
+---@param school? GameId GameId<mutation> of the spell school. Omit to include all schools.
+---@param minimum_level? integer Minimum effective level, from 0 through 10000. Defaults to zero.
+---@return CcbResult result value is the sum of the matching effective levels.
+function CcbSpellsApi.level_sum(character, school, minimum_level) end
+
 ---Read the native current and maximum mana.
 ---@param character GameHandle Exact live Character.
 ---@return CcbResult result value includes current and maximum as integers.

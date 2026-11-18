@@ -179,3 +179,4 @@ require("contemplation_recipes.obsolete_recipes")
 
 require("psychic_research")
 require("noetic_detector")
+require("mental_engineering")
