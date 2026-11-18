@@ -47,3 +47,27 @@ content.add(content.OvermapSpecial {
     rotate = false,
     flags = { "SKY_ISLAND", "SAFE_AT_WORLDGEN", "GLOBALLY_UNIQUE" },
 })
+
+local excluded_from_raids = { "SKY_ISLAND_NO_RAID_SPAWN" }
+for _, id in ipairs {
+    "Cabin_Lapin",
+    "Isherwood Farm Mutable",
+    "Strange warehouse",
+    "exodii_base",
+    "evac_center",
+    "New England Church Retreat",
+    "ranch_camp",
+    "cemetery_lacroix",
+    "balthazar_bunker",
+    "hub_01",
+    "isolated_road",
+    "Bastion Fort",
+    "Occupied Chem Lab",
+    "Occupied Scrap Yard",
+    "Occupied Lumbermill",
+    "Occupied Homeless Camp",
+    "Militia Lodge",
+    "robofac_strip_mall",
+} do
+    content.extend_overmap_special_flags(id, excluded_from_raids)
+end
