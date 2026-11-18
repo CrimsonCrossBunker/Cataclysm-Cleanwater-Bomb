@@ -159,6 +159,8 @@ require("labyrinth_returns")
 
 require("labyrinth_return_topics")
 
+require("lixa_hallway")
+
 require("void_spider_death")
 
 require("void_spider_spells")
