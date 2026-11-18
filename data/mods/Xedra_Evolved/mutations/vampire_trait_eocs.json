@@ -1676,13 +1676,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_MIST_FORM_BEFORE_LAST_BREATH",
-    "//": "Makes gaining last breath's mist without knowing mist form grants mist form instead.",
-    "condition": { "and": [ { "u_has_trait": "VAMPIRE_LAST_BREATH_MIST" }, { "not": { "u_has_trait": "VAMPIRE_MIST_FORM" } } ] },
-    "effect": [ { "u_lose_trait": "VAMPIRE_LAST_BREATH_MIST" }, { "u_add_trait": "VAMPIRE_MIST_FORM" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_BLIND_THE_SUN_activated",
     "condition": { "not": { "u_has_effect": "eyegleam" } },
     "effect": [
@@ -2152,66 +2145,6 @@
       {
         "if": { "math": [ "u_effect_intensity('bleed', 'bodypart': 'head') >= 1" ] },
         "then": { "u_add_effect": "bleed", "target_part": "head", "duration": 0, "intensity": -1 }
-      }
-    ]
-  },
-  {
-    "id": "EOC_VAMPIRE_GAIN_BLOOD_GIFTS",
-    "type": "effect_on_condition",
-    "//": "Every week, picks a random vampire trait that can be obtained by researching blood gifts and give it to the player if they have the mutation.",
-    "condition": { "u_has_trait": "VAMPIRE_GAIN_BLOOD_GIFTS" },
-    "deactivate_condition": { "not": { "u_has_trait": "VAMPIRE_GAIN_BLOOD_GIFTS" } },
-    "recurrence": [ "7 days", "7 days" ],
-    "effect": [
-      {
-        "u_roll_remainder": [
-          "EYEGLEAM",
-          "BLOOD_FUN",
-          "STAMINAFORBLOOD",
-          "COMMUNE_NIGHT",
-          "VAMPIRIC_STRENGTH",
-          "VAMPIRIC_RESILIENCE",
-          "VAMPIRE_HEIGHTENED_SENSES",
-          "VAMPIRE_SILENT_MOVE",
-          "VAMPIRE_HEALTH_BONUS",
-          "VAMPIRE_SENSE_CHILDREN_OF_THE_NIGHT",
-          "BLOODHEAL",
-          "COAGULANTWEAVE",
-          "VAMPIRIC_DODGE",
-          "VAMPIRE_FEAR_GAZE",
-          "VAMPIRE_WALK_ON_WALLS",
-          "VAMPIRE_BEAST_CLAWS",
-          "VAMPIRE_SEE_HEAT",
-          "VAMPIRIC_STEALTH_BONUS",
-          "VAMPIRE_FEIGN_DEATH",
-          "VAMPIRE_BLOOD_TEMPORARY_BOOST",
-          "BLOODHASTE",
-          "MAGICFORBLOOD",
-          "HYPNOTIC_GAZE",
-          "VAMPIRE_COMMAND_BEAST",
-          "VAMPIRE_EARTH_SLUMBER",
-          "VAMPIRE_CARDIO_BONUS",
-          "VAMPIRE_MOTION_ALARM",
-          "VAMPIRE_BONUS_HP",
-          "VAMPIRE_RENDING_TEETH",
-          "TRUE_VAMPIRE_POWER",
-          "VAMPIRE_TORPOR",
-          "VAMPIRE_DOMINATE",
-          "VAMPIRE_NO_BREATHE",
-          "VAMPIRE_NO_ILLNESS",
-          "VAMPIRE_SUMMON_SHADOWS",
-          "VAMPIRE_BAT_FORM",
-          "VAMPIRE_WOLF_FORM",
-          "VAMPIRE_MIST_FORM",
-          "VAMPIRE_MASTER_MORTAL_MIND",
-          "VAMPIRE_DISTILLATE_INNER_BLOOD",
-          "VAMPIRE_SHADOW_FORM",
-          "VAMPIRE_LAST_BREATH_MIST",
-          "VAMPIRE_IRON_MIND",
-          "VAMPIRE_BLIND_THE_SUN"
-        ],
-        "type": "mutation",
-        "true_eocs": [ "EOC_XE_VAMPIRE_BLOOD_RESEARCH_SUCCESS" ]
       }
     ]
   },

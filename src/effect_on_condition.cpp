@@ -231,7 +231,7 @@ character_task_migration psychic_learning_migration( const char *id, const char 
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 204> migrated_character_tasks = {{
+const std::array<character_task_migration, 207> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -242,6 +242,12 @@ const std::array<character_task_migration, 204> migrated_character_tasks = {{
           "anathema_sun_burn_due", nullptr },
         { effect_on_condition_id( "EOC_XE_VAMPIRE_WEAKNESS_RESHUFFLE_SWITCHER" ),
           "vampire_weakness_reshuffle_due", nullptr },
+        { effect_on_condition_id( "EOC_XE_VAMPIRE_BLOOD_RESEARCH_SWITCHER" ),
+          "vampire_blood_research_due", nullptr },
+        { effect_on_condition_id( "EOC_XE_VAMPIRE_BLOOD_REFINEMENT_RESEARCH_SWITCHER" ),
+          "vampire_blood_refinement_due", nullptr },
+        { effect_on_condition_id( "EOC_VAMPIRE_GAIN_BLOOD_GIFTS" ),
+          "vampire_passive_blood_gift_due", "vampire_blood_gift_timer" },
         { effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_GAIN_POWERS" ),
           "anathema_progression_due", "anathema_progression_timer" },
         { effect_on_condition_id( "EOC_vampire_virus_escalation" ),
