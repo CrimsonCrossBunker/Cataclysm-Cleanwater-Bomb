@@ -378,25 +378,6 @@
     "effects": [ "TANGLE" ]
   },
   {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "druid_seed",
-    "name": { "str": "seed of purification", "str_pl": "seeds of purification" },
-    "weight": "1 g",
-    "color": "white",
-    "use_action": {
-      "type": "transform",
-      "target": "druid_dust",
-      "msg": "You squeeze the seed in your palm, and it begins to turn to a fine dust.",
-      "target_charges": 15,
-      "menu_text": "Squeeze seed"
-    },
-    "symbol": "!",
-    "description": "A magical seed that can be squeezed to release purifying dust, which can then be used to purify up to a gallon of water.",
-    "volume": "250 ml",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
     "id": "armor_frost",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
@@ -764,112 +745,6 @@
     "armor": [ { "covers": [ "arm_l" ], "coverage": 0, "encumbrance": 0 } ]
   },
   {
-    "id": "eshaper_hammer",
-    "copy-from": "hammer",
-    "looks_like": "hammer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "earthshaper's hammer" },
-    "description": "Shaped with your own magic, this tool has the same abilities as the common hammer.",
-    "material": [ "stone" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "use_action": {
-      "type": "transform",
-      "need_wielding": true,
-      "target": "eshaper_pickaxe",
-      "menu_text": "Transform",
-      "msg": "Your hammer transforms into a pickaxe!"
-    },
-    "extend": { "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ] }
-  },
-  {
-    "id": "eshaper_pickaxe",
-    "copy-from": "pickaxe",
-    "looks_like": "pickaxe",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "earthshaper's pickaxe" },
-    "description": "Shaped with your own magic, this tool has the same abilities as the common pickaxe.",
-    "material": [ "stone" ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "use_action": [
-      {
-        "type": "transform",
-        "need_wielding": true,
-        "target": "eshaper_ax",
-        "menu_text": "Transform",
-        "msg": "Your pickaxe transforms into an ax!"
-      },
-      "PICKAXE"
-    ],
-    "extend": { "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ] }
-  },
-  {
-    "id": "eshaper_ax",
-    "copy-from": "ax",
-    "looks_like": "ax",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "earthshaper's axe" },
-    "description": "Shaped with your own magic, this tool has the same abilities as the common axe.",
-    "material": [ "stone" ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "use_action": {
-      "type": "transform",
-      "need_wielding": true,
-      "target": "eshaper_knife",
-      "menu_text": "Transform",
-      "msg": "Your ax transforms into a knife!"
-    },
-    "extend": { "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ] },
-    "melee_damage": { "bash": 11, "cut": 7 }
-  },
-  {
-    "id": "eshaper_knife",
-    "copy-from": "knife_hunting",
-    "looks_like": "knife_hunting",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "earthshaper's knife", "str_pl": "earthshaper's knives" },
-    "description": "Shaped with your own magic, this tool has the same abilities as the common knife.",
-    "material": [ "stone" ],
-    "repairs_with": [  ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "use_action": {
-      "type": "transform",
-      "need_wielding": true,
-      "target": "eshaper_shovel",
-      "menu_text": "Transform",
-      "msg": "Your knife transforms into a shovel!"
-    },
-    "extend": { "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ] }
-  },
-  {
-    "id": "eshaper_shovel",
-    "copy-from": "shovel",
-    "looks_like": "shovel",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "earthshaper's shovel" },
-    "description": "Shaped with your own magic, this tool has the same abilities as the common shovel.",
-    "material": [ "stone" ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "use_action": {
-      "type": "transform",
-      "need_wielding": true,
-      "target": "eshaper_hammer",
-      "menu_text": "Transform",
-      "msg": "Your shovel transforms into a hammer!"
-    },
-    "extend": { "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS" ] }
-  },
-  {
     "id": "flask_ethereal_rebreather",
     "name": { "str_sp": "air bubble" },
     "description": "Now you can breath under water, like a fish.",
@@ -1153,20 +1028,6 @@
     "passive_effects": [
       { "id": "ITEM_ENCH_Magiclysm_aura_druid_breathing_water_0" }
     ]
-  },
-  {
-    "id": "item_druid_disinfectant",
-    "type": "ITEM",
-    "name": { "str_sp": "druid antiseptic", "//~": "NO_I18N" },
-    "description": { "str": "A magical disinfectant.  You should never actually see this.", "//~": "NO_I18N" },
-    "weight": "0 g",
-    "volume": "0 ml",
-    "symbol": "~",
-    "color": "green",
-    "phase": "solid",
-    "flags": [ "NO_INGEST", "EDIBLE_FROZEN", "ZERO_WEIGHT", "TRADER_AVOID", "SINGLE_USE" ],
-    "max_worn": 1,
-    "use_action": { "type": "heal", "disinfectant_power": 3, "bite": 0.9, "move_cost": 1 }
   },
   {
     "id": "aura_bearmantle",

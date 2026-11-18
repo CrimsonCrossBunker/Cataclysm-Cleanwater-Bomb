@@ -169,3 +169,186 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "druid_seed",
+        name = ccb.content.plural_text("seed of purification", "seeds of purification"),
+        mass_milligrams = 1000,
+        color = "white",
+        symbol = "!",
+        description = ccb.content.text("A magical seed that can be squeezed to release purifying dust, which can then be used to purify up to a gallon of water."),
+        volume_ml = 250,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "druid_dust", charges = 15 },
+        message = ccb.content.text("You squeeze the seed in your palm, and it begins to turn to a fine dust."),
+        menu_text = ccb.content.text("Squeeze seed"),
+    }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "eshaper_hammer",
+        copy_from = "hammer",
+        looks_like = "hammer",
+        name = ccb.content.plural_text("earthshaper's hammer", "earthshaper's hammers"),
+        description = ccb.content.text("Shaped with your own magic, this tool has the same abilities as the common hammer."),
+        symbol = ";",
+        color = "dark_gray",
+    }
+    item:material("stone", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "eshaper_pickaxe" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Transform"),
+        message = ccb.content.text("Your hammer transforms into a pickaxe!"),
+    }
+    item:flag("TRADER_AVOID")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("MAGIC_FOCUS")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "eshaper_pickaxe",
+        copy_from = "pickaxe",
+        looks_like = "pickaxe",
+        name = ccb.content.plural_text("earthshaper's pickaxe", "earthshaper's pickaxes"),
+        description = ccb.content.text("Shaped with your own magic, this tool has the same abilities as the common pickaxe."),
+        symbol = "/",
+        color = "dark_gray",
+    }
+    item:material("stone", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "eshaper_ax" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Transform"),
+        message = ccb.content.text("Your pickaxe transforms into an ax!"),
+    }
+    item:native_use("PICKAXE")
+    item:flag("TRADER_AVOID")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("MAGIC_FOCUS")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "eshaper_ax",
+        copy_from = "ax",
+        looks_like = "ax",
+        name = ccb.content.plural_text("earthshaper's axe", "earthshaper's axes"),
+        description = ccb.content.text("Shaped with your own magic, this tool has the same abilities as the common axe."),
+        symbol = "/",
+        color = "dark_gray",
+    }
+    item:material("stone", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "eshaper_knife" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Transform"),
+        message = ccb.content.text("Your ax transforms into a knife!"),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 11)
+    item:melee_damage("cut", 7)
+    item:flag("TRADER_AVOID")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("MAGIC_FOCUS")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "eshaper_knife",
+        copy_from = "knife_hunting",
+        looks_like = "knife_hunting",
+        category = "weapons",
+        name = ccb.content.plural_text("earthshaper's knife", "earthshaper's knives"),
+        description = ccb.content.text("Shaped with your own magic, this tool has the same abilities as the common knife."),
+        symbol = "/",
+        color = "dark_gray",
+        repair_materials = {},
+    }
+    item:material("stone", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "eshaper_shovel" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Transform"),
+        message = ccb.content.text("Your knife transforms into a shovel!"),
+    }
+    item:flag("TRADER_AVOID")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("MAGIC_FOCUS")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "eshaper_shovel",
+        copy_from = "shovel",
+        looks_like = "shovel",
+        name = ccb.content.plural_text("earthshaper's shovel", "earthshaper's shovels"),
+        description = ccb.content.text("Shaped with your own magic, this tool has the same abilities as the common shovel."),
+        symbol = "/",
+        color = "dark_gray",
+    }
+    item:material("stone", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "eshaper_hammer" },
+        need_wielding = true,
+        menu_text = ccb.content.text("Transform"),
+        message = ccb.content.text("Your shovel transforms into a hammer!"),
+    }
+    item:flag("TRADER_AVOID")
+    item:flag("NO_REPAIR")
+    item:flag("NO_SALVAGE")
+    item:flag("MAGIC_FOCUS")
+    item:tool()
+    content.add(item)
+end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "item_druid_disinfectant",
+        name = content.plural_text("druid antiseptic", "druid antiseptic"),
+        description = content.text("A magical disinfectant.  You should never actually see this."),
+        mass_milligrams = 0,
+        volume_ml = 0,
+        symbol = "~",
+        color = "green",
+        max_worn = 1,
+        phase = "solid",
+    }
+    item:clear_flags()
+    item:flag("NO_INGEST")
+    item:flag("EDIBLE_FROZEN")
+    item:flag("ZERO_WEIGHT")
+    item:flag("TRADER_AVOID")
+    item:flag("SINGLE_USE")
+    item:clear_use_actions()
+    item:heal { disinfectant_power = 3, bite = 0.9, move_cost = 1 }
+    content.add(item)
+end
