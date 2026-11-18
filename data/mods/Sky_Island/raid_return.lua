@@ -75,12 +75,12 @@ end
 
 local function progress(character)
     if state.number("islandrank") == 0 and state.number("raidswon") >= 10 then
-        state.message(character, services.translate("You've proved you can survive a few excursions to the world below.  Something in the warp pulls at you, quickening your pulse and turning your vision red.  The sensation is indescribable.  You feel… powerful.\nThe Heart of the Island may have further use for you.\n\nHealing at the Heart of the Island is no longer free.  Be cautious in your future endeavors."), "neutral", true)
+        state.message(character, ccb.services.translate("You've proved you can survive a few excursions to the world below.  Something in the warp pulls at you, quickening your pulse and turning your vision red.  The sensation is indescribable.  You feel… powerful.\nThe Heart of the Island may have further use for you.\n\nHealing at the Heart of the Island is no longer free.  Be cautious in your future endeavors."), "neutral", true)
         state.set("islandrank", 1)
         state.checked(services.recipes.learn(character, id("recipe", "warpextender")))
     end
     if state.number("islandrank") == 2 and state.number("raidswon") >= 20 then
-        state.message(character, services.translate("You've drank deep of the warpstream and survived to tell the tale, though your unique isolation makes finding ears to listen difficult.  The fragments of this reality have risen against you, and you have weathered the storm… for now.\nYou feel confident, powerful.  Your mouth tastes of blood.  As the familiar world takes shape around you once more, you understand the Heart of the Island will surely be interested in your continued growth."), "neutral", true)
+        state.message(character, ccb.services.translate("You've drank deep of the warpstream and survived to tell the tale, though your unique isolation makes finding ears to listen difficult.  The fragments of this reality have risen against you, and you have weathered the storm… for now.\nYou feel confident, powerful.  Your mouth tastes of blood.  As the familiar world takes shape around you once more, you understand the Heart of the Island will surely be interested in your continued growth."), "neutral", true)
         state.set("islandrank", 3)
     end
 end
@@ -93,7 +93,7 @@ local function materials(character)
         state.set("owed_material_tokens", state.number("owed_material_tokens")
             * state.number("challenge_mode_reward_multiplier"))
     end
-    state.message(character, services.translate("You've returned home safely using a designated exit point.  You have earned <global_val:owed_material_tokens> material tokens for your success."), "neutral", true)
+    state.message(character, ccb.services.translate("You've returned home safely using a designated exit point.  You have earned <global_val:owed_material_tokens> material tokens for your success."), "neutral", true)
     local count = math.tointeger(math.modf(state.number("owed_material_tokens", 50)))
     state.checked(services.inventory.receive_item(character, id("item", "warptoken_material"), count))
     if services.gameplay.mods.is_loaded("innawood") then
@@ -114,7 +114,7 @@ local function merchants(character)
     end
     local choice = services.random.weighted_index { 1, 1, 1 }
     update_map(state.point("OM_island_n"), merchant_updates[choice])
-    state.message(character, services.translate("As you return to the island, you notice the trade stall in the north has an occupant."), "good")
+    state.message(character, ccb.services.translate("As you return to the island, you notice the trade stall in the north has an occupant."), "good")
     state.checked(services.effects.remove(character, id("effect", "effect_sky_island_merchant_attraction")))
 end
 
@@ -146,8 +146,8 @@ function M.home(character)
     update_map(state.point("OM_HQ_origin"), "raid_return_platform")
     return_room_items(character)
     state.teleport_followers(character, "OM_HQ_origin_npc")
-    state.teleport(character, state.point("OM_HQ_origin"), services.translate("You arrive on the island."),
-        services.translate("It seems the portal couldn't find a valid location."))
+    state.teleport(character, state.point("OM_HQ_origin"), ccb.services.translate("You arrive on the island."),
+        ccb.services.translate("It seems the portal couldn't find a valid location."))
     state.checked(services.relocation.travel_to_dimension("default",
         { npc_travel_radius = 10, item_travel_radius = 10 }))
     for _, item in ipairs { "warphome", "warp_healing_salve", "warpextender" } do
@@ -173,17 +173,17 @@ ccb.runtime.handler("sky_return_obelisk", function(payload)
     local whole_room, spend_token, question
     if mode == 0 then
         whole_room = true
-        question = services.translate("This will teleport you back to your sky island.  Any items inside the room will be teleported home alongside you.  Are you ready to leave?")
+        question = ccb.services.translate("This will teleport you back to your sky island.  Any items inside the room will be teleported home alongside you.  Are you ready to leave?")
     elseif mode == 1 then
         whole_room = state.checked(services.inventory.has_items(character, id("item", "warp_vortex_token"), 1, 0))
         spend_token = whole_room
         if whole_room then
-            question = services.translate("This will teleport you back to your sky island.  You will spend your vortex token to return any items in the room home alongside you.  Are you ready to leave?")
+            question = ccb.services.translate("This will teleport you back to your sky island.  You will spend your vortex token to return any items in the room home alongside you.  Are you ready to leave?")
         else
-            question = services.translate("This will teleport you back to your sky island.  Any items not on your person WILL BE LOST.  Are you ready to leave?")
+            question = ccb.services.translate("This will teleport you back to your sky island.  Any items not on your person WILL BE LOST.  Are you ready to leave?")
         end
     elseif mode == 2 then
-        question = services.translate("This will teleport you back to your sky island.  Any items not on your person WILL BE LOST.  Are you ready to leave?")
+        question = ccb.services.translate("This will teleport you back to your sky island.  Any items not on your person WILL BE LOST.  Are you ready to leave?")
     else
         return
     end

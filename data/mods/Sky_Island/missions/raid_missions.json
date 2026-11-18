@@ -1,10 +1,5 @@
 [
   {
-    "type": "effect_on_condition",
-    "id": "EOC_innawood_bonus_exp_warpshards",
-    "effect": [  ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "mx_exitroom",
     "object": {

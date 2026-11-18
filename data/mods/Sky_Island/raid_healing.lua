@@ -161,10 +161,10 @@ end
 
 function M.full(character)
     if state.has_trait(character, "awayfromhome") then
-        state.message(character, services.translate("The effect is wasted and you don't feel any better.  You have to be in your sanctuary to be healed by this!"))
+        state.message(character, ccb.services.translate("The effect is wasted and you don't feel any better.  You have to be in your sanctuary to be healed by this!"))
         return
     end
-    state.message(character, services.translate("Your body mends itself in the blink of an eye.  Underlying health issues may persist, but your structural integrity is restored."))
+    state.message(character, ccb.services.translate("Your body mends itself in the blink of an eye.  Underlying health issues may persist, but your structural integrity is restored."))
     state.checked(services.characters.set_hp_group(character, "ALL", 999))
     M.extras(character)
 end
@@ -172,13 +172,13 @@ end
 function M.at_heart(character)
     if state.number("islandrank") == 0 then
         M.full(character)
-        state.message(character, services.translate("The island's grace heals you at no charge.\nThis effect will only be free until you have survived 10 expeditions."), "neutral", true)
+        state.message(character, ccb.services.translate("The island's grace heals you at no charge.\nThis effect will only be free until you have survived 10 expeditions."), "neutral", true)
     elseif state.checked(services.inventory.has_items(character, id("item", "warptoken"), 4, 0)) then
-        state.message(character, services.translate("The warp shards you were holding dissipate into a mist and swirl in tiny vortices around your body.  The price is paid, and you are healed."), "neutral", true)
+        state.message(character, ccb.services.translate("The warp shards you were holding dissipate into a mist and swirl in tiny vortices around your body.  The price is paid, and you are healed."), "neutral", true)
         M.full(character)
         state.checked(services.inventory.consume_by_type(character, id("item", "warptoken"), 4, 0))
     else
-        state.message(character, services.translate("You must have the required payment on your person to be healed."), "neutral", true)
+        state.message(character, ccb.services.translate("You must have the required payment on your person to be healed."), "neutral", true)
     end
 end
 
