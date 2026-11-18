@@ -58,6 +58,7 @@ extern "C" {
 #include "effect.h"
 #include "flag.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "item.h"
 #include "item_action.h"
 #include "item_category.h"
@@ -438,6 +439,7 @@ struct recipe_definition_data {
     };
     std::map<std::string, book_data> books;
     std::string result_handler;
+    bool scripted_output = false;
     bool registered = false;
 
     void add_required_skill( const std::string &skill_name, std::int64_t level ) {
@@ -2804,6 +2806,7 @@ struct item_registration {
 struct recipe_registration {
     definition_operation operation = definition_operation::add;
     std::shared_ptr<recipe_definition_data> definition;
+    bool shadowed_by_later_source = false;
 };
 
 template<typename Definition>
@@ -3701,7 +3704,20 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->result_handler = options.get_or(
                                          "on_complete",
                                          options.get_or( "result_handler", std::string() ) );
+        definition->scripted_output = options.get_or( "scripted_output", false );
         return recipe_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "retire_recipe", [transaction]( const std::string & id,
+    const std::string & result ) {
+        if( transaction->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        auto definition = std::make_shared<recipe_definition_data>();
+        definition->id = id;
+        definition->result = result;
+        definition->obsolete = true;
+        definition->registered = true;
+        transaction->recipes.push_back( { definition_operation::upsert, std::move( definition ) } );
     } );
     content.set_function( "upsert_uncraft", [transaction]( const recipe_definition_handle & handle ) {
         if( handle.token != transaction->token || !handle.definition->uncraft ) {
@@ -5603,6 +5619,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "recipe '" + definition.id + "' has an invalid book" );
                 }
             }
+            if( definition.scripted_output && definition.result_handler.empty() ) {
+                throw std::runtime_error( "recipe '" + definition.id + "' with scripted output needs a completion handler" );
+            }
             if( !definition.result_handler.empty() &&
                 !runtime_has_handler( owner_runtime, definition.result_handler ) ) {
                 throw std::runtime_error( "recipe '" + definition.id +
@@ -7037,13 +7056,23 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 break;
             }
             case items_content_apply_phase::recipes: {
-                for( const recipe_registration &entry : pimpl_->recipes ) {
+                const DynamicDataLoader &loader = DynamicDataLoader::get_instance();
+                const auto owner_order = loader.source_load_order( pimpl_->owner );
+                for( recipe_registration &entry : pimpl_->recipes ) {
                     const bool targets_uncraft = entry.definition->uncraft;
                     const recipe_id id( targets_uncraft ? recipe_id( entry.definition->result ) :
                                         recipe_id( entry.definition->id ) );
                     auto &native_dict = targets_uncraft ? recipe_dict.uncraft : recipe_dict.recipes;
                     auto &undo_list = targets_uncraft ? pimpl_->uncraft_undo : pimpl_->recipe_undo;
                     const auto previous = native_dict.find( id );
+                    // Lua transactions follow JSON loading. A retirement must keep the normal Mod precedence.
+                    entry.shadowed_by_later_source = entry.definition->obsolete &&
+                                                   entry.operation == definition_operation::upsert &&
+                                                   previous != native_dict.end() && !previous->second.src.empty() &&
+                                                   loader.source_load_order( previous->second.src.back().second.str() ) > owner_order;
+                    if( entry.shadowed_by_later_source ) {
+                        continue;
+                    }
                     undo_list.emplace_back(
                         id, previous == native_dict.end() ? std::optional<recipe>() :
                         std::optional<recipe>( previous->second ) );
@@ -7123,6 +7152,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native.src.emplace_back( id, mod_id( pimpl_->owner ) );
                     native.lua_platform_mod = pimpl_->owner;
                     native.lua_platform_result_handler = entry.definition->result_handler;
+                    native.lua_platform_scripted_output = entry.definition->scripted_output;
                     for( const recipe_proficiency_data &source : entry.definition->proficiencies ) {
                         native.proficiencies.push_back( make_recipe_proficiency( source ) );
                     }
@@ -7360,6 +7390,9 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         }
     }
     for( const recipe_registration &entry : pimpl_->recipes ) {
+        if( entry.shadowed_by_later_source ) {
+            continue;
+        }
         const auto &native_dict = entry.definition->uncraft ? recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ? recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
@@ -8691,6 +8724,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, book.hidden ? "hidden" : "visible" );
                 }
                 hash_part( state, v.result_handler );
+                hash_part( state, v.scripted_output ? "scripted_output" : "ordinary_output" );
             }
             for( const auto &entry : pimpl_->plant_lifecycles ) {
                 hash_part( state, "plant_lifecycle" );

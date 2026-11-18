@@ -4165,7 +4165,8 @@ bool Character::advance_craft_completion( item &craft,
             }
         }
         // messages, learning of recipe
-        if( !making.is_practice() && ( completion.primary_had_results || !making.result_eocs.empty() ) ) {
+        if( !making.is_practice() && ( completion.primary_had_results || !making.result_eocs.empty() ||
+                                       making.lua_platform_scripted_output ) ) {
             // TODO: reconsider recipe memorization
             if( knows_recipe( &making ) ) {
                 if( is_avatar() ) {

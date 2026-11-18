@@ -324,6 +324,7 @@ class recipe
         std::vector<effect_on_condition_id> result_eocs;
         std::string lua_platform_mod;
         std::string lua_platform_result_handler;
+        bool lua_platform_scripted_output = false;
         std::pair<int, time_duration> morale_modifier;
         skill_id skill_used;
         std::map<skill_id, int> required_skills;

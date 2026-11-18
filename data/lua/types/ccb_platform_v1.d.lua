@@ -950,6 +950,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field obsolete? boolean Retire the recipe while keeping its ID and result for native lookup.
 ---@field result_multiplier? integer Positive native signed-int multiplier for the produced results; defaults to one.
 ---@field result? string Stable result item id. Omit for a named recipe with a completion handler and no item output.
+---@field scripted_output? boolean The completion handler supplies results. Use normal craft completion messages and memorization even with no primary item.
 ---@field name? string|LocalizedText Display name. Required when the recipe has no item output.
 ---@field description? string|LocalizedText Recipe description.
 ---@field flags? string[] Native recipe flags.
@@ -7257,6 +7258,11 @@ function CcbPlatformContent.upsert_ammunition_type(definition) end
 ---Nonempty inline requirements replace the matching groups from the previous definition.
 ---@param definition RecipeDefinition A recipe with `uncraft = true`.
 function CcbPlatformContent.upsert_uncraft(definition) end
+
+---Retire a recipe in normal Mod load order. Retains its ID and result for native lookup.
+---@param id string Stable recipe ID.
+---@param result string Result item ID associated with the retired recipe.
+function CcbPlatformContent.retire_recipe(id, result) end
 
 ---@param id string Item-category id staged earlier by this Mod.
 ---@return ItemCategoryDefinition
