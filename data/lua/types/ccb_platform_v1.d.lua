@@ -5484,8 +5484,14 @@ local MathFunctionDefinition = {}
 ---@field id any
 ---@field origin any
 ---@field place_when any
----@field reward any
 local MissionDefinition = {}
+
+---Declare reward metadata for the mission UI and queries. The completion handler grants the item.
+---@param value number Quantity, or the default quantity when the variable is absent.
+---@param item string Native reward item id.
+---@param quantity_variable? string Exact world variable key used as the reward count.
+---@return MissionDefinition self
+function MissionDefinition:reward(value, item, quantity_variable) end
 
 ---@param handler_id string Registered handler receiving MissionPhasePayload when the mission starts.
 ---@return MissionDefinition self

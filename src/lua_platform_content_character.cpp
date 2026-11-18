@@ -700,7 +700,12 @@ struct mission_definition_data {
     std::string fail_handler;
     std::string goal_condition_handler;
     std::map<std::string, std::string> dialogue;
-    std::vector<std::pair<double, std::string>> likely_rewards;
+    struct likely_reward {
+        double value;
+        std::string description;
+        std::string quantity_variable;
+    };
+    std::vector<likely_reward> likely_rewards;
     bool registered = false;
 };
 
@@ -1732,10 +1737,12 @@ struct mission_definition_handle {
         return *this;
     }
 
-    mission_definition_handle &reward( const double value,
-                                       const std::string &description ) {
+    mission_definition_handle &reward( const double value, const std::string &description,
+                                       const sol::optional<std::string> &quantity_variable = {} ) {
         require_building_handle( token, *definition, "mission definition" );
-        definition->likely_rewards.emplace_back( value, description );
+        definition->likely_rewards.push_back( {
+            value, description, quantity_variable.value_or( std::string() )
+        } );
         return *this;
     }
 
@@ -5380,10 +5387,11 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                                               definition.followup + "'" );
                 }
             }
-            for( const auto &[reward, description] : definition.likely_rewards ) {
-                if( !std::isfinite( reward ) ||
-                    std::abs( reward ) > std::numeric_limits < int >::max() ||
-                    description.empty() || description.size() > 16384 ) {
+            for( const auto &reward : definition.likely_rewards ) {
+                if( !std::isfinite( reward.value ) ||
+                    std::abs( reward.value ) > std::numeric_limits < int >::max() ||
+                    reward.description.empty() || reward.description.size() > 16384 ||
+                    reward.quantity_variable.find( '\0' ) != std::string::npos ) {
                     throw std::runtime_error( "mission definition '" + definition.id +
                                               "' has an invalid likely reward" );
                 }
@@ -6976,10 +6984,14 @@ void character_content_transaction::impl::apply_mission_definition()
         for( const auto &[phase, text] : source.dialogue ) {
             native.dialogue.emplace( phase, no_translation( text ) );
         }
-        for( const auto &[value, description] : source.likely_rewards ) {
-            native.likely_rewards.emplace_back(
-                std::piecewise_construct,
-                std::forward_as_tuple( value ), std::forward_as_tuple( description ) );
+        for( const auto &reward : source.likely_rewards ) {
+            dbl_or_var quantity( reward.value );
+            if( !reward.quantity_variable.empty() ) {
+                quantity.min.val = var_info( var_type::global, reward.quantity_variable );
+                quantity.min.default_val = reward.value;
+            }
+            native.likely_rewards.emplace_back( std::move( quantity ),
+                                                str_or_var( reward.description ) );
         }
 
         native.deadline = duration_or_var(
@@ -8207,10 +8219,14 @@ void character_content_transaction::append_fingerprint(
                     hash_part( state, phase );
                     hash_part( state, text );
                 }
-                for( const auto &[reward, description] : value.likely_rewards ) {
+                for( const auto &reward : value.likely_rewards ) {
                     hash_part( state, "likely_reward" );
-                    hash_part( state, std::to_string( reward ) );
-                    hash_part( state, description );
+                    hash_part( state, std::to_string( reward.value ) );
+                    hash_part( state, reward.description );
+                    if( !reward.quantity_variable.empty() ) {
+                        hash_part( state, "quantity_variable" );
+                        hash_part( state, reward.quantity_variable );
+                    }
                 }
             }
             break;
