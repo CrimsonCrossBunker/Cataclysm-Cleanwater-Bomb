@@ -57,7 +57,7 @@ function M.start(character)
     local maximum = math.modf(state.number("ps_max_length", 30 * 60))
     local delay = random.native_int(minimum, maximum)
     ccb.tasks.after_avatar_turn(delay, "portal_storm_end_due")
-    state.message(character, services.translate("Reality is breaking!"), "bad")
+    if character then state.message(character, services.translate("Reality is breaking!"), "bad") end
 end
 
 function M.finish_early(character)

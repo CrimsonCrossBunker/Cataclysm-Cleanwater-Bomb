@@ -2,6 +2,8 @@ local ccb = require("ccb")
 local content = ccb.content
 local services = ccb.services
 
+require("storm_triggers")
+
 if content.is_mod_active("classic_zombies") then
     local allowed = content.Blacklist { kind = "monster", whitelist = true, exclusive = true }
     allowed:category("XE_CLASSIC")

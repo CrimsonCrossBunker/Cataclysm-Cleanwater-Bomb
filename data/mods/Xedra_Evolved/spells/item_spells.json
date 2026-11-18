@@ -495,17 +495,6 @@
     "flags": [ "NO_FAIL", "NO_HANDS", "NO_LEGS", "NON_MAGICAL", "IGNORE_WALLS" ]
   },
   {
-    "id": "inventor_portal_closer_spell_portal_storm",
-    "type": "SPELL",
-    "name": { "str": "Netherium-Reality Smooth - Portal Spell", "//~": "NO_I18N" },
-    "description": { "str": "Having this spell is a bug.  Causes a strong portal storm.", "//~": "NO_I18N" },
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_CAUSE_PORTAL_STORM",
-    "shape": "blast",
-    "valid_targets": [ "ground", "self" ],
-    "flags": [ "NO_FAIL", "NO_HANDS", "NO_LEGS", "NON_MAGICAL", "IGNORE_WALLS" ]
-  },
-  {
     "type": "ter_furn_transform",
     "id": "inventor_portal_closer_spell_furn_transform",
     "field": [ { "result": [ "fd_null" ], "valid_field": [ "fd_fatigue" ], "message": "The tear in reality smoothes out." } ],

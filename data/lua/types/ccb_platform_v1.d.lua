@@ -7303,6 +7303,15 @@ function CcbPlatformRuntime.call_number(id, ...) end
 ---@return nil Handler results are ignored.
 function CcbPlatformRuntime.call_character(id, character) end
 
+---Call the last active Mod's named behavior with an exact live Creature, or an explicit absent actor.
+---Handles are rebound to the provider; missing, stale or non-Creature handles fail without selecting another actor.
+---Nil clears the provider's implicit actor for this callback. Character-only services reject monster actors.
+---Provider lookup follows active Mod order and hot reload. Requires a live runtime callback; errors propagate.
+---@param id string Handler registered with runtime.handler; receives one GameHandle or nil.
+---@param creature? GameHandle Exact live avatar, NPC or monster; nil preserves an absent actor.
+---@return nil Handler results are ignored.
+function CcbPlatformRuntime.call_creature(id, creature) end
+
 ---Register one per-Character recurring policy. The effect handler runs only
 ---when the Character-local due turn is reached; the interval handler runs on
 ---initial enrollment and after every due effect and must return 1..31536000

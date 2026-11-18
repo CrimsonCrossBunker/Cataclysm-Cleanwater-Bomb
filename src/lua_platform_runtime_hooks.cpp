@@ -2191,18 +2191,29 @@ void install_runtime_callback_api(
         }
         throw std::runtime_error( "runtime.call_number references missing handler '" + id + "'" );
     } );
-    runtime_api.set_function( "call_character", [weak]( const std::string &id,
-    const game_handle &handle ) {
+    const auto call_actor = [weak]( const std::string & id,
+    const sol::optional<game_handle> &handle, bool character_only ) {
+        const std::string api = character_only ? "runtime.call_character" : "runtime.call_creature";
         const std::shared_ptr<runtime> caller = weak.lock();
         if( !caller || !caller->world_is_ready || caller->callback_depth <= 0 ||
             find_active_runtime( caller->mod_id ) != caller ) {
-            throw std::runtime_error( "runtime.call_character requires a live runtime callback" );
+            throw std::runtime_error( api + " requires a live runtime callback" );
         }
         std::optional<game_handle_error> actor_error;
-        Character *actor = resolve_exact_character( handle, caller->handle_runtime(),
-                           runtime_world_generation_storage(), actor_error );
-        if( actor == nullptr ) {
-            throw std::invalid_argument( actor_error->message );
+        Creature *actor = nullptr;
+        if( handle ) {
+            if( character_only ) {
+                actor = resolve_exact_character( *handle, caller->handle_runtime(),
+                                                  runtime_world_generation_storage(), actor_error );
+            } else {
+                const auto resolved = handle->resolve_creature( caller->handle_runtime(),
+                                      runtime_world_generation_storage() );
+                actor = resolved.value;
+                actor_error = resolved.error;
+            }
+            if( actor == nullptr ) {
+                throw std::invalid_argument( actor_error->message );
+            }
         }
         for( auto entry = active_runtimes.rbegin(); entry != active_runtimes.rend(); ++entry ) {
             const std::shared_ptr<runtime> provider = *entry;
@@ -2214,22 +2225,33 @@ void install_runtime_callback_api(
                 continue;
             }
             if( !provider->world_is_ready || provider->callback_depth >= 16 ) {
-                throw std::runtime_error( "runtime.call_character provider is unavailable for '" + id + "'" );
+                throw std::runtime_error( api + " provider is unavailable for '" + id + "'" );
             }
             // Cross-state userdata must be rebound to the provider, preserving the exact actor.
-            const game_handle argument = platform_creature_handle( *provider, *actor );
+            const std::optional<game_handle> argument = actor ?
+                    std::optional<game_handle>( platform_creature_handle( *provider, *actor ) ) : std::nullopt;
             sol::protected_function callback = handler->second.callback;
             callback_scope scope( *provider, caller->native_enchantment_random );
             provider->callback_character = argument;
-            const sol::protected_function_result result = callback( argument );
+            const sol::protected_function_result result = callback( argument ?
+                    sol::make_object( *provider->lua, *argument ) :
+                    sol::make_object( *provider->lua, sol::lua_nil ) );
             if( !result.valid() ) {
                 const sol::error error = result;
-                throw std::runtime_error( "runtime.call_character '" + provider->mod_id + ":" +
+                throw std::runtime_error( api + " '" + provider->mod_id + ":" +
                                           id + "' failed: " + error.what() );
             }
             return;
         }
-        throw std::runtime_error( "runtime.call_character references missing handler '" + id + "'" );
+        throw std::runtime_error( api + " references missing handler '" + id + "'" );
+    };
+    runtime_api.set_function( "call_character", [call_actor]( const std::string & id,
+    const game_handle &handle ) {
+        call_actor( id, sol::optional<game_handle>( handle ), true );
+    } );
+    runtime_api.set_function( "call_creature", [call_actor]( const std::string & id,
+    const sol::optional<game_handle> &handle ) {
+        call_actor( id, handle, false );
     } );
     runtime_api.set_function( "character_recurring", [weak](
                                   const std::string & effect_handler,

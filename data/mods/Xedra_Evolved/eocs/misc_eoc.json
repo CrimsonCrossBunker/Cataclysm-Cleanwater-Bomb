@@ -72,40 +72,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD",
-    "effect": [
-      { "u_location_variable": { "context_val": "near_tear" }, "field": "fd_fatigue", "target_max_radius": 5 },
-      {
-        "if": { "map_field_id": "fd_fatigue", "loc": { "context_val": "near_tear" } },
-        "then": { "run_eocs": "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD_SUCCESS" },
-        "else": { "run_eocs": "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD_FAIL" }
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD_SUCCESS",
-    "effect": [
-      { "u_spawn_item": "stormwrought_blood_itert" },
-      {
-        "u_message": "The ritual harnesses the energies of the tear to infuse some blood with it, leaving behind a small ball of almost-solid blood.  It only needs to bath in the energies of the storms until it is fully charged and it will be ready to use.",
-        "type": "good"
-      },
-      { "run_eocs": "EOC_CAUSE_EARLY_PORTAL_STORM" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD_FAIL",
-    "effect": [
-      {
-        "u_message": "Without the proximity of a tear in reality, the ritual fails to harness any energy and the blood boils away.",
-        "type": "bad"
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "CHARGE_STORMWROUGHT_BLOOD",
     "recurrence": "5 minutes",
     "global": true,

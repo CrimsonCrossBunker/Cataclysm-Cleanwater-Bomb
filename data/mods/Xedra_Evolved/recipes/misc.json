@@ -42,21 +42,6 @@
     "subcategory": "CSC_XEDRA_MISC"
   },
   {
-    "id": "stormwrought_blood",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "name": "stormwrought blood",
-    "description": "Attempt to create one unit of inert stormwrought blood.  Will only work if you stand close enough to a tear in reality.",
-    "components": [ [ [ "blood", 100 ], [ "demihuman_blood", 100 ], [ "mutant_human_blood", 100 ], [ "fae_blood", 100 ] ] ],
-    "time": "15 m",
-    "skill_used": "deduction",
-    "difficulty": 2,
-    "flags": [ "SECRET" ],
-    "category": "CC_XEDRA",
-    "subcategory": "CSC_XEDRA_MISC",
-    "result_eocs": [ "EOC_ATTEMPT_TO_MAKE_STORMWROUGHT_BLOOD" ]
-  },
-  {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "result": "concentrated_underhill_essence",
