@@ -390,9 +390,10 @@ function CcbWorldApi.to_bubble(position) end
 ---@param id GameId GameId<item> identifying the item to create.
 ---@param quantity integer Positive quantity up to 1,000,000; non-charge items are limited to 100 instances per call.
 ---@param allow_overflow? boolean Allow native placement on nearby tiles when the requested tile cannot receive the item. Defaults to false.
+---@param flags? GameId[] Dense GameId<json_flag> array applied to the item before placement and stacking.
 --- Non-charge items receive native default ammo, and items with PRESERVE_SPAWN_LOC retain this position.
 ---@return CcbResult result `value` is a CcbWorldSpawnItemResult.
-function CcbWorldApi.spawn_item(position, id, quantity, allow_overflow) end
+function CcbWorldApi.spawn_item(position, id, quantity, allow_overflow, flags) end
 
 ---@param origin TripointCoord Explicit absolute map-square coordinate.
 ---@param options? CcbWorldPointsNearbyOptions Bounded result page options.

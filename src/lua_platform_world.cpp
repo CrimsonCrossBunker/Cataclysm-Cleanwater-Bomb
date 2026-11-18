@@ -2337,12 +2337,26 @@ sol::table emit_field_at(
                sol::make_object( state, std::move( value ) ) );
 }
 
+void configure_world_spawn_item(
+    item &entry, const std::vector<flag_id> &flags,
+    const tripoint_abs_ms &position )
+{
+    for( const flag_id &flag : flags ) {
+        entry.set_flag( flag );
+    }
+    if( entry.has_flag(
+            json_flag_PRESERVE_SPAWN_LOC ) ) {
+        entry.preserve_location( position );
+    }
+}
+
 sol::table spawn_item(
     sol::this_state lua,
     const script_tripoint_coord &position,
     const script_game_id &requested,
     const std::int64_t quantity,
     const bool allow_overflow,
+    const std::vector<flag_id> &flags,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -2383,9 +2397,7 @@ sol::table spawn_item(
             native, calendar::turn,
             count_by_charges ?
             static_cast<int>( quantity ) : -1 );
-        if( created.has_flag( json_flag_PRESERVE_SPAWN_LOC ) ) {
-            created.preserve_location( absolute );
-        }
+        configure_world_spawn_item( created, flags, absolute );
         if( !count_by_charges ) {
             const itype_id default_ammo = created.ammo_default();
             if( !default_ammo.is_null() ) {
@@ -2471,19 +2483,6 @@ std::vector<flag_id> read_world_spawn_flags(
         result.push_back( flag );
     }
     return result;
-}
-
-void configure_world_spawn_item(
-    item &entry, const std::vector<flag_id> &flags,
-    const tripoint_abs_ms &position )
-{
-    for( const flag_id &flag : flags ) {
-        entry.set_flag( flag );
-    }
-    if( entry.has_flag(
-            json_flag_PRESERVE_SPAWN_LOC ) ) {
-        entry.preserve_location( position );
-    }
 }
 
 sol::table place_world_spawn_items(
@@ -4223,10 +4222,12 @@ void install_world_api(
             const script_tripoint_coord & position,
             const script_game_id & id,
             const std::int64_t quantity,
-    const sol::optional<bool> &allow_overflow ) {
+            const sol::optional<bool> &allow_overflow,
+    const sol::optional<sol::table> &flags ) {
         require_write();
         return spawn_item(
                    lua_state, position, id, quantity, allow_overflow.value_or( false ),
+                   read_world_spawn_flags( flags, "services.world.spawn_item" ),
                    current_runtime_generation(),
                    current_world_generation() );
     } );
