@@ -482,3 +482,52 @@ do
     item:throwing_damage { { type = "bash", amount = 6 }, { type = "cut", amount = 16 }, { type = "heat", amount = 8 } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "salamagman_battleaxe",
+        name = ccb.content.plural_text("salamagman battle axe", "salamagman battle axes"),
+        looks_like = "ch_battleaxe",
+        description = ccb.content.text("A huge axe designed for warfare.  Made of forged dreamdross, and enchanted to channel heat into those it wounds."),
+        mass_milligrams = 2102000,
+        volume_ml = 2500,
+        longest_side_mm = 1000,
+        price_cents = 400000,
+        price_postapoc_cents = 120000,
+        melee_to_hit = 0,
+        symbol = "P",
+        color = "black_red",
+        techniques = { "WBLOCK_1", "WIDE", "BRUTAL", "SWEEP" },
+        replace_qualities = true,
+        weapon_categories = { "HOOKING_WEAPONRY", "GREAT_AXES" },
+        category = "weapons",
+    }
+    item:material("tezcatlipocas_blood", 1)
+    item:quality("AXE", 2)
+    item:quality("BUTCHER", -20)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_AXE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 19)
+    item:melee_damage("cut", 41)
+    item:melee_damage("heat", 21)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "xedra_chrono_knife",
+        category = "weapons",
+        name = ccb.content.plural_text("monochrome knife", "monochrome knives"),
+        description = ccb.content.text("A well designed steel knife that used to be stuck in your belly.  It lightly flickers in the air and is tainted an unnatural gray.  Despite your best efforts, you aren't even able to smear the gray streaks of your blood that remain frozen along the edge, much less damage the actual metal."),
+        copy_from = "knife_rm42",
+        looks_like = "knife_rm42",
+        price_postapoc_cents = 10000,
+    }
+    item:flag("UNBREAKABLE_MELEE")
+    item:tool()
+    content.add(item)
+end
