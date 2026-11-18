@@ -273,12 +273,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_biokinesis_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "biokinetic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_biokinesis_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "biokinetic_matrix_crystal_procgen",
     "charge_types": [
@@ -531,11 +525,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" }, { "weight": 100, "value": "passive_enchantment_mult" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_biokinesis" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "biokinetic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_biokinesis", 100 ] ]
   }
 ]

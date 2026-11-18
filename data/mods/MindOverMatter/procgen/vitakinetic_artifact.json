@@ -200,12 +200,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_vitakinesis_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "vitakinetic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_vitakinesis_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "vitakinetic_matrix_crystal_procgen",
     "charge_types": [
@@ -386,11 +380,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" }, { "weight": 100, "value": "passive_enchantment_mult" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_vitakinesis" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "vitakinetic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_vitakinesis", 100 ] ]
   }
 ]

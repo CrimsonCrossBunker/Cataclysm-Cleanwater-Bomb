@@ -153,12 +153,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_electrokinesis_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "electrokinetic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_electrokinesis_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "electrokinetic_matrix_crystal_procgen",
     "charge_types": [
@@ -294,11 +288,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" }, { "weight": 100, "value": "passive_enchantment_mult" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_electrokinesis" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "electrokinetic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_electrokinesis", 100 ] ]
   }
 ]

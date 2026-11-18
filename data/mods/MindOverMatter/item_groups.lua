@@ -1,0 +1,5 @@
+require("item_groups.dimensions")
+require("item_groups.itemgroups")
+require("item_groups.items")
+require("item_groups.mapgen")
+require("item_groups.procgen")

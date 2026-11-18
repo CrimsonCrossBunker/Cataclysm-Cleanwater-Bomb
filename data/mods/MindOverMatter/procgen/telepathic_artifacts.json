@@ -66,12 +66,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_telepathy_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "telepathic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_telepathy_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "telepathic_matrix_crystal_procgen",
     "charge_types": [
@@ -124,11 +118,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_telepathy" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "telepathic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_telepathy", 100 ] ]
   }
 ]

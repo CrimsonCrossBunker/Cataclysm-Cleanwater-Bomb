@@ -134,12 +134,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_telekinesis_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "telekinetic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_telekinesis_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "telekinetic_matrix_crystal_procgen",
     "charge_types": [
@@ -257,11 +251,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" }, { "weight": 100, "value": "passive_enchantment_mult" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_telekinesis" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "telekinetic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_telekinesis", 100 ] ]
   }
 ]

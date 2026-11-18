@@ -186,3 +186,5 @@ require("activity_types")
 require("banish_illness")
 
 require("shadow_urge")
+
+require("item_groups")

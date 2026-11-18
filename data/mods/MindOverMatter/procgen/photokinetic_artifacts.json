@@ -85,12 +85,6 @@
     "items": [ { "weight": 100, "item": "matrix_crystal_photokinesis_artifact" } ]
   },
   {
-    "type": "item_group",
-    "id": "photokinetic_crystal_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_photokinesis_artifact", 100 ] ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "photokinetic_matrix_crystal_procgen",
     "charge_types": [
@@ -162,11 +156,5 @@
     ],
     "type_weights": [ { "weight": 100, "value": "passive_enchantment_add" } ],
     "items": [ { "weight": 100, "item": "matrix_crystal_photokinesis" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "photokinetic_crystal_awakening_artifact_item",
-    "subtype": "distribution",
-    "items": [ [ "matrix_crystal_photokinesis", 100 ] ]
   }
 ]
