@@ -1191,7 +1191,7 @@ std::vector<const construction *> player_can_build_valid_constructions( Characte
     // check all with the same group to see if player can build any
     // if so, it will be added to the result
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             result.push_back( con );
         }
@@ -1204,7 +1204,7 @@ bool player_can_build( Character &you, const temp_crafting_inventory &inv,
 {
     // check all with the same group to see if player can build any
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             return true;
         }
@@ -1235,7 +1235,7 @@ bool player_can_see_to_build( Character &you, const construction_group_str_id &g
         return true;
     }
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( con->dark_craftable ) {
             return true;
         }
