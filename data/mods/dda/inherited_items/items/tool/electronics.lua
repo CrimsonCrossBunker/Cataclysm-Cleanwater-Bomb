@@ -289,3 +289,490 @@ do
     }
     content.add(item)
 end
+
+do
+    -- Nokia 105 4G, 26g Li-Ion battery
+    local item = content.Item {
+        id = "cell_phone",
+        name = ccb.content.plural_text("cellphone", "cellphones"),
+        description = ccb.content.text("A cellphone, an older cousin of the smartphone that is still popular in certain circles due to its reliability and sturdiness.  Using the phone will turn it on and provide light, assuming it is sufficiently charged.  It also tells the time and has an alarm feature."),
+        mass_milligrams = 95000,
+        volume_ml = 88,
+        price_cents = 9000,
+        price_postapoc_cents = 15,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("aluminum", 75)
+    item:material("plastic", 25)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "cell_phone_flashlight" },
+        menu_text = ccb.content.text("Light up the screen"),
+        message = ccb.content.text("You light up the screen."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:link_cable { cable_length = 3, charge_milliwatts = 20000 }
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATCH")
+    item:flag("ALARMCLOCK")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_pocket { ammo_capacities = { battery = 17 }, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "cell_phone_flashlight",
+        copy_from = "cell_phone",
+        looks_like = "cell_phone",
+        name = ccb.content.plural_text("cellphone - Flashlight", "cellphones - Flashlight"),
+        light = 8,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "cell_phone" },
+        message = ccb.content.text("You turn off the screen."),
+        menu_text = ccb.content.text("Turn off the screen"),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 3, charge_milliwatts = 20000 }
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATCH")
+    item:flag("CHARGEDIM")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("SPAWN_ACTIVE")
+    item:fault_group("electronic_general", {  })
+    item:transform_into { target = "cell_phone" }
+    item:tool { power_milliwatts = 500 }
+    content.add(item)
+end
+
+do
+    -- Don't add ELECTRONIC flag here, since these handcuffs have their own behavior when affected by EMP blast
+    local item = content.Item {
+        id = "e_handcuffs",
+        name = ccb.content.plural_text("electronic handcuffs", "electronic handcuffs"),
+        description = ccb.content.text("A pair of electronic handcuffs, used by police and riot bots to detain captives.  Their continuous siren clearly identifies the wearer as an arrested criminal and alerts human police.  Wait for their arrival, don't try to escape or to remove the cuffs - they will administer an electric shock.\nHowever, since the only police likely to respond are undead, you may have a long wait ahead, unless you get creative…"),
+        mass_milligrams = 2000000,
+        volume_ml = 500,
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("EHANDCUFFS")
+    item:clear_flags()
+    item:flag("ALWAYS_TWOHAND")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:tool { max_charges = 3000, turns_per_charge = 1 }
+    item:clear_tick_actions()
+    item:native_on_tick("EHANDCUFFS_TICK")
+    content.add(item)
+end
+
+do
+    -- amazon kindle, LIONX 6300mAh battery 42 ml
+    local item = content.Item {
+        id = "eink_tablet_pc",
+        copy_from = "abstract_tablet",
+        name = ccb.content.plural_text("e-ink tablet PC", "e-ink tablet PCs"),
+        description = ccb.content.text("A tablet PC using an efficient color e-ink display.  Before the Cataclysm, these were nifty gadgets; now, they are extremely useful tools.  Runs on conventional batteries."),
+        mass_milligrams = 158000,
+        volume_ml = 137,
+        longest_side_mm = 158,
+        price_cents = 8500,
+        price_postapoc_cents = 1000,
+        symbol = ";",
+        color = "blue",
+        replace_pockets = true,
+    }
+    item:material("aluminum", 3)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("E_FILE_DEVICE")
+    item:native_use("EBOOKSAVE")
+    item:transform_on_use {
+        result = { target = "eink_tablet_pc_on" },
+        menu_text = ccb.content.text("Light up the screen"),
+        message = ccb.content.text("You light up the screen."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:link_cable { cable_length = 4, charge_milliwatts = 10000 }
+    item:tool()
+    item:magazine_pocket { ammo_capacities = { battery = 85 }, rigid = true }
+    item:file_storage_pocket {
+        max_volume_ml = 1,
+        max_weight_milligrams = 1000,
+        rigid = true,
+        weight_multiplier = 0.0,
+        memory_kb = 32000000,
+    }
+    content.add(item)
+end
+
+do
+    -- light 10 is the bare minimum for reading without penalties
+    local item = content.Item {
+        id = "eink_tablet_pc_on",
+        copy_from = "eink_tablet_pc",
+        looks_like = "eink_tablet_pc",
+        name = ccb.content.plural_text("e-ink tablet PC (on)", "e-ink tablet PCs (on)"),
+        light = 10,
+    }
+    item:clear_use_actions()
+    item:native_use("E_FILE_DEVICE")
+    item:native_use("EBOOKSAVE")
+    item:transform_on_use {
+        result = { target = "eink_tablet_pc" },
+        menu_text = ccb.content.text("Turn off the screen"),
+        message = ccb.content.text("You turn off the screen."),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 4, charge_milliwatts = 10000 }
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATCH")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("TRADER_AVOID")
+    item:flag("SPAWN_ACTIVE")
+    item:fault_group("electronic_general", {  })
+    item:transform_into { target = "eink_tablet_pc" }
+    item:tool { power_milliwatts = 2000 }
+    content.add(item)
+end
+
+do
+    -- https://www.amazon.com/dp/B0B541D433 but AA instead of 14500
+    local item = content.Item {
+        id = "geiger_off",
+        name = ccb.content.plural_text("Geiger counter (off)", "Geiger counters (off)"),
+        description = ccb.content.text("A tool for measuring radiation.  Using it will prompt you to choose whether to scan yourself or the terrain, or to turn on continuous scan, which will provide continuous feedback on ambient radiation.  It is currently off."),
+        mass_milligrams = 231000,
+        volume_ml = 161,
+        price_cents = 6800,
+        price_postapoc_cents = 20,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:native_use("GEIGER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_LIGHT" },
+        default_magazine = "light_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "geiger_on",
+        copy_from = "geiger_off",
+        looks_like = "geiger_off",
+        name = ccb.content.plural_text("Geiger counter (on)", "Geiger counters (on)"),
+        description = ccb.content.text("A tool for measuring radiation.  It is in continuous scan mode, and will produce quiet clicking sounds in the presence of ambient radiation.  Using it allows you to turn it off, or scan yourself or the ground."),
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "geiger_off" },
+        message = ccb.content.text("The Geiger counter's SCANNING LED turns off."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "geiger_off" }
+    item:tool { power_milliwatts = 200 }
+    item:clear_tick_actions()
+    item:native_on_tick("GEIGER_ACTIVE")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "laptop_screen_lit",
+        copy_from = "laptop",
+        looks_like = "laptop",
+        name = ccb.content.plural_text("laptop computer - lit screen", "laptop computers - lit screen"),
+        light = 10,
+    }
+    item:clear_use_actions()
+    item:native_use("E_FILE_DEVICE")
+    item:native_use("EBOOKSAVE")
+    item:native_use("PORTABLE_GAME")
+    item:transform_on_use {
+        result = { target = "laptop" },
+        message = ccb.content.text("You turn off the screen."),
+        menu_text = ccb.content.text("Turn off the screen"),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 5, charge_milliwatts = 140000 }
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATCH")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("SPAWN_ACTIVE")
+    item:fault_group("electronic_general", {  })
+    item:transform_into { target = "laptop" }
+    item:tool { power_milliwatts = 1000 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "noise_emitter",
+        name = ccb.content.plural_text("noise emitter (off)", "noise emitters (off)"),
+        description = ccb.content.text("A device constructed by 'enhancing' a speaker with some amplifier circuits.  It has no other use besides emitting loud crackling static noise that could distract zombies."),
+        mass_milligrams = 340000,
+        volume_ml = 1000,
+        price_cents = 0,
+        price_postapoc_cents = 50,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "yellow",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "noise_emitter_on" },
+        message = ccb.content.text("You turn on the %s."),
+        menu_text = ccb.content.text("Turn on"),
+    }
+    item:clear_flags()
+    item:flag("RADIO_MODABLE")
+    item:flag("RADIO_INVOKE_PROC")
+    item:flag("WATER_BREAK")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_HEAVY", "BATTERY_MEDIUM", "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" },
+        default_magazine = "light_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "noise_emitter_on",
+        copy_from = "noise_emitter",
+        looks_like = "noise_emitter",
+        name = ccb.content.plural_text("noise emitter (on)", "noise emitters (on)"),
+        description = ccb.content.text("A homemade device that is emitting horrible crackles, pops, and other loud static sounds.  Quick, get away from it before it draws zombies to you!"),
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "noise_emitter" },
+        message = ccb.content.text("The infernal racket dies as the noise emitter turns off."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("RADIO_MODABLE")
+    item:flag("RADIO_INVOKE_PROC")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "noise_emitter" }
+    item:tool { power_milliwatts = 10000 }
+    item:clear_tick_actions()
+    item:native_on_tick("NOISE_EMITTER_ON")
+    content.add(item)
+end
+
+do
+    -- Based off the TRIFIELD EMF Meter Model TF2.  Supposed to use 9volt, but uses medium battery instead
+    local item = content.Item {
+        id = "emf_detector",
+        name = ccb.content.plural_text("EMF detector (off)", "EMF detectors (off)"),
+        description = ccb.content.text("This device detects and reads out different electromagnetic wave lengths.  It beeps with proximity and is sensitive enough you could use it to get a sense of direction."),
+        mass_milligrams = 240000,
+        volume_ml = 355,
+        price_cents = 0,
+        price_postapoc_cents = 50,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "yellow",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "emf_detector_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_MEDIUM" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    -- lasts 12 hours with backlight off
+    local item = content.Item {
+        id = "emf_detector_on",
+        copy_from = "emf_detector",
+        looks_like = "emf_detector",
+        name = ccb.content.plural_text("EMF detector (on)", "EMF detectors (on)"),
+        description = ccb.content.text("This device detects and reads out different wave lengths.  It is currently on, humming and beeping with proximity.  It is sensitive enough you could use it to get a sense of direction."),
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "emf_detector" },
+        message = ccb.content.text("The noise of your EMF detector slows to a halt."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("SPAWN_ACTIVE")
+    item:fault_group("electronic_general", {  })
+    item:transform_into { target = "emf_detector" }
+    item:tool { power_milliwatts = 1000 }
+    item:clear_tick_actions()
+    item:native_on_tick("EMF_PASSIVE_ON")
+    content.add(item)
+end
+
+do
+    -- Nintendo Switch
+    local item = content.Item {
+        id = "portable_game",
+        name = ccb.content.plural_text("handheld game system", "handheld game systems"),
+        description = ccb.content.text("A portable video game console, with a backlit screen allowing you to play in the dark.  You can use it to play a game, but this requires batteries.  Multiple game systems can be linked together for multiplayer games."),
+        mass_milligrams = 362000,
+        volume_ml = 341,
+        price_cents = 29200,
+        price_postapoc_cents = 3,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("aluminum", 75)
+    item:material("plastic", 25)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:native_use("PORTABLE_GAME")
+    item:link_cable { cable_length = 4, charge_milliwatts = 39000 }
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_pocket { ammo_capacities = { battery = 48 }, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "smart_phone_flashlight",
+        copy_from = "smart_phone",
+        looks_like = "smart_phone",
+        name = ccb.content.plural_text("smartphone - Flashlight", "smartphones - Flashlight"),
+        light = 20,
+    }
+    item:clear_use_actions()
+    item:native_use("E_FILE_DEVICE")
+    item:native_use("EBOOKSAVE")
+    item:native_use("PORTABLE_GAME")
+    item:transform_on_use {
+        result = { target = "smart_phone" },
+        message = ccb.content.text("You deactivate the flashlight app."),
+        menu_text = ccb.content.text("Turn off flashlight"),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 3, charge_milliwatts = 20000 }
+    item:flag("CHARGEDIM")
+    item:flag("TRADER_AVOID")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "smart_phone" }
+    item:tool { power_milliwatts = 1500 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "vibrator",
+        copy_from = "sextoy",
+        looks_like = "sextoy",
+        name = ccb.content.plural_text("vibrator", "vibrators"),
+        description = ccb.content.text("A vibrator."),
+        replace_pockets = true,
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 9)
+    item:clear_use_actions()
+    item:native_use("VIBE")
+    item:link_cable { cable_length = 3, charge_milliwatts = 10000 }
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("ELECTRONIC")
+    item:variants {
+        { id = "wand", name = ccb.content.plural_text("vibrating wand", "vibrating wands"), description = ccb.content.text("This truly multipurpose massage tool is just the thing you need to relax.  Use it to take a break and unwind.") },
+        { id = "egg", name = ccb.content.plural_text("vibrating egg", "vibrating eggs"), description = ccb.content.text("This bulbous, u-shaped alien looking device will help you see the stars.  Use it to take a break and unwind.") },
+        { id = "dildo", name = ccb.content.plural_text("vibrating dildo", "vibrating dildos"), description = ccb.content.text("You know what this is.  There's a switch at the bottom, you know what it's for.  Use it to take a break and unwind.") },
+    }
+    item:adjust_measurements { mass_milligrams = { offset = 50000 } }
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_pocket { ammo_capacities = { battery = 58 }, rigid = true }
+    content.add(item)
+end
