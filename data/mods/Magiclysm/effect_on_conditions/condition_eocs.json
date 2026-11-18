@@ -1,23 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_MAGICLYSM_GAME_START_HUMANS_ARE_HUMAN_MOM_CONDITIONS",
-    "condition": { "math": [ "0 == 1" ] },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_MAGICLYSM_GAME_START_HUMANS_ARE_HUMAN_XE_CONDITIONS",
-    "condition": { "math": [ "0 == 1" ] },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONDITION_SKY_ISLAND_TRIFFID_MERCHANT",
-    "condition": { "math": [ "0 == 1" ] }
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CONDITION_MAGICLYSM_ELF_WILDERNESS_EQUIVALENTS",
     "condition": {
       "or": [

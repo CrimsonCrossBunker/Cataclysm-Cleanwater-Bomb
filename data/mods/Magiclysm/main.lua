@@ -24,6 +24,8 @@ ccb.runtime.handler("initialize_default_spellcasting", function()
 end, 1)
 ccb.runtime.on("game:game_begin", "initialize_default_spellcasting")
 
+require("heritage")
+
 require("nested_recipes")
 
 require("morale_types")
