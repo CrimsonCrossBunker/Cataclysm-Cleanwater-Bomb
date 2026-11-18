@@ -323,3 +323,19 @@ content.add_nested_mapgen {
     size = 24,
     build = crash_site(main_crash, { 6, 10 }),
 }
+
+for i = 1, 2 do
+    local crash = content.MapExtra {
+        id = "mx_exocrash_" .. i,
+        name = content.text("Crashed pod"),
+        description = content.text("There is some kind of crashed metal pod here."),
+        generator_method = "update_mapgen",
+        generator_id = "mx_exodii_crash_big_" .. i,
+        z_levels = { 0, 0 },
+        symbol = "x",
+        color = "light_gray",
+        autonote_visibility = "details",
+    }
+    crash:flag("EXODII")
+    content.add(crash)
+end
