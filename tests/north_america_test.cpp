@@ -26,20 +26,22 @@
 #include "weather.h"
 #include "weather_gen.h"
 
-static const item_group_id item_group_cop_shoes( "cop_shoes" );
-static const item_group_id item_group_fresh_produce( "fresh_produce" );
-static const item_group_id item_group_fresh_produce_CA_ON( "fresh_produce-CA-ON" );
-static const item_group_id item_group_fresh_produce_MX_CMX( "fresh_produce-MX-CMX" );
-static const item_group_id item_group_guns_swat( "guns_swat" );
-static const item_group_id item_group_guns_swat_CA( "guns_swat-CA" );
-static const item_group_id item_group_guns_swat_MX( "guns_swat-MX" );
-static const item_group_id item_group_mags_common( "mags_common" );
-static const item_group_id item_group_mags_common_US_TX( "mags_common-US-TX" );
-static const item_group_id item_group_police_armory_any_pistol( "police_armory_any_pistol" );
-static const item_group_id item_group_police_armory_any_pistol_CA( "police_armory_any_pistol-CA" );
-static const item_group_id item_group_police_armory_any_pistol_MX( "police_armory_any_pistol-MX" );
-static const item_group_id item_group_roadmap_stock( "roadmap_stock" );
-static const item_group_id item_group_roadmap_stock_CA_ON( "roadmap_stock-CA-ON" );
+static const item_group_id Item_spawn_data_cop_shoes( "cop_shoes" );
+static const item_group_id Item_spawn_data_fresh_produce( "fresh_produce" );
+static const item_group_id Item_spawn_data_fresh_produce_CA_ON( "fresh_produce-CA-ON" );
+static const item_group_id Item_spawn_data_fresh_produce_MX_CMX( "fresh_produce-MX-CMX" );
+static const item_group_id Item_spawn_data_guns_swat( "guns_swat" );
+static const item_group_id Item_spawn_data_guns_swat_CA( "guns_swat-CA" );
+static const item_group_id Item_spawn_data_guns_swat_MX( "guns_swat-MX" );
+static const item_group_id Item_spawn_data_mags_common( "mags_common" );
+static const item_group_id Item_spawn_data_mags_common_US_TX( "mags_common-US-TX" );
+static const item_group_id Item_spawn_data_police_armory_any_pistol( "police_armory_any_pistol" );
+static const item_group_id
+Item_spawn_data_police_armory_any_pistol_CA( "police_armory_any_pistol-CA" );
+static const item_group_id
+Item_spawn_data_police_armory_any_pistol_MX( "police_armory_any_pistol-MX" );
+static const item_group_id Item_spawn_data_roadmap_stock( "roadmap_stock" );
+static const item_group_id Item_spawn_data_roadmap_stock_CA_ON( "roadmap_stock-CA-ON" );
 
 static const itype_id itype_boots_western( "boots_western" );
 
@@ -76,26 +78,26 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
     {
         const north_america::scoped_regional_loot canada( toronto );
         CHECK( north_america::civic_flag_variant() == "canadian_flag" );
-        check_regional_item_group( item_group_fresh_produce, item_group_fresh_produce_CA_ON );
-        check_regional_item_group( item_group_police_armory_any_pistol,
-                                   item_group_police_armory_any_pistol_CA );
-        check_regional_item_group( item_group_guns_swat, item_group_guns_swat_CA );
-        check_regional_item_group( item_group_roadmap_stock, item_group_roadmap_stock_CA_ON );
+        check_regional_item_group( Item_spawn_data_fresh_produce, Item_spawn_data_fresh_produce_CA_ON );
+        check_regional_item_group( Item_spawn_data_police_armory_any_pistol,
+                                   Item_spawn_data_police_armory_any_pistol_CA );
+        check_regional_item_group( Item_spawn_data_guns_swat, Item_spawn_data_guns_swat_CA );
+        check_regional_item_group( Item_spawn_data_roadmap_stock, Item_spawn_data_roadmap_stock_CA_ON );
     }
     {
         const north_america::scoped_regional_loot mexico( mexico_city );
         CHECK( north_america::civic_flag_variant() == "mexican_flag" );
-        check_regional_item_group( item_group_fresh_produce, item_group_fresh_produce_MX_CMX );
-        check_regional_item_group( item_group_police_armory_any_pistol,
-                                   item_group_police_armory_any_pistol_MX );
-        check_regional_item_group( item_group_guns_swat, item_group_guns_swat_MX );
+        check_regional_item_group( Item_spawn_data_fresh_produce, Item_spawn_data_fresh_produce_MX_CMX );
+        check_regional_item_group( Item_spawn_data_police_armory_any_pistol,
+                                   Item_spawn_data_police_armory_any_pistol_MX );
+        check_regional_item_group( Item_spawn_data_guns_swat, Item_spawn_data_guns_swat_MX );
     }
     g->north_america_world = false;
     const north_america::scoped_regional_loot classic( toronto );
     CHECK( north_america::civic_flag_variant().empty() );
-    CHECK( north_america::regional_item_group( item_group_fresh_produce ) == nullptr );
-    CHECK( north_america::regional_item_group( item_group_police_armory_any_pistol ) == nullptr );
-    CHECK( north_america::regional_item_group( item_group_roadmap_stock ) == nullptr );
+    CHECK( north_america::regional_item_group( Item_spawn_data_fresh_produce ) == nullptr );
+    CHECK( north_america::regional_item_group( Item_spawn_data_police_armory_any_pistol ) == nullptr );
+    CHECK( north_america::regional_item_group( Item_spawn_data_roadmap_stock ) == nullptr );
 }
 
 TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][farming]" )
@@ -248,27 +250,27 @@ TEST_CASE( "north_america_regional_loot_scope_uses_spawn_location",
     const restore_on_out_of_scope saved_mode( g->north_america_world );
     const point_abs_ms dallas( -2366147, 738224 );
     const point_abs_ms toronto( -649984, -162480 );
-    REQUIRE( item_group::group_is_defined( item_group_mags_common_US_TX ) );
+    REQUIRE( item_group::group_is_defined( Item_spawn_data_mags_common_US_TX ) );
 
     g->north_america_world = false;
     {
         const north_america::scoped_regional_loot classic( dallas );
-        CHECK( north_america::regional_item_group( item_group_mags_common ) == nullptr );
+        CHECK( north_america::regional_item_group( Item_spawn_data_mags_common ) == nullptr );
         CHECK( north_america::regional_monster( mon_zombie_swat, toronto ) == mon_zombie_swat );
     }
 
     g->north_america_world = true;
     {
         const north_america::scoped_regional_loot texas( dallas );
-        check_regional_item_group( item_group_mags_common, item_group_mags_common_US_TX );
-        CHECK( item_group::item_from( item_group_cop_shoes ).typeId() == itype_boots_western );
+        check_regional_item_group( Item_spawn_data_mags_common, Item_spawn_data_mags_common_US_TX );
+        CHECK( item_group::item_from( Item_spawn_data_cop_shoes ).typeId() == itype_boots_western );
         {
             const north_america::scoped_regional_loot massachusetts( point_abs_ms::zero );
-            CHECK( north_america::regional_item_group( item_group_mags_common ) == nullptr );
+            CHECK( north_america::regional_item_group( Item_spawn_data_mags_common ) == nullptr );
         }
-        check_regional_item_group( item_group_mags_common, item_group_mags_common_US_TX );
+        check_regional_item_group( Item_spawn_data_mags_common, Item_spawn_data_mags_common_US_TX );
     }
-    CHECK( north_america::regional_item_group( item_group_mags_common ) == nullptr );
+    CHECK( north_america::regional_item_group( Item_spawn_data_mags_common ) == nullptr );
     CHECK( north_america::regional_monster( mon_zombie_swat, toronto ) == mon_zombie_swat_ca );
     CHECK( north_america::regional_monster( mon_zombie_swat, dallas ) == mon_zombie_swat );
 }
