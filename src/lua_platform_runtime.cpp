@@ -851,6 +851,7 @@ struct trap_definition_data {
     std::int64_t avoidance = 0;
     std::int64_t difficulty = 0;
     std::string action;
+    std::string spell;
     std::string memorial_male;
     std::string memorial_female;
     std::string trigger_message_u;
@@ -4644,13 +4645,18 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<trap_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = detail::read_singular_text( options["name"], {}, "Trap.name" );
+        const sol::object name = options["name"];
+        if( !name.valid() || name.get_type() == sol::type::nil ) {
+            throw std::runtime_error( "Trap.name is required" );
+        }
+        definition->name = detail::read_singular_text( name, {}, "Trap.name" );
         definition->color = options.get_or( "color", std::string() );
         definition->symbol = options.get_or( "symbol", std::string() );
         definition->visibility = options.get_or<std::int64_t>( "visibility", 1 );
         definition->avoidance = options.get_or<std::int64_t>( "avoidance", 0 );
         definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         definition->action = options.get_or( "action", std::string() );
+        definition->spell = options.get_or( "spell", std::string() );
         definition->trigger_handler = options.get_or(
                                           "on_trigger",
                                           options.get_or( "trigger_handler", std::string() ) );
@@ -6878,7 +6884,7 @@ bool content_transaction::validate( const runtime &owner_runtime,
         for( const trap_registration &entry : pimpl_->traps ) {
             const trap_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "trap" );
-            if( definition.name.empty() || definition.color.empty() ||
+            if( definition.color.empty() ||
                 definition.symbol.empty() || definition.action.empty() ||
                 !trap_ids.insert( definition.id ).second ||
                 definition.visibility < std::numeric_limits<int>::min() ||
@@ -6893,6 +6899,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
                 definition.sound_threshold_max < definition.sound_threshold_min ) {
                 throw std::runtime_error( "trap '" + definition.id +
                                           "' has invalid ranges or a duplicate registration" );
+            }
+            if( !definition.spell.empty() && definition.action != "spell" ) {
+                throw std::runtime_error( "trap '" + definition.id +
+                                          "' requires the spell action to specify a spell" );
+            }
+            if( definition.action == "spell" && definition.trigger_handler.empty() &&
+                definition.spell.empty() ) {
+                throw std::runtime_error( "trap '" + definition.id + "' needs a spell to cast" );
             }
             for( const auto &[item, quantity, charges] : definition.drops ) {
                 if( item.empty() || quantity <= 0 || charges <= 0 ||
@@ -8903,6 +8917,9 @@ bool content_transaction::apply( std::string &error )
             native.avoidance = static_cast<int>( source.avoidance );
             native.difficulty = static_cast<int>( source.difficulty );
             native.act = trap_function_from_string( source.action );
+            if( !source.spell.empty() ) {
+                native.spell_data.id = spell_id( source.spell );
+            }
             native.lua_platform_mod = pimpl_->owner;
             native.lua_platform_trigger_handler = source.trigger_handler;
             if( !source.memorial_male.empty() && !source.memorial_female.empty() ) {
@@ -10391,6 +10408,12 @@ bool content_transaction::validate_finalized( std::string &error ) const
                     "' did not survive global finalization";
             return false;
         }
+        const std::string &spell = entry.definition->spell;
+        if( !spell.empty() && !spell_id( spell ).is_valid() ) {
+            error = "Lua-first trap '" + entry.definition->id + "' references unknown spell '" +
+                    spell + "'";
+            return false;
+        }
     }
     for( const construction_registration &entry : pimpl_->constructions ) {
         if( !construction_str_id( entry.definition->id ).is_valid() ) {
@@ -11565,6 +11588,10 @@ std::string content_transaction::fingerprint() const
         hash_part( state, std::to_string( value.avoidance ) );
         hash_part( state, std::to_string( value.difficulty ) );
         hash_part( state, value.action );
+        if( !value.spell.empty() ) {
+            hash_part( state, "spell" );
+            hash_part( state, value.spell );
+        }
         hash_part( state, value.memorial_male );
         hash_part( state, value.memorial_female );
         hash_part( state, value.trigger_message_u );

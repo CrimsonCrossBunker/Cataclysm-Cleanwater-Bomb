@@ -4040,13 +4040,14 @@ function MartialArtDefinition:on(handler_id) end
 
 ---@class TrapDefinitionOptions
 ---@field id string Stable trap id.
----@field name string|LocalizedText Player-facing trap name.
+---@field name string|LocalizedText Player-facing trap name. Use an explicit empty string for an unnamed trap.
 ---@field color string Native color name.
 ---@field symbol string Single map symbol character.
 ---@field visibility? integer Native signed spotting difficulty; smaller is easier. Negative native values are preserved.
 ---@field avoidance? integer Non-negative dodge difficulty.
 ---@field difficulty? integer Disarm difficulty from zero through 99; zero means always disarmable.
 ---@field action string Native trap action id, such as `spike` or `none`.
+---@field spell? string Spell ID used by the native `spell` action.
 ---@field memorial_male? string Memorial message for male victims; must pair with memorial_female.
 ---@field memorial_female? string Memorial message for female victims; must pair with memorial_male.
 ---@field trigger_message_u? string Message shown when the avatar triggers the trap.
