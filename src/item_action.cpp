@@ -439,8 +439,15 @@ void game::item_action_menu( item_location loc )
     item *it = iactions[action];
 
     std::string method = action;
-    if( it && u.has_item( *it ) &&
-        cata_mp::client_activate_item( form_loc_recursive<Character>( u, *it ), method ) ) {
+    item_location act_loc;
+    if( it ) {
+        if( u.has_item( *it ) ) {
+            act_loc = form_loc_recursive<Character>( u, *it );
+        } else if( loc ) {
+            act_loc = loc.get_item() == it ? loc : form_loc_recursive<item_location>( loc, *it );
+        }
+    }
+    if( act_loc && cata_mp::client_activate_item( act_loc, method ) ) {
         return;
     }
     u.invoke_item( it, method );

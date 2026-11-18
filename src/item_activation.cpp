@@ -63,7 +63,10 @@ bool supports_owned_item_activation( const item &source, const std::string &meth
     }
     const item *used = source.get_usable_item( method );
     const use_function *use = used ? used->type->get_use( method ) : nullptr;
-    return use && use->get_actor_ptr() && use->get_actor_ptr()->supports_owned_activation();
+    const iuse_actor *actor = use ? use->get_actor_ptr() : nullptr;
+    item_activation_choices empty_choices;
+    return actor && ( actor->supports_owned_activation() ||
+                      actor->valid_activation_choices( empty_choices ) );
 }
 
 bool query_item_activation_choices( const item_location &location, const std::string &method,
@@ -168,7 +171,7 @@ static bool activate_owned_item( Character &who, item_location source,
     if( !examine_pry && !method.empty() ) {
         const item *used = source->get_usable_item( method );
         const use_function *use = used ? used->type->get_use( method ) : nullptr;
-        if( !use || !source->ammo_sufficient( &who, method ) ||
+        if( !use || !used->ammo_sufficient( &who, method ) ||
             !use->can_call( who, *used, &here, position ).success() ) {
             return false;
         }

@@ -8899,15 +8899,29 @@ std::optional<int> use_function::call( Character *p, item &it,
     return use_function::call( p, it, &get_map(), pos );
 }
 
+static bool is_owned_activation_iuse_type( const std::string &type )
+{
+    return type == "INHALER" || type == "OXYGEN_BOTTLE" ||
+           type == "ADRENALINE_INJECTOR" || type == "JET_INJECTOR" ||
+           type == "STIMPACK" || type == "RADGLOVE" || type == "DOLLCHAT" ||
+           type == "BELL" || type == "SEXTANT" || type == "LUX_METER" ||
+           type == "DBG_LUX_METER" || type == "COIN_FLIP" ||
+           type == "HAND_CRANK" || type == "SCBA_MASK_ACTIVATE" ||
+           type == "SCBA_TANK_ACTIVATE" || type == "SOLARPACK" ||
+           type == "SOLARPACK_OFF" || type == "GASMASK_ACTIVATE" ||
+           type == "PAPR_MASK_ACTIVATE" || type == "BREAK_STICK";
+}
+
 bool iuse_actor::query_activation_choices( item_activation_choices &choices ) const
 {
     choices = {};
-    return supports_owned_activation();
+    return supports_owned_activation() || is_owned_activation_iuse_type( type );
 }
 
 bool iuse_actor::valid_activation_choices( const item_activation_choices &choices ) const
 {
-    return supports_owned_activation() && choices.empty();
+    return ( supports_owned_activation() || is_owned_activation_iuse_type( type ) ) &&
+           choices.empty();
 }
 
 std::optional<int> iuse_actor::use_with_choices( Character *p, item &it, map *here,

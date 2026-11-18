@@ -882,7 +882,9 @@ std::optional<int> mp3_iuse::use( Character *p, item &it, map *, const tripoint_
         p->add_msg_if_player( msg.translated() );
         it.convert( transform, p ).active = false;
         p->mod_moves( -200 );
-        music::deactivate_music_id( music::music_id::mp3 );
+        if( p->is_avatar() ) {
+            music::deactivate_music_id( music::music_id::mp3 );
+        }
     }
 
     return 0;
@@ -1540,7 +1542,7 @@ static ret_val<tripoint_bub_ms> check_deploy_square( Character *p, item &it,
         // Check that there is no liquid on the floor.
         // If there is, it needs to be mopped dry with a mop.
         if( here->terrain_moppable( pnt ) ) {
-            if( get_avatar().crafting_inventory().has_quality( qual_MOP ) ) {
+            if( p->crafting_inventory().has_quality( qual_MOP ) ) {
                 here->mop_spills( pnt );
                 p->add_msg_if_player( m_info, _( "You mopped up the spill with a nearby mop when deploying a %s." ),
                                       it.tname() );
@@ -1646,7 +1648,7 @@ void reveal_map_actor::load( const JsonObject &obj, const std::string & )
     optional( obj, false, "atlas_jurisdiction", atlas_jurisdiction );
 }
 
-void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
+void reveal_map_actor::reveal_targets( Character &who, const tripoint_abs_omt &center,
                                        const std::pair<std::string, ot_match_type> &target,
                                        int reveal_distance ) const
 {
@@ -1654,8 +1656,7 @@ void reveal_map_actor::reveal_targets( const tripoint_abs_omt &center,
                         target.second );
     for( const tripoint_abs_omt &place : places ) {
         if( overmap_buffer.seen( place ) != om_vision_level::full ) {
-            // Should be replaced with the character using the item passed as an argument if NPCs ever learn to use maps
-            get_avatar().map_revealed_omts.emplace( place );
+            who.map_revealed_omts.emplace( place );
         }
         overmap_buffer.reveal( place, reveal_distance );
     }
@@ -1706,7 +1707,7 @@ std::optional<int> reveal_map_actor::use( Character *p, item &it, map *,
     p->map_revealed_omts.clear();
     for( const auto &omt : omt_types ) {
         for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
-            reveal_targets( tripoint_abs_omt( center.xy(), z ), omt, 0 );
+            reveal_targets( *p, tripoint_abs_omt( center.xy(), z ), omt, 0 );
         }
     }
 
@@ -2129,15 +2130,16 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     if( tool.has_flag( flag_REQUIRES_TINDER ) ) {
         // Search inventory and adjacent tiles (same scope as the
         // tinder picker in fire_start_activity_actor::do_turn).
-        item_location tinder;
-        who.visit_items( [&tinder, &who, &tool]( item * it, item * ) -> VisitResponse {
+        item *tinder_item = nullptr;
+        who.visit_items( [&tinder_item, &tool]( item * it, item * ) -> VisitResponse {
             if( it != &tool && it->has_flag( flag_TINDER ) )
             {
-                tinder = item_location( who, it );
+                tinder_item = it;
                 return VisitResponse::ABORT;
             }
             return VisitResponse::NEXT;
         } );
+        item_location tinder = tinder_item ? form_loc_recursive( who, *tinder_item ) : item_location();
         if( !tinder ) {
             // Check adjacent ground tiles.
             for( const tripoint_bub_ms &adj : here.points_in_radius( who.pos_bub(), 1 ) ) {
@@ -2192,7 +2194,10 @@ bool firestarter_actor::npc_start_fire( npc &who, item &tool,
     }
 
     // Multi-turn activity.
-    item_location tool_loc( who, &tool );
+    const item_location tool_loc = locate_cutting_tool( who, tool );
+    if( !tool_loc ) {
+        return false;
+    }
     who.assign_activity( fire_start_activity_actor(
                              here.get_abs( fire_pos ), tool_loc,
                              potential_skill_gain, moves, tinder_consumed ) );
@@ -6680,7 +6685,7 @@ std::optional<int> change_scent_iuse::use( Character *p, item &it, map *,
     p->add_effect( effect_masked_scent, duration, false, scent_mod );
     p->set_type_of_scent( scenttypeid );
     p->mod_moves( -moves );
-    add_msg( m_info, _( "You use the %s to mask your scent" ), it.tname() );
+    p->add_msg_if_player( m_info, _( "You use the %s to mask your scent" ), it.tname() );
 
     // Apply the various effects.
     for( const iuse::effect_data &eff : effects ) {
@@ -6750,7 +6755,7 @@ std::optional<int> effect_on_conditions_actor::use( Character *p, item &it,
         } else if( npc *n = p->as_npc() ) {
             char_ptr = n;
         }
-        loc = item_location( *p->as_character(), &it );
+        loc = form_loc( *p, here, pos, it );
     } else {
         loc = item_location( map_cursor( here, pos ), &it );
     }

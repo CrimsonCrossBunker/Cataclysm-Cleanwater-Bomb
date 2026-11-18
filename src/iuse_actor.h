@@ -146,6 +146,9 @@ class message_iuse : public iuse_actor
         translation message;
 
         ~message_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms &pos ) const override;
@@ -185,6 +188,9 @@ class mp3_iuse : public iuse_actor
         explicit mp3_iuse( const std::string &type = "mp3" ) : iuse_actor( type ) {}
 
         ~mp3_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &jo, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *, item &, map *, const tripoint_bub_ms & ) const override;
@@ -209,6 +215,9 @@ class sound_iuse : public iuse_actor
         std::string sound_variant;
 
         ~sound_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         std::optional<int> use( Character *, item &, map *, const tripoint_bub_ms & ) const override;
         std::unique_ptr<iuse_actor> clone() const override;
@@ -250,6 +259,9 @@ class explosion_iuse : public iuse_actor
         explicit explosion_iuse( const std::string &type = "explosion" ) : iuse_actor( type ) {}
 
         ~explosion_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here,
@@ -309,6 +321,9 @@ class consume_drug_iuse : public iuse_actor
         explicit consume_drug_iuse( const std::string &type = "consume_drug" ) : iuse_actor( type ) {}
 
         ~consume_drug_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here, const tripoint_bub_ms & ) const override;
@@ -412,6 +427,9 @@ class change_scent_iuse : public iuse_actor
 
         change_scent_iuse() : iuse_actor( "change_scent" ) { }
         ~change_scent_iuse() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *, const tripoint_bub_ms & ) const override;
@@ -504,8 +522,8 @@ class reveal_map_actor : public iuse_actor
         translation message;
 
         void reveal_targets(
-            const tripoint_abs_omt &center, const std::pair<std::string, ot_match_type> &target,
-            int reveal_distance ) const;
+            Character &who, const tripoint_abs_omt &center,
+            const std::pair<std::string, ot_match_type> &target, int reveal_distance ) const;
 
         explicit reveal_map_actor( const std::string &type = "reveal_map" ) : iuse_actor( type ) {}
 
@@ -692,6 +710,9 @@ class fireweapon_off_actor : public iuse_actor
         fireweapon_off_actor() : iuse_actor( "fireweapon_off" ) {}
 
         ~fireweapon_off_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &it, map *here, const tripoint_bub_ms & ) const override;
@@ -716,6 +737,9 @@ class fireweapon_on_actor : public iuse_actor
         explicit fireweapon_on_actor( const std::string &type = "fireweapon_on" ) : iuse_actor( type ) {}
 
         ~fireweapon_on_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *, item &, map *here, const tripoint_bub_ms &pos ) const override;
@@ -738,6 +762,9 @@ class manualnoise_actor : public iuse_actor
         explicit manualnoise_actor( const std::string &type = "manualnoise" ) : iuse_actor( type ) {}
 
         ~manualnoise_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *p, item &, map *here, const tripoint_bub_ms & ) const override;
@@ -759,6 +786,9 @@ class play_instrument_iuse : public iuse_actor
         using iuse_actor::can_use;
         ret_val<void> can_use( const Character &p, const item &it, map *,
                                const tripoint_bub_ms & ) const override;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         std::unique_ptr<iuse_actor> clone() const override;
 };
 
@@ -1134,6 +1164,9 @@ class emit_actor : public iuse_actor
 
         explicit emit_actor( const std::string &type = "emit_actor" ) : iuse_actor( type ) {}
         ~emit_actor() override = default;
+        bool supports_owned_activation() const override {
+            return true;
+        }
         void load( const JsonObject &obj, const std::string & ) override;
         using iuse_actor::use;
         std::optional<int> use( Character *, item &it, map *here,
