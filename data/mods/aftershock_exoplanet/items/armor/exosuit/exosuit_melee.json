@@ -173,25 +173,5 @@
     ],
     "melee_damage": { "bash": 10, "cut": 5 },
     "tool_ammo": [ "gasoline", "diesel", "jp8", "avgas", "lamp_oil", "motor_oil", "propane", "conc_alcohol", "ammonia_liquid" ]
-  },
-  {
-    "id": "exosuit_power_cutter_on",
-    "copy-from": "exosuit_power_cutter",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exosuit power cutter (on)", "str_pl": "exosuit power cutters (on)" },
-    "description": "A huge, multi-fuel powered saw with a diamond blade, currently a whirling blur.  It's consuming fuel and can be used as a fantastic tool for cutting metal.  You can also use it as a terrifying weapon, if you're into that sort of thing.",
-    "turns_per_charge": 5,
-    "revert_to": "exosuit_power_cutter",
-    "use_action": {
-      "target": "exosuit_power_cutter",
-      "msg": "Your power cutter falls quiet.",
-      "menu_text": "Turn off",
-      "ammo_scale": 0,
-      "type": "transform"
-    },
-    "qualities": [ [ "CUT", 3 ], [ "SAW_M", 20 ], [ "SAW_M_FINE", 1 ], [ "BUTCHER", -80 ] ],
-    "extend": { "flags": [ "MESSY", "SPAWN_ACTIVE" ] },
-    "melee_damage": { "bash": 10, "cut": 100 }
   }
 ]
