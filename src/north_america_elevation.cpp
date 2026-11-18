@@ -18,6 +18,7 @@
 
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
+#include "coordinates.h"
 #include "debug.h"
 #include "filesystem.h"
 #include "map.h"
@@ -132,8 +133,8 @@ struct elevation_grid {
         }
     }
 
-    int elevation_at( int x, int y ) const {
-        const std::size_t index = 2 * ( y * grid_width + x );
+    int elevation_at( const point &position ) const {
+        const std::size_t index = 2 * ( position.y * grid_width + position.x );
         const int raw = bytes[index] | ( bytes[index + 1] << 8 );
         return raw < 32768 ? raw : raw - 65536;
     }
@@ -160,7 +161,7 @@ bool building_surface( const map &here, const tripoint_bub_ms &surface )
 
 std::optional<double> dem_elevation( regional_climate::coordinates location )
 {
-    const auto &data = grid();
+    const elevation_grid &data = grid();
     if( data.bytes.empty() || !std::isfinite( location.latitude ) ||
         !std::isfinite( location.longitude ) ) {
         return std::nullopt;
@@ -174,10 +175,10 @@ std::optional<double> dem_elevation( regional_climate::coordinates location )
     }
     const int column = std::min( static_cast<int>( x ), grid_width - 2 );
     const int row = std::min( static_cast<int>( y ), grid_height - 2 );
-    const double a = interpolate( data.elevation_at( column, row ),
-                                  data.elevation_at( column + 1, row ), x - column );
-    const double b = interpolate( data.elevation_at( column, row + 1 ),
-                                  data.elevation_at( column + 1, row + 1 ), x - column );
+    const double a = interpolate( data.elevation_at( point( column, row ) ),
+                                  data.elevation_at( point( column + 1, row ) ), x - column );
+    const double b = interpolate( data.elevation_at( point( column, row + 1 ) ),
+                                  data.elevation_at( point( column + 1, row + 1 ) ), x - column );
     return interpolate( a, b, y - row );
 }
 
