@@ -231,11 +231,23 @@ character_task_migration psychic_learning_migration( const char *id, const char 
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 207> migrated_character_tasks = {{
+const std::array<character_task_migration, 213> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
           "inventor_recipe_due", "inventor_recipe_timer" },
+        { effect_on_condition_id( "EOC_DREAMSMITHS_SCORE_TIMER" ),
+          "dreamsmith_score_due", "dreamsmith_score_timer" },
+        { effect_on_condition_id( "DREAMSMITH_CASINGS_LOW_CALIBER_RECIPE" ),
+          "dreamsmith_pistol_cases_due", "dreamsmith_pistol_cases_timer" },
+        { effect_on_condition_id( "DREAMSMITH_CASINGS_LARGE_CALIBER_RECIPE" ),
+          "dreamsmith_rifle_cases_due", "dreamsmith_rifle_cases_timer" },
+        { effect_on_condition_id( "EOC_XE_ALLOW_MAGIC_SEQUENCE" ),
+          "xedra_allow_dream_class_due", "xedra_dream_class_timer" },
+        { effect_on_condition_id( "EOC_DREAM_CRAFTS" ),
+          "xedra_dream_craft_due", nullptr },
+        { effect_on_condition_id( "EOC_DREAMSMITHS_SCORE_TRAIN" ),
+          "xedra_dreamsmith_training_due", nullptr },
         { effect_on_condition_id( "EOC_VAMPIRE_BLOOD_NUMBER_UI" ),
           "vampire_blood_display_due", "vampire_blood_display_timer" },
         { effect_on_condition_id( "EOC_VAMPIRE_ANATHEMA_BURN_IN_SUNLIGHT_CONTINUAL" ),

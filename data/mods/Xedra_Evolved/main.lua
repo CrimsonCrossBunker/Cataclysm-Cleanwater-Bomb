@@ -191,3 +191,6 @@ require("inventor_research")
 require("heartvine_communion")
 
 require("abyssal_hunger")
+
+require("dream_magic_class")
+require("dream_magic_artifacts")
