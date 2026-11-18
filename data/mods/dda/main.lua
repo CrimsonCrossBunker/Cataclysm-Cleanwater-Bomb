@@ -1,3 +1,5 @@
+require("item_migrations")
+
 require("region_settings")
 
 require("dimensions")
