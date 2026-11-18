@@ -52,3 +52,27 @@ do
     item:flag("TRADER_AVOID")
     content.add(item)
 end
+
+do
+    -- In terms of alchemy the gastrolith could serve to combine different effects, such as safely mixing together potions, or it could be used as an element of change, such as for shapechanging potions.
+    local item = content.Item {
+        id = "owlbear_stone",
+        name = ccb.content.plural_text("owlbear gastrolith", "owlbear gastroliths"),
+        description = ccb.content.text("This strangely shaped rock was once a part of an owlbear's complex digestive system, creating a link between owl throat and bear stomach.  It is possible that it could serve a similar purpose in alchemy, helping to bind together two disparate halves."),
+        mass_milligrams = 2000000,
+        volume_ml = 750,
+        price_cents = 3100,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "light_gray",
+        replace_qualities = true,
+    }
+    item:material("stone", 1)
+    item:quality("HAMMER", 2)
+    item:clear_use_actions()
+    item:native_use("CROWBAR")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 9)
+    item:tool()
+    content.add(item)
+end
