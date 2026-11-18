@@ -365,3 +365,143 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "polesaw_on",
+        copy_from = "polesaw_off",
+        looks_like = "polesaw_off",
+        name = ccb.content.plural_text("pole saw (on)", "pole saws (on)"),
+        description = ccb.content.text("This pole saw is on and making a lot of noise.  Use it to turn it off."),
+        melee_to_hit = -2,
+        techniques = { "SWEEP" },
+        replace_qualities = true,
+    }
+    item:quality("AXE", 2)
+    item:quality("BUTCHER", -100)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "polesaw_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("POLEARM")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POWERED")
+    item:flag("FRAGILE_MELEE")
+    item:flag("REACH_ATTACK")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:melee_damage("cut", 11)
+    item:transform_into { target = "polesaw_off" }
+    item:tool { charges_per_use = 0, turns_per_charge = 4 }
+    item:clear_tick_actions()
+    item:on_tick("tick_polesaw_on")
+    content.add(item)
+end
+
+do
+    -- Circular saw would be very fast but imprecise butchering tool - alas the qualities are not separate and so speed is sacrificed.
+    local item = content.Item {
+        id = "circsaw_on",
+        copy_from = "circsaw_off",
+        looks_like = "circsaw_off",
+        name = ccb.content.plural_text("circular saw (on)", "circular saws (on)"),
+        description = ccb.content.text("A lightweight, handheld cordless circular saw.  It is currently on and the blade is spinning; use this item to turn it off."),
+        melee_to_hit = -2,
+        replace_qualities = true,
+    }
+    item:quality("CUT", 1, 0.5)
+    item:quality("SAW_W", 2, 0.3)
+    item:quality("BUTCHER", -40)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "circsaw_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:melee_damage("cut", 10)
+    item:transform_into { target = "circsaw_off" }
+    item:tool { power_milliwatts = 1200000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_circsaw_on")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "elec_chainsaw_on",
+        copy_from = "elec_chainsaw_off",
+        looks_like = "elec_chainsaw_off",
+        name = ccb.content.plural_text("electric chainsaw (on)", "electric chainsaws (on)"),
+        description = ccb.content.text("This electric chainsaw is on and making a lot of noise.  Use it to turn it off."),
+        melee_to_hit = -2,
+        replace_qualities = true,
+    }
+    item:quality("AXE", 4)
+    item:quality("BUTCHER", -100)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "elec_chainsaw_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POWERED")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:melee_damage("cut", 16)
+    item:transform_into { target = "elec_chainsaw_off" }
+    item:tool { charges_per_use = 0, power_milliwatts = 2000000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_elec_chainsaw_on")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "elec_chainsaw_cord_on",
+        copy_from = "elec_chainsaw_off",
+        looks_like = "elec_chainsaw_on",
+        name = ccb.content.plural_text("corded electric chainsaw (on)", "corded electric chainsaws (on)"),
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "elec_chainsaw_cord_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:link_cable { cable_length = 4, charge_milliwatts = 2400000 }
+    item:quality("AXE", 4)
+    item:quality("BUTCHER", -100)
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POWERED")
+    item:flag("FRAGILE_MELEE")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "elec_chainsaw_cord_off" }
+    item:tool { power_milliwatts = 2000000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_elec_chainsaw_cord_on")
+    content.add(item)
+end

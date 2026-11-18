@@ -121,37 +121,5 @@
     "flags": [ "NONCONDUCTIVE" ],
     "melee_damage": { "bash": 4, "cut": 5 },
     "tool_ammo": [ "gasoline" ]
-  },
-  {
-    "id": "trimmer_on",
-    "copy-from": "trimmer_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "hedge trimmer (on)", "str_pl": "hedge trimmers (on)" },
-    "description": "A cordless, double-sided, gasoline-powered hedge trimmer.  It is currently on, ready to do some zombie topiary; use this item to turn it off.",
-    "power_draw": "500 W",
-    "charges_per_use": 0,
-    "revert_to": "trimmer_off",
-    "use_action": { "target": "trimmer_off", "msg": "Your %s goes quiet.", "menu_text": "Turn off", "type": "transform" },
-    "tick_action": {
-      "type": "effect_on_conditions",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_running__trimmer",
-          "effect": {
-            "run_eocs": "EOC_toolweapon_running",
-            "variables": {
-              "sound_chance": 15,
-              "sound_message": { "i18n": true, "str": "Your hedge trimmer rumbles." },
-              "volume": 10,
-              "revert_to": "trimmer_off"
-            }
-          }
-        }
-      ]
-    },
-    "qualities": [ [ "CUT", 1 ], [ "BUTCHER", -60 ] ],
-    "flags": [ "MESSY", "TRADER_AVOID", "NONCONDUCTIVE", "SPAWN_ACTIVE" ],
-    "melee_damage": { "bash": 4, "cut": 8 }
   }
 ]

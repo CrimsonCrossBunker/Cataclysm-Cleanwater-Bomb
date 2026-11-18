@@ -989,3 +989,37 @@ do
     }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "carver_on",
+        copy_from = "carver_off",
+        looks_like = "carver_off",
+        name = ccb.content.plural_text("electric carver (on)", "electric carvers (on)"),
+        description = ccb.content.text("This carver is on and the blades are buzzing.  Use it to turn it off."),
+        replace_qualities = true,
+    }
+    item:quality("CUT", 2)
+    item:quality("BUTCHER", 25)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "carver_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:link_cable { cable_length = 2, charge_milliwatts = 120000 }
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("WATER_BREAK")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:melee_damage("cut", 8)
+    item:transform_into { target = "carver_off" }
+    item:tool { charges_per_use = 0, power_milliwatts = 120000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_carver_on")
+    content.add(item)
+end

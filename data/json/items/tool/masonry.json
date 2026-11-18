@@ -43,40 +43,6 @@
     "tool_ammo": [ "gasoline" ]
   },
   {
-    "id": "masonrysaw_on",
-    "copy-from": "masonrysaw_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "masonry saw (on)", "str_pl": "masonry saws (on)" },
-    "description": "This masonry saw is on and making a lot of noise.  Use it to turn it off.",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "turns_per_charge": 4,
-    "charges_per_use": 0,
-    "revert_to": "masonrysaw_off",
-    "techniques": [ "SWEEP" ],
-    "qualities": [ [ "AXE", 3 ], [ "BUTCHER", -100 ] ],
-    "use_action": { "target": "masonrysaw_off", "msg": "Your %s goes quiet.", "menu_text": "Turn off", "type": "transform" },
-    "tick_action": {
-      "type": "effect_on_conditions",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_running__masonrysaw",
-          "effect": {
-            "run_eocs": "EOC_toolweapon_running",
-            "variables": {
-              "sound_chance": 15,
-              "sound_message": { "i18n": true, "str": "Your masonry saw buzzes." },
-              "volume": 7,
-              "revert_to": "masonrysaw_off"
-            }
-          }
-        }
-      ]
-    },
-    "flags": [ "MESSY", "TRADER_AVOID", "NONCONDUCTIVE", "POWERED", "FRAGILE_MELEE", "SPAWN_ACTIVE" ],
-    "melee_damage": { "bash": 4, "cut": 10 }
-  },
-  {
     "id": "electric_masonrysaw_off",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -108,64 +74,6 @@
     "faults": [ { "fault_group": "electronic_general" } ],
     "melee_damage": { "bash": 4 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "electric_masonrysaw_on",
-    "copy-from": "electric_masonrysaw_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "electric masonry saw (on)", "str_pl": "electric masonry saws (on)" },
-    "description": "This electric masonry saw is on and making a lot of noise.  Use it to turn it off.",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "//1": "I don't know whether we are allowed to have less than 1 turn per charge. Based on 13.2 to 1 conversion rate between",
-    "//2": "epower and gasoline (according to jackhammer tools) it would be 0.3 turns per charge.",
-    "turns_per_charge": 1,
-    "charges_per_use": 0,
-    "revert_to": "electric_masonrysaw_off",
-    "techniques": [ "SWEEP" ],
-    "qualities": [ [ "AXE", 3 ], [ "BUTCHER", -100 ] ],
-    "use_action": [
-      { "target": "electric_masonrysaw_off", "msg": "Your %s goes quiet.", "menu_text": "Turn off", "type": "transform" },
-      {
-        "type": "link_up",
-        "menu_text": "Plug in / Unplug",
-        "ammo_scale": 0,
-        "cable_length": 33,
-        "charge_rate": "2200 W"
-      }
-    ],
-    "tick_action": {
-      "type": "effect_on_conditions",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_running__electric_masonrysaw",
-          "effect": {
-            "run_eocs": "EOC_toolweapon_running",
-            "variables": {
-              "sound_chance": 15,
-              "sound_message": { "i18n": true, "str": "Your electric masonry saw buzzes." },
-              "volume": 7,
-              "revert_to": "electric_masonrysaw_off"
-            }
-          }
-        }
-      ]
-    },
-    "flags": [
-      "MESSY",
-      "TRADER_AVOID",
-      "NONCONDUCTIVE",
-      "POWERED",
-      "FRAGILE_MELEE",
-      "USE_UPS",
-      "NO_UNLOAD",
-      "NO_RELOAD",
-      "WATER_BREAK",
-      "ELECTRONIC",
-      "SPAWN_ACTIVE"
-    ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "melee_damage": { "bash": 4, "cut": 10 }
   },
   {
     "id": "heavy_masonrysaw_off",
@@ -211,39 +119,5 @@
     "flags": [ "NONCONDUCTIVE", "FRAGILE_MELEE" ],
     "melee_damage": { "bash": 6 },
     "tool_ammo": [ "gasoline" ]
-  },
-  {
-    "id": "heavy_masonrysaw_on",
-    "copy-from": "heavy_masonrysaw_off",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "heavy masonry saw (on)", "str_pl": "heavy masonry saws (on)" },
-    "description": "This masonry saw is on and making a lot of noise.  Use it to turn it off.",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "clumsy" },
-    "turns_per_charge": 4,
-    "charges_per_use": 0,
-    "revert_to": "heavy_masonrysaw_off",
-    "techniques": [ "SWEEP" ],
-    "qualities": [ [ "AXE", 3 ], [ "BUTCHER", -100 ] ],
-    "use_action": { "target": "heavy_masonrysaw_off", "msg": "Your %s goes quiet.", "menu_text": "Turn off", "type": "transform" },
-    "tick_action": {
-      "type": "effect_on_conditions",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_running__heavy_masonrysaw",
-          "effect": {
-            "run_eocs": "EOC_toolweapon_running",
-            "variables": {
-              "sound_chance": 15,
-              "sound_message": { "i18n": true, "str": "Your heavy masonry saw buzzes." },
-              "volume": 7,
-              "revert_to": "heavy_masonrysaw_off"
-            }
-          }
-        }
-      ]
-    },
-    "flags": [ "MESSY", "TRADER_AVOID", "NONCONDUCTIVE", "POWERED", "FRAGILE_MELEE", "SPAWN_ACTIVE" ],
-    "melee_damage": { "bash": 4, "cut": 10 }
   }
 ]

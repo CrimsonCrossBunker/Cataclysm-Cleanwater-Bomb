@@ -776,3 +776,32 @@ do
     item:magazine_pocket { ammo_capacities = { battery = 58 }, rigid = true }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "noise_emitter_super_on",
+        copy_from = "noise_emitter_super",
+        looks_like = "noise_emitter_super",
+        name = ccb.content.plural_text("super noise emitter (on)", "super noise emitters (on)"),
+        description = ccb.content.text("This is a noisemaker that has been further enhanced with a series of amplifiers.  It's currently making an extraordinary amount of noise - hopefully you have hearing protection."),
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "noise_emitter_super" },
+        message = ccb.content.text("The infernal racket dies as the noise emitter turns off."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("RADIO_MODABLE")
+    item:flag("RADIO_INVOKE_PROC")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:flag("POWERED")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "noise_emitter_super" }
+    item:tool { power_milliwatts = 250000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_noise_emitter_super_on")
+    content.add(item)
+end

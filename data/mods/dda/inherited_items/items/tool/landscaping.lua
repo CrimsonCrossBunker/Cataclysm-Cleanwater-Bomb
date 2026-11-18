@@ -450,3 +450,35 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "trimmer_on",
+        copy_from = "trimmer_off",
+        looks_like = "trimmer_off",
+        name = ccb.content.plural_text("hedge trimmer (on)", "hedge trimmers (on)"),
+        description = ccb.content.text("A cordless, double-sided, gasoline-powered hedge trimmer.  It is currently on, ready to do some zombie topiary; use this item to turn it off."),
+        replace_qualities = true,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "trimmer_off" },
+        message = ccb.content.text("Your %s goes quiet."),
+        menu_text = ccb.content.text("Turn off"),
+    }
+    item:quality("CUT", 1)
+    item:quality("BUTCHER", -60)
+    item:clear_flags()
+    item:flag("MESSY")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:melee_damage("cut", 8)
+    item:transform_into { target = "trimmer_off" }
+    item:tool { charges_per_use = 0, power_milliwatts = 500000 }
+    item:clear_tick_actions()
+    item:on_tick("tick_trimmer_on")
+    content.add(item)
+end

@@ -575,41 +575,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "noise_emitter_super_on",
-    "copy-from": "noise_emitter_super",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "super noise emitter (on)", "str_pl": "super noise emitters (on)" },
-    "description": "This is a noisemaker that has been further enhanced with a series of amplifiers.  It's currently making an extraordinary amount of noise - hopefully you have hearing protection.",
-    "power_draw": "250 W",
-    "revert_to": "noise_emitter_super",
-    "use_action": {
-      "target": "noise_emitter_super",
-      "msg": "The infernal racket dies as the noise emitter turns off.",
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "type": "transform"
-    },
-    "tick_action": {
-      "type": "effect_on_conditions",
-      "effect_on_conditions": [
-        {
-          "id": "EOC_toolweapon_running__supernoisemaker",
-          "effect": {
-            "run_eocs": "EOC_toolweapon_running",
-            "variables": {
-              "sound_chance": 0,
-              "sound_message": { "i18n": true, "str": "Your super noise emitter produces an unholy blast of sonic chaos." },
-              "volume": 300,
-              "revert_to": "noise_emitter_super"
-            }
-          }
-        }
-      ]
-    },
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "TRADER_AVOID", "WATER_BREAK", "POWERED", "SPAWN_ACTIVE" ]
-  },
-  {
     "id": "exodii_wrist_computer",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],

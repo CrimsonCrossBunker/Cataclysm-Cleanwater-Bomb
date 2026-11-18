@@ -133,27 +133,6 @@
     "false_effect": { "u_message": "The <npc_name> won't start underwater." }
   },
   {
-    "id": "EOC_toolweapon_running",
-    "type": "effect_on_condition",
-    "condition": { "not": "npc_is_underwater" },
-    "effect": {
-      "if": { "one_in_chance": { "context_val": "sound_chance" } },
-      "then": [
-        { "message": { "context_val": "sound_message" }, "sound": true },
-        {
-          "npc_make_sound": { "context_val": "sound_message" },
-          "type": "activity",
-          "volume": { "context_val": "volume" },
-          "ambient": true
-        }
-      ]
-    },
-    "false_effect": [
-      { "u_message": "Your <npc_name> gurgles in the water and stops." },
-      { "transform_item": { "context_val": "revert_to" } }
-    ]
-  },
-  {
     "id": "EOC_toolweapon_deactivate",
     "type": "effect_on_condition",
     "effect": [ { "u_message": "Your <npc_name> goes quiet." }, { "transform_item": { "context_val": "transform_target" } } ]

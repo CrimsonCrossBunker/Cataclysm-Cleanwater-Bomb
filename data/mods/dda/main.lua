@@ -461,6 +461,8 @@ require("book_items")
 
 require("generic_items")
 
+require("powered_tools")
+
 require("inherited_items")
 
 require("active_items")
