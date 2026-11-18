@@ -42,6 +42,8 @@ end
 
 require("island_overmap")
 
+require("island_dimensions")
+
 require("island_generation")
 
 require("exodii_crash_mapgen")
