@@ -718,10 +718,18 @@ local ModDefinition = {}
 ---@field max_worn? integer Native per-type wear limit.
 ---@field insulation? number Native item insulation factor.
 ---@field display_type? 'DEFAULT'|'BY_WEIGHT'|'BY_VOLUME'|'BY_LENGTH' Native presentation units.
+---@field phase? 'null'|'solid'|'liquid'|'gas'|'plasma' Physical phase. Fresh liquids use the game's smart display default when no display type is specified.
+---@field fall_damage_reduction? integer Native fall damage reduction when landing on this item.
+---@field repair_like? string Item type used to resolve repair tools for this item.
+---@field source_monster? string Native monster type used as the source of a corpse.
+---@field field_emissions? string[] Replace the native field emission IDs used while this item processes.
+---@field repair_materials? string[] Replace the native material IDs used to resolve compatible repair tools.
 ---@field expand_snippets? boolean Expand description snippet tags when the item is created.
 ---@field techniques? string[] Replace the item's martial technique list.
+---@field remove_techniques? string[] Remove these existing martial techniques after applying replacements.
 ---@field weapon_categories? string[] Replace the item's weapon categories.
 ---@field replace_qualities? boolean Clear inherited tool qualities before applying staged qualities.
+---@field remove_qualities? string[] Remove these existing tool qualities after applying staged qualities and adjustments.
 ---@field replace_pockets? boolean Clear inherited pockets before applying staged pockets.
 ---@field minimum_skills? table<string, integer> Replace native skill requirements by skill ID.
 ---@field throwing_recovery_chance? integer Native recovery probability after a throw, from 0 to 100.

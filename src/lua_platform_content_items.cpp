@@ -80,6 +80,7 @@ extern "C" {
 #include "mod_tracker.h"
 #include "math_parser_diag.h"
 #include "math_parser_jmath.h"
+#include "options.h"
 #include "proficiency.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
@@ -515,8 +516,16 @@ struct item_definition_data {
     std::optional<double> insulation;
     std::optional<bool> expand_snippets;
     std::optional<item_display_type> display_type;
+    std::optional<phase_id> phase;
+    std::optional<int> fall_damage_reduction;
+    std::optional<itype_id> repair_like;
+    std::optional<mtype_id> source_monster;
     std::optional<std::vector<std::string>> techniques;
     std::optional<std::vector<std::string>> weapon_categories;
+    std::optional<std::vector<std::string>> field_emissions;
+    std::optional<std::vector<std::string>> repair_materials;
+    std::optional<std::vector<std::string>> removed_techniques;
+    std::optional<std::vector<std::string>> removed_qualities;
     bool has_name = false;
     bool has_description = false;
     bool has_symbol = false;
@@ -4670,6 +4679,18 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         read_optional( "max_worn", definition->max_worn );
         read_optional( "insulation", definition->insulation );
         read_optional( "expand_snippets", definition->expand_snippets );
+        if( const auto phase = options.get<sol::optional<std::string>>( "phase" ) ) {
+            definition->phase = io::string_to_enum<phase_id>( *phase );
+        }
+        if( const auto reduction = options.get<sol::optional<std::int64_t>>( "fall_damage_reduction" ) ) {
+            definition->fall_damage_reduction = item_option_int( *reduction, "fall damage reduction" );
+        }
+        if( const auto base = options.get<sol::optional<std::string>>( "repair_like" ) ) {
+            definition->repair_like = itype_id( *base );
+        }
+        if( const auto monster = options.get<sol::optional<std::string>>( "source_monster" ) ) {
+            definition->source_monster = mtype_id( *monster );
+        }
         if( const auto duration = options.get<sol::optional<std::int64_t>>( "countdown_turns" ) ) {
             const int count = item_option_int( *duration, "item countdown" );
             if( count < 0 ) {
@@ -4709,6 +4730,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         };
         read_ids( "techniques", definition->techniques );
         read_ids( "weapon_categories", definition->weapon_categories );
+        read_ids( "field_emissions", definition->field_emissions );
+        read_ids( "repair_materials", definition->repair_materials );
+        read_ids( "remove_techniques", definition->removed_techniques );
+        read_ids( "remove_qualities", definition->removed_qualities );
         if( const auto container = options.get<sol::optional<std::string>>( "default_container" ) ) {
             definition->default_container = *container;
         }
@@ -8081,8 +8106,35 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.insulation ) {
                         native->insulation_factor = static_cast<float>( *definition.insulation );
                     }
+                    if( definition.phase ) {
+                        native->phase = *definition.phase;
+                    }
                     if( definition.display_type ) {
                         native->display_type = *definition.display_type;
+                    } else if( definition.copy_from.empty() && native->phase == phase_id::LIQUID &&
+                               native->volume > 0_ml && get_option<bool>( "SMART_DEFAULT_DISPLAY_TYPE" ) ) {
+                        native->display_type = item_display_type::BY_VOLUME;
+                    }
+                    if( definition.fall_damage_reduction ) {
+                        native->fall_damage_reduction = *definition.fall_damage_reduction;
+                    }
+                    if( definition.repair_like ) {
+                        native->repairs_like = *definition.repair_like;
+                    }
+                    if( definition.source_monster ) {
+                        native->source_monster = *definition.source_monster;
+                    }
+                    if( definition.field_emissions ) {
+                        native->emits.clear();
+                        for( const std::string &emission : *definition.field_emissions ) {
+                            native->emits.emplace( emission );
+                        }
+                    }
+                    if( definition.repair_materials ) {
+                        native->repairs_with.clear();
+                        for( const std::string &material : *definition.repair_materials ) {
+                            native->repairs_with.emplace( material );
+                        }
                     }
                     if( definition.expand_snippets ) {
                         native->expand_snippets = *definition.expand_snippets;
@@ -8203,10 +8255,26 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         level = item_option_int( static_cast<std::int64_t>( level ) + offset,
                                                  "adjusted quality level" );
                     }
+                    if( definition.removed_qualities ) {
+                        for( const std::string &quality : *definition.removed_qualities ) {
+                            if( native->qualities.erase( quality_id( quality ) ) == 0 ) {
+                                throw std::runtime_error( "item '" + definition.id +
+                                                          "' cannot remove missing quality '" + quality + "'" );
+                            }
+                        }
+                    }
                     if( definition.techniques ) {
                         native->techniques.clear();
                         for( const std::string &id : *definition.techniques ) {
                             native->techniques.emplace( id );
+                        }
+                    }
+                    if( definition.removed_techniques ) {
+                        for( const std::string &technique : *definition.removed_techniques ) {
+                            if( native->techniques.erase( matec_id( technique ) ) == 0 ) {
+                                throw std::runtime_error( "item '" + definition.id +
+                                                          "' cannot remove missing technique '" + technique + "'" );
+                            }
                         }
                     }
                     if( definition.weapon_categories ) {
@@ -10068,7 +10136,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                            "inherit_display_type" );
                 hash_part( state, v.expand_snippets ? ( *v.expand_snippets ? "expand" : "unexpanded" ) :
                            "inherit_expand_snippets" );
-                for( const auto &list : { &v.techniques, &v.weapon_categories } ) {
+                for( const auto &list : {
+                         &v.techniques, &v.weapon_categories, &v.field_emissions, &v.repair_materials,
+                         &v.removed_techniques, &v.removed_qualities
+                     } ) {
                     hash_part( state, *list ? std::to_string( ( *list )->size() ) : "inherit_list" );
                     if( *list ) {
                         for( const auto &id : **list ) {
@@ -10076,6 +10147,12 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         }
                     }
                 }
+                hash_part( state, v.phase ? std::to_string( static_cast<int>( *v.phase ) ) :
+                           "inherit_phase" );
+                hash_part( state, v.fall_damage_reduction ? std::to_string( *v.fall_damage_reduction ) :
+                           "inherit_fall_damage_reduction" );
+                hash_part( state, v.repair_like ? v.repair_like->str() : "inherit_repair_like" );
+                hash_part( state, v.source_monster ? v.source_monster->str() : "inherit_source_monster" );
                 for( const auto &[field, member] : item_measurement_changes::fields ) {
                     if( const auto &change = v.measurements.*member ) {
                         hash_part( state, field );
