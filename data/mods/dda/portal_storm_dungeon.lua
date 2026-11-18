@@ -136,15 +136,51 @@ function M.enter(character)
     ccb.tasks.after_character_turn(character, 60, "portal_dungeon_crawl_due")
 end
 
-ccb.runtime.handler("portal_dungeon_entrance_trigger", function(payload)
-    if not payload.creature or payload.creature.subtype ~= "avatar" then return false end
-    -- Consume the captured entrance before travel; its original map must own cleanup.
+function M.teleport(character)
+    if state.checked(services.effects.has(character, id("effect", "effect_portal_dungeon_multi_trigger_limiter"))) then return end
+    local origin = state.position(character)
+    environment.set_trap_area(origin, "tr_portal_dungeon_teleporter", 0, false)
+    local target = services.overmap.find_target(origin:project_to("omt"), "portal_storm_dungeon_teleporter",
+        { special = id("overmap_special", "portal_storm_dungeon_teleporter"), create_special = true,
+          min_distance = 6, search_range = 40, random = true })
+    local found = services.world.find_location(target:project_to("ms"),
+        { kind = "trap", id = id("trap", "tr_portal_dungeon_teleporter") },
+        { target_max_radius = 24, distance_origin = origin })
+    local destination = found.position or services.coords.tripoint_abs_ms(0, 0, 0)
+    state.add_effect(character, "effect_portal_dungeon_multi_trigger_limiter", 0)
+    teleport(character, destination)
+    environment.set_trap_area(destination, "tr_portal_dungeon_teleporter", 0, false)
+end
+
+function M.next_level(character)
+    state.set("portal_dungeon_level", state.number("portal_dungeon_level") + 1)
+    state.update_map(state.point("dungeon_loc"), "portal_dungeon_cleanup")
+    local moved = state.checked(services.relocation.teleport_avatar(character, state.point("dungeon_start"), { force = true }))
+    character = moved.handle
+    if not moved.accepted then state.message(character, services.translate("Something is very wrong!")) end
+    -- The obsolete reflection-spawn condition contains empty math and always evaluates to zero.
+    require("nre_recorder").capture(character)
+    state.update_map(state.point("dungeon_loc"), "portal_dungeon")
+    state.message(character, services.translate("Weren't you just here?  It feels thicker somehow though."))
+    local mood = state.checked(services.variables.get_global_string("portal_storm_voice_mood")).value or "none"
+    snippet(character, mood)
+end
+
+local function trigger_vortex(payload)
+    if not payload.creature or payload.creature.subtype ~= "avatar" then return nil end
+    -- Consume the captured trap before travel; its original map must own cleanup.
     local origin = services.coords.tripoint_abs_ms(payload.position.x, payload.position.y, payload.position.z)
     environment.set_trap_area(origin, "tr_null", 0, false)
     -- Native trap inheritance appends the dungeon action after the base vortex.
     local vortex = state.checked(services.relocation.teleport_character(payload.creature, state.point("nether_dungeon_door")))
     if vortex.accepted then state.message(vortex.handle, services.translate("How did you get here?")) end
-    M.enter(vortex.handle)
+    return vortex.handle
+end
+
+ccb.runtime.handler("portal_dungeon_entrance_trigger", function(payload)
+    local character = trigger_vortex(payload)
+    if not character then return false end
+    M.enter(character)
     return true
 end)
 local entrance = ccb.content.Trap {
@@ -155,5 +191,35 @@ local entrance = ccb.content.Trap {
 entrance:flag("UNDODGEABLE")
 entrance:flag("AVATAR_ONLY")
 ccb.content.add(entrance:on_trigger("portal_dungeon_entrance_trigger"))
+
+ccb.runtime.handler("portal_dungeon_teleporter_trigger", function(payload)
+    local character = trigger_vortex(payload)
+    if not character then return false end
+    M.teleport(character)
+    return true
+end)
+local teleporter = ccb.content.Trap {
+    id = "tr_portal_dungeon_teleporter", name = ccb.content.text("elsewhere"),
+    color = "green", symbol = "#", visibility = -1, avoidance = 99, difficulty = 99,
+    trap_radius = 0, action = "none",
+}
+teleporter:flag("UNDODGEABLE")
+teleporter:flag("AVATAR_ONLY")
+ccb.content.add(teleporter:on_trigger("portal_dungeon_teleporter_trigger"))
+
+ccb.runtime.handler("portal_dungeon_next_level_trigger", function(payload)
+    local character = trigger_vortex(payload)
+    if not character then return false end
+    M.next_level(character)
+    return true
+end)
+local next_level = ccb.content.Trap {
+    id = "tr_portal_dungeon_next_level", name = ccb.content.text("swirling vortex"),
+    color = "blue", symbol = "#", visibility = -1, avoidance = 99, difficulty = 99,
+    trap_radius = 2, action = "none",
+}
+next_level:flag("UNDODGEABLE")
+next_level:flag("AVATAR_ONLY")
+ccb.content.add(next_level:on_trigger("portal_dungeon_next_level_trigger"))
 
 return M

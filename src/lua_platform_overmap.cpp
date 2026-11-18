@@ -215,6 +215,8 @@ struct overmap_target_options {
     int min_distance = 0;
     std::optional<int> z;
     std::optional<tripoint_rel_omt> offset;
+    std::optional<overmap_special_id> special;
+    bool create_special = false;
 };
 
 struct overmap_search_options {
@@ -605,6 +607,17 @@ overmap_target_options read_overmap_target_options(
         if( key == "random" ) {
             result.random = require_boolean(
                                 entry.second, api_name, key );
+        } else if( key == "special" ) {
+            if( !entry.second.is<script_game_id>() ) {
+                throw std::invalid_argument( api_name + " option 'special' requires GameId<overmap_special>" );
+            }
+            const script_game_id &id = entry.second.as<const script_game_id &>();
+            if( id.kind() != "overmap_special" || !id.is_valid() ) {
+                throw std::invalid_argument( api_name + " option 'special' requires GameId<overmap_special>" );
+            }
+            result.special = overmap_special_id( id.value() );
+        } else if( key == "create_special" ) {
+            result.create_special = require_boolean( entry.second, api_name, key );
         } else if( key == "search_range" ) {
             result.search_range = require_native_int(
                                       entry.second, api_name, key );
@@ -633,6 +646,9 @@ overmap_target_options read_overmap_target_options(
             throw std::invalid_argument(
                 std::string( api_name ).append( " received unknown option '" ).append( key ).append( "'" ) );
         }
+    }
+    if( result.create_special && !result.special ) {
+        throw std::invalid_argument( api_name + " option 'create_special' requires 'special'" );
     }
     return result;
 }
@@ -1308,18 +1324,33 @@ script_tripoint_coord overmap_find_target(
         params.search_range = options.search_range;
         params.min_distance = options.min_distance;
         params.existing_only = true;
+        params.om_special = options.special;
 
         const auto find = [&]() {
             return options.random ?
                    overmap_buffer.find_random( search_origin, params ) :
                    overmap_buffer.find_closest( search_origin, params );
         };
-        target = find();
-        if( target.is_invalid() ) {
-            // The native non-existing-only search can generate overmaps.
-            require_write();
-            params.existing_only = false;
-            target = find();
+        if( options.special && overmap_buffer.contains_unique_special( *options.special ) ) {
+            target = overmap_buffer.find_existing_globally_unique( search_origin, params );
+        } else {
+            const auto find_or_place = [&]() {
+                tripoint_abs_omt position = find();
+                if( position.is_invalid() && options.create_special ) {
+                    require_write();
+                    if( overmap_buffer.place_special( *options.special, search_origin, options.search_range ) ) {
+                        position = overmap_buffer.find_closest( search_origin, params );
+                    }
+                }
+                return position;
+            };
+            target = find_or_place();
+            if( target.is_invalid() ) {
+                // The native non-existing-only search can generate overmaps.
+                require_write();
+                params.existing_only = false;
+                target = find_or_place();
+            }
         }
         if( target.is_invalid() ) {
             target = search_origin;

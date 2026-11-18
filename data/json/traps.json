@@ -1009,21 +1009,6 @@
   },
   {
     "type": "trap",
-    "id": "tr_portal_dungeon_teleporter",
-    "name": "elsewhere",
-    "copy-from": "tr_swirling_vortex",
-    "trap_radius": 0,
-    "eocs": [ "EOC_PORTAL_STORM_DUNGEON_TELEPORTER" ]
-  },
-  {
-    "type": "trap",
-    "id": "tr_portal_dungeon_next_level",
-    "color": "blue",
-    "copy-from": "tr_swirling_vortex",
-    "eocs": [ "EOC_PORTAL_STORM_DUNGEON_NEXT_LEVEL" ]
-  },
-  {
-    "type": "trap",
     "id": "tr_teeth",
     "name": "scattered monster teeth",
     "color": "light_cyan",
