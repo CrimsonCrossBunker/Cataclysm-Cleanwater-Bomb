@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:da921e0c5d1e5e7fa444ac5c0064e08c941b17f117414529ef91dabdc449b3df",
+    "source_fingerprint": "sha256:a172cec205602b6edd9124e597354bf9ac9f8fcd6d9ff7e0fbbf225e1906ae1f",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -29,8 +29,8 @@
       "wound_fix"
     ],
     "observed_not_registered": [],
-    "tracked_json_files": 6879,
-    "top_level_objects": 97818,
+    "tracked_json_files": 6883,
+    "top_level_objects": 97860,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -113,7 +113,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 15337,
+        "occurrences": 15339,
         "examples": [
           {
             "path": "data/json/artifact/artifact_item_types.json",
@@ -4273,7 +4273,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 629,
+        "occurrences": 631,
         "examples": [
           {
             "path": "data/json/harvest.json",
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2738,
+        "occurrences": 2760,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -9923,7 +9923,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 1791,
+        "occurrences": 1807,
         "examples": [
           {
             "path": "data/json/furniture_and_terrain/LIXA_furniture_and_terrain.json",

@@ -1,0 +1,212 @@
+[
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_sequoia",
+    "copy-from": "forest_thick",
+    "looks_like": "forest_thick",
+    "name": "giant sequoia grove",
+    "sym": "F",
+    "color": "green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_redwood",
+    "copy-from": "forest_thick",
+    "looks_like": "forest_thick",
+    "name": "coast redwood forest",
+    "sym": "F",
+    "color": "green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_dismal_swamp",
+    "copy-from": "forest_water",
+    "looks_like": "forest_water",
+    "name": "Great Dismal Swamp peat forest",
+    "sym": "F",
+    "color": "cyan",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_canyon",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Grand Canyon dry canyonland",
+    "sym": "^",
+    "color": "light_red"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_canyon_rim",
+    "copy-from": "forest",
+    "looks_like": "forest",
+    "name": "Grand Canyon rim woodland",
+    "sym": "F",
+    "color": "light_green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_badlands",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "eroded badlands",
+    "sym": "^",
+    "color": "brown"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_tundra",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Arctic tundra",
+    "sym": ".",
+    "color": "light_cyan"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_peatland",
+    "copy-from": "forest_water",
+    "looks_like": "forest_water",
+    "name": "Hudson Bay peatland",
+    "sym": "F",
+    "color": "cyan",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_zacaton",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Mexican high mountain zacaton grassland",
+    "sym": "^",
+    "color": "yellow"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_mexican_treeline",
+    "copy-from": "forest",
+    "looks_like": "forest",
+    "name": "Hartweg's pine treeline",
+    "sym": "F",
+    "color": "light_green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_alpine",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "alpine fellfield",
+    "sym": "^",
+    "color": "light_gray"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_subalpine",
+    "copy-from": "forest",
+    "looks_like": "forest",
+    "name": "subalpine woodland and meadow",
+    "sym": "F",
+    "color": "light_green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_pacific_rainforest",
+    "copy-from": "forest_thick",
+    "looks_like": "forest_thick",
+    "name": "Pacific temperate rainforest",
+    "sym": "F",
+    "color": "green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_mojave",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Mojave Desert scrub",
+    "sym": ".",
+    "color": "yellow"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_sonoran",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Sonoran cactus scrub",
+    "sym": ".",
+    "color": "yellow"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_chihuahuan",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Chihuahuan desert grass and scrub",
+    "sym": ".",
+    "color": "brown"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_great_basin",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "Great Basin sagebrush steppe",
+    "sym": ".",
+    "color": "brown"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_chaparral",
+    "copy-from": "field",
+    "looks_like": "field",
+    "name": "California chaparral",
+    "sym": ".",
+    "color": "light_green"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_pocosin",
+    "copy-from": "forest_water",
+    "looks_like": "forest_water",
+    "name": "Atlantic Coastal Plain pocosin",
+    "sym": "F",
+    "color": "cyan",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_oyamel",
+    "copy-from": "forest_thick",
+    "looks_like": "forest_thick",
+    "name": "oyamel fir forest",
+    "sym": "F",
+    "color": "green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_cloud_forest",
+    "copy-from": "forest_thick",
+    "looks_like": "forest_thick",
+    "name": "Mexican montane cloud forest",
+    "sym": "F",
+    "color": "green",
+    "mapgen": [ { "builtin": "forest" } ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": "na_biome_sawgrass",
+    "copy-from": "forest_water",
+    "looks_like": "forest_water",
+    "name": "Everglades sawgrass marsh",
+    "sym": "~",
+    "color": "cyan",
+    "mapgen": [ { "builtin": "forest" } ]
+  }
+]

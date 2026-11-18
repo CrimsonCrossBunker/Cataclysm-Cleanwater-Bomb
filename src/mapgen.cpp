@@ -6944,7 +6944,8 @@ void map::draw_map( mapgendata &dat )
     const oter_id &terrain_type = dat.terrain_type();
     const std::string function_key = terrain_type->get_mapgen_id();
 
-    if( !north_america::draw_mapped_road( dat ) &&
+    if( !north_america::draw_native_habitat( dat ) &&
+        !north_america::draw_mapped_road( dat ) &&
         !run_mapgen_func( function_key, dat ) &&
         !cata::lua_platform::dispatch_mapgen_generate( dat ) ) {
         debugmsg( "Error: tried to generate map for omtype %s, \"%s\" (id_mapgen %s)",

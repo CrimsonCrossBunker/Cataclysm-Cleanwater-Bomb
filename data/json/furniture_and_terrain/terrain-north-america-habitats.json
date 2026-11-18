@@ -1,0 +1,164 @@
+[
+  {
+    "type": "terrain",
+    "id": "t_tree_giant_sequoia",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_douglas_fir",
+    "name": "giant sequoia",
+    "description": "A massive Sierra Nevada conifer with thick reddish bark."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_coast_redwood",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_douglas_fir",
+    "name": "coast redwood",
+    "description": "A tall redwood with a straight trunk and fern-covered ground around it."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_atlantic_white_cedar",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_western_redcedar",
+    "name": "Atlantic white cedar",
+    "description": "An evergreen with scaly foliage, growing in wet coastal peat."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_red_maple",
+    "copy-from": "t_north_america_tree",
+    "looks_like": "t_tree_maple",
+    "name": "red maple",
+    "description": "A red maple growing in the waterlogged soil of an eastern swamp."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_joshua_tree",
+    "copy-from": "t_north_america_tree",
+    "looks_like": "t_tree",
+    "name": "Joshua tree",
+    "description": "A branching yucca with tufts of spiny leaves."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_pond_pine",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_pine",
+    "name": "pond pine",
+    "description": "An irregular pine with persistent cones, rooted in acidic wet soil."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_oyamel",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_subalpine_fir",
+    "name": "oyamel fir",
+    "description": "A tall Mexican fir with flat needles and upright cones."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_hartweg_pine",
+    "copy-from": "t_north_america_conifer",
+    "looks_like": "t_tree_pine",
+    "name": "Hartweg's pine",
+    "description": "A high mountain pine with needles bundled on its rough branches."
+  },
+  {
+    "type": "terrain",
+    "id": "t_tree_mexican_sweetgum",
+    "copy-from": "t_north_america_tree",
+    "looks_like": "t_tree",
+    "name": "Mexican sweetgum",
+    "description": "A tall broadleaf tree with star-shaped leaves in the mountain mist."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_arctic_heather",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "Arctic bell-heather",
+    "description": "A low mat of evergreen foliage and tiny bell-shaped flowers."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_zacaton",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_grass_tall",
+    "name": "zacaton tussock",
+    "description": "A dense tuft of wiry grass growing near the mountain treeline."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_sawgrass",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_grass_tall",
+    "name": "sawgrass clump",
+    "description": "A tall sedge with rough-edged leaves in shallow marshes."
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_cloudberry",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "cloudberry patch",
+    "description": "A low patch of cloudberry plants.",
+    "transforms_into": "t_shrub_cloudberry_harvested",
+    "examine_action": "harvest_ter_nectar",
+    "fruit_climate": {
+      "harvest": "atlas_cloudberry_harvest",
+      "growth": {
+        "base_c": 3,
+        "optimum_c": 17,
+        "min_c": -7,
+        "max_c": 31,
+        "degree_days": 390,
+        "water_mm": 145,
+        "growing_days": 62,
+        "water_peak": 0.5
+      },
+      "bearing_days": 25
+    }
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_cloudberry_harvested",
+    "copy-from": "t_shrub_cloudberry",
+    "looks_like": "t_shrub_cloudberry",
+    "extend": { "flags": [ "HARVESTED" ] },
+    "transforms_into": "t_shrub_cloudberry",
+    "examine_action": "harvested_plant"
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_lingonberry",
+    "copy-from": "t_north_america_shrub",
+    "looks_like": "t_shrub",
+    "name": "lingonberry patch",
+    "description": "A low patch of lingonberry plants.",
+    "transforms_into": "t_shrub_lingonberry_harvested",
+    "examine_action": "harvest_ter_nectar",
+    "fruit_climate": {
+      "harvest": "atlas_lingonberry_harvest",
+      "growth": {
+        "base_c": 3.5,
+        "optimum_c": 19,
+        "min_c": -6,
+        "max_c": 32,
+        "degree_days": 440,
+        "water_mm": 155,
+        "growing_days": 70,
+        "water_peak": 0.52
+      },
+      "bearing_days": 35
+    }
+  },
+  {
+    "type": "terrain",
+    "id": "t_shrub_lingonberry_harvested",
+    "copy-from": "t_shrub_lingonberry",
+    "looks_like": "t_shrub_lingonberry",
+    "extend": { "flags": [ "HARVESTED" ] },
+    "transforms_into": "t_shrub_lingonberry",
+    "examine_action": "harvested_plant"
+  }
+]
