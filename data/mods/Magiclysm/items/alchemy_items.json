@@ -121,32 +121,6 @@
     "stack_size": 10
   },
   {
-    "id": "alchemist_bomb",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "mana bomb" },
-    "description": "Mana bombs are powerful explosive devices developed by a little-known alchemist group for use against enemy spellcasters.  These bombs are fueled by pure arcane energy and can kill instantly.  The exact workings are unclear, but they appear to use some kind of massive mana burn.",
-    "weight": "430 g",
-    "volume": "200 ml",
-    "price": "20 USD",
-    "price_postapoc": "5 USD 50 cent",
-    "to_hit": -1,
-    "material": [ "crystallized_mana", "concentrated_mana" ],
-    "symbol": "*",
-    "color": "green",
-    "use_action": {
-      "need_wielding": true,
-      "target": "alchemist_bomb_act",
-      "msg": "You mix the contents of the bottle, and it starts to sizzle.",
-      "target_timer": "8 seconds",
-      "menu_text": "Mix liquid",
-      "type": "transform"
-    },
-    "flags": [ "BOMB", "GRENADE" ],
-    "melee_damage": { "bash": 14 }
-  },
-  {
     "id": "alchemist_bomb_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

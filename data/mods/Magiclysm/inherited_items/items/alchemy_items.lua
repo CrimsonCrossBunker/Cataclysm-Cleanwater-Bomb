@@ -76,3 +76,35 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "alchemist_bomb",
+        category = "weapons",
+        name = ccb.content.plural_text("mana bomb", "mana bombs"),
+        description = ccb.content.text("Mana bombs are powerful explosive devices developed by a little-known alchemist group for use against enemy spellcasters.  These bombs are fueled by pure arcane energy and can kill instantly.  The exact workings are unclear, but they appear to use some kind of massive mana burn."),
+        mass_milligrams = 430000,
+        volume_ml = 200,
+        price_cents = 2000,
+        price_postapoc_cents = 550,
+        melee_to_hit = -1,
+        symbol = "*",
+        color = "green",
+    }
+    item:material("crystallized_mana", 1)
+    item:material("concentrated_mana", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "alchemist_bomb_act", timer_turns = 8 },
+        need_wielding = true,
+        message = ccb.content.text("You mix the contents of the bottle, and it starts to sizzle."),
+        menu_text = ccb.content.text("Mix liquid"),
+    }
+    item:clear_flags()
+    item:flag("BOMB")
+    item:flag("GRENADE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:tool()
+    content.add(item)
+end
