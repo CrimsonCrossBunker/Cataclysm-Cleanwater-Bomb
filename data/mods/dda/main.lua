@@ -448,3 +448,5 @@ require("practice_recipes.practice_survival")
 require("practice_recipes.practice_tailoring")
 
 require("craft_recipes.recipe_companion")
+
+require("activity_types")
