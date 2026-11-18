@@ -19,21 +19,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_difficulty_DEFAULTS",
-    "effect": [
-      {
-        "u_message": "All difficulty settings set to default.  You can speak to the Heart of the Island to change these at any time."
-      },
-      { "math": [ "sicknessintervals = time('15 minutes')" ] },
-      { "math": [ "roomteleportselector = 1" ] },
-      { "math": [ "u_spell_level('warp_home') = -1" ] },
-      { "math": [ "u_spell_level('warped_return') = -1" ] },
-      { "u_learn_recipe": "warp_skyward_beacon" },
-      { "math": [ "has_set_difficulty = 1" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_difficulty0",
     "effect": [
       { "u_message": "Difficulty set to Casual.  You can speak to the Heart of the Island to change this at any time." },

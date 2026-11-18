@@ -98,6 +98,16 @@ local function recipe(character, name, learn)
     end
 end
 
+function M.defaults(character)
+    state.message(character, services.translate("All difficulty settings set to default.  You can speak to the Heart of the Island to change these at any time."))
+    state.set("sicknessintervals", 15 * 60)
+    state.set("roomteleportselector", 1)
+    spell_level(character, "warp_home", -1)
+    spell_level(character, "warped_return", -1)
+    recipe(character, "warp_skyward_beacon", true)
+    state.set("has_set_difficulty", 1)
+end
+
 function M.configure(character)
     local pulse = choose(character, menus.pulse)
     if not pulse then return end

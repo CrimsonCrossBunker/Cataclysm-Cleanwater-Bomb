@@ -2537,7 +2537,7 @@ function CharacterModifierDefinition:evaluate_with(handler_id) end
 
 ---@class StartLocationDefinitionOptions
 ---@field id string Stable start-location id.
----@field name string Player-facing location name.
+---@field name string|LocalizedText Player-facing location name. Plain strings remain literal; content.text retains native translation.
 
 ---@class StartLocationTerrainOptions
 ---@field match? 'exact'|'type'|'subtype'|'prefix'|'contains' Native overmap-terrain matching mode; defaults to type.

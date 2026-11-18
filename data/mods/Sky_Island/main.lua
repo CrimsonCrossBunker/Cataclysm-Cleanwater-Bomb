@@ -35,3 +35,5 @@ require("recipes")
 if require("ccb").content.is_mod_active("magiclysm") then
     require("recipes_magiclysm")
 end
+
+require("island_start")

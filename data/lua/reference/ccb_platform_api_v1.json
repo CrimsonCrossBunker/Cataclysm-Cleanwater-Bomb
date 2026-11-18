@@ -23312,7 +23312,7 @@
           {
             "line": 2540,
             "name": "name",
-            "type": "string"
+            "type": "string|LocalizedText"
           }
         ],
         "name": "StartLocationDefinitionOptions"

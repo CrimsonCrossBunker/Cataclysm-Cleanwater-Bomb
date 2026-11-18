@@ -687,7 +687,7 @@ struct start_location_target_definition_data {
 
 struct start_location_definition_data {
     std::string id;
-    std::string name;
+    detail::authored_text name;
     std::vector<start_location_target_definition_data> targets;
     std::set<std::string> flags;
     std::int64_t city_size_min = 0;
@@ -4407,7 +4407,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<start_location_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
+        definition->name = detail::read_singular_text(
+                               options.get<sol::object>( "name" ), {}, "start location name" );
         return start_location_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -8311,7 +8312,7 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native._name = no_translation( source.name );
+            native._name = source.name.native();
             native._flags = source.flags;
             native.constraints_.city_size = {
                 static_cast<int>( source.city_size_min ),
@@ -11476,7 +11477,12 @@ std::string content_transaction::fingerprint() const
         hash_part( state, operation_name( entry.operation ) );
         const start_location_definition_data &value = *entry.definition;
         hash_part( state, value.id );
-        hash_part( state, value.name );
+        hash_part( state, value.name.raw );
+        if( value.name.translated ) {
+            hash_part( state, "translated_start_location_name" );
+            hash_part( state, value.name.translated->context ? "context" : "no_context" );
+            hash_part( state, value.name.translated->context.value_or( "" ) );
+        }
         for( const start_location_target_definition_data &target : value.targets ) {
             hash_part( state, target.terrain );
             hash_part( state, target.match );
