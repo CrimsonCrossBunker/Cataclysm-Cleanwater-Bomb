@@ -53,7 +53,8 @@ class scoped_regional_loot
         const regional_loot_table *previous;
 };
 
-const item_group_id &regional_item_group( const item_group_id &base );
+// The override is owned by the regional table; nullptr means to keep the original group.
+const item_group_id *regional_item_group( const item_group_id &base );
 const std::string &civic_flag_variant();
 // The caller can include a border to make shoreline classification independent of generation order.
 std::vector<terrain> raster( point_abs_omt origin, int width, int height, int stride = 1,

@@ -471,15 +471,15 @@ scoped_regional_loot::~scoped_regional_loot()
     current_loot_table = previous;
 }
 
-const item_group_id &regional_item_group( const item_group_id &base )
+const item_group_id *regional_item_group( const item_group_id &base )
 {
     if( current_loot_table ) {
         const auto found = current_loot_table->groups.find( base );
         if( found != current_loot_table->groups.end() ) {
-            return found->second;
+            return &found->second;
         }
     }
-    return base;
+    return nullptr;
 }
 
 const std::string &civic_flag_variant()
