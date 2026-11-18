@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_grit_your_teeth_cooldown",
-    "//": "No name or description to hide effect",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "rating": "bad"
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_GRIT_YOUR_TEETH",
     "condition": { "not": { "u_has_effect": "effect_perk_grit_your_teeth_cooldown" } },

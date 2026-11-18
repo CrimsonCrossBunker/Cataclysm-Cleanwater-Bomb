@@ -1,16 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_twice_shy",
-    "name": [ "Twice Shy" ],
-    "desc": [ "That first time really smarts.  +2 effective dodge, +1 dodge attempt." ],
-    "rating": "good",
-    "int_dur_factor": "1 s",
-    "max_duration": "5 s",
-    "show_in_info": true,
-    "enchantments": [ "INLINE_ENCH_effect_perk_twice_shy_0" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_TWICE_SHY_TAKE_DAMAGE",
     "eoc_type": "EVENT",

@@ -10,14 +10,6 @@
     "effect": [ { "u_remove_item_with": "perk_safety_squint_integrated_goggles" } ]
   },
   {
-    "type": "effect_type",
-    "id": "effect_perk_safety_squint_reduced_vision",
-    "//": "Hidden effect",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "flags": [ "MYOPIC_SUPERNATURAL" ]
-  },
-  {
     "id": "perk_safety_squint_integrated_goggles",
     "copy-from": "goggles_welding",
     "looks_like": "integrated_ierde_eyes",

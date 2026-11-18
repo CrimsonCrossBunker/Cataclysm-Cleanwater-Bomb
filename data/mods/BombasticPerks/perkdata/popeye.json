@@ -28,15 +28,5 @@
     "shape": "blast",
     "effect": "attack",
     "effect_str": "spinach_strength"
-  },
-  {
-    "type": "effect_type",
-    "id": "spinach_strength",
-    "name": [ "Strength of Spinach" ],
-    "desc": [ "You have the strength of a sailor!" ],
-    "apply_message": "You feel strong!",
-    "remove_message": "Your strength deflates.",
-    "rating": "good",
-    "enchantments": [ "INLINE_ENCH_spinach_strength_0" ]
   }
 ]

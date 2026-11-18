@@ -1,31 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_closetland_sleepiness",
-    "name": [ "Soporific Atmosphere" ],
-    "desc": [ "Being here is making you very sleepy, but you feel that falling asleep would be a very, very bad idea." ],
-    "apply_message": "You yawn as you step through the hidden path.  Best to make your stay here brief.",
-    "rating": "bad",
-    "enchantments": [
-      "INLINE_ENCH_effect_perk_closetland_sleepiness_0"
-    ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_closetland_temp_levitation",
-    "//": "Hidden effect, prevents you from dying by falling as soon as you shift to a new dimension",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "flags": [ "LEVITATION" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_bombastic_escaped_closetland",
-    "//": "Hidden effect, used as a tracker",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_BOMBASTIC_PERKS_CLOSET_STORAGE_TRAVEL_TO_CLOSETLAND",
     "//": "Searching for individual furniture IDs isn't great, but there's no obvious flag to check for.",

@@ -1,12 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_hive_queen_canceller",
-    "//": "Hidden effect, cancels Hive Queen briefly",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
     "type": "mutation",
     "id": "TRAIT_HIVE_QUEEN",
     "name": { "str": "Insect Ignoring", "//~": "NO_I18N" },

@@ -11,6 +11,7 @@ require("snippets")
 require("conditional_enchantments")
 
 require("effect_enchantments")
+require("perk_effects")
 
 require("mutation_enchantments")
 

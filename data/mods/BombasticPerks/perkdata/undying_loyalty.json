@@ -35,24 +35,5 @@
     "max_duration": 6000,
     "min_aoe": 15,
     "max_aoe": 15
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_undying_loyalty_self",
-    "//": "No name or description to hide effect",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "rating": "bad"
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_undying_loyalty",
-    "name": [ "Undying Loyalty" ],
-    "desc": [ "You'll protect your allies no matter the cost." ],
-    "apply_message": "",
-    "rating": "good",
-    "show_in_info": true,
-    "max_duration": "1 minutes",
-    "enchantments": [ "INLINE_ENCH_effect_perk_undying_loyalty_0" ]
   }
 ]

@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_vengeful",
-    "rating": "good",
-    "int_dur_factor": "1 s",
-    "max_duration": "2 s",
-    "show_in_info": true
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_VENGEFUL_TAKE_DAMAGE",
     "eoc_type": "EVENT",

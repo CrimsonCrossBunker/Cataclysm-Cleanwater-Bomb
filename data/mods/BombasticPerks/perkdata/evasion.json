@@ -1,20 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_situational_uncanny_dodge_remover",
-    "//": "Hidden effect, turns off Uncanny Dodge when you get hit",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_situational_uncanny_dodge",
-    "//": "Hidden effect, gives you Uncanny Dodge",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "flags": [ "UNCANNY_DODGE" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_SITUATIONAL_UNCANNY_DODGE_TAKE_DAMAGE",
     "eoc_type": "EVENT",

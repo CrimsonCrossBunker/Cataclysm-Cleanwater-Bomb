@@ -8,17 +8,6 @@
     "effect": [ { "u_add_effect": "effect_perk_percussive_entry", "duration": 2 } ]
   },
   {
-    "type": "effect_type",
-    "id": "effect_perk_percussive_entry",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "max_intensity": 100,
-    "int_add_val": 3,
-    "enchantments": [
-      "INLINE_ENCH_effect_perk_percussive_entry_0"
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_PERCUSSIVE_ENTRY_LOSE_BONUS_WHEN_MOVING",
     "eoc_type": "EVENT",

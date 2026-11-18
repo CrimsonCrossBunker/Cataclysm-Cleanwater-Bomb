@@ -1,19 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_second_wind_cooldown",
-    "//": "Hidden effect",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_second_wind_currently_active",
-    "//": "Hidden effect",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_perk_second_wind",
     "condition": { "not": { "u_has_effect": "effect_perk_second_wind_cooldown" } },

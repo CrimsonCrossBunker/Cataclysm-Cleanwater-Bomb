@@ -1,41 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_moonstruck_full",
-    "name": [ "Moonstruck: Full Moon" ],
-    "desc": [ "Under the clear light of the full moon, you have unlocked your greatest potential." ],
-    "apply_message": "",
-    "rating": "good",
-    "max_duration": "1 days",
-    "enchantments": [
-      "INLINE_ENCH_effect_perk_moonstruck_full_0"
-    ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_moonstruck_waxing",
-    "name": [ "Moonstruck: Waxing Moon" ],
-    "desc": [ "The silver light of the waxing moon enhances your prowess." ],
-    "apply_message": "",
-    "rating": "good",
-    "max_duration": "1 days",
-    "enchantments": [
-      "INLINE_ENCH_effect_perk_moonstruck_waxing_0"
-    ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_moonstruck_new",
-    "name": [ "Moonstruck: New Moon" ],
-    "desc": [ "In the dark of the moon, you feel your vital essence weaken." ],
-    "apply_message": "",
-    "rating": "bad",
-    "max_duration": "1 days",
-    "enchantments": [
-      "INLINE_ENCH_effect_perk_moonstruck_new_0"
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_MOONSTRUCK",
     "recurrence": [ "1 hours", "1 hours" ],
