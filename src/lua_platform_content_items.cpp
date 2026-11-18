@@ -68,6 +68,7 @@ extern "C" {
 #include "item_category.h"
 #include "item_factory.h"
 #include "item_group.h"
+#include "item_transformation.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
@@ -216,6 +217,94 @@ void apply_item_adjustment( units::quantity<V, U> &current,
     }
 }
 
+int item_option_int( const std::int64_t value, const char *field )
+{
+    if( value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument( std::string( field ) + " exceeds the native item integer range" );
+    }
+    return static_cast<int>( value );
+}
+
+float item_option_float( const sol::table &options, const char *field, double fallback )
+{
+    const double value = options.get_or<double>( field, fallback );
+    if( !std::isfinite( value ) || std::abs( value ) > std::numeric_limits<float>::max() ) {
+        throw std::invalid_argument( std::string( field ) + " exceeds the native item number range" );
+    }
+    return static_cast<float>( value );
+}
+
+item_transformation read_item_transformation( const sol::table &options )
+{
+    item_transformation result;
+    result.target = itype_id( options.get_or( "target", std::string() ) );
+    result.target_group = item_group_id( options.get_or( "target_group", std::string() ) );
+    result.container = itype_id( options.get_or( "container", std::string() ) );
+    result.ammo_type = itype_id( options.get_or( "ammo_type", std::string() ) );
+    result.variant_type = options.get_or( "variant", std::string( "<any>" ) );
+    result.sealed = options.get_or( "sealed", true );
+    const auto charges = options.get<sol::optional<std::int64_t>>( "charges" );
+    if( charges ) {
+        result.ammo_qty = item_option_int( *charges, "transformation charges" );
+    }
+    if( const auto range = options.get<sol::optional<sol::table>>( "random_charges" ) ) {
+        if( charges ) {
+            throw std::invalid_argument( "item transformation cannot specify fixed and random charges" );
+        }
+        const std::size_t count = require_dense_array( *range, "transformation random charges", 2 );
+        result.random_ammo_qty.reserve( count );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            result.random_ammo_qty.push_back( item_option_int( range->raw_get<std::int64_t>( i ),
+                                              "transformation random charges" ) );
+        }
+    }
+    const int timer = item_option_int( options.get_or<std::int64_t>( "timer_turns", 0 ),
+                                      "transformation timer" );
+    if( result.target.is_empty() == result.target_group.is_empty() ||
+        ( !result.container.is_empty() && ( !result.ammo_type.is_empty() || result.target.is_empty() ) ) ||
+        timer < 0 ) {
+        throw std::invalid_argument( "invalid item transformation target, packaging, ammunition or timer" );
+    }
+    result.target_timer = time_duration::from_turns( timer );
+    return result;
+}
+
+struct item_transform_action {
+    item_transformation result;
+    authored_text message;
+    authored_text menu_text;
+    authored_text not_ready;
+    std::optional<int> minimum_age;
+    int moves = 0;
+    bool need_empty = false;
+    bool need_wielding = false;
+    bool need_worn = false;
+};
+
+std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_action &action )
+{
+    std::unique_ptr<iuse_transform> actor;
+    if( action.minimum_age ) {
+        auto delayed = std::make_unique<delayed_transform_iuse>();
+        delayed->transform_age = *action.minimum_age;
+        delayed->not_ready_msg = action.not_ready.native();
+        actor = std::move( delayed );
+    } else {
+        actor = std::make_unique<iuse_transform>();
+    }
+    actor->transform = action.result;
+    actor->msg_transform = action.message.native();
+    actor->menu_text = action.menu_text.native();
+    actor->moves = action.moves;
+    actor->need_empty = action.need_empty;
+    actor->need_wielding = action.need_wielding;
+    actor->need_worn = action.need_worn;
+    actor->damage_failure_msg = to_translation( "Activation of your damaged %s fails." );
+    actor->need_charges_msg = to_translation( "The %s is empty!" );
+    actor->need_fire_msg = to_translation( "You need a source of fire!" );
+    return actor;
+}
+
 struct item_definition_data {
     struct tool_data {
         std::optional<std::set<std::string>> ammo_types;
@@ -238,12 +327,6 @@ struct item_definition_data {
         std::set<std::string> materials;
         double material_thickness = 0.0;
         std::int64_t environmental_protection = 0;
-    };
-    struct healing_data {
-        std::int64_t move_cost = 0;
-        double limb_power = 0.0;
-        std::optional<double> head_power;
-        std::optional<double> torso_power;
     };
     struct activation_effect_data {
         std::string id;
@@ -381,7 +464,13 @@ struct item_definition_data {
     std::optional<map_reveal> reveal_map;
     std::set<std::string> native_use_actions;
     std::string capture_size;
-    std::optional<healing_data> healing;
+    std::optional<heal_actor> healing;
+    std::optional<cast_spell_actor> spell_use;
+    itype_id assembled_belt;
+    std::optional<item_transform_action> transform_use;
+    std::optional<item_transform_action> delayed_transform_use;
+    std::optional<item_transformation> transform_result;
+    std::optional<time_duration> countdown_interval;
     std::optional<activation_data> activation;
     std::vector<std::string> learned_spells;
     bool martial_arts_manual = false;
@@ -1636,12 +1725,110 @@ struct item_definition_handle {
 
     item_definition_handle &heal( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
-        item_definition_data::healing_data value;
-        value.move_cost = options.get<std::int64_t>( "move_cost" );
-        value.limb_power = options.get_or( "limb_power", 0.0 );
-        value.head_power = options.get<std::optional<double>>( "head_power" );
-        value.torso_power = options.get<std::optional<double>>( "torso_power" );
-        definition->healing = std::move( value );
+        heal_actor treatment;
+        treatment.move_cost = item_option_int( options.get<std::int64_t>( "move_cost" ), "healing move cost" );
+        treatment.limb_power = item_option_float( options, "limb_power", 0.0 );
+        treatment.head_power = item_option_float( options, "head_power", 0.8f * treatment.limb_power );
+        treatment.torso_power = item_option_float( options, "torso_power", 1.5f * treatment.limb_power );
+        treatment.limb_scaling = item_option_float( options, "limb_scaling", 0.25f * treatment.limb_power );
+        const double ratio = treatment.limb_power < 0.0001f ? 0.0 :
+                             static_cast<double>( treatment.limb_scaling / treatment.limb_power );
+        treatment.head_scaling = item_option_float( options, "head_scaling", ratio * treatment.head_power );
+        treatment.torso_scaling = item_option_float( options, "torso_scaling", ratio * treatment.torso_power );
+        treatment.bandages_power = item_option_float( options, "bandages_power", 0.0 );
+        treatment.bandages_scaling = item_option_float( options, "bandages_scaling",
+                                     0.25f * treatment.bandages_power );
+        treatment.disinfectant_power = item_option_float( options, "disinfectant_power", 0.0 );
+        treatment.disinfectant_scaling = item_option_float( options, "disinfectant_scaling",
+                                         0.25f * treatment.disinfectant_power );
+        treatment.bleed = item_option_int( options.get_or<std::int64_t>( "bleed", 0 ), "healing bleeding reduction" );
+        treatment.bite = item_option_float( options, "bite", 0.0 );
+        treatment.infect = item_option_float( options, "infect", 0.0 );
+        if( treatment.move_cost < 0 ||
+            !( treatment.limb_power || treatment.head_power || treatment.torso_power ||
+               treatment.bandages_power || treatment.bleed || treatment.disinfectant_power ||
+               treatment.bite || treatment.infect ) ) {
+            throw std::invalid_argument( "item healing requires a nonnegative move cost and a treatment effect" );
+        }
+        if( const auto used = options.get<sol::optional<sol::table>>( "used_up_item" ) ) {
+            const std::string id = used->get<std::string>( "id" );
+            if( id.empty() ) {
+                throw std::invalid_argument( "healing used-up item requires an id" );
+            }
+            treatment.used_up_item_id = itype_id( id );
+            treatment.used_up_item_quantity = item_option_int( used->get_or<std::int64_t>( "quantity", 1 ),
+                                              "healing used-up item quantity" );
+            treatment.used_up_item_charges = item_option_int( used->get_or<std::int64_t>( "charges", 1 ),
+                                             "healing used-up item charges" );
+            if( const auto flags = used->get<sol::optional<sol::table>>( "flags" ) ) {
+                const std::size_t count = require_dense_array( *flags, "healing used-up item flags", 0 );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    treatment.used_up_item_flags.emplace( flags->raw_get<std::string>( i ) );
+                }
+            }
+        }
+        definition->healing.emplace( std::move( treatment ) );
+        return *this;
+    }
+
+    item_definition_handle &cast_spell( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        cast_spell_actor action;
+        action.item_spell = spell_id( options.get<std::string>( "spell" ) );
+        action.spell_level = item_option_int( options.get<std::int64_t>( "level" ), "item spell level" );
+        if( action.item_spell.is_empty() ) {
+            throw std::invalid_argument( "item spell action requires a spell id" );
+        }
+        action.no_fail = options.get_or( "no_fail", false );
+        action.need_worn = options.get_or( "need_worn", false );
+        action.need_wielding = options.get_or( "need_wielding", false );
+        action.mundane = options.get_or( "mundane", false );
+        definition->spell_use.emplace( std::move( action ) );
+        return *this;
+    }
+
+    item_definition_handle &assemble_ammo_belt( const std::string &belt ) {
+        require_building_handle( token, *definition, "item" );
+        if( belt.empty() ) {
+            throw std::invalid_argument( "ammo belt assembly requires the resulting item id" );
+        }
+        definition->assembled_belt = itype_id( belt );
+        return *this;
+    }
+
+    item_definition_handle &transform_on_use( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_transform_action action;
+        action.result = read_item_transformation( options.get<sol::table>( "result" ) );
+        action.message = read_text_option( options, "message", {}, "item transform message" );
+        action.menu_text = read_text_option( options, "menu_text", {}, "item transform menu text" );
+        action.moves = item_option_int( options.get_or<std::int64_t>( "moves", 0 ), "item transform move cost" );
+        if( action.moves < 0 ) {
+            throw std::invalid_argument( "item transform move cost cannot be negative" );
+        }
+        action.need_empty = options.get_or( "need_empty", false );
+        action.need_wielding = options.get_or( "need_wielding", false );
+        action.need_worn = options.get_or( "need_worn", false );
+        if( const auto minimum_age = options.get<sol::optional<std::int64_t>>( "minimum_age_turns" ) ) {
+            action.minimum_age = item_option_int( *minimum_age, "item transform minimum age" );
+            action.not_ready = read_text_option( options, "not_ready_message", {}, "delayed transform message" );
+            if( *action.minimum_age < 0 || action.not_ready.empty() ) {
+                throw std::invalid_argument( "delayed item transform requires a nonnegative age and a message" );
+            }
+            definition->delayed_transform_use = std::move( action );
+        } else {
+            definition->transform_use = std::move( action );
+        }
+        return *this;
+    }
+
+    item_definition_handle &transform_into( const sol::table &result ) {
+        require_building_handle( token, *definition, "item" );
+        item_transformation transformation = read_item_transformation( result );
+        if( transformation.target.is_empty() ) {
+            throw std::invalid_argument( "an automatic item transformation requires a specific target" );
+        }
+        definition->transform_result = std::move( transformation );
         return *this;
     }
 
@@ -1706,6 +1893,11 @@ struct item_definition_handle {
         definition->clear_use_actions = true;
         definition->deploy_appliance.clear();
         definition->reveal_map.reset();
+        definition->healing.reset();
+        definition->spell_use.reset();
+        definition->assembled_belt = itype_id();
+        definition->transform_use.reset();
+        definition->delayed_transform_use.reset();
         definition->native_use_actions.clear();
         definition->learned_spells.clear();
         definition->martial_arts_manual = false;
@@ -3614,6 +3806,22 @@ void hash_part( std::uint64_t &state, const authored_text &text )
     }
 }
 
+void hash_item_transformation( std::uint64_t &state, const item_transformation &result )
+{
+    hash_part( state, result.target.str() );
+    hash_part( state, result.target_group.str() );
+    hash_part( state, result.container.str() );
+    hash_part( state, result.variant_type );
+    hash_part( state, result.sealed ? "sealed" : "unsealed" );
+    hash_part( state, std::to_string( result.ammo_qty ) );
+    hash_part( state, std::to_string( result.random_ammo_qty.size() ) );
+    for( const int charges : result.random_ammo_qty ) {
+        hash_part( state, std::to_string( charges ) );
+    }
+    hash_part( state, result.ammo_type.str() );
+    hash_part( state, std::to_string( to_turns<int>( result.target_timer ) ) );
+}
+
 template<typename Registration>
 bool defines_registration(
     const std::vector<Registration> &entries, const std::string_view id )
@@ -3832,6 +4040,10 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "native_use", &item_definition_handle::native_use,
         "capture_creature", &item_definition_handle::capture_creature,
         "heal", &item_definition_handle::heal,
+        "cast_spell", &item_definition_handle::cast_spell,
+        "assemble_ammo_belt", &item_definition_handle::assemble_ammo_belt,
+        "transform_on_use", &item_definition_handle::transform_on_use,
+        "transform_into", &item_definition_handle::transform_into,
         "activate_effects", &item_definition_handle::activate_effects,
         "ammo_pocket", &item_definition_handle::ammo_pocket,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
@@ -4242,6 +4454,13 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         read_optional( "max_worn", definition->max_worn );
         read_optional( "insulation", definition->insulation );
         read_optional( "expand_snippets", definition->expand_snippets );
+        if( const auto duration = options.get<sol::optional<std::int64_t>>( "countdown_turns" ) ) {
+            const int count = item_option_int( *duration, "item countdown" );
+            if( count < 0 ) {
+                throw std::invalid_argument( "item countdown cannot be negative" );
+            }
+            definition->countdown_interval = time_duration::from_turns( count );
+        }
         definition->replace_qualities = options.get_or( "replace_qualities", false );
         definition->replace_pockets = options.get_or( "replace_pockets", false );
         if( const auto display = options.get<sol::optional<std::string>>( "display_type" ) ) {
@@ -6109,16 +6328,6 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id + "' deploys unknown furniture '" +
                                           definition.deploy_furniture + "'" );
             }
-            if( definition.healing ) {
-                const auto &heal = *definition.healing;
-                const double head = heal.head_power.value_or( 0.8 * heal.limb_power );
-                const double torso = heal.torso_power.value_or( 1.5 * heal.limb_power );
-                if( heal.move_cost < 0 || !native_int( heal.move_cost ) ||
-                    !finite_native_float( heal.limb_power ) || !finite_native_float( head ) ||
-                    !finite_native_float( torso ) || ( heal.limb_power == 0.0 && head == 0.0 && torso == 0.0 ) ) {
-                    throw std::runtime_error( "item '" + definition.id + "' has invalid healing values" );
-                }
-            }
             if( definition.activation ) {
                 const auto &activation = *definition.activation;
                 if( activation.move_cost < 0 || !native_int( activation.move_cost ) ) {
@@ -7944,8 +8153,21 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->pockets.end() );
                         native->pockets.push_back( std::move( pocket ) );
                     }
+                    if( definition.countdown_interval ) {
+                        native->countdown_interval = *definition.countdown_interval;
+                    }
+                    if( definition.transform_result ) {
+                        native->transform_into = *definition.transform_result;
+                    }
                     if( definition.clear_use_actions ) {
                         native->use_methods.clear();
+                    }
+                    for( const auto *action : { &definition.transform_use, &definition.delayed_transform_use } ) {
+                        if( *action ) {
+                            auto actor = make_item_transform_actor( **action );
+                            const std::string type = actor->type;
+                            native->use_methods.insert_or_assign( type, use_function( std::move( actor ) ) );
+                        }
                     }
                     for( const std::string &action : definition.native_use_actions ) {
                         native->use_methods.insert_or_assign( action, Item_factory::usage_from_string( action ) );
@@ -7984,18 +8206,17 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                 Item_factory::usage_from_string( "CAPTURE_MONSTER_ACT" ) );
                     }
                     if( definition.healing ) {
-                        const auto &source = *definition.healing;
-                        auto actor = std::make_unique<heal_actor>();
-                        actor->move_cost = static_cast<int>( source.move_cost );
-                        actor->limb_power = static_cast<float>( source.limb_power );
-                        actor->head_power = static_cast<float>( source.head_power.value_or( 0.8f * actor->limb_power ) );
-                        actor->torso_power = static_cast<float>( source.torso_power.value_or( 1.5f * actor->limb_power ) );
-                        actor->limb_scaling = 0.25f * actor->limb_power;
-                        const double scaling_ratio = actor->limb_power < 0.0001f ? 0.0 :
-                                                     static_cast<double>( actor->limb_scaling / actor->limb_power );
-                        actor->head_scaling = static_cast<float>( scaling_ratio * actor->head_power );
-                        actor->torso_scaling = static_cast<float>( scaling_ratio * actor->torso_power );
-                        native->use_methods.insert_or_assign( "heal", use_function( std::move( actor ) ) );
+                        native->use_methods.insert_or_assign( "heal",
+                                use_function( std::make_unique<heal_actor>( *definition.healing ) ) );
+                    }
+                    if( definition.spell_use ) {
+                        native->use_methods.insert_or_assign( "cast_spell",
+                                use_function( std::make_unique<cast_spell_actor>( *definition.spell_use ) ) );
+                    }
+                    if( !definition.assembled_belt.is_empty() ) {
+                        auto actor = std::make_unique<ammobelt_actor>();
+                        actor->belt = definition.assembled_belt;
+                        native->use_methods.insert_or_assign( "ammobelt", use_function( std::move( actor ) ) );
                     }
                     if( definition.activation ) {
                         const auto &source = *definition.activation;
@@ -9766,11 +9987,63 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.deploy_furniture );
                 hash_part( state, v.capture_size );
                 if( v.healing ) {
+                    const heal_actor &heal = *v.healing;
                     hash_part( state, "heal" );
-                    hash_part( state, std::to_string( v.healing->move_cost ) );
-                    hash_part( state, std::to_string( v.healing->limb_power ) );
-                    hash_part( state, v.healing->head_power ? std::to_string( *v.healing->head_power ) : "default" );
-                    hash_part( state, v.healing->torso_power ? std::to_string( *v.healing->torso_power ) : "default" );
+                    hash_part( state, std::to_string( heal.move_cost ) );
+                    hash_part( state, std::to_string( heal.bleed ) );
+                    std::ostringstream values;
+                    values << std::hexfloat;
+                    for( float value : { heal.limb_power, heal.head_power, heal.torso_power,
+                                         heal.limb_scaling, heal.head_scaling, heal.torso_scaling,
+                                         heal.bandages_power, heal.bandages_scaling, heal.disinfectant_power,
+                                         heal.disinfectant_scaling, heal.bite, heal.infect } ) {
+                        values << value << ' ';
+                    }
+                    hash_part( state, values.str() );
+                    hash_part( state, heal.used_up_item_id.str() );
+                    hash_part( state, std::to_string( heal.used_up_item_quantity ) );
+                    hash_part( state, std::to_string( heal.used_up_item_charges ) );
+                    for( const flag_id &flag : heal.used_up_item_flags ) {
+                        hash_part( state, flag.str() );
+                    }
+                }
+                for( const auto *entry : { &v.transform_use, &v.delayed_transform_use } ) {
+                    if( *entry ) {
+                        const item_transform_action &action = **entry;
+                        hash_part( state, action.minimum_age ? "delayed_transform" : "transform" );
+                        hash_item_transformation( state, action.result );
+                        hash_part( state, action.message );
+                        hash_part( state, action.menu_text );
+                        hash_part( state, std::to_string( action.moves ) );
+                        for( const bool required : { action.need_empty, action.need_wielding, action.need_worn } ) {
+                            hash_part( state, required ? "required" : "optional" );
+                        }
+                        if( action.minimum_age ) {
+                            hash_part( state, std::to_string( *action.minimum_age ) );
+                            hash_part( state, action.not_ready );
+                        }
+                    }
+                }
+                if( v.transform_result ) {
+                    hash_part( state, "automatic_transform" );
+                    hash_item_transformation( state, *v.transform_result );
+                }
+                if( v.countdown_interval ) {
+                    hash_part( state, "countdown" );
+                    hash_part( state, std::to_string( to_turns<int>( *v.countdown_interval ) ) );
+                }
+                if( v.spell_use ) {
+                    const cast_spell_actor &spell = *v.spell_use;
+                    hash_part( state, "cast_spell" );
+                    hash_part( state, spell.item_spell.str() );
+                    hash_part( state, std::to_string( spell.spell_level ) );
+                    for( const bool option : { spell.no_fail, spell.need_worn, spell.need_wielding, spell.mundane } ) {
+                        hash_part( state, option ? "enabled" : "disabled" );
+                    }
+                }
+                if( !v.assembled_belt.is_empty() ) {
+                    hash_part( state, "ammobelt" );
+                    hash_part( state, v.assembled_belt.str() );
                 }
                 if( v.activation ) {
                     hash_part( state, "activate_effects" );

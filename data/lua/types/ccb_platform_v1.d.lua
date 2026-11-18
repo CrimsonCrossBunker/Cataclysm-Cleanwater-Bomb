@@ -711,6 +711,7 @@ local ModDefinition = {}
 ---@field variant_kind? 'generic'|'gun'|'drug' Selects the category of the native item-variant option.
 ---@field melee_to_hit? integer Native melee accuracy modifier.
 ---@field electronic_size_kb? integer Native electronic file size in kilobytes.
+---@field countdown_turns? integer Native countdown interval for a newly created item. Zero disables an inherited interval.
 ---@field stackable? boolean Whether identical items combine into a stack.
 ---@field stack_size? integer Positive number of units represented by the item's volume.
 ---@field light? integer Native light emission.
@@ -1016,16 +1017,83 @@ function ItemDefinition:native_use(action) end
 ---@return ItemDefinition self
 function ItemDefinition:capture_creature(max_size) end
 
+---@class ItemUsedUpTreatment
+---@field id string Item produced or used as the charged tool's replacement.
+---@field quantity? integer Number of items produced. Defaults to one.
+---@field charges? integer Charges on a produced item. Defaults to one.
+---@field flags? string[] Native flags applied to each produced or replacement item.
+
 ---@class ItemHealingOptions
 ---@field move_cost integer Native cost to apply the treatment.
----@field limb_power? number Base healing for limbs; defaults to zero.
----@field head_power? number Base healing for the head; defaults to 80 percent of limb power.
----@field torso_power? number Base healing for the torso; defaults to 150 percent of limb power.
+---@field limb_power? number Base healing for limbs. Defaults to zero.
+---@field head_power? number Base healing for the head. Defaults to 80 percent of limb power.
+---@field torso_power? number Base healing for the torso. Defaults to 150 percent of limb power.
+---@field limb_scaling? number Additional limb healing per skill level. Defaults to 25 percent of limb power.
+---@field head_scaling? number Additional head healing per skill level. Defaults to the limb scaling ratio.
+---@field torso_scaling? number Additional torso healing per skill level. Defaults to the limb scaling ratio.
+---@field bandages_power? number Base bandaging intensity.
+---@field bandages_scaling? number Bonus bandaging intensity per skill level. Defaults to 25 percent of base intensity.
+---@field disinfectant_power? number Base disinfectant intensity.
+---@field disinfectant_scaling? number Bonus disinfectant intensity per skill level. Defaults to 25 percent of base intensity.
+---@field bleed? integer Bleeding intensity reduction.
+---@field bite? number Chance to remove the bite effect.
+---@field infect? number Chance to remove the infection effect.
+---@field used_up_item? ItemUsedUpTreatment Treatment byproduct or tool replacement.
 
----Install native first aid targeting, skill scaling and item consumption for an instant healing item.
+---Install native first-aid targeting, skill scaling and item consumption.
 ---@param options ItemHealingOptions
 ---@return ItemDefinition self
 function ItemDefinition:heal(options) end
+
+---@class ItemTransformationOptions
+---@field target? string Fixed result item. Choose a target or a target group.
+---@field target_group? string Native group from which to select the result.
+---@field container? string Package for a fixed result.
+---@field variant? string Native result variant. Defaults to '<any>'.
+---@field sealed? boolean Whether to seal a package. Defaults to true.
+---@field charges? integer Fixed result charges. Choose fixed or random charges.
+---@field random_charges? integer[] Native random range endpoints. Supply at least two.
+---@field ammo_type? string Ammunition placed in the unpackaged result.
+---@field timer_turns? integer Native countdown to start on the result.
+
+---@class ItemUseTransformationOptions
+---@field result ItemTransformationOptions
+---@field message? string|LocalizedText Message published after transformation.
+---@field menu_text? string|LocalizedText Label for the native action.
+---@field moves? integer Nonnegative move cost.
+---@field need_empty? boolean Require empty pockets for activation.
+---@field need_wielding? boolean Require the item to be wielded.
+---@field need_worn? boolean Require the item to be worn.
+---@field minimum_age_turns? integer Install the delayed action variant with this minimum age.
+---@field not_ready_message? string|LocalizedText Required with a minimum age.
+
+---Attach the native transformation action and its activation requirements.
+---@param options ItemUseTransformationOptions
+---@return ItemDefinition self
+function ItemDefinition:transform_on_use(options) end
+
+---Set a fixed native result for automatic deactivation, expiry and tool depletion.
+---@param result ItemTransformationOptions
+---@return ItemDefinition self
+function ItemDefinition:transform_into(result) end
+
+---@class ItemSpellUseOptions
+---@field spell string Native spell id.
+---@field level integer Cast at this spell level.
+---@field no_fail? boolean Skip the spell failure roll.
+---@field need_worn? boolean Require the item to be worn.
+---@field need_wielding? boolean Require the item to be wielded.
+---@field mundane? boolean Use the native mundane action presentation.
+
+---Attach the native spell activation action.
+---@param options ItemSpellUseOptions
+---@return ItemDefinition self
+function ItemDefinition:cast_spell(options) end
+
+---Attach the native linkage action that assembles and loads the selected ammunition belt.
+---@param belt string Resulting belt item id.
+---@return ItemDefinition self
+function ItemDefinition:assemble_ammo_belt(belt) end
 
 ---@class ItemActivationEffectOptions
 ---@field id string Native effect type id.
@@ -1058,7 +1126,7 @@ function ItemDefinition:teach_spells(spells) end
 ---@return ItemDefinition self
 function ItemDefinition:martial_arts_manual() end
 
----Remove inherited native activation actions and staged on_use, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
+---Remove inherited native activation actions and staged on_use, transformations, treatment, spell use, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
