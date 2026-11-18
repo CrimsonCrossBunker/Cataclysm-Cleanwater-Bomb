@@ -3169,7 +3169,14 @@ function TrapDefinition:flag(flag_id) end
 ---@param charges? integer Positive charges; defaults to 1.
 ---@return TrapDefinition self
 function TrapDefinition:drop(item_id, quantity, charges) end
----@param handler_id string
+
+---@class CcbTrapTriggerContext
+---@field trap_id string Native triggered trap id.
+---@field position {coordinate_space:'abs_ms',x:integer,y:integer,z:integer} Copied absolute map-square coordinates; use services.coords.tripoint_abs_ms to construct a coordinate value for world services.
+---@field creature? GameHandle Exact triggering creature; absent for item/environment triggers.
+---@field trigger_kind 'creature'|'item'|'environment'
+
+---@param handler_id string Named handler receiving CcbTrapTriggerContext and returning a boolean native action result.
 ---@return TrapDefinition self
 function TrapDefinition:on_trigger(handler_id) end
 
@@ -9130,6 +9137,11 @@ function CcbCharactersApi.emit(character, emission, chance) end
 ---@return CcbResult
 function CcbCharactersApi.cast_spell(character, spell, options) end
 
+---@class CcbCharacterDieOptions
+---@field remove_corpse? boolean Native NPC corpse policy; not applied to the Avatar.
+---@field suppress_message? boolean Native NPC quiet-death policy; not applied to the Avatar.
+---@field final_effect? GameId Registered GameId<effect> applied for one permanent turn after the native death attempt, even if death prevention saves the Character. The retained native Character is used; other APIs still reject dead handles.
+
 ---@param character GameHandle Character to kill through native death rules.
 ---@param options? CcbCharacterDieOptions
 ---@return CcbResult
@@ -11051,7 +11063,7 @@ function CcbInventoryApi.give(character, item_type, quantity, options) end
 function CcbInventoryApi.give_group(character, group, options) end
 
 ---@class CcbInventoryReceiptOptions
----@field force_equip? boolean Pass native force-equip intent to i_add_or_drop; defaults to false.
+---@field force_equip? boolean Use native wear/wield/inventory fallback; defaults to false. This native dispatch has no success return and counts as an accepted attempt after dispatch.
 
 ---Deliver native-default items through native i_add_or_drop, including drop fallback.
 ---Preserves default ammunition and PRESERVE_SPAWN_LOC; charge-counted items use quantity as their charges.

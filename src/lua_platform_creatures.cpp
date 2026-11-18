@@ -3202,10 +3202,12 @@ sol::table cast_spell_character(
 struct creature_death_options {
     std::optional<bool> remove_corpse;
     std::optional<bool> suppress_message;
+    std::optional<efftype_id> final_effect;
 };
 
 creature_death_options read_creature_death_options(
-    const sol::optional<sol::table> &requested, const std::string_view api_name )
+    const sol::optional<sol::table> &requested, const std::string_view api_name,
+    const bool allow_final_effect = false )
 {
     creature_death_options result;
     if( !requested ) {
@@ -3213,7 +3215,16 @@ creature_death_options read_creature_death_options(
     }
     reject_unknown_combat_options(
         *requested, api_name,
-    { "remove_corpse", "suppress_message", "supress_message" } );
+    { "remove_corpse", "suppress_message", "supress_message", "final_effect" } );
+    const sol::object final_effect = combat_option( *requested, "final_effect" );
+    if( combat_option_present( final_effect ) ) {
+        if( !allow_final_effect || !final_effect.is<script_game_id>() ) {
+            throw std::invalid_argument( "final_effect requires a GameId<effect> on services.characters.die" );
+        }
+        const script_game_id &effect = final_effect.as<script_game_id>();
+        require_id_kind( effect, "effect", std::string( api_name ) );
+        result.final_effect = efftype_id( effect.value() );
+    }
     const sol::object remove_corpse = combat_option( *requested, "remove_corpse" );
     if( combat_option_present( remove_corpse ) ) {
         result.remove_corpse = combat_boolean_option(
@@ -3245,7 +3256,7 @@ sol::table die_character(
     const std::size_t world_generation )
 {
     const creature_death_options options = read_creature_death_options(
-            requested_options, "services.characters.die" );
+            requested_options, "services.characters.die", true );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character(
@@ -3279,6 +3290,17 @@ sol::table die_character(
         return make_game_error_result( state, {
             "stale_handle", "Death callback removed or replaced its character"
         } );
+    }
+    if( options.final_effect ) {
+        // Story endings apply their permanent marker after the native death attempt.
+        character->add_effect( *options.final_effect, 1_turns, true, 0, false );
+        remaining = reference.get();
+        character = remaining ? remaining->as_character() : nullptr;
+        if( !character || character->getID() != identity ) {
+            return make_game_error_result( state, {
+                "stale_handle", "Final death effect removed or replaced its character"
+            } );
+        }
     }
     const bool dead = is_dead( *character );
     sol::table value = state.create_table();

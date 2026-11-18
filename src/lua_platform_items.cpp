@@ -4161,7 +4161,10 @@ sol::table receive_inventory_items(
             created.preserve_location( spawn_position );
         }
         ++attempted;
-        if( character->i_add_or_drop( created, force_equip ) ) {
+        if( force_equip ) {
+            get_talker_for( *character )->i_add_or_drop( created, true );
+            ++accepted;
+        } else if( character->i_add_or_drop( created ) ) {
             ++accepted;
         }
     };
