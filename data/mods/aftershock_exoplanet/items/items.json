@@ -10,22 +10,6 @@
     "material": [ "clearcrete" ]
   },
   {
-    "id": "atomic_pseudo_churn",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "pseudo atomic butter churn", "//~": "NO_I18N" },
-    "description": { "str": "This is a crafting_pseudo_item if you have it something is wrong.", "//~": "NO_I18N" },
-    "weight": "6464 g",
-    "volume": "11356 ml",
-    "price": "200 USD",
-    "material": [ "plastic", "steel" ],
-    "qualities": [ [ "CONTAIN", 1 ], [ "CHURN", 2 ] ],
-    "symbol": "H",
-    "color": "light_cyan",
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "melee_damage": { "bash": 9 }
-  },
-  {
     "id": "afs_doping_agent",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
