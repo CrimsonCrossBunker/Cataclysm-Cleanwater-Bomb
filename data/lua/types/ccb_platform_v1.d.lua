@@ -5933,6 +5933,7 @@ function WeaponCategoryDefinition:proficiency(proficiency_id) end
 ---@field character? GameHandle Runtime-owner- and generation-safe handle for the actual using Character (alpha), or nil when native code supplies no Character; NPCs are preserved.
 ---@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta), retaining its native location hint.
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
+---@field item_position TripointCoord Current absolute map-square position of the exact item.
 ---@field charges integer
 local ItemUseContext = {}
 
@@ -14521,6 +14522,11 @@ function CcbPlatformEnvironmentQueries.field_exists(position, field_id) end
 ---@param flag string Bounded non-empty terrain flag id.
 ---@return boolean
 function CcbPlatformEnvironmentQueries.terrain_has_flag(position, flag) end
+
+---Check for swimmable deep water using the native map's terrain and furniture flags.
+---@param position TripointCoord Absolute map-square coordinate.
+---@return boolean
+function CcbPlatformEnvironmentQueries.is_divable(position) end
 
 ---@param position TripointCoord Absolute map-square coordinate; out-of-bounds
 --- returns false (mirroring the legacy map_is_outside handler).

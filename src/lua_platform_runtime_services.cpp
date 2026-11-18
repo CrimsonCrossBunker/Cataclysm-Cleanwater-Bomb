@@ -498,6 +498,13 @@ struct use_context_data {
                    coords::origin::reality_bubble, coords::scale::map_square,
                    position.raw() );
     }
+
+    cata::lua_platform::script_tripoint_coord item_position() const {
+        require_item();
+        return cata::lua_platform::script_tripoint_coord::from_native(
+                   coords::origin::abs, coords::scale::map_square,
+                   used_item_location.pos_abs().raw() );
+    }
 };
 
 constexpr std::size_t maximum_computer_value_entries = 256;
@@ -2190,6 +2197,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         "character", sol::property( &use_context_data::character_handle ),
         "item", sol::property( &use_context_data::item_handle ),
         "position", sol::property( &use_context_data::use_position ),
+        "item_position", sol::property( &use_context_data::item_position ),
         "charges", sol::property( &use_context_data::charges,
                                   &use_context_data::set_charges ) );
     ccb.new_usertype<computer_access_context>(
@@ -4250,6 +4258,17 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         map &here = get_map();
         const tripoint_abs_ms absolute( position.to_native() );
         return here.ter( here.get_bub( absolute ) )->has_flag( flag );
+    } );
+    environment.set_function( "is_divable", [require_read](
+    const cata::lua_platform::script_tripoint_coord & position ) {
+        require_read();
+        if( position.native_origin() != coords::origin::abs ||
+            position.native_scale() != coords::scale::map_square ) {
+            throw std::invalid_argument(
+                "services.gameplay.environment.is_divable requires an absolute map-square Tripoint" );
+        }
+        map &here = get_map();
+        return here.is_divable( here.get_bub( tripoint_abs_ms( position.to_native() ) ) );
     } );
     environment.set_function( "is_indoor_tile", [require_read](
     const cata::lua_platform::script_tripoint_coord & position ) {
