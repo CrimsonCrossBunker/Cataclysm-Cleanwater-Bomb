@@ -23,3 +23,5 @@ require("item_group_changes")
 require("book_items")
 
 require("generic_items")
+
+require("inherited_items")

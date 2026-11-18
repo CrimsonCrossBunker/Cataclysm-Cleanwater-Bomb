@@ -1,31 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "dragon_black_scale",
-    "category": "spare_parts",
-    "symbol": "o",
-    "color": "black_white",
-    "name": "black dragon scale",
-    "price": "25 USD",
-    "material": [ "black_dragon_scales" ],
-    "weight": "380 g",
-    "volume": "75 ml",
-    "to_hit": -4,
-    "description": "A scale from a black dragon.  It still has its magical properties and acid resistance.",
-    "melee_damage": { "bash": 0 }
-  },
-  {
-    "id": "bundle_black_scale",
-    "type": "ITEM",
-    "copy-from": "dragon_black_scale",
-    "symbol": "=",
-    "name": { "str": "bundle of black dragon scales", "str_pl": "bundles of black dragon scales" },
-    "//": "inspiration from bundle of planks",
-    "proportional": { "price": 10, "weight": 10, "volume": 10 },
-    "description": "Scales from a black dragon, bundled tightly together for storage.  Disassemble to unpack."
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "black_dragon_hide_raw",
     "category": "spare_parts",
@@ -70,30 +45,6 @@
       "//": "2 days"
     },
     "flags": [ "NO_SALVAGE" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "black_dragon_tanned_hide",
-    "symbol": ",",
-    "color": "black_white",
-    "name": "black dragon hide",
-    "description": "Prepared hide from a black dragon.  Hard, acid-resistant, and with more scales could make a suit of armor as hard as steel and half as heavy.",
-    "price": "500 USD",
-    "material": [ "black_dragon_hide" ],
-    "weight": "2500 g",
-    "volume": "4 L",
-    "category": "spare_parts",
-    "to_hit": -1
-  },
-  {
-    "id": "bundle_black_hide",
-    "type": "ITEM",
-    "copy-from": "black_dragon_tanned_hide",
-    "symbol": ",",
-    "name": { "str": "bundle of black dragon hides", "str_pl": "bundles of black dragon hides" },
-    "//": "inspiration from bundle of leather",
-    "proportional": { "price": 10, "weight": 10, "volume": 10 },
-    "description": "Hides from a black dragon, bundled tightly together for storage.  Disassemble to unpack."
   },
   {
     "id": "boots_black_dragon_scale",

@@ -306,34 +306,6 @@
     "melee_damage": { "bash": 12, "cut": 24 }
   },
   {
-    "type": "ITEM",
-    "id": "hatchet",
-    "symbol": ";",
-    "color": "light_gray",
-    "name": { "str": "hatchet" },
-    "description": "A one-handed hatchet.  Makes a great melee weapon, and is useful both for chopping things and hammering them.",
-    "category": "tools",
-    "price": "25 USD",
-    "price_postapoc": "5 USD",
-    "material": [ "steel", "wood" ],
-    "techniques": [ "WBLOCK_1" ],
-    "weight": "907 g",
-    "volume": "1 L",
-    "longest_side": "38 cm",
-    "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "neutral" },
-    "flags": [ "DURABLE_MELEE", "BELT_CLIP", "NONCONDUCTIVE", "SHEATH_AXE" ],
-    "faults": [ { "fault_group": "handle_short" }, { "fault_group": "blade_general_no_tip" } ],
-    "weapon_category": [ "HAND_AXES" ],
-    "qualities": [
-      { "id": "CUT", "level": 1 },
-      { "id": "AXE", "level": 2, "speed": 1.5 },
-      { "id": "BUTCHER", "level": 16 },
-      { "id": "HAMMER", "level": 2 },
-      { "id": "HAMMER_FINE", "level": 1 }
-    ],
-    "melee_damage": { "bash": 10, "cut": 20 }
-  },
-  {
     "id": "luthier_toolset",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

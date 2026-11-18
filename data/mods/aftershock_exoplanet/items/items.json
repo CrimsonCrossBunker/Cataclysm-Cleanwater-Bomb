@@ -1,15 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "nanomaterial",
-    "copy-from": "nanomaterial",
-    "price": "55 USD",
-    "price_postapoc": "55 USD",
-    "name": { "str": "nanomaterial canister" },
-    "description": "A steel canister containing carbon, iron, titanium, copper, and other elements in specifically engineered atomic-scale configurations.  Feedstock for most modern industrial processes, a nanofabricator can assemble them into usable items."
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "clearcrete_chunk",
     "copy-from": "rock",

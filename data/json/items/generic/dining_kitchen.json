@@ -59,21 +59,6 @@
     "melee_damage": { "bash": 3 }
   },
   {
-    "abstract": "base_tin_dish",
-    "name": { "str": "generic tin dish", "str_pl": "generic tin dishes", "//~": "NO_I18N" },
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "symbol": ")",
-    "color": "light_gray",
-    "price": "4 USD",
-    "price_postapoc": "0 cent",
-    "material": [ "tin" ],
-    "weight": "262 g",
-    "volume": "262 ml",
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 2 }
-  },
-  {
     "abstract": "base_plastic_dish",
     "name": { "str": "generic plastic dish", "str_pl": "generic plastic dishes", "//~": "NO_I18N" },
     "description": { "str": "generic item template", "//~": "NO_I18N" },
@@ -110,28 +95,6 @@
     "symbol": ",",
     "description": "A ceramic dinner plate, unremarkable in every way.",
     "qualities": [ [ "CONTAIN", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "category": "container",
-    "id": "tin_cup",
-    "name": { "str": "tin cup" },
-    "symbol": "u",
-    "description": "An enameled tin cup.  Great for camping or for prison use; makes a wonderful sound when clanged along bars.",
-    "looks_like": "ceramic_cup",
-    "proportional": { "weight": 0.8 },
-    "copy-from": "base_tin_dish",
-    "pocket_data": [
-      {
-        "max_contains_volume": "250 ml",
-        "max_contains_weight": "1 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "use_action": [ "HEAT_LIQUID_ITEMS" ],
-    "qualities": [ [ "BOIL", 2 ], [ "CONTAIN", 1 ] ]
   },
   {
     "id": "plastic_bowl_kids",
@@ -210,15 +173,6 @@
   {
     "type": "ITEM",
     "category": "other",
-    "id": "plastic_straw",
-    "name": { "str": "plastic straw" },
-    "proportional": { "weight": 0.7, "volume": 0.5 },
-    "description": "A plastic straw, for drinking things and littering.",
-    "copy-from": "base_plastic_silverware"
-  },
-  {
-    "type": "ITEM",
-    "category": "other",
     "id": "bottle_opener",
     "ascii_picture": "bottle_opener",
     "name": { "str": "bottle opener" },
@@ -258,27 +212,6 @@
     "description": "When you need to scoop some soup, this is the utensil for you.",
     "looks_like": "spoon",
     "copy-from": "base_utensil"
-  },
-  {
-    "type": "ITEM",
-    "category": "other",
-    "id": "rolling_pin",
-    "ascii_picture": "rolling_pin",
-    "name": { "str": "rolling pin" },
-    "description": "A stout piece of hardwood, turned and sanded smooth, with rounded handles at the ends.  This timeless kitchen tool also doubles as an effective club.",
-    "weight": "318 g",
-    "longest_side": "46 cm",
-    "color": "brown",
-    "symbol": "/",
-    "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1", "RAPID" ],
-    "flags": [ "DURABLE_MELEE" ],
-    "volume": "1450 ml",
-    "price": "8 USD",
-    "price_postapoc": "5 cent",
-    "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 7 },
-    "//": "Based on https://www.amazon.com/dp/B000ARPJRM"
   },
   {
     "type": "ITEM",

@@ -366,28 +366,6 @@
     "extend": { "flags": [ "NUTRIENT_OVERRIDE" ] }
   },
   {
-    "id": "family_photo",
-    "copy-from": "family_photo",
-    "type": "ITEM",
-    "category": "other",
-    "name": { "str": "blurry picture of a scowling cartoon ape" },
-    "description": "Allegedly very important.",
-    "price": "20000 kUSD",
-    "price_postapoc": "0 cent"
-  },
-  {
-    "id": "old_key",
-    "copy-from": "old_key",
-    "type": "ITEM",
-    "category": "other",
-    "name": { "str": "penultimate key" },
-    "description": "This opens the Blob Door.  Better hold on to it.",
-    "weight": "25 kg",
-    "material": [ "monolith" ],
-    "symbol": "p",
-    "color": "dark_gray"
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "party_rock",
@@ -540,14 +518,6 @@
     "material": [ "damaged_ceramic" ]
   },
   {
-    "id": "coin_half_dollar",
-    "copy-from": "coin_half_dollar",
-    "type": "ITEM",
-    "category": "currency",
-    "name": { "str": "50 Cent coin" },
-    "description": "A fifty-cent coin, featuring a portrait of famed rapper 50 Cent.  On the back is the date of minting, and the G-Unit symbol."
-  },
-  {
     "id": "kitchen_gun",
     "type": "ITEM",
     "subtypes": [ "GUN" ],
@@ -555,13 +525,6 @@
     "name": { "str": "Kitchen Gun™", "str_pl": "Kitchen Guns™" },
     "description": "Say goodbye to daily stains and dirty surfaces with new Kitchen Gun!  Just aim at the dust, blood, or splinters, and then shoot it a bunch of times to clean it.  Blast the filth away with Kitchen Gun™!",
     "ammo_effects": [ "CLEAN_DUST", "CLEAN_SPLINTERS", "CLEAN_BLOOD" ]
-  },
-  {
-    "id": "troglobite_sample",
-    "copy-from": "troglobite_sample",
-    "type": "ITEM",
-    "name": { "str": "gamer sample" },
-    "description": "A slurry of… uhh…"
   },
   {
     "id": "iv_mutagen_troglobite",

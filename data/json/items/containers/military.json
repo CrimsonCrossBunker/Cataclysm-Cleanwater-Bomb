@@ -142,51 +142,5 @@
         "description": "A small, thick cylindrical container.  Dark, shabby surface has printed:\n1330-00-133-8244 G881\nCOMP B 1 GRENADE HAND FRAG DELAY M67 W/FUZE M213\nCONTAINER M415A1 UAC"
       }
     ]
-  },
-  {
-    "id": "ammunition_can_carlgustav",
-    "type": "ITEM",
-    "category": "container",
-    "name": "double 84mm HEDP container",
-    "description": "Huge metal container, in a shape of two massive rockets.",
-    "//": "84mm heat 551 container, 265x700x124mm",
-    "weight": "1400 g",
-    "volume": "23000 ml",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "max_contains_volume": "2422 ml",
-        "max_contains_weight": "5000 g",
-        "max_item_length": "437mm"
-      },
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "max_contains_volume": "2422 ml",
-        "max_contains_weight": "5000 g",
-        "max_item_length": "437mm"
-      }
-    ],
-    "material": [ "steel" ],
-    "symbol": "8",
-    "color": "dark_gray",
-    "variant_type": "gun",
-    "variants": [
-      {
-        "id": "ammunition_can_carlgustav_hedp",
-        "name": { "str": "double 84mm HEDP container" },
-        "weight": 0,
-        "description": "A heavy and bulky container in a shape of two recoilless rifle rounds.  Text on the front says:\n<color_yellow>1 RD\n84MM HEDP 502\n1315-01-343-1944</color>\n\n<color_red>EXPLOSIVE</color>"
-      },
-      {
-        "id": "ammunition_can_carlgustav_he",
-        "name": { "str": "double 84mm HE container" },
-        "weight": 0,
-        "description": "A heavy and bulky container in a shape of two recoilless rifle rounds.  Text on the front says:\n<color_yellow>1 RD\n84MM HE 441D</color>\n\n<color_red>EXPLOSIVE</color>"
-      }
-    ]
   }
 ]

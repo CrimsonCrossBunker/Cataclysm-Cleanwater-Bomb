@@ -10,12 +10,5 @@
     "weight": "100 g",
     "volume": "250 ml",
     "flags": [ "TRADER_AVOID", "INEDIBLE" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "dryad_bark",
-    "copy-from": "alder_bark",
-    "name": { "str": "dryad bark", "str_pl": "chunks of dryad bark" },
-    "description": "A strip of bark taken from a fallen dryad.  It's still slightly supple, as though it were attached to a living tree."
   }
 ]

@@ -550,22 +550,6 @@
   },
   {
     "type": "ITEM",
-    "id": "nanomaterial",
-    "category": "tool_magazine",
-    "price": "50 USD",
-    "price_postapoc": "10 cent",
-    "name": { "str": "nanomaterial canister" },
-    "symbol": "=",
-    "color": "light_gray",
-    "flags": [ "TRADER_AVOID" ],
-    "description": "A steel canister containing carbon, iron, titanium, copper, and other elements in specifically engineered atomic-scale configurations.  A nanofabricator can assemble them into usable items.",
-    "material": [ "steel" ],
-    "volume": "300 ml",
-    "weight": "250 g",
-    "stackable": true
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "ether",
     "category": "chems",

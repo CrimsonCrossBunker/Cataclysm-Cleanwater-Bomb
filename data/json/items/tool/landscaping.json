@@ -1,24 +1,5 @@
 [
   {
-    "id": "digging_stick",
-    "type": "ITEM",
-    "name": { "str": "digging stick" },
-    "category": "tools",
-    "description": "A large stick with the end carved into a broad blade for digging.  It could be used to dig shallow pits, but not deep ones.",
-    "weight": "1133 g",
-    "volume": "1500 ml",
-    "longest_side": "90 cm",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
-    "material": [ "wood" ],
-    "symbol": "/",
-    "color": "brown",
-    "techniques": [ "WBLOCK_1" ],
-    "qualities": [ [ "DIG", 1 ] ],
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "id": "g_shovel",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -153,22 +134,6 @@
     "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE" ],
     "weapon_category": [ "HOOKING_WEAPONRY", "POLEARMS" ],
     "melee_damage": { "bash": 6, "cut": 14 }
-  },
-  {
-    "id": "scythe_fake",
-    "copy-from": "scythe",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_gray",
-    "name": { "str": "scythe" },
-    "description": "A dull, cheaply-made replica of an old-fashioned farming tool used to cut tall grass.",
-    "proportional": { "melee_damage": { "bash": 1.8, "cut": 0.064 } },
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
-    "extend": { "flags": [ "FRAGILE_MELEE" ] },
-    "material": [ "aluminum", "wood" ],
-    "weight": "1840 g",
-    "price": "40 USD",
-    "price_postapoc": "40 cent"
   },
   {
     "id": "shovel",

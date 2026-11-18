@@ -69,21 +69,6 @@
   },
   {
     "type": "ITEM",
-    "id": "broken_skitterbot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken skitterbot" },
-    "category": "other",
-    "description": "A broken skitterbot.  Much less threatening now that it lies limp on solid ground.  Could be gutted for parts.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "32700 g",
-    "volume": "105 L",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "paper",
     "name": { "str_sp": "paper" },
@@ -262,22 +247,6 @@
     "countdown_interval": "7 days",
     "revert_to": "adobe_brick",
     "melee_damage": { "bash": 1 }
-  },
-  {
-    "type": "ITEM",
-    "abstract": "bark_abstract",
-    "symbol": ",",
-    "color": "brown",
-    "name": { "str": "piece of abstract bark", "str_pl": "pieces of abstract bark", "//~": "NO_I18N" },
-    "description": {
-      "str": "A sheet of bark from a hypothetical tree.  Useful for making adding new bark items slightly simpler.",
-      "//~": "NO_I18N"
-    },
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "wood" ],
-    "weight": "200 g",
-    "volume": "250 ml"
   },
   {
     "type": "ITEM",
@@ -488,113 +457,6 @@
     "description": "This card gives you a splendid discount on the purchase of gasoline.",
     "price": "5 USD",
     "extend": { "flags": [ "GAS_DISCOUNT", "DISCOUNT_VALUE_3" ] }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_turret",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken turret" },
-    "category": "other",
-    "description": "A broken turret.  Much less threatening now that it's laid limp on solid ground.  Could be gutted for parts.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "72650 g",
-    "volume": "30 L",
-    "to_hit": { "grip": "bad", "length": "long", "surface": "line", "balance": "clumsy" },
-    "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE" ],
-    "melee_damage": { "bash": 4, "cut": 4 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_turret_rifle",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken M249 autonomous CROWS II", "str_pl": "broken M249 autonomous CROWS II turrets" },
-    "weight": "75 kg",
-    "copy-from": "broken_turret"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_turret_rifle_balthazar",
-    "name": { "str": "broken M249 autonomous CROWS II", "str_pl": "broken M249 autonomous CROWS II turrets" },
-    "copy-from": "broken_turret_rifle"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_crows_m240",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken M240 autonomous CROWS II", "str_pl": "broken M240 autonomous CROWS II turrets" },
-    "weight": "75 kg",
-    "copy-from": "broken_turret"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_turret_bmg",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken M2 autonomous CROWS II", "str_pl": "broken M2 autonomous CROWS II turrets" },
-    "weight": "100 kg",
-    "copy-from": "broken_turret"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_turret_artisans",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken custom plated turret" },
-    "weight": "75 kg",
-    "copy-from": "broken_turret"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_secubot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken secubot" },
-    "category": "other",
-    "description": "A broken secubot, with its casing broken and fluid drained.  Could be gutted for parts.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "100 kg",
-    "volume": "65 L",
-    "to_hit": { "grip": "bad", "length": "long", "surface": "line", "balance": "clumsy" },
-    "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE" ],
-    "melee_damage": { "bash": 4, "cut": 4 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_secubot_balthazar",
-    "name": { "str": "broken secubot" },
-    "copy-from": "broken_secubot"
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_talon_m202a1",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken M202A1 TALON" },
-    "category": "other",
-    "description": "A broken TALON UGV, with its casing broken and fluid drained.  Could be gutted for parts.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "100 kg",
-    "volume": "65 L",
-    "to_hit": { "grip": "bad", "length": "long", "surface": "line", "balance": "clumsy" },
-    "flags": [ "TRADER_AVOID", "NO_REPAIR", "NO_SALVAGE" ],
-    "melee_damage": { "bash": 4, "cut": 4 }
-  },
-  {
-    "type": "ITEM",
-    "id": "alder_bark",
-    "name": { "str": "piece of alder bark", "str_pl": "pieces of alder bark" },
-    "description": "A strip of bark pulled from an alder tree.  Used in the production of topical hemostatics.",
-    "copy-from": "bark_abstract",
-    "stackable": true
   },
   {
     "id": "wallet_travel",

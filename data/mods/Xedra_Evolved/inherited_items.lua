@@ -1,0 +1,7 @@
+require("inherited_items.items.casing")
+require("inherited_items.items.corpses")
+require("inherited_items.items.melee")
+require("inherited_items.items.melee_moons_tears")
+require("inherited_items.items.melee_treesung")
+require("inherited_items.items.notes_and_news")
+require("inherited_items.items.weapon_copy_extensions")

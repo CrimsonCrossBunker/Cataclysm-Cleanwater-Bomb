@@ -41,21 +41,5 @@
     "melee_damage": { "bash": 2, "stab": 6 },
     "weapon_category": [ "SHIVS" ],
     "stackable": true
-  },
-  {
-    "id": "gold_small",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str_sp": "gold" },
-    "description": "A soft, shiny metal.  Before the apocalypse this would've been worth a small fortune, but now its value is greatly diminished.",
-    "weight": "19 g",
-    "volume": "1 ml",
-    "price": "320 USD 15 cent",
-    "price_postapoc": "10 cent",
-    "material": [ "gold" ],
-    "symbol": "/",
-    "color": "yellow",
-    "display_type": "BY_WEIGHT",
-    "stackable": true
   }
 ]

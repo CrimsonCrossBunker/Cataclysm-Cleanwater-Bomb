@@ -109,76 +109,6 @@
     "melee_damage": { "bash": 8 }
   },
   {
-    "type": "ITEM",
-    "id": "broken_tripod",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken tribot" },
-    "category": "other",
-    "description": "A broken tribot.  Now that its legs lie broken and immobile, the world seems a little less threatening.  Could be gutted for parts.",
-    "price": "10 USD",
-    "material": [ "steel", "plastic" ],
-    "weight": "430000 g",
-    "volume": "187500 ml",
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 10, "cut": 6 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_tankbot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken tank drone" },
-    "category": "other",
-    "description": "A broken tank drone.  Still looks intimidating despite being permanently inoperative, possibly due to the sheer size and mass.  Could be gutted for parts.",
-    "price": "10 USD",
-    "material": [ "steel", "plastic" ],
-    "weight": "1223850 g",
-    "volume": "875 L",
-    "to_hit": -3,
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 20, "cut": 15 }
-  },
-  {
-    "type": "ITEM",
-    "id": "tripod_chassis",
-    "name": { "str_sp": "tripod chassis" },
-    "description": "What's left when you remove all moving parts and electronics.  It's the skeleton and armor of the tripod.",
-    "symbol": "c",
-    "color": "light_gray",
-    "weight": "40000 g",
-    "volume": "70000 ml",
-    "price": "2 kUSD",
-    "material": [ "steel" ],
-    "category": "spare_parts"
-  },
-  {
-    "type": "ITEM",
-    "id": "chickenbot_chassis",
-    "name": { "str_sp": "chicken walker chassis" },
-    "description": "What's left when you remove all moving parts and electronics.  It's the skeleton and armor of the chicken walker.",
-    "symbol": "c",
-    "color": "light_gray",
-    "weight": "60000 g",
-    "volume": "80000 ml",
-    "price": "3 kUSD",
-    "material": [ "steel" ],
-    "category": "spare_parts"
-  },
-  {
-    "type": "ITEM",
-    "id": "tankbot_chassis",
-    "name": { "str_sp": "Beagle chassis" },
-    "description": "What's left when you remove all moving parts and electronics.  It's the skeleton and armor of the Beagle tank.",
-    "symbol": "c",
-    "color": "light_gray",
-    "weight": "150000 g",
-    "volume": "575000 ml",
-    "price": "10 kUSD",
-    "material": [ "steel" ],
-    "category": "spare_parts"
-  },
-  {
     "id": "TANK",
     "looks_like": "m79",
     "type": "ITEM",
@@ -203,19 +133,6 @@
     "melee_damage": { "bash": 6 }
   },
   {
-    "type": "ITEM",
-    "id": "spidery_legs_big",
-    "name": { "str": "set of spidery legs", "str_pl": "sets of spidery legs" },
-    "description": "A set of big pointy legs, like the ones found under a tripod.",
-    "symbol": "W",
-    "color": "light_gray",
-    "weight": "40000 g",
-    "volume": "20 L",
-    "price": "2 kUSD",
-    "material": [ "steel" ],
-    "category": "spare_parts"
-  },
-  {
     "id": "bot_laserturret",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -237,19 +154,5 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "reverse_jointed_legs",
-    "name": { "str": "set of reverse-jointed legs", "str_pl": "sets of reverse-jointed legs" },
-    "description": "A set of reverse-jointed legs, like the ones found under a chicken walker.",
-    "symbol": "k",
-    "color": "light_gray",
-    "weight": "60000 g",
-    "volume": "20 L",
-    "price": "5 kUSD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "steel" ],
-    "category": "spare_parts"
   }
 ]

@@ -1,0 +1,8 @@
+require("inherited_items.items.alien_organics")
+require("inherited_items.items.casing")
+require("inherited_items.items.corpses")
+require("inherited_items.items.currency")
+require("inherited_items.items.items")
+require("inherited_items.items.robotparts")
+require("inherited_items.items.weapons")
+require("inherited_items.vehicles.part_items")

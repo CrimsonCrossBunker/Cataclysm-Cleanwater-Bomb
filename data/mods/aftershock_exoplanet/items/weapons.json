@@ -146,13 +146,6 @@
     ]
   },
   {
-    "type": "ITEM",
-    "id": "golf_club",
-    "name": { "str": "golf club" },
-    "copy-from": "golf_club",
-    "material": [ "aluminum", "titanium" ]
-  },
-  {
     "id": "afs_bionic_rocket",
     "type": "ITEM",
     "subtypes": [ "GUN" ],

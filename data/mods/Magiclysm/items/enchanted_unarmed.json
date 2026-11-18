@@ -1,24 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "cestus_plus_one",
-    "copy-from": "cestus",
-    "looks_like": "cestus",
-    "name": { "str": "cestus +1", "str_pl": "cesti +1" },
-    "proportional": { "price": 3.0, "price_postapoc": 3.0, "weight": 0.9, "melee_damage": { "all": 1.1 } },
-    "relative": { "to_hit": 1 }
-  },
-  {
-    "type": "ITEM",
-    "id": "cestus_plus_two",
-    "copy-from": "cestus",
-    "looks_like": "cestus",
-    "name": { "str": "cestus +2", "str_pl": "cesti +2" },
-    "proportional": { "price": 6.0, "price_postapoc": 6.0, "weight": 0.8, "melee_damage": { "all": 1.2 } },
-    "relative": { "to_hit": 2 }
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARMOR" ],
     "id": "flaming_fist",
     "symbol": "3",
@@ -53,24 +35,6 @@
       }
     ],
     "melee_damage": { "bash": 2, "heat": 7 }
-  },
-  {
-    "type": "ITEM",
-    "id": "flaming_fist_plus_one",
-    "copy-from": "flaming_fist",
-    "looks_like": "flaming_fist",
-    "name": { "str": "flaming fist +1", "str_pl": "flaming fists +1" },
-    "proportional": { "price": 3.0, "weight": 0.9, "melee_damage": { "all": 1.5 } },
-    "relative": { "to_hit": 1 }
-  },
-  {
-    "type": "ITEM",
-    "id": "flaming_fist_plus_two",
-    "copy-from": "flaming_fist",
-    "looks_like": "flaming_fist",
-    "name": { "str": "flaming fist +2", "str_pl": "flaming fists +2" },
-    "proportional": { "price": 6.0, "weight": 0.8, "melee_damage": { "all": 2 } },
-    "relative": { "to_hit": 2 }
   },
   {
     "type": "ITEM",

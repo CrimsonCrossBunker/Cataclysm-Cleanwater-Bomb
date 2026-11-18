@@ -74,22 +74,6 @@
     ]
   },
   {
-    "id": "family_photo",
-    "type": "ITEM",
-    "//": "Unique mission item for the CITY_COP.",
-    "category": "other",
-    "name": { "str": "family photo" },
-    "description": "A photo of a smiling family on a camping trip.  One of the parents looks like a cleaner, happier version of a zombie you've seen.",
-    "weight": "1 g",
-    "volume": "5 ml",
-    "price": "8 USD",
-    "price_postapoc": "0 cent",
-    "flags": [ "BANK_NOTE_SHAPED", "PAPER_SHAPED" ],
-    "material": [ "paper" ],
-    "symbol": "*",
-    "color": "light_gray"
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
     "id": "pom_poms",
@@ -118,20 +102,6 @@
     "longest_side": "10 cm",
     "flags": [ "SLEEP_IGNORE" ],
     "material_thickness": 0.1
-  },
-  {
-    "id": "old_key",
-    "type": "ITEM",
-    "category": "other",
-    "name": { "str": "key" },
-    "description": "An old, nondescript North American Cylinder key.  Lord knows what lock it goes to; best not to bother with it.",
-    "weight": "8 g",
-    "volume": "2 ml",
-    "price": "7 USD 50 cent",
-    "price_postapoc": "1 cent",
-    "material": [ "brass" ],
-    "symbol": "p",
-    "color": "dark_gray"
   },
   {
     "id": "xedra_seismograph",
@@ -172,20 +142,6 @@
     "symbol": "i",
     "color": "brown",
     "flags": [ "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "LIXA_lab_postit",
-    "symbol": ",",
-    "color": "white",
-    "name": { "str": "cyan post-it note" },
-    "snippet_category": "LIXA_lab_notes",
-    "description": "A bright post-it note.",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "paper" ],
-    "flags": [ "TRADER_AVOID" ],
-    "copy-from": "lab_postit_bio"
   },
   {
     "type": "ITEM",

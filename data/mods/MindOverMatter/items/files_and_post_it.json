@@ -1,23 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "lab_postit_psi",
-    "category": "books",
-    "symbol": ",",
-    "color": "white",
-    "name": { "str": "yellow post-it note" },
-    "snippet_category": "lab_postit_psi",
-    "description": "A bright post-it note.",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "paper" ],
-    "flags": [ "TRADER_AVOID" ],
-    "weight": "12 mg",
-    "volume": "1 ml",
-    "copy-from": "lab_postit_bio"
-  },
-  {
-    "type": "ITEM",
     "id": "quest_starter_note_fifth_sun_cuachic",
     "name": { "str": "note with strange writing", "str_pl": "notes with strange writing" },
     "category": "books",

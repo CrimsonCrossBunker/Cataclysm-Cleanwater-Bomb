@@ -1,33 +1,5 @@
 [
   {
-    "id": "mjolnir",
-    "copy-from": "warhammer",
-    "type": "ITEM",
-    "name": { "str": "Mjölnir" },
-    "description": "Mjölnir, the legendary hammer of Thor.  It is rumored to be able to level mountains with a single blow.  You feel the power of Asgard coursing through the hammer.",
-    "weight": "1731 g",
-    "color": "light_gray",
-    "material": [ "orichalcum_metal", "wood", "gold" ],
-    "techniques": [ "WBLOCK_2", "BRUTAL", "MOUNTED_CHARGE" ],
-    "volume": "2500 ml",
-    "price": "2 kUSD",
-    "melee_damage": { "bash": 45, "stab": 23 }
-  },
-  {
-    "mounted_charge": { "max_steps": 15, "damage_type": "cut", "multiplier_per_step": 0.08, "max_multiplier": 1.3 },
-    "id": "gungnir",
-    "copy-from": "spear_steel",
-    "type": "ITEM",
-    "name": { "str": "Gungnir" },
-    "description": "Gungnir, the spear of Odin.  It is rumored to be the perfect spear, perfectly hitting any target regardless of the wielder's strength or skill.  It feels like Odin's protecting you.",
-    "weight": "1854 g",
-    "material": [ "orichalcum_metal", "wood", "gold" ],
-    "techniques": [ "WBLOCK_1", "IMPALE", "SWEEP", "MOUNTED_CHARGE" ],
-    "volume": "3250 ml",
-    "price": "2 kUSD",
-    "melee_damage": { "bash": 10, "cut": 35 }
-  },
-  {
     "id": "laevateinn",
     "copy-from": "i_staff",
     "type": "ITEM",

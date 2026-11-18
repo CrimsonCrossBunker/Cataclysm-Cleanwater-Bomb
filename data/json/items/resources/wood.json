@@ -77,51 +77,5 @@
     },
     "price_postapoc": "5 USD",
     "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "2x4",
-    "name": { "str": "plank" },
-    "description": "A flat, thick plank of wood, like a 2 by 4 or similar piece of dimensional lumber.  Makes a decent melee weapon if you're desperate, and can be used for all kinds of construction projects.",
-    "category": "spare_parts",
-    "weight": "2440 g",
-    "color": "brown",
-    "symbol": "/",
-    "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
-    "volume": "4130 ml",
-    "longest_side": "122 cm",
-    "to_hit": { "grip": "none", "length": "long", "surface": "any", "balance": "uneven" },
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "flags": [ "FRAGILE_MELEE", "FIREWOOD" ],
-    "melee_damage": { "bash": 16 },
-    "stackable": true
-  },
-  {
-    "type": "ITEM",
-    "id": "plank_short",
-    "name": { "str": "short plank" },
-    "description": "A short 2 by 4 plank of wood.  While less common and smaller than its 4 foot cousin it can still be very useful in carpentry.",
-    "category": "spare_parts",
-    "weight": "1220 g",
-    "color": "brown",
-    "symbol": "/",
-    "material": [ "wood" ],
-    "volume": "2066 ml",
-    "longest_side": "61 cm",
-    "to_hit": { "grip": "none", "length": "long", "surface": "any", "balance": "uneven" },
-    "price": "5 USD",
-    "price_postapoc": "10 cent",
-    "flags": [ "FIREWOOD" ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
-    "type": "ITEM",
-    "id": "stick_common",
-    "copy-from": "stick",
-    "name": { "str": "stick (bent)", "str_pl": "sticks (bent)" },
-    "description": "A respectable length of wood, just big enough to wrap your hand around.  It's a little bent, and that makes it useless for most things you'd want to make with it.  Also makes it a little harder to hit things with it.",
-    "relative": { "melee_damage": { "bash": -1 } }
   }
 ]

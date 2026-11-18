@@ -1,12 +1,5 @@
 [
   {
-    "type": "ITEM",
-    "id": "teeth_macuahuitl",
-    "name": { "str": "teeth-bladed macuahuitl" },
-    "copy-from": "teeth_macuahuitl",
-    "melee_damage": { "bash": 16, "cut": 30 }
-  },
-  {
     "id": "q_staff_of_the_wise",
     "looks_like": "rune_magus_weapon",
     "type": "ITEM",

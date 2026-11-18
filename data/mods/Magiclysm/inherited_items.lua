@@ -1,0 +1,8 @@
+require("inherited_items.items.alchemy_items")
+require("inherited_items.items.black_dragon_items")
+require("inherited_items.items.enchanted_melee")
+require("inherited_items.items.enchanted_unarmed")
+require("inherited_items.items.generic")
+require("inherited_items.items.melee")
+require("inherited_items.items.nature_spirit_items")
+require("inherited_items.items.weapons")

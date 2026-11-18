@@ -216,3 +216,5 @@ require("book_items")
 require("hedge_magic_squares")
 
 require("generic_items")
+
+require("inherited_items")

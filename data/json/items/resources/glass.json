@@ -50,23 +50,5 @@
     "faults": [ { "fault": "fault_broken_window" } ],
     "flags": [ "SINGLE_USE", "PUNCTURE_VEHICLE_WHEELS" ],
     "melee_damage": { "bash": 4 }
-  },
-  {
-    "type": "ITEM",
-    "id": "tempered_glass_sheet",
-    "symbol": "]",
-    "color": "light_cyan",
-    "name": { "str": "sheet of tempered glass", "str_pl": "sheets of tempered glass" },
-    "description": "A large, durable sheet of tempered glass, approximately six millimeters thick.  A common type of safety glass with the curious property of breaking into small, non-lethal pieces upon shattering.",
-    "category": "spare_parts",
-    "price": "100 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "glass" ],
-    "weight": "17514 g",
-    "volume": "7070 ml",
-    "longest_side": "122 cm",
-    "faults": [ { "fault": "fault_broken_window" } ],
-    "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 6 }
   }
 ]

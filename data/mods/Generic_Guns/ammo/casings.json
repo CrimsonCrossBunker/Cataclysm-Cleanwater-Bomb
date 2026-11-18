@@ -1,12 +1,5 @@
 [
   {
-    "id": "caotel_cell_spent",
-    "type": "ITEM",
-    "copy-from": "caotel_cell_spent",
-    "name": { "str": "spent plasma cell" },
-    "description": "A plasma cell that has been depleted of energy.  It cannot be recharged."
-  },
-  {
     "id": "ammolinkrifle",
     "copy-from": "ammolink",
     "type": "ITEM",

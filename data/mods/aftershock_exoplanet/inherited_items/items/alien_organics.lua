@@ -1,0 +1,14 @@
+local ccb = require("ccb")
+local content = ccb.content
+
+do
+    local item = content.Item {
+        id = "alien_hydrogen_sacs",
+        copy_from = "mutant_bug_hydrogen_sacs",
+        looks_like = "mutant_bug_hydrogen_sacs",
+        category = "spare_parts",
+        name = ccb.content.plural_text("cluster of gas sacs", "clusters of gas sacs"),
+        description = ccb.content.text("This is a cluster of multicolored membranous bubbles, each about the size of a grape, retrieved from inside an alien animal.  They float like tiny helium balloons - perhaps they are full of lighter-than-air gas."),
+    }
+    content.add(item)
+end

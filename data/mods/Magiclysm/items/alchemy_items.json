@@ -168,30 +168,6 @@
   },
   {
     "type": "ITEM",
-    "id": "demon_chitin_piece",
-    "category": "spare_parts",
-    "symbol": ",",
-    "color": "red",
-    "name": { "str": "chunk of demon chitin", "str_pl": "chunks of demon chitin" },
-    "description": "A piece of demon spider exoskeleton.  It is light and very durable, and probably has some magical properties.",
-    "price": "10 USD",
-    "material": [ "demon_chitin" ],
-    "weight": "89 g",
-    "volume": "250 ml",
-    "flags": [ "TRADER_AVOID" ],
-    "melee_damage": { "bash": 1 }
-  },
-  {
-    "id": "bundle_demon_chitin_piece",
-    "type": "ITEM",
-    "copy-from": "demon_chitin_piece",
-    "symbol": "=",
-    "name": { "str": "bundle of demon chitin chunks", "str_pl": "bundles of demon chitin chunks" },
-    "proportional": { "price": 10, "weight": 10, "volume": 10 },
-    "description": "Pieces of demon spider exoskeleton, bundled tightly together for storage.  Disassemble to unpack."
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "alumentum",
     "category": "spare_parts",
