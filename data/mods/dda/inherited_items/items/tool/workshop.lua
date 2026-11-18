@@ -1312,3 +1312,99 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- based on the US Hammer Gas-Powered GB-60
+    -- Consumes 0.6 L/h
+    local item = content.Item {
+        id = "jackhammer",
+        name = ccb.content.plural_text("jackhammer", "jackhammers"),
+        description = ccb.content.text("A construction or mining tool for breaking rock and other hard surfaces.  This model runs on gasoline."),
+        mass_milligrams = 24000000,
+        volume_ml = 13330,
+        longest_side_mm = 810,
+        price_cents = 40000,
+        price_postapoc_cents = 1000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("JACKHAMMER")
+    item:clear_flags()
+    item:flag("DIG_TOOL")
+    item:flag("MULTI_DRILL")
+    item:flag("POWERED")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:melee_damage("stab", 6)
+    item:tool { charges_per_use = 300, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 1200 }, rigid = true, watertight = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pickaxe",
+        name = ccb.content.plural_text("pickaxe", "pickaxes"),
+        description = ccb.content.text("A large steel pickaxe, suitable for breaking up hard things or (with enough skill) hard targets.  Strike the earth!"),
+        mass_milligrams = 4535000,
+        volume_ml = 3000,
+        longest_side_mm = 910,
+        price_cents = 16000,
+        price_postapoc_cents = 1250,
+        melee_to_hit = -3,
+        symbol = "/",
+        color = "dark_gray",
+        techniques = { "WBLOCK_1" },
+        weapon_categories = { "HOOKING_WEAPONRY" },
+    }
+    item:material("wood", 1)
+    item:material("hc_steel", 1)
+    item:clear_use_actions()
+    item:native_use("PICKAXE")
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("DIG_TOOL")
+    item:flag("SHEATH_AXE")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 30)
+    item:melee_damage("stab", 15)
+    item:fault_group("handle_short", {  })
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "propane_torch",
+        name = ccb.content.plural_text("propane torch", "propane torches"),
+        description = ccb.content.text("A compact tool kit intended for heating metal, this portable propane torch includes a torch handle and accessories in an easy-to-carry tote.  It needs to be connected to a pressurized propane cylinder before use."),
+        mass_milligrams = 1600000,
+        volume_ml = 1000,
+        price_cents = 20000,
+        price_postapoc_cents = 750,
+        symbol = ";",
+        color = "red",
+        melee_to_hit = 0,
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("FIRESTARTER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { ammo_types = { "propane" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        allowed_items = { "small_propane_tank", "medium_propane_tank", "large_propane_tank", "xl_propane_tank" },
+    }
+    content.add(item)
+end

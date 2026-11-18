@@ -319,30 +319,6 @@
     ]
   },
   {
-    "id": "jackhammer",
-    "//": "based on the US Hammer Gas-Powered GB-60",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "jackhammer" },
-    "description": "A construction or mining tool for breaking rock and other hard surfaces.  This model runs on gasoline.",
-    "weight": "24 kg",
-    "volume": "13330 ml",
-    "longest_side": "81 cm",
-    "price": "400 USD",
-    "price_postapoc": "10 USD",
-    "to_hit": { "grip": "none", "length": "long", "surface": "point", "balance": "clumsy" },
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "//1": "Consumes 0.6 L/h",
-    "charges_per_use": 300,
-    "use_action": [ "JACKHAMMER" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "watertight": true, "ammo_restriction": { "gasoline": 1200 } } ],
-    "flags": [ "DIG_TOOL", "MULTI_DRILL", "POWERED" ],
-    "melee_damage": { "bash": 14, "stab": 6 },
-    "tool_ammo": [ "gasoline" ]
-  },
-  {
     "id": "kiln",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -512,28 +488,6 @@
     "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "neutral" },
     "melee_damage": { "bash": 3 },
     "tool_ammo": [ "weldgas" ]
-  },
-  {
-    "id": "pickaxe",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "pickaxe" },
-    "description": "A large steel pickaxe, suitable for breaking up hard things or (with enough skill) hard targets.  Strike the earth!",
-    "weight": "4535 g",
-    "volume": "3 L",
-    "longest_side": "91 cm",
-    "price": "160 USD",
-    "price_postapoc": "12 USD 50 cent",
-    "to_hit": { "grip": "solid", "length": "short", "surface": "point", "balance": "uneven" },
-    "material": [ "wood", "hc_steel" ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "use_action": [ "PICKAXE" ],
-    "techniques": [ "WBLOCK_1" ],
-    "flags": [ "DURABLE_MELEE", "NONCONDUCTIVE", "DIG_TOOL", "SHEATH_AXE", "NO_SALVAGE" ],
-    "faults": [ { "fault_group": "handle_short" } ],
-    "weapon_category": [ "HOOKING_WEAPONRY" ],
-    "melee_damage": { "bash": 30, "stab": 15 }
   },
   {
     "id": "polisher",
@@ -870,30 +824,6 @@
     "use_action": [ { "type": "link_up", "cable_length": 2, "charge_rate": "1500 W" } ],
     "melee_damage": { "bash": 7 },
     "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "propane_torch",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "propane torch", "str_pl": "propane torches" },
-    "description": "A compact tool kit intended for heating metal, this portable propane torch includes a torch handle and accessories in an easy-to-carry tote.  It needs to be connected to a pressurized propane cylinder before use.",
-    "weight": "1600 g",
-    "volume": "1 L",
-    "price": "200 USD",
-    "price_postapoc": "7 USD 50 cent",
-    "material": [ "steel", "plastic" ],
-    "symbol": ";",
-    "color": "red",
-    "flags": [ "ALLOWS_REMOTE_USE", "FIRESTARTER" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "item_restriction": [ "small_propane_tank", "medium_propane_tank", "large_propane_tank", "xl_propane_tank" ]
-      }
-    ],
-    "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "neutral" },
-    "melee_damage": { "bash": 3 },
-    "tool_ammo": [ "propane" ]
   },
   {
     "id": "exodii_kiln",
