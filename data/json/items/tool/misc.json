@@ -47,29 +47,6 @@
     "explode_in_fire": true
   },
   {
-    "id": "fur_rollmat",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "fur rollmat" },
-    "description": "A bedroll made of pelts which can be rolled up for transport.  It insulates you from the floor, making it easier to sleep.  Use it to unroll and place on the ground.",
-    "weight": "1800 g",
-    "volume": "3 L",
-    "price": "40 USD",
-    "price_postapoc": "12 USD 50 cent",
-    "material": [ "fur" ],
-    "symbol": ";",
-    "color": "brown",
-    "use_action": {
-      "type": "place_trap",
-      "allow_under_player": true,
-      "trap": "tr_fur_rollmat",
-      "moves": 100,
-      "practice": 0,
-      "done_message": "You unroll the fur mat and lay it on the ground."
-    },
-    "flags": [ "SINGLE_USE" ]
-  },
-  {
     "id": "horn_bicycle",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -128,29 +105,6 @@
     "flags": [ "WATCH" ]
   },
   {
-    "id": "rollmat",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "rollmat" },
-    "description": "A sheet of foam which can be rolled tightly for storage.  It insulates you from the floor, making it easier to sleep.  Use it to unroll and place on the ground.",
-    "weight": "250 g",
-    "volume": "1 L",
-    "price": "40 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "blue",
-    "use_action": {
-      "type": "place_trap",
-      "allow_under_player": true,
-      "trap": "tr_rollmat",
-      "moves": 1000,
-      "practice": 0,
-      "done_message": "You unroll the mat and lay it on the ground."
-    },
-    "flags": [ "SINGLE_USE" ]
-  },
-  {
     "id": "spray_can",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -187,22 +141,6 @@
     "charges_per_use": 1,
     "use_action": { "type": "inscribe", "verb": "Write", "gerund": "Written", "on_terrain": true, "material_restricted": false },
     "flags": [ "WRITE_MESSAGE" ]
-  },
-  {
-    "id": "survivor_scope",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "retractable telescope" },
-    "description": "A homemade collapsible telescope, perfect for a pirate.  Too large and inaccurate to use as a weapon scope, but carrying it in your inventory will double the distance that is mapped around you during your travels.",
-    "weight": "330 g",
-    "volume": "250 ml",
-    "price": "6 USD",
-    "price_postapoc": "7 USD 50 cent",
-    "material": [ "glass", "plastic" ],
-    "symbol": "o",
-    "color": "green",
-    "use_action": { "type": "firestarter", "moves": 1000, "moves_slow": 25000, "need_sunlight": true },
-    "flags": [ "FIRESTARTER", "ZOOM" ]
   },
   {
     "id": "tear_gas_payload_act",
@@ -285,29 +223,5 @@
       { "type": "firestarter", "moves": 1000, "moves_slow": 25000, "need_sunlight": true }
     ],
     "flags": [ "FIRESTARTER", "THERMOMETER" ]
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "nm_teeth",
-    "symbol": ",",
-    "color": "light_cyan",
-    "name": { "str_sp": "monster teeth" },
-    "category": "other",
-    "description": "Impossibly-sharp teeth extracted from a giant corpse.  You could use them as a weapon, but you might want to wear gloves.",
-    "material": [ "bone" ],
-    "weight": "42 g",
-    "volume": "30 ml",
-    "use_action": {
-      "type": "place_trap",
-      "trap": "tr_teeth",
-      "moves": 3000,
-      "practice": 2,
-      "done_message": "You carefully place the teeth on the ground, ready to be walked on by something passing by."
-    },
-    "flags": [ "HURT_WHEN_WIELDED", "TRADER_AVOID", "SINGLE_USE", "FRAGILE_MELEE", "ALLOWS_BODY_BLOCK" ],
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "point", "balance": "neutral" },
-    "melee_damage": { "cut": 12 },
-    "weapon_category": [ "SHIVS" ]
   }
 ]

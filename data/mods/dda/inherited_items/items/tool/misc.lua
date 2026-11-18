@@ -986,3 +986,113 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "fur_rollmat",
+        name = ccb.content.plural_text("fur rollmat", "fur rollmats"),
+        description = ccb.content.text("A bedroll made of pelts which can be rolled up for transport.  It insulates you from the floor, making it easier to sleep.  Use it to unroll and place on the ground."),
+        mass_milligrams = 1800000,
+        volume_ml = 3000,
+        price_cents = 4000,
+        price_postapoc_cents = 1250,
+        symbol = ";",
+        color = "brown",
+    }
+    item:material("fur", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_fur_rollmat",
+        moves = 100,
+        practice = 0,
+        message = ccb.content.text("You unroll the fur mat and lay it on the ground."),
+        allow_under_player = true,
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "rollmat",
+        name = ccb.content.plural_text("rollmat", "rollmats"),
+        description = ccb.content.text("A sheet of foam which can be rolled tightly for storage.  It insulates you from the floor, making it easier to sleep.  Use it to unroll and place on the ground."),
+        mass_milligrams = 250000,
+        volume_ml = 1000,
+        price_cents = 4000,
+        price_postapoc_cents = 250,
+        symbol = ";",
+        color = "blue",
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_rollmat",
+        moves = 1000,
+        practice = 0,
+        message = ccb.content.text("You unroll the mat and lay it on the ground."),
+        allow_under_player = true,
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "survivor_scope",
+        name = ccb.content.plural_text("retractable telescope", "retractable telescopes"),
+        description = ccb.content.text("A homemade collapsible telescope, perfect for a pirate.  Too large and inaccurate to use as a weapon scope, but carrying it in your inventory will double the distance that is mapped around you during your travels."),
+        mass_milligrams = 330000,
+        volume_ml = 250,
+        price_cents = 600,
+        price_postapoc_cents = 750,
+        symbol = "o",
+        color = "green",
+    }
+    item:material("glass", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:firestarter { moves = 1000, moves_slow = 25000, need_sunlight = true }
+    item:clear_flags()
+    item:flag("FIRESTARTER")
+    item:flag("ZOOM")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "nm_teeth",
+        symbol = ",",
+        color = "light_cyan",
+        name = ccb.content.plural_text("monster teeth", "monster teeth"),
+        category = "other",
+        description = ccb.content.text("Impossibly-sharp teeth extracted from a giant corpse.  You could use them as a weapon, but you might want to wear gloves."),
+        mass_milligrams = 42000,
+        volume_ml = 30,
+        melee_to_hit = -5,
+        weapon_categories = { "SHIVS" },
+    }
+    item:material("bone", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_teeth",
+        moves = 3000,
+        practice = 2,
+        message = ccb.content.text("You carefully place the teeth on the ground, ready to be walked on by something passing by."),
+    }
+    item:clear_flags()
+    item:flag("HURT_WHEN_WIELDED")
+    item:flag("TRADER_AVOID")
+    item:flag("SINGLE_USE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:clear_melee_damage()
+    item:melee_damage("cut", 12)
+    item:tool()
+    content.add(item)
+end
