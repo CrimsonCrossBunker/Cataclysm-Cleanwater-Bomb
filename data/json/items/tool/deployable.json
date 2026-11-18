@@ -20,55 +20,5 @@
       }
     ],
     "use_action": { "type": "deploy_furn", "furn_type": "f_hobo_stove" }
-  },
-  {
-    "id": "cot",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "cot" },
-    "description": "A military-style folding cot.  While it may not be quite as comfortable as a bed, it's better than slumming it on the ground.",
-    "weight": "7500 g",
-    "volume": "15 L",
-    "longest_side": "100 cm",
-    "price": "75 USD",
-    "price_postapoc": "5 USD",
-    "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "material": [ "aluminum", "cotton" ],
-    "symbol": ";",
-    "color": "green",
-    "use_action": {
-      "type": "place_trap",
-      "allow_under_player": true,
-      "trap": "tr_cot",
-      "moves": 1000,
-      "practice": 0,
-      "done_message": "You unfold the cot and place it on the ground."
-    },
-    "flags": [ "SINGLE_USE" ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
-    "id": "target_spinner",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "spinner target" },
-    "description": "Two steel plates mounted on a pipe in a double-sided oar design, installed in a sturdy frame with a rotating mechanism.  It spins when struck, eventually returning to vertical alignment due to one plate being heavier than the other.  You can use it for target practice when stationary targets become too easy.",
-    "weight": "20 kg",
-    "volume": "10 L",
-    "longest_side": "130 cm",
-    "price": "35 USD",
-    "price_postapoc": "10 USD",
-    "material": [ "steel" ],
-    "symbol": "%",
-    "color": "light_gray",
-    "use_action": {
-      "type": "place_trap",
-      "allow_under_player": true,
-      "trap": "tr_target_spinner",
-      "moves": 500,
-      "practice": 0,
-      "done_message": "You set up the spinner target, time to shoot!"
-    },
-    "flags": [ "SINGLE_USE" ]
   }
 ]

@@ -483,3 +483,63 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "cot",
+        name = ccb.content.plural_text("cot", "cots"),
+        description = ccb.content.text("A military-style folding cot.  While it may not be quite as comfortable as a bed, it's better than slumming it on the ground."),
+        mass_milligrams = 7500000,
+        volume_ml = 15000,
+        longest_side_mm = 1000,
+        price_cents = 7500,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "green",
+    }
+    item:material("aluminum", 1)
+    item:material("cotton", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_cot",
+        moves = 1000,
+        practice = 0,
+        message = ccb.content.text("You unfold the cot and place it on the ground."),
+        allow_under_player = true,
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "target_spinner",
+        name = ccb.content.plural_text("spinner target", "spinner targets"),
+        description = ccb.content.text("Two steel plates mounted on a pipe in a double-sided oar design, installed in a sturdy frame with a rotating mechanism.  It spins when struck, eventually returning to vertical alignment due to one plate being heavier than the other.  You can use it for target practice when stationary targets become too easy."),
+        mass_milligrams = 20000000,
+        volume_ml = 10000,
+        longest_side_mm = 1300,
+        price_cents = 3500,
+        price_postapoc_cents = 1000,
+        symbol = "%",
+        color = "light_gray",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_target_spinner",
+        moves = 500,
+        practice = 0,
+        message = ccb.content.text("You set up the spinner target, time to shoot!"),
+        allow_under_player = true,
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:tool()
+    content.add(item)
+end
