@@ -527,7 +527,7 @@ std::vector<tripoint_bub_ms> map::route( const tripoint_bub_ms &f,
     clip_to_bounds( min.x(), min.y(), min.z() );
     clip_to_bounds( max.x(), max.y(), max.z() );
 
-    auto search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
+    pathfinding_workspace::lease search = get_pathfinding_cache_ref( f.z() ).workspace.acquire();
     pathfinder &pf = search.get().ordinary;
     pf.reset( min.z(), max.z(), min_z() );
 
@@ -1056,8 +1056,8 @@ std::vector<tripoint_bub_ms> route_with_grab(
 
     const int total_states = MAPSIZE_X * MAPSIZE_Y * GRAB_DIRS;
 
-    auto search = pf_cache.workspace.acquire();
-    auto &state = search.get();
+    pathfinding_workspace::lease search = pf_cache.workspace.acquire();
+    pathfinding_workspace::state &state = search.get();
     auto &closed = state.grab_closed;
     auto &open = state.grab_open;
     auto &gscore = state.grab_gscore;
