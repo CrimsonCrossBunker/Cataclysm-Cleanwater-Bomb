@@ -1,16 +1,5 @@
 [
   {
-    "type": "dimension",
-    "id": "mom_shoggothed_world",
-    "region_layout": "mom_shoggothed_world"
-  },
-  {
-    "type": "dimension_region_layout",
-    "id": "mom_shoggothed_world",
-    "generation_mode": "UNIFORM",
-    "uniform_region": "mom_shoggothed_world"
-  },
-  {
     "type": "region_settings",
     "id": "mom_shoggothed_world",
     "copy-from": "default",

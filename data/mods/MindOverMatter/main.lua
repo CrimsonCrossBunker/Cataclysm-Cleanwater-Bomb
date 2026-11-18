@@ -1,3 +1,5 @@
+require("dimensions")
+
 local ccb = require("ccb")
 local services = ccb.services
 local knacks_only = ccb.content.is_mod_active("mom_knacks_only")

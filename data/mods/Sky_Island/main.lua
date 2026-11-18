@@ -42,6 +42,8 @@ end
 
 require("island_overmap")
 
+require("island_regions")
+
 require("island_dimensions")
 
 require("island_generation")

@@ -1,3 +1,5 @@
+require("dimensions")
+
 local ccb = require("ccb")
 
 local function mounted_charge_available(context)

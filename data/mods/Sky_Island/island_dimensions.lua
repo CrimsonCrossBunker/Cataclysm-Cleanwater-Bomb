@@ -43,3 +43,11 @@ content.add(content.DimensionRegionLayout {
     generation_mode = "UNIFORM",
     uniform_region = "sky_island_raid_region_mega_city",
 })
+
+content.add(content.DimensionRegionLayout {
+    id = "default_skyisland",
+    generation_mode = "UNIFORM",
+    uniform_region = "default_skyisland",
+})
+
+content.replace(content.Dimension { id = "default", region_layout = "default_skyisland" })

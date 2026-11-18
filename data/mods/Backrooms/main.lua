@@ -1,3 +1,5 @@
+require("dimensions")
+
 require("snippets")
 
 require("weather_generators")

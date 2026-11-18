@@ -1,3 +1,5 @@
+require("dimensions")
+
 require("difficulty")
 
 require("snippets")

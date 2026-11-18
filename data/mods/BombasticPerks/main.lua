@@ -1,3 +1,5 @@
+require("dimensions")
+
 require("morale_types")
 
 require("flags")
