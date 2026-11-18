@@ -29,6 +29,7 @@
 #include "mapgendata.h"
 #include "north_america.h"
 #include "north_america_elevation.h"
+#include "north_america_soil.h"
 #include "omdata.h"
 #include "path_info.h"
 #include "regional_climate.h"
@@ -317,7 +318,9 @@ const habitat *habitat_by_terrain( const oter_id &terrain )
     return nullptr;
 }
 
-void draw_habitat_cover( mapgendata &dat, const habitat &entry )
+enum class habitat_surface { wilderness, roadside, natural_margin };
+
+void draw_habitat_cover( mapgendata &dat, const habitat &entry, habitat_surface surface )
 {
     weighted_int_list<ter_id> trees;
     weighted_int_list<ter_id> shrubs;
@@ -332,11 +335,19 @@ void draw_habitat_cover( mapgendata &dat, const habitat &entry )
             ground.add( terrain.id(), weight );
         }
     }
-    const double phase = habitat_roll( dat.pos().xy() ) * 6.283185307179586;
+    const point_abs_ms origin = project_to<coords::ms>( dat.pos().xy() );
     for( int y = 0; y < 2 * SEEY; ++y ) {
         for( int x = 0; x < 2 * SEEX; ++x ) {
             const point_bub_ms pos( x, y );
-            const ter_t &original = *dat.m.ter( pos );
+            const ter_id original_id = dat.m.ter( pos );
+            const ter_t &original = *original_id;
+            if( surface != habitat_surface::wilderness ) {
+                const ter_id soil = canonical_soil( original_id );
+                if( soil != ter_t_dirt && soil != ter_t_grass && soil != ter_t_grass_tall &&
+                    soil != ter_t_grass_long ) {
+                    continue;
+                }
+            }
             if( original.has_flag( ter_furn_flag::TFLAG_SWIMMABLE ) ||
                 original.has_flag( ter_furn_flag::TFLAG_WALL ) ||
                 original.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
@@ -350,17 +361,19 @@ void draw_habitat_cover( mapgendata &dat, const habitat &entry )
                 continue;
             }
             // Low-frequency patches keep wet ground, scree and shrubs from looking like confetti.
-            const double patch = 0.65 + 0.35 * std::sin( x * 0.23 + phase ) *
-                                 std::sin( y * 0.19 - phase );
-            if( x_in_y( entry.tree_percent, 100 ) ) {
+            const double patch = 0.65 + 0.35 * std::sin( ( origin.x() + x ) * 0.23 ) *
+                                 std::sin( ( origin.y() + y ) * 0.19 );
+            if( surface == habitat_surface::wilderness && x_in_y( entry.tree_percent, 100 ) ) {
                 if( const ter_id *tree = trees.pick() ) {
                     replacement = tree;
                 }
-            } else if( x_in_y( entry.shrub_percent * patch, 100 ) ) {
+            } else if( surface != habitat_surface::roadside &&
+                       x_in_y( entry.shrub_percent * patch *
+                               ( surface == habitat_surface::natural_margin ? 0.35 : 1.0 ), 100 ) ) {
                 if( const ter_id *shrub = shrubs.pick() ) {
                     replacement = shrub;
                 }
-            } else if( x_in_y( entry.water_percent * patch, 100 ) ) {
+            } else if( surface == habitat_surface::wilderness && x_in_y( entry.water_percent * patch, 100 ) ) {
                 static const ter_str_id water( "t_water_sh" );
                 replacement = nullptr;
                 dat.m.ter_set( pos, water.id() );
@@ -850,13 +863,35 @@ void place_native_vegetation( mapgendata &dat )
         return;
     }
     if( const habitat *local = habitat_by_terrain( dat.terrain_type() ) ) {
-        draw_habitat_cover( dat, *local );
+        draw_habitat_cover( dat, *local, habitat_surface::wilderness );
         return;
     }
     const std::string &terrain = dat.terrain_type()->get_type_id().str();
     const bool field = terrain == "field";
     const bool forest = terrain == "forest" || terrain == "forest_thick" ||
                         terrain == "forest_water";
+    const bool road = dat.terrain_type()->is_road() && !dat.terrain_type()->is_water() &&
+                      !in_urban_footprint( dat.pos().xy() );
+    const bool natural_feature = terrain == "stream" || terrain == "stream_end" ||
+                                 terrain == "stream_corner" || terrain == "pond_field" ||
+                                 terrain == "cave" || terrain == "cave_rat" ||
+                                 terrain == "c_cave_entrance" || dat.terrain_type()->is_lake_shore();
+    if( road || natural_feature ) {
+        const ecology_profile *profile = profile_at( dat.pos().xy() );
+        const std::string_view region = profile ? std::string_view( profile->ecoregion ) :
+                                        std::string_view();
+        const habitat_surface surface = road ? habitat_surface::roadside : habitat_surface::natural_margin;
+        if( const habitat *local = habitat_at( dat.pos().xy(), region, false ) ) {
+            draw_habitat_cover( dat, *local, surface );
+        } else if( profile && natural_feature ) {
+            habitat margin;
+            margin.ground.emplace_back( profile->biome.groundcover, 1 );
+            margin.plants = profile->plants;
+            margin.shrub_percent = profile->biome.open_shrub_percent;
+            draw_habitat_cover( dat, margin, surface );
+        }
+        return;
+    }
     if( !field && !forest ) {
         return;
     }

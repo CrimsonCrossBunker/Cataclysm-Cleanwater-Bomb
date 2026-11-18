@@ -28,6 +28,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <variant>
 
@@ -1515,6 +1516,24 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
         }
         std::size_t preparation_index = 0;
         std::vector<row_sprite_entry> row_sprites;
+        std::unordered_map<tripoint_abs_omt, snow_cover> snow_cover_for_cell;
+        const weather_manager &weather = get_weather_const();
+        const auto ground_snow = [&]( const tripoint_bub_ms &pos ) {
+            if( !here.inbounds( pos ) ) {
+                return snow_cover::none;
+            }
+            const tripoint_abs_omt cell = snow_climate_cell( project_to<coords::omt>( here.get_abs( pos ) ) );
+            auto [entry, inserted] = snow_cover_for_cell.try_emplace( cell, snow_cover::none );
+            if( inserted ) {
+                entry->second = classify_snow( weather.get_snow_depth_mm( cell ) );
+            }
+            if( entry->second == snow_cover::none || here.is_open_air( pos ) || here.is_roofed( pos ) ||
+                here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, pos ) ||
+                here.has_flag( ter_furn_flag::TFLAG_SWIM_UNDER, pos ) ) {
+                return snow_cover::none;
+            }
+            return entry->second;
+        };
         std::vector<tinted_tile_scratch> row_tinted;
         while( cur_zlevel <= center.z() && !draw_aborted ) {
             const half_open_rectangle<point> &cur_any_tile_range = is_isometric()
@@ -1604,7 +1623,7 @@ void cata_tiles::draw( const point &dest, const tripoint_bub_ms &center, int wid
                             const point slope = draw_relief ?
                                                 north_america::surface_slope( here, position ) : point::zero;
                             const int shade = north_america::surface_relief_shade( slope );
-                            const snow_cover cover = get_weather_const().get_surface_snow_cover( here, position );
+                            const snow_cover cover = ground_snow( position );
                             if( cover == snow_cover::none && std::abs( shade ) < 7 ) {
                                 continue;
                             }

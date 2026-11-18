@@ -4,6 +4,7 @@
     "https://release.nass.usda.gov/reports/cropan26.pdf",
     "https://www150.statcan.gc.ca/t1/tbl1/en/tv.action?pid=3210035901",
     "https://gov.mb.ca/agriculture/crops/seasonal-reports/pubs/early-seeding-considerations.pdf",
+    "https://gov.mb.ca/agriculture/crops/crop-management/grain-corn/corn-seed-bed-preparation.html",
     "https://www.ontario.ca/page/publication-811-agronomy-guide-field-crops",
     "https://nube.agricultura.gob.mx/calendario_agricola/",
     "https://nube.agricultura.gob.mx/panorama_dgsiap/2025.pdf"
@@ -26,9 +27,10 @@
       [ "seed_potato_raw", 18, 425, 1015 ]
     ],
     "CA-MB": [
-      [ "seed_wheat", 33, 427, 921 ],
-      [ "seed_canola", 32, 505, 1010 ],
-      [ "soybean_seed", 16, 510, 1007 ],
+      [ "seed_wheat", 29, 427, 921 ],
+      [ "seed_canola", 28, 505, 1010 ],
+      [ "soybean_seed", 14, 510, 1007 ],
+      [ "seed_corn", 10, 515, 1015 ],
       [ "seed_oats", 9, 426, 919 ],
       [ "seed_potato_raw", 10, 501, 1007 ]
     ],
