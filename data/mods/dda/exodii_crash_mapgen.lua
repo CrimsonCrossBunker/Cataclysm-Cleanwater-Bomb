@@ -192,3 +192,22 @@ add_room("nest_exodii_crash_building_smashed", {
     ["*"] = { group = "recycle_steel", chance = 50, repetitions = { 1, 3 } },
     [" "] = { group = "recycle_steel", chance = 20 },
 })
+
+content.add_nested_mapgen {
+    id = "nest_exodii_scouts",
+    size = 3,
+    build = function(layout)
+        layout:furniture({ 0, 2 }, { 0, 2 }, "f_exodii_signpost")
+        layout:spawn_monster("mon_exodii_quad", 0, { 0, 2 })
+        layout:spawn_monster("mon_exodii_worker", { 1, 2 }, { 0, 2 },
+            { chance = 50, repetitions = { 1, 3 } })
+    end,
+}
+
+content.add_nested_mapgen {
+    id = "nest_exodii_zombies",
+    size = 3,
+    build = function(layout)
+        layout:spawn_monster("mon_zomborg", { 0, 2 }, { 0, 2 }, { repetitions = { 1, 4 } })
+    end,
+}
