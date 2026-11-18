@@ -64,3 +64,32 @@ do
     item:adjust_measurements { price_cents = { factor = 10 }, volume_ml = { factor = 10 }, mass_milligrams = { factor = 10 } }
     content.add(item)
 end
+
+do
+    -- 2 days
+    local item = content.Item {
+        id = "black_dragon_tanning_hide",
+        category = "spare_parts",
+        name = ccb.content.plural_text("tanning black dragon hide", "tanning black dragon hides"),
+        description = ccb.content.text("A treated black dragon hide which is undergoing the chemical processes required to become workable.  You will be able to activate it to unroll and make use of it when it is done."),
+        mass_milligrams = 2500000,
+        volume_ml = 4000,
+        price_cents = 0,
+        symbol = ",",
+        color = "black_white",
+    }
+    item:material("flesh", 1)
+    item:material("black_dragon_hide", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "black_dragon_tanned_hide" },
+        message = ccb.content.text("You carefully unfold the black dragon hide and shake it clean."),
+        moves = 150,
+        minimum_age_turns = 172800,
+        not_ready_message = ccb.content.text("The black dragon hide isn't done yet."),
+    }
+    item:clear_flags()
+    item:flag("NO_SALVAGE")
+    item:tool()
+    content.add(item)
+end
