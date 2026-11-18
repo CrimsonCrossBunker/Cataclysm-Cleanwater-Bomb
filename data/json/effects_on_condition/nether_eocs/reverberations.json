@@ -216,24 +216,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_INNER_CABINS_WARPED_CABIN",
-    "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_DIMENSIONAL_ANCHOR" }, { "not": "u_driving" } ] },
-    "effect": [
-      { "u_travel_to_dimension": "cabins", "npc_travel_radius": 0, "npc_travel_filter": "none" },
-      { "u_location_variable": { "context_val": "nearest_bed" }, "furniture": "f_bed", "target_max_radius": 60 },
-      { "u_teleport": { "context_val": "nearest_bed" } },
-      {
-        "u_message": "As you step through the cabin door your movements slow, like you're trying to run underwater.  You then awake in bed.",
-        "popup": true,
-        "popup_w_interrupt_query": true
-      },
-      { "run_eocs": "EOC_PORTAL_CABINS_RETURN", "time_in_future": [ "6 hours", "12 hours" ] },
-      { "run_eocs": [ "EOC_CABIN_DAY_CYCLE_OR_KILL_CYCLE" ] }
-    ],
-    "false_effect": { "u_message": "Standing at the edge of the void tickles your senses.", "popup": false }
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_INNER_CABINS_UPDATE_EXIT_1",
     "condition": { "current_dimension": "inner_cabins" },
     "effect": [

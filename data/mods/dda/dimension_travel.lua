@@ -51,8 +51,9 @@ local function zero()
     return services.coords.tripoint_abs_ms(0, 0, 0)
 end
 
-local function local_floor(character, position, terrain, radius)
-    return services.world.find_location(position, { kind = "terrain", id = id("terrain", terrain) },
+local function local_floor(character, position, terrain, radius, kind)
+    kind = kind or "terrain"
+    return services.world.find_location(position, { kind = kind, id = id(kind, terrain) },
         { target_max_radius = radius, distance_origin = state.position(character) })
 end
 
@@ -144,6 +145,19 @@ function M.cabins(character)
     schedule(character, "cabins", 6 * 3600, 12 * 3600)
     cabin_light_cycle()
     ire(character)
+end
+
+function M.warped_cabin(character)
+    if not M.can_leave(character) then
+        state.message(character, services.translate("Standing at the edge of the void tickles your senses."))
+        return
+    end
+    travel(character, "cabins")
+    local location = local_floor(character, state.position(character), "f_bed", 60, "furniture")
+    teleport(character, location.position or zero())
+    M.notice(character, services.translate("As you step through the cabin door your movements slow, like you're trying to run underwater.  You then awake in bed."))
+    schedule(character, "cabins", 6 * 3600, 12 * 3600)
+    cabin_light_cycle()
 end
 
 function M.reverberation(character)

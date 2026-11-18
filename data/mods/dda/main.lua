@@ -153,6 +153,8 @@ require("anomalous_mp3")
 
 require("string_dimension_hypercube")
 
+require("inner_cabin_door")
+
 require("highland_incense_content")
 
 require("highland_incense")
