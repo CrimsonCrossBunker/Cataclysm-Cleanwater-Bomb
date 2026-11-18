@@ -49,6 +49,7 @@ extern "C" {
 #include "butchery_requirements.h"
 #include "body_part_set.h"
 #include "bodypart.h"
+#include "build_reqs.h"
 #include "calendar.h"
 #include "color.h"
 #include "coordinates.h"
@@ -392,6 +393,28 @@ struct recipe_step_definition_data {
     std::vector<recipe_proficiency_data> proficiencies;
 };
 
+using blueprint_tokens = std::vector<std::pair<std::string, int>>;
+
+struct recipe_blueprint_needs_data {
+    int time = 0;
+    std::map<std::string, int> skills;
+    std::vector<std::vector<component_requirement>> components;
+    std::vector<std::vector<component_requirement>> tools;
+    std::vector<std::vector<quality_requirement_definition>> qualities;
+};
+
+struct recipe_blueprint_data {
+    std::string update;
+    authored_text name;
+    std::vector<std::string> resources;
+    blueprint_tokens provides;
+    blueprint_tokens requires_tokens;
+    blueprint_tokens excludes;
+    std::map<std::string, std::map<std::string, authored_text>> parameter_labels;
+    bool check_needs = true;
+    std::optional<recipe_blueprint_needs_data> needs;
+};
+
 struct recipe_definition_data {
     std::string id;
     bool nested_category = false;
@@ -410,7 +433,9 @@ struct recipe_definition_data {
     std::int64_t difficulty = 0;
     std::int64_t time_moves = 100;
     bool autolearn = true;
+    bool never_learn = false;
     bool reversible = false;
+    std::optional<recipe_blueprint_data> blueprint;
     std::string variant;
     std::string container;
     std::string container_variant;
@@ -1334,6 +1359,29 @@ struct item_definition_handle {
     }
 };
 
+std::vector<component_requirement> read_recipe_component_alternatives( const sol::table &choices )
+{
+    const std::size_t count = require_dense_array(
+                                  choices, "recipe component alternatives", 1, 128 );
+    std::vector<component_requirement> group;
+    group.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object value = choices.raw_get<sol::object>( index );
+        if( !value.is<sol::table>() ) {
+            throw std::runtime_error( "recipe component alternatives must be tables" );
+        }
+        const sol::table choice = value.as<sol::table>();
+        const std::string id = choice.get_or( "id", std::string() );
+        const std::int64_t count = choice.get_or<std::int64_t>( "count", 1 );
+        if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe component alternative requires an id and positive count" );
+        }
+        group.push_back( { id, count, choice.get_or( "requirement", false ),
+                           choice.get_or( "recoverable", true ) } );
+    }
+    return group;
+}
+
 std::vector<component_requirement> read_recipe_tool_alternatives( const sol::table &choices )
 {
     const std::size_t count = require_dense_array(
@@ -1426,6 +1474,67 @@ requirement_data make_recipe_requirements(
     return requirement_data( tools, qualities, components );
 }
 
+blueprint_tokens read_blueprint_tokens( const sol::table &options, const char *field )
+{
+    blueprint_tokens result;
+    if( const auto entries = options.get<sol::optional<sol::table>>( field ) ) {
+        const auto size = require_dense_array( *entries, field, 0 );
+        for( std::size_t i = 1; i <= size; ++i ) {
+            const sol::table token = entries->raw_get<sol::table>( i );
+            const std::string id = token.get<std::string>( "id" );
+            const auto amount = token.get_or<std::int64_t>( "amount", 1 );
+            if( id.empty() || amount <= 0 || amount > std::numeric_limits<int>::max() ) {
+                throw std::runtime_error( "blueprint token needs an ID and a positive amount" );
+            }
+            result.emplace_back( id, static_cast<int>( amount ) );
+        }
+    }
+    return result;
+}
+
+recipe_blueprint_needs_data read_blueprint_needs( const sol::table &options )
+{
+    recipe_blueprint_needs_data needs;
+    const auto moves = options.get_or<std::int64_t>( "duration_moves", 0 );
+    if( moves < 0 || moves > std::numeric_limits<int>::max() ) {
+        throw std::runtime_error( "blueprint needs duration is outside the native range" );
+    }
+    needs.time = static_cast<int>( moves );
+    if( const auto skills = options.get<sol::optional<sol::table>>( "skills" ) ) {
+        for( const auto &[id, level] : *skills ) {
+            if( !id.is<std::string>() || !level.is<std::int64_t>() ) {
+                throw std::runtime_error( "blueprint needs skills must map skill IDs to levels" );
+            }
+            const std::string skill = id.as<std::string>();
+            const auto required_level = level.as<std::int64_t>();
+            if( skill.empty() || required_level < 0 || required_level > MAX_SKILL ) {
+                throw std::runtime_error( "blueprint needs contains an invalid skill or level" );
+            }
+            needs.skills.emplace( skill, static_cast<int>( required_level ) );
+        }
+    }
+    if( const auto components = options.get<sol::optional<sol::table>>( "components" ) ) {
+        const auto size = require_dense_array( *components, "blueprint component groups", 0 );
+        for( std::size_t i = 1; i <= size; ++i ) {
+            needs.components.push_back( read_recipe_component_alternatives( components->raw_get<sol::table>( i ) ) );
+        }
+    }
+    if( const auto tools = options.get<sol::optional<sol::table>>( "tools" ) ) {
+        const auto size = require_dense_array( *tools, "blueprint tool groups", 0 );
+        for( std::size_t i = 1; i <= size; ++i ) {
+            needs.tools.push_back( read_recipe_tool_alternatives( tools->raw_get<sol::table>( i ) ) );
+        }
+    }
+    if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities" ) ) {
+        const auto size = require_dense_array( *qualities, "blueprint quality groups", 0 );
+        for( std::size_t i = 1; i <= size; ++i ) {
+            needs.qualities.push_back( read_quality_alternatives( qualities->raw_get<sol::table>( i ),
+                                       "blueprint quality alternatives" ) );
+        }
+    }
+    return needs;
+}
+
 struct recipe_definition_handle {
     std::shared_ptr<recipe_definition_data> definition;
     std::shared_ptr<owner_token> token;
@@ -1463,25 +1572,7 @@ struct recipe_definition_handle {
 
     recipe_definition_handle &component_any( const sol::table &choices ) {
         require_building_handle( token, *definition, "recipe" );
-        const std::size_t count = require_dense_array(
-                                      choices, "recipe component alternatives", 1, 128 );
-        std::vector<component_requirement> group;
-        group.reserve( count );
-        for( std::size_t index = 1; index <= count; ++index ) {
-            const sol::object value = choices.raw_get<sol::object>( index );
-            if( !value.is<sol::table>() ) {
-                throw std::runtime_error( "recipe component alternatives must be tables" );
-            }
-            const sol::table choice = value.as<sol::table>();
-            const std::string id = choice.get_or( "id", std::string() );
-            const std::int64_t count = choice.get_or<std::int64_t>( "count", 1 );
-            if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
-                throw std::runtime_error( "recipe component alternative requires an id and positive count" );
-            }
-            group.push_back( { id, count, choice.get_or( "requirement", false ),
-                               choice.get_or( "recoverable", true ) } );
-        }
-        definition->components.push_back( std::move( group ) );
+        definition->components.push_back( read_recipe_component_alternatives( choices ) );
         return *this;
     }
 
@@ -1669,6 +1760,53 @@ struct recipe_definition_handle {
             }
         }
         definition->steps.push_back( std::move( step ) );
+        return *this;
+    }
+
+    recipe_definition_handle &camp_blueprint( const sol::table &options ) {
+        require_building_handle( token, *definition, "recipe" );
+        recipe_blueprint_data blueprint;
+        blueprint.update = options.get<std::string>( "update" );
+        if( blueprint.update.empty() ) {
+            throw std::runtime_error( "camp blueprint needs an update mapgen ID" );
+        }
+        blueprint.name = read_text_option( options, "name", {}, "camp blueprint name" );
+        blueprint.provides = read_blueprint_tokens( options, "provides" );
+        blueprint.requires_tokens = read_blueprint_tokens( options, "requires" );
+        blueprint.excludes = read_blueprint_tokens( options, "excludes" );
+        blueprint.check_needs = options.get_or( "check_needs", true );
+        if( const auto resources = options.get<sol::optional<sol::table>>( "resources" ) ) {
+            const auto size = require_dense_array( *resources, "camp blueprint resources", 0 );
+            for( std::size_t i = 1; i <= size; ++i ) {
+                const std::string id = resources->raw_get<std::string>( i );
+                if( id.empty() ) {
+                    throw std::runtime_error( "camp blueprint resource needs an item ID" );
+                }
+                blueprint.resources.push_back( id );
+            }
+        }
+        if( const auto parameters = options.get<sol::optional<sol::table>>( "parameter_labels" ) ) {
+            for( const auto &[parameter, labels] : *parameters ) {
+                if( !parameter.is<std::string>() || !labels.is<sol::table>() ) {
+                    throw std::runtime_error( "camp blueprint parameters must map names to value labels" );
+                }
+                auto &choices = blueprint.parameter_labels[parameter.as<std::string>()];
+                for( const auto &[id, label] : labels.as<sol::table>() ) {
+                    if( !id.is<std::string>() ) {
+                        throw std::runtime_error( "camp blueprint parameter values must have string IDs" );
+                    }
+                    choices.emplace( id.as<std::string>(),
+                                     detail::read_singular_text( label, {}, "camp blueprint parameter label" ) );
+                }
+            }
+        }
+        if( const auto needs = options.get<sol::optional<sol::table>>( "needs" ) ) {
+            blueprint.needs = read_blueprint_needs( *needs );
+        }
+        if( !blueprint.parameter_labels.empty() && ( blueprint.needs || !blueprint.check_needs ) ) {
+            throw std::runtime_error( "parameterized camp blueprints need automatic requirements" );
+        }
+        definition->blueprint = std::move( blueprint );
         return *this;
     }
 
@@ -3220,6 +3358,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "batch_discount", &recipe_definition_handle::batch_discount,
         "batch_setup", &recipe_definition_handle::batch_setup,
         "step", &recipe_definition_handle::step,
+        "camp_blueprint", &recipe_definition_handle::camp_blueprint,
         "byproduct", &recipe_definition_handle::byproduct,
         "byproducts_from_group", &recipe_definition_handle::byproducts_from_group,
         "remove_result_flag", &recipe_definition_handle::remove_result_flag,
@@ -3700,6 +3839,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->time_moves = options.get_or<std::int64_t>( "duration_moves", 100 );
         definition->result_multiplier = options.get_or<std::int64_t>( "result_multiplier", 1 );
         definition->autolearn = options.get_or( "autolearn", true );
+        definition->never_learn = options.get_or( "never_learn", false );
         definition->disassembly_moves = options.get_or<std::int64_t>( "disassembly_moves", 0 );
         definition->reversible = options.get_or( "reversible", false ) || definition->disassembly_moves > 0;
         definition->variant = options.get_or( "variant", std::string() );
@@ -5635,6 +5775,25 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 validate_recipe_requirements( step.requirements );
                 validate_recipe_proficiencies( step.proficiencies );
             }
+            if( definition.blueprint ) {
+                if( definition.result.empty() || definition.uncraft || !definition.steps.empty() ||
+                    definition.time_moves > std::numeric_limits<int>::max() ) {
+                    throw std::runtime_error( "recipe '" + definition.id + "' has invalid camp blueprint options" );
+                }
+                if( const auto &needs = definition.blueprint->needs ) {
+                    if( needs->time > std::numeric_limits<int>::max() - definition.time_moves ) {
+                        throw std::runtime_error( "recipe '" + definition.id + "' has an invalid blueprint duration" );
+                    }
+                    for( const auto &[skill, level] : needs->skills ) {
+                        if( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) {
+                            throw std::runtime_error( "recipe '" + definition.id + "' has an unknown blueprint skill" );
+                        }
+                    }
+                    validate_recipe_groups( needs->components, "blueprint component", false );
+                    validate_recipe_groups( needs->tools, "blueprint tool", true );
+                    validate_recipe_qualities( needs->qualities );
+                }
+            }
             for( const auto &[book, properties] : definition.books ) {
                 if( book.empty() || properties.level < -1 || properties.level > MAX_SKILL ||
                     ( check_engine_state && !item::type_is_defined( itype_id( book ) ) &&
@@ -7147,6 +7306,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native.subcategory = entry.definition->subcategory;
                     native.autolearn = entry.definition->autolearn;
+                    native.never_learn = entry.definition->never_learn;
                     for( const auto &[skill, level] : entry.definition->autolearn_skills ) {
                         native.autolearn_requirements.emplace( skill_id( skill ), level );
                     }
@@ -7230,6 +7390,43 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         assign_requirement_sets( step.reqs_external, source.requirements );
                         for( const recipe_proficiency_data &proficiency : source.proficiencies ) {
                             step.proficiencies.push_back( make_recipe_proficiency( proficiency ) );
+                        }
+                    }
+                    if( const auto &blueprint = entry.definition->blueprint ) {
+                        native.blueprint = update_mapgen_id( blueprint->update );
+                        native.bp_name = blueprint->name.native();
+                        for( const std::string &resource : blueprint->resources ) {
+                            native.bp_resources.emplace_back( resource );
+                        }
+                        native.bp_provides = blueprint->provides;
+                        native.bp_provides.emplace_back( native.result_.str(), 1 );
+                        native.bp_requires = blueprint->requires_tokens;
+                        native.bp_excludes.emplace_back( native.result_.str(), 1 );
+                        native.bp_excludes.insert( native.bp_excludes.end(), blueprint->excludes.begin(),
+                                                   blueprint->excludes.end() );
+                        for( const auto &[parameter, labels] : blueprint->parameter_labels ) {
+                            auto &translations = native.bp_parameter_names[parameter];
+                            for( const auto &[value, label] : labels ) {
+                                translations.emplace( value, label.native() );
+                            }
+                        }
+                        native.check_blueprint_needs = blueprint->check_needs;
+                        native.bp_autocalc = blueprint->check_needs && !blueprint->needs;
+                        if( native.bp_parameter_names.empty() ) {
+                            native.bp_build_reqs = cata::make_value<parameterized_build_reqs>();
+                            build_reqs &requirements = native.bp_build_reqs->reqs_by_parameters.emplace().first->second;
+                            if( const auto &needs = blueprint->needs ) {
+                                requirements.time = needs->time;
+                                for( const auto &[skill, level] : needs->skills ) {
+                                    requirements.skills.emplace( skill_id( skill ), level );
+                                }
+                                if( !needs->tools.empty() || !needs->qualities.empty() || !needs->components.empty() ) {
+                                    const requirement_id needs_id( "inline_blueprint_recipe_" + id.str() );
+                                    stage_requirements( needs_id, make_recipe_requirements( needs->tools, needs->qualities,
+                                                        needs->components ) );
+                                    requirements.raw_reqs.emplace( needs_id, 1 );
+                                }
+                            }
                         }
                     }
                     native_dict[id] = std::move( native );
@@ -8624,6 +8821,24 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                 }
             };
+            const auto hash_components = [&]( const auto & groups ) {
+                for( const auto &group : groups ) {
+                    hash_part( state, "component_group" );
+                    for( const component_requirement &component : group ) {
+                        hash_part( state, component.id );
+                        hash_part( state, std::to_string( component.count ) );
+                        hash_part( state, component.requirement ? "requirement" : "item" );
+                        hash_part( state, component.recoverable ? "recoverable" : "consumed" );
+                    }
+                }
+            };
+            const auto hash_blueprint_tokens = [&]( const char *name, const blueprint_tokens & tokens ) {
+                hash_part( state, name );
+                for( const auto &[id, amount] : tokens ) {
+                    hash_part( state, id );
+                    hash_part( state, std::to_string( amount ) );
+                }
+            };
             const auto hash_batch = [&]( const batch_savings & batch ) {
                 if( const auto *linear = std::get_if<batch_savings::linear>( &batch.data ) ) {
                     hash_part( state, "linear" );
@@ -8684,6 +8899,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.difficulty ) );
                 hash_part( state, std::to_string( v.time_moves ) );
                 hash_part( state, v.autolearn ? "autolearn" : "manual" );
+                hash_part( state, v.never_learn ? "never_learn" : "learnable" );
                 hash_part( state, v.reversible ? "reversible" : "irreversible" );
                 hash_part( state, v.variant );
                 hash_part( state, v.container );
@@ -8721,20 +8937,44 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( count ) );
                 }
                 hash_part( state, v.byproduct_group );
+                if( const auto &blueprint = v.blueprint ) {
+                    hash_part( state, "camp_blueprint" );
+                    hash_part( state, blueprint->update );
+                    hash_part( state, blueprint->name );
+                    for( const std::string &resource : blueprint->resources ) {
+                        hash_part( state, "blueprint_resource" );
+                        hash_part( state, resource );
+                    }
+                    hash_blueprint_tokens( "blueprint_provides", blueprint->provides );
+                    hash_blueprint_tokens( "blueprint_requires", blueprint->requires_tokens );
+                    hash_blueprint_tokens( "blueprint_excludes", blueprint->excludes );
+                    for( const auto &[parameter, labels] : blueprint->parameter_labels ) {
+                        hash_part( state, "blueprint_parameter" );
+                        hash_part( state, parameter );
+                        for( const auto &[value, label] : labels ) {
+                            hash_part( state, value );
+                            hash_part( state, label );
+                        }
+                    }
+                    hash_part( state, blueprint->check_needs ? "check_needs" : "unchecked_needs" );
+                    if( const auto &needs = blueprint->needs ) {
+                        hash_part( state, "explicit_needs" );
+                        hash_part( state, std::to_string( needs->time ) );
+                        for( const auto &[skill, level] : needs->skills ) {
+                            hash_part( state, skill );
+                            hash_part( state, std::to_string( level ) );
+                        }
+                        hash_components( needs->components );
+                        hash_tools( needs->tools );
+                        hash_qualities( needs->qualities );
+                    }
+                }
                 for( const auto &[skill, level] : v.autolearn_skills ) {
                     hash_part( state, "autolearn_skill" );
                     hash_part( state, skill );
                     hash_part( state, std::to_string( level ) );
                 }
-                for( const auto &g : v.components ) {
-                    hash_part( state, "and" );
-                    for( const auto &e : g ) {
-                        hash_part( state, e.id );
-                        hash_part( state, std::to_string( e.count ) );
-                        hash_part( state, e.requirement ? "requirement" : "item" );
-                        hash_part( state, e.recoverable ? "recoverable" : "consumed" );
-                    }
-                }
+                hash_components( v.components );
                 hash_tools( v.tools );
                 for( const auto &[id, level] : v.required_skills ) {
                     hash_part( state, id );

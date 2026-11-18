@@ -960,6 +960,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field difficulty? integer Difficulty from zero through the native maximum skill level.
 ---@field duration_moves? integer Non-negative base duration in moves.
 ---@field autolearn? boolean Whether the recipe is automatically learnable.
+---@field never_learn? boolean Prevent the recipe from appearing in learned character recipes.
 ---@field reversible? boolean Whether the recipe supplies disassembly data.
 ---@field disassembly_moves? integer Explicit disassembly duration in moves. A positive value makes the recipe reversible.
 ---@field variant? string Item variant of the crafted result.
@@ -1122,6 +1123,33 @@ function RecipeDefinition:batch_setup(setup_moves, max_batch) end
 ---@param options RecipeStepOptions
 ---@return RecipeDefinition self
 function RecipeDefinition:step(options) end
+
+---@class CampBlueprintToken
+---@field id string Native camp capability or upgrade ID.
+---@field amount? integer Positive contribution or required amount; defaults to one.
+
+---@class CampBlueprintNeeds
+---@field duration_moves? integer Explicit build duration added to the root recipe duration.
+---@field skills? table<string, integer> Explicit skill levels merged with the root requirements.
+---@field components? RecipeComponentAlternative[][] Ordered groups of interchangeable components.
+---@field tools? RecipeToolAlternative[][] Ordered groups of interchangeable tools.
+---@field qualities? RequirementQualityAlternative[][] Ordered groups of interchangeable tool qualities.
+
+---@class CampBlueprintOptions
+---@field update string Native update-mapgen ID applied by camp construction.
+---@field name? string|LocalizedText Name of the upgrade.
+---@field resources? string[] Item IDs available after completion.
+---@field provides? CampBlueprintToken[] Capabilities added by the upgrade.
+---@field requires? CampBlueprintToken[] Capabilities required before starting the upgrade.
+---@field excludes? CampBlueprintToken[] Capabilities that prevent this upgrade.
+---@field parameter_labels? table<string, table<string, string|LocalizedText>> Labels by mapgen parameter and parameter value.
+---@field needs? CampBlueprintNeeds Explicit build requirements. Omit to allow native calculation.
+---@field check_needs? boolean Use native mapgen requirement calculation or validation; defaults to true.
+
+---Attach a native camp construction blueprint to a recipe. The result token is automatically provided and excluded.
+---@param options CampBlueprintOptions
+---@return RecipeDefinition self
+function RecipeDefinition:camp_blueprint(options) end
 
 ---@param item_id string Item produced alongside the result.
 ---@param count integer Positive byproduct count per craft.
