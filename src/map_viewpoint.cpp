@@ -7,6 +7,7 @@
 #include "coordinates.h"
 #include "creature.h"
 #include "map.h"
+#include "point.h"
 #include "safe_reference.h"
 
 scoped_map_viewpoint::scoped_map_viewpoint( map &here, const Character &observer,

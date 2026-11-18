@@ -48,13 +48,13 @@
 #include "debug.h"
 #include "do_turn.h"
 #include "drawing_primitives.h"
+#include "effect_source.h"
 #include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
-#include "flat_set.h"
 #include "finite_water.h"
 #include "fragment_cloud.h"
 #include "fungal_effects.h"
@@ -87,6 +87,7 @@
 #include "map_viewpoint.h"
 #include "map_visibility.h"
 #include "map_memory.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
@@ -94,6 +95,7 @@
 #include "north_america_elevation.h"
 #include "mapgen_primitives.h"
 #include "maptile_fwd.h"
+#include "mdarray.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
 #endif
@@ -158,6 +160,8 @@
 #if defined(TILES)
     #include "sdltiles.h"
 #endif
+
+class weather_generator;
 
 static const ammo_effect_str_id ammo_effect_IGNITE( "IGNITE" );
 static const ammo_effect_str_id ammo_effect_INCENDIARY( "INCENDIARY" );
