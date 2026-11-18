@@ -24,30 +24,6 @@
   },
   {
     "type": "ITEM",
-    "id": "matrix_crystal_biokin_dust",
-    "name": { "str_sp": "crystalline dust, pink" },
-    "description": "A bit of crystalline dust with a faint pink shimmer.",
-    "color": "pink",
-    "symbol": "=",
-    "volume": "1 ml",
-    "weight": "15 g",
-    "material": [ "powder_nonflam" ],
-    "looks_like": "material_quicklime"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_biokin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, pink" },
-    "description": "Concentrated matrix crystal dust.  It glitters pink even in complete darkness.",
-    "color": "pink",
-    "symbol": "=",
-    "volume": "1 ml",
-    "weight": "5 g",
-    "material": [ "powder_nonflam" ],
-    "looks_like": "material_quicklime"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
     "category": "artifacts",
     "id": "matrix_crystal_biokinesis_artifact",
@@ -78,22 +54,6 @@
       "description": "The gray glow calls to you.",
       "effect_on_conditions": [ "EOC_CLAIR_MATRIX_AWAKENING" ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_clair_dust",
-    "name": { "str_sp": "crystalline dust, gray" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint gray shimmer.",
-    "color": "dark_gray"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_clair_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, gray" },
-    "description": "Concentrated matrix crystal dust.  It glitters gray even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "dark_gray"
   },
   {
     "type": "ITEM",
@@ -130,22 +90,6 @@
   },
   {
     "type": "ITEM",
-    "id": "matrix_crystal_electrokin_dust",
-    "name": { "str_sp": "crystalline dust, cyan" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint cyan shimmer.",
-    "color": "cyan"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_electrokin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, cyan" },
-    "description": "Concentrated matrix crystal dust.  It glitters cyan even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "cyan"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
     "category": "artifacts",
     "id": "matrix_crystal_electrokinesis_artifact",
@@ -176,22 +120,6 @@
       "description": "The golden glow calls to you.",
       "effect_on_conditions": [ "EOC_PHOTOKIN_MATRIX_AWAKENING" ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_photokin_dust",
-    "name": { "str_sp": "crystalline dust, golden" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint golden shimmer.",
-    "color": "yellow"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_photokin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, golden" },
-    "description": "Concentrated matrix crystal dust.  It glitters gold even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "yellow"
   },
   {
     "type": "ITEM",
@@ -228,22 +156,6 @@
   },
   {
     "type": "ITEM",
-    "id": "matrix_crystal_pyrokin_dust",
-    "name": { "str_sp": "crystalline dust, red" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint red shimmer.",
-    "color": "red"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_pyrokin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, red" },
-    "description": "Concentrated matrix crystal dust.  It glitters red even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "red"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
     "category": "artifacts",
     "id": "matrix_crystal_pyrokinesis_artifact",
@@ -274,22 +186,6 @@
       "description": "The yellow glow calls to you.",
       "effect_on_conditions": [ "EOC_TELEKIN_MATRIX_AWAKENING" ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_telekin_dust",
-    "name": { "str_sp": "crystalline dust, yellow" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint yellow shimmer.",
-    "color": "yellow"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_telekin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, yellow" },
-    "description": "Concentrated matrix crystal dust.  It glitters yellow even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "yellow"
   },
   {
     "type": "ITEM",
@@ -326,22 +222,6 @@
   },
   {
     "type": "ITEM",
-    "id": "matrix_crystal_telepath_dust",
-    "name": { "str_sp": "crystalline dust, white" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint white shimmer.",
-    "color": "white"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_telepath_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, white" },
-    "description": "Concentrated matrix crystal dust.  It glitters white even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "white"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
     "category": "artifacts",
     "id": "matrix_crystal_telepathy_artifact",
@@ -372,22 +252,6 @@
       "description": "The blue glow calls to you.",
       "effect_on_conditions": [ "EOC_TELEPORT_MATRIX_AWAKENING" ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_teleport_dust",
-    "name": { "str_sp": "crystalline dust, blue" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint blue shimmer.",
-    "color": "blue"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_teleport_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, blue" },
-    "description": "Concentrated matrix crystal dust.  It glitters blue even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "blue"
   },
   {
     "type": "ITEM",
@@ -424,22 +288,6 @@
   },
   {
     "type": "ITEM",
-    "id": "matrix_crystal_vitakin_dust",
-    "name": { "str_sp": "crystalline dust, green" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust with a faint green shimmer.",
-    "color": "green"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_vitakin_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, green" },
-    "description": "Concentrated matrix crystal dust.  It glitters green even in complete darkness.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "green"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "ARTIFACT" ],
     "category": "artifacts",
     "id": "matrix_crystal_vitakinesis_artifact",
@@ -473,22 +321,6 @@
       "description": "The faint light calls to you.",
       "effect_on_conditions": [ "EOC_DRAINED_MATRIX" ]
     }
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_drained_dust",
-    "name": { "str_sp": "crystalline dust, black" },
-    "copy-from": "matrix_crystal_biokin_dust",
-    "description": "A bit of crystalline dust that seems to absorb light.",
-    "color": "dark_gray"
-  },
-  {
-    "type": "ITEM",
-    "id": "matrix_crystal_drained_dust_refined",
-    "name": { "str_sp": "refined matrix crystal powder, black" },
-    "description": "Concentrated matrix crystal dust.  It seems to completely absorb any light that falls on it.",
-    "copy-from": "matrix_crystal_biokin_dust_refined",
-    "color": "dark_gray"
   },
   {
     "type": "ITEM",

@@ -95,22 +95,5 @@
     "use_action": { "type": "transform", "target": "pyrokinetic_lamp", "msg": "You close the lamp's cover.", "menu_text": "Close cover" },
     "light": 150,
     "flags": [ "LEAK_DAM", "ALLOWS_REMOTE_USE", "CHARGEDIM", "TRADER_AVOID", "WATER_BREAK", "SPAWN_ACTIVE" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "standing_pyrokinetic_lamp",
-    "name": { "str": "disconnected standing matrix lamp" },
-    "description": "A tall floor lamp that provides illumination when plugged into a power outlet.  This lamp is enhanced with matrix technology, making it far more power efficient.",
-    "weight": "2500 g",
-    "to_hit": -1,
-    "material": [ "plastic", "steel" ],
-    "volume": "2 L",
-    "longest_side": "170 cm",
-    "melee_damage": { "bash": 5 },
-    "price": "90 USD",
-    "price_postapoc": "5 USD",
-    "symbol": "L",
-    "color": "white",
-    "looks_like": "f_floor_lamp"
   }
 ]
