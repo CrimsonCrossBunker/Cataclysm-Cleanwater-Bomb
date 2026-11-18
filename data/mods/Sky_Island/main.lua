@@ -36,6 +36,8 @@ if require("ccb").content.is_mod_active("magiclysm") then
     require("recipes_magiclysm")
 end
 
+require("island_overmap")
+
 require("island_generation")
 
 require("island_start")
