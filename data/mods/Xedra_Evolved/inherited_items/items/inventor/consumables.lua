@@ -1,5 +1,57 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+local id = services.types.id
+
+local function check(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+end
+
+local rip_ticket = id("item", "rip_ticket")
+ccb.runtime.handler("consume_ripped_ticket", function(event)
+    if event.data.spell == "rip_ticket" then
+        local character = event.actors.character or services.characters.avatar()
+        check(services.inventory.consume_by_type(character, rip_ticket, 1, 0))
+    end
+end, 1)
+ccb.runtime.on("game:character_casts_spell", "consume_ripped_ticket")
+
+local regeneration = id("spell", "cosmic_dagwood_regeneration")
+ccb.runtime.handler("digest_cosmic_dagwood", function(use)
+    check(services.characters.cast_spell(use.character, regeneration))
+end)
+
+do
+    local item = content.Item {
+        id = "cosmic_dagwood",
+        name = ccb.content.plural_text("cosmic dagwood", "cosmic dagwoods"),
+        description = ccb.content.text("The greatest sandwich that will ever be made, in this universe and the next.  A quadruple stacker with beer-batter fried poultry, caramel chocolate chili, and topped with a specially made sauce of egg, blue cheese, honey mustard, BBQ and extremely concentrated vinegar that oozes down the other layers, before the entire thing is pressed and grilled in a waffle iron and finished with a garnish of gold and silver flakes and a fresh fruit skewered on top.  All the gourmet chefs in existence could not even conceive such a combination which, by all means, should not taste this good - But you did it.  And you don't plan on sharing."),
+        symbol = "%",
+        color = "yellow",
+        price_cents = 2900,
+        -- The volume is intentional, like an overpriced restaurant sandwich.
+        mass_grams = 950,
+        volume_ml = 220,
+    }
+    for _, material in ipairs({ "wheat", "flesh", "tomato", "veggy", "egg", "milk", "junk", "fruit" }) do
+        item:material(material, 1)
+    end
+    item:flag("INVENTOR_CRAFTED")
+    item:comestible { type = "FOOD", calories = 900, fun = 60, quench = 24, spoils_in_turns = 86400 }
+    item:vitamin("vitC", 30)
+    item:vitamin("calcium", 20)
+    item:vitamin("iron", 38)
+    item:vitamin("meat_allergen", 1)
+    item:vitamin("veggy_allergen", 1)
+    item:vitamin("wheat_allergen", 1)
+    item:vitamin("milk_allergen", 1)
+    item:vitamin("fruit_allergen", 1)
+    item:vitamin("junk_allergen", 1)
+    item:on_consume("digest_cosmic_dagwood")
+    content.add(item)
+end
 
 do
     local item = content.Item {

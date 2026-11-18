@@ -1,26 +1,5 @@
 [
   {
-    "type": "ITEM",
-    "subtypes": [ "TOOL", "ARTIFACT" ],
-    "id": "mace_magic",
-    "name": { "str": "wolf sledge" },
-    "description": "A long, solid, crafted steel haft, and a bulky, comma-like head.  It feels really massive, but it is surprisingly easy to swing, and you will do more damage as your level increases.  You can throw it like a boomerang, and the damage of throw depend on your throwing skill level.",
-    "weight": "2150 g",
-    "volume": "1750 ml",
-    "longest_side": "130 cm",
-    "color": "dark_gray",
-    "symbol": "/",
-    "looks_like": "sledge",
-    "material": [ "hc_steel" ],
-    "techniques": [ "WBLOCK_1", "SWEEP", "BRUTAL" ],
-    "flags": [ "SHEATH_SPEAR", "DURABLE_MELEE", "MUNDANE", "INVENTOR_CRAFTED" ],
-    "weapon_category": [ "GREAT_HAMMERS" ],
-    "melee_damage": { "bash": 27 },
-    "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "neutral" },
-    "use_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_WOLF_SLEDGE_TRHOW" ] },
-    "passive_effects": [ { "id": "WOLF_SLEDGE" } ]
-  },
-  {
     "id": "binary_sword",
     "copy-from": "qt_zweihander",
     "type": "ITEM",

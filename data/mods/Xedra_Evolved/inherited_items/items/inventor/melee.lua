@@ -1,5 +1,38 @@
 local ccb = require("ccb")
 local content = ccb.content
+local services = ccb.services
+local id = services.types.id
+
+local function value(result)
+    if not result.ok then
+        error(result.error.message)
+    end
+    return result.value
+end
+
+local throw_activity = id("activity", "ACT_GENERIC_EOC")
+local throw_spell = id("spell", "mace_pipe_magic_throw")
+ccb.runtime.handler("throw_wolf_sledge", function(use)
+    local character = use.character
+    if not character then
+        return 0
+    end
+    if value(services.needs.get(character)).stamina < 3000 then
+        use:message(ccb.services.translate("You don't have enough stamina to throw your Wolf Sledge."), "bad")
+        return 0
+    end
+    local wielded = value(services.inventory.wielded(character))
+    if not wielded or value(services.items.snapshot(wielded)).id.value ~= "mace_magic" then
+        use:message(ccb.services.translate("You aren't wielding it."))
+        return 0
+    end
+
+    value(services.activities.assign_timed(character, throw_activity, services.time.duration(2, "turn")))
+    local stamina = value(services.needs.get(character)).stamina
+    value(services.needs.set(character, { stamina = stamina - 400 }))
+    value(services.characters.cast_spell(character, throw_spell))
+    return 0
+end)
 
 do
     local item = content.Item {
@@ -157,5 +190,35 @@ do
         allowed_flags = { "BATTERY_MEDIUM", "BATTERY_HEAVY" },
         default_magazine = "medium_battery_cell",
     }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "mace_magic",
+        name = ccb.content.plural_text("wolf sledge", "wolf sledges"),
+        description = ccb.content.text("A long, solid, crafted steel haft, and a bulky, comma-like head.  It feels really massive, but it is surprisingly easy to swing, and you will do more damage as your level increases.  You can throw it like a boomerang, and the damage of throw depend on your throwing skill level."),
+        mass_milligrams = 2150000,
+        volume_ml = 1750,
+        longest_side_mm = 1300,
+        color = "dark_gray",
+        symbol = "/",
+        looks_like = "sledge",
+        techniques = { "WBLOCK_1", "SWEEP", "BRUTAL" },
+        weapon_categories = { "GREAT_HAMMERS" },
+        melee_to_hit = 1,
+    }
+    item:material("hc_steel", 1)
+    item:clear_flags()
+    item:flag("SHEATH_SPEAR")
+    item:flag("DURABLE_MELEE")
+    item:flag("MUNDANE")
+    item:flag("INVENTOR_CRAFTED")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 27)
+    item:tool()
+    item:passive_enchantment("WOLF_SLEDGE")
+    item:clear_use_actions()
+    item:on_use("throw_wolf_sledge", ccb.content.text("Activate"))
     content.add(item)
 end

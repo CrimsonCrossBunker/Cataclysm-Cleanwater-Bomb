@@ -217,6 +217,8 @@ require("hedge_magic_squares")
 
 require("generic_items")
 
+require("locked_files")
+
 require("inherited_items")
 
 require("active_items")
