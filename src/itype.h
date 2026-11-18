@@ -1824,6 +1824,7 @@ struct itype {
         int degrade_increments() const {
             return degrade_increments_;
         }
+        void set_degradation_multiplier( float multiplier );
 
         /**
         * Quantizes item damage numbers into levels (for example for display).

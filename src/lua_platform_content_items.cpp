@@ -5712,23 +5712,11 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id +
                                           "' references missing tick handler '" + definition.tick_handler + "'" );
             }
-            if( !definition.consume_handler.empty() ) {
-                if( !runtime_has_handler( owner_runtime, definition.consume_handler ) ) {
-                    throw std::runtime_error( "item '" + definition.id +
-                                              "' references missing consumption handler '" +
-                                              definition.consume_handler + "'" );
-                }
-                const itype *base = nullptr;
-                if( !definition.copy_from.empty() ) {
-                    base = item::find_type( itype_id( definition.copy_from ) );
-                } else if( item::type_is_defined( itype_id( definition.id ) ) ) {
-                    base = item::find_type( itype_id( definition.id ) );
-                }
-                if( check_engine_state && !definition.comestible && base != nullptr &&
-                    !base->comestible ) {
-                    throw std::runtime_error( "item '" + definition.id +
-                                              "' attaches on_consume to a non-comestible item" );
-                }
+            if( !definition.consume_handler.empty() &&
+                !runtime_has_handler( owner_runtime, definition.consume_handler ) ) {
+                throw std::runtime_error( "item '" + definition.id +
+                                          "' references missing consumption handler '" +
+                                          definition.consume_handler + "'" );
             }
         }
 
@@ -7058,6 +7046,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 break;
             }
             case items_content_apply_phase::definitions: {
+                generic_factory<itype> &factory = item_controller->get_generic_factory();
                 std::vector<std::size_t> item_order;
                 std::string inheritance_error;
                 if( !detail::resolve_platform_inheritance_order( pimpl_->items,
@@ -7067,39 +7056,25 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
             []( const item_registration & entry ) {
                 return entry.definition->copy_from;
             },
-            []( const std::string & id ) {
-                const itype_id native_id( id );
-                    const generic_factory<itype> &factory = item_controller->get_generic_factory();
-                    return item::type_is_defined( native_id ) || factory.is_valid( native_id ) ||
-                           factory.find_abstract( id ) != nullptr;
+            [&factory]( const std::string & id ) {
+                return factory.is_valid( itype_id( id ) ) || factory.find_abstract( id ) != nullptr;
                 }, item_order, inheritance_error, "item" ) ) {
                     throw std::runtime_error( inheritance_error );
                 }
                 for( const std::size_t index : item_order ) {
                     const item_registration &entry = pimpl_->items[index];
                     const itype_id id( entry.definition->id );
-                    const auto previous = item_controller->m_runtimes.find( id );
                     pimpl_->item_undo.emplace_back(
-                        id, previous == item_controller->m_runtimes.end() ?
-                        std::optional<itype>() : std::optional<itype>( *previous->second ) );
+                        id, factory.is_valid( id ) ?
+                        std::optional<itype>( factory.obj( id ) ) : std::nullopt );
                     const item_definition_data &definition = *entry.definition;
                     std::unique_ptr<itype> native;
                     if( definition.copy_from.empty() ) {
                         native = std::make_unique<itype>();
                     } else {
                         const itype_id source_id( definition.copy_from );
-                        const itype *source = nullptr;
-                        const auto runtime_source = item_controller->m_runtimes.find( source_id );
-                        if( runtime_source != item_controller->m_runtimes.end() ) {
-                            source = runtime_source->second.get();
-                        } else {
-                            generic_factory<itype> &factory = item_controller->get_generic_factory();
-                            if( factory.is_valid( source_id ) ) {
-                                source = &factory.obj( source_id );
-                            } else {
-                                source = factory.find_abstract( definition.copy_from );
-                            }
-                        }
+                        const itype *const source = factory.is_valid( source_id ) ?
+                                                    &factory.obj( source_id ) : factory.find_abstract( definition.copy_from );
                         if( source == nullptr ) {
                             throw std::runtime_error( "item '" + definition.id +
                                                       "' lost its copy-from source '" +
@@ -7145,6 +7120,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.has_category ) {
                         native->category_force = item_category_id( definition.category );
                     }
+                    native->set_degradation_multiplier( 1.0f );
                     if( definition.has_looks_like ) {
                         // Tileset fallback keys can name sprites without registered item types.
                         native->looks_like = itype_id( definition.looks_like );
@@ -7156,19 +7132,14 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     native->was_loaded = true;
                     native->src.clear();
                     native->src.emplace_back( id, mod_id( pimpl_->owner ) );
-                    bool first_material = true;
                     if( !definition.materials.empty() ) {
                         native->materials.clear();
                         native->mat_portion_total = 0;
-                    }
-                    for( const material_part &material : definition.materials ) {
-                        const material_id material_key( material.id );
-                        native->materials[material_key] += static_cast<int>( material.portions );
-                        native->mat_portion_total += static_cast<int>( material.portions );
-                        if( first_material ) {
-                            native->default_mat = material_key;
-                            first_material = false;
+                        for( const material_part &material : definition.materials ) {
+                            native->materials[material_id( material.id )] += static_cast<int>( material.portions );
+                            native->mat_portion_total += static_cast<int>( material.portions );
                         }
+                        native->default_mat = native->materials.begin()->first;
                     }
                     if( native->materials.empty() ) {
                         native->default_mat = material_id::NULL_ID();
@@ -7429,7 +7400,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->comestible->lua_platform_mod = pimpl_->owner;
                         native->comestible->lua_platform_consume_handler = definition.consume_handler;
                     }
-                    item_controller->m_runtimes[id] = std::move( native );
+                    // Authored items must participate in native inheritance, migration and item caches.
+                    factory.restore( *native );
                     item_controller->m_runtimes_dirty = true;
                     item_controller->templates_all_cache.clear();
                     item_controller->armor_containers.clear();
@@ -7808,7 +7780,7 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         }
     }
     for( const item_registration &entry : pimpl_->items ) {
-        if( !check( item_controller->m_runtimes.count( itype_id( entry.definition->id ) ) != 0,
+        if( !check( item_controller->get_generic_factory().is_valid( itype_id( entry.definition->id ) ),
                     "item", entry.definition->id ) ) {
             return false;
         }
@@ -7949,19 +7921,12 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
             restore_requirements( pimpl_->recipe_requirement_undo );
             break;
         case items_content_rollback_phase::definitions:
-            for( auto it = pimpl_->item_undo.rbegin(); it != pimpl_->item_undo.rend(); ++it ) {
-                if( it->second ) {
-                    item_controller->m_runtimes[it->first] = std::make_unique<itype>( *it->second );
-                } else {
-                    item_controller->m_runtimes.erase( it->first );
-                }
-            }
             if( !pimpl_->item_undo.empty() ) {
+                restore_factory( item_controller->get_generic_factory(), pimpl_->item_undo );
                 item_controller->m_runtimes_dirty = true;
                 item_controller->templates_all_cache.clear();
                 item_controller->armor_containers.clear();
             }
-            pimpl_->item_undo.clear();
             break;
         case items_content_rollback_phase::requirements:
             restore_requirements( pimpl_->requirement_undo );

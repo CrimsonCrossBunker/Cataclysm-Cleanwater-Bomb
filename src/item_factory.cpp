@@ -4932,6 +4932,21 @@ static void replace_materials( const JsonObject &jo, itype &def )
     }
 }
 
+void itype::set_degradation_multiplier( float multiplier )
+{
+    // TODO: remove condition once degradation is ready to be applied to all items
+    if( count_by_charges() || category_force != item_category_veh_parts ||
+        !get_option<bool>( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) {
+        multiplier = 0.0f;
+    }
+    if( ( multiplier * damage_max_ ) <= 0.5f ) {
+        degrade_increments_ = 0;
+    } else {
+        const float adjusted_inc = std::max( degrade_increments_ / multiplier, 1.0f );
+        degrade_increments_ = std::isnan( adjusted_inc ) ? 0 : std::round( adjusted_inc );
+    }
+}
+
 void itype::load( const JsonObject &jo, std::string_view src )
 {
     units_bound_reader < units::mass > not_negative_mass{ 0_milligram };
@@ -5007,17 +5022,7 @@ void itype::load( const JsonObject &jo, std::string_view src )
     optional( jo, was_loaded, "to_hit", m_to_hit, melee_accuracy_reader{ *this }, -2 );
     float degrade_mult = 1.0f;
     optional( jo, false, "degradation_multiplier", degrade_mult, 1.0f );
-    // TODO: remove condition once degradation is ready to be applied to all items
-    if( ( count_by_charges() || category_force != item_category_veh_parts ||
-          !get_option < bool > ( "VEHICLE_DEGRADATION_WHEN_DAMAGE" ) ) ) {
-        degrade_mult = 0.0f;
-    }
-    if( ( degrade_mult * itype::damage_max_ ) <= 0.5f ) {
-        degrade_increments_ = 0;
-    } else {
-        float adjusted_inc = std::max( degrade_increments_ / degrade_mult, 1.0f );
-        degrade_increments_ = std::isnan( adjusted_inc ) ? 0 : std::round( adjusted_inc );
-    }
+    set_degradation_multiplier( degrade_mult );
 
     name.make_plural();
     mandatory( jo, was_loaded, "name", name );
