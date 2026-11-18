@@ -11,25 +11,6 @@
     "color": "dark_gray"
   },
   {
-    "id": "afs_kaburaya_bomb",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "grenade_canister",
-    "category": "weapons",
-    "looks_like": "c4",
-    "name": "Kabura-ya antipersonnel device",
-    "description": "A tiny plastic explosive meant to be installed in a Kabura-ya drone.  Explodes 3 turns after activation.",
-    "use_action": {
-      "need_wielding": true,
-      "target": "afs_kaburaya_bomb_act",
-      "msg": "You pull the pin on the %s.",
-      "target_timer": "3 seconds",
-      "menu_text": "Pull pin",
-      "type": "transform"
-    },
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" ]
-  },
-  {
     "id": "afs_kaburaya_bomb_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -109,50 +90,6 @@
     "extend": { "flags": [ "TRADER_AVOID" ] }
   },
   {
-    "id": "afs_electroshock_grenade_1",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "grenade_canister",
-    "category": "weapons",
-    "looks_like": "grenade_emp",
-    "name": "electroshock grenade",
-    "description": "This is an electronic weapon that will emit a short-ranged electric field.  When activated, you'll have five turns before it starts doing so; throwing it before that would be a good idea.",
-    "price": "350 USD",
-    "use_action": {
-      "menu_text": "Pull pin",
-      "need_wielding": true,
-      "type": "transform",
-      "target": "afs_electroshock_grenade_1_act",
-      "target_timer": "20 seconds"
-    },
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" ]
-  },
-  {
-    "id": "grenade_cryo",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "cryo grenade" },
-    "description": "This is a military-grade cryo hand grenade.  Once it explodes it spreads exotic highly-radioactive shrapnel.  Use this item to pull the pin and light the fuse.  You will then have five seconds before it explodes; throwing it would be a good idea.",
-    "weight": "397 g",
-    "volume": "250 ml",
-    "price": "450 USD",
-    "to_hit": -1,
-    "material": [ "steel", "plastic" ],
-    "symbol": "*",
-    "color": "green",
-    "use_action": {
-      "need_wielding": true,
-      "target": "grenade_cryo_act",
-      "msg": "You pull the pin on the %s.",
-      "target_timer": "5 seconds",
-      "menu_text": "Pull pin",
-      "type": "transform"
-    },
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
     "id": "grenade_cryo_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -218,25 +155,6 @@
       "fields_max_intensity": 6
     },
     "extend": { "flags": [ "TRADER_AVOID" ] }
-  },
-  {
-    "id": "afs_oxygen_bomb",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "pipebomb",
-    "looks_like": "pipebomb",
-    "name": "oxygen bomb",
-    "price": "150 USD",
-    "description": "A favorite tool of mutineers everywhere, this is a standard issue oxygen candle deliberately tampered to explode upon activation.  Its fuse is dangerously short, so you won't want to waste any time.",
-    "use_action": {
-      "need_wielding": true,
-      "target": "afs_oxygen_bomb_act",
-      "msg": "You pull the pin on the %s.",
-      "target_timer": "3 seconds",
-      "menu_text": "Pull pin",
-      "type": "transform"
-    },
-    "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ]
   },
   {
     "id": "afs_reactor_unstable",
