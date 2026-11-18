@@ -511,3 +511,93 @@ do
     item:on_use("start_trimmer_off", ccb.content.text("Turn on"), nil, { id = "activate_power" })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "g_shovel",
+        name = ccb.content.plural_text("trowel", "trowels"),
+        description = ccb.content.text("A small, sharp gardening shovel, perfect for digging up grubs and worms."),
+        mass_milligrams = 280000,
+        volume_ml = 500,
+        longest_side_mm = 250,
+        price_cents = 20,
+        price_postapoc_cents = 50,
+        melee_to_hit = -2,
+        symbol = "/",
+        color = "dark_gray",
+        replace_qualities = true,
+        weapon_categories = { "SHIVS" },
+    }
+    item:material("mc_steel", 1)
+    item:quality("DIG", 1)
+    item:quality("BUTCHER", -4)
+    item:quality("CUT", 2)
+    item:clear_flags()
+    item:flag("FRAGILE_MELEE")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:flag("SHEATH_KNIFE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:melee_damage("cut", 5)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shovel",
+        name = ccb.content.plural_text("shovel", "shovels"),
+        description = ccb.content.text("A digging tool.  Use it to dig pits adjacent to your location."),
+        mass_milligrams = 2032000,
+        volume_ml = 3500,
+        longest_side_mm = 1400,
+        price_cents = 2000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "brown",
+        replace_qualities = true,
+        techniques = { "WBLOCK_1" },
+    }
+    item:material("mc_steel", 1)
+    item:material("wood", 1)
+    item:quality("DIG", 3)
+    item:quality("COOK", 1)
+    item:quality("BUTCHER", -70)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:melee_damage("cut", 3)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shovel_snow",
+        looks_like = "shovel",
+        name = ccb.content.plural_text("snow shovel", "snow shovels"),
+        description = ccb.content.text("A sturdy metal shovel used for picking up snow and moving it somewhere else.  It was useful before the Cataclysm, but now it's useless."),
+        mass_milligrams = 2000000,
+        volume_ml = 4000,
+        longest_side_mm = 1500,
+        price_cents = 2000,
+        price_postapoc_cents = 250,
+        symbol = "/",
+        color = "brown",
+        replace_qualities = true,
+        techniques = { "WBLOCK_1" },
+    }
+    item:material("lc_steel", 1)
+    item:material("wood", 1)
+    item:quality("COOK", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 16)
+    item:melee_damage("cut", 1)
+    item:tool()
+    content.add(item)
+end

@@ -554,3 +554,52 @@ do
     item:tool { power_milliwatts = 1000 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "g_shovel",
+        copy_from = "g_shovel",
+        looks_like = "g_shovel",
+        name = ccb.content.plural_text("trowel", "trowels"),
+        price_cents = 600,
+        description = ccb.content.text("A small, sharp shovel, perfect for breaking off chunks of ice."),
+    }
+    item:material("mc_steel", 1)
+    item:material("plastic", 1)
+    item:tool()
+    item:clear_use_actions()
+    item:on_use("harvest_ice", ccb.content.text("Harvest ice"), nil, { ammo_scale = 1 })
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "shovel",
+        copy_from = "shovel",
+        looks_like = "shovel",
+        name = ccb.content.plural_text("shovel", "shovels"),
+        description = ccb.content.text("A shovel with a steel blade."),
+    }
+    item:material("mc_steel", 1)
+    item:material("plastic", 1)
+    item:tool()
+    item:clear_use_actions()
+    item:on_use("harvest_ice", ccb.content.text("Harvest ice"), nil, { ammo_scale = 1 })
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "shovel_snow",
+        looks_like = "shovel",
+        copy_from = "shovel_snow",
+        name = ccb.content.plural_text("snow shovel", "snow shovels"),
+        description = ccb.content.text("A sturdy metal shovel used for picking up snow and moving it somewhere else."),
+    }
+    item:material("mc_steel", 1)
+    item:material("plastic", 1)
+    item:tool()
+    item:clear_use_actions()
+    item:on_use("harvest_ice", ccb.content.text("Harvest ice"), nil, { ammo_scale = 1 })
+    content.replace(item)
+end

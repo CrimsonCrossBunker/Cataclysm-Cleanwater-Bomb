@@ -116,6 +116,8 @@ require("book_items")
 
 require("generic_items")
 
+require("ice_harvesting")
+
 require("inherited_items")
 
 require("active_items")
