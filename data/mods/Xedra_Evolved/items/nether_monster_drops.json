@@ -10,20 +10,5 @@
     "parasites": 0,
     "vitamins": [ [ "calcium", 0 ], [ "iron", 0 ], [ "meat_allergen", 0 ], [ "human_flesh_vitamin", 0 ] ],
     "calories": 0
-  },
-  {
-    "id": "shoggoth_ooze",
-    "type": "ITEM",
-    "name": { "str": "protoplasmic ooze" },
-    "description": "A deeply disturbing ooze that seems to attempt to take on form over and over again, never quite succeeding.  The only thing it seems to manage are eyes that look around madly for a few seconds before dissolving back into the steaming gunk.",
-    "material": [ "shoggoth_protoplasmic_ooze" ],
-    "flags": [ "TRADER_AVOID" ],
-    "copy-from": "blood_mi-go",
-    "symbol": "/",
-    "color": "yellow",
-    "weight": "275 g",
-    "volume": "250 ml",
-    "phase": "liquid",
-    "conditional_names": [ { "type": "FLAG", "condition": "DIRTY", "name": "protoplasmic spill" } ]
   }
 ]

@@ -40,27 +40,6 @@
     "melee_damage": { "xe_cold_iron_bash_damage": 6, "xe_cold_iron_cut_damage": 26 }
   },
   {
-    "type": "ITEM",
-    "id": "cold_iron_warhammer",
-    "name": { "str": "war hammer" },
-    "description": "A medieval hammer with a spike on one end, made for battle.  Its odd shape and balance make it an excellent weapon, but an ineffective tool.",
-    "weight": "1337 g",
-    "price_postapoc": "60 USD",
-    "color": "dark_gray",
-    "symbol": "/",
-    "material": [ "iron", "wood" ],
-    "repairs_with": [ "iron" ],
-    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP" ],
-    "flags": [ "DURABLE_MELEE", "SPEAR", "NONCONDUCTIVE" ],
-    "weapon_category": [ "HOOKING_WEAPONRY", "GREAT_HAMMERS" ],
-    "volume": "1250 ml",
-    "longest_side": "120 cm",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
-    "price": "160 USD",
-    "qualities": [ [ "HAMMER", 1 ] ],
-    "melee_damage": { "xe_cold_iron_bash_damage": 22, "xe_cold_iron_stab_damage": 23 }
-  },
-  {
     "id": "cold_iron_battleaxe",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
