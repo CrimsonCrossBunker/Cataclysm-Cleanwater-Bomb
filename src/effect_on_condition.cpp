@@ -7,6 +7,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -222,25 +223,41 @@ struct character_task_migration {
     bool global = false;
     const char *mod = "xedra_evolved";
     const char *payload_key = nullptr;
-    const char *payload_value = nullptr;
+    cata::lua_platform::script_persistent_value payload_value = cata::lua_platform::script_null_value{};
 };
 
 character_task_migration psychic_learning_migration( const char *id, const char *spell )
 {
     return { effect_on_condition_id( id ), "psychic_contemplation_learn", nullptr,
-             false, "mindovermatter", "spell", spell };
+             false, "mindovermatter", "spell", std::string( spell ) };
 }
 
 character_task_migration matrix_crystal_migration( const char *id, const char *crystal )
 {
     return { effect_on_condition_id( id ), "drain_matrix_crystal", nullptr,
-             false, "mindovermatter", "crystal", crystal };
+             false, "mindovermatter", "crystal", std::string( crystal ) };
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 254> migrated_character_tasks = {{
+const std::array<character_task_migration, 262> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_unvitrified_return" ),
           "return_from_vitrification_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_LIXA_unfold_spawn_goodbye_cards" ),
+          "lixa_leave_goodbye_cards", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_0" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 0 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_1" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 1 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_2" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 2 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_3" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 3 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_4" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 4 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_5" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 5 } },
+        { effect_on_condition_id( "EOC_LIXA_unfold_shift_6" ),
+          "lixa_unfold_hallway", nullptr, false, "ccb", "stage", std::int64_t{ 6 } },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_FOCUS_DRAIN" ),
           "hedge_tome_focus_due", nullptr },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_FARM" ),
@@ -728,8 +745,7 @@ static void process_new_eocs( queued_eocs &eoc_queue,
                 std::ostringstream serialized;
                 JsonOut json( serialized );
                 json.start_object();
-                cata::lua_platform::detail::write_persistent_value(
-                    json, std::string( migration->payload_value ) );
+                cata::lua_platform::detail::write_persistent_value( json, migration->payload_value );
                 json.end_object();
                 task_data.emplace( migration->payload_key, diag_value( serialized.str() ) );
             }

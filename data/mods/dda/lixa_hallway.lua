@@ -123,6 +123,18 @@ local finale = services.types.id("achievement", "achievement_LIXA_finale")
 local escape_key = "LIXA_escape_key"
 local coordinates = services.coords
 
+ccb.runtime.handler("lixa_final_death", function(payload)
+    local intensity = payload.whole_body_effects.LIXA_unfolded_eff
+    if not intensity or intensity < -1 then return end
+
+    local category = "You don't die.  Death is something that happens in the plane of time, and now that you are part of this place, you will never see that plane again.  You will very quickly come to wish you had died instead."
+    local message = services.snippets.native_random(category)
+    if message then
+        services.messages.add(checked(services.text.expand_for(message, nil, nil, nil, nil, true)), "bad")
+    end
+end)
+ccb.runtime.on("avatar_death", "lixa_final_death")
+
 local corridor_locations = {
     { "LIXA_unfold_A", "LIXA_device_unfolded_A", -8 },
     { "LIXA_unfold_B", "LIXA_device_unfolded_B", -8 },
