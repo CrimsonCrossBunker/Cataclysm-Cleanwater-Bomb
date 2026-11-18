@@ -30,6 +30,7 @@
 #include "safe_reference.h"
 #include "creature_tracker.h"
 #include "debug.h"
+#include "effect.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
 #include "game.h"
@@ -1695,6 +1696,12 @@ void notify_avatar_death( const Character &actor )
     const script_tripoint_coord position = script_tripoint_coord::from_native(
             coords::origin::abs, coords::scale::map_square, actor.pos_abs().raw() );
     const std::string dimension = g->get_dimension_prefix().str();
+    std::map<std::string, int> whole_body_effects;
+    for( const effect &entry : actor.get_effects() ) {
+        if( entry.get_bp() == bodypart_str_id::NULL_ID() ) {
+            whole_body_effects.emplace( entry.get_id().str(), entry.get_intensity() );
+        }
+    }
     const std::vector<std::shared_ptr<runtime>> owners = detail::active_runtime_values();
     for( const std::shared_ptr<runtime> &owner : owners ) {
         if( !owner || !owner->world_is_ready || owner->subscriptions.count( "avatar_death" ) == 0 ) {
@@ -1704,6 +1711,11 @@ void notify_avatar_death( const Character &actor )
         payload["character_id"] = character_id;
         payload["position"] = position;
         payload["dimension"] = dimension;
+        sol::table effects = owner->lua->create_table();
+        for( const auto &[id, intensity] : whole_body_effects ) {
+            effects[id] = intensity;
+        }
+        payload["whole_body_effects"] = std::move( effects );
         dispatch_lifecycle( *owner, "avatar_death", payload );
     }
 }

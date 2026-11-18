@@ -8421,6 +8421,7 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@field character_id integer Copied native avatar ID.
 ---@field position TripointCoord Copied absolute map-square position at final death.
 ---@field dimension string Copied dimension ID at final death.
+---@field whole_body_effects table<string, integer> Whole-body effect IDs and their copied intensities at final death.
 
 ---Character lifecycle events supply the live actor in `payload.actors.character`.
 ---`character_ready` also sets `payload.new_character` and runs once per native
