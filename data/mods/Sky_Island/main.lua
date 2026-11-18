@@ -22,6 +22,8 @@ require("effects")
 
 require("mutations")
 
+require("monster_groups")
+
 require("weather_generators")
 
 require("portal_storm_cycle")
