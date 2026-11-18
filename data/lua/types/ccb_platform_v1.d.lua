@@ -698,6 +698,7 @@ local ModDefinition = {}
 
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
+---@field abstract? boolean Register an inheritance template without creating an item that can spawn.
 ---@field copy_from? string Existing item id used as the patch base. A replacement may use its own id to copy the preceding native definition.
 ---@field name? string|LocalizedText Display name; defaults to id. Explicit plural text supplies counted names.
 ---@field description? string|LocalizedText Player-facing description; plural text is rejected.
@@ -705,6 +706,11 @@ local ModDefinition = {}
 ---@field color? string Native color id.
 ---@field category? string Native item-category id.
 ---@field looks_like? string Tileset key used for presentation fallback; need not identify a registered item.
+---@field ascii_picture? string Native ASCII art id for the item.
+---@field snippet_category? string Snippet category from which the item draws descriptions.
+---@field variant_kind? 'generic'|'gun'|'drug' Selects the category of the native item-variant option.
+---@field melee_to_hit? integer Native melee accuracy modifier.
+---@field electronic_size_kb? integer Native electronic file size in kilobytes.
 ---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
 ---@field mass_milligrams? integer Non-negative native signed-64-bit mass in milligrams; cannot be combined with mass_grams in one constructor.
@@ -743,6 +749,10 @@ function ItemDefinition:price_postapoc_cents(cents) end
 ---@return ItemDefinition self
 function ItemDefinition:melee_damage(damage_type, amount) end
 
+---Clear inherited and staged melee damage. Add replacement values with melee_damage.
+---@return ItemDefinition self
+function ItemDefinition:clear_melee_damage() end
+
 ---@param ammo_type string
 ---@param capacity integer
 ---@return ItemDefinition self
@@ -765,6 +775,26 @@ function ItemDefinition:quality(id, level) end
 ---@param id string
 ---@return ItemDefinition self
 function ItemDefinition:flag(id) end
+
+---Clear inherited and staged item flags. Add replacement flags with flag.
+---@return ItemDefinition self
+function ItemDefinition:clear_flags() end
+
+---@class ItemVariantDefinitionOptions
+---@field id string Stable native variant ID.
+---@field name? string|LocalizedText Localized variant name. Defaults to the base item's name.
+---@field description? string|LocalizedText Variant description. Defaults to the base item's description.
+---@field symbol? string Map symbol override.
+---@field color? string Native color override.
+---@field ascii_picture? string Native ASCII art override.
+---@field weight? integer Non-negative selection weight. Defaults to one.
+---@field append? boolean Append the variant's description to the base description.
+---@field expand_snippets? boolean Expand snippet tags on item creation.
+
+---Replace the inherited variant list, preserving the order of the supplied entries.
+---@param variants ItemVariantDefinitionOptions[]
+---@return ItemDefinition self
+function ItemDefinition:variants(variants) end
 
 ---@class ItemAmmunitionDefinitionOptions
 ---@field type string Native ammunition-type id, including a type staged by this Mod.
@@ -914,7 +944,11 @@ function ItemDefinition:ammo_pocket(ammo_type, capacity) end
 ---@return ItemDefinition self
 function ItemDefinition:teach_spells(spells) end
 
----Remove inherited native activation actions and any on_use or teach_spells staged before this call.
+---Install the native martial-arts learning action. The book supplies the style.
+---@return ItemDefinition self
+function ItemDefinition:martial_arts_manual() end
+
+---Remove inherited native activation actions and staged on_use, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
@@ -7299,6 +7333,10 @@ function CcbPlatformContent.upsert_item_group(definition) end
 ---@param id string Item id staged earlier by this Mod in the current candidate.
 ---@return ItemDefinition
 function CcbPlatformContent.edit_item(id) end
+
+---Register a complete item or template at this Mod's load position, replacing the existing definition if present.
+---@param definition ItemDefinition
+function CcbPlatformContent.upsert_item(definition) end
 
 ---@param id string Recipe id staged earlier by this Mod in the current candidate.
 ---@return RecipeDefinition

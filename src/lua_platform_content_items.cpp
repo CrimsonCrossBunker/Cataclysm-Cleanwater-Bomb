@@ -231,8 +231,20 @@ struct item_definition_data {
         bool generic = false;
         std::vector<book_proficiency_bonus> proficiencies;
     };
+    struct item_variant {
+        std::string id;
+        authored_text name;
+        authored_text description;
+        std::optional<std::string> symbol;
+        std::optional<std::string> color;
+        std::string ascii_picture;
+        std::int64_t weight = 1;
+        bool append = false;
+        bool expand_snippets = false;
+    };
     std::string id;
     std::string copy_from;
+    bool is_abstract = false;
     std::string name;
     std::string description;
     std::optional<localized_text> translated_name;
@@ -248,6 +260,12 @@ struct item_definition_data {
     std::string category;
     std::string looks_like;
     std::optional<std::string> default_container;
+    std::optional<std::string> ascii_picture;
+    std::optional<std::string> snippet_category;
+    std::optional<itype_variant_kind> variant_kind;
+    std::optional<std::vector<item_variant>> variants;
+    std::optional<std::int64_t> melee_to_hit;
+    std::optional<std::int64_t> electronic_size_kb;
     bool has_name = false;
     bool has_description = false;
     bool has_symbol = false;
@@ -261,7 +279,9 @@ struct item_definition_data {
     std::vector<material_part> materials;
     std::vector<quality_level> qualities;
     std::set<std::string> flags;
+    bool clear_flags = false;
     std::map<std::string, double> melee_damage;
+    bool clear_melee_damage = false;
     std::map<std::string, std::int64_t> magazine_ammo;
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
@@ -281,6 +301,7 @@ struct item_definition_data {
     std::optional<healing_data> healing;
     std::optional<activation_data> activation;
     std::vector<std::string> learned_spells;
+    bool martial_arts_manual = false;
     std::string use_handler;
     std::string tick_handler;
     authored_text use_label;
@@ -1075,6 +1096,53 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &clear_flags() {
+        require_building_handle( token, *definition, "item" );
+        definition->clear_flags = true;
+        definition->flags.clear();
+        return *this;
+    }
+
+    item_definition_handle &clear_melee_damage() {
+        require_building_handle( token, *definition, "item" );
+        definition->clear_melee_damage = true;
+        definition->melee_damage.clear();
+        return *this;
+    }
+
+    item_definition_handle &variants( const sol::table &variants ) {
+        require_building_handle( token, *definition, "item" );
+        const std::size_t count = require_dense_array( variants, "item variants", 0 );
+        std::vector<item_definition_data::item_variant> values;
+        values.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table options = variants.raw_get<sol::table>( index );
+            item_definition_data::item_variant variant;
+            variant.id = options.get<std::string>( "id" );
+            const sol::object name = options.get<sol::object>( "name" );
+            if( name.is<localized_text>() ) {
+                const localized_text &value = name.as<const localized_text &>();
+                variant.name = { value.singular, value };
+            } else {
+                variant.name = read_singular_text( name, "", "item variant name" );
+            }
+            variant.description = read_text_option( options, "description", {}, "item variant description" );
+            if( const auto symbol = options.get<sol::optional<std::string>>( "symbol" ) ) {
+                variant.symbol = *symbol;
+            }
+            if( const auto color = options.get<sol::optional<std::string>>( "color" ) ) {
+                variant.color = *color;
+            }
+            variant.ascii_picture = options.get_or( "ascii_picture", std::string() );
+            variant.weight = options.get_or<std::int64_t>( "weight", 1 );
+            variant.append = options.get_or( "append", false );
+            variant.expand_snippets = options.get_or( "expand_snippets", false );
+            values.push_back( std::move( variant ) );
+        }
+        definition->variants = std::move( values );
+        return *this;
+    }
+
     item_definition_handle &ammunition( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
         item_definition_data::ammunition_data value;
@@ -1361,10 +1429,17 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &martial_arts_manual() {
+        require_building_handle( token, *definition, "item" );
+        definition->martial_arts_manual = true;
+        return *this;
+    }
+
     item_definition_handle &clear_use_actions() {
         require_building_handle( token, *definition, "item" );
         definition->clear_use_actions = true;
         definition->learned_spells.clear();
+        definition->martial_arts_manual = false;
         definition->use_handler.clear();
         definition->use_label = {};
         definition->use_description.reset();
@@ -3347,6 +3422,7 @@ struct items_content_transaction::impl {
     std::vector<std::pair<item_group_id, std::size_t>> item_group_extension_undo;
     std::vector<std::pair<ammo_effect_str_id, std::optional<ammo_effect>>> ammo_effect_undo;
     std::vector<std::pair<itype_id, std::optional<itype>>> item_undo;
+    std::vector<std::pair<std::string, std::optional<itype>>> item_abstract_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> recipe_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> uncraft_undo;
     std::vector<std::pair<requirement_id, std::optional<requirement_data>>> recipe_requirement_undo;
@@ -3457,11 +3533,14 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "price_cents", &item_definition_handle::price,
         "price_postapoc_cents", &item_definition_handle::price_postapoc,
         "melee_damage", &item_definition_handle::melee,
+        "clear_melee_damage", &item_definition_handle::clear_melee_damage,
         "magazine_ammo", &item_definition_handle::magazine_ammo,
         "magazine_capacity", &item_definition_handle::magazine_capacity,
         "material", &item_definition_handle::material,
         "quality", &item_definition_handle::quality,
         "flag", &item_definition_handle::flag,
+        "clear_flags", &item_definition_handle::clear_flags,
+        "variants", &item_definition_handle::variants,
         "ammunition", &item_definition_handle::ammunition,
         "comestible", &item_definition_handle::comestible,
         "vitamin", &item_definition_handle::vitamin,
@@ -3478,6 +3557,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "ammo_pocket", &item_definition_handle::ammo_pocket,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "teach_spells", &item_definition_handle::teach_spells,
+        "martial_arts_manual", &item_definition_handle::martial_arts_manual,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
         "clear_tick_actions", &item_definition_handle::clear_tick_actions,
@@ -3823,6 +3903,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto definition = std::make_shared<item_definition_data>();
         definition->id = options.get_or( "id", std::string() );
         definition->copy_from = options.get_or( "copy_from", std::string() );
+        definition->is_abstract = options.get_or( "abstract", false );
         const auto read_string = [&options]( const char *key, std::string & target,
         bool & present ) {
             if( const sol::optional<std::string> value =
@@ -3852,6 +3933,24 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         read_string( "color", definition->color, definition->has_color );
         read_string( "category", definition->category, definition->has_category );
         read_string( "looks_like", definition->looks_like, definition->has_looks_like );
+        if( const auto picture = options.get<sol::optional<std::string>>( "ascii_picture" ) ) {
+            definition->ascii_picture = *picture;
+        }
+        if( const auto category = options.get<sol::optional<std::string>>( "snippet_category" ) ) {
+            definition->snippet_category = *category;
+        }
+        if( const auto kind = options.get<sol::optional<std::string>>( "variant_kind" ) ) {
+            definition->variant_kind = io::string_to_enum<itype_variant_kind>( *kind );
+        }
+        if( const auto to_hit = options.get<sol::optional<std::int64_t>>( "melee_to_hit" ) ) {
+            definition->melee_to_hit = *to_hit;
+        }
+        if( const auto size = options.get<sol::optional<std::int64_t>>( "electronic_size_kb" ) ) {
+            if( *size < 0 || *size > std::numeric_limits<units::ememory::value_type>::max() ) {
+                throw std::runtime_error( "item electronic storage size is outside the native range" );
+            }
+            definition->electronic_size_kb = *size;
+        }
         if( const auto container = options.get<sol::optional<std::string>>( "default_container" ) ) {
             definition->default_container = *container;
         }
@@ -4177,7 +4276,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             std::move( definition ), transaction->token
         };
     } );
-    const auto register_item_group = [transaction]( const item_group_definition_handle &handle,
+        const auto register_item_group = [transaction]( const item_group_definition_handle &handle,
     const definition_operation operation ) {
         if( handle.token != transaction->token ) {
             throw std::runtime_error( "cannot register an item group definition owned by another Mod" );
@@ -4370,6 +4469,14 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         auto definition = std::make_shared<item_definition_data>( *found->definition );
         definition->registered = false;
         return item_definition_handle{ std::move( definition ), transaction->token };
+    } );
+    content.set_function( "upsert_item", [transaction]( const item_definition_handle & handle ) {
+        if( handle.token != transaction->token ) {
+            throw std::runtime_error( "cannot register an item definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "item" );
+        handle.definition->registered = true;
+        transaction->items.push_back( { definition_operation::upsert, handle.definition } );
     } );
     content.set_function( "edit_recipe", [transaction]( const std::string & id ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {
@@ -4839,7 +4946,9 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
 
         std::set<std::string> declared_item_ids;
         for( const item_registration &entry : pimpl_->items ) {
-            declared_item_ids.insert( entry.definition->id );
+            if( !entry.definition->is_abstract ) {
+                declared_item_ids.insert( entry.definition->id );
+            }
         }
         for( const auto &entry : pimpl_->item_migrations ) {
             const migration &native = entry->specification;
@@ -5490,14 +5599,12 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         if( !check_engine_state ) {
                 return true;
             }
-            const itype_id native_id( id );
             const generic_factory<itype> &factory = item_controller->get_generic_factory();
-            return item::type_is_defined( native_id ) || factory.is_valid( native_id ) ||
+            return factory.is_valid( itype_id( id ) ) ||
                    factory.find_abstract( id ) != nullptr;
         }, item_order, inheritance_error, "item" ) ) {
             throw std::runtime_error( inheritance_error );
         }
-        std::set<std::string> item_ids;
         for( const std::size_t index : item_order ) {
             const item_registration &entry = pimpl_->items[index];
             const item_definition_data &definition = *entry.definition;
@@ -5505,20 +5612,22 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             if( definition.copy_from.empty() && ( definition.name.empty() || definition.symbol.empty() ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' requires a name and symbol" );
             }
-            if( !item_ids.insert( definition.id ).second ) {
-                throw std::runtime_error( "item '" + definition.id +
-                                          "' is registered more than once in one transaction" );
-            }
-            if( !definition.copy_from.empty() && check_engine_state &&
-                declared_item_ids.count( definition.copy_from ) == 0 &&
-                !item::type_is_defined( itype_id( definition.copy_from ) ) &&
-                item_controller->get_generic_factory().find_abstract( definition.copy_from ) == nullptr ) {
-                throw std::runtime_error( "item '" + definition.id +
-                                          "' copies unknown item '" + definition.copy_from + "'" );
-            }
             if( definition.has_color &&
                 color_from_string( definition.color, report_color_error::no ) == c_unset ) {
                 throw std::runtime_error( "item '" + definition.id + "' has an invalid color" );
+            }
+            if( definition.melee_to_hit && !native_int( *definition.melee_to_hit ) ) {
+                throw std::runtime_error( "item '" + definition.id + "' has invalid melee accuracy" );
+            }
+            if( definition.variants ) {
+                for( const auto &variant : *definition.variants ) {
+                    require_valid_id( variant.id, "item variant" );
+                    if( variant.weight < 0 || !native_int( variant.weight ) ||
+                        ( variant.color && color_from_string( *variant.color, report_color_error::no ) == c_unset ) ) {
+                        throw std::runtime_error( "item '" + definition.id + "' has an invalid variant '" +
+                                                  variant.id + "'" );
+                    }
+                }
             }
             std::int64_t material_portions = 0;
             std::map<std::string, std::int64_t> portions_by_material;
@@ -5720,9 +5829,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 const item_definition_data::book_data &book = *definition.book;
                 if( ( !book.skill.empty() && book.skill != skill_id::NULL_ID().str() &&
                       skill_ids.count( book.skill ) == 0 && !skill_id( book.skill ).is_valid() ) ||
-                    book.required_level < 0 || book.required_level > MAX_SKILL ||
-                    book.maximum_level < book.required_level ||
-                    book.maximum_level > MAX_SKILL || book.intelligence < 0 ||
+                    !native_int( book.required_level ) || !native_int( book.maximum_level ) ||
+                    book.intelligence < 0 ||
                     book.intelligence > std::numeric_limits<int>::max() ||
                     book.read_time_turns < 0 ||
                     book.read_time_turns > std::numeric_limits<int>::max() ||
@@ -5745,8 +5853,11 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             for( const std::string &spell : definition.learned_spells ) {
                 require_valid_id( spell, "learnable spell" );
             }
-            validate_operation( entry.operation,
-                                item_controller->has_template( itype_id( definition.id ) ),
+            const auto &item_factory = item_controller->get_generic_factory();
+            const bool exists = definition.is_abstract ?
+                                item_factory.find_abstract( definition.id ) != nullptr :
+                                item_factory.is_valid( itype_id( definition.id ) );
+            validate_operation( entry.operation, exists,
                                 definition.id, "item" );
             if( !definition.use_handler.empty() &&
                 !runtime_has_handler( owner_runtime, definition.use_handler ) ) {
@@ -7109,11 +7220,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 }
                 for( const std::size_t index : item_order ) {
                     const item_registration &entry = pimpl_->items[index];
-                    const itype_id id( entry.definition->id );
-                    pimpl_->item_undo.emplace_back(
-                        id, factory.is_valid( id ) ?
-                        std::optional<itype>( factory.obj( id ) ) : std::nullopt );
                     const item_definition_data &definition = *entry.definition;
+                    const itype_id id( definition.id );
                     std::unique_ptr<itype> native;
                     if( definition.copy_from.empty() ) {
                         native = std::make_unique<itype>();
@@ -7171,6 +7279,41 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         // Tileset fallback keys can name sprites without registered item types.
                         native->looks_like = itype_id( definition.looks_like );
                     }
+                    if( definition.ascii_picture ) {
+                        native->picture_id = ascii_art_id( *definition.ascii_picture );
+                    }
+                    if( definition.snippet_category ) {
+                        native->snippet_category = *definition.snippet_category;
+                    }
+                    if( definition.melee_to_hit ) {
+                        native->m_to_hit = static_cast<int>( *definition.melee_to_hit );
+                    }
+                    if( definition.electronic_size_kb ) {
+                        native->ememory_size = units::from_kilobytes(
+                                                   static_cast<units::ememory::value_type>( *definition.electronic_size_kb ) );
+                    }
+                    if( definition.variant_kind ) {
+                        native->variant_kind = *definition.variant_kind;
+                    }
+                    if( definition.variants ) {
+                        native->variants.clear();
+                        for( const auto &variant : *definition.variants ) {
+                            itype_variant_data value;
+                            value.id = variant.id;
+                            value.alt_name = variant.name.native();
+                            value.alt_name.make_plural();
+                            value.alt_description = variant.description.native();
+                            value.alt_sym = variant.symbol;
+                            if( variant.color ) {
+                                value.alt_color = color_from_string( *variant.color, report_color_error::no );
+                            }
+                            value.art = ascii_art_id( variant.ascii_picture );
+                            value.weight = static_cast<int>( variant.weight );
+                            value.append = variant.append;
+                            value.expand_snippets = variant.expand_snippets;
+                            native->variants.push_back( std::move( value ) );
+                        }
+                    }
                     if( definition.default_container ) {
                         native->default_container = itype_id( *definition.default_container );
                         native->default_container_variant.reset();
@@ -7194,6 +7337,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->qualities[quality_id( quality.id )] = {
                             static_cast<int>( quality.level ), 1.0F
                         };
+                    }
+                    if( definition.clear_flags ) {
+                        native->item_tags.clear();
                     }
                     for( const std::string &flag : definition.flags ) {
                         native->item_tags.insert( flag_id( flag ) );
@@ -7346,10 +7492,13 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->book->generic = source.generic;
                         native->book->proficiencies = source.proficiencies;
                     }
+                    if( definition.clear_melee_damage ) {
+                        native->melee.damage_map.clear();
+                    }
                     for( const auto &[damage, amount] : definition.melee_damage ) {
                         native->melee.damage_map[damage_type_id( damage )] = static_cast<float>( amount );
                     }
-                    if( !definition.melee_damage.empty() ) {
+                    if( definition.clear_melee_damage || !definition.melee_damage.empty() ) {
                         native->melee.finalize();
                     }
                     if( !definition.magazine_ammo.empty() ) {
@@ -7385,6 +7534,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         auto actor = std::make_unique<learn_spell_actor>();
                         actor->spells = definition.learned_spells;
                         native->use_methods.insert_or_assign( "learn_spell", use_function( std::move( actor ) ) );
+                    }
+                    if( definition.martial_arts_manual ) {
+                        native->use_methods.insert_or_assign( "MA_MANUAL",
+                                Item_factory::usage_from_string( "MA_MANUAL" ) );
                     }
                     if( !definition.deploy_furniture.empty() ) {
                         auto actor = std::make_unique<deploy_furn_actor>();
@@ -7458,11 +7611,21 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->comestible->lua_platform_mod = pimpl_->owner;
                         native->comestible->lua_platform_consume_handler = definition.consume_handler;
                     }
-                    // Authored items must participate in native inheritance, migration and item caches.
-                    factory.restore( *native );
-                    item_controller->m_runtimes_dirty = true;
-                    item_controller->templates_all_cache.clear();
-                    item_controller->armor_containers.clear();
+                    if( definition.is_abstract ) {
+                        const itype *previous = factory.find_abstract( definition.id );
+                        pimpl_->item_abstract_undo.emplace_back(
+                            definition.id, previous ? std::optional<itype>( *previous ) : std::nullopt );
+                        factory.restore_abstract( *native );
+                    } else {
+                        pimpl_->item_undo.emplace_back(
+                            id, factory.is_valid( id ) ?
+                            std::optional<itype>( factory.obj( id ) ) : std::nullopt );
+                        // Match native inheritance, migration and item caches.
+                        factory.restore( *native );
+                        item_controller->m_runtimes_dirty = true;
+                        item_controller->templates_all_cache.clear();
+                        item_controller->armor_containers.clear();
+                    }
                 }
                 break;
             }
@@ -7839,7 +8002,8 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
     }
     for( const item_registration &entry : pimpl_->items ) {
         const item_definition_data &definition = *entry.definition;
-        if( !check( item_controller->get_generic_factory().is_valid( itype_id( definition.id ) ),
+        if( !definition.is_abstract &&
+            !check( item_controller->get_generic_factory().is_valid( itype_id( definition.id ) ),
                     "item", definition.id ) ) {
             return false;
         }
@@ -7992,6 +8156,15 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
             restore_requirements( pimpl_->recipe_requirement_undo );
             break;
         case items_content_rollback_phase::definitions:
+            for( auto it = pimpl_->item_abstract_undo.rbegin(); it != pimpl_->item_abstract_undo.rend(); ++it ) {
+                auto &factory = item_controller->get_generic_factory();
+                if( it->second ) {
+                    factory.restore_abstract( *it->second );
+                } else {
+                    factory.erase_abstract( it->first );
+                }
+            }
+            pimpl_->item_abstract_undo.clear();
             if( !pimpl_->item_undo.empty() ) {
                 restore_factory( item_controller->get_generic_factory(), pimpl_->item_undo );
                 item_controller->m_runtimes_dirty = true;
@@ -8122,6 +8295,7 @@ void items_content_transaction::commit()
     pimpl_->item_group_extension_undo.clear();
     pimpl_->ammo_effect_undo.clear();
     pimpl_->item_undo.clear();
+    pimpl_->item_abstract_undo.clear();
     pimpl_->recipe_undo.clear();
     pimpl_->uncraft_undo.clear();
     pimpl_->recipe_requirement_undo.clear();
@@ -8182,7 +8356,11 @@ items_content_staged_ids items_content_transaction::staged_ids() const
     collect( pimpl_->ammunition_types, result.ammunition_types );
     collect( pimpl_->item_categories, result.item_categories );
     collect( pimpl_->crafting_categories, result.crafting_categories );
-    collect( pimpl_->items, result.items );
+    for( const item_registration &entry : pimpl_->items ) {
+        if( !entry.definition->is_abstract ) {
+            result.items.insert( entry.definition->id );
+        }
+    }
     collect( pimpl_->item_groups, result.item_groups );
     collect( pimpl_->recipes, result.recipes );
     collect( pimpl_->requirements, result.requirements );
@@ -8222,7 +8400,9 @@ bool items_content_transaction::defines_proficiency( const std::string_view id )
 }
 bool items_content_transaction::defines_item( const std::string_view id ) const
 {
-    return defines_registration( pimpl_->items, id );
+    return std::any_of( pimpl_->items.begin(), pimpl_->items.end(), [id]( const item_registration &entry ) {
+        return !entry.definition->is_abstract && entry.definition->id == id;
+    } );
 }
 bool items_content_transaction::defines_item_group( const std::string_view id ) const
 {
@@ -8901,6 +9081,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 const auto &v = *entry.definition;
                 hash_part( state, "item" );
                 hash_part( state, operation_name( entry.operation ) );
+                hash_part( state, v.is_abstract ? "abstract" : "concrete" );
                 // An omitted patch field inherits its source; an explicitly
                 // supplied default value overwrites it. Both have identical
                 // stored values, so include presence in the reload fingerprint.
@@ -8940,10 +9121,34 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.color );
                 hash_part( state, v.category );
                 hash_part( state, v.looks_like );
+                hash_part( state, v.ascii_picture.value_or( "inherit_picture" ) );
+                hash_part( state, v.snippet_category.value_or( "inherit_snippets" ) );
+                hash_part( state, v.melee_to_hit ? std::to_string( *v.melee_to_hit ) : "inherit_accuracy" );
+                hash_part( state, v.electronic_size_kb ? std::to_string( *v.electronic_size_kb ) : "inherit_file_size" );
+                hash_part( state, v.variant_kind ? std::to_string( static_cast<int>( *v.variant_kind ) ) :
+                           "inherit_variant_kind" );
+                if( v.variants ) {
+                    hash_part( state, "replace_item_variants" );
+                    for( const auto &variant : *v.variants ) {
+                        hash_part( state, variant.id );
+                        hash_part( state, variant.name.raw );
+                        hash_text( variant.name.translated );
+                        hash_part( state, variant.description );
+                        hash_part( state, variant.symbol.value_or( "inherit_symbol" ) );
+                        hash_part( state, variant.color.value_or( "inherit_color" ) );
+                        hash_part( state, variant.ascii_picture );
+                        hash_part( state, std::to_string( variant.weight ) );
+                        hash_part( state, variant.append ? "append" : "replace" );
+                        hash_part( state, variant.expand_snippets ? "expand" : "keep_snippets" );
+                    }
+                }
                 hash_part( state, v.default_container ? "container" : "inherit_container" );
                 hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.clear_use_actions ? "clear_use_actions" : "inherit_use_actions" );
+                hash_part( state, v.martial_arts_manual ? "martial_arts_manual" : "inherit_manual" );
+                hash_part( state, v.clear_flags ? "clear_item_flags" : "inherit_item_flags" );
+                hash_part( state, v.clear_melee_damage ? "clear_melee_damage" : "inherit_melee_damage" );
                 hash_part( state, v.clear_tick_actions ? "clear_tick_actions" : "inherit_tick_actions" );
                 hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );

@@ -525,6 +525,7 @@ class generic_factory
             deferred.clear();
             list.clear();
             map.clear();
+            abstracts.clear();
             inc_version();
         }
         /**
@@ -541,10 +542,16 @@ class generic_factory
             return list;
         }
 
-        /** Returns a JSON abstract while inheritance is still being resolved. */
+        /** An inheritance template is visible to loaders until finalization. */
         const T *find_abstract( const std::string &id ) const {
             const auto found = abstracts.find( id );
             return found == abstracts.end() ? nullptr : &found->second;
+        }
+        void restore_abstract( const T &obj ) {
+            abstracts.insert_or_assign( obj.id.str(), obj );
+        }
+        void erase_abstract( const std::string &id ) {
+            abstracts.erase( id );
         }
         /**
          * @name `string_id/int_id` interface functions
