@@ -9,3 +9,5 @@ require("requirements")
 require("disassembly")
 
 require("retired_recipes")
+
+require("crafting_recipes")

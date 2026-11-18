@@ -142,36 +142,6 @@
     "byproducts": [ [ "fur", 6 ] ]
   },
   {
-    "result": "armor_faux_farmor",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_*",
-    "subcategory": "CSC_*_NESTED",
-    "skill_used": "tailor",
-    "difficulty": 5,
-    "time": "8 h",
-    "autolearn": true,
-    "using": [ [ "tailoring_faux_fur_patchwork", 14 ] ],
-    "proficiencies": [ { "proficiency": "prof_leatherworking_basic" }, { "proficiency": "prof_furriery" } ],
-    "byproducts": [ [ "faux_fur", 2 ], [ "scrap_faux_fur", 6 ] ]
-  },
-  {
-    "result": "armor_faux_farmor_xs",
-    "type": "recipe",
-    "copy-from": "armor_faux_farmor",
-    "time": "8 h",
-    "using": [ [ "tailoring_faux_fur_patchwork", 11 ] ],
-    "byproducts": [ [ "faux_fur", 5 ], [ "scrap_faux_fur", 5 ] ]
-  },
-  {
-    "result": "xl_armor_faux_farmor",
-    "type": "recipe",
-    "copy-from": "armor_faux_farmor",
-    "time": "9 h",
-    "using": [ [ "tailoring_faux_fur_patchwork", 16 ] ],
-    "byproducts": [ [ "faux_fur", 6 ], [ "scrap_faux_fur", 12 ] ]
-  },
-  {
     "result": "armor_larmor",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -1945,61 +1915,6 @@
     "using": [ [ "sewing_standard", 20 ] ],
     "flags": [ "NO_RESIZE" ],
     "components": [ [ [ "long_undertop", 1 ] ], [ [ "long_underpants", 1 ] ], [ [ "cordage", 1, "LIST" ] ] ]
-  },
-  {
-    "result": "wetsuit",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_*",
-    "subcategory": "CSC_*_NESTED",
-    "skill_used": "tailor",
-    "difficulty": 4,
-    "time": "10 h",
-    "book_learn": [ [ "textbook_tailor", 4 ], [ "manual_tailor", 5 ], [ "tailor_portfolio", 4 ] ],
-    "using": [ [ "tailoring_neoprene_patchwork", 33 ], [ "tailoring_nylon_patchwork", 55 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ],
-    "proficiencies": [ { "proficiency": "prof_elastics" }, { "proficiency": "prof_closures_waterproofing" } ]
-  },
-  {
-    "result": "xs_wetsuit",
-    "type": "recipe",
-    "copy-from": "wetsuit",
-    "time": "8 h",
-    "using": [ [ "tailoring_neoprene_patchwork", 25 ], [ "tailoring_nylon_patchwork", 40 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ]
-  },
-  {
-    "result": "xl_wetsuit",
-    "type": "recipe",
-    "copy-from": "wetsuit",
-    "time": "15 h",
-    "using": [ [ "tailoring_neoprene_patchwork", 45 ], [ "tailoring_nylon_patchwork", 75 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ]
-  },
-  {
-    "result": "wetsuit_thick",
-    "type": "recipe",
-    "copy-from": "wetsuit",
-    "difficulty": 5,
-    "time": "20 h",
-    "using": [ [ "tailoring_neoprene_patchwork", 55 ], [ "tailoring_nylon_patchwork", 110 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ]
-  },
-  {
-    "result": "xs_wetsuit_thick",
-    "type": "recipe",
-    "copy-from": "wetsuit_thick",
-    "time": "16 h",
-    "using": [ [ "tailoring_neoprene_patchwork", 42 ], [ "tailoring_nylon_patchwork", 85 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ]
-  },
-  {
-    "result": "xl_wetsuit_thick",
-    "type": "recipe",
-    "copy-from": "wetsuit_thick",
-    "time": "30 h",
-    "using": [ [ "tailoring_neoprene_patchwork", 75 ], [ "tailoring_nylon_patchwork", 160 ], [ "fastener_small", 6 ] ],
-    "components": [ [ [ "zipper_long_plastic", 1 ] ] ]
   },
   {
     "result": "wetsuit_spring",

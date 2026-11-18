@@ -503,39 +503,6 @@
     "components": [ [ [ "rubber_tire_chunk", 10 ] ] ]
   },
   {
-    "result": "duster_faux_fur",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_*",
-    "subcategory": "CSC_*_NESTED",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "time": "10 h",
-    "book_learn": [ [ "textbook_tailor", 3 ], [ "tailor_portfolio", 3 ], [ "recipe_fauxfur", 2 ] ],
-    "using": [ [ "sewing_standard", 60 ], [ "fabric_standard_nostretch", 25 ], [ "fabric_fauxfur", 20 ], [ "fastener_large", 1 ] ],
-    "proficiencies": [
-      { "proficiency": "prof_closures" },
-      { "proficiency": "prof_closures_waterproofing" },
-      { "proficiency": "prof_leatherworking_basic" },
-      { "proficiency": "prof_furriery" }
-    ],
-    "byproducts": [ [ "faux_fur", 3 ], [ "scrap_faux_fur", 7 ] ]
-  },
-  {
-    "result": "xs_duster_faux_fur",
-    "type": "recipe",
-    "copy-from": "duster_faux_fur",
-    "time": "10 h",
-    "using": [ [ "sewing_standard", 45 ], [ "fabric_standard_nostretch", 18 ], [ "fabric_fauxfur", 15 ], [ "fastener_large", 1 ] ]
-  },
-  {
-    "result": "xl_duster_faux_fur",
-    "type": "recipe",
-    "copy-from": "duster_faux_fur",
-    "time": "11 h 15 m",
-    "using": [ [ "sewing_standard", 80 ], [ "fabric_standard_nostretch", 25 ], [ "fabric_fauxfur", 30 ], [ "fastener_large", 1 ] ]
-  },
-  {
     "result": "duster_leather",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -992,83 +959,6 @@
     "reversible": true,
     "using": [ [ "sewing_standard", 30 ], [ "tailoring_denim_patchwork", 8 ] ],
     "components": [ [ [ "button_plastic", 5 ] ] ]
-  },
-  {
-    "result": "lsurvivor_armor",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_TORSO",
-    "skill_used": "tailor",
-    "difficulty": 5,
-    "time": "5 h 15 m",
-    "autolearn": true,
-    "using": [ [ "tailoring_kevlar_fabric", 30 ], [ "armor_kevlar_layered", 2 ] ],
-    "qualities": [ { "id": "FABRIC_CUT", "level": 2 } ],
-    "components": [
-      [ [ "combat_shirt", 1 ] ],
-      [
-        [ "tacvest", 1 ],
-        [ "legrig", 1 ],
-        [ "vest", 1 ],
-        [ "tool_belt", 1 ],
-        [ "leather_pouch", 2 ],
-        [ "dump_pouch", 1 ],
-        [ "purse", 1 ],
-        [ "fanny", 1 ]
-      ],
-      [ [ "kevlar", 1 ] ],
-      [ [ "filament_durable", 30, "LIST" ] ]
-    ],
-    "proficiencies": [ { "proficiency": "prof_polymerworking" }, { "proficiency": "prof_closures" } ]
-  },
-  {
-    "result": "xl_lsurvivor_armor",
-    "type": "recipe",
-    "copy-from": "lsurvivor_armor",
-    "time": "7 h 45 m",
-    "using": [ [ "tailoring_kevlar_fabric", 50 ], [ "armor_kevlar_layered", 4 ] ],
-    "qualities": [ { "id": "FABRIC_CUT", "level": 2 } ],
-    "components": [
-      [ [ "combat_shirt", 2 ] ],
-      [
-        [ "tacvest", 1 ],
-        [ "legrig", 1 ],
-        [ "vest", 1 ],
-        [ "tool_belt", 1 ],
-        [ "leather_pouch", 2 ],
-        [ "dump_pouch", 1 ],
-        [ "purse", 1 ],
-        [ "fanny", 1 ]
-      ],
-      [ [ "kevlar", 1 ] ],
-      [ [ "filament_durable", 60, "LIST" ] ]
-    ],
-    "proficiencies": [ { "proficiency": "prof_polymerworking" }, { "proficiency": "prof_closures" } ]
-  },
-  {
-    "result": "xs_lsurvivor_armor",
-    "type": "recipe",
-    "copy-from": "lsurvivor_armor",
-    "time": "4 h 5 m",
-    "using": [ [ "tailoring_kevlar_fabric", 24 ], [ "armor_kevlar_layered", 2 ] ],
-    "qualities": [ { "id": "FABRIC_CUT", "level": 2 } ],
-    "components": [
-      [ [ "combat_shirt", 1 ] ],
-      [
-        [ "tacvest", 1 ],
-        [ "legrig", 1 ],
-        [ "vest", 1 ],
-        [ "tool_belt", 1 ],
-        [ "leather_pouch", 2 ],
-        [ "dump_pouch", 1 ],
-        [ "purse", 1 ],
-        [ "fanny", 1 ]
-      ],
-      [ [ "kevlar", 1 ] ],
-      [ [ "filament_durable", 27, "LIST" ] ]
-    ],
-    "proficiencies": [ { "proficiency": "prof_polymerworking" }, { "proficiency": "prof_closures" } ]
   },
   {
     "result": "scrap_esapi_plate",
