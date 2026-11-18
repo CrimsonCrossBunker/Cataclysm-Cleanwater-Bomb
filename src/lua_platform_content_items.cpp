@@ -208,9 +208,11 @@ struct item_definition_data {
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
     bool clear_use_actions = false;
+    bool clear_tick_actions = false;
     bool has_tool = false;
     std::vector<std::string> passive_enchantments;
     std::string use_handler;
+    std::string tick_handler;
     authored_text use_label;
     std::optional<authored_text> use_description;
     std::string consume_handler;
@@ -929,6 +931,22 @@ struct item_definition_handle {
             throw std::runtime_error( "item consumption handler id cannot be empty" );
         }
         definition->consume_handler = handler_id;
+        return *this;
+    }
+
+    item_definition_handle &clear_tick_actions() {
+        require_building_handle( token, *definition, "item" );
+        definition->clear_tick_actions = true;
+        definition->tick_handler.clear();
+        return *this;
+    }
+
+    item_definition_handle &on_tick( const std::string &handler_id ) {
+        require_building_handle( token, *definition, "item" );
+        if( handler_id.empty() ) {
+            throw std::runtime_error( "item tick handler id cannot be empty" );
+        }
+        definition->tick_handler = handler_id;
         return *this;
     }
 
@@ -2534,6 +2552,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
+        "clear_tick_actions", &item_definition_handle::clear_tick_actions,
+        "on_tick", &item_definition_handle::on_tick,
         "on_consume", &item_definition_handle::on_consume );
     ccb.new_usertype<recipe_definition_handle>(
         "RecipeDefinition", sol::no_constructor,
@@ -4463,6 +4483,11 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id +
                                           "' references missing handler '" + definition.use_handler + "'" );
             }
+            if( !definition.tick_handler.empty() &&
+                !runtime_has_handler( owner_runtime, definition.tick_handler ) ) {
+                throw std::runtime_error( "item '" + definition.id +
+                                          "' references missing tick handler '" + definition.tick_handler + "'" );
+            }
             if( !definition.consume_handler.empty() ) {
                 if( !runtime_has_handler( owner_runtime, definition.consume_handler ) ) {
                     throw std::runtime_error( "item '" + definition.id +
@@ -5776,6 +5801,18 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                               pimpl_->owner, definition.use_handler, definition.use_label,
                                               definition.use_description ) ) );
                     }
+                    if( definition.clear_tick_actions ) {
+                        native->tick_action.clear();
+                    }
+                    if( !definition.tick_handler.empty() ) {
+                        const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
+                                                      definition.tick_handler;
+                        native->tick_action.emplace(
+                            action_id,
+                            use_function( std::make_unique<lua_platform_iuse_actor>(
+                                              pimpl_->owner, definition.tick_handler,
+                                              authored_text{ definition.tick_handler, std::nullopt }, std::nullopt ) ) );
+                    }
                     if( !definition.consume_handler.empty() ) {
                         if( !native->comestible ) {
                             throw std::runtime_error( "item '" + definition.id +
@@ -6998,6 +7035,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.default_container.value_or( "" ) );
                 hash_part( state, std::to_string( v.magazine_capacity ) );
                 hash_part( state, v.clear_use_actions ? "clear_use_actions" : "inherit_use_actions" );
+                hash_part( state, v.clear_tick_actions ? "clear_tick_actions" : "inherit_tick_actions" );
+                hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
                 for( const std::string &enchantment : v.passive_enchantments ) {
                     hash_part( state, "passive_enchantment" );

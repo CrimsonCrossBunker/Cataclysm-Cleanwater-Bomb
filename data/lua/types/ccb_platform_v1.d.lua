@@ -674,7 +674,7 @@ local ModDefinition = {}
 
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
----@field copy_from? string Existing item id used as the patch base.
+---@field copy_from? string Existing item id used as the patch base. A replacement may use its own id to copy the preceding native definition.
 ---@field name? string|LocalizedText Display name; defaults to id. Explicit plural text supplies counted names.
 ---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field symbol? string Map symbol; defaults to `?`.
@@ -789,6 +789,19 @@ function ItemDefinition:on_use(handler_id, label, description) end
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
+
+---Append one named Lua callback to the item's native active-processing actions.
+---The callback has the same item/character/position payload as on_use; character is nil for an uncarried item.
+---It runs only when native processing ticks the active item, including on the map.
+---Return nil or zero for ordinary ticking; a positive native return retains the engine's charge/destruction policy.
+---@param handler_id string Registered handler id.
+---@return ItemDefinition self
+function ItemDefinition:on_tick(handler_id) end
+
+---Remove inherited active-processing actions and any on_tick staged before this call.
+---Call on_tick afterwards to install a replacement; activation and consumption actions are independent.
+---@return ItemDefinition self
+function ItemDefinition:clear_tick_actions() end
 
 ---Ensure the native tool slot exists; an inherited tool keeps its existing settings.
 ---@return ItemDefinition self
@@ -7639,7 +7652,8 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 ---@param character GameHandle Exact live Character.
 ---@param turns integer Non-negative delay in turns, within the game calendar.
 ---@param handler_id string Registered handler with payload fields `character` and `due_turn`.
-function CcbPlatformTasks.after_character_turn(character, turns, handler_id) end
+---@param data? table<string,boolean|number|string|NullValue|TripointCoord|any[]> Copied saved callback data, returned as payload.data. Each value uses the saved-value bridge's 512-node, eight-level array and 8192-byte string bounds. Boolean and integer types, explicit NullValue slots and absolute map-square coordinates are preserved; live handles and functions are rejected.
+function CcbPlatformTasks.after_character_turn(character, turns, handler_id, data) end
 
 ---Inspect this Mod's saved queue on the exact Character, including tasks restored from a save.
 ---Does not search other characters or the shared avatar queue; it does not enqueue or consume a task.

@@ -13,6 +13,7 @@
 #include <optional>
 #include <ostream>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -1387,7 +1388,7 @@ void detail::install_runtime_state_task_api(
         return has_character_turn_task( *actor, owner->mod_id, handler );
     } );
     tasks.set_function( "after_character_turn", [weak]( const game_handle & handle,
-    const std::int64_t turns, const std::string & handler ) {
+    const std::int64_t turns, const std::string & handler, const sol::optional<sol::table> &data ) {
         const std::shared_ptr<runtime> owner = weak.lock();
         if( !owner || !owner->world_is_ready || owner->task_migration_active ) {
             throw std::runtime_error( "Character turn tasks require an active world" );
@@ -1405,8 +1406,24 @@ void detail::install_runtime_state_task_api(
         if( !actor ) {
             throw std::invalid_argument( error->message );
         }
+        global_variables::impl_t copied_data;
+        if( data ) {
+            for( const auto &entry : *data ) {
+                if( entry.first.get_type() != sol::type::string ) {
+                    throw std::invalid_argument( "Character turn task data keys must be strings" );
+                }
+                const script_persistent_value value = script_persistent_value_from_lua(
+                            entry.second, "Character turn task data", 8192 );
+                std::ostringstream serialized;
+                JsonOut json( serialized );
+                json.start_object();
+                detail::write_persistent_value( json, value );
+                json.end_object();
+                copied_data.emplace( entry.first.as<std::string>(), diag_value( serialized.str() ) );
+            }
+        }
         queue_character_task( *actor, time_point::from_turn( static_cast<int>( now + turns ) ),
-                              owner->mod_id, handler );
+                              owner->mod_id, handler, copied_data );
     } );
     const auto schedule_avatar_turn = [weak]( const std::int64_t turns,
     const std::string & handler, const bool ensure ) {
@@ -1787,7 +1804,7 @@ void runtime_after_save( bool success, std::string_view error )
 }
 
 void invoke_character_task( Character &actor, time_point due, const std::string &mod,
-                            const std::string &handler )
+                            const std::string &handler, const global_variables::impl_t &context )
 {
     const std::shared_ptr<runtime> owner = detail::find_active_runtime( mod );
     if( !owner || !owner->world_is_ready ) {
@@ -1801,6 +1818,15 @@ void invoke_character_task( Character &actor, time_point due, const std::string 
     sol::table payload = owner->lua->create_table();
     payload["character"] = platform_creature_handle( *owner, actor );
     payload["due_turn"] = to_turn<std::int64_t>( due );
+    sol::table data = owner->lua->create_table();
+    for( const auto &[key, value] : context ) {
+        if( key.compare( 0, character_task_data_prefix.size(), character_task_data_prefix ) == 0 ) {
+            const JsonValue serialized = json_loader::from_string( value.str() );
+            data[key.substr( character_task_data_prefix.size() )] = script_persistent_value_to_lua(
+                        *owner->lua, detail::read_persistent_value( serialized.get_object() ) );
+        }
+    }
+    payload["data"] = std::move( data );
     const sol::protected_function callable = callback->second.callback;
     callback_scope scope( *owner, &actor );
     const sol::protected_function_result result = callable( payload );

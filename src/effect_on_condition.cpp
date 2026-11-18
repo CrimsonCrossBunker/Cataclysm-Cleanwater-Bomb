@@ -297,13 +297,18 @@ const character_task_migration *find_migrated_task( const effect_on_condition_id
     return found != migrated_character_tasks.end() && !id.is_valid() ? &*found : nullptr;
 }
 
-queued_eoc character_task_record( time_point due, std::string_view mod, std::string_view handler )
+queued_eoc character_task_record( time_point due, std::string_view mod, std::string_view handler,
+                                 const global_variables::impl_t &data = {} )
 {
-    return { lua_task_record, due, {
+    queued_eoc record{ lua_task_record, due, {
             { "mod", diag_value( std::string( mod ) ) },
             { "handler", diag_value( std::string( handler ) ) }
         }
     };
+    for( const auto &[key, value] : data ) {
+        record.context.emplace( std::string( cata::lua_platform::character_task_data_prefix ) + key, value );
+    }
+    return record;
 }
 
 void queue_turn_task( queued_eocs &queue, const queued_eoc &entry )
@@ -320,9 +325,9 @@ void queue_turn_task( queued_eocs &queue, const queued_eoc &entry )
 } // namespace
 
 void cata::lua_platform::queue_character_task( Character &actor, time_point due,
-        std::string_view mod, std::string_view handler )
+        std::string_view mod, std::string_view handler, const global_variables::impl_t &data )
 {
-    queue_turn_task( actor.queued_effect_on_conditions, character_task_record( due, mod, handler ) );
+    queue_turn_task( actor.queued_effect_on_conditions, character_task_record( due, mod, handler, data ) );
 }
 
 namespace
@@ -519,10 +524,11 @@ static bool process_eocs( queued_eocs &eoc_queue, std::vector<effect_on_conditio
             const auto handler = top.context.find( "handler" );
             const std::string mod_id = mod == top.context.end() ? "" : mod->second.to_string();
             const std::string handler_id = handler == top.context.end() ? "" : handler->second.to_string();
+            const global_variables::impl_t context = std::move( top.context );
             eoc_queue.list.erase( it );
             if( !mod_id.empty() && !handler_id.empty() ) {
                 const character_action_guard lifetime( actor );
-                cata::lua_platform::invoke_character_task( actor, due, mod_id, handler_id );
+                cata::lua_platform::invoke_character_task( actor, due, mod_id, handler_id, context );
                 if( !lifetime ) {
                     if( avatar_queue ) {
                         restore_pending_entries();

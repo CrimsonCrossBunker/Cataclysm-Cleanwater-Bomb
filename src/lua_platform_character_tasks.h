@@ -5,20 +5,23 @@
 #include <string>
 #include <string_view>
 
+#include "global_vars.h"
+
 class Character;
 class time_point;
 
 namespace cata::lua_platform
 {
+inline constexpr std::string_view character_task_data_prefix = "data:";
 void queue_character_task( Character &actor, time_point due, std::string_view mod,
-                           std::string_view handler );
+                           std::string_view handler, const global_variables::impl_t &data = {} );
 void queue_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 void ensure_avatar_turn_task( time_point due, std::string_view mod, std::string_view handler );
 bool has_avatar_turn_task( std::string_view mod, std::string_view handler );
 bool has_character_turn_task( const Character &actor, std::string_view mod,
                               std::string_view handler );
 void invoke_character_task( Character &actor, time_point due, const std::string &mod,
-                            const std::string &handler );
+                            const std::string &handler, const global_variables::impl_t &context );
 void notify_character_ready( Character &actor, bool new_character );
 void notify_character_conditions_changed( Character &actor );
 } // namespace cata::lua_platform

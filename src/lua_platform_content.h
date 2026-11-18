@@ -192,7 +192,9 @@ bool resolve_platform_inheritance_order(
         if( !parent.empty() ) {
             const auto staged = by_id.find( parent );
             if( staged != by_id.end() ) {
-                if( !visit( staged->second ) ) {
+                // A replacement may inherit the previous native definition under its own id.
+                const bool previous_native = staged->second == index && native_exists( parent );
+                if( !previous_native && !visit( staged->second ) ) {
                     return false;
                 }
             } else if( !native_exists( parent ) ) {
