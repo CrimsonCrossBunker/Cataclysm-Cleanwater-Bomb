@@ -474,3 +474,5 @@ require("saline_infusion")
 require("injection_serums")
 
 require("map_item_actions")
+
+require("readable_files")

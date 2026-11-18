@@ -1,19 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "file",
-    "name": { "str": "file" },
-    "category": "books",
-    "description": "Several documents containing all kinds of information, customer data, and charts, kept together in a manila folder.  Pretty useless now.",
-    "weight": "15 g",
-    "color": "white",
-    "symbol": ",",
-    "material": [ "paper" ],
-    "volume": "50 ml",
-    "flags": [ "TRADER_AVOID", "TINDER" ]
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "MILLING" ],
     "id": "chitin_piece",
     "category": "spare_parts",

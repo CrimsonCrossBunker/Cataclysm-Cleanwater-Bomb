@@ -57,27 +57,6 @@
     "variables": { "browsed": "true" }
   },
   {
-    "id": "efile_lore",
-    "copy-from": "abstract_efile_exclusive",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": "questionable media file",
-    "description": "You kept this file on the off-chance that it might be interesting, but you need to take a more thorough look to find out what's inside.",
-    "use_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_READ_LOCAL_FILES" ] },
-    "ememory_size": "64 MB"
-  },
-  {
-    "id": "efile_map",
-    "copy-from": "abstract_efile_exclusive",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": "map cache",
-    "description": "Information about nearby locations stored from previous use.",
-    "ememory_size": "32 MB",
-    "use_action": { "type": "effect_on_conditions", "effect_on_conditions": [ "EOC_CHECK_MAP_CACHE" ] },
-    "extend": { "flags": [ "PRESERVE_SPAWN_LOC" ] }
-  },
-  {
     "abstract": "abstract_efile_recipes",
     "copy-from": "abstract_efile_exclusive_copiable",
     "type": "ITEM",
