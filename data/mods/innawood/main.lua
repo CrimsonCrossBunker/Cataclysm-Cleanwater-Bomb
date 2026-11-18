@@ -23,3 +23,5 @@ require("xp_progression")
 require("scenario_filters")
 
 require("construction_groups")
+
+require("disassembly")

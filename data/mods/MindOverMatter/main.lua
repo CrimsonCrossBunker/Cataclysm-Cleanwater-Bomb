@@ -152,3 +152,5 @@ require("construction_groups")
 require("overmap_locations")
 
 require("field_emissions")
+
+require("disassembly")

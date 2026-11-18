@@ -300,15 +300,6 @@
     "components": [ [ [ "gossamer_patchwork", 8 ] ], [ [ "filament", 15, "LIST" ] ] ]
   },
   {
-    "result": "sheet_gossamer_patchwork",
-    "type": "uncraft",
-    "activity_level": "NO_EXERCISE",
-    "time": "15 s",
-    "qualities": [ { "id": "CUT", "level": 1 } ],
-    "components": [ [ [ "gossamer_patchwork", 8 ] ] ],
-    "flags": [ "BLIND_EASY" ]
-  },
-  {
     "result": "gambeson_gossamer",
     "type": "recipe",
     "copy-from": "gambeson",

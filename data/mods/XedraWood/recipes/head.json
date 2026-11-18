@@ -1,25 +1,5 @@
 [
   {
-    "result": "skull_dino_pred_small",
-    "type": "uncraft",
-    "activity_level": "MODERATE_EXERCISE",
-    "skill_used": "fabrication",
-    "time": "10 s",
-    "qualities": [ { "id": "HAMMER", "level": 1 } ],
-    "components": [ [ [ "bone", 4 ] ] ],
-    "flags": [ "BLIND_EASY" ]
-  },
-  {
-    "result": "skull_dino_pred_med",
-    "type": "uncraft",
-    "activity_level": "MODERATE_EXERCISE",
-    "skill_used": "fabrication",
-    "time": "20 s",
-    "qualities": [ { "id": "HAMMER", "level": 1 } ],
-    "components": [ [ [ "bone", 8 ] ] ],
-    "flags": [ "BLIND_EASY" ]
-  },
-  {
     "result": "helmet_dragon_bird_pred",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",

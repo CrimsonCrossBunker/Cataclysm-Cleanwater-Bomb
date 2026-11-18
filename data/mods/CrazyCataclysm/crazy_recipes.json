@@ -1,12 +1,5 @@
 [
   {
-    "result": "battletorch_done",
-    "type": "uncraft",
-    "activity_level": "MODERATE_EXERCISE",
-    "time": "2 m",
-    "components": [ [ [ "bat", 1 ] ], [ [ "nomex", 5 ] ] ]
-  },
-  {
     "type": "recipe",
     "activity_level": "MODERATE_EXERCISE",
     "result": "firekatana_off",

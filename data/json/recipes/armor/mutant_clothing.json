@@ -11,13 +11,5 @@
     "autolearn": true,
     "components": [ [ [ "horseshoe", 2 ] ] ],
     "flags": [ "BLIND_EASY" ]
-  },
-  {
-    "result": "horseshoes_wearable",
-    "type": "uncraft",
-    "activity_level": "NO_EXERCISE",
-    "time": "1 s",
-    "components": [ [ [ "horseshoe", 2 ] ] ],
-    "flags": [ "BLIND_EASY" ]
   }
 ]

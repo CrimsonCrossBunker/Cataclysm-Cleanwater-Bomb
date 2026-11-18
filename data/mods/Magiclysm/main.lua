@@ -94,3 +94,5 @@ require("field_emissions")
 require("sub_body_parts")
 
 require("body_parts")
+
+require("disassembly")

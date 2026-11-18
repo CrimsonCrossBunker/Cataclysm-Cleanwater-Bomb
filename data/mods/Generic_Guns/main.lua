@@ -5,3 +5,5 @@ require("item_blacklists")
 require("ammunition_types")
 
 require("requirements")
+
+require("disassembly")

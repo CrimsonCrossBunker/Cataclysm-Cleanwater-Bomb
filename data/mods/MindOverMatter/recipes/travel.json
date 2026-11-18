@@ -81,48 +81,5 @@
       [ [ "small_lcd_screen", 1 ] ],
       [ [ "test_tube", 2 ] ]
     ]
-  },
-  {
-    "result": "psionic_transporter_remote",
-    "type": "uncraft",
-    "activity_level": "LIGHT_EXERCISE",
-    "time": "45 m",
-    "qualities": [ { "id": "SCREW", "level": 1 } ],
-    "difficulty": 4,
-    "components": [
-      [ [ "matrix_channeling_tool", 1 ] ],
-      [ [ "e_scrap", 1 ] ],
-      [ [ "RAM", 2 ] ],
-      [ [ "amplifier", 1 ] ],
-      [ [ "power_supply", 1 ] ],
-      [ [ "cable", 1 ] ],
-      [ [ "small_lcd_screen", 1 ] ]
-    ]
-  },
-  {
-    "result": "psionic_transporter_remote_on",
-    "type": "uncraft",
-    "activity_level": "LIGHT_EXERCISE",
-    "time": "45 m",
-    "qualities": [ { "id": "SCREW", "level": 1 } ],
-    "difficulty": 4,
-    "components": [
-      [ [ "matrix_channeling_tool", 1 ] ],
-      [ [ "e_scrap", 1 ] ],
-      [ [ "RAM", 2 ] ],
-      [ [ "amplifier", 1 ] ],
-      [ [ "power_supply", 1 ] ],
-      [ [ "cable", 1 ] ],
-      [ [ "small_lcd_screen", 1 ] ]
-    ]
-  },
-  {
-    "result": "psionic_transporter_remote_broken",
-    "type": "uncraft",
-    "activity_level": "LIGHT_EXERCISE",
-    "time": "45 m",
-    "qualities": [ { "id": "SCREW", "level": 1 } ],
-    "difficulty": 4,
-    "components": [ [ [ "matrix_crystal_drained", 1 ] ], [ [ "e_scrap", 5 ] ], [ [ "cable", 1 ] ] ]
   }
 ]

@@ -18,3 +18,5 @@ require("speech")
 require("ammo_effects")
 
 require("snippets")
+
+require("disassembly")

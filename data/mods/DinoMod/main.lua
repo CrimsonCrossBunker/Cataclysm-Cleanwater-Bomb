@@ -7,3 +7,5 @@ require("snippets")
 require("requirements")
 
 require("mutation_enchantments")
+
+require("disassembly")
