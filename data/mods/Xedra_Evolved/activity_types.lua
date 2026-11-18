@@ -54,3 +54,35 @@ content.add(content.ActivityType {
     can_resume = false,
     rooted = true,
 }:on_turn("ierde_vigil_turn"))
+
+local chronomancer_meditation = "ACT_XEDRA_CHRONOMANCER_MEDITATE"
+
+local function end_chronomancer_meditation(character)
+    local id = services.types.id
+    checked(services.effects.remove(character, id("effect", "effect_xedra_rewrite_wound_causality")))
+    checked(services.effects.remove(character, id("effect", "effect_xedra_rewrite_equipment_causality")))
+    if character.subtype == "avatar" then
+        services.messages.add(ccb.services.translate("You finish your meditations."), "good")
+    end
+end
+
+ccb.runtime.handler("finish_chronomancer_meditation", function(activity)
+    end_chronomancer_meditation(activity.character)
+end, 1)
+
+ccb.runtime.handler("cleanup_chronomancer_meditation", function(event)
+    local character = event.actors.character
+    if character and event.data.activity == chronomancer_meditation then
+        end_chronomancer_meditation(character)
+    end
+end, 1)
+ccb.runtime.on("game:character_finished_activity", "cleanup_chronomancer_meditation")
+
+content.add(content.ActivityType {
+    id = chronomancer_meditation,
+    verb = ccb.content.text("meditating"),
+    based_on = "time",
+    activity_level = 1,
+    can_resume = false,
+    rooted = true,
+}:on_finish("finish_chronomancer_meditation"))

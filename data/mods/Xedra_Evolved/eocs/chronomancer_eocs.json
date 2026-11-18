@@ -389,32 +389,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_XEDRA_CHRONOMANCER_MEDITATE_CANCELLED",
-    "eoc_type": "EVENT",
-    "required_event": "character_finished_activity",
-    "condition": { "and": [ { "compare_string": [ "ACT_XEDRA_CHRONOMANCER_MEDITATE", { "context_val": "activity" } ] } ] },
-    "effect": [ { "run_eocs": "EOC_XEDRA_CHRONOMANCER_MEDITATE_EFFFECT_REMOVE" } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_XEDRA_CHRONOMANCER_MEDITATE_EFFFECT_REMOVE",
-    "effect": [
-      { "u_lose_effect": [ "effect_xedra_rewrite_wound_causality", "effect_xedra_rewrite_equipment_causality" ] },
-      { "u_message": "You finish your meditations.", "type": "good" }
-    ]
-  },
-  {
-    "id": "ACT_XEDRA_CHRONOMANCER_MEDITATE",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "meditating",
-    "based_on": "time",
-    "can_resume": false,
-    "rooted": true,
-    "completion_eoc": "EOC_XEDRA_CHRONOMANCER_MEDITATE_EFFFECT_REMOVE"
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_XEDRA_TRACK_LAST_HIT",
     "eoc_type": "EVENT",
     "required_event": "character_takes_damage",

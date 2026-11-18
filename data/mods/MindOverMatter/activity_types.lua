@@ -67,3 +67,49 @@ content.add(content.ActivityType {
     can_resume = false,
     rooted = true,
 }:on_turn("wakeful_rest_turn"))
+
+local trance_activities = {
+    ACT_BIOKIN_VITAMINOSIS_MEDITATE = {
+        effect = "effect_biokin_vitaminosis",
+        message = function()
+            return ccb.services.translate("You exit your trance and feel somehow fuller.")
+        end,
+    },
+    ACT_VITAKIN_HEALING_TRANCE_MEDITATE = {
+        effect = "effect_vitakin_healing_trance",
+        message = function()
+            return ccb.services.translate("You exit your trance and your wounds feel less painful")
+        end,
+    },
+}
+
+local function end_trance(character, trance)
+    checked(services.effects.remove(character, services.types.id("effect", trance.effect)))
+    if character.subtype == "avatar" then
+        services.messages.add(trance.message(), "good")
+    end
+end
+
+ccb.runtime.handler("finish_psionic_trance", function(activity)
+    end_trance(activity.character, trance_activities[activity.activity_type_id])
+end, 1)
+
+ccb.runtime.handler("cleanup_psionic_trance", function(event)
+    local character = event.actors.character
+    local trance = trance_activities[event.data.activity]
+    if character and trance and checked(services.effects.has(character, services.types.id("effect", trance.effect))) then
+        end_trance(character, trance)
+    end
+end, 1)
+ccb.runtime.on("game:character_finished_activity", "cleanup_psionic_trance")
+
+for _, activity_id in ipairs({ "ACT_BIOKIN_VITAMINOSIS_MEDITATE", "ACT_VITAKIN_HEALING_TRANCE_MEDITATE" }) do
+    content.add(content.ActivityType {
+        id = activity_id,
+        verb = ccb.content.text("meditating"),
+        based_on = "time",
+        activity_level = 1,
+        can_resume = false,
+        rooted = true,
+    }:on_finish("finish_psionic_trance"))
+end
