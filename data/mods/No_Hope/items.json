@@ -240,15 +240,6 @@
   },
   {
     "type": "ITEM",
-    "id": "broken_laserturret",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken laser turret" },
-    "weight": "110 kg",
-    "copy-from": "broken_turret"
-  },
-  {
-    "type": "ITEM",
     "id": "reverse_jointed_legs",
     "name": { "str": "set of reverse-jointed legs", "str_pl": "sets of reverse-jointed legs" },
     "description": "A set of reverse-jointed legs, like the ones found under a chicken walker.",
@@ -260,41 +251,5 @@
     "price_postapoc": "2 USD 50 cent",
     "material": [ "steel" ],
     "category": "spare_parts"
-  },
-  {
-    "id": "lobotomizer_weapon",
-    "type": "ITEM",
-    "category": "weapons",
-    "name": { "str": "lobotomizer" },
-    "description": "A hand-forged collapsible tool with two axe heads and a sharp shovel-like tip on one end.  It can be used as a shovel, or you could chop some zombies with it instead.",
-    "weight": "2722 g",
-    "volume": "1750 ml",
-    "price": "250 USD",
-    "price_postapoc": "12 USD 50 cent",
-    "to_hit": { "grip": "none", "length": "long", "surface": "line", "balance": "neutral" },
-    "material": [ "steel" ],
-    "symbol": "/",
-    "color": "dark_gray",
-    "qualities": [ [ "DIG", 2 ], [ "AXE", 1 ], [ "CUT", 1 ], [ "BUTCHER", -11 ], [ "COOK", 1 ] ],
-    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP" ],
-    "flags": [ "NEEDS_UNFOLD", "BELT_CLIP", "SHEATH_AXE" ],
-    "weapon_category": [ "HOOKING_WEAPONRY" ],
-    "melee_damage": { "bash": 18, "cut": 37 }
-  },
-  {
-    "type": "ITEM",
-    "id": "necropolis_leaflet",
-    "category": "books",
-    "symbol": ",",
-    "color": "white",
-    "name": { "str": "vault leaflet" },
-    "snippet_category": "necropolis_intro",
-    "description": "A folded glossy handout that appears to be an introduction to living in a massive underground complex.",
-    "looks_like": "flyer",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "paper" ],
-    "weight": "1 g",
-    "volume": "1 ml"
   }
 ]
