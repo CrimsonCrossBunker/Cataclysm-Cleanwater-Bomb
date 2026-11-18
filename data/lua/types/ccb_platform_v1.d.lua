@@ -979,6 +979,7 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field id string Item type id.
 ---@field count? integer Positive count; defaults to one.
 ---@field requirement? boolean Treat `id` as a native Requirement id (`LIST` semantics).
+---@field recoverable? boolean Whether disassembly can recover this component; defaults to true.
 
 ---@class RecipeDefinition
 ---@field id string
@@ -995,8 +996,9 @@ function RecipeDefinition:result_charges(charges) end
 ---@param id string
 ---@param count integer
 ---@param requirement? boolean Treat `id` as a native Requirement id.
+---@param recoverable? boolean Whether disassembly can recover this component; defaults to true.
 ---@return RecipeDefinition self
-function RecipeDefinition:component(id, count, requirement) end
+function RecipeDefinition:component(id, count, requirement, recoverable) end
 
 ---@param choices RecipeComponentAlternative[] Dense one-based array with at most 128 entries.
 ---@return RecipeDefinition self
@@ -1125,6 +1127,10 @@ function RecipeDefinition:step(options) end
 ---@param count integer Positive byproduct count per craft.
 ---@return RecipeDefinition self
 function RecipeDefinition:byproduct(item_id, count) end
+
+---@param item_group_id string Native item group to roll for each crafted unit.
+---@return RecipeDefinition self
+function RecipeDefinition:byproducts_from_group(item_group_id) end
 
 ---@param flag_id string Native item flag to remove from the crafted result.
 ---@return RecipeDefinition self

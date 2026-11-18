@@ -316,6 +316,7 @@ struct component_requirement {
     std::string id;
     std::int64_t count = 1;
     bool requirement = false;
+    bool recoverable = true;
 };
 
 struct recipe_proficiency_data {
@@ -418,6 +419,7 @@ struct recipe_definition_data {
     batch_savings batching;
     std::set<std::string> removed_result_flags;
     std::map<std::string, int> byproducts;
+    std::string byproduct_group;
     std::map<std::string, int> autolearn_skills;
     std::optional<std::int64_t> result_charges;
     std::int64_t result_multiplier = 1;
@@ -1398,6 +1400,7 @@ requirement_data make_recipe_requirements(
             item_comp native_component( itype_id( component.id ),
                                         static_cast<int>( component.count ) );
             native_component.requirement = component.requirement;
+            native_component.recoverable = component.recoverable;
             alternatives.push_back( native_component );
         }
         components.push_back( std::move( alternatives ) );
@@ -1446,12 +1449,15 @@ struct recipe_definition_handle {
     }
 
     recipe_definition_handle &component( const std::string &id, std::int64_t count,
-                                         const sol::optional<bool> &requirement ) {
+                                         const sol::optional<bool> &requirement,
+                                         const sol::optional<bool> &recoverable ) {
         require_building_handle( token, *definition, "recipe" );
         if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
             throw std::runtime_error( "recipe component requires a non-empty id and positive count" );
         }
-        definition->components.push_back( { { id, count, requirement.value_or( false ) } } );
+        definition->components.push_back( {
+            { id, count, requirement.value_or( false ), recoverable.value_or( true ) }
+        } );
         return *this;
     }
 
@@ -1472,7 +1478,8 @@ struct recipe_definition_handle {
             if( id.empty() || count <= 0 || count > std::numeric_limits<int>::max() ) {
                 throw std::runtime_error( "recipe component alternative requires an id and positive count" );
             }
-            group.push_back( { id, count, choice.get_or( "requirement", false ) } );
+            group.push_back( { id, count, choice.get_or( "requirement", false ),
+                               choice.get_or( "recoverable", true ) } );
         }
         definition->components.push_back( std::move( group ) );
         return *this;
@@ -1675,6 +1682,15 @@ struct recipe_definition_handle {
             throw std::runtime_error( "recipe byproduct count is outside the native range" );
         }
         total += static_cast<int>( count );
+        return *this;
+    }
+
+    recipe_definition_handle &byproducts_from_group( const std::string &id ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() ) {
+            throw std::runtime_error( "recipe byproduct group needs an id" );
+        }
+        definition->byproduct_group = id;
         return *this;
     }
 
@@ -3205,6 +3221,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "batch_setup", &recipe_definition_handle::batch_setup,
         "step", &recipe_definition_handle::step,
         "byproduct", &recipe_definition_handle::byproduct,
+        "byproducts_from_group", &recipe_definition_handle::byproducts_from_group,
         "remove_result_flag", &recipe_definition_handle::remove_result_flag,
         "on_complete", &recipe_definition_handle::on_complete );
     ccb.new_usertype<plant_lifecycle_definition_handle>(
@@ -5496,8 +5513,14 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 linear && linear->offset > definition.time_moves ) {
                 throw std::runtime_error( "recipe '" + definition.id + "' has a batch setup longer than its base duration" );
             }
-            if( definition.reversible && !definition.byproducts.empty() ) {
+            if( definition.reversible && ( !definition.byproducts.empty() ||
+                                           !definition.byproduct_group.empty() ) ) {
                 throw std::runtime_error( "recipe '" + definition.id + "' cannot be reversible and have byproducts" );
+            }
+            if( check_engine_state && !definition.byproduct_group.empty() &&
+                item_group_ids.count( definition.byproduct_group ) == 0 &&
+                !item_group::group_is_defined( item_group_id( definition.byproduct_group ) ) ) {
+                throw std::runtime_error( "recipe '" + definition.id + "' references an unknown byproduct group" );
             }
             for( const auto &[skill, level] : definition.disassembly_learning ) {
                 if( ( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
@@ -7140,6 +7163,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     for( const auto &[byproduct, count] : entry.definition->byproducts ) {
                         native.byproducts.emplace( itype_id( byproduct ), count );
                     }
+                    if( !entry.definition->byproduct_group.empty() ) {
+                        native.byproduct_group = item_group_id( entry.definition->byproduct_group );
+                    }
                     for( const std::string &flag : entry.definition->removed_result_flags ) {
                         native.flags_to_delete.emplace( flag );
                     }
@@ -8694,6 +8720,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, id );
                     hash_part( state, std::to_string( count ) );
                 }
+                hash_part( state, v.byproduct_group );
                 for( const auto &[skill, level] : v.autolearn_skills ) {
                     hash_part( state, "autolearn_skill" );
                     hash_part( state, skill );
@@ -8705,6 +8732,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, e.id );
                         hash_part( state, std::to_string( e.count ) );
                         hash_part( state, e.requirement ? "requirement" : "item" );
+                        hash_part( state, e.recoverable ? "recoverable" : "consumed" );
                     }
                 }
                 hash_tools( v.tools );
