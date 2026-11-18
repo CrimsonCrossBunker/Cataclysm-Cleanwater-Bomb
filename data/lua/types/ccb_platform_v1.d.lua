@@ -2075,6 +2075,7 @@ function MonsterAttackDefinition:on_hit(handler_id) end
 ---@field remove_memorial_log? string Memorial text recorded when removed.
 ---@field blood_analysis_description? string|LocalizedText Player-facing blood-analysis description.
 ---@field maximum_intensity? integer Positive native maximum intensity; defaults to one.
+---@field maximum_effective_intensity? integer Cap used by native effect calculations. Zero leaves effective intensity uncapped.
 ---@field maximum_duration_turns? integer Non-negative maximum duration.
 ---@field intensity_duration_turns? integer Non-negative duration represented by one intensity.
 ---@field duration_add_percent? integer Duration stacking percentage; defaults to 100.
@@ -2085,6 +2086,7 @@ function MonsterAttackDefinition:on_hit(handler_id) end
 ---@field main_parts_only? boolean Whether body-part application targets only main parts.
 ---@field pain_sizing? boolean Scale pain by the affected Creature's native body size.
 ---@field hurt_sizing? boolean Scale direct damage by the affected Creature's native body size.
+---@field painkiller_addiction_reduces? boolean Reduce pain relief using the native addiction adjustment.
 ---@field show_in_info? boolean Whether the effect appears in item/character information.
 ---@field show_intensity? boolean Whether UI displays intensity; defaults to true.
 ---@field part_descriptions? boolean Whether descriptions vary by body part.
@@ -2172,8 +2174,8 @@ function EffectTypeDefinition:monster_death_chance(numerator, denominator) end
 ---@field resisted_base? number Base while resisted; defaults to zero.
 ---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
 
----@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'
----@param action 'amount'|'minimum'|'maximum'|'minimum_value'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stats and healing accept amount only. Cough and vomiting accept chance and tick. Minimum value is supported by health, health modifier, sleepiness, stimulant and perspiration. Hurt accepts neither value bound.
+---@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'|'hunger'|'thirst'|'focus'|'sensitivity'|'blood_pressure'|'sleep'|'size'
+---@param action 'amount'|'minimum'|'maximum'|'minimum_value'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stats and healing accept amount only. Cough and vomiting accept chance and tick. Value bounds follow the native modifier kind.
 ---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:modifier(kind, action, options) end
@@ -2209,6 +2211,13 @@ function EffectTypeDefinition:vitamin(vitamin_id, options) end
 ---@param options EffectLimbScoreOptions
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:limb_score(score_id, options) end
+
+---Scale the duration of a matching effect applied by native hit processing.
+---@param effect_id string Existing or same-transaction EffectType id.
+---@param multiplier number Finite native multiplier. Multiple active sources multiply together.
+---@param same_body_part? boolean Require the source effect to be on the affected body part. Defaults to false.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:on_hit_effect_duration(effect_id, multiplier, same_body_part) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.

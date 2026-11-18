@@ -412,11 +412,13 @@ struct effect_type_definition_data {
     bool monster_only_death_roll = false;
     std::vector<vitamin_rate_effect> vitamin_modifiers;
     std::vector<limb_score_effect> limb_score_modifiers;
+    std::vector<effect_dur_mod> duration_modifiers;
     std::map<std::pair<std::string, mod_action>, modifier_data> modifiers;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
     authored_text blood_analysis_description;
     std::int64_t maximum_intensity = 1;
+    std::int64_t maximum_effective_intensity = 0;
     std::int64_t maximum_duration_turns = 31536000;
     std::int64_t intensity_duration_turns = 0;
     std::int64_t duration_add_percent = 100;
@@ -427,6 +429,7 @@ struct effect_type_definition_data {
     bool main_parts_only = false;
     bool pain_sizing = false;
     bool hurt_sizing = false;
+    bool painkiller_addiction_reduces = false;
     bool show_in_info = false;
     bool show_intensity = true;
     bool part_descriptions = false;
@@ -1384,6 +1387,9 @@ struct effect_type_definition_handle {
                 { "healing", "HEAL_RATE" }, { "dodge", "DODGE" }, { "hit", "HIT" },
                 { "stamina", "STAMINA" }, { "stimulant", "STIM" }, { "perspiration", "PERSPIRATION" },
                 { "bash", "BASH" }, { "cut", "CUT" },
+                { "hunger", "HUNGER" }, { "thirst", "THIRST" }, { "focus", "FOCUS" },
+                { "sensitivity", "SENSITIVE" }, { "blood_pressure", "BLOOD_PRESSURE" },
+                { "sleep", "SLEEP" }, { "size", "SIZE" },
                 { "healing_head", "HEAL_HEAD" }, { "healing_torso", "HEAL_TORSO" },
                 { "strength", "STR" }, { "dexterity", "DEX" },
                 { "perception", "PER" }, { "intelligence", "INT" }, { "speed", "SPEED" }
@@ -1399,15 +1405,18 @@ struct effect_type_definition_handle {
             const auto effect = kinds.find( kind );
             const bool stat = kind == "strength" || kind == "dexterity" ||
                               kind == "perception" || kind == "intelligence" || kind == "speed" ||
-                              kind == "dodge" || kind == "hit" || kind == "bash" || kind == "cut";
+                              kind == "dodge" || kind == "hit" || kind == "bash" || kind == "cut" ||
+                              kind == "size";
             const bool healing = kind == "healing" || kind == "healing_head" || kind == "healing_torso";
             const bool minimum_bound = kind == "health" || kind == "health_modifier" ||
-                                       kind == "sleepiness" || kind == "stimulant" || kind == "perspiration";
+                                       kind == "sleepiness" || kind == "stimulant" || kind == "perspiration" ||
+                                       kind == "hunger" || kind == "thirst" || kind == "focus" ||
+                                       kind == "sensitivity" || kind == "blood_pressure";
             const bool timed_chance_only = kind == "cough" || kind == "vomiting";
             if( effect == kinds.end() || found == actions.end() ||
                 ( ( stat || healing ) && action != "amount" ) ||
                 ( action == "minimum_value" && !minimum_bound ) ||
-                ( kind == "hurt" && action == "maximum_value" ) ||
+                ( ( kind == "hurt" || kind == "sleep" ) && action == "maximum_value" ) ||
                 ( timed_chance_only && action != "chance_numerator" &&
                   action != "chance_denominator" && action != "tick" ) ) {
                 throw std::runtime_error( "unsupported effect modifier kind or action" );
@@ -1504,6 +1513,19 @@ struct effect_type_definition_handle {
             definition->limb_score_modifiers.push_back( {
                 limb_score_id( id ), multiplier, read_float( "resisted_multiplier", multiplier ),
                 scaling, read_float( "resisted_per_intensity", scaling )
+            } );
+            return *this;
+        }
+
+        effect_type_definition_handle &on_hit_effect_duration( const std::string &id, double multiplier,
+                sol::optional<bool> same_body_part ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( id.empty() || !std::isfinite( multiplier ) ||
+                std::abs( multiplier ) > std::numeric_limits<float>::max() ) {
+                throw std::invalid_argument( "effect duration scaling requires an id and finite native multiplier" );
+            }
+            definition->duration_modifiers.push_back( {
+                efftype_id( id ), static_cast<float>( multiplier ), same_body_part.value_or( false )
             } );
             return *this;
         }
@@ -3283,6 +3305,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "modifier", &effect_type_definition_handle::modifier,
         "vitamin", &effect_type_definition_handle::vitamin,
         "limb_score", &effect_type_definition_handle::limb_score,
+        "on_hit_effect_duration", &effect_type_definition_handle::on_hit_effect_duration,
         "enchantment", &effect_type_definition_handle::enchantment );
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
@@ -3521,6 +3544,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
                 "blood_analysis_description", {}, "effect blood analysis description" );
         definition->maximum_intensity = options.get_or<std::int64_t>(
                                             "maximum_intensity", 1 );
+        definition->maximum_effective_intensity = options.get_or<std::int64_t>(
+                    "maximum_effective_intensity", 0 );
         definition->maximum_duration_turns = options.get_or<std::int64_t>(
                 "maximum_duration_turns", 31536000 );
         definition->intensity_duration_turns = options.get_or<std::int64_t>(
@@ -3538,6 +3563,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->main_parts_only = options.get_or( "main_parts_only", false );
         definition->pain_sizing = options.get_or( "pain_sizing", false );
         definition->hurt_sizing = options.get_or( "hurt_sizing", false );
+        definition->painkiller_addiction_reduces = options.get_or( "painkiller_addiction_reduces", false );
         definition->show_in_info = options.get_or( "show_in_info", false );
         definition->show_intensity = options.get_or( "show_intensity", true );
         definition->part_descriptions = options.get_or( "part_descriptions", false );
@@ -4436,6 +4462,7 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 return value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max();
             };
             if( definition.maximum_intensity <= 0 || !native_int( definition.maximum_intensity ) ||
+                definition.maximum_effective_intensity < 0 || !native_int( definition.maximum_effective_intensity ) ||
                 definition.maximum_duration_turns < 0 || !native_int( definition.maximum_duration_turns ) ||
                 definition.intensity_duration_turns < 0 || !native_int( definition.intensity_duration_turns ) ||
                 !native_int( definition.duration_add_percent ) ||
@@ -4472,6 +4499,12 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                     !( index.defines_limb_score && index.defines_limb_score( id ) ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
                                               "' references unknown limb score '" + id + "'" );
+                }
+            }
+            for( const effect_dur_mod &modifier : definition.duration_modifiers ) {
+                if( !effect_exists( modifier.effect_id.str() ) ) {
+                    throw std::runtime_error( "effect type '" + definition.id +
+                                              "' scales unknown effect '" + modifier.effect_id.str() + "'" );
                 }
             }
             for( const std::string &id : definition.resist_effects ) {
@@ -5257,6 +5290,7 @@ void creatures_content_transaction::impl::apply_effect_type()
         native.monster_only_death_roll = source.monster_only_death_roll;
         native.vitamin_data = source.vitamin_modifiers;
         native.limb_score_data = source.limb_score_modifiers;
+        native.effect_dur_scaling = source.duration_modifiers;
         native.harmful_cough = source.harmful_cough;
         for( const auto &[key, value] : source.modifiers ) {
             native.mod_data[key.first][native.get_effect_modifier_key( key.second, 0 )] =
@@ -5269,6 +5303,7 @@ void creatures_content_transaction::impl::apply_effect_type()
         native.blood_analysis_description = source.blood_analysis_description.empty() ?
                                             translation() : source.blood_analysis_description.native();
         native.max_intensity = static_cast<int>( source.maximum_intensity );
+        native.max_effective_intensity = static_cast<int>( source.maximum_effective_intensity );
         native.max_duration = time_duration::from_turns(
                                   static_cast<int>( source.maximum_duration_turns ) );
         native.int_dur_factor = time_duration::from_turns(
@@ -5281,6 +5316,8 @@ void creatures_content_transaction::impl::apply_effect_type()
         native.main_parts_only = source.main_parts_only;
         native.pain_sizing = source.pain_sizing;
         native.hurt_sizing = source.hurt_sizing;
+        native.pkill_addict_reduces = source.painkiller_addiction_reduces;
+        native.update_movement_impairment();
         native.show_in_info = source.show_in_info;
         native.show_intensity = source.show_intensity;
         native.part_descs = source.part_descriptions;
@@ -7247,10 +7284,23 @@ void creatures_content_transaction::append_fingerprint(
                        << modifier.scaling << ',' << modifier.red_scaling;
                 hash_part( state, values.str() );
             }
+            for( const effect_dur_mod &modifier : value.duration_modifiers ) {
+                hash_part( state, "on_hit_effect_duration" );
+                hash_part( state, modifier.effect_id.str() );
+                std::ostringstream multiplier;
+                multiplier.imbue( std::locale::classic() );
+                multiplier << std::hexfloat << modifier.modifier;
+                hash_part( state, multiplier.str() );
+                hash_part( state, modifier.same_bp ? "same_part" : "any_part" );
+            }
             hash_part( state, value.apply_memorial_log );
             hash_part( state, value.remove_memorial_log );
             hash_part( state, value.blood_analysis_description );
             hash_part( state, std::to_string( value.maximum_intensity ) );
+            if( value.maximum_effective_intensity != 0 ) {
+                hash_part( state, "maximum_effective_intensity" );
+                hash_part( state, std::to_string( value.maximum_effective_intensity ) );
+            }
             hash_part( state, std::to_string( value.maximum_duration_turns ) );
             hash_part( state, std::to_string( value.intensity_duration_turns ) );
             hash_part( state, std::to_string( value.duration_add_percent ) );
@@ -7261,6 +7311,9 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.main_parts_only ? "main_parts" : "all_parts" );
             hash_part( state, value.pain_sizing ? "pain_sizing" : "fixed_pain" );
             hash_part( state, value.hurt_sizing ? "hurt_sizing" : "fixed_hurt" );
+            if( value.painkiller_addiction_reduces ) {
+                hash_part( state, "painkiller_addiction_reduces" );
+            }
             hash_part( state, value.show_in_info ? "show_info" : "hide_info" );
             hash_part( state, value.show_intensity ? "show_intensity" : "hide_intensity" );
             hash_part( state, value.part_descriptions ? "part_descriptions" : "global_descriptions" );

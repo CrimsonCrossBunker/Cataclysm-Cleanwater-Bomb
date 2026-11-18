@@ -1595,6 +1595,11 @@ static const std::unordered_set<efftype_id> hardcoded_movement_impairing = {{
     }
 };
 
+void effect_type::update_movement_impairment()
+{
+    impairs_movement = hardcoded_movement_impairing.count( id ) > 0;
+}
+
 void load_effect_type( const JsonObject &jo, std::string_view src )
 {
     effect_type new_etype;
@@ -1690,7 +1695,7 @@ void load_effect_type( const JsonObject &jo, std::string_view src )
 
     new_etype.load_mod_data( jo );
 
-    new_etype.impairs_movement = hardcoded_movement_impairing.count( new_etype.id ) > 0;
+    new_etype.update_movement_impairment();
 
     new_etype.flags = jo.get_tags<flag_id>( "flags" );
     int enchant_num = 0;
