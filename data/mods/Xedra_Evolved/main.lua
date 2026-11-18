@@ -184,3 +184,7 @@ require("dreamforged_recipes")
 require("treesinging_recipes")
 
 require("nether_sorcery_study")
+
+require("inventor_research")
+
+require("heartvine_communion")
