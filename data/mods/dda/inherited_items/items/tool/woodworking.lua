@@ -327,3 +327,41 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- Wood axes also lack the ability to hook appropriately in combat, for the same reason they work well against trees.  Straight axe head instead of curved.
+    local item = content.Item {
+        id = "ax",
+        name = ccb.content.plural_text("wood axe", "wood axes"),
+        description = ccb.content.text("A large, two-handed wood axe.  It makes a good melee weapon, but is a bit slow to recover between swings."),
+        mass_milligrams = 2227000,
+        volume_ml = 2000,
+        longest_side_mm = 780,
+        price_cents = 10500,
+        price_postapoc_cents = 750,
+        melee_to_hit = 0,
+        symbol = "/",
+        color = "light_gray",
+        replace_qualities = true,
+        techniques = { "WBLOCK_1", "BRUTAL", "SWEEP", "MOUNTED_CHARGE" },
+        weapon_categories = { "GREAT_AXES" },
+    }
+    item:material("wood", 1)
+    item:material("steel", 1)
+    item:quality("CUT", 1)
+    item:quality("AXE", 3)
+    item:quality("BUTCHER", -36)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SHEATH_AXE")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:melee_damage("cut", 28)
+    item:mounted_charge { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 }
+    item:fault_group("handle_long", {  })
+    item:fault_group("blade_general_no_tip", {  })
+    item:tool()
+    content.add(item)
+end
