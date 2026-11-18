@@ -2,11 +2,12 @@
 
 #include <algorithm>
 
-#include "cached_options.h"
-#include "game_constants.h"
 #include "character.h"
+#include "character_id.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "map.h"
+#include "safe_reference.h"
 
 scoped_map_viewpoint::scoped_map_viewpoint( map &here, const Character &observer,
         const tripoint_abs_ms &position, bool standing, int z_range ) : here( here ),

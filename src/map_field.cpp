@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <array>
-#include <bitset>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -19,7 +18,6 @@
 #include "bodypart.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "lua_platform_runtime.h"
 #include "character.h"
 #include "coordinates.h"
 #include "creature.h"
@@ -37,6 +35,7 @@
 #include "game.h"
 #include "item.h"
 #include "itype.h"
+#include "lua_platform_runtime.h"
 #include "map.h"
 #include "map_field.h"
 #include "map_iterator.h"
