@@ -108,3 +108,31 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "alchemist_mine",
+        name = ccb.content.plural_text("alchemical mine", "alchemical mines"),
+        description = ccb.content.text("A pair of stabilized alchemist bombs with concentrated mana linking them.  Any movement in the mana linkage zone provokes an extremely powerful explosion in a small area."),
+        mass_milligrams = 860000,
+        volume_ml = 400,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "dark_gray",
+    }
+    item:material("crystallized_mana", 1)
+    item:material("concentrated_mana", 1)
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_alchemist_mine",
+        moves = 120,
+        practice = 3,
+        message = ccb.content.text("You set the alchemic mine."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:tool()
+    content.add(item)
+end
