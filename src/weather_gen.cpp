@@ -39,6 +39,14 @@
 #include "weather.h"
 #include "weather_type.h"
 
+static const dimension_id dimension_default( "default" );
+
+static const weather_type_id weather_drizzle( "drizzle" );
+static const weather_type_id weather_flurries( "flurries" );
+static const weather_type_id weather_light_drizzle( "light_drizzle" );
+static const weather_type_id weather_rain( "rain" );
+static const weather_type_id weather_snowing( "snowing" );
+
 namespace
 {
 constexpr double tau = 2 * M_PI;
@@ -167,7 +175,8 @@ static weather_gen_common get_common_data( const weather_generator &generator,
         }
         // Scale the January-first, 364-day calendar to the configured game year.
         const double model_day = year_fraction * regional_climate::model_year_days;
-        const auto normal = regional_climate::temperature_for_day( *climate, model_day );
+        const regional_climate::temperature_normal normal =
+            regional_climate::temperature_for_day( *climate, model_day );
         result.normal_mean_c = normal.mean_c;
         result.normal_daily_range_c = normal.daily_range_c;
         result.climate_month = climate->months[normal.month];
@@ -194,8 +203,7 @@ std::optional<regional_climate::normals> weather_generator::climate_at(
 std::optional<regional_climate::coordinates> weather_generator::climate_location(
     const tripoint_abs_ms &location ) const
 {
-    static const dimension_id earth_dimension( "default" );
-    if( climate_station.empty() || !g || g->get_dimension_prefix() != earth_dimension ) {
+    if( climate_station.empty() || !g || g->get_dimension_prefix() != dimension_default ) {
         return std::nullopt;
     }
     if( north_america::active() ) {
@@ -366,23 +374,18 @@ weather_type_id weather_generator::get_weather_conditions( const w_point &w ) co
     dialogue d( get_talker_for( get_avatar() ), nullptr );
     d.set_value( "weather_location", w.location );
 
-    static const weather_type_id light_drizzle( "light_drizzle" );
-    static const weather_type_id drizzle( "drizzle" );
-    static const weather_type_id rain( "rain" );
-    static const weather_type_id flurries( "flurries" );
-    static const weather_type_id snowing( "snowing" );
     weather_type_id climate_weather = WEATHER_CLEAR;
     if( w.climate_precipitation_mm_per_hour && *w.climate_precipitation_mm_per_hour > 0 ) {
         const double rate = *w.climate_precipitation_mm_per_hour;
         climate_weather = w.temperature < units::from_fahrenheit( 33 ) ?
-                          ( rate < 2.0 ? flurries : snowing ) :
-                          ( rate < 0.75 ? light_drizzle : rate < 2.0 ? drizzle : rain );
+                          ( rate < 2.0 ? weather_flurries : weather_snowing ) :
+                          ( rate < 0.75 ? weather_light_drizzle : rate < 2.0 ? weather_drizzle : weather_rain );
     }
     for( const weather_type_id &type : sorted_weather ) {
         // The climate model drives ordinary precipitation. Custom weather and
         // Lua overrides still run through their existing priority and conditions.
-        const bool regular_precipitation = type == light_drizzle || type == drizzle || type == rain ||
-                                           type == flurries || type == snowing;
+        const bool regular_precipitation = type == weather_light_drizzle || type == weather_drizzle ||
+                                           type == weather_rain || type == weather_flurries || type == weather_snowing;
         if( w.climate_precipitation_mm_per_hour && regular_precipitation &&
             ( current_conditions->precip == precip_class::none || type != climate_weather ) ) {
             const std::optional<bool> lua_condition =
