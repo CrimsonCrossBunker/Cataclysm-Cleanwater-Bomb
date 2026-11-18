@@ -1,44 +1,5 @@
 [
   {
-    "id": "talking_doll",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "talking doll" },
-    "description": "This is a talking doll, meant for children.  Fortunately it still works, and you could unload the batteries out of it.",
-    "//": "https://amz.run/7YNm",
-    "weight": "410 g",
-    "volume": "725 ml",
-    "price": "60 USD",
-    "price_postapoc": "0 cent",
-    "material": [ "plastic" ],
-    "symbol": "|",
-    "color": "pink",
-    "flags": [ "WATER_BREAK", "ELECTRONIC" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "charges_per_use": 1,
-    "turns_per_charge": 20,
-    "use_action": [ "DOLLCHAT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_LIGHT" ],
-        "default_magazine": "light_battery_cell"
-      }
-    ],
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "creepy_doll",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "talking doll" },
-    "description": "This is a talking doll, meant for children.  Fortunately it still works, and you could unload the batteries out of it.",
-    "copy-from": "talking_doll",
-    "symbol": "|",
-    "color": "pink"
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "pool_ball",
@@ -85,47 +46,5 @@
     "recovery_chance": 99,
     "effects": [ "NON_FOULING" ],
     "thrown_damage": [ { "damage_type": "bash", "amount": 3 } ]
-  },
-  {
-    "type": "ITEM",
-    "id": "football",
-    "symbol": "*",
-    "color": "brown",
-    "name": { "str": "football" },
-    "category": "other",
-    "description": "An oval-shaped ball made of leather and string, it's easily thrown but does little damage.  You could take it apart into leather if you wanted.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ { "type": "leather", "portion": 9 }, { "type": "rubber" } ],
-    "weight": "400 g",
-    "volume": "750 ml",
-    "longest_side": "29 cm"
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "aim_game",
-    "//": "lazerlyte trainer target was used as a reference",
-    "symbol": "*",
-    "color": "white",
-    "name": { "str": "aim game target practice kit" },
-    "category": "other",
-    "description": "A collection of laser guns and targets designed to help you practice shooting.  The spot you 'hit' is displayed on the targets.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "plastic", "aluminum" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" ],
-        "default_magazine": "light_minus_disposable_cell"
-      }
-    ],
-    "charges_per_use": 50,
-    "//2": "670 grams for the target with a bit extra for the generic laser + connectors",
-    "weight": "800 g",
-    "volume": "3500 ml",
-    "tool_ammo": [ "battery" ]
   }
 ]
