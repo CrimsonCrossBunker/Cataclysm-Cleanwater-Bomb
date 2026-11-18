@@ -239,9 +239,11 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 262> migrated_character_tasks = {{
+const std::array<character_task_migration, 263> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_unvitrified_return" ),
           "return_from_vitrification_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_PERK_insight" ),
+          "martial_perks_insight_due", nullptr, false, "perk_melee_system" },
         { effect_on_condition_id( "EOC_LIXA_unfold_spawn_goodbye_cards" ),
           "lixa_leave_goodbye_cards", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_LIXA_unfold_shift_0" ),

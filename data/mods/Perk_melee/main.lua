@@ -13,3 +13,7 @@ require("xp_progression")
 require("sidebar_extensions")
 
 require("effect_types")
+
+require("poise_spells")
+
+require("insight")
