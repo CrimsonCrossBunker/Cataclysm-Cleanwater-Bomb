@@ -211,3 +211,30 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "xedra_dreamsmith_time_trap",
+        name = ccb.content.plural_text("dreamforged time trap", "dreamforged time traps"),
+        copy_from = "beartrap",
+        looks_like = "beartrap",
+        description = ccb.content.text("A dreamdross mesh that condenses within the center.  Use it to set it on the ground, creating a trap that will freeze anything that steps on it for several hours."),
+        price_cents = 100000,
+        price_postapoc_cents = 2000,
+        symbol = ";",
+        color = "light_gray",
+    }
+    item:material("forged_dreamstuff", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_xedra_dreamsmith_time_trap",
+        moves = 200,
+        practice = 4,
+        message = ccb.content.text("You set the time trap on the ground."),
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:adjust_measurements { mass_milligrams = { factor = 0.3 } }
+    item:tool()
+    content.add(item)
+end

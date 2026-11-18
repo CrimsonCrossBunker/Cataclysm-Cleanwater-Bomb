@@ -47,28 +47,6 @@
     "tool_ammo": [ "thread" ]
   },
   {
-    "id": "xedra_dreamsmith_time_trap",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "dreamforged time trap" },
-    "copy-from": "beartrap",
-    "description": "A dreamdross mesh that condenses within the center.  Use it to set it on the ground, creating a trap that will freeze anything that steps on it for several hours.",
-    "proportional": { "weight": 0.3 },
-    "price": "1000 USD",
-    "price_postapoc": "20 USD",
-    "material": [ "forged_dreamstuff" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "use_action": {
-      "type": "place_trap",
-      "trap": "tr_xedra_dreamsmith_time_trap",
-      "moves": 200,
-      "practice": 4,
-      "done_message": "You set the time trap on the ground."
-    },
-    "flags": [ "SINGLE_USE" ]
-  },
-  {
     "id": "xedra_dreamsmith_time_watch",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],
