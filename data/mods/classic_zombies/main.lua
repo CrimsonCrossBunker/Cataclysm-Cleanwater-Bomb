@@ -62,3 +62,6 @@ require("retired_recipes")
 require("craft_recipes")
 
 require("item_group_changes")
+
+require("contagion.effect_types")
+require("effect_types")
