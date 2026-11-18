@@ -39,7 +39,7 @@
 #include "weather.h"
 #include "weather_type.h"
 
-static const dimension_id dimension_default( "default" );
+static const dimension_id dimension_world_default( "default" );
 
 static const weather_type_id weather_drizzle( "drizzle" );
 static const weather_type_id weather_flurries( "flurries" );
@@ -203,7 +203,7 @@ std::optional<regional_climate::normals> weather_generator::climate_at(
 std::optional<regional_climate::coordinates> weather_generator::climate_location(
     const tripoint_abs_ms &location ) const
 {
-    if( climate_station.empty() || !g || g->get_dimension_prefix() != dimension_default ) {
+    if( climate_station.empty() || !g || g->get_dimension_prefix() != dimension_world_default ) {
         return std::nullopt;
     }
     if( north_america::active() ) {

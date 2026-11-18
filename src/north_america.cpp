@@ -22,11 +22,12 @@
 #include "north_america_elevation.h"
 #include "options.h"
 #include "path_info.h"
+#include "point.h"
 #include "regional_climate.h"
 #include "type_id.h"
 #include "worldfactory.h"
 
-static const dimension_id dimension_default( "default" );
+static const dimension_id dimension_world_default( "default" );
 
 static const mtype_id mon_zombie_marine( "mon_zombie_marine" );
 static const mtype_id mon_zombie_marine_ca( "mon_zombie_marine_ca" );
@@ -443,7 +444,7 @@ bool available()
 
 bool active()
 {
-    return g && g->north_america_world && g->get_dimension_prefix() == dimension_default;
+    return g && g->north_america_world && g->get_dimension_prefix() == dimension_world_default;
 }
 
 std::string_view jurisdiction_at( point_abs_ms position )
