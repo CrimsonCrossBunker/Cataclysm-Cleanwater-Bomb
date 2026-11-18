@@ -124,18 +124,5 @@
       { "text": "Let's talk about something else.", "topic": "TALK_NONE" },
       { "text": "Maybe later.  Bye!", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "hunter_mundane_sold_items",
-    "//": "Leather, bone and sinew, in other words anything worth selling but not edible from various animals.",
-    "//2": "The guards take turns treating the hides to make leather as Elsa taught them, as having anything to sell can result in more food and supplies.",
-    "items": [
-      { "item": "bone", "count": [ 20, 50 ] },
-      { "item": "sinew", "count": [ 400, 800 ] },
-      { "item": "leather", "count": [ 3, 15 ] },
-      { "item": "tanned_hide", "count": [ 1, 5 ] }
-    ]
   }
 ]

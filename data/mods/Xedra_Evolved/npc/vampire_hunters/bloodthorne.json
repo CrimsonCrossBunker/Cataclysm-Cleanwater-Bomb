@@ -82,26 +82,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "VAMPIRE_HUNTER_BLOODTHORNE_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "holy_symbol_wood" },
-      {
-        "distribution": [
-          { "item": "jeans", "prob": 25 },
-          { "item": "pants", "prob": 25 },
-          { "item": "pants_leather", "prob": 25 },
-          { "item": "pants_cargo", "prob": 25 }
-        ],
-        "prob": 100
-      },
-      { "item": "longshirt" },
-      { "item": "socks" },
-      { "item": "boots" }
-    ]
-  },
-  {
     "id": "TALK_HUNTER_BLOODTHORNE",
     "type": "talk_topic",
     "//": "Due to her heartvines, she notices vampirism before it has visible symptoms.",

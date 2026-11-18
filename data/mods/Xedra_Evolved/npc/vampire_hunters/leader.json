@@ -47,27 +47,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "VAMPIRE_HUNTER_LEADER_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "socks" },
-      { "item": "dress_shoes" },
-      { "item": "knit_scarf" },
-      { "item": "dentures" },
-      { "item": "holy_symbol_wood" },
-      { "item": "briefs" },
-      { "item": "dress_shirt" },
-      { "item": "pants" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "VAMPIRE_HUNTER_LEADER_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "cane" } ]
-  },
-  {
     "id": "TALK_VAMPIRE_HUNTER_LEADER",
     "type": "talk_topic",
     "//": "He will always refuse to talk with vampires until they get cured.",

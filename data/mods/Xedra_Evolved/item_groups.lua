@@ -1,0 +1,5 @@
+require("item_groups.itemgroups")
+require("item_groups.mapgen")
+require("item_groups.npc")
+require("item_groups.player")
+require("item_groups.procgen")

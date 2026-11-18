@@ -206,3 +206,5 @@ require("vampire_torpor")
 require("hedge_tome_activity")
 
 require("book_of_lies")
+
+require("item_groups")

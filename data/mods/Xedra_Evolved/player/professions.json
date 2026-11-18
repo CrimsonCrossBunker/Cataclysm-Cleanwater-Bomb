@@ -11,12 +11,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "diazepam_scrip",
-    "entries": [ { "item": "diazepam", "count": 20, "container-item": "null", "entry-wrapper": "bottle_plastic_pill_prescription" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "torso_grenade_bandolier_jotunn",
     "entries": [ { "item": "torso_bandolier_grenade", "ammo-item": "40x46mm_m576", "charges": 3 } ]
   },
@@ -1019,25 +1013,6 @@
     }
   },
   {
-    "type": "item_group",
-    "id": "random_cryptid_map",
-    "//": "This item group gives a random cryptid map and the associated notes when starting as a cryptid hunter.  The probabilities are intended to be equal with each other.",
-    "subtype": "distribution",
-    "items": [ { "group": "deathworm_map", "prob": 50 }, { "group": "sevenoclock_map", "prob": 50 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "deathworm_map",
-    "entries": [ { "item": "deathworm_map" }, { "item": "deathworm_note" } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "sevenoclock_map",
-    "entries": [ { "item": "sevenoclock_map" }, { "item": "sevenoclock_note" } ]
-  },
-  {
     "type": "profession",
     "id": "xedra_bloodthorne_druid_profession",
     "name": "Bloodthorne Druid",
@@ -1083,18 +1058,6 @@
     },
     "flags": [ "SCEN_ONLY" ],
     "chargen_allow_npc": false
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_crossbow_low_vampire_hunter",
-    "entries": [ { "item": "bolt_steel", "charges": 20 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_crossbow_vampire_hunter",
-    "entries": [ { "item": "bolt_cf", "charges": 20 } ]
   },
   {
     "type": "profession",

@@ -350,21 +350,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "nether_cult_items_worn",
-    "subtype": "distribution",
-    "items": [
-      [ "art_robe", 100 ],
-      [ "art_cloak", 100 ],
-      [ "art_coat", 100 ],
-      [ "art_mask", 100 ],
-      [ "art_helm", 100 ],
-      [ "art_gloves", 100 ],
-      [ "art_boots", 100 ],
-      [ "art_ring", 100 ]
-    ]
-  },
-  {
     "type": "relic_procgen_data",
     "id": "nether_cult_wield",
     "charge_types": [
@@ -657,19 +642,6 @@
       { "weight": 100, "item": "art_dagger" },
       { "weight": 100, "item": "art_spear" },
       { "weight": 100, "item": "art_club" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "nether_cult_items_wielded",
-    "subtype": "distribution",
-    "items": [
-      [ "art_staff", 100 ],
-      [ "art_sword", 100 ],
-      [ "art_harp", 100 ],
-      [ "art_dagger", 100 ],
-      [ "art_spear", 100 ],
-      [ "art_club", 100 ]
     ]
   }
 ]

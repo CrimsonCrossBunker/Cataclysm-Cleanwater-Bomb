@@ -1,67 +1,6 @@
 [
   {
     "type": "item_group",
-    "subtype": "collection",
-    "id": "map_extra_fae",
-    "//": "Drugdealer with access to fae drugs.",
-    "entries": [
-      { "group": "drugdealer", "prob": 75 },
-      {
-        "distribution": [
-          { "item": "lsd", "container-item": "null", "entry-wrapper": "bag_zipper", "count": [ 20, 30 ], "prob": 10 },
-          {
-            "item": "faewild",
-            "container-item": "null",
-            "entry-wrapper": "bag_zipper",
-            "count": [ 10, 20 ],
-            "prob": 40
-          },
-          {
-            "item": "lotus_blossom",
-            "container-item": "null",
-            "entry-wrapper": "bag_zipper",
-            "count": [ 8, 14 ],
-            "prob": 30
-          }
-        ],
-        "prob": 50
-      },
-      { "group": "clothing_outdoor_pants", "damage": [ 1, 4 ] },
-      { "group": "socks_unisex", "damage": [ 1, 4 ] },
-      { "group": "lab_shoes", "damage": [ 1, 4 ], "prob": 50 },
-      { "group": "shirts", "damage": [ 1, 4 ], "prob": 50 },
-      { "group": "jackets", "damage": [ 1, 4 ], "prob": 30 },
-      { "group": "underwear", "damage": [ 1, 3 ] },
-      { "item": "corpse", "damage": 4 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "//": "Inventor artifact creation itemgroup.",
-    "id": "minor_spark_artifacts",
-    "subtype": "distribution",
-    "items": [
-      [ "xe_art_clock", 100 ],
-      [ "xe_art_rod", 100 ],
-      [ "xe_art_monitor", 100 ],
-      [ "xe_art_mess", 100 ],
-      [ "xe_art_sculpture", 100 ],
-      [ "xe_art_disc", 100 ],
-      [ "xe_art_instrument", 100 ],
-      [ "art_napkin", 100 ],
-      [ "art_urchin", 100 ],
-      [ "art_jelly", 100 ],
-      [ "art_spiral", 100 ],
-      [ "art_pin", 100 ],
-      [ "art_tube", 100 ],
-      [ "art_pyramid", 100 ],
-      [ "art_crystal", 100 ],
-      [ "art_knot", 100 ],
-      [ "art_crescent", 100 ]
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "minor_spark_artifact",
     "subtype": "distribution",
     "entries": [

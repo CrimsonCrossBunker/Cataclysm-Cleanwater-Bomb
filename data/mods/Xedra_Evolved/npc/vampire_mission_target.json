@@ -43,33 +43,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "xe_vampire_mission_target_worn",
-    "//": "Until there's a way to make a NPC spawn with random equipment but with a single non-random piece of equipment, this group will be needed to make sure the sun-sensitive vampire has sunglasses.",
-    "subtype": "collection",
-    "entries": [
-      { "item": "sunglasses" },
-      {
-        "distribution": [
-          { "item": "jeans", "prob": 25 },
-          { "item": "pants", "prob": 25 },
-          { "item": "pants_leather", "prob": 25 },
-          { "item": "pants_cargo", "prob": 25 }
-        ],
-        "prob": 100
-      },
-      { "item": "longshirt" },
-      { "item": "socks" },
-      { "item": "sneakers" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "xe_vampire_mission_target_wield",
-    "subtype": "distribution",
-    "entries": [ { "item": "umbrella", "prob": 10 }, { "item": "teleumbrella-extended", "prob": 10 } ]
-  },
-  {
     "id": "TALK_VAMPIRE_MISSION_TARGET",
     "type": "talk_topic",
     "//": "Depending on their reason to become a vampire, they will be more or less open to be cured.",

@@ -345,40 +345,6 @@
     "responses": [ { "text": "<end_talking_bye>", "topic": "TALK_DONE" } ]
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "hunter_doctor_sold_items",
-    "//": "Some common medical supplies they can afford to trade for more useful things.",
-    "entries": [
-      { "item": "bandages", "prob": 80, "count": [ 5, 10 ] },
-      { "item": "adhesive_bandages", "count": [ 1, 20 ], "prob": 70 },
-      { "item": "vitamins", "prob": 75, "count": [ 10, 30 ] },
-      { "item": "calcium_tablet", "prob": 75, "count": [ 15, 25 ] },
-      { "item": "aspirin", "prob": 60, "count": [ 5, 10 ] },
-      { "item": "ibuprofen", "prob": 70, "count": [ 5, 10 ] },
-      { "item": "acetaminophen", "prob": 70, "count": [ 15, 30 ] },
-      { "item": "dayquil", "prob": 70, "count": [ 5, 10 ] },
-      { "item": "nyquil", "prob": 70, "count": [ 5, 10 ] },
-      { "item": "disinfectant", "prob": 35, "count": [ 5, 20 ] },
-      { "item": "inhaler", "prob": 20, "charges": [ 10, 100 ] },
-      { "item": "antibiotics", "prob": 35, "count": [ 1, 20 ] },
-      { "item": "antifungal", "prob": 10, "count": [ 1, 20 ] },
-      { "item": "antiparasitic", "prob": 10, "count": [ 1, 20 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "hunter_doctor_aspirin",
-    "entries": [ { "item": "extra_str_aspirin", "prob": 80, "count": [ 5, 20 ] } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "hunter_doctor_rage_drink",
-    "entries": [ { "item": "blackout_rage_drink", "prob": 75, "count": [ 3, 9 ] } ]
-  },
-  {
     "id": "MISSION_VAMPIRE_HUNTER_DOCTOR_FIND_GINSENG",
     "type": "mission_definition",
     "name": { "str": "Find some elder ginseng for Blaine" },

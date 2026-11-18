@@ -238,20 +238,6 @@
     }
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "map_extra_fallen_adventurer",
-    "//": "Nested group to damage the container-item",
-    "entries": [ { "group": "map_extra_fallen_adventurer_corpse", "prob": 100, "damage": [ 3, 4 ] } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "map_extra_fallen_adventurer_corpse",
-    "container-item": "corpse_fae",
-    "entries": [ { "group": "changeling_bannerman_death_drops", "prob": 100 } ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "mine_lava",
     "object": {
