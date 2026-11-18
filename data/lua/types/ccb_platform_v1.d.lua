@@ -8349,6 +8349,10 @@ function ScriptMapgenContext:fill_groundcover() end
 ---and vehicle state can participate in the transaction.
 ---@field cancel_on_collision? true Omitted or `{}` uses transactional collision cancellation; when supplied, this must be true.
 
+---@class CcbMapgenRunOptions
+---@field mission? MissionToken Exact active mission used by mission-target mapgen placements.
+---@field cancel_on_collision? boolean Native collision cancellation, enabled by default.
+
 ---@class CcbMapgenApi
 local CcbMapgenApi = {}
 
@@ -8365,12 +8369,13 @@ function CcbMapgenApi.apply(target, update, options) end
 ---Run one registered update through the native immediate mapgen path at an explicit OMT.
 ---Unlike `apply`, this operation does not use transactional preflight or rollback;
 ---external NPC, vehicle, and zone effects may be published even when the native
----runner reports failure. The selected mission is nil. The native result is
----reported in `value`, while token/argument errors use the CcbResult error.
+---runner reports failure. The native result is reported in `value`, while
+---token/argument errors use the CcbResult error.
 ---@param target OvermapTileToken Exact target absolute OMT token.
 ---@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@param options? CcbMapgenRunOptions Native immediate-update options.
 ---@return CcbResult result `value` is the native runner's success boolean.
-function CcbMapgenApi.run_update(target, update) end
+function CcbMapgenApi.run_update(target, update, options) end
 
 ---Queue one registered update through the native UPDATE_MAPGEN timed-event path.
 ---The delay must be positive. Native processing occurs one second after the
@@ -10553,6 +10558,11 @@ function CcbMissionsApi.assign(owner, token) end
 ---@param deadline? TimePoint
 ---@return CcbResult result `value` is a CcbMissionMutation.
 function CcbMissionsApi.set_deadline(token, deadline) end
+---@param owner GameHandle Exact Character holding the active mission.
+---@param token MissionToken Exact mission-instance token.
+---@param position TripointCoord Absolute overmap-terrain target.
+---@return CcbResult result `value` is the assigned target position.
+function CcbMissionsApi.set_target(owner, token, position) end
 ---@param owner GameHandle Exact avatar owner.
 ---@param token MissionToken Exact mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionSnapshot.

@@ -31,6 +31,7 @@ extern "C" {
 #include "game.h"
 #include "item.h"
 #include "item_group.h"
+#include "lua_platform_missions.h"
 #include "lua_platform_overmap.h"
 #include "lua_platform_world.h"
 #include "map.h"
@@ -438,6 +439,7 @@ sol::table run_mapgen_update(
     sol::this_state lua,
     const sol::object &requested_target,
     const sol::object &requested_update,
+    const sol::optional<sol::object> &requested_options,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation,
     const std::function<void()> &require_write )
@@ -470,6 +472,44 @@ sol::table run_mapgen_update(
         return make_game_error_result( state, *error );
     }
 
+    bool cancel_on_collision = true;
+    mission *active_mission = nullptr;
+    if( requested_options && requested_options->get_type() != sol::type::nil ) {
+        if( !requested_options->is<sol::table>() ) {
+            return make_game_error_result( state, {
+                "invalid_options",
+                "services.mapgen.run_update options must be a table"
+            } );
+        }
+        const sol::table options = requested_options->as<sol::table>();
+        for( const auto &entry : options ) {
+            if( !entry.first.is<std::string>() ) {
+                return make_game_error_result( state, {
+                    "invalid_options", "Mapgen update option keys must be strings"
+                } );
+            }
+            const std::string key = entry.first.as<std::string>();
+            if( key == "cancel_on_collision" && entry.second.is<bool>() ) {
+                cancel_on_collision = entry.second.as<bool>();
+            } else if( key == "mission" && entry.second.is<mission_token>() ) {
+                std::optional<game_handle_error> error;
+                active_mission = resolve_mission( entry.second.as<const mission_token &>(),
+                                                  runtime_generation, world_generation, error );
+                if( active_mission == nullptr ) {
+                    return make_game_error_result( state, *error );
+                }
+                if( !active_mission->in_progress() ) {
+                    return make_game_error_result( state, {
+                        "not_active", "Mapgen update mission must be active"
+                    } );
+                }
+            } else {
+                return make_game_error_result( state, {
+                    "invalid_options", "Invalid mapgen update option '" + key + "'"
+                } );
+            }
+        }
+    }
     require_native_mapgen_target_range(
         target.native_position(), "services.mapgen.run_update" );
 
@@ -479,7 +519,8 @@ sol::table run_mapgen_update(
     // also runs this operation with the runner's default collision policy and
     // without a transaction.
     const ret_val<void> outcome = run_mapgen_update_func(
-                                      update.native_id(), target.native_position(), {}, nullptr );
+                                      update.native_id(), target.native_position(), {},
+                                      active_mission, cancel_on_collision );
     set_queued_points();
     reality_bubble().invalidate_map_cache( target.native_position().z() );
     // A native failure can still have changed map state before it returned.
@@ -624,9 +665,10 @@ void install_mapgen_service_api(
     mapgen.set_function(
         "run_update",
         [current_runtime_generation, current_world_generation, require_write](
-    sol::this_state state, const sol::object & target, const sol::object & update ) {
+            sol::this_state state, const sol::object & target, const sol::object & update,
+    const sol::optional<sol::object> &options ) {
         return run_mapgen_update(
-                   state, target, update,
+                   state, target, update, options,
                    current_runtime_generation(),
                    current_world_generation(), require_write );
     } );

@@ -31,6 +31,7 @@ extern "C" {
 #include "lua_platform_bindings_enums.h"
 #include "lua_platform_bindings_values.h"
 #include "lua_platform_handle.h"
+#include "map_scale_constants.h"
 #include "mission.h"
 #include "npc.h"
 #include "type_id.h"
@@ -93,18 +94,6 @@ std::optional<game_handle_error> mission_token_error(
         };
     }
     return std::nullopt;
-}
-
-mission *resolve_mission(
-    const mission_token &token,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation,
-    std::optional<game_handle_error> &error )
-{
-    error = mission_token_error(
-                token, runtime_generation, world_generation );
-    return error ? nullptr :
-           mission::find( token.uid(), true );
 }
 
 template<typename Id>
@@ -1070,8 +1059,13 @@ sol::table assign_instance(
             "The mission is already assigned"
         } );
     }
+    const character_id owner_id = owner->getID();
     entry->assign( *owner );
-    if( !entry->is_assigned() ) {
+    entry = resolve_mission( token, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( entry->get_assigned_player_id() != owner_id ) {
         return make_game_error_result(
         state, game_handle_error{
             "rejected",
@@ -1082,7 +1076,7 @@ sol::table assign_instance(
                            state, *entry,
                            runtime_generation,
                            world_generation,
-                           owner->getID() );
+                           owner_id );
     return make_game_value_result(
                state,
                sol::make_object( state, std::move( value ) ) );
@@ -1124,6 +1118,41 @@ bool assigned_to_owner( const mission &entry, const Character &owner )
 {
     return entry.get_assigned_player_id() ==
            owner.getID();
+}
+
+sol::table set_instance_target(
+    sol::this_state lua, const game_handle &owner_handle,
+    const mission_token &token, const script_tripoint_coord &position,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    const tripoint_abs_omt target = require_absolute_omt(
+                                       position, "services.missions.set_target" );
+    sol::state_view state( lua );
+    if( target.is_invalid() || target.z() < -OVERMAP_DEPTH || target.z() > OVERMAP_HEIGHT ) {
+        return make_game_error_result( state, {
+            "invalid_target",
+            "The mission target is outside the native overmap coordinate range"
+        } );
+    }
+    std::optional<game_handle_error> error;
+    Character *owner = resolve_exact_character(
+                           owner_handle, runtime_generation, world_generation, error );
+    if( owner == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    mission *entry = resolve_mission( token, runtime_generation, world_generation, error );
+    if( entry == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    if( !assigned_to_owner( *entry, *owner ) || !entry->in_progress() ) {
+        return make_game_error_result( state, {
+            "not_active",
+            "Only a mission active for the supplied Character can change target"
+        } );
+    }
+    entry->set_target( target );
+    return make_game_value_result( state, sol::make_object( state, position ) );
 }
 
 sol::table select_instance(
@@ -1524,6 +1553,18 @@ sol::table abandon_instance(
 
 } // namespace
 
+mission *resolve_mission(
+    const mission_token &token,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation,
+    std::optional<game_handle_error> &error )
+{
+    error = mission_token_error(
+                token, runtime_generation, world_generation );
+    return error ? nullptr :
+           mission::find( token.uid(), true );
+}
+
 mission_token::mission_token(
     const int uid, const std::size_t identity_generation,
     const game_handle_runtime &runtime,
@@ -1738,6 +1779,16 @@ void install_mission_api(
                    lua_state, token, deadline,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    missions.set_function(
+        "set_target",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & owner,
+            const mission_token & token, const script_tripoint_coord & position ) {
+        require_write();
+        return set_instance_target(
+                   lua_state, owner, token, position,
+                   current_runtime_generation(), current_world_generation() );
     } );
     missions.set_function(
         "select",

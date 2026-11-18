@@ -4,10 +4,13 @@
 
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "lua_platform_handle.h"
 #include "lua_platform_sol.h"
+
+class mission;
 
 namespace cata::lua_platform
 {
@@ -42,6 +45,12 @@ class mission_token
         game_handle_runtime runtime_;
         std::size_t world_generation_ = 0;
 };
+
+// Resolve a runtime-bound token immediately before a native operation.
+mission *resolve_mission( const mission_token &token,
+                          const game_handle_runtime &runtime_generation,
+                          std::size_t world_generation,
+                          std::optional<game_handle_error> &error );
 
 // Install detached mission definitions plus runtime-owner- and generation-bound
 // mission tokens.
