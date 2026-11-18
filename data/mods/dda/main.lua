@@ -117,6 +117,7 @@ require("attribute_scaling")
 
 require("environment_enchantments")
 require("psionic_base_effects")
+require("native_effects")
 
 require("overlay_enchantments")
 
