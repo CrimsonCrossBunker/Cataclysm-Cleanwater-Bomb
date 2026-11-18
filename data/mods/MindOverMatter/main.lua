@@ -198,3 +198,5 @@ require("generic_items")
 require("inherited_items")
 
 require("active_items")
+
+require("fifth_sun_note")
