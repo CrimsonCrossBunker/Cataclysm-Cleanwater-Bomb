@@ -56,3 +56,35 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "inventor_warp_grenade_act",
+        category = "weapons",
+        name = ccb.content.plural_text("active netherium warp grenade", "active netherium warp grenades"),
+        description = ccb.content.text("This netherium warp grenade is active, and will explode any second now.  Continue holding it to die in the messiest and most violent of ways imaginable"),
+        mass_milligrams = 397000,
+        volume_ml = 270,
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        symbol = "*",
+        color = "green",
+        countdown_turns = 5,
+    }
+    item:material("mc_steel", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:message_on_use {
+        message = ccb.content.text("You've already pulled the pin, try throwing it instead."),
+        menu_text = ccb.content.text("Pull pin"),
+    }
+    item:clear_flags()
+    item:flag("BOMB")
+    item:flag("TRADER_AVOID")
+    item:flag("DANGEROUS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:tool()
+    item:cast_spell_on_expiry { spell = "netherium_warp_grenade_detonation", no_fail = true, level = 0 }
+    content.add(item)
+end

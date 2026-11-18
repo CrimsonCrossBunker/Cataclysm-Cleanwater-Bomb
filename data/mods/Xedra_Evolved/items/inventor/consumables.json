@@ -120,25 +120,5 @@
     "fun": 10,
     "copy-from": "coffee",
     "healthy": -20
-  },
-  {
-    "id": "inventor_warp_grenade_act",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "active netherium warp grenade" },
-    "description": "This netherium warp grenade is active, and will explode any second now.  Continue holding it to die in the messiest and most violent of ways imaginable",
-    "weight": "397 g",
-    "volume": "270 ml",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "mc_steel", "plastic" ],
-    "symbol": "*",
-    "color": "green",
-    "use_action": { "type": "message", "message": "You've already pulled the pin, try throwing it instead.", "name": "Pull pin" },
-    "countdown_action": { "type": "cast_spell", "spell_id": "netherium_warp_grenade_detonation", "no_fail": true, "level": 0 },
-    "countdown_interval": "5 seconds",
-    "flags": [ "BOMB", "TRADER_AVOID", "DANGEROUS" ],
-    "melee_damage": { "bash": 6 }
   }
 ]
