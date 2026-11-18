@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_met_whately"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_WHATELY_1",
     "dynamic_line": {

@@ -11,15 +11,5 @@
       { "u_lose_effect": "effect_telepathic_psi_armor" },
       { "run_eocs": "EOC_AFS_END_PSI_POWERS_MAINTAINED" }
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_telepathic_suggestion",
-    "name": [ "Mind Trick" ],
-    "desc": [ "You are preparing to influence the minds of others to make them more amenable to your point of view." ],
-    "apply_message": "",
-    "remove_message": "",
-    "rating": "good",
-    "max_duration": "7 days"
   }
 ]

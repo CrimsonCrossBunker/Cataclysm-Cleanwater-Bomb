@@ -69,9 +69,5 @@
         ]
       }
     ]
-  },
-  {
-    "id": "afs_cryosuit_warning",
-    "type": "effect_type"
   }
 ]

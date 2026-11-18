@@ -280,13 +280,5 @@
         "om_terrain": "afs_shuttlepad_salvors_a1_1"
       }
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "afs_tried_to_buy_car",
-    "name": [ { "str": "Asked to buy car", "//~": "NO_I18N" } ],
-    "desc": [
-      { "str": "You tried and failed to buy the car off this npc recently.  If you see this it's a bug.", "//~": "NO_I18N" }
-    ]
   }
 ]

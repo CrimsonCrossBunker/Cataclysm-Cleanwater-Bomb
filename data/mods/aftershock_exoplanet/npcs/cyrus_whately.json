@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_met_cyrus"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_CYRUS_1",
     "dynamic_line": {

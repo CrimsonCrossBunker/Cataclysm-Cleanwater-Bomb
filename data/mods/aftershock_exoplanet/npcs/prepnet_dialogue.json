@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_met_prepnet_gardener"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_PrepNet_gardener_1",
     "dynamic_line": {

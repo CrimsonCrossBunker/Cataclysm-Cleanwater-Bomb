@@ -1,22 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_met_sadie"
-  },
-  {
-    "type": "effect_type",
-    "id": "sadie_injection",
-    "name": [ "Sadie's injection" ],
-    "desc": [ "" ],
-    "blood_analysis_description": "Several hundred lines of text list a series of complex biological molecules with unknown interactions.  Many appear to be associated with healing and immune response.  Only a few are known to be poisonous and many are known carcinogens.  Several have psychological and hormonal effects.",
-    "rating": "mixed",
-    "apply_message": "A wave of cold runs through your body and you feel dizzy",
-    "remove_message": "The effects of Sadie's injection appear to be wearing off now",
-    "removes_effects": [ "bite", "flu" ],
-    "blocks_effects": [ "bite", "cold", "flu" ],
-    "base_mods": { "str_mod": [ 1 ], "sleep_chance": [ -1003 ], "sleep_min": [ 2500 ], "sleep_max": [ 3500 ] }
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_Sadie_1",
     "dynamic_line": {

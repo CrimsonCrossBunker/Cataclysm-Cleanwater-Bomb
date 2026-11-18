@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_met_millyficent"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_Millyficent_1",
     "dynamic_line": {
