@@ -89,7 +89,6 @@
 #include "vpart_position.h"
 
 #if defined(TILES)
-    #include "cached_options.h"    // for use_tiles
     #include "cata_tiles.h"        // for cata_tiles
     #include "cuboid_rectangle.h"  // for half_open_rectangle
     #include "cursesport.h"        // for get_scaling_factor (??)
@@ -1553,7 +1552,7 @@ bool build_construction_activity_actor::prepare_owned_turn( Character &who )
     if( !site || site->uid != site_uid || site->id != construction_type.id() ) {
         return false;
     }
-    const auto &built = construction_type.obj();
+    const construction &built = construction_type.obj();
     if( !decision.empty() ) {
         return true;
     }
@@ -1561,12 +1560,12 @@ bool build_construction_activity_actor::prepare_owned_turn( Character &who )
         get_option<bool>( "QUERY_DECONSTRUCT" ) ) {
         std::string detail;
         if( here.has_furn( at ) ) {
-            const auto &f = here.furn( at ).obj();
+            const furn_t &f = here.furn( at ).obj();
             if( f.deconstruct && !f.base_item.is_null() ) {
                 detail = f.deconstruct->potential_deconstruct_items( f );
             }
         } else {
-            const auto &t = here.ter( at ).obj();
+            const ter_t &t = here.ter( at ).obj();
             if( t.deconstruct && !t.base_item.is_null() ) {
                 detail = t.deconstruct->potential_deconstruct_items( t );
             }
