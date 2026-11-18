@@ -23,15 +23,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_DUNGEON_SHIFT",
-    "condition": { "math": [ "portal_dungeon_level > 0" ] },
-    "effect": [
-      { "mapgen_update": "portal_dungeon", "target_var": { "global_val": "dungeon_loc" } },
-      { "run_eocs": "EOC_PORTAL_STORM_DUNGEON_SHIFT", "time_in_future": [ "5 seconds", "15 seconds" ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_STORM_DUNGEON_REFLECTION_SPAWN",
     "global": true,
     "condition": { "math": [  ] },
@@ -80,17 +71,5 @@
         }
       ]
     }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_DUNGEON_REWARD_ITEM",
-    "effect": [
-      { "u_message": "A strange item comes back with you.", "popup": true },
-      {
-        "set_string_var": [ "unstable_rift", "calming_stone", "escape_stone" ],
-        "target_var": { "global_val": "item_type" }
-      },
-      { "u_spawn_item": { "global_val": "item_type" } }
-    ]
   }
 ]

@@ -166,6 +166,24 @@ function M.next_level(character)
     snippet(character, mood)
 end
 
+ccb.runtime.handler("portal_dungeon_shift_due", function(payload)
+    if state.number("portal_dungeon_level") <= 0 then return end
+    state.update_map(state.point("dungeon_loc"), "portal_dungeon")
+    ccb.tasks.after_character_turn(payload.character, services.random.native_int(5, 15), "portal_dungeon_shift_due")
+end)
+
+function M.reward_item(character)
+    state.message(character, services.translate("A strange item comes back with you."), "neutral", true)
+    local rewards = { "unstable_rift", "calming_stone", "escape_stone" }
+    local reward = rewards[services.random.native_int(0, #rewards - 1) + 1]
+    state.set("item_type", reward)
+    state.checked(services.inventory.receive_item(character, id("item", reward), 1))
+end
+ccb.runtime.handler("portal_dungeon_reward_item", M.reward_item)
+ccb.runtime.handler("portal_dungeon_reward_item_due", function(payload)
+    M.reward_item(payload.character)
+end)
+
 local function trigger_vortex(payload)
     if not payload.creature or payload.creature.subtype ~= "avatar" then return nil end
     -- Consume the captured trap before travel; its original map must own cleanup.
