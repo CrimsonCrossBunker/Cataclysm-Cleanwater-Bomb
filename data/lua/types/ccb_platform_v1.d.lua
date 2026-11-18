@@ -1788,6 +1788,28 @@ function WoundDefinition:require_body_part_type(kind) end
 ---@return WoundDefinition self
 function WoundDefinition:forbid_body_part_type(kind) end
 
+---@class BodyPartHealthScaling
+---@field strength? number HP per point of strength; defaults to three.
+---@field dexterity? number
+---@field intelligence? number
+---@field perception? number
+---@field health? number
+
+---@class BodyPartHitEffect
+---@field id string Effect to apply when hit.
+---@field global? boolean Apply to the character instead of the struck part.
+---@field damage_type? string Required damage type; omitted means any.
+---@field damage_threshold? integer Minimum damage threshold; defaults to one.
+---@field scale_increment? number Damage per scaling step; defaults to one.
+---@field chance? integer Base trigger chance in percent; defaults to 100.
+---@field chance_scaling? number Chance per scaling step.
+---@field intensity? integer Base effect intensity; defaults to one.
+---@field intensity_scaling? number Intensity per scaling step.
+---@field max_intensity? integer Maximum resulting intensity.
+---@field duration? integer Base effect duration in turns; defaults to one.
+---@field duration_scaling? number Turns per scaling step.
+---@field max_duration? integer Maximum resulting duration in turns.
+
 ---@class BodyPartDefinitionOptions
 ---@field id string Stable native body-part id.
 ---@field name string|LocalizedText Player-facing singular name.
@@ -1808,6 +1830,37 @@ function WoundDefinition:forbid_body_part_type(kind) end
 ---@field drench_capacity? integer Non-negative wetness capacity.
 ---@field limb? boolean
 ---@field vital? boolean
+---@field smash_message? string|LocalizedText
+---@field health_scaling? BodyPartHealthScaling
+---@field legacy_id? string Native slot for standard parts; omit for modded limbs.
+---@field similar_body_part? string Part whose armor coverage applies to this part.
+---@field winded_effect? string
+---@field no_power_effect? string
+---@field heal_bonus? integer
+---@field mend_rate? number
+---@field drench_increment? integer
+---@field drying_rate? number
+---@field wet_morale? integer
+---@field ugliness? integer
+---@field ugliness_mandatory? integer
+---@field environmental_protection? integer
+---@field fire_warmth_c? number Temperature difference in degrees Celsius.
+---@field minimum_temperature_c? number Intrinsic temperature adjustment in degrees Celsius.
+---@field maximum_temperature_c? number Temperature adjustment in degrees Celsius when not overheated.
+---@field smash_efficiency? number
+---@field pain_multiplier? number
+---@field hot_morale? number
+---@field cold_morale? number
+---@field feels_discomfort? boolean
+---@field squeamish_penalty? integer
+---@field bionic_slots? integer
+---@field encumbrance_threshold? integer
+---@field encumbrance_limit? integer
+---@field health_limit? integer
+---@field technique_encumbrance_limit? integer
+---@field bmi_encumbrance_threshold? integer
+---@field bmi_encumbrance_scalar? number
+---@field power_efficiency? integer Millijoules per stamina point.
 
 ---@class BodyPartDefinition
 ---@field id string
@@ -1824,7 +1877,7 @@ local BodyPartDefinition = {}
 ---@return BodyPartDefinition self
 function BodyPartDefinition:sub_part(id) end
 ---@param kind 'head'|'torso'|'sensor'|'mouth'|'arm'|'hand'|'leg'|'foot'|'wing'|'tail'|'other'
----@param weight? number Finite positive weight.
+---@param weight? number Finite non-negative weight.
 ---@return BodyPartDefinition self
 function BodyPartDefinition:limb_type(kind, weight) end
 ---@param damage_type string
@@ -1833,8 +1886,22 @@ function BodyPartDefinition:limb_type(kind, weight) end
 function BodyPartDefinition:armor(damage_type, amount) end
 ---@param damage_type string
 ---@param amount number
+---@param armor_penetration? number
 ---@return BodyPartDefinition self
-function BodyPartDefinition:unarmed_damage(damage_type, amount) end
+function BodyPartDefinition:unarmed_damage(damage_type, amount, armor_penetration) end
+---@param id string Conditional character flag.
+---@return BodyPartDefinition self
+function BodyPartDefinition:conditional_flag(id) end
+---@param id string Limb-specific attack technique.
+---@return BodyPartDefinition self
+function BodyPartDefinition:technique(id) end
+---@param weight_mg integer Load threshold in milligrams.
+---@param encumbrance integer Encumbrance at this weight.
+---@return BodyPartDefinition self
+function BodyPartDefinition:weight_encumbrance(weight_mg, encumbrance) end
+---@param definition BodyPartHitEffect
+---@return BodyPartDefinition self
+function BodyPartDefinition:hit_effect(definition) end
 ---@param flag_id string Existing or same-transaction JsonFlag id.
 ---@return BodyPartDefinition self
 function BodyPartDefinition:flag(flag_id) end

@@ -362,6 +362,7 @@ struct body_part_type {
         void load( const JsonObject &jo, std::string_view src );
         void finalize();
         void check() const;
+        void set_legacy_body_part( const std::string &legacy_slot );
 
         static void load_bp( const JsonObject &jo, const std::string &src );
         static const std::vector<body_part_type> &get_all();

@@ -435,13 +435,10 @@ void body_part_type::load( const JsonObject &jo, std::string_view )
     // tokens are actually legacy code that should be on their way out.
     if( !was_loaded ) {
         optional( jo, was_loaded, "legacy_id", legacy_id, "BP_NULL" );
-        if( legacy_id != "BP_NULL" ) {
-            token = legacy_id_to_enum( legacy_id );
-        }
+        set_legacy_body_part( legacy_id );
     } else {
-        // we need to clear this because any bodypart using copy-from will not be a legacy part.
-        legacy_id = "BP_NULL";
-        token = body_part::num_bp;
+        // Derived body parts do not own the base part's legacy slot.
+        set_legacy_body_part( "BP_NULL" );
     }
 
     optional( jo, was_loaded, "env_protection", env_protection, 0 );
@@ -543,6 +540,12 @@ void body_part_type::load( const JsonObject &jo, std::string_view )
 
     optional( jo, was_loaded, "encumbrance_per_weight", encumbrance_per_weight,
               encumbrance_per_weight_reader{} );
+}
+
+void body_part_type::set_legacy_body_part( const std::string &legacy_slot )
+{
+    legacy_id = legacy_slot;
+    token = legacy_id == "BP_NULL" ? num_bp : legacy_id_to_enum( legacy_id );
 }
 
 void bp_onhit_effect::load( const JsonObject &jo )

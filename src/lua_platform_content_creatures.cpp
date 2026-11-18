@@ -609,11 +609,46 @@ struct body_part_definition_data {
     std::int64_t drench_capacity = 0;
     bool limb = true;
     bool vital = false;
+    authored_text smash_message;
+    stat_hp_mods health_scaling;
+    std::string legacy_id = "BP_NULL";
+    std::string similar_body_part;
+    std::string winded_effect;
+    std::string no_power_effect;
+    int heal_bonus = 0;
+    double mend_rate = 1.0;
+    int drench_increment = 2;
+    double drying_rate = 1.0;
+    int wet_morale = 0;
+    int ugliness = 0;
+    int ugliness_mandatory = 0;
+    int environmental_protection = 0;
+    double fire_warmth_c = 0.0;
+    double minimum_temperature_c = 0.0;
+    double maximum_temperature_c = 0.0;
+    double smash_efficiency = 0.5;
+    double pain_multiplier = 1.0;
+    double hot_morale = 0.0;
+    double cold_morale = 0.0;
+    bool feels_discomfort = true;
+    int squeamish_penalty = 0;
+    int bionic_slots = 0;
+    int encumbrance_threshold = 0;
+    int encumbrance_limit = 100;
+    int health_limit = 1;
+    int technique_encumbrance_limit = 50;
+    int bmi_encumbrance_threshold = 999;
+    double bmi_encumbrance_scalar = 0.0;
+    int power_efficiency = 0;
     std::vector<std::string> sub_parts;
-    std::map<std::string, double> limb_types;
+    std::vector<std::pair<std::string, double>> limb_types;
     std::map<std::string, double> armor;
-    std::map<std::string, double> unarmed_damage;
+    std::vector<damage_unit> unarmed_damage;
     std::set<std::string> flags;
+    std::set<std::string> conditional_flags;
+    std::set<matec_id> techniques;
+    std::map<units::mass, int> encumbrance_per_weight;
+    std::vector<bp_onhit_effect> hit_effects;
     std::map<std::string, body_part_limb_score_definition_data> limb_scores;
     std::vector<body_part_quality_definition_data> qualities;
     bool registered = false;
@@ -1658,10 +1693,18 @@ struct body_part_definition_handle {
                                                 const sol::optional<double> &weight ) {
             require_building_handle( token, *definition, "body part" );
             const double value = weight.value_or( 1.0 );
-            if( kind.empty() || !std::isfinite( value ) || value <= 0.0 ) {
+            if( kind.empty() || !std::isfinite( value ) || value < 0.0 ) {
                 throw std::runtime_error( "body-part limb type is invalid" );
             }
-            definition->limb_types[kind] = value;
+            const auto existing = std::find_if( definition->limb_types.begin(),
+            definition->limb_types.end(), [&kind]( const auto & entry ) {
+                return entry.first == kind;
+            } );
+            if( existing == definition->limb_types.end() ) {
+                definition->limb_types.emplace_back( kind, value );
+            } else {
+                existing->second = value;
+            }
             return *this;
         }
 
@@ -1671,9 +1714,68 @@ struct body_part_definition_handle {
         }
 
         body_part_definition_handle &unarmed_damage( const std::string &damage_type,
-                const double amount ) {
-            return set_damage( definition->unarmed_damage, damage_type, amount,
-                               "unarmed damage" );
+                const double amount, const sol::optional<double> &armor_penetration ) {
+            require_building_handle( token, *definition, "body part" );
+            const double penetration = armor_penetration.value_or( 0.0 );
+            if( damage_type.empty() || !std::isfinite( amount ) || amount < 0.0 ||
+                !std::isfinite( penetration ) || penetration < 0.0 ) {
+                throw std::runtime_error( "body-part unarmed damage is invalid" );
+            }
+            const damage_type_id type( damage_type );
+            const damage_unit damage( type, static_cast<float>( amount ),
+                                      static_cast<float>( penetration ) );
+            const auto found = std::find_if( definition->unarmed_damage.begin(),
+            definition->unarmed_damage.end(), [&type]( const damage_unit & entry ) {
+                return entry.type == type;
+            } );
+            if( found == definition->unarmed_damage.end() ) {
+                definition->unarmed_damage.push_back( damage );
+            } else {
+                *found = damage;
+            }
+            return *this;
+        }
+
+        body_part_definition_handle &conditional_flag( const std::string &id ) {
+            require_building_handle( token, *definition, "body part" );
+            definition->conditional_flags.insert( id );
+            return *this;
+        }
+
+        body_part_definition_handle &technique( const std::string &id ) {
+            require_building_handle( token, *definition, "body part" );
+            definition->techniques.emplace( id );
+            return *this;
+        }
+
+        body_part_definition_handle &weight_encumbrance( const std::int64_t milligrams, const int encumbrance ) {
+            require_building_handle( token, *definition, "body part" );
+            if( milligrams < 0 ) {
+                throw std::runtime_error( "body-part encumbrance weight cannot be negative" );
+            }
+            definition->encumbrance_per_weight[units::from_milligram( milligrams )] = encumbrance;
+            return *this;
+        }
+
+        body_part_definition_handle &hit_effect( const sol::table &options ) {
+            require_building_handle( token, *definition, "body part" );
+            bp_onhit_effect effect;
+            effect.id = efftype_id( options.get<std::string>( "id" ) );
+            effect.global = options.get_or( "global", false );
+            effect.dtype = damage_type_id( options.get_or( "damage_type",
+                                          damage_type_id::NULL_ID().str() ) );
+            effect.dmg_threshold = options.get_or( "damage_threshold", 1 );
+            effect.scale_increment = options.get_or( "scale_increment", 1.0f );
+            effect.chance = options.get_or( "chance", 100 );
+            effect.chance_dmg_scaling = options.get_or( "chance_scaling", 0.0f );
+            effect.intensity = options.get_or( "intensity", 1 );
+            effect.intensity_dmg_scaling = options.get_or( "intensity_scaling", 0.0f );
+            effect.max_intensity = options.get_or( "max_intensity", INT_MAX );
+            effect.duration = options.get_or( "duration", 1 );
+            effect.duration_dmg_scaling = options.get_or( "duration_scaling", 0.0f );
+            effect.max_duration = options.get_or( "max_duration", INT_MAX );
+            definition->hit_effects.push_back( effect );
+            return *this;
         }
 
         body_part_definition_handle &flag( const std::string &id ) {
@@ -1690,7 +1792,7 @@ struct body_part_definition_handle {
             require_building_handle( token, *definition, "body part" );
             const double maximum_value = maximum.value_or( score );
             if( id.empty() || !std::isfinite( score ) || !std::isfinite( maximum_value ) ||
-                score < 0.0 || maximum_value < score ) {
+                maximum_value < score ) {
                 throw std::runtime_error( "body-part limb score is invalid" );
             }
             definition->limb_scores[id] = { score, maximum_value };
@@ -3075,6 +3177,10 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "armor", &body_part_definition_handle::armor,
         "unarmed_damage", &body_part_definition_handle::unarmed_damage,
         "flag", &body_part_definition_handle::flag,
+        "conditional_flag", &body_part_definition_handle::conditional_flag,
+        "technique", &body_part_definition_handle::technique,
+        "weight_encumbrance", &body_part_definition_handle::weight_encumbrance,
+        "hit_effect", &body_part_definition_handle::hit_effect,
         "limb_score", &body_part_definition_handle::limb_score,
         "quality", &body_part_definition_handle::quality );
     ccb.new_usertype<wound_fix_definition_handle>(
@@ -3413,6 +3519,44 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
                                           "drench_capacity", 0 );
         definition->limb = options.get_or( "limb", true );
         definition->vital = options.get_or( "vital", false );
+        definition->legacy_id = options.get_or( "legacy_id", std::string( "BP_NULL" ) );
+        definition->similar_body_part = options.get_or( "similar_body_part", std::string() );
+        definition->winded_effect = options.get_or( "winded_effect", std::string() );
+        definition->no_power_effect = options.get_or( "no_power_effect", std::string() );
+        definition->heal_bonus = options.get_or( "heal_bonus", 0 );
+        definition->mend_rate = options.get_or( "mend_rate", 1.0 );
+        definition->drench_increment = options.get_or( "drench_increment", 2 );
+        definition->drying_rate = options.get_or( "drying_rate", 1.0 );
+        definition->wet_morale = options.get_or( "wet_morale", 0 );
+        definition->ugliness = options.get_or( "ugliness", 0 );
+        definition->ugliness_mandatory = options.get_or( "ugliness_mandatory", 0 );
+        definition->environmental_protection = options.get_or( "environmental_protection", 0 );
+        definition->fire_warmth_c = options.get_or( "fire_warmth_c", 0.0 );
+        definition->minimum_temperature_c = options.get_or( "minimum_temperature_c", 0.0 );
+        definition->maximum_temperature_c = options.get_or( "maximum_temperature_c", 0.0 );
+        definition->smash_efficiency = options.get_or( "smash_efficiency", 0.5 );
+        definition->pain_multiplier = options.get_or( "pain_multiplier", 1.0 );
+        definition->hot_morale = options.get_or( "hot_morale", 0.0 );
+        definition->cold_morale = options.get_or( "cold_morale", 0.0 );
+        definition->feels_discomfort = options.get_or( "feels_discomfort", true );
+        definition->squeamish_penalty = options.get_or( "squeamish_penalty", 0 );
+        definition->bionic_slots = options.get_or( "bionic_slots", 0 );
+        definition->encumbrance_threshold = options.get_or( "encumbrance_threshold", 0 );
+        definition->encumbrance_limit = options.get_or( "encumbrance_limit", 100 );
+        definition->health_limit = options.get_or( "health_limit", 1 );
+        definition->technique_encumbrance_limit = options.get_or( "technique_encumbrance_limit", 50 );
+        definition->bmi_encumbrance_threshold = options.get_or( "bmi_encumbrance_threshold", 999 );
+        definition->bmi_encumbrance_scalar = options.get_or( "bmi_encumbrance_scalar", 0.0 );
+        definition->power_efficiency = options.get_or( "power_efficiency", 0 );
+        definition->smash_message = read_text_option( options, "smash_message", {},
+                                    "body-part smash message" );
+        if( const auto scaling = options.get<sol::optional<sol::table>>( "health_scaling" ) ) {
+            definition->health_scaling.str_mod = scaling->get_or( "strength", 3.0f );
+            definition->health_scaling.dex_mod = scaling->get_or( "dexterity", 0.0f );
+            definition->health_scaling.int_mod = scaling->get_or( "intelligence", 0.0f );
+            definition->health_scaling.per_mod = scaling->get_or( "perception", 0.0f );
+            definition->health_scaling.health_mod = scaling->get_or( "health", 0.0f );
+        }
         return body_part_definition_handle{ std::move( definition ), pimpl_->token };
     } );
     content.set_function( "Anatomy", [this]( const sol::table & options ) {
@@ -4305,10 +4449,22 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown damage type '" + damage.first + "'" );
                 }
             }
-            for( const auto &damage : definition.unarmed_damage ) {
-                if( !damage_exists( damage.first ) ) {
+            for( const damage_unit &damage : definition.unarmed_damage ) {
+                if( !damage_exists( damage.type.str() ) ) {
                     throw std::runtime_error( "body part '" + definition.id +
-                                              "' references unknown damage type '" + damage.first + "'" );
+                                              "' references unknown damage type '" + damage.type.str() + "'" );
+                }
+            }
+            if( !definition.similar_body_part.empty() &&
+                !body_exists( definition.similar_body_part ) ) {
+                throw std::runtime_error( "body part '" + definition.id +
+                                          "' references unknown similar part" );
+            }
+            for( const bp_onhit_effect &effect : definition.hit_effects ) {
+                if( !effect_exists( effect.id.str() ) ||
+                    ( !effect.dtype.is_null() && !damage_exists( effect.dtype.str() ) ) ) {
+                    throw std::runtime_error( "body part '" + definition.id +
+                                              "' has an unknown hit effect or damage type" );
                 }
             }
         }
@@ -5081,8 +5237,7 @@ void creatures_content_transaction::impl::apply_body_part()
         native.id = id;
         native.src.emplace_back( id, mod_id( this->owner ) );
         native.was_loaded = true;
-        native.legacy_id = "BP_NULL";
-        native.token = num_bp;
+        native.set_legacy_body_part( source.legacy_id );
         native.name = source.name.native();
         native.name_multiple = source.plural_name.native();
         native.accusative = source.accusative.native();
@@ -5101,15 +5256,56 @@ void creatures_content_transaction::impl::apply_body_part()
         native.drench_max = static_cast<int>( source.drench_capacity );
         native.is_limb = source.limb;
         native.is_vital = source.vital;
+        native.smash_message = source.smash_message.native();
+        native.hp_mods = source.health_scaling;
+        native.heal_bonus = source.heal_bonus;
+        native.mend_rate = static_cast<float>( source.mend_rate );
+        native.drench_increment = source.drench_increment;
+        native.drying_rate = static_cast<float>( source.drying_rate );
+        native.wet_morale = source.wet_morale;
+        native.ugliness = source.ugliness;
+        native.ugliness_mandatory = source.ugliness_mandatory;
+        native.env_protection = source.environmental_protection;
+        native.fire_warmth_bonus = units::from_celsius_delta( source.fire_warmth_c );
+        native.temp_min = units::from_celsius_delta( source.minimum_temperature_c );
+        native.temp_max = units::from_celsius_delta( source.maximum_temperature_c );
+        native.smash_efficiency = static_cast<float>( source.smash_efficiency );
+        native.pain_mod = static_cast<float>( source.pain_multiplier );
+        native.hot_morale_mod = static_cast<float>( source.hot_morale );
+        native.cold_morale_mod = static_cast<float>( source.cold_morale );
+        native.feels_discomfort = source.feels_discomfort;
+        native.squeamish_penalty = source.squeamish_penalty;
+        native.bionic_slots_ = source.bionic_slots;
+        native.encumbrance_threshold = source.encumbrance_threshold;
+        native.encumbrance_limit = source.encumbrance_limit;
+        native.health_limit = source.health_limit;
+        native.technique_enc_limit = source.technique_encumbrance_limit;
+        native.bmi_encumbrance_threshold = source.bmi_encumbrance_threshold;
+        native.bmi_encumbrance_scalar = static_cast<float>( source.bmi_encumbrance_scalar );
+        native.power_efficiency = source.power_efficiency;
+        native.encumbrance_per_weight = source.encumbrance_per_weight;
+        native.techniques = source.techniques;
+        native.effects_on_hit = source.hit_effects;
+        if( !source.similar_body_part.empty() ) {
+            native.similar_bodypart = bodypart_str_id( source.similar_body_part );
+        }
+        native.windage_effect = source.winded_effect.empty() ?
+                                efftype_id::NULL_ID() : efftype_id( source.winded_effect );
+        native.no_power_effect = source.no_power_effect.empty() ?
+                                 efftype_id::NULL_ID() : efftype_id( source.no_power_effect );
+        for( const std::string &flag : source.conditional_flags ) {
+            native.conditional_flags.insert( json_character_flag( flag ) );
+        }
         for( const std::string &sub_part : source.sub_parts ) {
             native.sub_parts.emplace_back( sub_part );
         }
-        double highest_weight = -1.0;
+        float highest_weight = -1.0f;
         for( const auto &[kind, weight] : source.limb_types ) {
             const bp_type type = platform_body_part_types.at( kind );
-            native.limbtypes[type] = static_cast<float>( weight );
-            if( weight > highest_weight ) {
-                highest_weight = weight;
+            const float native_weight = static_cast<float>( weight );
+            native.limbtypes[type] = native_weight;
+            if( native_weight > highest_weight ) {
+                highest_weight = native_weight;
                 native._primary_limb_type = type;
             }
         }
@@ -5117,9 +5313,8 @@ void creatures_content_transaction::impl::apply_body_part()
             native.armor.set_resist( damage_type_id( damage_id ),
                                      static_cast<float>( amount ) );
         }
-        for( const auto &[damage_id, amount] : source.unarmed_damage ) {
-            native.damage.add_damage( damage_type_id( damage_id ),
-                                      static_cast<float>( amount ) );
+        for( const damage_unit &damage : source.unarmed_damage ) {
+            native.damage.add_damage( damage.type, damage.amount, damage.res_pen );
         }
         for( const std::string &flag : source.flags ) {
             native.flags.insert( json_character_flag( flag ) );
@@ -5135,7 +5330,11 @@ void creatures_content_transaction::impl::apply_body_part()
                 static_cast<float>( quality.disable_fraction )
             } );
         }
-        detail::body_part_registry().insert( native ).finalize();
+        body_part_type &installed = detail::body_part_registry().insert( native );
+        // The core null body part is installed before the game damage types.
+        if( !damage_type::get_all().empty() ) {
+            installed.finalize();
+        }
     }
     if( !this->body_parts.empty() ) {
         detail::refresh_body_part_similarity_cache();
@@ -6938,7 +7137,76 @@ void creatures_content_transaction::append_fingerprint(
                 }
             };
             hash_damage_values( "armor", value.armor );
-            hash_damage_values( "unarmed", value.unarmed_damage );
+            for( const damage_unit &damage : value.unarmed_damage ) {
+                hash_part( state, "unarmed" );
+                hash_part( state, damage.type.str() );
+                hash_number( damage.amount );
+                hash_number( damage.res_pen );
+            }
+            hash_part( state, value.smash_message );
+            hash_part( state, value.legacy_id );
+            hash_part( state, value.similar_body_part );
+            hash_part( state, value.winded_effect );
+            hash_part( state, value.no_power_effect );
+            hash_part( state, value.feels_discomfort ? "discomfort" : "no_discomfort" );
+            hash_number( value.health_scaling.str_mod );
+            hash_number( value.health_scaling.dex_mod );
+            hash_number( value.health_scaling.int_mod );
+            hash_number( value.health_scaling.per_mod );
+            hash_number( value.health_scaling.health_mod );
+            hash_number( value.heal_bonus );
+            hash_number( value.mend_rate );
+            hash_number( value.drench_increment );
+            hash_number( value.drying_rate );
+            hash_number( value.wet_morale );
+            hash_number( value.ugliness );
+            hash_number( value.ugliness_mandatory );
+            hash_number( value.environmental_protection );
+            hash_number( value.fire_warmth_c );
+            hash_number( value.minimum_temperature_c );
+            hash_number( value.maximum_temperature_c );
+            hash_number( value.smash_efficiency );
+            hash_number( value.pain_multiplier );
+            hash_number( value.hot_morale );
+            hash_number( value.cold_morale );
+            hash_number( value.squeamish_penalty );
+            hash_number( value.bionic_slots );
+            hash_number( value.encumbrance_threshold );
+            hash_number( value.encumbrance_limit );
+            hash_number( value.health_limit );
+            hash_number( value.technique_encumbrance_limit );
+            hash_number( value.bmi_encumbrance_threshold );
+            hash_number( value.bmi_encumbrance_scalar );
+            hash_number( value.power_efficiency );
+            for( const std::string &flag : value.conditional_flags ) {
+                hash_part( state, "conditional_flag" );
+                hash_part( state, flag );
+            }
+            for( const matec_id &technique : value.techniques ) {
+                hash_part( state, "technique" );
+                hash_part( state, technique.str() );
+            }
+            for( const auto &[weight, encumbrance] : value.encumbrance_per_weight ) {
+                hash_part( state, "encumbrance_per_weight" );
+                hash_number( units::to_milligram( weight ) );
+                hash_number( encumbrance );
+            }
+            for( const bp_onhit_effect &effect : value.hit_effects ) {
+                hash_part( state, "hit_effect" );
+                hash_part( state, effect.id.str() );
+                hash_part( state, effect.dtype.str() );
+                hash_part( state, effect.global ? "global" : "local" );
+                hash_number( effect.dmg_threshold );
+                hash_number( effect.scale_increment );
+                hash_number( effect.chance );
+                hash_number( effect.chance_dmg_scaling );
+                hash_number( effect.intensity );
+                hash_number( effect.intensity_dmg_scaling );
+                hash_number( effect.max_intensity );
+                hash_number( effect.duration );
+                hash_number( effect.duration_dmg_scaling );
+                hash_number( effect.max_duration );
+            }
             for( const std::string &flag : value.flags ) {
                 hash_part( state, "flag" );
                 hash_part( state, flag );
