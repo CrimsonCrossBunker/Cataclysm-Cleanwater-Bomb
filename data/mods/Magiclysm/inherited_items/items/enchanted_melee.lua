@@ -1395,3 +1395,38 @@ do
     item:fault_group("blade_general", { weight_multiplier = 5 })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "knife_hybrasil_khanjar",
+        category = "weapons",
+        name = ccb.content.plural_text("Hy-Brasilian khanjar", "Hy-Brasilian khanjars"),
+        description = ccb.content.text("An ornate curved blade made of glassteel covered in intricate looping designs that refract light.  These are the ceremonial daggers of the Hy-Brasil honor guard."),
+        mass_milligrams = 38000,
+        volume_ml = 100,
+        longest_side_mm = 350,
+        price_cents = 4000,
+        price_postapoc_cents = 750,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "dark_gray",
+        replace_qualities = true,
+        weapon_categories = { "KNIVES" },
+        techniques = { "HYBRASIL_ENCHANTMENT" },
+    }
+    item:material("glassteel", 1)
+    item:material("leather", 1)
+    item:quality("CUT", 2)
+    item:quality("BUTCHER", 20)
+    item:clear_flags()
+    item:flag("SHEATH_KNIFE")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:flag("CONDUCTIVE")
+    item:flag("DURABLE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("cut", 14)
+    item:fault_group("handle_short", {  })
+    item:fault_group("blade_general", { weight_multiplier = 5 })
+    item:tool()
+    content.add(item)
+end
