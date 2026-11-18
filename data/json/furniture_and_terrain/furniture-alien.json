@@ -980,20 +980,6 @@
   },
   {
     "type": "furniture",
-    "id": "f_string_dimension_housing",
-    "name": "metal container",
-    "looks_like": "f_safe_c",
-    "description": "An extremely dense metal box.  It has a door with a heavy latch.  A golden plate is affixed to the door, covered in letters you do not understand.  Examine it to use the lever on the door.",
-    "symbol": "O",
-    "color": "yellow",
-    "move_cost_mod": -1,
-    "required_str": -1,
-    "coverage": 100,
-    "flags": [ "NOITEM", "BLOCKSDOOR" ],
-    "examine_action": { "type": "effect_on_condition", "effect_on_conditions": [ "EOC_STRING_DIMENSION_ZIGGURAT_PORTAL" ] }
-  },
-  {
-    "type": "furniture",
     "id": "f_string_dimension_housing_imploded",
     "name": "imploded clump of metal",
     "description": "An extremely dense ball of imploded metal.",
