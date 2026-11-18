@@ -127,32 +127,6 @@
   },
   {
     "type": "ITEM",
-    "id": "bat_metal_bolt",
-    "copy-from": "bat_metal",
-    "name": { "str": "bolt studded aluminum bat" },
-    "description": "An aluminum baseball bat with a selection of bolts threaded through the barrel.  Helps to concentrate the force of a blow, without adding much weight.",
-    "weight": "1138 g",
-    "price_postapoc": "14 USD",
-    "material": [ { "type": "aluminum", "portion": 6 }, { "type": "mc_steel", "portion": 1 } ],
-    "melee_damage": { "bash": 27 }
-  },
-  {
-    "type": "ITEM",
-    "id": "bat_nerf",
-    "name": { "str": "foam rubber bat" },
-    "description": "A baseball bat made of foam rubber with a plastic handle.  Light and easy to wield, but almost completely ineffective if your goal is to hurt someone.",
-    "weight": "225 g",
-    "longest_side": "60 cm",
-    "color": "yellow",
-    "symbol": "/",
-    "price_postapoc": "50 cent",
-    "material": [ "plastic" ],
-    "flags": [ "BELT_CLIP" ],
-    "volume": "2250 ml",
-    "price": "25 USD"
-  },
-  {
-    "type": "ITEM",
     "id": "baton",
     "category": "weapons",
     "name": { "str": "expandable baton" },
@@ -944,50 +918,6 @@
     "melee_damage": { "bash": 24, "cut": 15 }
   },
   {
-    "type": "ITEM",
-    "id": "mc_aztec_sword",
-    "name": { "str": "medium steel bladed macuahuitl" },
-    "description": "A modern reimagining of the large close combat weapon affiliated with Aztec warriors, made of a sturdy wooden club and sharp blades forged from medium steel.  Blades are definitely sturdier than obsidian ones.",
-    "copy-from": "lc_aztec_sword",
-    "price": "50 USD",
-    "price_postapoc": "17 USD 50 cent",
-    "material": [ "wood", "mc_steel" ],
-    "melee_damage": { "bash": 24, "cut": 18 }
-  },
-  {
-    "type": "ITEM",
-    "id": "hc_aztec_sword",
-    "name": { "str": "high steel bladed macuahuitl" },
-    "description": "A modern reimagining of the large close combat weapon affiliated with Aztec warriors, made of a sturdy wooden club and sharp blades forged from high steel.  Blades are definitely sturdier than obsidian ones.",
-    "copy-from": "lc_aztec_sword",
-    "price": "70 USD",
-    "price_postapoc": "20 USD",
-    "material": [ "wood", "hc_steel" ],
-    "melee_damage": { "bash": 24, "cut": 22 }
-  },
-  {
-    "type": "ITEM",
-    "id": "ch_aztec_sword",
-    "name": { "str": "hardened steel bladed macuahuitl" },
-    "description": "A modern reimagining of the large close combat weapon affiliated with Aztec warriors, made of a sturdy wooden club and sharp blades forged from hardened steel.  Blades are definitely sturdier than obsidian ones.",
-    "copy-from": "lc_aztec_sword",
-    "price": "90 USD",
-    "price_postapoc": "25 USD",
-    "material": [ "wood", "ch_steel" ],
-    "melee_damage": { "bash": 24, "cut": 26 }
-  },
-  {
-    "type": "ITEM",
-    "id": "qt_aztec_sword",
-    "name": { "str": "tempered steel bladed macuahuitl" },
-    "description": "A modern reimagining of the large close combat weapon affiliated with Aztec warriors, made of a sturdy wooden club and sharp blades forged from tempered steel.  You can single-handedly avenge the fallen nations of Mesoamerica with this one.",
-    "copy-from": "lc_aztec_sword",
-    "price": "120 USD",
-    "price_postapoc": "30 USD",
-    "material": [ "wood", "qt_steel" ],
-    "melee_damage": { "bash": 24, "cut": 30 }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "i_staff",
@@ -1219,20 +1149,6 @@
     "melee_damage": { "bash": 30 }
   },
   {
-    "id": "homemade_polehammer_makeshift",
-    "copy-from": "homemade_polehammer",
-    "type": "ITEM",
-    "name": { "str": "makeshift homemade polehammer" },
-    "description": "A standard hammerhead mounted at the end of a long stick.  It is far from being a proper weapon, but it allows you to bash zombie heads from a safe distance.",
-    "delete": { "flags": [ "DURABLE_MELEE" ] },
-    "weight": "1800 g",
-    "volume": "1650 ml",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "uneven" },
-    "price": "5 USD",
-    "price_postapoc": "2 USD",
-    "melee_damage": { "bash": 27 }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "mace",
@@ -1385,17 +1301,6 @@
     "melee_damage": { "bash": 43 }
   },
   {
-    "type": "ITEM",
-    "id": "mace_simple",
-    "name": { "str": "simple mace" },
-    "copy-from": "mace_trench",
-    "description": "A stick with a circular lump of metal tied to it in a facsimile of a mace.  You could probably improve it by finding a way to pin the head to the handle.",
-    "price": "10 cent",
-    "price_postapoc": "75 cent",
-    "qualities": [ [ "HAMMER", 1 ] ],
-    "extend": { "flags": [ "FRAGILE_MELEE" ] }
-  },
-  {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
     "type": "ITEM",
     "id": "mace_trench",
@@ -1507,25 +1412,6 @@
     "price_postapoc": "20 USD",
     "qualities": [ [ "HAMMER", 1 ] ],
     "melee_damage": { "bash": 30 }
-  },
-  {
-    "id": "makeshift_sap",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "dark_gray",
-    "name": { "str": "makeshift sap" },
-    "description": "An improvised sap, also known as a cosh, slapjack, and slapper.  A short, flat bludgeoning weapon consisting of a weight embedded between two patches of leather.",
-    "price": "50 USD",
-    "material": [ "leather", "steel" ],
-    "techniques": [ "PRECISE", "RAPID" ],
-    "flags": [ "BELT_CLIP", "NONCONDUCTIVE" ],
-    "weight": "400 g",
-    "volume": "350 ml",
-    "longest_side": "20 cm",
-    "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "good" },
-    "price_postapoc": "50 cent",
-    "category": "weapons",
-    "melee_damage": { "bash": 12 }
   },
   {
     "type": "ITEM",
@@ -1743,42 +1629,6 @@
     "to_hit": { "grip": "weapon", "length": "long", "surface": "any", "balance": "good" },
     "price_postapoc": "10 USD",
     "melee_damage": { "bash": 19 }
-  },
-  {
-    "type": "ITEM",
-    "id": "rock_sock",
-    "symbol": ";",
-    "color": "white",
-    "name": { "str": "rock in a sock", "str_pl": "rocks in socks" },
-    "description": "A pair of nested socks with a stone tied inside.  A true weapon of desperation.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "cotton", "stone" ],
-    "weight": "825 g",
-    "volume": "500 ml",
-    "longest_side": "10 cm",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "any", "balance": "neutral" },
-    "qualities": [ [ "HAMMER", 1 ] ],
-    "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "sharp_toothbrush",
-    "symbol": ",",
-    "color": "light_blue",
-    "name": { "str": "plastic shank" },
-    "description": "An oblong plastic object with the far end ground down into a stabbing point.",
-    "category": "weapons",
-    "price": "4 USD",
-    "price_postapoc": "0 cent",
-    "material": [ "plastic" ],
-    "weight": "49 g",
-    "volume": "250 ml",
-    "longest_side": "20 cm",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "point", "balance": "good" },
-    "flags": [ "SHEATH_KNIFE", "CONDUCTIVE", "ALLOWS_BODY_BLOCK" ],
-    "weapon_category": [ "SHIVS" ],
-    "melee_damage": { "bash": 1, "stab": 3 }
   },
   {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },
@@ -2010,13 +1860,6 @@
     "faults": [ { "fault_group": "ax_sheets" } ],
     "weapon_category": [ "HOOKING_WEAPONRY", "GREAT_AXES" ],
     "melee_damage": { "bash": 18, "cut": 24 }
-  },
-  {
-    "type": "ITEM",
-    "id": "ax_sheets_bolted",
-    "copy-from": "ax_sheets_welded",
-    "name": { "str": "bolted battle axe" },
-    "description": "A savage-looking battle axe made out of layered sheet metal bolted to two pipes held together with fittings, vaguely forming a upside-down L shape.  Swing it with all your might."
   },
   {
     "mounted_charge": { "max_steps": 15, "damage_type": "bash", "multiplier_per_step": 0.06, "max_multiplier": 1.25 },

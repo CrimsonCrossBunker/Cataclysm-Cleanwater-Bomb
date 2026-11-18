@@ -512,15 +512,6 @@
   },
   {
     "type": "ITEM",
-    "id": "pike_pipe",
-    "copy-from": "simple_pike_pipe",
-    "name": { "str": "pipe pike" },
-    "description": "Five pipes welded together to form a very crude pike.  Heavy, slow, and all around cumbersome to carry and fight with.",
-    "price_postapoc": "1 USD 50 cent",
-    "melee_damage": { "stab": 23 }
-  },
-  {
-    "type": "ITEM",
     "id": "pointed_rebar",
     "symbol": "/",
     "color": "dark_gray",
@@ -795,17 +786,6 @@
     "price_postapoc": "25 USD",
     "category": "weapons",
     "melee_damage": { "bash": 3, "cut": 30 }
-  },
-  {
-    "type": "ITEM",
-    "id": "naginata_machete_temp",
-    "copy-from": "naginata_machete",
-    "name": { "str_sp": "tempered machete naginata" },
-    "description": "This crude facsimile of a naginata was made by attaching a machete to the end of a spear.  This one uses a tempered machete, making it a bit more sharp and durable.",
-    "price": "50 USD",
-    "price_postapoc": "27 USD",
-    "material": [ { "type": "wood", "portion": 25 }, { "type": "qt_steel", "portion": 21 } ],
-    "melee_damage": { "bash": 3, "cut": 35 }
   },
   {
     "mounted_charge": { "max_steps": 15, "damage_type": "stab", "multiplier_per_step": 0.1, "max_multiplier": 1.5 },
@@ -1297,49 +1277,5 @@
     "techniques": [ "WBLOCK_1", "SWEEP", "WIDE", "MOUNTED_CHARGE" ],
     "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "neutral" },
     "melee_damage": { "bash": 18, "cut": 12 }
-  },
-  {
-    "type": "ITEM",
-    "id": "mc_aztec_spear",
-    "name": { "str": "medium steel bladed tepoztopili" },
-    "description": "This is a redesigned version of the Mesoamerican tepoztopili.  It has an elliptical piece of carved wood lined with sharp medium steel blades, firmly attached to a stout spear shaft.",
-    "copy-from": "lc_aztec_spear",
-    "price": "50 USD",
-    "price_postapoc": "17 USD 50 cent",
-    "material": [ "wood", "mc_steel" ],
-    "melee_damage": { "bash": 18, "cut": 15 }
-  },
-  {
-    "type": "ITEM",
-    "id": "hc_aztec_spear",
-    "name": { "str": "high steel bladed tepoztopili" },
-    "description": "This is a redesigned version of the Mesoamerican tepoztopili.  It has an elliptical piece of carved wood lined with sharp high steel blades, firmly attached to a stout spear shaft.",
-    "copy-from": "lc_aztec_spear",
-    "price": "70 USD",
-    "price_postapoc": "20 USD",
-    "material": [ "wood", "hc_steel" ],
-    "melee_damage": { "bash": 18, "cut": 18 }
-  },
-  {
-    "type": "ITEM",
-    "id": "ch_aztec_spear",
-    "name": { "str": "hardened steel bladed tepoztopili" },
-    "description": "This is a redesigned version of the Mesoamerican tepoztopili.  It has an elliptical piece of carved wood lined with sharp hardened steel blades, firmly attached to a stout spear shaft.",
-    "copy-from": "lc_aztec_spear",
-    "price": "90 USD",
-    "price_postapoc": "25 USD",
-    "material": [ "wood", "ch_steel" ],
-    "melee_damage": { "bash": 18, "cut": 22 }
-  },
-  {
-    "type": "ITEM",
-    "id": "qt_aztec_spear",
-    "name": { "str": "tempered steel bladed tepoztopili" },
-    "description": "This is a redesigned version of the Mesoamerican tepoztopili.  It has an elliptical piece of carved wood lined with sharp tempered steel blades, firmly attached to a stout spear shaft.  It's a weapon worthy of being wielded by Huitzilopochtli himself.",
-    "copy-from": "lc_aztec_spear",
-    "price": "120 USD",
-    "price_postapoc": "30 USD",
-    "material": [ "wood", "qt_steel" ],
-    "melee_damage": { "bash": 18, "cut": 26 }
   }
 ]
