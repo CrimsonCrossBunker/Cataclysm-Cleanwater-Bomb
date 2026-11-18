@@ -47,3 +47,5 @@ require("island_construction_repairs")
 require("raid_upgrades")
 
 require("island_upgrades")
+
+require("expedition_missions")

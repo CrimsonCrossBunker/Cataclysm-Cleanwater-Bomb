@@ -1,0 +1,166 @@
+[
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_reach_extract",
+    "object": {
+      "place_nested": [
+        {"chunks": ["mx_exitroom"], "x": [0, 13], "y": [0, 13]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_treasure",
+    "object": {
+      "place_nested": [
+        {"chunks": ["mx_treasuregoal"], "x": [0, 13], "y": [0, 13]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_light",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [4, 8]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_horde",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [8, 24]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_mid",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 4]},
+        {"group": "GROUP_SI_ZOMMID", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [3, 8]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_mid_horde",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 6]},
+        {"group": "GROUP_SI_ZOMMID", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [8, 20]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_hard",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 4]},
+        {"group": "GROUP_SI_ZOMMID", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 2]},
+        {"group": "GROUP_SI_ZOMHARD", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [4, 8]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_elite",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMMID", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 2]},
+        {"group": "GROUP_SI_ZOMHARD", "x": [1, 22], "y": [1, 22], "name": "Marked", "target": true, "repeat": [0, 1]},
+        {"group": "GROUP_SI_ZOMELITE", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [4, 8]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_boss",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMBOSS", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked"}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_boss_multi",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMBOSS", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "pack_size": [2, 5]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_boss_group",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMBOSS", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked"},
+        {"group": "GROUP_SI_ZOMELITE", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [2, 5]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_boss_horde",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_ZOMBOSS", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked"},
+        {"group": "GROUP_SI_ZOMEASY", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [10, 22]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_migo",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_MIGO", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [2, 5]}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_kill_migo_elite",
+    "object": {
+      "place_monster": [
+        {"group": "GROUP_SI_MIGO", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked", "repeat": [0, 2]},
+        {"group": "GROUP_SI_MIGO_ELITE", "x": [1, 22], "y": [1, 22], "target": true, "name": "Marked"}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_assassin1",
+    "object": {
+      "place_npcs": [
+        {"class": "bandit", "x": [1, 22], "y": [1, 22], "target": true}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_assassin2",
+    "object": {
+      "place_npcs": [
+        {"class": "thug", "x": [1, 22], "y": [1, 22], "target": true}
+      ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "update_mapgen_id": "mx_skyisland_mission_bonus_assassin3",
+    "object": {
+      "place_npcs": [
+        {"class": "thug", "x": [1, 22], "y": [1, 22], "repeat": [1, 2], "target": true},
+        {"class": "bandit", "x": [1, 22], "y": [1, 22], "repeat": [0, 1], "target": true},
+        {"class": "bandit", "x": [1, 22], "y": [1, 22], "target": true}
+      ]
+    }
+  }
+]
