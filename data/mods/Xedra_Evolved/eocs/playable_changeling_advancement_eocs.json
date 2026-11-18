@@ -37,37 +37,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CHANGELING_RESEARCH_NEW_TRAIT_FINALIZE",
-    "//": "Trait values below have to be manually set because changes_to traits count in the total but you can't have both, so u_sum_traits_of_category won't accurately count how many traits you can have at one time.",
-    "effect": [
-      { "u_message": "You sit back with a smile.  It is done.", "type": "good" },
-      {
-        "u_consume_item": "scrap_dreamdross",
-        "count": { "math": [ "u_changeling_new_trait_dreamdross_research_cost" ] }
-      },
-      { "run_eocs": "EOC_CHANGELING_ADVANCEMENT_DREAMDROSS_COST_UPDATER" },
-      { "math": [ "u_changeling_advancement_dreams_counter++" ] },
-      {
-        "if": {
-          "or": [
-            { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_NOBLE') >= 31" ] },
-            { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_BROWNIE') >= 31" ] },
-            { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_POOKA') >= 40" ] },
-            { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_SELKIE') >= 30" ] },
-            { "math": [ "u_sum_traits_of_category_char_has('FAIR_FOLK_COMMONER_TROW') >= 27" ] }
-          ]
-        },
-        "then": [
-          {
-            "u_message": "You have reached the pinnacle of power possible in the mortal lands.  For any greater advancements, you'll need to travel Under the Hill.",
-            "popup": true
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PLAYABLE_CHANGELING_GAIN_POWER_SPELL",
     "eoc_type": "EVENT",
     "required_event": "character_wakes_up",
@@ -90,11 +59,6 @@
       { "math": [ "u_changeling_new_trait_dreamdross_research_cost = 35" ] },
       { "math": [ "u_spell_level('changeling_gain_new_traits') = 1" ] }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CHANGELING_ADVANCEMENT_DREAMDROSS_COST_UPDATER",
-    "effect": [ { "math": [ "u_changeling_new_trait_dreamdross_research_cost += 35" ] } ]
   },
   {
     "type": "effect_on_condition",

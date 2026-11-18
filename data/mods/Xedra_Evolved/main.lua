@@ -196,3 +196,7 @@ require("dream_magic_class")
 require("dream_magic_artifacts")
 
 require("activity_types")
+
+require("changeling_research")
+
+require("werewolf_research")

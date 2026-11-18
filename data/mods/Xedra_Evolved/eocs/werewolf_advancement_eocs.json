@@ -21,35 +21,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_WEREWOLVES_GAIN_MORE_POWERS_COST_UPDATER",
-    "effect": [
-      { "math": [ "u_werewolf_xp_threshold += u_werewolf_xp_threshold_updater" ] },
-      { "math": [ "u_werewolf_xp_threshold_updater += 25" ] },
-      { "u_lose_effect": "effect_werewolf_gain_more_powers" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_WEREWOLF_LEARNING_MOON_GIFT_MOON_CHECK",
-    "condition": { "and": [ { "not": "is_day" }, "u_is_outside" ] },
-    "effect": [  ],
-    "false_effect": [
-      { "u_message": "You can only learn a new Gift of the Moon under the moon's light.", "type": "mixed" },
-      "u_cancel_activity"
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_WEREWOLF_LEARNING_MOON_GIFT_END",
-    "condition": { "and": [ { "not": "is_day" }, "u_is_outside" ] },
-    "effect": [
-      { "u_add_trait": { "u_val": "xe_werewolf_power_to_gain" } },
-      { "run_eocs": "EOC_WEREWOLVES_GAIN_MORE_POWERS_COST_UPDATER" },
-      { "u_message": "You learned a new Gift of the Moon.", "type": "good" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_WEREWOLVES_GAIN_MORE_POWERS",
     "condition": { "and": [ { "u_has_effect": "effect_werewolf_gain_more_powers" }, { "not": { "u_has_trait": "VAMPIRE" } } ] },
     "effect": [

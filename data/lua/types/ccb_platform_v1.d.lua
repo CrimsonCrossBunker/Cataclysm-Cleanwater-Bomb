@@ -13347,6 +13347,14 @@ function CcbMutationsApi.has(character, mutation) end
 ---@return CcbResult result `value` is boolean.
 function CcbMutationsApi.has_id_text(character, id_text) end
 
+---Count native mutation-category entries. With owned_only, count the Character's held mutations.
+---@param character GameHandle Exact avatar or NPC handle.
+---@param category GameId GameId<mutation_category>.
+---@param count_type? "POSITIVE"|"NEGATIVE"|"ALL" Defaults to ALL.
+---@param owned_only? boolean Count currently held mutations rather than all entries in the category; defaults to false.
+---@return CcbResult result `value` is the native mutation count.
+function CcbMutationsApi.category_count(character, category, count_type, owned_only) end
+
 ---Check a mutation's visibility to the explicit observer, including the native visibility threshold.
 ---@param observed GameHandle Character whose mutation is inspected.
 ---@param observer GameHandle Character performing the observation.
