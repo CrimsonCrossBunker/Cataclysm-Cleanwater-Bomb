@@ -47,47 +47,11 @@ function M.bonus(character)
     M.tick(character)
 end
 
-local saved = ccb.state.character
-local timer = "sky_raid_sickness_timer"
-local due = "sky_raid_sickness_due"
-
-local function schedule(character)
-    local delay = math.tointeger(math.modf(state.number("currentpulselength", 15 * 60)))
-    ccb.tasks.after_character_turn(character, delay, due)
-    saved.set(timer, "scheduled")
-end
-
-local function wake(character)
-    if saved.get(timer) == "dormant" and state.has_trait(character, "awayfromhome") then
-        schedule(character)
-    end
-end
-
-ccb.runtime.handler(due, function(payload)
-    local character = payload.character
-    if not state.has_trait(character, "awayfromhome") then
-        saved.set(timer, "dormant")
-        return
-    end
-    M.tick(character)
-    schedule(character)
-end)
-
-ccb.runtime.handler("sky_raid_sickness_ready", function(event)
-    local character = event.actors.character
-    if ccb.tasks.has_character_turn(character, due) then
-        saved.set(timer, "scheduled")
-    elseif saved.get(timer) == "dormant" then
-        wake(character)
-    else
-        schedule(character)
-    end
-end)
-ccb.runtime.on("character_ready", "sky_raid_sickness_ready")
-
-ccb.runtime.handler("sky_raid_sickness_conditions", function(event)
-    wake(event.actors.character)
-end)
-ccb.runtime.on("character_conditions_changed", "sky_raid_sickness_conditions")
+local recurring = require("island_timer")
+recurring("sky_raid_sickness", function(character)
+    return state.has_trait(character, "awayfromhome")
+end, function()
+    return math.tointeger(math.modf(state.number("currentpulselength", 15 * 60)))
+end, M.tick)
 
 return M

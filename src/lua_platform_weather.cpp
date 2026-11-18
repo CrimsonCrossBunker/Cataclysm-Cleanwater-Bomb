@@ -991,35 +991,41 @@ sol::table clear_weather_override(
                lua, weather );
 }
 
+units::temperature read_weather_temperature( const script_unit_value &temperature,
+        std::string_view api )
+{
+    if( temperature.kind() != "temperature" ) {
+        throw std::invalid_argument( std::string( api ) + " requires UnitValue<temperature>" );
+    }
+    const double kelvin = temperature.value_as( "kelvin" );
+    if( !std::isfinite( kelvin ) || kelvin < 0.0 || kelvin > maximum_temperature_kelvin ) {
+        throw std::invalid_argument( std::string( api ) + " must be within 0..1000 kelvin" );
+    }
+    return units::from_kelvin( static_cast<float>( kelvin ) );
+}
+
+sol::table set_current_temperature( sol::this_state lua, const script_unit_value &temperature )
+{
+    constexpr std::string_view api = "services.weather.set_current_temperature";
+    const units::temperature value = read_weather_temperature( temperature, api );
+    require_active_game( api );
+    weather_manager &weather = get_weather();
+    weather.weather_precise->temperature = value;
+    weather.temperature = value;
+    weather.clear_temp_cache();
+    sol::state_view state( lua );
+    return make_game_value_result( state, sol::make_object( state, true ) );
+}
+
 sol::table set_temperature_override(
     sol::this_state lua,
     const script_unit_value &temperature )
 {
-    if( temperature.kind() !=
-        "temperature" ) {
-        throw std::invalid_argument(
-            "services.weather.set_temperature_override "
-            "requires UnitValue<temperature>" );
-    }
-    const double kelvin =
-        temperature.value_as(
-            "kelvin" );
-    if( !std::isfinite( kelvin ) ||
-        kelvin < 0.0 ||
-        kelvin >
-        maximum_temperature_kelvin ) {
-        throw std::invalid_argument(
-            "services.weather.set_temperature_override "
-            "must be within 0..1000 kelvin" );
-    }
-    require_active_game(
-        "services.weather.set_temperature_override" );
-    weather_manager &weather =
-        get_weather();
-    weather.forced_temperature =
-        units::from_kelvin(
-            static_cast<float>(
-                kelvin ) );
+    constexpr std::string_view api = "services.weather.set_temperature_override";
+    const units::temperature value = read_weather_temperature( temperature, api );
+    require_active_game( api );
+    weather_manager &weather = get_weather();
+    weather.forced_temperature = value;
     weather.clear_temp_cache();
     sol::state_view state( lua );
     return make_game_value_result(
@@ -1494,6 +1500,12 @@ void install_weather_api(
         require_write();
         return clear_weather_override(
                    state );
+    } );
+    weather.set_function(
+        "set_current_temperature",
+        [require_write]( sol::this_state state, const script_unit_value & temperature ) {
+        require_write();
+        return set_current_temperature( state, temperature );
     } );
     weather.set_function(
         "set_temperature_override",

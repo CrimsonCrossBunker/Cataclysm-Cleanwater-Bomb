@@ -9597,6 +9597,11 @@ function CcbWeatherApi.set_override(id) end
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
 function CcbWeatherApi.clear_override() end
 
+---Change the current weather sample and clear temperature caches. Normal weather refresh can replace the sample.
+---@param temperature UnitValue UnitValue<temperature>, within 0..1000 kelvin.
+---@return CcbResult result `value` is true after changing the sample.
+function CcbWeatherApi.set_current_temperature(temperature) end
+
 ---@param temperature UnitValue UnitValue<temperature>
 ---@return CcbResult result `value` is a CcbWeatherCurrentSnapshot.
 function CcbWeatherApi.set_temperature_override(temperature) end
