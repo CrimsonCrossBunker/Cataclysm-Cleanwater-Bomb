@@ -237,3 +237,50 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "fish_trap",
+        name = ccb.content.plural_text("plastic fish trap", "plastic fish traps"),
+        description = ccb.content.text("A makeshift fish trap made from plastic bottles.  It's simple, even primitive, but easy to use.  The principle of action: the fish swims inside to eat the bait, but can't get out.  Not humane and prohibited by law, but there are no cops left to care."),
+        mass_milligrams = 85000,
+        volume_ml = 2000,
+        price_cents = 500,
+        price_postapoc_cents = 50,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:quality("FISH_TRAP", 1)
+    item:tool { ammo_types = { "fish_bait" } }
+    item:magazine_pocket { ammo_capacities = { fish_bait = 5 } }
+    item:clear_tick_actions()
+    item:native_on_tick("FISH_TRAP_TICK")
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "fish_trap_basket",
+        name = ccb.content.plural_text("basket fish trap", "basket fish traps"),
+        description = ccb.content.text("A long wicker fish trap made from bark, reeds, cordage, or other natural materials.  It's a staple fishing tool in many pre-industrial societies.  The principle of action: the fish swims inside to eat the bait, but can't get out."),
+        mass_milligrams = 800000,
+        volume_ml = 12000,
+        longest_side_mm = 500,
+        price_cents = 500,
+        price_postapoc_cents = 50,
+        symbol = ";",
+        color = "brown",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("dry_plant", 1)
+    item:quality("FISH_TRAP", 1)
+    item:tool { ammo_types = { "fish_bait" } }
+    item:magazine_pocket { ammo_capacities = { fish_bait = 10 } }
+    item:clear_tick_actions()
+    item:native_on_tick("FISH_TRAP_TICK")
+    content.add(item)
+end
