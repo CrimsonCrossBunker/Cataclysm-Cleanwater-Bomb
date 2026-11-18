@@ -101,3 +101,5 @@ require("weapon_recipes")
 require("armor_recipes")
 
 require("craft_recipes")
+
+require("camp_recipes")
