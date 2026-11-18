@@ -375,6 +375,10 @@ struct behavior_definition_data {
     bool registered = false;
 };
 
+const std::map<std::string_view, game_message_type> effect_message_ratings = {
+    { "neutral", m_neutral }, { "good", m_good }, { "bad", m_bad }, { "mixed", m_mixed }
+};
+
 struct effect_type_definition_data {
     struct modifier_data {
         double base = 0.0;
@@ -390,6 +394,7 @@ struct effect_type_definition_data {
     authored_text apply_message;
     authored_text death_message;
     std::string rating = "neutral";
+    std::vector<std::pair<authored_text, game_message_type>> decay_messages;
     std::string death_event;
     bool harmful_cough = false;
     std::vector<std::pair<int, int>> death_chances;
@@ -1225,6 +1230,18 @@ struct effect_type_definition_handle {
         effect_type_definition_handle &reduced_description( const sol::object &text ) {
             return append_text( definition->reduced_descriptions, text,
                                 "reduced effect description" );
+        }
+
+        effect_type_definition_handle &decay_message( const sol::object &text,
+                std::string_view rating_name ) {
+            require_building_handle( token, *definition, "effect type" );
+            const auto rating = effect_message_ratings.find( rating_name );
+            if( rating == effect_message_ratings.end() ) {
+                throw std::runtime_error( "effect decay message requires a valid rating" );
+            }
+            definition->decay_messages.emplace_back(
+                read_singular_text( text, {}, "effect decay message" ), rating->second );
+            return *this;
         }
 
         effect_type_definition_handle &flag( const std::string &id ) {
@@ -2979,6 +2996,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "name", &effect_type_definition_handle::name,
         "description", &effect_type_definition_handle::description,
         "reduced_description", &effect_type_definition_handle::reduced_description,
+        "decay_message", &effect_type_definition_handle::decay_message,
         "flag", &effect_type_definition_handle::flag,
         "immune_character_flag", &effect_type_definition_handle::immune_character_flag,
         "immune_bodypart_flag", &effect_type_definition_handle::immune_bodypart_flag,
@@ -4065,8 +4083,7 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "effect type '" + definition.id +
                                           "' has invalid intensity or duration values" );
             }
-            if( definition.rating != "good" && definition.rating != "neutral" &&
-                definition.rating != "bad" && definition.rating != "mixed" ) {
+            if( effect_message_ratings.count( definition.rating ) == 0 ) {
                 throw std::runtime_error( "effect type '" + definition.id + "' has an invalid rating" );
             }
             if( !definition.death_event.empty() ) {
@@ -4819,10 +4836,11 @@ void creatures_content_transaction::impl::apply_effect_type()
         }
         native.remove_message = source.remove_message.empty() ? translation() :
                                 source.remove_message.native();
-        static const std::map<std::string, game_message_type> ratings = {
-            { "neutral", m_neutral }, { "good", m_good }, { "bad", m_bad }, { "mixed", m_mixed }
-        };
-        native.apply_msgs.emplace_back( source.apply_message.native(), ratings.at( source.rating ) );
+        native.apply_msgs.emplace_back( source.apply_message.native(),
+                                        effect_message_ratings.at( source.rating ) );
+        for( const auto &[text, rating] : source.decay_messages ) {
+            native.decay_msgs.emplace_back( text.native(), rating );
+        }
         native.death_msg = source.death_message.empty() ? to_translation( "You died." ) :
                            source.death_message.native();
         if( !source.death_event.empty() ) {
@@ -6628,6 +6646,11 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.apply_message );
             hash_part( state, value.death_message );
             hash_part( state, value.rating );
+            for( const auto &[text, rating] : value.decay_messages ) {
+                hash_part( state, "decay_message" );
+                hash_part( state, text );
+                hash_part( state, std::to_string( static_cast<int>( rating ) ) );
+            }
             hash_part( state, value.death_event );
             hash_part( state, value.harmful_cough ? "harmful_cough" : "harmless_cough" );
             for( std::size_t index = 0; index < value.death_chances.size(); ++index ) {

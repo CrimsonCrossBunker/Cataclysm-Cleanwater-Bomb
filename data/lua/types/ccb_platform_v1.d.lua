@@ -1491,6 +1491,11 @@ function EffectTypeDefinition:description(text) end
 ---@param text string|LocalizedText
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:reduced_description(text) end
+---Append the message for falling to this intensity, starting at intensity one.
+---@param text string|LocalizedText
+---@param rating 'neutral'|'good'|'bad'|'mixed'
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:decay_message(text, rating) end
 ---@param id string
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:flag(id) end
