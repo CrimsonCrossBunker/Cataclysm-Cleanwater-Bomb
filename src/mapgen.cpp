@@ -2128,10 +2128,17 @@ class jmapgen_alternatively : public jmapgen_piece_with_has_vehicle_collision
         std::vector<PieceType> alternatives;
         jmapgen_alternatively() = default;
         template<typename Id>
-        explicit jmapgen_alternatively( const std::vector<Id> &ids ) {
-            alternatives.reserve( ids.size() );
-            for( const Id &id : ids ) {
+        explicit jmapgen_alternatively( const std::vector<std::pair<Id, int>> &choices ) {
+            alternatives.reserve( choices.size() );
+            cumulative_weights_.reserve( choices.size() );
+            int total = 0;
+            for( const auto &[id, weight] : choices ) {
+                if( weight < 1 || weight > std::numeric_limits<int>::max() - total ) {
+                    throw std::invalid_argument( "Mapgen tile choices exceed the native weight range" );
+                }
+                total += weight;
                 alternatives.emplace_back( id );
+                cumulative_weights_.push_back( total );
             }
         }
         mapgen_phase phase() const override {
@@ -2157,10 +2164,20 @@ class jmapgen_alternatively : public jmapgen_piece_with_has_vehicle_collision
         }
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y, const jmapgen_int &z,
                     const std::string &context ) const override {
-            if( const auto chosen = random_entry_opt( alternatives ) ) {
+            if( !cumulative_weights_.empty() ) {
+                // Sample the same slot as the native expanded alternatives vector.
+                const int slot = rng( 0, cumulative_weights_.back() - 1 );
+                const auto selected = std::upper_bound( cumulative_weights_.begin(),
+                                                       cumulative_weights_.end(), slot );
+                alternatives[std::distance( cumulative_weights_.begin(), selected )].apply(
+                    dat, x, y, z, context );
+            } else if( const auto chosen = random_entry_opt( alternatives ) ) {
                 chosen->get().apply( dat, x, y, z, context );
             }
         }
+
+    private:
+        std::vector<int> cumulative_weights_;
 };
 
 template<typename Value>
@@ -4084,8 +4101,10 @@ class jmapgen_nested : public jmapgen_piece
         neighbor_flag_any_check neighbor_flags_any;
         predecessor_oter_check predecessors;
         correct_z_level_check correct_z_level;
-        explicit jmapgen_nested( const nested_mapgen_id &id ) {
-            entries.add( mapgen_value<nested_mapgen_id>( id ), dbl_or_var( 100 ) );
+        explicit jmapgen_nested( const std::vector<std::pair<nested_mapgen_id, int>> &choices ) {
+            for( const auto &[id, weight] : choices ) {
+                entries.add( mapgen_value<nested_mapgen_id>( id ), dbl_or_var( weight ) );
+            }
             entries.precalc();
         }
         jmapgen_nested( const JsonObject &jsi, std::string_view/*context*/ )
@@ -8171,7 +8190,7 @@ void mapgen_patch::add_terrain( const jmapgen_place &where, const ter_str_id &id
     add_piece( where, make_shared_fast<jmapgen_terrain>( id ) );
 }
 
-void mapgen_patch::add_terrain( const jmapgen_place &where, const std::vector<ter_str_id> &choices )
+void mapgen_patch::add_terrain( const jmapgen_place &where, const std::vector<std::pair<ter_str_id, int>> &choices )
 {
     add_piece( where, make_shared_fast<jmapgen_alternatively<jmapgen_terrain>>( choices ) );
 }
@@ -8181,7 +8200,7 @@ void mapgen_patch::add_furniture( const jmapgen_place &where, const furn_str_id 
     add_piece( where, make_shared_fast<jmapgen_furniture>( id ) );
 }
 
-void mapgen_patch::add_furniture( const jmapgen_place &where, const std::vector<furn_str_id> &choices )
+void mapgen_patch::add_furniture( const jmapgen_place &where, const std::vector<std::pair<furn_str_id, int>> &choices )
 {
     add_piece( where, make_shared_fast<jmapgen_alternatively<jmapgen_furniture>>( choices ) );
 }
@@ -8234,14 +8253,15 @@ void mapgen_patch::add_item_group( const jmapgen_place &where, const item_group_
     add_piece( where, make_shared_fast<jmapgen_item_group>( group, chance ) );
 }
 
-void mapgen_patch::add_named_stamp( const jmapgen_place &where, const nested_mapgen_id &id )
+void mapgen_patch::add_named_stamp( const jmapgen_place &where,
+                                    const std::vector<std::pair<nested_mapgen_id, int>> &choices )
 {
     const int low = std::min( min_z_offset_, where.z.val );
     const int high = std::max( max_z_offset_, where.z.valmax );
     if( high - low > OVERMAP_DEPTH + OVERMAP_HEIGHT ) {
         throw std::invalid_argument( "Mapgen stamp spans more levels than the world contains" );
     }
-    add_piece( where, make_shared_fast<jmapgen_nested>( id ) );
+    add_piece( where, make_shared_fast<jmapgen_nested>( choices ) );
     min_z_offset_ = low;
     max_z_offset_ = high;
 }

@@ -479,36 +479,52 @@ jmapgen_int patch_stamp_height( const sol::object &value )
 }
 
 template<typename Id>
-Id patch_tile_id( const sol::object &entry )
+Id patch_placement_id( const sol::object &entry )
 {
     if( entry.get_type() != sol::type::string ) {
-        throw std::invalid_argument( "Mapgen patch tile ids must be strings" );
+        throw std::invalid_argument( "Mapgen patch placement ids must be strings" );
     }
     Id id( entry.as<std::string>() );
-    if( !id.is_null() && !id.is_valid() ) {
-        throw std::invalid_argument( "Mapgen patch references unknown tile id '" + id.str() + "'" );
+    if( id.is_empty() || ( !id.is_null() && !id.is_valid() ) ) {
+        throw std::invalid_argument( "Mapgen patch references unknown placement id '" + id.str() + "'" );
     }
     return id;
+}
+
+template<typename Id>
+std::vector<std::pair<Id, int>> patch_choices( const sol::table &entries )
+{
+    std::vector<std::pair<Id, int>> choices;
+    const std::size_t count = entries.size();
+    if( count == 0 ) {
+        throw std::invalid_argument( "Mapgen patch choices must contain at least one id" );
+    }
+    choices.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        const sol::object value = entries.raw_get<sol::object>( index );
+        if( value.get_type() == sol::type::table ) {
+            const sol::table weighted = value.as<sol::table>();
+            if( weighted.size() != 2 ) {
+                throw std::invalid_argument( "Weighted mapgen choices require an id and weight" );
+            }
+            choices.emplace_back( patch_placement_id<Id>( weighted.raw_get<sol::object>( 1 ) ),
+                                  patch_integer( weighted.raw_get<sol::object>( 2 ), 1,
+                                          std::numeric_limits<int>::max(), "choice weight" ) );
+        } else {
+            choices.emplace_back( patch_placement_id<Id>( value ), 1 );
+        }
+    }
+    return choices;
 }
 
 template<typename Id, typename Apply>
 void add_patch_tile( const sol::object &entry, const Apply &apply )
 {
-    if( entry.get_type() != sol::type::table ) {
-        apply( patch_tile_id<Id>( entry ) );
-        return;
+    if( entry.get_type() == sol::type::table ) {
+        apply( patch_choices<Id>( entry.as<sol::table>() ) );
+    } else {
+        apply( patch_placement_id<Id>( entry ) );
     }
-    const sol::table entries = entry.as<sol::table>();
-    std::vector<Id> choices;
-    const std::size_t count = entries.size();
-    if( count == 0 ) {
-        throw std::invalid_argument( "Mapgen patch tile choices must contain at least one id" );
-    }
-    choices.reserve( count );
-    for( std::size_t index = 1; index <= count; ++index ) {
-        choices.emplace_back( patch_tile_id<Id>( entries.raw_get<sol::object>( index ) ) );
-    }
-    apply( choices );
 }
 
 void add_patch_monster_group( mapgen_patch &patch, std::string group,
@@ -845,17 +861,18 @@ void install_mapgen_service_api(
         }
         patch.add_item_group( where, group, chance );
     },
-    "stamp_named", []( mapgen_patch &patch, const std::string &id, const sol::object &x,
+    "stamp_named", []( mapgen_patch &patch, const sol::object &layouts, const sol::object &x,
     const sol::object &y, const sol::optional<sol::object> &z ) {
-        const nested_mapgen_id layout( id );
-        if( !layout.is_valid() || layout.is_null() ) {
-            throw std::invalid_argument( "Mapgen patch requires a registered nested layout" );
-        }
+        const auto choices = layouts.get_type() == sol::type::table ?
+                             patch_choices<nested_mapgen_id>( layouts.as<sol::table>() ) :
+        std::vector<std::pair<nested_mapgen_id, int>> {
+            { patch_placement_id<nested_mapgen_id>( layouts ), 100 }
+        };
         jmapgen_place where = patch_at( x, y );
         if( z ) {
             where.z = patch_stamp_height( *z );
         }
-        patch.add_named_stamp( where, layout );
+        patch.add_named_stamp( where, choices );
     },
     "stamp", []( mapgen_patch &patch, const mapgen_patch &layout, const sol::object &x,
     const sol::object &y, const sol::optional<sol::table> &options ) {

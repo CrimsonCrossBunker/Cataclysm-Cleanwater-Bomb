@@ -605,9 +605,9 @@ class mapgen_patch final : private update_mapgen_function_json
         void preserve_tile_contents();
         void erase_before_terrain();
         void add_terrain( const jmapgen_place &where, const ter_str_id &id );
-        void add_terrain( const jmapgen_place &where, const std::vector<ter_str_id> &choices );
+        void add_terrain( const jmapgen_place &where, const std::vector<std::pair<ter_str_id, int>> &choices );
         void add_furniture( const jmapgen_place &where, const furn_str_id &id );
-        void add_furniture( const jmapgen_place &where, const std::vector<furn_str_id> &choices );
+        void add_furniture( const jmapgen_place &where, const std::vector<std::pair<furn_str_id, int>> &choices );
         void add_monster_group( const jmapgen_place &where, const mongroup_id &group,
                                 const jmapgen_int &pack_size, bool one_or_none,
                                 bool mission_target, const std::optional<translation> &name );
@@ -620,7 +620,8 @@ class mapgen_patch final : private update_mapgen_function_json
         void set_faction_owner( const jmapgen_place &where, const faction_id &owner );
         void add_item_group( const jmapgen_place &where, const item_group_id &group,
                              const jmapgen_int &chance );
-        void add_named_stamp( const jmapgen_place &where, const nested_mapgen_id &id );
+        void add_named_stamp( const jmapgen_place &where,
+                              const std::vector<std::pair<nested_mapgen_id, int>> &choices );
         void add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance );
         std::shared_ptr<mapgen_function_json_nested> freeze_nested( int size,
                 const std::string &context ) const;

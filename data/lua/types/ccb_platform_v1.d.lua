@@ -8392,6 +8392,8 @@ function ScriptMapgenContext:fill_groundcover() end
 ---@class MapgenPatch
 local MapgenPatch = {}
 
+---@alias MapgenPatchChoices (string|{ [1]: string, [2]: integer })[] Positive integer weights; plain IDs have weight one.
+
 ---Apply local coordinates in the OMT's fixed orientation.
 function MapgenPatch:keep_orientation() end
 
@@ -8403,12 +8405,12 @@ function MapgenPatch:erase_before_terrain() end
 
 ---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
 ---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
----@param id string|string[] Native terrain ID or an array of equally likely IDs.
+---@param id string|MapgenPatchChoices Native terrain ID or weighted choices.
 function MapgenPatch:terrain(x, y, id) end
 
 ---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
 ---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
----@param id string|string[] Native furniture ID or an array of equally likely IDs.
+---@param id string|MapgenPatchChoices Native furniture ID or weighted choices.
 function MapgenPatch:furniture(x, y, id) end
 
 ---@param group string Native monster-group ID. Uses native single-monster mapgen selection and density rules.
@@ -8462,8 +8464,8 @@ function MapgenPatch:set_faction_owner(faction, x, y) end
 ---@param options? MapgenPatchItemGroupOptions
 function MapgenPatch:place_item_group(group, x, y, options) end
 
----Place a previously registered nested mapgen using its native variant weights.
----@param id string Native nested mapgen ID.
+---Choose a registered nested mapgen before sampling its native variants.
+---@param id string|MapgenPatchChoices Native nested IDs; `null` skips placement.
 ---@param x MapgenPatchRange
 ---@param y MapgenPatchRange
 ---@param z? integer Z-level offset. Defaults to zero.
