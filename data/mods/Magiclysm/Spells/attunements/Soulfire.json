@@ -111,16 +111,5 @@
     "max_level": 35,
     "min_duration": { "math": [ "max((1080000 - (u_spell_level('soul_afterburner') * 30000)), 540000)" ] },
     "max_duration": { "math": [ "max((1080000 - (u_spell_level('soul_afterburner') * 30000)), 540000)" ] }
-  },
-  {
-    "id": "soul_burn",
-    "type": "effect_type",
-    "name": [ "Soul Burn" ],
-    "desc": [
-      "A little of your soul has been burned away, leaving you in a weakened state.  The soul heals quickly, but your body regenerates more slowly while the soul is weak."
-    ],
-    "rating": "bad",
-    "show_intensity": false,
-    "enchantments": [ "INLINE_ENCH_soul_burn_0" ]
   }
 ]

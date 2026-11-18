@@ -29,12 +29,6 @@
     "max_duration": 100
   },
   {
-    "type": "effect_type",
-    "id": "effect_dragon_deep_breath",
-    "name": [ { "str": "Deep Breath", "//~": "NO_I18N" } ],
-    "desc": [ { "str": "You are ready to use your breath weapon.", "//~": "NO_I18N" } ]
-  },
-  {
     "type": "SPELL",
     "id": "dragon_breath_black",
     "name": { "str": "Black Dragons' Breath", "//~": "NO_I18N" },

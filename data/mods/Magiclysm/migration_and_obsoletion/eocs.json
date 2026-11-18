@@ -56,13 +56,6 @@
     "effect": [ { "u_lose_trait": "FOREST_STEALTH" } ]
   },
   {
-    "type": "effect_type",
-    "id": "effect_elven_cloak_effect",
-    "//": "This is a dummy effect because EoCs can't tell what you're wearing",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_BIO_EAT_TONS_OF_FOOD_MUTATION_REMOVER",
     "effect": [  ]

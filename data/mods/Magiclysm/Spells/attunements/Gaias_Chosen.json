@@ -57,13 +57,5 @@
     "flags": [ "ENHANCEMENT_SPELL", "SOMATIC" ],
     "spell_class": "GAIAS_CHOSEN",
     "magic_type": "magiclysm_enhancement_magic"
-  },
-  {
-    "id": "effect_terra_armor",
-    "type": "effect_type",
-    "name": [ "Terra Armor" ],
-    "desc": [ "Your body is covered in dense, ethereal shell, that protect you." ],
-    "remove_message": "Your lost your terra shell.",
-    "enchantments": [ "INLINE_ENCH_effect_terra_armor_0" ]
   }
 ]

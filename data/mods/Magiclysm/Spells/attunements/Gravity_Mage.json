@@ -130,17 +130,5 @@
     "min_duration": 20000,
     "max_duration": 720000,
     "duration_increment": 20000
-  },
-  {
-    "id": "gravity_mage_melee",
-    "type": "effect_type",
-    "name": [ "Gravity Control" ],
-    "desc": [ "Decreases mass of weapon on swing, increases the gravity on attack." ],
-    "remove_message": "You cease your control over gravity.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [
-      "INLINE_ENCH_gravity_mage_melee_0"
-    ]
   }
 ]

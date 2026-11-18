@@ -439,14 +439,6 @@
     ]
   },
   {
-    "id": "burn_scar",
-    "type": "effect_type",
-    "desc": [ "This burn really hurts!" ],
-    "max_duration": "10 second",
-    "rating": "bad",
-    "base_mods": { "pain_amount": [ 20 ] }
-  },
-  {
     "id": "overcharge_burn_scar",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
