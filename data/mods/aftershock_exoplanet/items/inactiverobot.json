@@ -331,23 +331,6 @@
     }
   },
   {
-    "abstract": "bot_defbot_base",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "inactive defense robot", "//~": "NO_I18N" },
-    "looks_like": "mon_riotbot",
-    "material": [ "steel", "plastic" ],
-    "weight": "140 kg",
-    "volume": "62500 ml",
-    "price": "100 USD",
-    "price_postapoc": "100 USD",
-    "to_hit": -3,
-    "symbol": ";",
-    "color": "light_gray",
-    "flags": [ "LEAK_DAM", "RADIOACTIVE", "TRADER_AVOID" ],
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "abstract": "bot_skitterbot_base",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
