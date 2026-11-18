@@ -1,11 +1,17 @@
 #include <algorithm>
 #include <cmath>
+#include <functional>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "calendar.h"
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "coordinates.h"
 #include "game.h"
+#include "item.h"
 #include "item_group.h"
 #include "mapdata.h"
 #include "north_america.h"
@@ -13,6 +19,10 @@
 #include "north_america_transport.h"
 #include "options.h"
 #include "options_helpers.h"
+#include "point.h"
+#include "regional_climate.h"
+#include "type_id.h"
+#include "units.h"
 #include "weather.h"
 #include "weather_gen.h"
 
@@ -190,7 +200,7 @@ TEST_CASE( "reusing_climate_normals_preserves_water_freeze_temperature_samples",
 {
     const restore_on_out_of_scope saved_mode( g->north_america_world );
     g->north_america_world = true;
-    const auto &generator = get_weather().get_cur_weather_gen();
+    const weather_generator &generator = get_weather().get_cur_weather_gen();
     const tripoint_abs_ms water( -1825851, -1120910, 0 );
     const auto climate = generator.climate_at( water );
     REQUIRE( climate );
@@ -265,7 +275,7 @@ TEST_CASE( "north_america_regional_loot_scope_uses_spawn_location",
 
 TEST_CASE( "north_america_is_a_new_world_map_option", "[north_america][option]" )
 {
-    const auto defaults = get_options().get_world_defaults();
+    const options_manager::options_container defaults = get_options().get_world_defaults();
     CHECK( defaults.at( "WORLD_MAP_GENERATION" ).getDefaultValue() == "north_america" );
 
     override_option map_mode( "WORLD_MAP_GENERATION", "classic_random" );
@@ -306,8 +316,9 @@ TEST_CASE( "north_america_atlas_contains_real_water_and_land", "[north_america]"
 
 TEST_CASE( "north_american_latitude_changes_seasonal_daylight", "[north_america][calendar]" )
 {
-    const auto bedford = north_america::location( point_abs_ms::zero );
-    const auto mexico = north_america::location( point_abs_ms( -2966130, 2139454 ) );
+    const regional_climate::coordinates bedford = north_america::location( point_abs_ms::zero );
+    const regional_climate::coordinates mexico = north_america::location( point_abs_ms( -2966130,
+            2139454 ) );
     CHECK( bedford.latitude == Approx( 42.47 ) );
     CHECK( bedford.longitude == Approx( -71.2894 ) );
     CHECK( mexico.latitude == Approx( 19.43 ).margin( 0.001 ) );
