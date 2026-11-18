@@ -387,7 +387,8 @@ void map::furniture_terrain_emit_fields( const map_simulation_regions *regions )
     }
     const auto emit_at = [&]( const std::vector<tripoint_bub_ms> &indexed, const auto & emissions ) {
         // An emission's Lua handler may mutate the map and its index.
-        const auto positions = indexed;
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
+        const std::vector<tripoint_bub_ms> positions = indexed;
         for( const tripoint_bub_ms &p : positions ) {
             const tripoint_abs_sm submap_position = project_to<coords::sm>( get_abs( p ) );
             if( !has_loaded_submap( p ) || ( regions && !regions->owns( *this, submap_position ) ) ) {
