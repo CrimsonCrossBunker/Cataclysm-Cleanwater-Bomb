@@ -233,15 +233,6 @@
     "qualities": [ [ "ANVIL", 4 ] ]
   },
   {
-    "id": "fake_smoke_plume",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "name": { "str_sp": "smoldering embers" },
-    "description": "A handful of smoldering embers emitting smoke.  They are fading away before your eyes.",
-    "emits": [ "emit_small_smoke_plume" ],
-    "extend": { "flags": [ "TRADER_AVOID", "FAKE_SMOKE" ] }
-  },
-  {
     "id": "fake_firestarter",
     "copy-from": "fake_item",
     "type": "ITEM",

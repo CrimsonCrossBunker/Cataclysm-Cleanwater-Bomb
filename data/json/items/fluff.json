@@ -68,19 +68,5 @@
     "symbol": "i",
     "color": "brown",
     "flags": [ "NO_REPAIR" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "waste_electrolyte_slurry",
-    "category": "other",
-    "name": { "str_sp": "Electrolyte Slurry" },
-    "symbol": "o",
-    "color": "cyan",
-    "description": "The leftover remnants of what was inside of a lithium-ion battery.  It has a rainbow sheen, almost like oil resting on water.",
-    "material": [ "acid" ],
-    "volume": "400 ml",
-    "weight": "700 g",
-    "stackable": true,
-    "phase": "liquid"
   }
 ]

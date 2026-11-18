@@ -1,20 +1,5 @@
 [
   {
-    "abstract": "base_silverware",
-    "name": { "str_sp": "generic silverware", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "symbol": ";",
-    "color": "light_gray",
-    "price": "1 USD",
-    "price_postapoc": "0 cent",
-    "weight": "48 g",
-    "volume": "25 ml",
-    "material": [ "steel" ],
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
-    "melee_damage": { "cut": 1 }
-  },
-  {
     "abstract": "base_utensil",
     "name": { "str": "generic utensil", "//~": "NO_I18N" },
     "type": "ITEM",
@@ -28,19 +13,6 @@
     "material": [ "steel" ],
     "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
     "melee_damage": { "cut": 2 }
-  },
-  {
-    "abstract": "base_plastic_silverware",
-    "name": { "str_sp": "generic plastic silverware", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "symbol": ";",
-    "color": "light_gray",
-    "price": "10 cent",
-    "price_postapoc": "0 cent",
-    "weight": "28 g",
-    "volume": "25 ml",
-    "material": [ "plastic" ]
   },
   {
     "abstract": "base_ceramic_dish",
@@ -57,19 +29,6 @@
     "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
     "flags": [ "FRAGILE_MELEE" ],
     "melee_damage": { "bash": 3 }
-  },
-  {
-    "abstract": "base_plastic_dish",
-    "name": { "str": "generic plastic dish", "str_pl": "generic plastic dishes", "//~": "NO_I18N" },
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "symbol": ")",
-    "color": "light_cyan",
-    "price": "4 USD",
-    "price_postapoc": "0 cent",
-    "material": [ "plastic" ],
-    "weight": "130 g",
-    "volume": "262 ml"
   },
   {
     "abstract": "base_cookpot",
@@ -95,113 +54,6 @@
     "symbol": ",",
     "description": "A ceramic dinner plate, unremarkable in every way.",
     "qualities": [ [ "CONTAIN", 1 ] ]
-  },
-  {
-    "id": "plastic_bowl_kids",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "kiddie bowl" },
-    "symbol": "u",
-    "proportional": { "weight": 0.6, "volume": 0.5 },
-    "description": "A plastic bowl designed for use by children.",
-    "copy-from": "base_plastic_dish",
-    "pocket_data": [
-      {
-        "max_contains_volume": "120 ml",
-        "max_contains_weight": "1 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "qualities": [ [ "CONTAIN", 1 ] ],
-    "snippet_category": [
-      { "id": "kbowl1", "text": "This bowl is decorated with cartoon bears." },
-      {
-        "id": "kbowl2",
-        "text": "There is a drawing of Yoda at the bottom of this bowl, and the words 'Eaten it all, you have'."
-      },
-      { "id": "kbowl3", "text": "This bowl is covered in cartoon dogs and a logo that reads 'Paw Patrol'." },
-      { "id": "kbowl4", "text": "There are orange and blue fish chasing each other around the rim of this bowl." },
-      {
-        "id": "kbowl5",
-        "text": "This bowl is shaped like the head of a silly frog with the opening forming the mouth."
-      },
-      { "id": "kbowl6", "text": "There are cute farm animals decorating this bowl." }
-    ]
-  },
-  {
-    "id": "sippy_cup",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "sippy cup" },
-    "symbol": "u",
-    "proportional": { "weight": 0.4, "volume": 0.5 },
-    "description": "A plastic cup with a spill-proof lid, designed for use by children.",
-    "copy-from": "base_plastic_dish",
-    "pocket_data": [ { "max_contains_volume": "120 ml", "max_contains_weight": "1 kg", "watertight": true, "rigid": true } ],
-    "qualities": [ [ "CONTAIN", 1 ] ],
-    "snippet_category": [
-      { "id": "sippycup1", "text": "This cup is decorated with cartoon bears." },
-      { "id": "sippycup2", "text": "This cup has a cartoony picture of the Avengers wrapped around the side." },
-      { "id": "sippycup3", "text": "This sippy cup is made of plastic in bright clashing colors." },
-      { "id": "sippycup4", "text": "This is a simple blue sippy cup with tooth marks around the spout." },
-      { "id": "sippycup5", "text": "This cup is decorated to look like a pokeball." },
-      { "id": "sippycup6", "text": "There are cute anthropomorphic fruits decorating this cup." },
-      { "id": "sippycup7", "text": "This sippy cup is decorated with crayon-like text that reads 'I love you'." }
-    ]
-  },
-  {
-    "type": "ITEM",
-    "category": "other",
-    "id": "plastic_spoon_kids",
-    "name": { "str": "kiddie spoon" },
-    "symbol": "u",
-    "proportional": { "weight": 0.7, "volume": 0.5 },
-    "description": "A plastic spoon designed for use by children.",
-    "looks_like": "spoon",
-    "copy-from": "base_plastic_silverware",
-    "snippet_category": [
-      { "id": "kspoon1", "text": "This spoon is striped in bright primary colors." },
-      { "id": "kspoon2", "text": "This spoon is styled to look like a bulldozer." },
-      { "id": "kspoon3", "text": "This spoon is covered in cartoon dogs and a logo that reads 'Paw Patrol'." },
-      { "id": "kspoon4", "text": "There is a cute cartoon bear on the handle of this spoon." },
-      { "id": "kspoon5", "text": "There are cartoon cats all over this spoon." },
-      { "id": "kspoon6", "text": "This spoon has a silhouette of a giraffe going down the handle." }
-    ]
-  },
-  {
-    "type": "ITEM",
-    "category": "other",
-    "id": "bottle_opener",
-    "ascii_picture": "bottle_opener",
-    "name": { "str": "bottle opener" },
-    "description": "A simple lever for popping open bottles.",
-    "weight": "64 g",
-    "volume": "93 ml",
-    "longest_side": "18 cm",
-    "price": "4 USD",
-    "looks_like": "fork",
-    "copy-from": "base_silverware",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "any", "balance": "neutral" },
-    "snippet_category": [
-      { "id": "bottleopener1", "text": "This bottle opener is shaped like a zombie head, the mouth pops open the bottle." },
-      { "id": "bottleopener2", "text": "This bottle opener is shaped like a lightsaber." },
-      { "id": "bottleopener3", "text": "This bottle opener is shaped like a revolver." },
-      {
-        "id": "bottleopener4",
-        "text": "This bottle opener is engraved with the words 'I'll die before I give you my beer'."
-      },
-      {
-        "id": "bottleopener5",
-        "text": "This bottle opener is emblazoned with a logo for an HVAC contracting company."
-      },
-      { "id": "bottleopener6", "text": "This bottle opener reads 'Corporate Team Building Exercise 1999'." },
-      { "id": "bottleopener7", "text": "This bottle opener reads 'I'd rather be drinking whiskey'." },
-      { "id": "bottleopener8", "text": "This bottle opener is shaped like a phaser." },
-      { "id": "bottleopener9", "text": "This novelty bottle opener is designed to look like a hobo clown." }
-    ],
-    "//": "Based on https://www.amazon.com/dp/B087QF9SWM"
   },
   {
     "type": "ITEM",
@@ -294,96 +146,5 @@
     "relative": { "qualities": [ [ "COOK", -1 ] ] },
     "melee_damage": { "bash": 12 },
     "//": "Based on https://www.amazon.com/dp/B00006JSUA BUT volume calculated as a cylinder - 2 inches height x 10.68 inches diameter"
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "kettle",
-    "name": { "str": "kettle" },
-    "description": "A stovetop kettle for boiling water.",
-    "copy-from": "base_cookpot",
-    "material": [ "steel" ],
-    "color": "light_gray",
-    "weight": "508 g",
-    "volume": "3205 ml",
-    "//1": "Calculated as a cylinder of 7.44in diameter and 4.5in height. Calculating it from package dimensions of the amazon listing would give ridiculous volume.",
-    "longest_side": "19 cm",
-    "price": "13 USD",
-    "pocket_data": [ { "max_contains_volume": "1500 ml", "max_contains_weight": "2 kg", "watertight": true, "rigid": true } ],
-    "delete": { "qualities": [ "COOK" ] },
-    "melee_damage": { "bash": 5 },
-    "//2": "Based on https://www.amazon.com/dp/B0858VCYTB"
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "coffeepot",
-    "name": { "str": "coffee pot" },
-    "description": "A glass pot for making a cup of joe.",
-    "copy-from": "base_cookpot",
-    "material": [ "glass" ],
-    "color": "light_gray",
-    "weight": "676 g",
-    "volume": "3100 ml",
-    "melee_damage": { "bash": 5 },
-    "pocket_data": [ { "max_contains_volume": "3000 ml", "max_contains_weight": "6 kg", "watertight": true, "rigid": true } ],
-    "delete": { "qualities": [ "COOK" ] }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "dutch_oven",
-    "name": { "str": "cast-iron dutch oven" },
-    "description": "A cast-iron dutch oven, suitable for boiling, broiling, roasting, baking, stewing, frying and any other method of cooking.",
-    "copy-from": "base_cookpot",
-    "material": [ "iron" ],
-    "color": "dark_gray",
-    "weight": "6210 g",
-    "volume": "12152 ml",
-    "longest_side": "31 cm",
-    "pocket_data": [ { "max_contains_volume": "6300 ml", "max_contains_weight": "6300 g", "watertight": true, "rigid": true } ],
-    "extend": { "qualities": [ [ "OVEN", 2 ] ] },
-    "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "improvised_oven",
-    "name": { "str": "improvised oven" },
-    "description": "A large pot converted into an improvised oven, suitable for basic baking on a hot surface.",
-    "copy-from": "base_cookpot",
-    "material": [ "steel" ],
-    "color": "light_gray",
-    "weight": "2490 g",
-    "volume": "12800 ml",
-    "longest_side": "25 cm",
-    "pocket_data": [
-      {
-        "max_contains_volume": "12 L",
-        "max_contains_weight": "12 kg",
-        "watertight": true,
-        "rigid": true,
-        "open_container": true
-      }
-    ],
-    "extend": { "qualities": [ [ "OVEN", 1 ] ] },
-    "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "clay_dutch_oven",
-    "name": { "str": "clay pot oven" },
-    "description": "A makeshift oven made of a big clay pot with a lid, containing firebricks to hold heat and a smaller pot to bake in.",
-    "copy-from": "base_cookpot",
-    "looks_like": "pot_canning_clay",
-    "material": [ "clay" ],
-    "color": "brown",
-    "weight": "11388 g",
-    "volume": "30 L",
-    "longest_side": "35 cm",
-    "pocket_data": [ { "max_contains_volume": "2 L", "max_contains_weight": "2100 g", "watertight": true, "rigid": true } ],
-    "extend": { "qualities": [ [ "OVEN", 1 ] ] },
-    "melee_damage": { "bash": 8 }
   }
 ]

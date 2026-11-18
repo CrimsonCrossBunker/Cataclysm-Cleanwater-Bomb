@@ -57,3 +57,20 @@ do
     item:flag("TRADER_AVOID")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "waste_electrolyte_slurry",
+        category = "other",
+        name = ccb.content.plural_text("Electrolyte Slurry", "Electrolyte Slurry"),
+        symbol = "o",
+        color = "cyan",
+        description = ccb.content.text("The leftover remnants of what was inside of a lithium-ion battery.  It has a rainbow sheen, almost like oil resting on water."),
+        volume_ml = 400,
+        mass_milligrams = 700000,
+        stackable = true,
+        phase = "liquid",
+    }
+    item:material("acid", 1)
+    content.add(item)
+end

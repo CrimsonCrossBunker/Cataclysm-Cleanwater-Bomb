@@ -31,69 +31,6 @@
     "//": "intended fields: revert_to active grenade; name"
   },
   {
-    "abstract": "abstract_gas_bomb_active",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "description": "This grenade has had its pin pulled and is now expelling highly toxic gas.",
-    "countdown_interval": "60 seconds",
-    "revert_to": "canister_empty",
-    "//": "intended fields: emits; countdown_interval; name"
-  },
-  {
-    "id": "gasbomb_act",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_active",
-    "name": { "str": "tear gas grenade" },
-    "description": "This tear gas grenade has had its pin removed and is expelling highly noxious gas.",
-    "emits": [ "emit_tear_gas_stream" ]
-  },
-  {
-    "id": "smokebomb_act",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_active",
-    "name": { "str": "smoke grenade" },
-    "weight": "680 g",
-    "description": "This smoke bomb has had its pin removed and is expelling thick smoke.",
-    "emits": [ "emit_smoke_stream" ],
-    "countdown_interval": "100 seconds"
-  },
-  {
-    "id": "insecticidalbomb_act",
-    "copy-from": "abstract_gas_bomb_active",
-    "type": "ITEM",
-    "name": { "str": "insecticidal gas grenade" },
-    "emits": [ "emit_insecticidal_stream" ]
-  },
-  {
-    "id": "insecticidalbomb_makeshift_act",
-    "copy-from": "abstract_gas_bomb_active",
-    "type": "ITEM",
-    "name": { "str": "makeshift insecticidal gas grenade" },
-    "emits": [ "emit_small_insecticidal_stream" ]
-  },
-  {
-    "id": "fungicidalbomb_act",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_active",
-    "name": { "str": "fungicidal gas grenade" },
-    "emits": [ "emit_fungicidal_stream" ]
-  },
-  {
-    "id": "fungicidalbomb_makeshift_act",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_active",
-    "name": { "str": "makeshift fungicidal gas grenade" },
-    "emits": [ "emit_small_fungicidal_stream" ]
-  },
-  {
-    "id": "gasbomb_makeshift_act",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_active",
-    "name": { "str": "makeshift toxic gas grenade" },
-    "countdown_interval": "30 seconds",
-    "emits": [ "emit_toxic_stream" ]
-  },
-  {
     "id": "tool_rocket_candy",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
