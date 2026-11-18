@@ -1210,7 +1210,7 @@ bool gunmod_remove_activity_actor::gunmod_unload( Character &who, item &gunmod )
     // and once in
     // Character::gunmod_remove
     // Remove one of them before making gunmod_unload take time
-    item_location loc = item_location( who, &gunmod );
+    item_location loc = form_loc_recursive<Character>( who, gunmod );
     return !( gunmod.ammo_remaining( ) && !who.unload( loc, true ) );
 }
 
@@ -5527,7 +5527,7 @@ void atm_activity_actor::do_turn( player_activity &act, Character &who )
         if( cash_item->charges > 1 ) {
             cash_item->charges--;
         } else {
-            item_location( who, cash_item ).remove_item();
+            form_loc_recursive<Character>( who, *cash_item ).remove_item();
         }
         destination_cash_card->ammo_set( destination_cash_card->ammo_default(),
                                          destination_cash_card->ammo_remaining() + value );
@@ -13119,6 +13119,10 @@ void hand_crank_activity_actor::do_turn( player_activity &act, Character &who )
     // to 10 watt (suspicious claims from some manufacturers) sustained output.
     // It takes 2.4 minutes to produce 1kj at just slightly under 7 watts (25 kj per hour)
     // time-based instead of speed based because it's a sustained activity
+    if( !hand_crank_tool ) {
+        act.set_to_null();
+        return;
+    }
     item &hand_crank_item = *hand_crank_tool;
 
     int time_to_crank = to_seconds<int>( 144_seconds );
@@ -13129,12 +13133,12 @@ void hand_crank_activity_actor::do_turn( player_activity &act, Character &who )
             hand_crank_item.ammo_set( itype_battery, hand_crank_item.ammo_remaining() + 1 );
         } else {
             act.set_to_null();
-            add_msg( m_info, _( "You've charged the battery completely." ) );
+            who.add_msg_if_player( m_info, _( "You've charged the battery completely." ) );
         }
     }
     if( who.get_sleepiness() >= sleepiness_levels::DEAD_TIRED ) {
         act.set_to_null();
-        add_msg( m_info, _( "You're too exhausted to keep cranking." ) );
+        who.add_msg_if_player( m_info, _( "You're too exhausted to keep cranking." ) );
     }
 }
 

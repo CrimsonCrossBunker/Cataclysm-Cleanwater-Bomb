@@ -1050,8 +1050,8 @@ std::optional<int> iuse::inhaler( Character *p, item *it, const tripoint_bub_ms 
 std::optional<int> iuse::oxygen_bottle( Character *p, item *it, const tripoint_bub_ms & )
 {
     if( !it->activation_success() ) {
-        add_msg( m_bad, _( "You try to take a deep breath from your %s, but something blocks the flow." ),
-                 it->tname() );
+        p->add_msg_if_player( m_bad, _( "You try to take a deep breath from your %s, but something blocks the flow." ),
+                              it->tname() );
         return std::nullopt;
     }
 
@@ -1471,8 +1471,12 @@ std::optional<int> iuse::fishing_rod( Character *p, item *it, const tripoint_bub
         return std::nullopt;
     }
 
+    const item_location rod = locate_cutting_tool( *p, *it );
+    if( !rod ) {
+        return std::nullopt;
+    }
     p->add_msg_if_player( _( "You cast your line and wait to hook something…" ) );
-    p->assign_activity( fish_activity_actor( item_location( *p, it ),
+    p->assign_activity( fish_activity_actor( rod,
                         g->get_fishable_locations_abs( MAX_VIEW_DISTANCE, *found ), 5_hours ) );
     return 0;
 }
@@ -2062,7 +2066,8 @@ std::optional<int> iuse::manage_exosuit( Character *p, item *it, const tripoint_
         return std::nullopt;
     }
     if( it->get_container_pockets().empty() ) {
-        add_msg( m_warning, _( "Your %s does not have any pockets to contain modules." ), it->tname() );
+        p->add_msg_if_player( m_warning, _( "Your %s does not have any pockets to contain modules." ),
+                              it->tname() );
         return std::nullopt;
     }
     p->mod_moves( -exosuit_interact::run( it ) );
@@ -2544,28 +2549,29 @@ std::optional<int> iuse::crowbar( Character *p, item *it, const tripoint_bub_ms 
         return std::nullopt;
     }
 
-    if( prying->prying_nails ) {
-        p->assign_activity( prying_activity_actor( pnt, item_location{*p, it} ) );
-        return std::nullopt;
+    if( !prying->prying_nails ) {
+        // Doors need PRY 2 which is on a crowbar, crates need PRY 1 which is on a crowbar
+        // & a claw hammer.
+        // The iexamine function for crate supplies a hammer object.
+        // So this stops the player (A)ctivating a Hammer with a Crowbar in their backpack
+        // then managing to open a door.
+        const int pry_level = it->get_quality( qual_PRY );
+
+        if( pry_level < prying->prying_level ) {
+            // This doesn't really make it clear to the player
+            // why their attempt is failing.
+            p->add_msg_if_player( _( "You can't get sufficient leverage to open that with your %1$s." ),
+                                  it->tname() );
+            p->mod_moves( -50 ); // spend a few moves trying it.
+            return std::nullopt;
+        }
     }
 
-    // Doors need PRY 2 which is on a crowbar, crates need PRY 1 which is on a crowbar
-    // & a claw hammer.
-    // The iexamine function for crate supplies a hammer object.
-    // So this stops the player (A)ctivating a Hammer with a Crowbar in their backpack
-    // then managing to open a door.
-    const int pry_level = it->get_quality( qual_PRY );
-
-    if( pry_level < prying->prying_level ) {
-        // This doesn't really make it clear to the player
-        // why their attempt is failing.
-        p->add_msg_if_player( _( "You can't get sufficient leverage to open that with your %1$s." ),
-                              it->tname() );
-        p->mod_moves( -50 ); // spend a few moves trying it.
+    const item_location tool_loc = locate_cutting_tool( *p, *it );
+    if( !tool_loc ) {
         return std::nullopt;
     }
-
-    p->assign_activity( prying_activity_actor( pnt, item_location{*p, it} ) );
+    p->assign_activity( prying_activity_actor( pnt, tool_loc ) );
 
     return std::nullopt;
 }
@@ -2808,7 +2814,10 @@ static std::optional<int> dig_tool( Character *p, item *it, const tripoint_bub_m
         digging_time /= 2;
     }
 
-    const item_location mining_tool( *p, it );
+    const item_location mining_tool = locate_cutting_tool( *p, *it );
+    if( !mining_tool ) {
+        return std::nullopt;
+    }
     const tripoint_abs_ms pnt_abs = here.get_abs( pnt );
     if( activity == ACT_JACKHAMMER ) {
         p->assign_activity( jackhammer_activity_actor( mining_tool, pnt_abs, digging_time ) );
@@ -2849,7 +2858,11 @@ std::optional<int> iuse::pick_lock( Character *p, item *it, const tripoint_bub_m
             *it, here.get_abs( *target ) ) ) {
         return std::nullopt;
     }
-    p->assign_activity( lockpick_activity_actor::use_item( item_location( *p, it ),
+    const item_location lockpick_loc = locate_cutting_tool( *p, *it );
+    if( !lockpick_loc ) {
+        return std::nullopt;
+    }
+    p->assign_activity( lockpick_activity_actor::use_item( lockpick_loc,
                         here.get_abs( *target ), *p ) );
     return 1;
 }
@@ -3894,7 +3907,11 @@ std::optional<int> iuse::portable_game( Character *p, item *it, const tripoint_b
                 n->assign_activity( portable_game_act );
             }
         }
-        portable_game_activity_actor portable_game_act( 15_minutes, item_location( *p, it ),
+        const item_location game_loc = locate_cutting_tool( *p, *it );
+        if( !game_loc ) {
+            return std::nullopt;
+        }
+        portable_game_activity_actor portable_game_act( 15_minutes, game_loc,
                 entertain_players, winner );
         p->assign_activity( portable_game_act );
 
@@ -3997,7 +4014,7 @@ std::optional<int> iuse::fitness_check( Character *p, item *it, const tripoint_b
 
 std::optional<int> iuse::hand_crank( Character *p, item *it, const tripoint_bub_ms & )
 {
-    if( p->is_npc() ) {
+    if( p->is_npc() && p->activity.execution() != activity_execution::authoritative ) {
         // Long action
         return std::nullopt;
     }
@@ -4019,8 +4036,12 @@ std::optional<int> iuse::hand_crank( Character *p, item *it, const tripoint_bub_
         if( it->ammo_capacity( ammo_battery ) > it->ammo_remaining( ) ) {
             p->add_msg_if_player( _( "You start cranking the %s to charge its %s." ), it->tname(),
                                   it->magazine_current()->tname() );
+            const item_location crank_loc = locate_cutting_tool( *p, *it );
+            if( !crank_loc ) {
+                return std::nullopt;
+            }
             // 1 day is an upper bound; expectation is it runs until the player is too tired.
-            p->assign_activity( hand_crank_activity_actor( 1_days, item_location( *p, it ) ) );
+            p->assign_activity( hand_crank_activity_actor( 1_days, crank_loc ) );
         } else {
             p->add_msg_if_player( _( "You could use the %s to charge its %s, but it's already charged." ),
                                   it->tname(), magazine->tname() );
@@ -4063,6 +4084,10 @@ std::optional<int> iuse::vibe( Character *p, item *it, const tripoint_bub_ms & )
         return std::nullopt;
 
     } else {
+        const item_location vibe_loc = locate_cutting_tool( *p, *it );
+        if( !vibe_loc ) {
+            return std::nullopt;
+        }
         if( it->ammo_remaining( ) > 0 ) {
             p->add_msg_if_player( _( "You fire up your %s and start getting the tension out." ),
                                   it->tname() );
@@ -4070,7 +4095,7 @@ std::optional<int> iuse::vibe( Character *p, item *it, const tripoint_bub_ms & )
             p->add_msg_if_player( _( "You whip out your %s and start getting the tension out." ),
                                   it->tname() );
         }
-        p->assign_activity( vibe_activity_actor( 20_minutes, item_location( *p, it ) ) );
+        p->assign_activity( vibe_activity_actor( 20_minutes, vibe_loc ) );
     }
     return 1;
 }
@@ -4334,10 +4359,13 @@ std::optional<int> iuse::hacksaw( Character *p, item *it, const tripoint_bub_ms 
     }
     map &here = get_map();
     const bool authority = p->activity.execution() == activity_execution::authoritative;
+    if( !authority && !p->is_avatar() ) {
+        return std::nullopt;
+    }
     const auto target = authority ? std::make_optional( here.get_abs( position ) ) :
                         query_adjacent_tool_target( adjacent_tool_action::saw, *p, here, *it );
     if( target && ( authority || query_hacksaw_work( *p, *it, *target ) ) ) {
-        start_hacksaw_work( *p, item_location( *p, it ), *target );
+        start_hacksaw_work( *p, locate_cutting_tool( *p, *it ), *target );
     }
     return std::nullopt; // Charges are consumed by the activity, once per turn.
 }
@@ -4907,13 +4935,15 @@ std::optional<int> iuse::toolmod_attach( Character *p, item *it, const tripoint_
         return std::nullopt;
     }
 
-    item_location mod( *p, it );
+    item_location mod = form_loc_recursive( *p, *it );
+    if( !mod ) {
+        return std::nullopt;
+    }
     const ret_val<void> source_check = can_attach_toolmod( mod );
     if( !source_check.success() ) {
         p->add_msg_if_player( m_info, "%s", source_check.str() );
         return std::nullopt;
     }
-    mod = form_loc_recursive( *p, *it );
     auto filter = [&mod]( const item & candidate ) {
         return can_attach_toolmod( mod, &candidate ).success();
     };
@@ -6772,7 +6802,7 @@ std::optional<int> iuse::radiocontrol_action( Character *p, item *it, int choice
     }
 
     const bool carried = p->has_item( *it );
-    const item_location source = carried ? item_location( *p, it ) : item_location();
+    const item_location source = carried ? locate_cutting_tool( *p, *it ) : item_location();
     map &here = get_map();
     if( choice < 0 ) {
         return 0;
@@ -7754,7 +7784,10 @@ heater find_heater( Character *p, item *it, bool force_use_it )
     bool pseudo_flag = false;
     int available_heater = 1;
     int heating_effect = 0;
-    item_location loc = item_location( *p, it );
+    item_location loc = locate_cutting_tool( *p, *it );
+    if( !loc ) {
+        loc = item_location( *p, it );
+    }
     tripoint_abs_ms vpt;
     if( it->has_flag( flag_PSEUDO ) && it->has_quality( qual_HOTPLATE ) ) {
         pseudo_flag = true;
@@ -8390,9 +8423,13 @@ std::optional<int> iuse::disassemble( Character *p, item *it, const tripoint_bub
     if( p->cant_do_mounted() || !p->has_item( *it ) ) {
         return std::nullopt;
     }
+    const item_location target_loc = locate_cutting_tool( *p, *it );
+    if( !target_loc ) {
+        return std::nullopt;
+    }
     // Disassembly owns placement and any wielded-item disposition. Its frontend
     // must select first, before a client or another player's inventory is mutated.
-    p->disassemble( item_location( *p, it ), false );
+    p->disassemble( target_loc, false );
 
     return 0;
 }
@@ -8413,7 +8450,10 @@ std::optional<int> iuse::post_up( Character *p, item *it, const tripoint_bub_ms 
     }
 
     //copy and place used item and remove the used item from inventory
-    item_location original_item( *p, it );
+    item_location original_item = locate_cutting_tool( *p, *it );
+    if( !original_item ) {
+        return std::nullopt;
+    }
     item copy_item( *original_item );
     here.add_item( *pnt_, copy_item );
     original_item.remove_item();
@@ -8443,7 +8483,10 @@ std::optional<int> iuse::play_game( Character *p, item *it, const tripoint_bub_m
     const bool w_friends = fcount > 0;
     std::vector<character_id> entertain_players = { p->getID() };
     const time_duration play_time = 1_hours;
-    const item_location entertain_item( *p, it );
+    const item_location entertain_item = locate_cutting_tool( *p, *it );
+    if( !entertain_item ) {
+        return std::nullopt;
+    }
     int winner_index = -1;
 
     auto assign_game_activity = [&play_time, &entertain_item, &entertain_players,
@@ -8594,7 +8637,11 @@ std::optional<int> iuse::change_outfit( Character *p, item *it, const tripoint_b
         return std::nullopt;
     }
 
-    p->assign_activity( outfit_swap_actor( item_location{*p, it} ) );
+    const item_location outfit_loc = form_loc_recursive<Character>( *p, *it );
+    if( !outfit_loc ) {
+        return std::nullopt;
+    }
+    p->assign_activity( outfit_swap_actor( outfit_loc ) );
 
     // Deleting the item we activated is handled in outfit_swap_actor::finish
     return std::nullopt;
@@ -8638,7 +8685,10 @@ std::optional<int> iuse::ebooksave( Character *p, item *it, const tripoint_bub_m
         p->add_msg_if_player( m_info, _( "You can't see to do that!" ) );
         return std::nullopt;
     }
-    item_location ereader = item_location( *p, it );
+    item_location ereader = locate_cutting_tool( *p, *it );
+    if( !ereader ) {
+        return std::nullopt;
+    }
     const drop_locations to_scan = game_menus::inv::ebooksave( *p, ereader );
     if( to_scan.empty() ) {
         return std::nullopt;
@@ -8728,7 +8778,11 @@ std::optional<int> iuse::binder_add_recipe( Character *p, item *binder, const tr
         return std::nullopt;
     }
 
-    bookbinder_copy_activity_actor act( item_location( *p, binder ), recipes[menu.ret]->ident() );
+    const item_location binder_loc = locate_cutting_tool( *p, *binder );
+    if( !binder_loc ) {
+        return std::nullopt;
+    }
+    bookbinder_copy_activity_actor act( binder_loc, recipes[menu.ret]->ident() );
     p->assign_activity( act );
 
     return std::nullopt;

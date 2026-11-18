@@ -17,6 +17,7 @@
 #include "flag.h"
 #include "item.h"
 #include "item_activation.h"
+#include "iuse_actor.h"
 #include "itype.h"
 #include "json.h"
 #include "line.h"
@@ -46,7 +47,7 @@ bool settle_security( Character &who, item &controller, vehicle &target, int rol
     const auto generation = who.activity.identity_generation();
     const int64_t target_id = target.uid().get_value();
     const bool carried = who.has_item( controller );
-    const item_location source = carried ? item_location( who, &controller ) : item_location();
+    const item_location source = carried ? form_loc_recursive<Character>( who, controller ) : item_location();
     int effort = 0;
     bool success = false;
     if( roll < -20 ) {
@@ -646,7 +647,7 @@ std::optional<int> begin_remote_vehicle_access( Character &who, item &controller
         return std::nullopt;
     }
     who.assign_activity( remote_vehicle_activity_actor( capture_item_source( who,
-                         item_location( who, &controller ) ),
+                         form_loc_recursive<Character>( who, controller ) ),
                          *choices.remote_vehicle_uid, choices.remote_vehicle_action == "action" ) );
     return 0;
 }
