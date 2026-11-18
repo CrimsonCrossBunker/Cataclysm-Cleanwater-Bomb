@@ -1,27 +1,42 @@
-#include "cata_catch.h"
-
 #include <algorithm>
+#include <array>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
+#include "cata_catch.h"
 #include "cata_scope_helpers.h"
-#include "game.h"
+#include "city.h"
+#include "common_types.h"
 #include "coordinates.h"
+#include "game.h"
+#include "line.h"
 #include "map.h"
+#include "map_helpers.h"
 #include "map_scale_constants.h"
 #include "mapgendata.h"
-#include "map_helpers.h"
-#include "mapdata.h"
-#include "line.h"
 #include "north_america.h"
 #include "north_america_ecology.h"
 #include "north_america_elevation.h"
-#include "regional_climate.h"
 #include "north_america_transport.h"
+#include "omdata.h"
 #include "overmap.h"
+#include "overmap_location.h"
 #include "overmap_test_helpers.h"
 #include "overmapbuffer.h"
+#include "point.h"
+#include "regional_climate.h"
 #include "rng.h"
+#include "type_id.h"
+
+static const overmap_special_id overmap_special_house_regional_cape_cod( "house_regional_cape_cod" );
+
+static const ter_str_id ter_t_open_air( "t_open_air" );
+static const ter_str_id ter_t_rock( "t_rock" );
 
 TEST_CASE( "atlas_elevation_distinguishes_sea_level_from_local_storeys", "[north_america]" )
 {
@@ -78,19 +93,19 @@ TEST_CASE( "atlas_extended_map_window_loads_original_rock_and_air", "[north_amer
 
     window.load( tripoint_abs_sm( site, -30 ), false, false );
     REQUIRE( window.inbounds_z( -30 ) );
-    CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_str_id( "t_rock" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, -30 ) ) == ter_t_rock.id() );
     CHECK( !window.inbounds_z( 0 ) );
     REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, -41 ) ) );
     CHECK( window.get_abs_sub().z() == -30 );
-    CHECK( window.ter( tripoint_bub_ms( middle, -41 ) ) == ter_str_id( "t_rock" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, -41 ) ) == ter_t_rock.id() );
 
     window.load( tripoint_abs_sm( site, 30 ), false, false );
     REQUIRE( window.inbounds_z( 30 ) );
-    CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_str_id( "t_open_air" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, 30 ) ) == ter_t_open_air.id() );
     CHECK( !window.inbounds_z( -30 ) );
     REQUIRE( window.ensure_z_in_window( tripoint_bub_ms( middle, 41 ) ) );
     CHECK( window.get_abs_sub().z() == 30 );
-    CHECK( window.ter( tripoint_bub_ms( middle, 41 ) ) == ter_str_id( "t_open_air" ).id() );
+    CHECK( window.ter( tripoint_bub_ms( middle, 41 ) ) == ter_t_open_air.id() );
 }
 
 TEST_CASE( "atlas_diagonal_slopes_have_visible_relief", "[north_america]" )
@@ -438,9 +453,9 @@ TEST_CASE( "atlas_city_building_can_be_placed_at_an_overmap_edge",
 {
     const auto om = std::make_unique<overmap>( point_abs_om::zero );
     const tripoint_om_omt edge( 0, OMAPY / 2, 0 );
-    const overmap_special_id house( "house_regional_cape_cod" );
+    const overmap_special_id &house = overmap_special_house_regional_cape_cod;
     const city town( "" );
-    const auto facing = om_direction::type::north;
+    const om_direction::type facing = om_direction::type::north;
     REQUIRE( house.is_valid() );
     om->ter_set( edge, oter_id( "field" ) );
 
