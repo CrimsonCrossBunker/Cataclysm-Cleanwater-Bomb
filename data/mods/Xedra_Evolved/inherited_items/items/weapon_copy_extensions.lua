@@ -534,3 +534,14 @@ do
     item:flag("WOODEN_WEAPON")
     content.replace(item)
 end
+
+do
+    local item = content.Item {
+        id = "cane",
+        copy_from = "cane",
+        looks_like = "cane",
+        name = ccb.content.plural_text("walking cane", "walking canes"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end

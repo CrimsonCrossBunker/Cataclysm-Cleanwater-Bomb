@@ -146,13 +146,6 @@
   },
   {
     "type": "ITEM",
-    "id": "cane",
-    "copy-from": "cane",
-    "name": { "str": "walking cane" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "GUN" ],
     "id": "crossbow",
     "copy-from": "crossbow",

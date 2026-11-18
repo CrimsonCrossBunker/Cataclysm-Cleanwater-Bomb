@@ -2145,3 +2145,248 @@ do
     item:tool { charges_per_use = 2, ammo_types = { "battery" } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "cane",
+        name = ccb.content.plural_text("walking cane", "walking canes"),
+        description = ccb.content.text("Handicapped or not, you always walk in style.  Consisting of a metal headpiece and a wooden body, this makes a great bashing weapon in a pinch."),
+        mass_milligrams = 453000,
+        color = "dark_gray",
+        symbol = "/",
+        techniques = { "WBLOCK_1", "MOUNTED_CHARGE" },
+        weapon_categories = { "BATONS" },
+        volume_ml = 1000,
+        longest_side_mm = 800,
+        melee_to_hit = 2,
+        price_cents = 16000,
+        price_postapoc_cents = 100,
+    }
+    item:material("wood", 1)
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("CRUTCHES")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:mounted_charge { max_steps = 15, damage_type = "bash", multiplier_per_step = 0.06, max_multiplier = 1.25 }
+    item:fault_group("staff_short", {  })
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wizard_cane_cheap",
+        name = ccb.content.plural_text("cheap wizard cane (off)", "cheap wizard canes (off)"),
+        description = ccb.content.text("An arcane but cheap-looking cane made of plastic.  It has a white light-up orb on the end.  Using it will turn it on and provide a weak light."),
+        copy_from = "cane",
+        looks_like = "cane",
+        mass_milligrams = 195000,
+        color = "blue",
+        symbol = "/",
+        melee_to_hit = 1,
+        price_postapoc_cents = 20,
+        remove_techniques = { "MOUNTED_CHARGE" },
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "wizard_cane_cheap_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:flag("FRAGILE_MELEE")
+    item:flag("WATER_BREAK_ACTIVE")
+    item:flag("COSPLAY_PROPS")
+    item:clear_mounted_charge()
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" },
+        default_magazine = "light_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wizard_cane_cheap_on",
+        copy_from = "wizard_cane_cheap",
+        looks_like = "wizard_cane_cheap",
+        name = ccb.content.plural_text("cheap wizard cane (on)", "cheap wizard canes (on)"),
+        color = "blue",
+        light = 4,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "wizard_cane_cheap" },
+        menu_text = ccb.content.text("Turn off"),
+        message = ccb.content.text("You turn off the %s."),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("CHARGEDIM")
+    item:flag("COSPLAY_PROPS")
+    item:flag("CRUTCHES")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SPAWN_ACTIVE")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:transform_into { target = "wizard_cane_cheap" }
+    item:tool { power_milliwatts = 1000 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wizard_cane",
+        name = ccb.content.plural_text("wizard cane (off)", "wizard canes (off)"),
+        description = ccb.content.text("An arcane-looking cane made of wood and aluminum.  It has a white light-up orb on the end.  Using it will turn it on and illuminate the area around you."),
+        copy_from = "cane",
+        looks_like = "cane",
+        mass_milligrams = 500000,
+        color = "blue",
+        symbol = "/",
+        melee_to_hit = 1,
+        price_postapoc_cents = 150,
+        remove_techniques = { "MOUNTED_CHARGE" },
+        replace_pockets = true,
+    }
+    item:material("wood", 1)
+    item:material("aluminum", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "wizard_cane_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:flag("WATER_BREAK_ACTIVE")
+    item:flag("COSPLAY_PROPS")
+    item:clear_mounted_charge()
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_LIGHT", "BATTERY_ULTRA_LIGHT" },
+        default_magazine = "light_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "wizard_cane_on",
+        copy_from = "wizard_cane",
+        looks_like = "wizard_cane",
+        name = ccb.content.plural_text("wizard cane (on)", "wizard canes (on)"),
+        color = "blue",
+        light = 300,
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "wizard_cane" },
+        menu_text = ccb.content.text("Turn off"),
+        message = ccb.content.text("You turn off the %s."),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("CHARGEDIM")
+    item:flag("COSPLAY_PROPS")
+    item:flag("CRUTCHES")
+    item:flag("NONCONDUCTIVE")
+    item:flag("SPAWN_ACTIVE")
+    item:flag("TRADER_AVOID")
+    item:flag("WATER_BREAK")
+    item:transform_into { target = "wizard_cane" }
+    item:tool { power_milliwatts = 10000 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shocktonfa_off",
+        category = "weapons",
+        name = ccb.content.plural_text("tactical tonfa (off)", "tactical tonfas (off)"),
+        description = ccb.content.text("A reinforced plastic tonfa; the core is filled with capacitors and a high-yield rechargeable storage battery.  When a switch on the handle is pressed, a high-voltage current is transmitted to the two electrodes mounted in the end of the tonfa, and by extension to anyone unfortunate enough to be in contact with them.  It also has a nifty flashlight, which is off at the moment."),
+        mass_milligrams = 726000,
+        volume_ml = 2250,
+        longest_side_mm = 500,
+        price_cents = 17000,
+        price_postapoc_cents = 2500,
+        melee_to_hit = 2,
+        symbol = "/",
+        color = "dark_gray",
+        techniques = { "WBLOCK_2", "RAPID", "PRECISE" },
+        weapon_categories = { "BATONS" },
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("TAZER")
+    item:transform_on_use {
+        result = { target = "shocktonfa_on" },
+        message = ccb.content.text("You turn the light on."),
+        menu_text = ccb.content.text("Turn on light"),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("BELT_CLIP")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 14)
+    item:fault_group("tonfas", {  })
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_MEDIUM" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "shocktonfa_on",
+        copy_from = "shocktonfa_off",
+        looks_like = "shocktonfa_off",
+        name = ccb.content.plural_text("tactical tonfa (on)", "tactical tonfas (on)"),
+        description = ccb.content.text("A reinforced plastic tonfa; the core is filled with capacitors and a high-yield rechargeable storage battery.  When a switch on the handle is pressed, a high-voltage current is transmitted to the two electrodes mounted in the end of the weapon, and by extension to anyone unfortunate enough to be in contact with them.  The integral flashlight is turned on, continually draining power and lighting the surrounding area."),
+        melee_to_hit = 3,
+        light = 450,
+        weapon_categories = { "BATONS" },
+    }
+    item:clear_use_actions()
+    item:native_use("TAZER")
+    item:transform_on_use {
+        result = { target = "shocktonfa_off" },
+        message = ccb.content.text("You turn off the light."),
+        menu_text = ccb.content.text("Turn off light"),
+        ammo_scale = 0,
+    }
+    item:clear_flags()
+    item:flag("CHARGEDIM")
+    item:flag("DURABLE_MELEE")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("BELT_CLIP")
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "shocktonfa_off" }
+    item:tool { power_milliwatts = 15000 }
+    content.add(item)
+end
