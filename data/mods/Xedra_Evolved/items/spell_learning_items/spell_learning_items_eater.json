@@ -211,21 +211,6 @@
     "use_action": { "type": "learn_spell", "spells": [ "spell_clairvoyance" ] }
   },
   {
-    "id": "eater_book_artifact",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "Enemy of the World", "str_pl": "copies of Enemy of the World" },
-    "description": "A small Korean novel that describes the journey of an incredibly strong protagonist attempting to save the world.",
-    "weight": "460 g",
-    "volume": "500 ml",
-    "symbol": "[",
-    "color": "brown",
-    "material": [ "forged_dreamstuff" ],
-    "looks_like": "book_newage_generic",
-    "use_action": { "type": "learn_spell", "spells": [ "spell_melee_damage" ] },
-    "melee_damage": { "bash": 1 }
-  },
-  {
     "id": "artifact_horn",
     "type": "ITEM",
     "category": "artifacts",

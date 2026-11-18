@@ -42,3 +42,5 @@ content.upsert_enchantment(content.Enchantment {
 }:melee_damage("bash", { add_handler = "ki_strike_bash", load_skills = { "unarmed" } }))
 
 require("item_group_changes")
+
+require("book_items")

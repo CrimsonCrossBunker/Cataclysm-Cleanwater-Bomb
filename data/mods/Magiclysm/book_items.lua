@@ -1,0 +1,6 @@
+require("book_items.items.books")
+require("book_items.items.books_lore")
+require("book_items.items.recipe_books")
+require("book_items.items.spell_scrolls")
+require("book_items.items.spellbooks")
+require("book_items.migration_and_obsoletion.items")

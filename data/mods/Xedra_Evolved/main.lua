@@ -210,3 +210,5 @@ require("book_of_lies")
 require("item_groups")
 
 require("item_group_changes")
+
+require("book_items")

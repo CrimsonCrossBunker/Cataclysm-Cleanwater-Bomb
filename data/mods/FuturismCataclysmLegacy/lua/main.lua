@@ -31,3 +31,5 @@ require("lua.craft_recipes")
 require("item_groups")
 
 require("item_group_changes")
+
+require("book_items")

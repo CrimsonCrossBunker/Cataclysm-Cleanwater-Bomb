@@ -1,0 +1,7 @@
+require("book_items.items.alchemy_recipes")
+require("book_items.items.book_lore")
+require("book_items.items.book_recipes")
+require("book_items.items.books_deduction")
+require("book_items.items.books_nether_sorcery")
+require("book_items.items.spell_learning_items.spell_learning_items_eater")
+require("book_items.items.spell_learning_items.spellbooks_hedge")
