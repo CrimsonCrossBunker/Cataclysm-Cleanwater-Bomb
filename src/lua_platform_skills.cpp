@@ -354,6 +354,7 @@ struct level_adjustments {
     std::optional<int> practical;
     std::optional<int> knowledge;
     std::optional<int> exercise_percent;
+    std::optional<int> exercise_raw;
 };
 
 level_adjustments read_level_adjustments( const sol::table &requested )
@@ -366,7 +367,7 @@ level_adjustments read_level_adjustments( const sol::table &requested )
         }
         const std::string key = entry.first.as<std::string>();
         if( key != "practical" && key != "knowledge" &&
-            key != "exercise_percent" ) {
+            key != "exercise_percent" && key != "exercise_raw" ) {
             throw std::invalid_argument(
                 "services.skills.set received unknown option '" +
                 key + "'" );
@@ -384,6 +385,8 @@ level_adjustments read_level_adjustments( const sol::table &requested )
                     "must be within 0..99" );
             }
             result.exercise_percent = value;
+        } else if( key == "exercise_raw" ) {
+            result.exercise_raw = value;
         } else {
             if( value < 0 || value > MAX_SKILL ) {
                 throw std::invalid_argument(
@@ -397,8 +400,12 @@ level_adjustments read_level_adjustments( const sol::table &requested )
             }
         }
     }
+    if( result.exercise_percent && result.exercise_raw ) {
+        throw std::invalid_argument(
+            "services.skills.set accepts only one exercise format" );
+    }
     if( !result.practical && !result.knowledge &&
-        !result.exercise_percent ) {
+        !result.exercise_percent && !result.exercise_raw ) {
         throw std::invalid_argument(
             "services.skills.set requires at least one adjustment" );
     }
@@ -446,7 +453,9 @@ sol::table set_state(
     if( adjustments.knowledge ) {
         character->set_knowledge_level( id, knowledge );
     }
-    if( adjustments.exercise_percent ) {
+    if( adjustments.exercise_raw ) {
+        character->get_skill_level_object( id ).set_exercise( *adjustments.exercise_raw, true );
+    } else if( adjustments.exercise_percent ) {
         character->get_skill_level_object( id ).set_exercise(
             *adjustments.exercise_percent );
     }

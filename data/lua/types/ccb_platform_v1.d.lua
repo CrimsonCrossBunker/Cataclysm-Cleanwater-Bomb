@@ -6488,6 +6488,9 @@ function CcbPlatformGameplayOptionsApi.get(id) end
 ---@param id string Raw native option name passed through without validation.
 ---@return string Native string slot; unknown names and non-string types retain native diagnostics.
 function CcbPlatformGameplayOptionsApi.get_string(id) end
+---@param id string Raw native option name.
+---@return number Native numeric value, including integer and boolean conversions. Unknown or incompatible options use native diagnostics and defaults.
+function CcbPlatformGameplayOptionsApi.get_number(id) end
 ---@param id string
 ---@return boolean
 function CcbPlatformGameplayOptionsApi.has(id) end
@@ -9819,6 +9822,17 @@ local CcbSpellsApi = {}
 ---@return CcbResult result `value` is the Native effective level.
 function CcbSpellsApi.effective_level(character, raw_spell_id) end
 
+---@param character GameHandle Exact live Character.
+---@param spell GameId GameId<spell>.
+---@return CcbResult result value contains a detached spell snapshot including experience, or not_known if absent.
+function CcbSpellsApi.get(character, spell) end
+
+---@param character GameHandle Exact live Character.
+---@param spell GameId GameId<spell>.
+---@param baseline? boolean Use definition difficulty even for a known spell. Defaults to false.
+---@return CcbResult result value is the native numeric spell difficulty.
+function CcbSpellsApi.difficulty(character, spell, baseline) end
+
 ---Assign a native spell level without granting its spell-school trait. Nonnegative levels can learn an unknown spell; negative levels forget it.
 ---@param character GameHandle Exact live Character.
 ---@param spell GameId GameId<spell>.
@@ -12827,6 +12841,19 @@ function CcbPlatformWoundsApi.remove_all_direct(character, body_part, wound) end
 ---@field returned integer Number of returned ids.
 ---@field truncated boolean Whether additional ids were omitted.
 
+---@class CcbSkillState
+---@field practical integer Native practical skill level.
+---@field practical_effective integer Effective level including native modifiers.
+---@field practical_exercise_percent integer Practical exercise as a percentage.
+---@field practical_exercise_raw integer Native practical exercise points.
+---@field knowledge integer Native theoretical skill level.
+
+---@class CcbSkillSetOptions
+---@field practical? integer Requested practical level in 0..10.
+---@field knowledge? integer Requested theoretical level in 0..10, at least the practical level.
+---@field exercise_percent? integer Practical exercise percent in 0..99. Mutually exclusive with exercise_raw.
+---@field exercise_raw? integer Native signed-int practical exercise points. Applies native level rollover without training or focus modifiers.
+
 ---@class CcbSkillsApi
 local CcbSkillsApi = {}
 
@@ -12837,6 +12864,17 @@ local CcbSkillsApi = {}
 ---@param id string Raw skill ID text; empty, embedded NUL and long strings follow native ID lookup.
 ---@return CcbResult result `value` is the effective numeric level from Character:get_skill_level.
 function CcbSkillsApi.level(character, id) end
+
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<skill>.
+---@return CcbResult result value is a detached CcbSkillState.
+function CcbSkillsApi.get(character, id) end
+
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<skill>.
+---@param adjustments CcbSkillSetOptions
+---@return CcbResult result value contains before and after CcbSkillState snapshots.
+function CcbSkillsApi.set(character, id, adjustments) end
 
 ---Assign through native Character::set_skill_level, including its practical/theory bookkeeping and native clamping.
 ---@param character GameHandle Exact live Character.
