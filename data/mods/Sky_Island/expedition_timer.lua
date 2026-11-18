@@ -73,3 +73,14 @@ ccb.runtime.handler(handler_id, function(payload)
     return state.has_trait(payload.avatar, "awayfromhome") and condition(payload.avatar)
 end)
 content.add(timer)
+
+for _, sidebar in ipairs {
+    "legacy_classic_sidebar",
+    "legacy_compact_sidebar",
+    "legacy_labels_narrow_sidebar",
+    "legacy_labels_sidebar",
+    "structured_sidebar",
+    "spacebar",
+} do
+    content.extend_sidebar(sidebar, { timer.id })
+end
