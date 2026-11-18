@@ -541,18 +541,6 @@
     }
   },
   {
-    "id": "landough_calrisean",
-    "type": "ITEM",
-    "copy-from": "sourdough_starter_uncovered",
-    "looks_like": "jar_glass_sealed",
-    "name": { "str_sp": "Dana's family sourdough starter" },
-    "description": "This crusty old jar has a glow-in-the-dark Millennium Falcon decal on the side, and a label that reads, \"Landough Calrisean.  Dana's.  Do not touch on pain of death\".  It's been abandoned for some time and doesn't look like it could be readily salvaged as a sourdough culture, but maybe an experienced sourdough baker could manage it.",
-    "weight": "450 g",
-    "volume": "680 ml",
-    "longest_side": "132 mm",
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "Dana_sourdough_bread",

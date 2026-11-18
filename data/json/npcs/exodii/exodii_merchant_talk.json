@@ -1,21 +1,5 @@
 [
   {
-    "type": "ITEM",
-    "id": "rubik_farthing",
-    "name": { "str": "shiny farthing" },
-    "category": "currency",
-    "description": "A small, shiny brass coin with a picture of a stern-looking older man on one side and the words 'For all of Angland and her children' in an arc beneath him.  On the other side is a large number '1' wreathed in what appear to be nettle leaves.",
-    "weight": "2 g",
-    "color": "yellow",
-    "symbol": ".",
-    "flags": [ "COIN_SHAPED" ],
-    "material": [ "copper" ],
-    "volume": "1 ml",
-    "price": "1 cent",
-    "price_postapoc": "1 cent",
-    "use_action": [ "COIN_FLIP" ]
-  },
-  {
     "//": "table of contents: common response strings appearing in this list of topics",
     "id": [
       "TALK_EXODII_MERCHANT_New",
