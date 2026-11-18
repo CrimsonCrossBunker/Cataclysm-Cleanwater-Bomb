@@ -1472,6 +1472,7 @@ struct item_melee_damage {
     std::unordered_map<damage_type_id, float> damage_map;
     float default_value = 0.0f;  // NOLINT(cata-serialize)
     bool handle_proportional( const JsonValue &jval );
+    void scale( const item_melee_damage &factors );
     item_melee_damage &operator+=( const item_melee_damage &rhs );
     void finalize();
     void deserialize( const JsonObject &jo );
@@ -1927,6 +1928,7 @@ struct itype {
         bool was_loaded = false;
         void load( const JsonObject &jo, std::string_view src );
         void load_slots( const JsonObject &jo, bool was_loaded, std::string_view src );
+        void replace_material( const material_id &original, const material_id &replacement );
 };
 
 void load_charge_removal_blacklist( const JsonObject &jo, std::string_view src );

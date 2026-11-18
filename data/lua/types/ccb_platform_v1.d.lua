@@ -764,6 +764,32 @@ function ItemDefinition:melee_damage(damage_type, amount) end
 ---@return ItemDefinition self
 function ItemDefinition:clear_melee_damage() end
 
+---@class ItemNumericAdjustment
+---@field factor? number Positive multiplier. Choose this or offset.
+---@field offset? integer Additive change in the field's native units.
+
+---@class ItemMeasurementChanges
+---@field mass_milligrams? ItemNumericAdjustment
+---@field volume_ml? ItemNumericAdjustment
+---@field longest_side_mm? ItemNumericAdjustment
+---@field price_cents? ItemNumericAdjustment
+---@field price_postapoc_cents? ItemNumericAdjustment
+---@field melee_to_hit? ItemNumericAdjustment
+
+---Adjust the inherited or explicitly set measurements before material substitutions. Scaled values truncate to native integer units.
+---@param changes ItemMeasurementChanges
+---@return ItemDefinition
+function ItemDefinition:adjust_measurements(changes) end
+
+---@class ItemMeleeDamageChanges
+---@field factors? table<string, number> Multipliers keyed by damage type. Omitted types default to one.
+---@field bonuses? table<string, number> Additive changes keyed by damage type. Omitted types default to zero.
+
+---Apply damage multipliers and then bonuses using native melee rounding, after any explicit melee damage.
+---@param changes ItemMeleeDamageChanges
+---@return ItemDefinition
+function ItemDefinition:adjust_melee_damage(changes) end
+
 ---@param ammo_type string
 ---@param capacity integer
 ---@return ItemDefinition self
@@ -777,6 +803,44 @@ function ItemDefinition:magazine_capacity(capacity) end
 ---@param portions integer
 ---@return ItemDefinition self
 function ItemDefinition:material(id, portions) end
+
+---Substitute a material and adjust mass using the two material densities. Multiple substitutions apply in call order.
+---@param original string
+---@param replacement string
+---@return ItemDefinition
+function ItemDefinition:replace_material(original, replacement) end
+
+---Append a possible native fault to the item.
+---@param id string
+---@param weight integer
+---@return ItemDefinition
+function ItemDefinition:fault(id, weight) end
+
+---@class ItemFaultGroupOptions
+---@field weight_override? integer Replace each fault weight. Defaults to -1, which uses the individual weights.
+---@field weight_add? integer Add to each weight when no override is specified.
+---@field weight_multiplier? number Scale individual weights when no override is specified.
+
+---Append faults from a native fault group.
+---@param id string
+---@param options ItemFaultGroupOptions
+---@return ItemDefinition
+function ItemDefinition:fault_group(id, options) end
+
+---@class ItemMountedChargeOptions
+---@field max_steps integer Maximum charge distance in map tiles.
+---@field damage_type? 'stab'|'cut'|'bash' Defaults to stab.
+---@field multiplier_per_step? number Between 0 and 0.5, defaults to 0.10.
+---@field max_multiplier? number Between 1 and 2, defaults to 1.5.
+
+---Set the native mounted charge profile.
+---@param options ItemMountedChargeOptions
+---@return ItemDefinition
+function ItemDefinition:mounted_charge(options) end
+
+---Remove an inherited mounted charge profile.
+---@return ItemDefinition
+function ItemDefinition:clear_mounted_charge() end
 
 ---@param id string
 ---@param level integer

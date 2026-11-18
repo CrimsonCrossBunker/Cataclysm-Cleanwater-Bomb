@@ -620,18 +620,21 @@ bool item_melee_damage::handle_proportional( const JsonValue &jval )
         item_melee_damage rhs;
         rhs.default_value = 1.0f;
         rhs.deserialize( jval.get_object() );
-        for( const std::pair<const damage_type_id, float> &dt : rhs.damage_map ) {
-            const auto iter = damage_map.find( dt.first );
-            if( iter != damage_map.end() ) {
-                iter->second *= dt.second;
-                // For maintaining legacy behaviour (when melee damage used ints)
-                iter->second = std::floor( iter->second );
-            }
-        }
+        scale( rhs );
         return true;
     }
     jval.throw_error( "invalid damage map for item melee damage" );
     return false;
+}
+
+void item_melee_damage::scale( const item_melee_damage &factors )
+{
+    for( const auto &[type, factor] : factors.damage_map ) {
+        const auto iter = damage_map.find( type );
+        if( iter != damage_map.end() ) {
+            iter->second = std::floor( iter->second * factor );
+        }
+    }
 }
 
 item_melee_damage &item_melee_damage::operator+=( const item_melee_damage &rhs )

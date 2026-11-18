@@ -6,7 +6,6 @@
 
 #include <character_id.h>
 #include <damage.h>
-#include <enums.h>
 #include <explosion.h>
 #include <fire.h>
 #include <flat_set.h>
@@ -163,6 +162,60 @@ struct quality_level {
     float speed = 1.0f;
 };
 
+struct item_numeric_adjustment {
+    std::optional<double> factor;
+    std::int64_t offset = 0;
+};
+
+struct item_measurement_changes {
+    std::optional<item_numeric_adjustment> mass;
+    std::optional<item_numeric_adjustment> volume;
+    std::optional<item_numeric_adjustment> length;
+    std::optional<item_numeric_adjustment> price;
+    std::optional<item_numeric_adjustment> postapoc_price;
+    std::optional<item_numeric_adjustment> accuracy;
+
+    static constexpr std::pair<const char *, std::optional<item_numeric_adjustment>
+           item_measurement_changes::*> fields[] = {
+        { "mass_milligrams", &item_measurement_changes::mass },
+        { "volume_ml", &item_measurement_changes::volume },
+        { "longest_side_mm", &item_measurement_changes::length },
+        { "price_cents", &item_measurement_changes::price },
+        { "price_postapoc_cents", &item_measurement_changes::postapoc_price },
+        { "melee_to_hit", &item_measurement_changes::accuracy }
+    };
+};
+
+template<typename T>
+T apply_item_adjustment( T current, const item_numeric_adjustment &adjustment )
+{
+    constexpr auto minimum = std::numeric_limits<T>::min();
+    constexpr auto maximum = std::numeric_limits<T>::max();
+    if( adjustment.factor ) {
+        const double result = std::trunc( current * *adjustment.factor );
+        if( result < static_cast<double>( minimum ) ||
+            result >= -static_cast<double>( minimum ) ) {
+            throw std::runtime_error( "scaled item measurement exceeds its native range" );
+        }
+        return static_cast<T>( result );
+    }
+    const std::int64_t offset = adjustment.offset;
+    if( ( offset > 0 && current > maximum - offset ) ||
+        ( offset < 0 && current < minimum - offset ) ) {
+        throw std::runtime_error( "item measurement offset exceeds its native range" );
+    }
+    return static_cast<T>( current + offset );
+}
+
+template<typename V, typename U>
+void apply_item_adjustment( units::quantity<V, U> &current,
+                            const std::optional<item_numeric_adjustment> &adjustment )
+{
+    if( adjustment ) {
+        current = units::quantity<V, U>( apply_item_adjustment( current.value(), *adjustment ), U{} );
+    }
+}
+
 struct item_definition_data {
     struct tool_data {
         std::optional<std::set<std::string>> ammo_types;
@@ -294,12 +347,20 @@ struct item_definition_data {
     bool has_category = false;
     bool has_looks_like = false;
     std::vector<material_part> materials;
+    std::vector<std::pair<material_id, material_id>> material_replacements;
+    item_measurement_changes measurements;
+    std::vector<std::pair<fault_id, int>> faults;
+    std::vector<std::tuple<int, int, float, std::string>> fault_groups;
+    std::optional<mounted_charge_profile> mounted_charge;
+    bool clear_mounted_charge = false;
     std::vector<quality_level> qualities;
     bool replace_qualities = false;
     std::set<std::string> flags;
     bool clear_flags = false;
     std::map<std::string, double> melee_damage;
     bool clear_melee_damage = false;
+    std::optional<item_melee_damage> melee_bonuses;
+    std::optional<item_melee_damage> melee_factors;
     std::map<std::string, std::int64_t> magazine_ammo;
     std::int64_t magazine_capacity = 0;
     bool has_magazine_capacity = false;
@@ -1069,6 +1130,47 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &adjust_measurements( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        for( const auto &[field, member] : item_measurement_changes::fields ) {
+            if( const auto value = options.get<sol::optional<sol::table>>( field ) ) {
+                const auto factor = value->get<sol::optional<double>>( "factor" );
+                const auto offset = value->get<sol::optional<std::int64_t>>( "offset" );
+                if( factor.has_value() == offset.has_value() ||
+                    ( factor && ( !std::isfinite( *factor ) || *factor <= 0.0 ) ) ) {
+                    throw std::invalid_argument( "item measurement requires a positive factor or an integer offset" );
+                }
+                auto &adjustment = ( definition->measurements.*member ).emplace();
+                adjustment.factor = factor ? std::optional<double>( *factor ) : std::nullopt;
+                adjustment.offset = offset.value_or( 0 );
+            }
+        }
+        return *this;
+    }
+
+    item_definition_handle &adjust_melee_damage( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        const auto read_values = [&]( const char *key, float default_value,
+                                      std::optional<item_melee_damage> &target ) {
+            if( const auto values = options.get<sol::optional<sol::table>>( key ) ) {
+                item_melee_damage &damage = target.emplace();
+                damage.default_value = default_value;
+                for( const auto &entry : *values ) {
+                    const std::string id = entry.first.as<std::string>();
+                    const double value = entry.second.as<double>();
+                    if( id.empty() || !std::isfinite( value ) ||
+                        std::abs( value ) > std::numeric_limits<float>::max() ) {
+                        throw std::invalid_argument( "item melee adjustment requires damage ids and finite values" );
+                    }
+                    damage.damage_map.emplace( damage_type_id( id ), static_cast<float>( value ) );
+                }
+            }
+        };
+        read_values( "factors", 1.0f, definition->melee_factors );
+        read_values( "bonuses", 0.0f, definition->melee_bonuses );
+        return *this;
+    }
+
     item_definition_handle &magazine_ammo( const std::string &ammo_type,
                                            std::int64_t capacity ) {
         require_building_handle( token, *definition, "item" );
@@ -1097,6 +1199,68 @@ struct item_definition_handle {
             throw std::runtime_error( "item material requires a non-empty id and positive portions" );
         }
         definition->materials.push_back( { id, portions } );
+        return *this;
+    }
+
+    item_definition_handle &replace_material( const std::string &original, const std::string &replacement ) {
+        require_building_handle( token, *definition, "item" );
+        if( original.empty() || replacement.empty() || original == replacement ) {
+            throw std::invalid_argument( "item material replacement requires two different ids" );
+        }
+        definition->material_replacements.emplace_back( material_id( original ), material_id( replacement ) );
+        return *this;
+    }
+
+    item_definition_handle &fault( const std::string &id, std::int64_t weight ) {
+        require_building_handle( token, *definition, "item" );
+        if( id.empty() || weight < 0 || weight > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "item fault requires an id and nonnegative integer weight" );
+        }
+        definition->faults.emplace_back( fault_id( id ), static_cast<int>( weight ) );
+        return *this;
+    }
+
+    item_definition_handle &fault_group( const std::string &id, const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        const auto weight = options.get_or<std::int64_t>( "weight_override", -1 );
+        const auto add = options.get_or<std::int64_t>( "weight_add", 0 );
+        const auto multiplier = options.get_or<double>( "weight_multiplier", 1.0 );
+        if( id.empty() || weight < -1 || weight > std::numeric_limits<int>::max() ||
+            add < std::numeric_limits<int>::min() || add > std::numeric_limits<int>::max() ||
+            !std::isfinite( multiplier ) || std::abs( multiplier ) > std::numeric_limits<float>::max() ) {
+            throw std::invalid_argument( "item fault group has invalid weight options" );
+        }
+        definition->fault_groups.emplace_back( static_cast<int>( weight ), static_cast<int>( add ),
+                                               static_cast<float>( multiplier ), id );
+        return *this;
+    }
+
+    item_definition_handle &mounted_charge( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        const auto steps = options.get<std::int64_t>( "max_steps" );
+        const auto per_step = options.get_or<double>( "multiplier_per_step", 0.10 );
+        const auto maximum = options.get_or<double>( "max_multiplier", 1.50 );
+        if( steps < 1 || steps > std::numeric_limits<int>::max() ||
+            !( per_step >= 0.0 && per_step <= 0.5 ) || !( maximum >= 1.0 && maximum <= 2.0 ) ) {
+            throw std::invalid_argument( "invalid mounted charge range or multipliers" );
+        }
+        mounted_charge_profile profile;
+        profile.max_steps = static_cast<int>( steps );
+        profile.damage_type = options.get_or( "damage_type", std::string( "stab" ) );
+        profile.multiplier_per_step = static_cast<float>( per_step );
+        profile.max_multiplier = static_cast<float>( maximum );
+        if( !profile.valid() ) {
+            throw std::invalid_argument( "invalid mounted charge damage type" );
+        }
+        definition->mounted_charge = profile;
+        definition->clear_mounted_charge = false;
+        return *this;
+    }
+
+    item_definition_handle &clear_mounted_charge() {
+        require_building_handle( token, *definition, "item" );
+        definition->mounted_charge.reset();
+        definition->clear_mounted_charge = true;
         return *this;
     }
 
@@ -3639,9 +3803,16 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "price_postapoc_cents", &item_definition_handle::price_postapoc,
         "melee_damage", &item_definition_handle::melee,
         "clear_melee_damage", &item_definition_handle::clear_melee_damage,
+        "adjust_measurements", &item_definition_handle::adjust_measurements,
+        "adjust_melee_damage", &item_definition_handle::adjust_melee_damage,
         "magazine_ammo", &item_definition_handle::magazine_ammo,
         "magazine_capacity", &item_definition_handle::magazine_capacity,
         "material", &item_definition_handle::material,
+        "replace_material", &item_definition_handle::replace_material,
+        "fault", &item_definition_handle::fault,
+        "fault_group", &item_definition_handle::fault_group,
+        "mounted_charge", &item_definition_handle::mounted_charge,
+        "clear_mounted_charge", &item_definition_handle::clear_mounted_charge,
         "quality", &item_definition_handle::quality,
         "flag", &item_definition_handle::flag,
         "clear_flags", &item_definition_handle::clear_flags,
@@ -5797,6 +5968,26 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' has too many material portions" );
                 }
             }
+            for( const auto &[original, replacement] : definition.material_replacements ) {
+                for( const material_id &id : { original, replacement } ) {
+                    if( material_ids.count( id.str() ) == 0 && !id.is_valid() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' replaces an unknown material '" + id.str() + "'" );
+                    }
+                }
+            }
+            for( const auto *adjustment : { &definition.melee_factors, &definition.melee_bonuses } ) {
+                if( *adjustment ) {
+                    for( const auto &entry : ( *adjustment )->damage_map ) {
+                        const damage_type_id &id = entry.first;
+                        if( damage_type_ids.count( id.str() ) == 0 && !id.is_valid() &&
+                            id.str() != "all" && id.str() != "physical" && id.str() != "non_physical" ) {
+                            throw std::runtime_error( "item '" + definition.id +
+                                                      "' adjusts an unknown damage type '" + id.str() + "'" );
+                        }
+                    }
+                }
+            }
             for( const quality_level &quality : definition.qualities ) {
                 if( tool_quality_ids.count( quality.id ) == 0 && !quality_id( quality.id ).is_valid() ) {
                     throw std::runtime_error( "item '" + definition.id +
@@ -7470,6 +7661,22 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.melee_to_hit ) {
                         native->m_to_hit = static_cast<int>( *definition.melee_to_hit );
                     }
+                    apply_item_adjustment( native->weight, definition.measurements.mass );
+                    apply_item_adjustment( native->volume, definition.measurements.volume );
+                    apply_item_adjustment( native->longest_side, definition.measurements.length );
+                    apply_item_adjustment( native->price, definition.measurements.price );
+                    apply_item_adjustment( native->price_post, definition.measurements.postapoc_price );
+                    if( definition.measurements.accuracy ) {
+                        native->m_to_hit = apply_item_adjustment( native->m_to_hit, *definition.measurements.accuracy );
+                    }
+                    if( definition.mounted_charge || definition.clear_mounted_charge ) {
+                        native->mounted_charge = definition.mounted_charge;
+                    }
+                    for( const auto &[fault, weight] : definition.faults ) {
+                        native->faults.add( fault, weight );
+                    }
+                    native->fault_groups.insert( native->fault_groups.end(), definition.fault_groups.begin(),
+                                                 definition.fault_groups.end() );
                     if( definition.electronic_size_kb ) {
                         native->ememory_size = units::from_kilobytes(
                                                    static_cast<units::ememory::value_type>( *definition.electronic_size_kb ) );
@@ -7701,6 +7908,16 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.clear_melee_damage || !definition.melee_damage.empty() ) {
                         native->melee.finalize();
                     }
+                    if( definition.melee_factors ) {
+                        item_melee_damage factors = *definition.melee_factors;
+                        factors.finalize();
+                        native->melee.scale( factors );
+                    }
+                    if( definition.melee_bonuses ) {
+                        item_melee_damage bonuses = *definition.melee_bonuses;
+                        bonuses.finalize();
+                        native->melee += bonuses;
+                    }
                     if( !definition.magazine_ammo.empty() ) {
                         if( !native->magazine ) {
                             native->magazine = cata::make_value<islot_magazine>();
@@ -7827,6 +8044,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native->comestible->lua_platform_mod = pimpl_->owner;
                         native->comestible->lua_platform_consume_handler = definition.consume_handler;
+                    }
+                    for( const auto &[original, replacement] : definition.material_replacements ) {
+                        native->replace_material( original, replacement );
                     }
                     if( definition.is_abstract ) {
                         const itype *previous = factory.find_abstract( definition.id );
@@ -9356,6 +9576,62 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     if( *list ) {
                         for( const auto &id : **list ) {
                             hash_part( state, id );
+                        }
+                    }
+                }
+                for( const auto &[field, member] : item_measurement_changes::fields ) {
+                    if( const auto &change = v.measurements.*member ) {
+                        hash_part( state, field );
+                        if( change->factor ) {
+                            std::ostringstream factor;
+                            factor << std::hexfloat << *change->factor;
+                            hash_part( state, factor.str() );
+                        } else {
+                            hash_part( state, std::to_string( change->offset ) );
+                        }
+                    }
+                }
+                for( const auto &[original, replacement] : v.material_replacements ) {
+                    hash_part( state, "replace_material" );
+                    hash_part( state, original.str() );
+                    hash_part( state, replacement.str() );
+                }
+                for( const auto &[id, weight] : v.faults ) {
+                    hash_part( state, "item_fault" );
+                    hash_part( state, id.str() );
+                    hash_part( state, std::to_string( weight ) );
+                }
+                for( const auto &[weight, extra, multiplier, id] : v.fault_groups ) {
+                    std::ostringstream factor;
+                    factor << std::hexfloat << multiplier;
+                    hash_part( state, "item_fault_group" );
+                    hash_part( state, id );
+                    hash_part( state, std::to_string( weight ) );
+                    hash_part( state, std::to_string( extra ) );
+                    hash_part( state, factor.str() );
+                }
+                if( v.clear_mounted_charge ) {
+                    hash_part( state, "clear_mounted_charge" );
+                } else if( v.mounted_charge ) {
+                    std::ostringstream factors;
+                    factors << std::hexfloat << v.mounted_charge->multiplier_per_step << ' '
+                            << v.mounted_charge->max_multiplier;
+                    hash_part( state, "mounted_charge" );
+                    hash_part( state, v.mounted_charge->damage_type );
+                    hash_part( state, std::to_string( v.mounted_charge->max_steps ) );
+                    hash_part( state, factors.str() );
+                }
+                for( const auto *adjustment : { &v.melee_factors, &v.melee_bonuses } ) {
+                    if( *adjustment ) {
+                        const item_melee_damage &damage = **adjustment;
+                        const std::map<damage_type_id, float> ordered( damage.damage_map.begin(),
+                                damage.damage_map.end() );
+                        hash_part( state, damage.default_value == 1.0f ? "melee_factors" : "melee_bonuses" );
+                        for( const auto &[type, value] : ordered ) {
+                            std::ostringstream exact;
+                            exact << std::hexfloat << value;
+                            hash_part( state, type.str() );
+                            hash_part( state, exact.str() );
                         }
                     }
                 }

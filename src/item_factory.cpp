@@ -4880,61 +4880,55 @@ class melee_accuracy_reader : public generic_typed_reader < melee_accuracy_reade
 };
 } // namespace
 
-static void replace_materials( const JsonObject &jo, itype &def )
+void itype::replace_material( const material_id &original, const material_id &replacement )
 {
-    // itterate through material replacements
-    for( JsonMember jv : jo ) {
-        material_id to_replace = material_id( jv.name() );
-        material_id replacement = material_id( jv.get_string() );
+    const units::mass original_weight = weight;
+    const int mat_portion = materials[original];
 
-        units::mass original_weight = def.weight;
-        int mat_portion = def.materials[to_replace];
-
-        // make repairs_with act the same way
-        if( !def.repairs_with.empty() ) {
-            const auto iter = def.repairs_with.find( to_replace );
-            if( iter != def.repairs_with.end() ) {
-                def.repairs_with.erase( iter );
-                def.repairs_with.insert( replacement );
-            }
+    // make repairs_with act the same way
+    if( !repairs_with.empty() ) {
+        const auto iter = repairs_with.find( original );
+        if( iter != repairs_with.end() ) {
+            repairs_with.erase( iter );
+            repairs_with.insert( replacement );
         }
+    }
 
-        // material is defined
-        if( mat_portion != 0 ) {
-            double mat_percent = static_cast < double >( mat_portion ) / static_cast < double >
-                                 ( def.mat_portion_total );
+    // material is defined
+    if( mat_portion != 0 ) {
+        double mat_percent = static_cast < double >( mat_portion ) / static_cast < double >
+                             ( mat_portion_total );
 
-            float density_percent = replacement->density() / to_replace->density();
+        float density_percent = replacement->density() / original->density();
 
-            // add the portion for the replaced material
-            def.materials[replacement] += mat_portion;
+        // add the portion for the replaced material
+        materials[replacement] += mat_portion;
 
-            // delete the old data
-            def.materials.erase( to_replace );
+        // delete the old data
+        materials.erase( original );
 
-            // change the weight relative
-            units::mass material_weight = original_weight * mat_percent;
-            units::mass weight_dif = material_weight * density_percent - material_weight;
+        // change the weight relative
+        units::mass material_weight = original_weight * mat_percent;
+        units::mass weight_dif = material_weight * density_percent - material_weight;
 
-            def.weight += weight_dif;
-        }
+        weight += weight_dif;
+    }
 
-        // update the armor defs
-        if( def.armor ) {
-            for( armor_portion_data &data : def.armor->sub_data ) {
-                std::vector < part_material >::iterator entry;
-                do {
-                    entry = std::find_if( data.materials.begin(),
-                    data.materials.end(), [to_replace]( const part_material & pm ) {
-                        return pm.id == to_replace;
-                    } );
+    // update the armor defs
+    if( armor ) {
+        for( armor_portion_data &data : armor->sub_data ) {
+            std::vector < part_material >::iterator entry;
+            do {
+                entry = std::find_if( data.materials.begin(),
+                data.materials.end(), [original]( const part_material & pm ) {
+                    return pm.id == original;
+                } );
 
-                    if( entry != data.materials.end() ) {
-                        entry->id = replacement;
-                    }
+                if( entry != data.materials.end() ) {
+                    entry->id = replacement;
+                }
 
-                } while( entry != data.materials.end() );
-            }
+            } while( entry != data.materials.end() );
         }
     }
 }
@@ -5157,7 +5151,9 @@ void itype::load( const JsonObject &jo, std::string_view src )
     // potentially replace materials and update their values
     JsonObject replace_val = jo.get_object( "replace_materials" );
     replace_val.allow_omitted_members();
-    replace_materials( replace_val, *this );
+    for( JsonMember material : replace_val ) {
+        replace_material( material_id( material.name() ), material_id( material.get_string() ) );
+    }
 }
 
 void Item_factory::add_migration( const migration &m )
