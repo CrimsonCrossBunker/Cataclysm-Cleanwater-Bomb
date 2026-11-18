@@ -231,7 +231,31 @@ character_task_migration psychic_learning_migration( const char *id, const char 
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 226> migrated_character_tasks = {{
+const std::array<character_task_migration, 238> migrated_character_tasks = {{
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_FOCUS_DRAIN" ),
+          "hedge_tome_focus_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_FARM" ),
+          "research_spellbook_hedge_farm_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_WARD_DEMONS" ),
+          "research_spellbook_hedge_ward_demons_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_DOCTOR_BOOK" ),
+          "research_spellbook_hedge_doctor_book_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_BLOOD_BOOK" ),
+          "research_spellbook_hedge_blood_book_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_WARD_DREAMS" ),
+          "research_spellbook_hedge_ward_dreams_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_SNARE_CHANGELINGS" ),
+          "research_spellbook_hedge_snare_changelings_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_BATHHOUSE_AT_MIDNIGHT" ),
+          "research_spellbook_hedge_bathhouse_midnight_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_ABRAMELIN_THE_MAGE" ),
+          "research_spellbook_hedge_abramelin_the_mage_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_PSYCHIC_DEFENSE" ),
+          "research_spellbook_hedge_psychic_defense_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_BOOK_OF_RAZIEL" ),
+          "research_spellbook_hedge_book_of_raziel_due", nullptr },
+        { effect_on_condition_id( "EOC_HEDGE_RESEARCH_PROGRESS_AVODAH_ZARAH" ),
+          "research_spellbook_hedge_avodah_zarah_due", nullptr },
         { effect_on_condition_id( "EOC_APPLY_REGEN_SERUM_CRASH_2" ),
           "serum_regen_crash", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_APPLY_SUPER_SOLDIER_SERUM_CRASH_2" ),
