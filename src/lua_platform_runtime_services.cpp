@@ -409,6 +409,21 @@ struct use_context_data {
         character->add_msg_if_player( params, value );
     }
 
+    bool require_wielded() const {
+        Character *character = require_character();
+        if( character == nullptr ) {
+            return false;
+        }
+        const item &used_item = require_item();
+        if( character->is_wielding( used_item ) ) {
+            return true;
+        }
+        character->add_msg_if_player( m_info,
+                                      to_translation( "You need to wield the %1$s before activating it." ).translated(),
+                                      used_item.tname() );
+        return false;
+    }
+
     std::string expand_text( std::string text ) const {
         const item &used_item = require_item();
         const Character *character = require_character();
@@ -2206,6 +2221,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     ccb.new_usertype<use_context_data>(
         "ItemUseContext", sol::no_constructor,
         "message", &use_context_data::message,
+        "require_wielded", &use_context_data::require_wielded,
         "expand_text", &use_context_data::expand_text,
         "transform", &use_context_data::transform,
         "player_name", sol::property( &use_context_data::player_name ),

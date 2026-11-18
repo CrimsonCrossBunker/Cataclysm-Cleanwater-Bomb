@@ -5950,6 +5950,10 @@ local ItemUseContext = {}
 ---native Character, the call is a no-op before severity parsing.
 function ItemUseContext:message(text, type) end
 
+---Check whether the acting Character wields this exact item, showing the native activation message if needed.
+---@return boolean
+function ItemUseContext:require_wielded() end
+
 ---Expand native snippet and dialogue tags with the actual using Character, the item and an id context value.
 ---@param text string Native text to expand.
 ---@return string
