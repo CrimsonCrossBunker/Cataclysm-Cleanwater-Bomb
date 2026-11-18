@@ -41,6 +41,7 @@ extern "C" {
 #include <type_traits>
 #include <unordered_map>
 #include <utility>
+#include <variant>
 
 #include "ammo.h"
 #include "ammo_effect.h"
@@ -334,6 +335,15 @@ struct recipe_definition_data {
     std::int64_t time_moves = 100;
     bool autolearn = true;
     bool reversible = false;
+    std::string variant;
+    std::string container;
+    std::string container_variant;
+    bool contained = false;
+    bool sealed = true;
+    batch_savings batching;
+    std::set<std::string> removed_result_flags;
+    std::map<std::string, int> byproducts;
+    std::map<std::string, int> autolearn_skills;
     std::optional<std::int64_t> result_charges;
     std::int64_t result_multiplier = 1;
     std::vector<std::vector<quality_requirement_definition>> qualities;
@@ -352,7 +362,12 @@ struct recipe_definition_data {
         bool skill_penalty_assigned = false;
     };
     std::vector<proficiency_data> proficiencies;
-    std::map<std::string, std::int64_t> books;
+    struct book_data {
+        int level = -1;
+        authored_text name;
+        bool hidden = false;
+    };
+    std::map<std::string, book_data> books;
     std::string result_handler;
     bool registered = false;
 
@@ -1401,18 +1416,14 @@ struct recipe_definition_handle {
                 "recipe external requirement needs a non-empty id and positive multiplier" );
         }
         auto &requirements = definition->external_requirements;
-        // Preserve the authored order for disassembly and the existing ID order for crafting.
-        const auto position = definition->uncraft ?
-                              std::find_if( requirements.begin(), requirements.end(), [&]( const auto &entry ) {
+        const auto existing = std::find_if( requirements.begin(), requirements.end(),
+        [&]( const auto & entry ) {
             return entry.first == id;
-        } ) : std::lower_bound( requirements.begin(), requirements.end(), id,
-        []( const auto & entry, const std::string & key ) {
-            return entry.first < key;
         } );
-        if( position != requirements.end() && position->first == id ) {
-            position->second = multiplier;
+        if( existing == requirements.end() ) {
+            requirements.emplace_back( id, multiplier );
         } else {
-            requirements.emplace( position, id, multiplier );
+            existing->second = multiplier;
         }
         return *this;
     }
@@ -1438,12 +1449,75 @@ struct recipe_definition_handle {
         return *this;
     }
 
-    recipe_definition_handle &book( const std::string &id, std::int64_t skill_level ) {
+    recipe_definition_handle &book( const std::string &id, const sol::optional<std::int64_t> &skill_level,
+                                    const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "recipe" );
-        if( id.empty() || skill_level < 0 || skill_level > MAX_SKILL ) {
+        const std::int64_t level = skill_level.value_or( -1 );
+        if( id.empty() || level < -1 || level > MAX_SKILL ) {
             throw std::runtime_error( "recipe book needs an id and valid skill level" );
         }
-        definition->books[id] = skill_level;
+        recipe_definition_data::book_data book;
+        book.level = static_cast<int>( level );
+        if( options ) {
+            book.name = read_text_option( *options, "name", {}, "recipe book name" );
+            book.hidden = options->get_or( "hidden", false );
+        }
+        definition->books[id] = std::move( book );
+        return *this;
+    }
+
+    recipe_definition_handle &learn_automatically( const std::string &id, std::int64_t level ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() || level < 0 || level > MAX_SKILL ) {
+            throw std::runtime_error( "recipe autolearn needs a skill id and a valid level" );
+        }
+        definition->autolearn = true;
+        definition->autolearn_skills[id] = static_cast<int>( level );
+        return *this;
+    }
+
+    recipe_definition_handle &batch_discount( double max_percent, std::int64_t at_batch ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( !std::isfinite( max_percent ) || max_percent < 0.0 || max_percent > 100.0 ||
+            at_batch < 1 || at_batch > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe batch discount needs a percentage and a positive batch size" );
+        }
+        definition->batching.data = batch_savings::logistic{ max_percent / 100.0, static_cast<int>( at_batch ) };
+        return *this;
+    }
+
+    recipe_definition_handle &batch_setup( std::int64_t moves,
+                                          const sol::optional<std::int64_t> &max_batch ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( moves < 0 || max_batch.value_or( 1 ) < 1 ||
+            max_batch.value_or( 1 ) > std::numeric_limits<int>::max() ) {
+            throw std::runtime_error( "recipe batch setup needs a non-negative duration and a positive maximum" );
+        }
+        definition->batching.data = batch_savings::linear{
+            moves, max_batch ? std::make_optional( static_cast<int>( *max_batch ) ) : std::nullopt
+        };
+        return *this;
+    }
+
+    recipe_definition_handle &byproduct( const std::string &id, std::int64_t count ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() || count <= 0 ) {
+            throw std::runtime_error( "recipe byproduct needs an item id and positive count" );
+        }
+        int &total = definition->byproducts[id];
+        if( count > std::numeric_limits<int>::max() - total ) {
+            throw std::runtime_error( "recipe byproduct count is outside the native range" );
+        }
+        total += static_cast<int>( count );
+        return *this;
+    }
+
+    recipe_definition_handle &remove_result_flag( const std::string &id ) {
+        require_building_handle( token, *definition, "recipe" );
+        if( id.empty() ) {
+            throw std::runtime_error( "recipe result flag needs an id" );
+        }
+        definition->removed_result_flags.insert( id );
         return *this;
     }
 
@@ -2809,7 +2883,7 @@ struct items_content_transaction::impl {
     std::vector<std::pair<itype_id, std::optional<itype>>> item_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> recipe_undo;
     std::vector<std::pair<recipe_id, std::optional<recipe>>> uncraft_undo;
-    std::vector<std::pair<requirement_id, std::optional<requirement_data>>> uncraft_requirement_undo;
+    std::vector<std::pair<requirement_id, std::optional<requirement_data>>> recipe_requirement_undo;
 
     mutable bool finalization_validated = false;
     items_content_apply_phase next_apply_phase = items_content_apply_phase::foundations;
@@ -2959,6 +3033,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "requirement", &recipe_definition_handle::requirement,
         "proficiency", &recipe_definition_handle::proficiency,
         "book", &recipe_definition_handle::book,
+        "learn_automatically", &recipe_definition_handle::learn_automatically,
+        "batch_discount", &recipe_definition_handle::batch_discount,
+        "batch_setup", &recipe_definition_handle::batch_setup,
+        "byproduct", &recipe_definition_handle::byproduct,
+        "remove_result_flag", &recipe_definition_handle::remove_result_flag,
         "on_complete", &recipe_definition_handle::on_complete );
     ccb.new_usertype<plant_lifecycle_definition_handle>(
         "PlantLifecycleDefinition", sol::no_constructor,
@@ -3436,6 +3515,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->result_multiplier = options.get_or<std::int64_t>( "result_multiplier", 1 );
         definition->autolearn = options.get_or( "autolearn", true );
         definition->reversible = options.get_or( "reversible", false );
+        definition->variant = options.get_or( "variant", std::string() );
+        definition->container = options.get_or( "container", std::string() );
+        definition->contained = !definition->container.empty() || options.get_or( "contained", false );
+        definition->sealed = options.get_or( "sealed", true );
+        definition->container_variant = options.get_or( "container_variant", std::string() );
         definition->practice = options.get_or( "practice", false );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
         const std::int64_t morale_bonus = options.get_or<std::int64_t>( "morale_bonus", 0 );
@@ -5211,6 +5295,20 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' references unknown category '" + definition.category + "'" );
             }
             validate_recipe_skills( definition );
+            for( const auto &[skill, level] : definition.autolearn_skills ) {
+                if( ( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
+                    level < 0 || level > MAX_SKILL ) {
+                    throw std::runtime_error( "recipe '" + definition.id +
+                                              "' has an invalid autolearn skill '" + skill + "'" );
+                }
+            }
+            if( const auto *linear = std::get_if<batch_savings::linear>( &definition.batching.data );
+                linear && linear->offset > definition.time_moves ) {
+                throw std::runtime_error( "recipe '" + definition.id + "' has a batch setup longer than its base duration" );
+            }
+            if( definition.reversible && !definition.byproducts.empty() ) {
+                throw std::runtime_error( "recipe '" + definition.id + "' cannot be reversible and have byproducts" );
+            }
             for( const auto &[skill, level] : definition.disassembly_learning ) {
                 if( ( check_engine_state && skill_ids.count( skill ) == 0 && !skill_id( skill ).is_valid() ) ||
                     level < 0 || level > MAX_SKILL ) {
@@ -5244,8 +5342,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                            requirement_data::registry().count( requirement_id( component.id ) ) != 0 :
                                            declared_item_ids.count( component.id ) != 0 ||
                                            item::type_is_defined( itype_id( component.id ) ) ||
-                                           ( definition.uncraft &&
-                                             item_controller->has_template_migration( itype_id( component.id ) ) );
+                                           item_controller->has_template_migration( itype_id( component.id ) );
                         // Native item inheritance is resolved before the engine-state pass.
                         if( check_engine_state && !valid ) {
                             throw std::runtime_error( "recipe '" + definition.id +
@@ -5283,8 +5380,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "recipe '" + definition.id + "' has an invalid proficiency" );
                 }
             }
-            for( const auto &[book, level] : definition.books ) {
-                if( book.empty() || level < 0 || level > MAX_SKILL ||
+            for( const auto &[book, properties] : definition.books ) {
+                if( book.empty() || properties.level < -1 || properties.level > MAX_SKILL ||
                     ( check_engine_state && !item::type_is_defined( itype_id( book ) ) &&
                       declared_item_ids.count( book ) == 0 ) ) {
                     throw std::runtime_error( "recipe '" + definition.id + "' has an invalid book" );
@@ -6774,7 +6871,24 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native.subcategory = entry.definition->subcategory;
                     native.autolearn = entry.definition->autolearn;
+                    for( const auto &[skill, level] : entry.definition->autolearn_skills ) {
+                        native.autolearn_requirements.emplace( skill_id( skill ), level );
+                    }
                     native.reversible = entry.definition->reversible;
+                    native.variant_ = entry.definition->variant;
+                    native.contained = entry.definition->contained;
+                    native.sealed = entry.definition->sealed;
+                    if( !entry.definition->container.empty() ) {
+                        native.container = itype_id( entry.definition->container );
+                    }
+                    native.container_variant = entry.definition->container_variant;
+                    native.batch_info = entry.definition->batching;
+                    for( const auto &[byproduct, count] : entry.definition->byproducts ) {
+                        native.byproducts.emplace( itype_id( byproduct ), count );
+                    }
+                    for( const std::string &flag : entry.definition->removed_result_flags ) {
+                        native.flags_to_delete.emplace( flag );
+                    }
                     native.morale_modifier = { entry.definition->morale_bonus, entry.definition->morale_duration };
                     for( const auto &[skill, level] : entry.definition->disassembly_learning ) {
                         native.learn_by_disassembly[skill_id( skill )] = static_cast<int>( level );
@@ -6793,8 +6907,12 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native_proficiency._skill_penalty_assigned = source.skill_penalty_assigned;
                         native.proficiencies.push_back( native_proficiency );
                     }
-                    for( const auto &[book, level] : entry.definition->books ) {
-                        native.booksets[itype_id( book )].skill_req = static_cast<int>( level );
+                    for( const auto &[book, properties] : entry.definition->books ) {
+                        native.booksets.emplace( itype_id( book ), book_recipe_data{
+                            properties.level,
+                            properties.name.empty() ? std::nullopt : std::make_optional( properties.name.native() ),
+                            properties.hidden
+                        } );
                     }
                     requirement_data::alter_item_comp_vector components;
                     for( const std::vector<component_requirement> &group : entry.definition->components ) {
@@ -6825,28 +6943,21 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                                        static_cast<int>( quality.level ) );
                         }
                     }
+                    const requirement_id inline_id( ( targets_uncraft ? "inline_uncraft_" : "inline_recipe_" ) +
+                                                    id.str() );
+                    const auto old_requirements = requirement_data::registry().find( inline_id );
+                    pimpl_->recipe_requirement_undo.emplace_back(
+                        inline_id, old_requirements == requirement_data::registry().end() ?
+                        std::nullopt : std::make_optional( old_requirements->second ) );
                     requirement_data inline_requirements( tools, qualities, components );
-                    std::vector<std::pair<requirement_id, int>> external;
+                    inline_requirements.id_ = inline_id;
+                    requirement_data::register_requirement_layer( {
+                        std::move( inline_requirements ), std::nullopt, pimpl_->owner, !targets_uncraft
+                    } );
+                    pimpl_->requirement_changes = true;
+                    native.reqs_internal.emplace_back( inline_id, 1 );
                     for( const auto &[requirement, multiplier] : entry.definition->external_requirements ) {
-                        external.emplace_back( requirement_id( requirement ), static_cast<int>( multiplier ) );
-                    }
-                    if( targets_uncraft ) {
-                        const requirement_id inline_id( "inline_uncraft_" + id.str() );
-                        const auto old_requirements = requirement_data::registry().find( inline_id );
-                        pimpl_->uncraft_requirement_undo.emplace_back(
-                            inline_id, old_requirements == requirement_data::registry().end() ?
-                            std::nullopt : std::make_optional( old_requirements->second ) );
-                        inline_requirements.id_ = inline_id;
-                        requirement_data::register_requirement_layer( {
-                            std::move( inline_requirements ), std::nullopt, pimpl_->owner, false
-                        } );
-                        pimpl_->requirement_changes = true;
-                        native.reqs_internal.emplace_back( inline_id, 1 );
-                        native.reqs_external = std::move( external );
-                    } else {
-                        native.requirements_ = external.empty() ? std::move( inline_requirements ) :
-                                               inline_requirements + requirement_data( external );
-                        native.root_requirements_ = native.requirements_;
+                        native.reqs_external.emplace_back( requirement_id( requirement ), static_cast<int>( multiplier ) );
                     }
                     native_dict[id] = std::move( native );
                 }
@@ -7035,9 +7146,11 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         const auto &native_dict = entry.definition->uncraft ? recipe_dict.uncraft : recipe_dict.recipes;
         const recipe_id id( entry.definition->uncraft ? recipe_id( entry.definition->result ) :
                             recipe_id( entry.definition->id ) );
-        if( entry.definition->uncraft && native_dict.count( id ) == 0 ) {
+        if( !entry.definition->nested_category && !entry.definition->result.empty() &&
+            native_dict.count( id ) == 0 ) {
             const itype_id result( entry.definition->result );
-            const requirement_id inline_id( "inline_uncraft_" + id.str() );
+            const requirement_id inline_id( ( entry.definition->uncraft ? "inline_uncraft_" : "inline_recipe_" ) +
+                                            id.str() );
             // Native finalization filters recipes that use blacklisted items or produce migrated items.
             if( item_is_blacklisted( result ) || item_controller->has_template_migration( result ) ||
                 inline_id->is_blacklisted() ||
@@ -7146,7 +7259,7 @@ void items_content_transaction::rollback_phase( const items_content_rollback_pha
                 }
             }
             pimpl_->uncraft_undo.clear();
-            restore_requirements( pimpl_->uncraft_requirement_undo );
+            restore_requirements( pimpl_->recipe_requirement_undo );
             break;
         case items_content_rollback_phase::definitions:
             for( auto it = pimpl_->item_undo.rbegin(); it != pimpl_->item_undo.rend(); ++it ) {
@@ -7288,7 +7401,7 @@ void items_content_transaction::commit()
     pimpl_->item_undo.clear();
     pimpl_->recipe_undo.clear();
     pimpl_->uncraft_undo.clear();
-    pimpl_->uncraft_requirement_undo.clear();
+    pimpl_->recipe_requirement_undo.clear();
     pimpl_->token->lifecycle = handle_lifecycle::committed;
 }
 
@@ -8244,6 +8357,34 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, std::to_string( v.time_moves ) );
                 hash_part( state, v.autolearn ? "autolearn" : "manual" );
                 hash_part( state, v.reversible ? "reversible" : "irreversible" );
+                hash_part( state, v.variant );
+                hash_part( state, v.container );
+                hash_part( state, v.container_variant );
+                hash_part( state, v.contained ? "contained" : "uncontained" );
+                hash_part( state, v.sealed ? "sealed" : "unsealed" );
+                if( const auto *linear = std::get_if<batch_savings::linear>( &v.batching.data ) ) {
+                    hash_part( state, "linear" );
+                    hash_part( state, std::to_string( linear->offset ) );
+                    hash_part( state, std::to_string( linear->max_batch.value_or( 0 ) ) );
+                } else if( const auto *logistic = std::get_if<batch_savings::logistic>( &v.batching.data ) ) {
+                    hash_part( state, "logistic" );
+                    hash_part( state, std::to_string( logistic->rscale ) );
+                    hash_part( state, std::to_string( logistic->rsize ) );
+                }
+                for( const std::string &flag : v.removed_result_flags ) {
+                    hash_part( state, "removed_result_flag" );
+                    hash_part( state, flag );
+                }
+                for( const auto &[id, count] : v.byproducts ) {
+                    hash_part( state, "byproduct" );
+                    hash_part( state, id );
+                    hash_part( state, std::to_string( count ) );
+                }
+                for( const auto &[skill, level] : v.autolearn_skills ) {
+                    hash_part( state, "autolearn_skill" );
+                    hash_part( state, skill );
+                    hash_part( state, std::to_string( level ) );
+                }
                 for( const auto &g : v.components ) {
                     hash_part( state, "and" );
                     for( const auto &e : g ) {
@@ -8274,9 +8415,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( p.time_multiplier ) );
                     hash_part( state, std::to_string( p.skill_penalty ) );
                 }
-                for( const auto &[id, level] : v.books ) {
+                for( const auto &[id, book] : v.books ) {
                     hash_part( state, id );
-                    hash_part( state, std::to_string( level ) );
+                    hash_part( state, std::to_string( book.level ) );
+                    hash_part( state, book.name );
+                    hash_part( state, book.hidden ? "hidden" : "visible" );
                 }
                 hash_part( state, v.result_handler );
             }

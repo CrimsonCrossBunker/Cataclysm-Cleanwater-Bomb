@@ -959,6 +959,11 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field duration_moves? integer Non-negative base duration in moves.
 ---@field autolearn? boolean Whether the recipe is automatically learnable.
 ---@field reversible? boolean Whether the recipe supplies disassembly data.
+---@field variant? string Item variant of the crafted result.
+---@field contained? boolean Wrap the result in its default container.
+---@field container? string Use this item as the result container.
+---@field container_variant? string Item variant of the result container.
+---@field sealed? boolean Seal the result container; defaults to true.
 ---@field practice? boolean Whether this is a practice recipe; native practice
 ---progression data stays author-owned Lua behaviour.
 ---@field uncraft? boolean Whether this is a disassembly recipe staged into the
@@ -1051,10 +1056,39 @@ function RecipeDefinition:requirement(requirement_id, multiplier) end
 ---@return RecipeDefinition self
 function RecipeDefinition:proficiency(proficiency_id, options) end
 
+---@class RecipeBookOptions
+---@field name? string|LocalizedText Alternate recipe name shown in this book.
+---@field hidden? boolean Hide the recipe from the book's listed recipes.
+
 ---@param item_id string Existing book item id.
----@param skill_level integer Required primary skill level.
+---@param skill_level? integer Required primary skill level. Omit to use the native book and recipe levels.
+---@param options? RecipeBookOptions
 ---@return RecipeDefinition self
-function RecipeDefinition:book(item_id, skill_level) end
+function RecipeDefinition:book(item_id, skill_level, options) end
+
+---@param skill_id string Native skill required for automatic learning.
+---@param level integer Minimum skill level.
+---@return RecipeDefinition self
+function RecipeDefinition:learn_automatically(skill_id, level) end
+
+---@param maximum_percent number Maximum crafting time discount in percent.
+---@param at_batch integer Batch size at which the discount curve reaches its target.
+---@return RecipeDefinition self
+function RecipeDefinition:batch_discount(maximum_percent, at_batch) end
+
+---@param setup_moves integer Work in moves shared across a batch.
+---@param max_batch? integer Maximum number of units that share one setup.
+---@return RecipeDefinition self
+function RecipeDefinition:batch_setup(setup_moves, max_batch) end
+
+---@param item_id string Item produced alongside the result.
+---@param count integer Positive byproduct count per craft.
+---@return RecipeDefinition self
+function RecipeDefinition:byproduct(item_id, count) end
+
+---@param flag_id string Native item flag to remove from the crafted result.
+---@return RecipeDefinition self
+function RecipeDefinition:remove_result_flag(flag_id) end
 
 ---@param handler_id string
 ---@return RecipeDefinition self
