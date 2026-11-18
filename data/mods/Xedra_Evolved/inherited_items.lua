@@ -11,3 +11,4 @@ require("inherited_items.items.spell_learning_items.spell_learning_items_dreamer
 require("inherited_items.items.armor.integrated")
 require("inherited_items.items.ethereal_items")
 require("inherited_items.items.inventor.misc")
+require("inherited_items.items.pets")
