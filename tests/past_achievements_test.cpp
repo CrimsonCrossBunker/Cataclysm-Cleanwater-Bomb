@@ -1,4 +1,3 @@
-#include <flexbuffer_json.h>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -10,6 +9,7 @@
 #include "cata_path.h"
 #include "cata_scope_helpers.h"
 #include "debug.h"
+#include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "past_achievements_info.h"
 #include "past_games_info.h"

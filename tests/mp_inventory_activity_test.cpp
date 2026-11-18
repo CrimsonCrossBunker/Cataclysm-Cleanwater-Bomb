@@ -8,7 +8,6 @@
 #include <creature.h>
 #include <creature_tracker.h>
 #include <enums.h>
-#include <flexbuffer_json.h>
 #include <item_disposition.h>
 #include <item_source.h>
 #include <item_transformation.h>
@@ -36,8 +35,8 @@
 #include <recipe.h>
 #include <safe_reference.h>
 #include <spell_casting_choice.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cstddef>
+#include <cstdint>
 #include <stomach.h>
 #include <tileray.h>
 #include <type_id.h>
@@ -56,7 +55,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -107,6 +105,7 @@
 #include "field_type.h"
 #include "fireplace.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "furniture_reload.h"
 #include "game.h"
 #include "game_constants.h"

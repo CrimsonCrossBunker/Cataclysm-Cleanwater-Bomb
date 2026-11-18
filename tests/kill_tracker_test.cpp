@@ -2,10 +2,10 @@
 #include <coordinates.h>
 #include <point.h>
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
-#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -29,7 +29,6 @@
 #include "mp_client_conn.h"
 #include "npc.h"
 #include "player_helpers.h"
-#include "rng.h"
 #include "rng_helpers.h"
 #include "type_id.h"
 

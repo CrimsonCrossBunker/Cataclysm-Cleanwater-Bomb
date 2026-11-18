@@ -3,7 +3,6 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -37,7 +36,6 @@
 #include "overmapbuffer.h"
 #include "player_helpers.h"
 #include "point.h"
-#include "rng.h"
 #include "rng_helpers.h"
 #include "type_id.h"
 

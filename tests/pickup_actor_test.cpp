@@ -2,7 +2,6 @@
 #include <character.h>
 #include <coordinates.h>
 #include <enums.h>
-#include <flexbuffer_json.h>
 #include <item_uid.h>
 #include <mp_actor_binding.h>
 #include <mp_admission.h>
@@ -21,7 +20,6 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -33,6 +31,7 @@
 #include "cata_catch.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "inventory.h"
 #include "item.h"
@@ -52,7 +51,6 @@
 #include "pickup.h"
 #include "player_activity.h"
 #include "player_helpers.h"
-#include "rng.h"
 #include "rng_helpers.h"
 #include "type_id.h"
 #include "vehicle.h"

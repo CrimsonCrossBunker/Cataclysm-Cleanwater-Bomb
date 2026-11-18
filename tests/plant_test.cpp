@@ -14,7 +14,6 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
-#include <random>
 #include <set>
 #include <sstream>
 #include <string>
@@ -2417,9 +2416,10 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
             worker.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     };
-    get_event_bus().subscribe( &sub );
+    event_bus &bus = get_event_bus();
+    bus.subscribe( &sub );
     const on_out_of_scope cleanup( [&]() {
-        get_event_bus().unsubscribe( &sub );
+        bus.unsubscribe( &sub );
         clear_npcs();
         calendar::turn = previous_time;
     } );
@@ -2685,9 +2685,10 @@ TEST_CASE( "plant_damage_events_can_remove_the_victim_or_start_replacement_work"
             worker.assign_activity( player_activity( ACT_WAIT, 321 ) );
         }
     };
-    get_event_bus().subscribe( &sub );
+    event_bus &bus = get_event_bus();
+    bus.subscribe( &sub );
     const on_out_of_scope cleanup( [&]() {
-        get_event_bus().unsubscribe( &sub );
+        bus.unsubscribe( &sub );
         clear_npcs();
     } );
     worker.apply_damage( nullptr, leg, 4 );

@@ -17,6 +17,7 @@
 #include <functional>
 #include <initializer_list>
 #include <istream>
+#include <iterator>
 #include <locale>
 #include <map>
 #include <memory>
@@ -2390,7 +2391,7 @@ void main_menu::world_tab( const std::string &worldname )
         const std::vector<std::string> world_names = world_generator->all_worldnames();
         const auto removed_world = std::find( world_names.begin(), world_names.end(), worldname );
         const bool shift_last_world_pos = last_world_pos > 0 && removed_world != world_names.end() &&
-                                          std::distance( world_names.begin(), removed_world ) <= last_world_pos;
+                                          static_cast<size_t>( std::distance( world_names.begin(), removed_world ) ) <= last_world_pos;
 
         // Release save and map resources before removing the directory.  Windows
         // will otherwise keep the world folder alive while one of these resources

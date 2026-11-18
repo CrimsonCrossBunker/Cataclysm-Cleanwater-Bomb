@@ -1,7 +1,6 @@
 #include <character_attire.h>
 #include <character_id.h>
 #include <coordinates.h>
-#include <flexbuffer_json.h>
 #include <item_location.h>
 #include <overmap_ui.h>
 #include <pimpl.h>
@@ -35,6 +34,7 @@
 #include "event_bus.h"
 #include "event_subscriber.h"
 #include "faction.h"
+#include "flexbuffer_json.h"
 #include "game.h"
 #include "json.h"
 #include "json_loader.h"

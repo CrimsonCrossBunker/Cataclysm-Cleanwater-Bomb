@@ -1,4 +1,4 @@
-#include <stddef.h>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
 #include <functional>

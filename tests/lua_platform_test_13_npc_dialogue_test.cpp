@@ -35,7 +35,6 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
-#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -65,6 +64,7 @@
 #include "mtype.h"
 #include "npctalk.h"
 #include "player_helpers.h"
+#include "rng_helpers.h"
 #include "talker.h"
 #include "talker_avatar.h"
 #include "talker_furniture.h"
@@ -73,7 +73,6 @@
 #include "talker_vehicle.h"
 #include "translation.h"
 #include "type_id.h"
-#include "rng_helpers.h"
 
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_pacified( "pacified" );

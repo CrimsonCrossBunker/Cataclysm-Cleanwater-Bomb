@@ -4,7 +4,6 @@
 #include <calendar.h>
 #include <character_id.h>
 #include <coordinates.h>
-#include <flexbuffer_json.h>
 #include <inventory.h>
 #include <item.h>
 #include <item_location.h>
@@ -34,6 +33,7 @@
 #include <vector>
 
 #include "cata_catch.h"
+#include "flexbuffer_json.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
 

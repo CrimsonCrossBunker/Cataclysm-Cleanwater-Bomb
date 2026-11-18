@@ -10123,8 +10123,8 @@ point map::sees_cache_key( const tripoint_bub_ms &from, const tripoint_bub_ms &t
 
     // A little gross, just pack the values into an integer.
     return point(
-               min.x() << 20 | min.y() << 10 | ( layer_for_z( min.z() ) ),
-               max.x() << 20 | max.y() << 10 | ( layer_for_z( max.z() ) )
+               min.x() << 20 | min.y() << 10 | layer_for_z( min.z() ),
+               max.x() << 20 | max.y() << 10 | layer_for_z( max.z() )
            );
 }
 

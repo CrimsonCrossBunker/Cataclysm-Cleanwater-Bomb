@@ -948,7 +948,9 @@ static const oter_id *atlas_outlying_terrain( int z )
     }
     // Resolve string IDs again after a data reload. The returned reference has
     // the same lifetime as other overmap terrain lookups on the owning thread.
+    // NOLINTNEXTLINE(cata-static-int_id-constants)
     static thread_local oter_id rock_id;
+    // NOLINTNEXTLINE(cata-static-int_id-constants)
     static thread_local oter_id air_id;
     if( z < 0 ) {
         rock_id = oter_deep_rock.id();
