@@ -748,3 +748,82 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "forge",
+        name = ccb.content.plural_text("electric forge", "electric forges"),
+        description = ccb.content.text("An electric metalworking forge, powered by your electric grid.  With the right tools, you could use this for metalworking."),
+        mass_milligrams = 10000000,
+        volume_ml = 6000,
+        price_cents = 40000,
+        price_postapoc_cents = 4000,
+        symbol = ";",
+        color = "light_gray",
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1400000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:fault_group("electronic_general", {  })
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "belt_grinder",
+        name = ccb.content.plural_text("belt grinder", "belt grinders"),
+        looks_like = "pedal_grindstone",
+        description = ccb.content.text("A power tool used for grinding and shaping metal or even wood.  It consists of a motorized abrasive belt that spins at high speeds, allowing you to quickly polish, flatten, or overall remove material from surfaces."),
+        mass_milligrams = 55000000,
+        volume_ml = 70000,
+        longest_side_mm = 800,
+        price_cents = 150000,
+        price_postapoc_cents = 3000,
+        symbol = "B",
+        color = "light_gray",
+        charged_qualities = { { id = "GRIND", level = 2, speed = 0.3 }, { id = "FILE", level = 3, speed = 0.2 } },
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 10, charge_milliwatts = 1600000 }
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 25, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "makeshift_steel_kiln",
+        name = ccb.content.plural_text("makeshift tempering kiln", "makeshift tempering kilns"),
+        looks_like = "f_kiln_empty",
+        description = ccb.content.text("A very large brick kiln with a sheet metal shell.  Used for tempering metal of all sizes."),
+        mass_milligrams = 80000000,
+        volume_ml = 300000,
+        longest_side_mm = 1600,
+        price_postapoc_cents = 3000,
+        symbol = "B",
+        color = "light_gray",
+        charged_qualities = { { id = "TEMPER", level = 2, speed = 1.05 } },
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 10, charge_milliwatts = 1600000 }
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 30, ammo_types = { "battery" } }
+    content.add(item)
+end
