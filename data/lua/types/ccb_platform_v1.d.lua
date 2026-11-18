@@ -819,9 +819,24 @@ function ItemDefinition:on_tick(handler_id) end
 ---@return ItemDefinition self
 function ItemDefinition:clear_tick_actions() end
 
----Ensure the native tool slot exists; an inherited tool keeps its existing settings.
+---@class ToolDefinitionOptions
+---@field ammo_types? string[] Native ammunition types accepted by the tool. Omission inherits; an empty array clears them.
+---@field charges_per_use? integer Non-negative native signed-int charge requirement for activation. Omission inherits; the use handler's return value controls actual consumption.
+
+---Ensure the native tool slot exists; unspecified settings remain inherited or use native defaults for a new tool.
+---@param options? ToolDefinitionOptions
 ---@return ItemDefinition self
-function ItemDefinition:tool() end
+function ItemDefinition:tool(options) end
+
+---@class MagazineWellDefinitionOptions
+---@field rigid? boolean Whether the pocket keeps its shape; defaults to false.
+---@field flags? string[] Restrict magazines to those carrying at least one of these flags. Omission or an empty array leaves the pocket unrestricted.
+---@field default_magazine? string Existing or same-transaction item ID inserted by native default magazine spawning.
+
+---Append one native magazine-well pocket. Existing pockets remain in their original order.
+---@param options MagazineWellDefinitionOptions
+---@return ItemDefinition self
+function ItemDefinition:magazine_well(options) end
 
 ---Append a passive native enchantment, preserving item-instance behavior and inherited passives.
 ---@param enchantment_id string Existing or same-transaction enchantment id.

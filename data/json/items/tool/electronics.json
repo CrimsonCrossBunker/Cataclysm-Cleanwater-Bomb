@@ -582,32 +582,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "nre_recorder",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "NRE recorder" },
-    "description": "A strange apparatus, seemingly consisting of a glass-encased microphone linked to a small thermal printer and digital screen.  The screen remains perpetually blank, save for a battery indicator on its upper right, and on its left side lies a single red button: \"PRINT DATA\".",
-    "weight": "225 g",
-    "volume": "2735 ml",
-    "price": "150 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "plastic", "aluminum" ],
-    "symbol": ";",
-    "color": "red",
-    "flags": [ "WATER_BREAK" ],
-    "charges_per_use": 10,
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "melee_damage": { "bash": 2 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "hand_crank_charger",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

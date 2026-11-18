@@ -82,10 +82,20 @@ ccb.runtime.handler("nre_print_data", function(payload)
     if payload.character then M.print(payload.character) end
     return 0
 end)
-local recorder = ccb.content.Item { id = "nre_recorder", copy_from = "nre_recorder" }
-recorder:clear_use_actions()
+local recorder = ccb.content.Item {
+    id = "nre_recorder", name = ccb.content.text("NRE recorder"),
+    description = ccb.content.text("A strange apparatus, seemingly consisting of a glass-encased microphone linked to a small thermal printer and digital screen.  The screen remains perpetually blank, save for a battery indicator on its upper right, and on its left side lies a single red button: \"PRINT DATA\"."),
+    mass_grams = 225, volume_ml = 2735, price_cents = 15000, price_postapoc_cents = 100,
+    symbol = ";", color = "red",
+}
+recorder:material("plastic", 1)
+recorder:material("aluminum", 1)
+recorder:flag("WATER_BREAK")
+recorder:melee_damage("bash", 2)
+recorder:tool { ammo_types = { "battery" }, charges_per_use = 10 }
+recorder:magazine_well { rigid = true, flags = { "BATTERY_MEDIUM" }, default_magazine = "medium_battery_cell" }
 recorder:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Activate the recorder's printer."))
-ccb.content.replace(recorder)
+ccb.content.add(recorder)
 local station = ccb.content.Item { id = "robofac_mobile_weather_station", copy_from = "robofac_mobile_weather_station" }
 station:clear_use_actions()
 station:on_use("nre_print_data", ccb.content.text("Activate"), ccb.content.text("Print NRE data."))

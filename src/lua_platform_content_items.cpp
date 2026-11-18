@@ -149,6 +149,15 @@ struct quality_level {
 };
 
 struct item_definition_data {
+    struct tool_data {
+        std::optional<std::set<std::string>> ammo_types;
+        std::optional<std::int64_t> charges_per_use;
+    };
+    struct magazine_well_data {
+        bool rigid = false;
+        std::optional<std::string> default_magazine;
+        std::set<std::string> flags;
+    };
     struct ammunition_data {
         std::string type;
         std::optional<std::int64_t> count;
@@ -211,6 +220,8 @@ struct item_definition_data {
     bool clear_tick_actions = false;
     bool has_tool = false;
     bool has_armor = false;
+    std::optional<tool_data> tool;
+    std::vector<magazine_well_data> magazine_wells;
     std::vector<std::string> passive_enchantments;
     std::string use_handler;
     std::string tick_handler;
@@ -882,9 +893,40 @@ struct item_definition_handle {
         return *this;
     }
 
-    item_definition_handle &tool() {
+    item_definition_handle &tool( const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "item" );
+        if( options ) {
+            auto value = definition->tool.value_or( item_definition_data::tool_data{} );
+            if( const auto ammo = options->get<sol::optional<sol::table>>( "ammo_types" ) ) {
+                const std::size_t count = require_dense_array( *ammo, "tool ammo types", 0 );
+                value.ammo_types = std::set<std::string>{};
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    value.ammo_types->insert( ammo->get<std::string>( index ) );
+                }
+            }
+            if( const auto charges = options->get<sol::optional<std::int64_t>>( "charges_per_use" ) ) {
+                value.charges_per_use = *charges;
+            }
+            definition->tool = std::move( value );
+        }
         definition->has_tool = true;
+        return *this;
+    }
+
+    item_definition_handle &magazine_well( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::magazine_well_data value;
+        value.rigid = options.get_or( "rigid", false );
+        if( const auto magazine = options.get<sol::optional<std::string>>( "default_magazine" ) ) {
+            value.default_magazine = *magazine;
+        }
+        if( const auto flags = options.get<sol::optional<sol::table>>( "flags" ) ) {
+            const std::size_t count = require_dense_array( *flags, "magazine well flags", 0 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                value.flags.insert( flags->get<std::string>( index ) );
+            }
+        }
+        definition->magazine_wells.push_back( std::move( value ) );
         return *this;
     }
 
@@ -2556,6 +2598,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "vitamin", &item_definition_handle::vitamin,
         "book", &item_definition_handle::book,
         "tool", &item_definition_handle::tool,
+        "magazine_well", &item_definition_handle::magazine_well,
         "armor", &item_definition_handle::armor,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
@@ -4408,6 +4451,32 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id + "' has invalid ammunition values" );
                 }
             }
+            if( definition.tool ) {
+                const auto &tool = *definition.tool;
+                if( tool.charges_per_use &&
+                    ( *tool.charges_per_use < 0 || !native_int( *tool.charges_per_use ) ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has an invalid tool charge cost" );
+                }
+                if( tool.ammo_types ) {
+                    for( const std::string &ammo : *tool.ammo_types ) {
+                        if( ammo.empty() || ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
+                            throw std::runtime_error( "item '" + definition.id + "' references unknown tool ammo '" + ammo + "'" );
+                        }
+                    }
+                }
+            }
+            for( const auto &well : definition.magazine_wells ) {
+                if( well.default_magazine && ( well.default_magazine->empty() ||
+                    ( check_engine_state && declared_item_ids.count( *well.default_magazine ) == 0 &&
+                      !item::type_is_defined( itype_id( *well.default_magazine ) ) ) ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' references an unknown default magazine" );
+                }
+                for( const std::string &flag : well.flags ) {
+                    if( flag.empty() || ( check_engine_state && json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) ) {
+                        throw std::runtime_error( "item '" + definition.id + "' references unknown magazine well flag '" + flag + "'" );
+                    }
+                }
+            }
             for( const auto &[ammo, capacity] : definition.magazine_ammo ) {
                 if( ammo.empty() || capacity <= 0 || !native_int( capacity ) ||
                     ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
@@ -5698,6 +5767,32 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.has_tool && !native->tool ) {
                         native->tool = cata::make_value<islot_tool>();
                         native->tool->was_loaded = true;
+                    }
+                    if( definition.tool ) {
+                        const auto &tool = *definition.tool;
+                        if( tool.ammo_types ) {
+                            native->tool->ammo_id.clear();
+                            for( const std::string &ammo : *tool.ammo_types ) {
+                                native->tool->ammo_id.insert( ammotype( ammo ) );
+                            }
+                        }
+                        if( tool.charges_per_use ) {
+                            native->tool->charges_per_use = static_cast<int>( *tool.charges_per_use );
+                        }
+                    }
+                    for( const auto &well : definition.magazine_wells ) {
+                        pocket_data pocket;
+                        pocket.type = pocket_type::MAGAZINE_WELL;
+                        pocket.rigid = well.rigid;
+                        pocket.was_loaded = true;
+                        pocket.max_item_length = units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+                        if( well.default_magazine ) {
+                            pocket.default_magazine = itype_id( *well.default_magazine );
+                        }
+                        for( const std::string &flag : well.flags ) {
+                            pocket.add_flag_restriction( flag_id( flag ) );
+                        }
+                        native->pockets.push_back( std::move( pocket ) );
                     }
                     if( definition.has_armor && !native->armor ) {
                         native->armor = cata::make_value<islot_armor>();
@@ -7050,6 +7145,23 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.clear_tick_actions ? "clear_tick_actions" : "inherit_tick_actions" );
                 hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
+                if( v.tool ) {
+                    hash_part( state, v.tool->charges_per_use ? std::to_string( *v.tool->charges_per_use ) : "inherit_tool_cost" );
+                    hash_part( state, v.tool->ammo_types ? "tool_ammo" : "inherit_tool_ammo" );
+                    if( v.tool->ammo_types ) {
+                        for( const std::string &ammo : *v.tool->ammo_types ) {
+                            hash_part( state, ammo );
+                        }
+                    }
+                }
+                for( const auto &well : v.magazine_wells ) {
+                    hash_part( state, "magazine_well" );
+                    hash_part( state, well.rigid ? "rigid" : "flexible" );
+                    hash_part( state, well.default_magazine.value_or( "null" ) );
+                    for( const std::string &flag : well.flags ) {
+                        hash_part( state, flag );
+                    }
+                }
                 hash_part( state, v.has_armor ? "armor" : "inherit_armor" );
                 for( const std::string &enchantment : v.passive_enchantments ) {
                     hash_part( state, "passive_enchantment" );
