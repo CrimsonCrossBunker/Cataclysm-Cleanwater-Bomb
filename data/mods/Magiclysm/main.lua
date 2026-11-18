@@ -84,3 +84,5 @@ require("thermal_overlay_enchantments")
 require("world_enchantments")
 
 require("item_enchantments")
+
+require("sidebar_extensions")

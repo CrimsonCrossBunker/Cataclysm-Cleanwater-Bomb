@@ -144,3 +144,5 @@ require("portal_active_effects")
 require("portal_storm_warning")
 
 require("chaos_stone")
+
+require("sidebar_extensions")

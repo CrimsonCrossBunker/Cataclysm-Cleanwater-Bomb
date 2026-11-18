@@ -1,11 +1,5 @@
 [
   {
-    "copy-from": "spacebar",
-    "type": "widget",
-    "id": "spacebar",
-    "extend": { "widgets": [ "spacebar_nether_attunement_block" ] }
-  },
-  {
     "id": "spacebar_nether_attunement_block",
     "type": "widget",
     "style": "layout",

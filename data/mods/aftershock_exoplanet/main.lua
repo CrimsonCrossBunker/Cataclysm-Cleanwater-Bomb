@@ -79,3 +79,5 @@ require("weather_generators")
 require("weather_types")
 
 require("portal_storm_cycle")
+
+require("sidebar_extensions")

@@ -156,3 +156,5 @@ require("item_enchantments")
 require("weather_types")
 
 require("blotted_sun")
+
+require("sidebar_extensions")
