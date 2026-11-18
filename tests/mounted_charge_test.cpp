@@ -29,6 +29,7 @@
 #include "character_martial_arts.h"
 #include "creature.h"
 #include "damage.h"
+#include "faction.h"
 #include "flag.h"
 #include "flexbuffer_json.h"
 #include "item.h"
@@ -42,6 +43,7 @@
 #include "map_helpers_tests.h"
 #include "martialarts.h"
 #include "mod_manager.h"
+#include "mondefense.h"
 #include "monster.h"
 #include "mounted_charge.h"
 #include "mtype.h"
@@ -128,6 +130,22 @@ void start_mounted_charge( avatar &player, monster &horse )
                                 horse.uid().get_value(), lance->uid().get_value(),
                                 player.pos_abs(), lance->typeId() ) );
 }
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+void start_wild_charge( avatar &player, monster &horse )
+{
+    player.set_movement_mode( move_mode_run );
+    player.set_moves( 10000 );
+    map &here = get_map();
+    for( int step = 1; step <= 5; ++step ) {
+        here.ter_set( player.pos_bub() + tripoint( step, 0, 0 ), ter_id( "t_floor" ) );
+    }
+    here.ter_set( player.pos_bub() + tripoint( 3, 1, 0 ), ter_id( "t_floor" ) );
+    here.ter_set( player.pos_bub() + tripoint( 3, -1, 0 ), ter_id( "t_floor" ) );
+    player.assign_activity( mounted_charge_activity_actor( player.pos_abs() + tripoint( 5, 0, 0 ),
+                            horse.uid().get_value(), 0, player.pos_abs(), itype_id(), true ) );
+}
+#endif
 
 } // namespace
 
@@ -410,6 +428,218 @@ TEST_CASE( "mounted_charge_activity_resumes_with_a_migrated_weapon_type",
     player.cancel_activity();
     player.forced_dismount();
 }
+
+#if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+TEST_CASE( "wild_charge_is_available_without_a_weapon_but_requires_trotting",
+           "[mounted][charge][wild_charge]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    player.set_wielded_item( item() );
+    player.set_movement_mode( move_mode_walk );
+    CHECK_FALSE( avatar_action::mounted_charge_available( player, true ) );
+    player.set_movement_mode( move_mode_run );
+    CHECK( avatar_action::mounted_charge_available( player, true ) );
+    while( horse.get_load_weight() <= horse.weight_capacity() ) {
+        horse.add_item( item( itype_id( "anvil" ) ) );
+    }
+    CHECK_FALSE( avatar_action::mounted_charge_available( player, true ) );
+}
+
+TEST_CASE( "wild_charge_requires_two_clear_tiles_of_runup",
+           "[mounted][charge][wild_charge]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    const tripoint_bub_ms start = player.pos_bub();
+    monster &target = spawn_test_monster( "mon_zombie", start + tripoint::east );
+    const int initial_hp = target.get_hp();
+    start_wild_charge( player, horse );
+    REQUIRE( player.activity );
+    player.activity.do_turn( player );
+    CHECK_FALSE( player.activity );
+    CHECK( target.get_hp() == initial_hp );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_wild_charge ) == 0_turns );
+
+}
+
+TEST_CASE( "wild_charge_respects_contact_defenses_and_blocking",
+           "[mounted][charge][wild_charge][regression]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    horse.set_hit_bonus( 1000 );
+    const tripoint_bub_ms start = player.pos_bub();
+    monster &target = spawn_test_monster( "mon_zombie", start + tripoint( 3, 0, 0 ) );
+    target.set_hp( 500 );
+    target.set_dodge_bonus( -1000 );
+    mtype defender = *target.type;
+    restore_on_out_of_scope<const mtype *> restore_type( target.type );
+    target.type = &defender;
+
+    SECTION( "contact_retaliation_hits_the_mount" ) {
+        defender.sp_defense = &mdefense::zapback;
+        defender.def_chance = 100;
+        const int horse_hp = horse.get_hp();
+        start_wild_charge( player, horse );
+        for( int step = 0; step < 3 && player.activity; ++step ) {
+            player.activity.do_turn( player );
+        }
+        CHECK( horse.get_hp() < horse_hp );
+        CHECK( target.get_hp() < 500 );
+    }
+
+    SECTION( "a_fully_blocked_hit_does_not_apply_control_effects" ) {
+        defender.block.chance = 100;
+        defender.block.effectiveness = 1000;
+        target.blocks_left = 1;
+        start_wild_charge( player, horse );
+        for( int step = 0; step < 3 && player.activity; ++step ) {
+            player.activity.do_turn( player );
+        }
+        CHECK( target.blocks_left == 0 );
+        CHECK( target.get_hp() == 500 );
+        CHECK_FALSE( target.has_effect( efftype_id( "downed" ) ) );
+        CHECK_FALSE( target.has_effect( efftype_id( "stunned" ) ) );
+    }
+
+    SECTION( "lethal_retaliation_stops_the_charge" ) {
+        defender.sp_defense = &mdefense::zapback;
+        defender.def_chance = 100;
+        horse.set_hp( 1 );
+        start_wild_charge( player, horse );
+        for( int step = 0; step < 3 && player.activity; ++step ) {
+            player.activity.do_turn( player );
+        }
+        CHECK( horse.is_dead() );
+        CHECK_FALSE( player.is_mounted() );
+        CHECK_FALSE( player.activity );
+    }
+
+    SECTION( "the_rider_receives_kill_credit" ) {
+        target.set_hp( 1 );
+        start_wild_charge( player, horse );
+        for( int step = 0; step < 3 && player.activity; ++step ) {
+            player.activity.do_turn( player );
+        }
+        CHECK( target.is_dead() );
+        CHECK( target.get_killer() == &player );
+    }
+}
+
+TEST_CASE( "mounted_charge_hit_reports_the_actual_recipient_after_rider_redirection",
+           "[mounted][charge][wild_charge][regression]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    monster &defender = spawn_test_monster( "mon_horse", player.pos_bub() + tripoint( 3, 0, 0 ) );
+    npc &passenger = spawn_npc( point_bub_ms( 60, 60 ), "test_talker" );
+    const bool allied = GENERATE( false, true );
+    CAPTURE( allied );
+    if( allied ) {
+        passenger.set_fac( faction_id( "your_followers" ) );
+        passenger.set_attitude( NPCATT_FOLLOW );
+    }
+    REQUIRE( passenger.is_player_ally() == allied );
+    REQUIRE_FALSE( passenger.is_enemy() );
+    REQUIRE( passenger.get_faction() != nullptr );
+    faction &rider_faction = *passenger.get_faction();
+    const restore_on_out_of_scope restore_faction( rider_faction );
+    rider_faction.likes_u = 0;
+    REQUIRE_FALSE( passenger.guaranteed_hostile() );
+    passenger.op_of_u.trust = 20;
+    passenger.op_of_u.anger = 0;
+    passenger.mount_creature( defender );
+    REQUIRE( passenger.is_mounted() );
+    bool redirected = false;
+    for( int attempt = 0; attempt < 64 && !redirected; ++attempt ) {
+        dealt_damage_instance dealt;
+        safe_reference<Creature> recipient;
+        defender.deal_melee_hit( &horse, 100, false, damage_instance(), dealt,
+                                 weakpoint_attack(), nullptr, &player, &recipient );
+        REQUIRE( recipient );
+        CHECK( ( recipient.get() == &defender || recipient.get() == &passenger ) );
+        redirected = recipient.get() == &passenger;
+        if( !redirected ) {
+            CHECK_FALSE( passenger.is_enemy() );
+            CHECK( passenger.op_of_u.trust == 20 );
+        }
+    }
+    CHECK( redirected );
+    CHECK( passenger.hit_by_player );
+    if( allied ) {
+        CHECK_FALSE( passenger.is_enemy() );
+        CHECK( passenger.op_of_u.trust == 15 );
+        CHECK( passenger.op_of_u.anger == 5 );
+    } else {
+        CHECK( passenger.is_enemy() );
+    }
+}
+
+TEST_CASE( "wild_charge_direct_npc_hit_does_not_repeat_the_attack_notification",
+           "[mounted][charge][wild_charge][regression]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    npc &target = spawn_npc( ( player.pos_bub() + tripoint( 3, 0, 0 ) ).xy(), "test_talker" );
+    target.set_fac( faction_id( "your_followers" ) );
+    target.set_attitude( NPCATT_FOLLOW );
+    REQUIRE( target.get_faction() != nullptr );
+    faction &target_faction = *target.get_faction();
+    const restore_on_out_of_scope restore_faction( target_faction );
+    target_faction.likes_u = 0;
+    REQUIRE_FALSE( target.guaranteed_hostile() );
+    target.op_of_u.trust = 20;
+    target.op_of_u.anger = 0;
+    REQUIRE( target.is_player_ally() );
+    target.on_attacked( player );
+    REQUIRE( target.op_of_u.trust == 15 );
+    dealt_damage_instance dealt;
+    safe_reference<Creature> recipient;
+    target.deal_melee_hit( &horse, 100, false, damage_instance(), dealt,
+                           weakpoint_attack(), nullptr, &player, &recipient );
+    CHECK( recipient.get() == &target );
+    CHECK_FALSE( target.is_enemy() );
+    CHECK( target.op_of_u.trust == 15 );
+    CHECK( target.op_of_u.anger == 5 );
+}
+
+TEST_CASE( "wild_charge_survives_saving_and_hits_with_the_mount_instead_of_the_weapon",
+           "[mounted][charge][wild_charge][save]" )
+{
+    avatar &player = get_avatar();
+    monster &horse = setup_mounted_lance( player );
+    horse.set_hit_bonus( 1000 );
+    const tripoint_bub_ms start = player.pos_bub();
+    monster &target = spawn_test_monster( "mon_zombie", start + tripoint( 3, 0, 0 ) );
+    target.set_hp( 500 );
+    target.set_dodge_bonus( -1000 );
+    start_wild_charge( player, horse );
+    REQUIRE( player.activity );
+    player.activity.do_turn( player );
+    REQUIRE( player.activity );
+    player.activity.do_turn( player );
+    REQUIRE( player.activity );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns );
+    CHECK( player.martial_arts_data->technique_cooldown_remaining( tec_wild_charge ) > 0_turns );
+
+    std::ostringstream saved;
+    JsonOut output( saved );
+    player.activity.actor->serialize( output );
+    JsonValue data = json_loader::from_string( saved.str() );
+    const std::unique_ptr<activity_actor> resumed = mounted_charge_activity_actor::deserialize( data );
+    player.assign_activity( *resumed );
+    REQUIRE( player.activity );
+    melee::clear_stats();
+    player.activity.do_turn( player );
+    CHECK( target.get_hp() < 500 );
+    CHECK( target.has_effect( efftype_id( "downed" ) ) );
+    CHECK( target.has_effect( efftype_id( "stunned" ) ) );
+    CHECK( melee::get_stats().attack_count == 0 );
+    CHECK( player.pos_bub() == start + tripoint( 3, 0, 0 ) );
+}
+
+#endif
 
 TEST_CASE( "steel_spear_loads_an_explicit_charge_profile", "[mounted][charge][json]" )
 {

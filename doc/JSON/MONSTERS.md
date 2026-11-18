@@ -356,7 +356,18 @@ Monster speed. 100 is the normal speed for a human being - higher values are fas
 ## "mountable_weight_ratio"
 (float, optional)
 
-Used as the acceptable rider vs. mount weight percentage ratio. Defaults to "0.2", which means the mount is capable of carrying riders weighing `<= 20%` of the mount's weight.
+The maximum carried load as a fraction of the mount's current body weight. The default is `0.2`.
+The load includes animal equipment, cargo inside equipped containers, legacy cargo, and the
+rider's body and carried equipment when mounted. Mounting checks the combined load, not the
+rider alone. Moving an item between the rider and mount does not change their combined load.
+An overloaded ridden animal moves more slowly and cannot start or continue a charge.
+
+The animal interaction and equipment menus show the weight limit and projected riding load.
+Permanently tamed mounts have an overmap marker for their last observed position. The animal
+menu can hide or restore the marker; names and stable monster identities survive saving.
+Wild Charge is available through active techniques while trotting on an animal mount. It
+requires two clear tiles of run-up, shares recovery with weapon-based Mounted Charge, and
+can knock down or stun sufficiently light targets that are not immune to those effects.
 
 ## "melee_skill"
 (integer, optional)

@@ -76,6 +76,7 @@
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
+#include "damage.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "effect_on_condition.h"
@@ -151,6 +152,7 @@
 #include "overmap.h"
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
+#include "pet_inventory_ui.h"
 #include "pickup.h"
 #include "pimpl.h"
 #include "player_activity.h"
@@ -350,6 +352,7 @@ static const efftype_id effect_controlled( "controlled" );
 static const efftype_id effect_currently_busy( "currently_busy" );
 static const efftype_id effect_docile( "docile" );
 static const efftype_id effect_downed( "downed" );
+static const efftype_id effect_stunned( "stunned" );
 static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
@@ -19804,13 +19807,22 @@ tripoint_abs_ms mounted_charge_activity_actor::route_destination( const int max_
                               legacy_direction.y() * steps, legacy_direction.z() * steps );
 }
 
+const mounted_charge_profile &mounted_charge_activity_actor::charge_profile(
+    const item *weapon ) const
+{
+    return body_charge ? mounted_body_charge_profile() : *weapon->type->mounted_charge;
+}
+
 bool mounted_charge_activity_actor::valid_state( Character &who, const item *&weapon ) const
 {
     weapon = nullptr;
+    if( body_charge && !tec_wild_charge.is_valid() ) {
+        return false;
+    }
     if( completed_steps < 0 ||
         ( destination == tripoint_abs_ms::min && legacy_direction == tripoint_rel_ms::zero ) ||
         origin == tripoint_abs_ms::min ||
-        charge_item_type.is_null() ) {
+        ( !body_charge && charge_item_type.is_null() ) ) {
         return false;
     }
     if( !who.is_avatar() || !who.is_mounted() || !who.mounted_creature ||
@@ -19818,15 +19830,19 @@ bool mounted_charge_activity_actor::valid_state( Character &who, const item *&we
         return false;
     }
 
+    if( who.mounted_creature->get_load_weight() > who.mounted_creature->weight_capacity() ||
+        ( body_charge && !who.is_running() ) ) {
+        return false;
+    }
     const item_location wielded = who.get_wielded_item();
-    if( !wielded || wielded->uid().get_value() != weapon_uid ||
-        wielded->typeId() != charge_item_type ||
-        !wielded->has_technique( tec_mounted_charge ) ||
-        !wielded->type->mounted_charge || !wielded->type->mounted_charge->valid() ) {
+    if( !body_charge && ( !wielded || wielded->uid().get_value() != weapon_uid ||
+                          wielded->typeId() != charge_item_type ||
+                          !wielded->has_technique( tec_mounted_charge ) ||
+                          !wielded->type->mounted_charge || !wielded->type->mounted_charge->valid() ) ) {
         return false;
     }
 
-    const mounted_charge_profile &profile = *wielded->type->mounted_charge;
+    const mounted_charge_profile &profile = charge_profile( wielded.get_item() );
     const tripoint_abs_ms target = route_destination( profile.max_steps );
     if( target.z() != origin.z() || target == origin ||
         rl_dist( origin, target ) > profile.max_steps ) {
@@ -19842,7 +19858,7 @@ bool mounted_charge_activity_actor::valid_state( Character &who, const item *&we
     }
 
     weapon = wielded.get_item();
-    return weapon != nullptr;
+    return body_charge || weapon != nullptr;
 }
 
 void mounted_charge_activity_actor::stop( player_activity &act ) const
@@ -19852,11 +19868,13 @@ void mounted_charge_activity_actor::stop( player_activity &act ) const
 
 void mounted_charge_activity_actor::start( player_activity &act, Character &who )
 {
+    const matec_id technique = body_charge ? tec_wild_charge : tec_mounted_charge;
     const item *weapon = nullptr;
     if( !valid_state( who, weapon ) ||
         ( !cooldown_started &&
-          who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
-        !tec_mounted_charge->activation_allowed( who, cooldown_started ? "continue" : "start" ) ) {
+          ( who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ||
+            who.martial_arts_data->technique_cooldown_remaining( tec_wild_charge ) > 0_turns ) ) ||
+        !technique->activation_allowed( who, cooldown_started ? "continue" : "start" ) ) {
         stop( act );
         return;
     }
@@ -19887,16 +19905,18 @@ static std::optional<tripoint_bub_ms> mounted_charge_knockback_tile( map &here,
 
 void mounted_charge_activity_actor::do_turn( player_activity &act, Character &who )
 {
+    const matec_id technique = body_charge ? tec_wild_charge : tec_mounted_charge;
     const item *weapon = nullptr;
     if( !valid_state( who, weapon ) ||
         ( !cooldown_started &&
-          who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ) ||
-        !tec_mounted_charge->activation_allowed( who, "continue" ) ) {
+          ( who.martial_arts_data->technique_cooldown_remaining( tec_mounted_charge ) > 0_turns ||
+            who.martial_arts_data->technique_cooldown_remaining( tec_wild_charge ) > 0_turns ) ) ||
+        !technique->activation_allowed( who, "continue" ) ) {
         stop( act );
         return;
     }
 
-    const mounted_charge_profile &profile = *weapon->type->mounted_charge;
+    const mounted_charge_profile &profile = charge_profile( weapon );
     const std::vector<tripoint_abs_ms> path = line_to( origin, route_destination( profile.max_steps ) );
     if( completed_steps >= static_cast<int>( path.size() ) ) {
         stop( act );
@@ -19926,9 +19946,19 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
     }
 
     const time_duration cooldown = cooldown_started ? 0_turns :
-                                   tec_mounted_charge->activation_cooldown( who );
+                                   technique->activation_cooldown( who );
     Creature *const target = get_creature_tracker().creature_at( next, true );
     if( target != nullptr ) {
+        if( body_charge && completed_steps < 2 ) {
+            who.add_msg_if_player( m_info, _( "Your mount needs at least two clear tiles of run-up." ) );
+            stop( act );
+            return;
+        }
+        if( body_charge && target->attitude_to( who ) != Creature::Attitude::HOSTILE &&
+            !player->query_yn( _( "Ram %s?" ), target->disp_name() ) ) {
+            stop( act );
+            return;
+        }
         if( !player->try_break_relax_gas( _( "Your mount surges forward!" ),
                                           _( "You are too pacified to charge." ) ) ) {
             stop( act );
@@ -19936,11 +19966,13 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
         }
 
         monster *const struck_monster = target->as_monster();
+        const units::mass combined_weight = who.mounted_creature->get_weight() +
+                                            ( body_charge ? who.mounted_creature->get_load_weight( &who ) : who.get_weight() );
         // Only a small fraction of the rider and mount's combined mass can be thrown clear.
         constexpr int knockback_mass_ratio = 4;
         const bool light_monster = struck_monster != nullptr &&
                                    struck_monster->get_weight() * knockback_mass_ratio <=
-                                   who.get_weight() + who.mounted_creature->get_weight();
+                                   combined_weight;
         const std::optional<tripoint_bub_ms> landing = light_monster ?
                 mounted_charge_knockback_tile( here, current, next ) : std::nullopt;
         std::vector<int64_t> existing_corpse_uids;
@@ -19952,15 +19984,103 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
             }
         }
 
-        who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
-                tec_mounted_charge->charge_damage_multiplier( who, profile, completed_steps ) );
-        const bool attacked = who.melee_attack( *target, false, matec_id(), false );
-        who.clear_mounted_charge_stab_multiplier();
+        bool attacked = false;
+        if( body_charge ) {
+            const character_action_guard rider( who );
+            const auto context = here.get_context_reference();
+            const std::uint64_t generation = act.identity_generation();
+            const shared_ptr_fast<monster> mount = who.mounted_creature;
+            const safe_reference<Creature> target_reference = target->get_safe_reference();
+            const auto activity_alive = [&]() {
+                return rider && context && act.identity_generation() == generation && act.actor.get() == this;
+            };
+            if( npc *person = target->as_npc() ) {
+                person->on_attacked( who );
+            }
+            if( !activity_alive() ) {
+                return;
+            }
+            if( !target_reference || target->is_dead_state() || !valid_state( who, weapon ) ) {
+                stop( act );
+                return;
+            }
+            const int hit_spread = target->deal_melee_attack( mount.get(),
+                                   static_cast<int>( mount->hit_roll() ) );
+            if( !activity_alive() ) {
+                return;
+            }
+            if( !target_reference || !valid_state( who, weapon ) ) {
+                stop( act );
+                return;
+            }
+            who.mod_moves( -100 );
+            if( hit_spread < 0 ) {
+                who.add_msg_if_player( m_info, _( "%s evades your mount's charge." ), target->disp_name() );
+                stop( act );
+                return;
+            }
+            constexpr units::mass mass_per_damage = 25_kilogram;
+            const float mass_damage = static_cast<float>( combined_weight.value() ) / mass_per_damage.value();
+            const float damage = std::clamp( mass_damage *
+                                             technique->charge_damage_multiplier( who, profile, completed_steps ), 0.0f, 60.0f );
+            dealt_damage_instance dealt;
+            safe_reference<Creature> hit_target;
+            const bodypart_id torso( "torso" );
+            target->deal_melee_hit( mount.get(), hit_spread, false,
+                                    damage_instance( damage_type_id( "bash" ), damage ), dealt,
+                                    weakpoint_attack(), &torso, &who, &hit_target );
+            if( !rider || !context ) {
+                return;
+            }
+            if( hit_target ) {
+                hit_target->check_dead_state( &here );
+            }
+            if( !activity_alive() ) {
+                return;
+            }
+            if( !hit_target || !target_reference || !valid_state( who, weapon ) ) {
+                stop( act );
+                return;
+            }
+            monster *const hit_monster = hit_target->as_monster();
+            if( !hit_target->is_dead_state() && dealt.total_damage() > 0 &&
+                hit_target->get_weight() * knockback_mass_ratio <= combined_weight &&
+                ( hit_monster == nullptr || !hit_monster->has_flag( mon_flag_FLIES ) ) ) {
+                hit_target->add_effect( effect_downed, time_duration::from_turns( technique->down_dur ) );
+                if( !activity_alive() ) {
+                    return;
+                }
+                if( !hit_target || !target_reference || !valid_state( who, weapon ) ) {
+                    stop( act );
+                    return;
+                }
+                hit_target->add_effect( effect_stunned, time_duration::from_turns( technique->stun_dur ) );
+            }
+            if( !activity_alive() ) {
+                return;
+            }
+            if( !hit_target || !target_reference || !valid_state( who, weapon ) ) {
+                stop( act );
+                return;
+            }
+            who.add_msg_if_player( m_good, _( "Your mount rams %s." ), hit_target->disp_name() );
+            if( hit_target.get() != target ) {
+                stop( act );
+                return;
+            }
+            attacked = true;
+        } else {
+            who.set_mounted_charge_damage_multiplier( damage_type_id( profile.damage_type ),
+                    technique->charge_damage_multiplier( who, profile, completed_steps ) );
+            attacked = who.melee_attack( *target, false, matec_id(), false );
+            who.clear_mounted_charge_stab_multiplier();
+        }
         if( attacked && !cooldown_started ) {
             who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
+            who.martial_arts_data->start_technique_cooldown( tec_wild_charge, cooldown );
             cooldown_started = true;
         }
-        if( npc *const person = target->as_npc() ) {
+        if( npc *const person = target->as_npc(); person != nullptr && !body_charge ) {
             person->make_angry();
         }
         if( !landing || struck_monster == nullptr ) {
@@ -19993,6 +20113,7 @@ void mounted_charge_activity_actor::do_turn( player_activity &act, Character &wh
     avatar_action::move( *player, here, direction );
     if( !cooldown_started && ( who.pos_abs() != before || who.get_moves() < moves_before ) ) {
         who.martial_arts_data->start_technique_cooldown( tec_mounted_charge, cooldown );
+        who.martial_arts_data->start_technique_cooldown( tec_wild_charge, cooldown );
         cooldown_started = true;
     }
     const tripoint_abs_ms expected_after = next_abs;
@@ -20043,6 +20164,7 @@ void mounted_charge_activity_actor::serialize( JsonOut &jsout ) const
     jsout.member( "weapon_uid", weapon_uid );
     jsout.member( "origin", origin );
     jsout.member( "charge_item_type", charge_item_type );
+    jsout.member( "body_charge", body_charge );
     jsout.member( "completed_steps", completed_steps );
     jsout.member( "cooldown_started", cooldown_started );
     jsout.end_object();
@@ -20056,7 +20178,10 @@ std::unique_ptr<activity_actor> mounted_charge_activity_actor::deserialize( Json
     data.read( "weapon_uid", actor.weapon_uid );
     data.read( "origin", actor.origin );
     data.read( "charge_item_type", actor.charge_item_type );
-    actor.charge_item_type = item_controller->migrate_id( actor.charge_item_type );
+    data.read( "body_charge", actor.body_charge );
+    if( !actor.body_charge ) {
+        actor.charge_item_type = item_controller->migrate_id( actor.charge_item_type );
+    }
     data.read( "completed_steps", actor.completed_steps );
     actor.cooldown_started = actor.completed_steps > 0;
     data.read( "cooldown_started", actor.cooldown_started );
@@ -20140,6 +20265,7 @@ deserialize_functions = {
     { ACT_MILK, &milk_activity_actor::deserialize },
     { ACT_MOP, &mop_activity_actor::deserialize },
     { ACT_MOUNTED_CHARGE, &mounted_charge_activity_actor::deserialize },
+    { activity_id( "ACT_PET_TRANSFER" ), &pet_inventory_ui::transfer_activity_actor::deserialize },
     { ACT_MOVE_ITEMS, &move_items_activity_actor::deserialize },
     { ACT_MOVE_LOOT, &zone_sort_activity_actor::deserialize },
     { ACT_MULTIPLE_BUTCHER, &multi_butchery_activity_actor::deserialize },

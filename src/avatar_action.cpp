@@ -1157,8 +1157,10 @@ void avatar_action::active_technique( avatar &you, map &m )
     for( size_t i = 0; i < available.size(); ++i ) {
         const matec_id technique = available[i];
         const ret_val<void> status = you.active_technique_availability( technique );
-        const bool enabled = status.success() && ( technique != tec_mounted_charge ||
-                             ( !cata_mp::is_client_mode() && mounted_charge_available( you ) ) );
+        const bool charge = technique == tec_mounted_charge || technique == tec_wild_charge;
+        const bool enabled = status.success() && ( !charge ||
+                             ( !cata_mp::is_client_mode() &&
+                               mounted_charge_available( you, technique == tec_wild_charge ) ) );
         const std::string state = status.success() ? _( "Ready" ) : status.str();
         const std::string description = technique->get_description() + "\n" + state;
         menu.addentry_desc( i, enabled, MENU_AUTOASSIGN,
@@ -1184,8 +1186,8 @@ void avatar_action::active_technique( avatar &you, map &m )
         return;
     }
     const matec_id technique = available[menu.ret];
-    if( technique == tec_mounted_charge ) {
-        mounted_charge( you );
+    if( technique == tec_mounted_charge || technique == tec_wild_charge ) {
+        mounted_charge( you, technique == tec_wild_charge );
         return;
     }
 
@@ -1271,27 +1273,36 @@ void avatar_action::active_technique( avatar &you, map &m )
     }
 }
 
-bool avatar_action::mounted_charge_available( const avatar &you )
+bool avatar_action::mounted_charge_available( const avatar &you, bool body_charge )
 {
+    const matec_id technique = body_charge ? tec_wild_charge : tec_mounted_charge;
+    if( !you.mounted_creature ||
+        you.mounted_creature->get_load_weight() > you.mounted_creature->weight_capacity() ||
+        !you.active_technique_availability( technique ).success() ) {
+        return false;
+    }
+    if( body_charge ) {
+        return you.is_running() && technique->activation_allowed( you, "start" );
+    }
     const item_location weapon = you.get_wielded_item();
     if( !weapon || !weapon->has_technique( tec_mounted_charge ) ||
-        !weapon->type->mounted_charge || !weapon->type->mounted_charge->valid() ||
-        !you.mounted_creature ||
-        !you.active_technique_availability( tec_mounted_charge ).success() ) {
+        !weapon->type->mounted_charge || !weapon->type->mounted_charge->valid() ) {
         return false;
     }
     return tec_mounted_charge->activation_allowed( you, "start" );
 }
 
-void avatar_action::mounted_charge( avatar &you )
+void avatar_action::mounted_charge( avatar &you, bool body_charge )
 {
-    if( !mounted_charge_available( you ) ) {
+    if( !mounted_charge_available( you, body_charge ) ) {
         add_msg( m_info, _( "You cannot begin a mounted charge right now." ) );
         return;
     }
     const item_location weapon = you.get_wielded_item();
+    const mounted_charge_profile &profile = body_charge ? mounted_body_charge_profile() :
+                                            *weapon->type->mounted_charge;
     const target_handler::trajectory trajectory =
-        target_handler::mode_select_only( you, weapon->type->mounted_charge->max_steps );
+        target_handler::mode_select_only( you, profile.max_steps );
     if( trajectory.empty() ) {
         return;
     }
@@ -1303,8 +1314,8 @@ void avatar_action::mounted_charge( avatar &you )
     }
 
     you.assign_activity( mounted_charge_activity_actor( here.get_abs( destination ),
-                         you.mounted_creature->uid().get_value(), weapon->uid().get_value(), you.pos_abs(),
-                         weapon->typeId() ) );
+                         you.mounted_creature->uid().get_value(), body_charge ? 0 : weapon->uid().get_value(),
+                         you.pos_abs(), body_charge ? itype_id() : weapon->typeId(), body_charge ) );
 }
 
 // TODO: Move data/functions related to targeting out of game class

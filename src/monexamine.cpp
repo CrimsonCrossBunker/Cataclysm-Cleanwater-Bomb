@@ -36,6 +36,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
+#include "overmapbuffer.h"
 #include "pathfinding.h"
 #include "pet_inventory_ui.h"
 #include "pet_slot.h"
@@ -221,33 +222,21 @@ void attach_bag_to( monster &z )
 
     avatar &player_character = get_avatar();
     item_location loc = game_menus::inv::titled_filter_menu( filter, player_character,
-        _( "Bag item" ) );
+                        _( "Bag item" ) );
 
     if( !loc ) {
         add_msg( _( "Never mind." ) );
         return;
     }
 
-    item &it = *loc;
-    if( it.weight() > z.weight_capacity() ) {
-        add_msg( _( "The %1$s is too heavy for the %2$s to carry." ), it.tname(), pet_name );
+    const std::string bag_name = loc->display_name();
+    const ret_val<void> installed = pet_inventory_ui::install_equipment( player_character, z,
+                                    pet_slot_storage, loc );
+    if( !installed.success() ) {
+        add_msg( m_bad, "%s", installed.str() );
         return;
     }
-    if( !it.is_container_empty() ) {
-        for( item *top_item : it.all_items_top() ) {
-            item &i = *top_item;
-            z.add_item( i );
-            it.remove_item( i );
-        }
-    }
-    if( !z.equip_pet_equipment( pet_slot_storage, it ) ) {
-        return;
-    }
-    add_msg( _( "You mount the %1$s on your %2$s." ), it.display_name(), pet_name );
-    player_character.i_rem( &it );
-    // Update encumbrance in case we were wearing it
-    player_character.flag_encumbrance();
-    player_character.mod_moves( -to_moves<int>( 2_seconds ) );
+    add_msg( _( "You mount the %1$s on your %2$s." ), bag_name, pet_name );
 }
 
 void dump_items( monster &z )
@@ -583,7 +572,7 @@ void milk_source( monster &source_mon )
             source_mon.add_effect( effect_tied, 1_turns, true );
         }
         player_character.assign_activity( milk_activity_actor( moves, moves_per_unit, coords, liquid_target,
-                temp_tie ) );
+                                          temp_tie ) );
 
         add_msg( _( "You milk the %s." ), source_mon.get_name() );
     } else {
@@ -657,7 +646,7 @@ bool Character::can_mount( const monster &critter ) const
     return critter.has_flag( mon_flag_PET_MOUNTABLE ) && critter.friendly == -1 &&
            !critter.has_effect( effect_controlled ) && !critter.has_effect( effect_ridden ) &&
            critter.get_size() >= ( get_size() + 1 ) &&
-           get_weight() <= critter.get_weight() * critter.get_mountable_weight_ratio();
+           critter.get_load_weight( this ) <= critter.weight_capacity();
 }
 
 bool monexamine::pet_menu( monster &z )
@@ -670,6 +659,7 @@ bool monexamine::pet_menu( monster &z )
         rename,
         manage_equipment,
         transfer_items,
+        toggle_tracking,
         attach_bag,
         remove_bag,
         drop_all,
@@ -704,6 +694,9 @@ bool monexamine::pet_menu( monster &z )
     if( z.has_flag( mon_flag_EATS ) ) {
         amenu.text = string_format( _( "What to do with your %s?\n" ), pet_name );
     }
+    if( z.has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        amenu.text += "\n" + pet_inventory_ui::load_summary( z, get_player_character() );
+    }
     amenu.addentry( swap_pos, true, 's', _( "Swap positions" ) );
     amenu.addentry( push_monster, true, 'p', _( "Push the %s" ), pet_name );
     if( z.has_effect( effect_leashed ) ) {
@@ -714,6 +707,11 @@ bool monexamine::pet_menu( monster &z )
         }
     }
     amenu.addentry( rename, true, 'e', _( "Rename" ) );
+    if( z.has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        amenu.addentry( toggle_tracking, true, 'M',
+                        z.get_value( "hide_overmap_marker" ).str() == "yes" ?
+                        _( "Show on the overmap" ) : _( "Hide from the overmap" ) );
+    }
     if( !z.has_flag( mon_flag_RIDEABLE_MECH ) ) {
         amenu.addentry( manage_equipment, true, 'E', _( "Manage animal equipment" ) );
         amenu.addentry( transfer_items, z.get_pet_storage() != nullptr, 'I',
@@ -785,8 +783,9 @@ bool monexamine::pet_menu( monster &z )
             amenu.addentry( mount, false, 'r', _( "The %s cannot be mounted" ), pet_name );
         } else if( z.get_size() <= player_character.get_size() ) {
             amenu.addentry( mount, false, 'r', _( "The %s is too small to carry your weight" ), pet_name );
-        } else if( player_character.get_weight() >= z.get_weight() * z.get_mountable_weight_ratio() ) {
-            amenu.addentry( mount, false, 'r', _( "You are too heavy to mount the %s" ), pet_name );
+        } else if( z.get_load_weight( &player_character ) > z.weight_capacity() ) {
+            amenu.addentry( mount, false, 'r', _( "You and the equipment are too heavy for the %s" ),
+                            pet_name );
         }
     } else {
         const itype &type = *item::find_type( z.type->mech_battery );
@@ -874,6 +873,13 @@ bool monexamine::pet_menu( monster &z )
         case rename:
             selected_entry = "rename";
             rename_pet( z );
+            overmap_buffer.update_tracked_pet( z, get_player_character() );
+            break;
+        case toggle_tracking:
+            selected_entry = "toggle_tracking";
+            z.set_value( "hide_overmap_marker",
+                         z.get_value( "hide_overmap_marker" ).str() == "yes" ? "no" : "yes" );
+            overmap_buffer.update_tracked_pet( z, get_player_character() );
             break;
         case manage_equipment:
             selected_entry = "manage_equipment";

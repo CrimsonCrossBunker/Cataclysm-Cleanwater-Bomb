@@ -2408,8 +2408,10 @@ double Character::mount_speed() const
         return mounted_creature->get_speed();
     }
     const riding_config &config = get_riding_config();
+    const double load_ratio = static_cast<double>( mounted_creature->get_load_weight().value() ) /
+                              std::max( 1_gram, mounted_creature->weight_capacity() ).value();
     return mounted_creature->get_speed() * ( is_running() ? config.animal_trot_speed_multiplier :
-            config.animal_walk_speed_multiplier );
+            config.animal_walk_speed_multiplier ) / std::max( 1.0, load_ratio );
 }
 
 void Character::set_player_movement_mode( const move_mode_id &new_mode )

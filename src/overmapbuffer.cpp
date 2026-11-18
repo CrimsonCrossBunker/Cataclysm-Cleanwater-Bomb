@@ -19,6 +19,7 @@
 #include <type_traits>
 
 #include "basecamp.h"
+#include "avatar.h"
 #include "calendar.h"
 #include "cata_assert.h"
 #include "cata_utility.h"
@@ -302,8 +303,63 @@ void overmap_global_state::clear()
     unique_special_decks.clear();
     highway_intersections.clear();
     placed_regions.clear();
+    tracked_pets.clear();
     overmap_count = 0;
     major_river_count = 0;
+}
+
+void overmapbuffer::update_tracked_pet( monster &pet, const Character &observer,
+                                        bool claim_ownership )
+{
+    pet.ensure_uid();
+    const int64_t uid = pet.uid().get_value();
+    if( pet.friendly != -1 || pet.is_dead() || !pet.has_flag( mon_flag_PET_MOUNTABLE ) ||
+        pet.get_value( "hide_overmap_marker" ).str() == "yes" ) {
+        remove_tracked_pet( uid );
+        return;
+    }
+    std::vector<overmap_tracked_pet> &pets = global_state.tracked_pets;
+    const auto found = std::find_if( pets.begin(),
+    pets.end(), [uid]( const overmap_tracked_pet & entry ) {
+        return entry.uid == uid;
+    } );
+    if( found == pets.end() ) {
+        pets.push_back( { uid, observer.getID(), pet.pos_abs_omt(), pet.get_name() } );
+    } else {
+        if( claim_ownership ) {
+            found->owner = observer.getID();
+        }
+        found->position = pet.pos_abs_omt();
+        found->name = pet.get_name();
+    }
+}
+
+void overmapbuffer::remove_tracked_pet( int64_t uid )
+{
+    std::vector<overmap_tracked_pet> &pets = global_state.tracked_pets;
+    pets.erase( std::remove_if( pets.begin(), pets.end(), [uid]( const overmap_tracked_pet & entry ) {
+        return entry.uid == uid;
+    } ), pets.end() );
+}
+
+bool overmapbuffer::has_tracked_pet( const tripoint_abs_omt &p ) const
+{
+    const character_id owner = get_avatar().getID();
+    return std::any_of( global_state.tracked_pets.begin(), global_state.tracked_pets.end(),
+    [&p, owner]( const overmap_tracked_pet & entry ) {
+        return entry.owner == owner && entry.position == p;
+    } );
+}
+
+std::vector<overmap_tracked_pet> overmapbuffer::get_tracked_pets( const tripoint_abs_omt &p ) const
+{
+    std::vector<overmap_tracked_pet> result;
+    for( const overmap_tracked_pet &entry : global_state.tracked_pets ) {
+        if( entry.owner == get_avatar().getID() && entry.position == p ) {
+            result.push_back( entry );
+        }
+    }
+    return result;
 }
 
 const region_settings &overmapbuffer::get_settings( const tripoint_abs_omt &p )

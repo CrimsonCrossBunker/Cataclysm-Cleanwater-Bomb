@@ -5017,6 +5017,8 @@ class zone_sort_activity_actor : public zone_activity_actor
         void return_items_to_source( Character &you, const tripoint_bub_ms &src_bub );
 };
 
+struct mounted_charge_profile;
+
 /** One-step-per-activity-call selected-route charge for an animal-mounted rider. */
 class mounted_charge_activity_actor : public activity_actor
 {
@@ -5025,9 +5027,9 @@ class mounted_charge_activity_actor : public activity_actor
         mounted_charge_activity_actor( const tripoint_abs_ms &destination,
                                        int64_t mount_uid, int64_t weapon_uid,
                                        const tripoint_abs_ms &origin,
-                                       const itype_id &charge_item_type ) :
+                                       const itype_id &charge_item_type, bool body_charge = false ) :
             destination( destination ), mount_uid( mount_uid ), weapon_uid( weapon_uid ), origin( origin ),
-            charge_item_type( charge_item_type ) {}
+            charge_item_type( charge_item_type ), body_charge( body_charge ) {}
 
         const activity_id &get_type() const override {
             static const activity_id ACT_MOUNTED_CHARGE( "ACT_MOUNTED_CHARGE" );
@@ -5053,10 +5055,12 @@ class mounted_charge_activity_actor : public activity_actor
         int64_t weapon_uid = 0;
         tripoint_abs_ms origin = tripoint_abs_ms::min;
         itype_id charge_item_type;
+        bool body_charge = false;
         int completed_steps = 0;
         bool cooldown_started = false;
 
         bool valid_state( Character &who, const item *&weapon ) const;
+        const mounted_charge_profile &charge_profile( const item *weapon ) const;
         tripoint_abs_ms route_destination( int max_steps ) const;
         void stop( player_activity &act ) const;
 };

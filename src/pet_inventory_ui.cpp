@@ -6,6 +6,7 @@
 #include <functional>
 #include <iterator>
 #include <list>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -14,8 +15,10 @@
 #include <vector>
 
 #include "avatar.h"
+#include "cata_utility.h"
 #include "character.h"
 #include "color.h"
+#include "creature_tracker.h"
 #include "cursesdef.h"
 #include "enums.h"
 #include "flag.h"
@@ -25,16 +28,22 @@
 #include "item_location.h"
 #include "item_pocket.h"
 #include "itype.h"
+#include "json.h"
+#include "line.h"
+#include "map.h"
+#include "messages.h"
 #include "monster.h"
 #include "mtype.h"
 #include "output.h"
 #include "pet_slot.h"
 #include "pimpl.h"
+#include "player_activity.h"
 #include "pocket_type.h"
 #include "point.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "string_formatter.h"
+#include "string_input_popup.h"
 #include "translation.h"
 #include "translations.h"
 #include "ui_manager.h"
@@ -45,6 +54,24 @@
 
 namespace pet_inventory_ui
 {
+std::string load_summary( const monster &pet, const Character &who )
+{
+    const units::mass carried = pet.get_carried_weight();
+    if( !pet.has_flag( mon_flag_PET_MOUNTABLE ) ) {
+        return string_format( _( "Equipment/cargo: %.1f / %.1f %s  Remaining: %.1f %s" ),
+                              convert_weight( carried ), convert_weight( pet.weight_capacity() ), weight_units(),
+                              convert_weight( pet.weight_capacity() - carried ), weight_units() );
+    }
+    const Character &rider = pet.mounted_player != nullptr ? *pet.mounted_player : who;
+    const units::mass total = pet.get_load_weight( &rider );
+    return string_format(
+               _( "Equipment/cargo: %.1f %s  Rider: %.1f %s\n%s: %.1f / %.1f %s  Remaining: %.1f %s" ),
+               convert_weight( carried ), weight_units(), convert_weight( rider.get_weight() ),
+               weight_units(), pet.mounted_player != nullptr ? _( "Riding load" ) : _( "After mounting" ),
+               convert_weight( total ), convert_weight( pet.weight_capacity() ),
+               weight_units(), convert_weight( pet.weight_capacity() - total ), weight_units() );
+}
+
 std::optional<std::pair<quality_id, int>> missing_install_quality( const Character &who,
                                        const item &equipment )
 {
@@ -56,6 +83,30 @@ std::optional<std::pair<quality_id, int>> missing_install_quality( const Charact
         }
     }
     return std::nullopt;
+}
+
+ret_val<void> install_equipment( Character &who, monster &pet, const pet_slot_id &slot,
+                                 item_location source )
+{
+    if( !source ) {
+        return ret_val<void>::make_failure( _( "The equipment is no longer available." ) );
+    }
+    const units::mass added = pet.mounted_player == &who && who.has_item( *source ) ?
+                              0_gram : source->weight();
+    if( added > 0_gram && pet.get_load_weight() + added > pet.weight_capacity() ) {
+        return ret_val<void>::make_failure( _( "That equipment is too heavy for the animal." ) );
+    }
+    if( const auto missing = missing_install_quality( who, *source ) ) {
+        return ret_val<void>::make_failure( _( "Installing this equipment requires %s quality level %d." ),
+                                            missing->first.obj().name, missing->second );
+    }
+    if( !pet.equip_pet_equipment( slot, *source ) ) {
+        return ret_val<void>::make_failure( _( "The equipment could not be installed in that slot." ) );
+    }
+    source.remove_item();
+    who.flag_encumbrance();
+    who.mod_moves( -200 );
+    return ret_val<void>::make_success();
 }
 
 namespace
@@ -281,15 +332,17 @@ units::volume pet_cargo_volume( const std::vector<pet_cargo_entry> &cargo )
     return result;
 }
 
-units::mass pet_cargo_weight( const std::vector<pet_cargo_entry> &cargo )
+std::string equipment_summary( const item &equipment )
 {
-    units::mass result = 0_gram;
-    for( const pet_cargo_entry &entry : cargo ) {
-        if( entry.value != nullptr ) {
-            result += entry.value->weight();
-        }
+    if( equipment.is_pet_armor() ) {
+        return string_format( _( "%.1f %s; bash %.1f cut %.1f stab %.1f" ),
+                              convert_weight( equipment.weight() ), weight_units(),
+                              equipment.resist( damage_type_id( "bash" ) ),
+                              equipment.resist( damage_type_id( "cut" ) ),
+                              equipment.resist( damage_type_id( "stab" ) ) );
     }
-    return result;
+    return string_format( _( "Weight: %.1f %s" ), convert_weight( equipment.weight() ),
+                          weight_units() );
 }
 
 struct pane_row {
@@ -312,7 +365,7 @@ struct menu_layout {
         const int content_width = std::max( 2, width - 2 );
         const int left_width = content_width / 2;
         const int right_width = content_width - left_width;
-        body_height = std::max( 4, height - 8 );
+        body_height = std::max( 4, height - 11 );
 
         root = catacurses::newwin( height, width, point::zero );
         left = catacurses::newwin( body_height, left_width, point( 1, 2 ) );
@@ -320,8 +373,8 @@ struct menu_layout {
                                     point( 1 + left_width, 2 ) );
         details = catacurses::newwin( 4, content_width,
                                       point( 1, 2 + body_height ) );
-        controls = catacurses::newwin( 1, content_width,
-                                       point( 1, height - 2 ) );
+        controls = catacurses::newwin( 4, content_width,
+                                       point( 1, height - 5 ) );
         adaptor.position_from_window( root );
     }
 };
@@ -394,6 +447,7 @@ input_context pet_inventory_context( const std::string &id )
     context.register_action( "PREV_TAB" );
     context.register_action( "NEXT_TAB" );
     context.register_action( "CONFIRM" );
+    context.register_action( "EXAMINE" );
     context.register_action( "MOVE_ALL_ITEMS" );
     context.register_action( "PAGE_UP" );
     context.register_action( "PAGE_DOWN" );
@@ -402,14 +456,17 @@ input_context pet_inventory_context( const std::string &id )
     return context;
 }
 
-bool can_pet_carry( const monster &pet, const item &candidate, std::string &reason )
+bool can_pet_carry( const monster &pet, const item &candidate, std::string &reason,
+                    const item *source = nullptr )
 {
     const item *storage = pet.get_pet_storage();
     if( storage == nullptr ) {
         reason = _( "Equip a storage item first." );
         return false;
     }
-    if( candidate.weight() > pet.weight_capacity() - pet.get_carried_weight() ) {
+    if( ( pet.mounted_player == nullptr ||
+          !pet.mounted_player->has_item( source != nullptr ? *source : candidate ) ) &&
+        candidate.weight() > pet.weight_capacity() - pet.get_load_weight() ) {
         reason = _( "The animal cannot carry that much additional weight." );
         return false;
     }
@@ -421,42 +478,69 @@ bool can_pet_carry( const monster &pet, const item &candidate, std::string &reas
 }
 
 bool move_character_item_to_pet( Character &who, monster &pet, item_location source,
-                                 bool show_failure )
+                                 bool show_failure, int quantity )
 {
     if( !source ) {
         return false;
     }
+    if( quantity <= 0 || quantity > source->count() ) {
+        return false;
+    }
+    item payload( *source );
+    if( payload.count_by_charges() ) {
+        payload.charges = quantity;
+    }
     std::string reason;
-    if( !can_pet_carry( pet, *source, reason ) ) {
+    if( !can_pet_carry( pet, payload, reason, source.get_item() ) ) {
         if( show_failure ) {
             popup( reason );
         }
         return false;
     }
-    item *storage = pet.find_pet_storage( *source );
+    item *storage = pet.find_pet_storage( payload );
     if( storage == nullptr ) {
         return false;
     }
-    const item payload( *source );
     if( !storage->put_in( payload, pocket_type::CONTAINER, false, &who, true ).success() ) {
         if( show_failure ) {
             popup( _( "The item could not be inserted into the animal's storage pocket." ) );
         }
         return false;
     }
-    source.remove_item();
+    if( source->count_by_charges() && quantity < source->charges ) {
+        source->charges -= quantity;
+        source.on_contents_changed();
+    } else {
+        source.remove_item();
+    }
     who.flag_encumbrance();
     who.mod_moves( -100 );
     return true;
 }
 
-bool move_pet_item_to_character( Character &who, monster &pet, const pet_cargo_entry &entry )
+bool move_pet_item_to_character( Character &who, monster &pet, const pet_cargo_entry &entry,
+                                 int quantity )
 {
     if( entry.value == nullptr || entry.value->typeId().is_empty() ||
         entry.value->typeId().is_null() ) {
         return false;
     }
 
+    if( quantity <= 0 || quantity > entry.value->count() ) {
+        return false;
+    }
+    if( entry.value->count_by_charges() && quantity < entry.value->charges ) {
+        item payload( *entry.value );
+        payload.charges = quantity;
+        entry.value->charges -= quantity;
+        if( entry.pocket != nullptr ) {
+            entry.pocket->on_contents_changed();
+        }
+        who.i_add( payload );
+        who.flag_encumbrance();
+        who.mod_moves( -100 );
+        return true;
+    }
     std::optional<item> extracted;
     if( entry.legacy_inventory ) {
         const auto found = std::find_if( pet.inv.begin(), pet.inv.end(),
@@ -489,6 +573,122 @@ bool move_pet_item_to_character( Character &who, monster &pet, const pet_cargo_e
 }
 
 } // namespace
+
+void transfer_request::serialize( JsonOut &json ) const
+{
+    json.start_object();
+    json.member( "to_pet", to_pet );
+    json.member( "source", source );
+    json.member( "cargo_uid", cargo_uid );
+    json.member( "quantity", quantity );
+    json.end_object();
+}
+
+void transfer_request::deserialize( const JsonObject &json )
+{
+    json.read( "to_pet", to_pet );
+    json.read( "source", source );
+    json.read( "cargo_uid", cargo_uid );
+    json.read( "quantity", quantity );
+}
+
+ret_val<void> transfer_item( Character &who, monster &pet, const transfer_request &request )
+{
+    if( request.to_pet ) {
+        if( !request.source || !who.has_item( *request.source ) ||
+            !who.can_drop( *request.source ).success() ) {
+            return ret_val<void>::make_failure( _( "The selected item is no longer available." ) );
+        }
+        if( move_character_item_to_pet( who, pet, request.source, false, request.quantity ) ) {
+            return ret_val<void>::make_success();
+        }
+        return ret_val<void>::make_failure(
+                   _( "The item no longer fits the animal's weight or pocket limits." ) );
+    }
+    for( const pet_cargo_entry &entry : transferable_pet_items( pet ) ) {
+        if( entry.value->uid().get_value() == request.cargo_uid ) {
+            return move_pet_item_to_character( who, pet, entry, request.quantity ) ?
+                   ret_val<void>::make_success() :
+                   ret_val<void>::make_failure( _( "The selected quantity is no longer available." ) );
+        }
+    }
+    return ret_val<void>::make_failure( _( "The animal is no longer carrying that item." ) );
+}
+
+const activity_id &transfer_activity_actor::get_type() const
+{
+    static const activity_id activity( "ACT_PET_TRANSFER" );
+    return activity;
+}
+
+void transfer_activity_actor::start( player_activity &act, Character & )
+{
+    act.moves_total = 1;
+    act.moves_left = 1;
+}
+
+void transfer_activity_actor::do_turn( player_activity &act, Character &who )
+{
+    const shared_ptr_fast<monster> pet = get_creature_tracker().find_by_uid( pet_uid );
+    map &here = get_map();
+    const auto reachable = [&]() {
+        return pet && !pet->is_dead() && pet->friendly == -1 &&
+               here.inbounds( who.pos_abs() ) && here.inbounds( pet->pos_abs() ) &&
+               who.posz() == pet->posz() && rl_dist( who.pos_abs(), pet->pos_abs() ) <= 1 &&
+               here.passable( pet->pos_bub( here ) ) &&
+               here.clear_path( who.pos_bub( here ), pet->pos_bub( here ), 1, 1, 100 );
+    };
+    if( who.getID() != operator_id || !reachable() || next_request < 0 ||
+        next_request > static_cast<int>( requests.size() ) ) {
+        who.add_msg_if_player( m_info, _( "The animal is no longer available for transferring items." ) );
+        act.set_to_null();
+        return;
+    }
+    while( who.get_moves() > 0 && next_request < static_cast<int>( requests.size() ) ) {
+        if( !reachable() ) {
+            who.add_msg_if_player( m_info, _( "The animal is no longer available for transferring items." ) );
+            act.set_to_null();
+            return;
+        }
+        const ret_val<void> result = transfer_item( who, *pet, requests[next_request] );
+        if( act.actor.get() != this ) {
+            return;
+        }
+        if( !result.success() ) {
+            who.add_msg_if_player( m_info, "%s", result.str() );
+        }
+        ++next_request;
+    }
+    if( next_request == static_cast<int>( requests.size() ) ) {
+        act.set_to_null();
+    }
+}
+
+void transfer_activity_actor::finish( player_activity &act, Character & )
+{
+    act.set_to_null();
+}
+
+void transfer_activity_actor::serialize( JsonOut &json ) const
+{
+    json.start_object();
+    json.member( "pet_uid", pet_uid );
+    json.member( "operator_id", operator_id );
+    json.member( "requests", std::vector<transfer_request>( requests.begin() + next_request,
+                 requests.end() ) );
+    json.end_object();
+}
+
+std::unique_ptr<activity_actor> transfer_activity_actor::deserialize( JsonValue &json )
+{
+    auto actor = std::make_unique<transfer_activity_actor>();
+    const JsonObject data = json.get_object();
+    data.read( "pet_uid", actor->pet_uid );
+    data.read( "operator_id", actor->operator_id );
+    data.read( "requests", actor->requests );
+    data.read( "next_request", actor->next_request );
+    return actor;
+}
 
 void show_equipment( monster &pet )
 {
@@ -596,28 +796,12 @@ void show_equipment( monster &pet )
             return false;
         }
 
-        const pet_slot &slot = slot_id.obj();
-        if( slot.min_storage > 0_ml && !selected->is_container_empty() ) {
-            popup( _( "Empty that storage item before equipping it on the animal." ) );
-            return false;
-        }
-        if( selected->weight() > pet.weight_capacity() - pet.get_carried_weight() ) {
-            popup( _( "That equipment is too heavy for the animal." ) );
-            return false;
-        }
-        if( const auto missing = missing_install_quality( player, *selected ) ) {
-            popup( _( "Installing this equipment requires %s quality level %d." ),
-                   missing->first.obj().name, missing->second );
-            return false;
-        }
-        if( !pet.equip_pet_equipment( slot_id, *selected ) ) {
-            popup( _( "The equipment could not be installed in that slot." ) );
+        const ret_val<void> installed = install_equipment( player, pet, slot_id, selected );
+        if( !installed.success() ) {
+            popup( installed.str() );
             return false;
         }
 
-        selected.remove_item();
-        player.flag_encumbrance();
-        player.mod_moves( -200 );
         const auto slot_iter = std::find( slots.begin(), slots.end(), slot_id );
         if( slot_iter != slots.end() ) {
             slot_cursor.selected = std::distance( slots.begin(), slot_iter );
@@ -712,7 +896,8 @@ void show_equipment( monster &pet )
         if( !candidates.empty() ) {
             const equipment_candidate &candidate = candidates[item_cursor.selected];
             item_title = candidate.location->display_name();
-            item_text = string_format( _( "Fits: %s" ), candidate_slot_names( candidate ) );
+            item_text = candidate.location->is_pet_armor() ? equipment_summary( *candidate.location ) :
+                        string_format( _( "Fits: %s" ), candidate_slot_names( candidate ) );
         }
 
         std::string slot_title = _( "Selected slot" );
@@ -726,7 +911,7 @@ void show_equipment( monster &pet )
                                                     parent->obj().name.translated() ) :
                             _( "Locked" );
             } else if( const item *equipped = pet.get_pet_equipment( *current_slot ) ) {
-                slot_text = string_format( _( "Installed: %s" ), equipped->display_name() );
+                slot_text = equipment_summary( *equipped );
             } else {
                 slot_text = slot.description.translated();
             }
@@ -734,10 +919,15 @@ void show_equipment( monster &pet )
         draw_detail_box( layout.details, item_title, item_text, slot_title, slot_text );
 
         werase( layout.controls );
-        center_print( layout.controls, 0, c_light_gray,
-                      string_format( _( "[%1$s] switch side  [%2$s] install/remove  [%3$s] exit" ),
+        fold_and_print( layout.controls, point::zero, getmaxx( layout.controls ),
+                        pet.get_load_weight( pet.has_flag( mon_flag_PET_MOUNTABLE ) ? &player : nullptr ) >
+                        pet.weight_capacity() ? c_light_red : c_light_gray,
+                        load_summary( pet, player ) );
+        center_print( layout.controls, 2, c_light_gray,
+                      string_format( _( "[%1$s] switch  [%2$s] install/remove  [%3$s] details  [%4$s] exit" ),
                                      context.get_desc( "NEXT_TAB" ),
                                      context.get_desc( "CONFIRM" ),
+                                     context.get_desc( "EXAMINE" ),
                                      context.get_desc( "QUIT" ) ) );
         wnoutrefresh( layout.controls );
     } );
@@ -764,6 +954,16 @@ void show_equipment( monster &pet )
         } else if( action == "LEFT" || action == "PREV_TAB" || action == "RIGHT" ||
                    action == "NEXT_TAB" ) {
             active = active == pane_side::left ? pane_side::right : pane_side::left;
+        } else if( action == "EXAMINE" ) {
+            const item *equipment = nullptr;
+            if( active == pane_side::left && !candidates.empty() ) {
+                equipment = candidates[item_cursor.selected].location.get_item();
+            } else if( active == pane_side::right && !slots.empty() ) {
+                equipment = pet.get_pet_equipment( slots[slot_cursor.selected] );
+            }
+            if( equipment != nullptr ) {
+                full_screen_popup( "%s\n%s", equipment_summary( *equipment ), equipment->info( true ) );
+            }
         } else if( action == "CONFIRM" ) {
             bool changed = false;
             if( active == pane_side::left && !candidates.empty() ) {
@@ -805,11 +1005,41 @@ void show_transfer( monster &pet )
     pane_cursor pet_cursor;
     std::vector<item_location> player_items;
     std::vector<pet_cargo_entry> pet_items;
+    migrate_legacy_pet_cargo( pet );
+    const std::vector<item_location> all_player_items = character_transfer_items( player );
+    const std::vector<pet_cargo_entry> all_pet_items = transferable_pet_items( pet );
+    std::map<const item *, int> selected;
+    std::string filter;
+
+    const auto select_item = [&selected]( const item & entry, int quantity ) {
+        if( quantity <= 0 ) {
+            selected.erase( &entry );
+            return;
+        }
+        for( auto pending = selected.begin(); pending != selected.end(); ) {
+            if( pending->first != &entry &&
+                ( pending->first->has_item( entry ) || entry.has_item( *pending->first ) ) ) {
+                pending = selected.erase( pending );
+            } else {
+                ++pending;
+            }
+        }
+        selected[&entry] = quantity;
+    };
 
     const auto rebuild = [&]() {
-        migrate_legacy_pet_cargo( pet );
-        player_items = character_transfer_items( player );
-        pet_items = transferable_pet_items( pet );
+        player_items.clear();
+        pet_items.clear();
+        for( const item_location &entry : all_player_items ) {
+            if( lcmatch( entry->display_name(), filter ) ) {
+                player_items.push_back( entry );
+            }
+        }
+        for( const pet_cargo_entry &entry : all_pet_items ) {
+            if( lcmatch( entry.value->display_name(), filter ) ) {
+                pet_items.push_back( entry );
+            }
+        }
         player_cursor.normalize( static_cast<int>( player_items.size() ), 1 );
         pet_cursor.normalize( static_cast<int>( pet_items.size() ), 1 );
     };
@@ -823,6 +1053,9 @@ void show_transfer( monster &pet )
     ui.mark_resize();
 
     input_context context = pet_inventory_context( "PET_ITEM_TRANSFER" );
+    context.register_action( "SELECT_ITEM" );
+    context.register_action( "SELECT_QUANTITY" );
+    context.register_action( "FILTER" );
     ui.on_redraw( [&]( ui_adaptor & ) {
         werase( layout.root );
         draw_border( layout.root );
@@ -834,11 +1067,13 @@ void show_transfer( monster &pet )
         std::vector<pane_row> player_rows;
         player_rows.reserve( player_items.size() );
         for( const item_location &entry : player_items ) {
+            const auto pending = selected.find( entry.get_item() );
+            const std::string marked = pending == selected.end() ? " " : std::to_string( pending->second );
             player_rows.push_back( {
-                entry->display_name(),
+                string_format( "[%s] %s%s", marked, entry->is_favorite ? "* " : "", entry->display_name() ),
                 string_format( _( "%1$d g  %2$s %3$s" ), units::to_gram( entry->weight() ),
                                format_volume( entry->volume() ), volume_units_abbr() ),
-                c_white
+                pending == selected.end() ? c_white : c_light_green
             } );
         }
 
@@ -849,13 +1084,15 @@ void show_transfer( monster &pet )
                 continue;
             }
             const item &entry = *cargo.value;
+            const auto pending = selected.find( &entry );
+            const std::string marked = pending == selected.end() ? " " : std::to_string( pending->second );
             const std::string location = cargo.legacy_inventory ? _( "Legacy cargo" ) :
                                          pet_pocket_name( *cargo.pocket, cargo.pocket_index );
             pet_rows.push_back( {
-                string_format( _( "%1$s: %2$s" ), location, entry.display_name() ),
+                string_format( "[%s] %s: %s", marked, location, entry.display_name() ),
                 string_format( _( "%1$s / %2$d g" ), format_volume( entry.volume() ),
                                units::to_gram( entry.weight() ) ),
-                c_white
+                pending == selected.end() ? c_white : c_light_green
             } );
         }
 
@@ -900,16 +1137,50 @@ void show_transfer( monster &pet )
         for( const item *storage : pet.get_pet_storages() ) {
             total_capacity += storage->get_volume_capacity();
         }
+        units::mass weight_delta = 0_gram;
+        units::volume volume_delta = 0_ml;
+        for( const item_location &entry : all_player_items ) {
+            const auto pending = selected.find( entry.get_item() );
+            if( pending != selected.end() ) {
+                item payload( *entry );
+                if( payload.count_by_charges() ) {
+                    payload.charges = pending->second;
+                }
+                weight_delta += payload.weight();
+                volume_delta += payload.volume();
+            }
+        }
+        for( const pet_cargo_entry &entry : all_pet_items ) {
+            const auto pending = selected.find( entry.value );
+            if( pending != selected.end() ) {
+                item payload( *entry.value );
+                if( payload.count_by_charges() ) {
+                    payload.charges = pending->second;
+                }
+                weight_delta -= payload.weight();
+                volume_delta -= payload.volume();
+            }
+        }
+        const units::mass projected = pet.get_load_weight() +
+                                      ( pet.mounted_player == &player ? 0_gram : weight_delta );
         werase( layout.controls );
-        center_print( layout.controls, 0, c_light_gray,
-                      string_format(
-                          _( "Cargo %1$s/%2$s %3$s, %4$d/%5$d g   [%6$s] switch  [%7$s] move  [%8$s] move all  [%9$s] exit" ),
-                          format_volume( pet_cargo_volume( pet_items ) ),
-                          format_volume( total_capacity ), volume_units_abbr(),
-                          units::to_gram( pet_cargo_weight( pet_items ) ),
-                          units::to_gram( pet.weight_capacity() ),
-                          context.get_desc( "NEXT_TAB" ), context.get_desc( "CONFIRM" ),
-                          context.get_desc( "MOVE_ALL_ITEMS" ), context.get_desc( "QUIT" ) ) );
+        trim_and_print( layout.controls, point::zero, getmaxx( layout.controls ),
+                        projected > pet.weight_capacity() ? c_light_red : c_light_gray,
+                        string_format( _( "After transfer: load %.1f / %.1f %s; free %.1f %s" ),
+                                       convert_weight( projected ), convert_weight( pet.weight_capacity() ), weight_units(),
+                                       convert_weight( pet.weight_capacity() - projected ), weight_units() ) );
+        trim_and_print( layout.controls, point( 0, 1 ), getmaxx( layout.controls ), c_light_gray,
+                        string_format( _( "Cargo: %s / %s %s; selected: %d; filter: %s" ),
+                                       format_volume( pet_cargo_volume( all_pet_items ) + volume_delta ),
+                                       format_volume( total_capacity ), volume_units_abbr(), selected.size(), filter ) );
+        center_print( layout.controls, 2, c_light_gray,
+                      string_format( _( "[%s] select  [%s] quantity  [%s] confirm  [%s] filter" ),
+                                     context.get_desc( "SELECT_ITEM" ), context.get_desc( "SELECT_QUANTITY" ),
+                                     context.get_desc( "CONFIRM" ), context.get_desc( "FILTER" ) ) );
+        center_print( layout.controls, 3, c_light_gray,
+                      string_format( _( "[%s] switch  [%s] select all  [%s] details  [%s] cancel" ),
+                                     context.get_desc( "NEXT_TAB" ), context.get_desc( "MOVE_ALL_ITEMS" ),
+                                     context.get_desc( "EXAMINE" ), context.get_desc( "QUIT" ) ) );
         wnoutrefresh( layout.controls );
     } );
 
@@ -935,39 +1206,62 @@ void show_transfer( monster &pet )
         } else if( action == "LEFT" || action == "PREV_TAB" || action == "RIGHT" ||
                    action == "NEXT_TAB" ) {
             active = active == pane_side::left ? pane_side::right : pane_side::left;
-        } else if( action == "CONFIRM" ) {
-            if( active == pane_side::left && !player_items.empty() ) {
-                move_character_item_to_pet( player, pet, player_items[player_cursor.selected], true );
-            } else if( active == pane_side::right && !pet_items.empty() ) {
-                move_pet_item_to_character( player, pet, pet_items[pet_cursor.selected] );
-            }
+        } else if( action == "FILTER" ) {
+            filter = string_input_popup().title( _( "Filter items" ) ).text( filter ).query_string();
             rebuild();
-        } else if( action == "MOVE_ALL_ITEMS" && count > 0 &&
-                   query_yn( active == pane_side::left ?
-                             _( "Move every item that fits to the animal?" ) :
-                             _( "Take every item from the animal?" ) ) ) {
+        } else if( action == "EXAMINE" && count > 0 ) {
+            const item &entry = active == pane_side::left ?
+                                *player_items[player_cursor.selected] : *pet_items[pet_cursor.selected].value;
+            full_screen_popup( "%s", entry.info( true ) );
+        } else if( ( action == "SELECT_ITEM" || action == "SELECT_QUANTITY" ) && count > 0 ) {
+            const item &entry = active == pane_side::left ?
+                                *player_items[player_cursor.selected] : *pet_items[pet_cursor.selected].value;
+            const auto pending = selected.find( &entry );
+            int quantity = pending == selected.end() ? entry.count() : 0;
+            if( action == "SELECT_QUANTITY" && entry.count_by_charges() ) {
+                quantity = pending == selected.end() ? entry.count() : pending->second;
+                if( !query_int( quantity, false, _( "Select quantity (0-%d):" ), entry.count() ) ||
+                    quantity < 0 || quantity > entry.count() ) {
+                    continue;
+                }
+            }
+            select_item( entry, quantity );
+        } else if( action == "MOVE_ALL_ITEMS" ) {
             if( active == pane_side::left ) {
-                bool moved_item = true;
-                while( moved_item ) {
-                    moved_item = false;
-                    rebuild();
-                    for( const item_location &entry : player_items ) {
-                        if( move_character_item_to_pet( player, pet, entry, false ) ) {
-                            moved_item = true;
-                            break;
-                        }
+                for( const item_location &entry : player_items ) {
+                    const bool contained = std::any_of( player_items.begin(), player_items.end(),
+                    [&entry]( const item_location & other ) {
+                        return other != entry && other->has_item( *entry );
+                    } );
+                    if( !contained ) {
+                        select_item( *entry, entry->count() );
                     }
                 }
             } else {
-                while( true ) {
-                    rebuild();
-                    if( pet_items.empty() ) {
-                        break;
-                    }
-                    move_pet_item_to_character( player, pet, pet_items.front() );
+                for( const pet_cargo_entry &entry : pet_items ) {
+                    select_item( *entry.value, entry.value->count() );
                 }
             }
-            rebuild();
+        } else if( action == "CONFIRM" ) {
+            std::vector<transfer_request> requests;
+            for( const pet_cargo_entry &entry : all_pet_items ) {
+                const auto pending = selected.find( entry.value );
+                if( pending != selected.end() ) {
+                    requests.push_back( { false, item_location(), entry.value->uid().get_value(), pending->second } );
+                }
+            }
+            for( const item_location &entry : all_player_items ) {
+                const auto pending = selected.find( entry.get_item() );
+                if( pending != selected.end() ) {
+                    requests.push_back( { true, entry, 0, pending->second } );
+                }
+            }
+            if( !requests.empty() ) {
+                pet.ensure_uid();
+                player.assign_activity( transfer_activity_actor( pet.uid().get_value(), player.getID(),
+                                        std::move( requests ) ) );
+                return;
+            }
         }
         ui.invalidate_ui();
     }

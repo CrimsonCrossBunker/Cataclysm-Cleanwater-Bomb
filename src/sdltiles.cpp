@@ -4108,6 +4108,11 @@ void cata_tiles::draw_om( const point &dest, const tripoint_abs_omt &center_abs_
                 }
             }
 
+            if( draw_overlays && overmap_buffer.has_tracked_pet( omp ) ) {
+                draw_from_id_string( "note_h_light_green", TILE_CATEGORY::OVERMAP_NOTE,
+                                     "overmap_note", omp, 0, 0, lit_level::LIT, false );
+            }
+
             if( draw_overlays && uistate.overmap_show_map_notes ) {
                 if( overmap_buffer.has_note( omp ) ) {
                     nc_color ter_color = c_black;
