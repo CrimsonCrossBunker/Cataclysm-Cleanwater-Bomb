@@ -9,15 +9,20 @@
 #include <monster.h>
 #include <type_id.h>
 #include <algorithm>
+#include <cstdint>
+#include <limits>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include "calendar.h"
+#include "cata_assert.h"
 #include "cata_utility.h"
 #include "debug.h"
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "lua_platform_content.h"
 #include "mtype.h"
 #include "options.h"
@@ -511,13 +516,120 @@ std::map<mongroup_id, MonsterGroup> &MonsterGroupManager::Get_all_Groups()
     return MonsterGroupManager::monsterGroupMap;
 }
 
-void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
+namespace
 {
-    float mon_upgrade_factor = get_option<float>( "EVOLUTION_INVERSE_MULTIPLIER" );
 
-    MonsterGroup g;
-    int freq_total = 0;
-    std::pair<mtype_id, int> max_freq( { mon_null, 0 } );
+struct monster_group_layer {
+    MonsterGroup values;
+    std::string source;
+    bool replace = false;
+    std::optional<mtype_id> default_monster;
+    mtype_id fallback_monster = mon_null;
+    std::optional<time_duration> replacement_time;
+    std::optional<int> frequency_total;
+    bool auto_total = false;
+};
+
+std::map<mongroup_id, std::vector<monster_group_layer>> monster_group_layers;
+
+int checked_group_frequency( const mongroup_id &id, const std::int64_t frequency )
+{
+    if( frequency < std::numeric_limits<int>::min() ||
+        frequency > std::numeric_limits<int>::max() ) {
+        throw std::runtime_error( "monster group '" + id.str() + "' exceeds the native weight range" );
+    }
+    return static_cast<int>( frequency );
+}
+
+void apply_monster_group_layer( MonsterGroup &group, bool extending,
+                                const monster_group_layer &layer )
+{
+    const MonsterGroup &values = layer.values;
+    if( !extending || layer.replace ) {
+        group = MonsterGroup{};
+        group.id = values.id;
+        group.defaultMonster = layer.fallback_monster;
+    }
+    if( layer.default_monster ) {
+        group.defaultMonster = *layer.default_monster;
+    }
+    std::int64_t frequency = group.freq_total;
+    for( const MonsterGroupEntry &entry : values.monsters ) {
+        if( entry.event == holiday::none ) {
+            frequency += entry.frequency;
+        }
+        int &event_frequency = group.event_freq[entry.event];
+        event_frequency = checked_group_frequency( group.id,
+                          static_cast<std::int64_t>( event_frequency ) + entry.frequency );
+        group.monsters.push_back( entry );
+    }
+    group.is_animal = values.is_animal;
+    group.replace_monster_group = values.replace_monster_group;
+    group.new_monster_group = values.new_monster_group;
+    group.is_safe = values.is_safe;
+    if( layer.replacement_time ) {
+        group.monster_group_time = *layer.replacement_time;
+    }
+    if( layer.auto_total ) {
+        frequency = 0;
+        for( const MonsterGroupEntry &entry : group.monsters ) {
+            frequency += entry.frequency;
+        }
+    } else if( layer.frequency_total ) {
+        frequency = *layer.frequency_total;
+    }
+    group.freq_total = checked_group_frequency( group.id, frequency );
+}
+
+void register_monster_group_layer( std::map<mongroup_id, MonsterGroup> &registry,
+                                   monster_group_layer layer )
+{
+    const mongroup_id id = layer.values.id;
+    auto &layers = monster_group_layers[id];
+    const auto &loader = DynamicDataLoader::get_instance();
+    const auto position = loader.source_load_order( layer.source );
+    MonsterGroup resolved;
+    const bool arrives_last = std::none_of( layers.begin(), layers.end(),
+    [&loader, &position]( const monster_group_layer & authored ) {
+        return loader.source_load_order( authored.source ) > position;
+    } );
+    if( arrives_last ) {
+        const auto previous = registry.find( id );
+        const bool extending = previous != registry.end() && !layer.replace;
+        if( extending ) {
+            resolved = previous->second;
+        }
+        apply_monster_group_layer( resolved, extending, layer );
+    } else {
+        // Lua can contribute at an earlier Mod's position after later JSON was read.
+        std::vector<const monster_group_layer *> ordered;
+        ordered.reserve( layers.size() + 1 );
+        for( const monster_group_layer &authored : layers ) {
+            ordered.push_back( &authored );
+        }
+        ordered.push_back( &layer );
+        std::stable_sort( ordered.begin(), ordered.end(), [&loader]( const auto *lhs, const auto *rhs ) {
+            return loader.source_load_order( lhs->source ) < loader.source_load_order( rhs->source );
+        } );
+        bool extending = false;
+        for( const monster_group_layer *authored : ordered ) {
+            apply_monster_group_layer( resolved, extending, *authored );
+            extending = true;
+        }
+    }
+    layers.push_back( std::move( layer ) );
+    registry[id] = std::move( resolved );
+}
+
+} // namespace
+
+void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo, const std::string &source )
+{
+    const float mon_upgrade_factor = get_option<float>( "EVOLUTION_INVERSE_MULTIPLIER" );
+    monster_group_layer layer;
+    layer.source = source;
+    layer.replace = jo.get_bool( "override", false );
+    MonsterGroup &g = layer.values;
 
     //TODO: Remove after 0.I
     if( !jo.has_string( "id" ) && jo.has_string( "name" ) ) {
@@ -528,22 +640,12 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
         g.id = mongroup_id( jo.get_string( "id" ) );
     }
 
-    bool extending = false;  //If already a group with that name, add to it instead of overwriting it
-    if( monsterGroupMap.count( g.id ) != 0 && !jo.get_bool( "override", false ) ) {
-        g = monsterGroupMap[g.id];
-        extending = true;
-    }
-    bool explicit_def_null = false;
-    if( !extending || jo.has_string( "default" ) ) {
-        g.defaultMonster = mtype_id( jo.get_string( "default", "mon_null" ) );
-        if( jo.has_string( "default" ) && g.defaultMonster == mon_null ) {
-            explicit_def_null = true;
-        }
-    } else if( extending && !jo.has_string( "default" ) && g.defaultMonster == mon_null ) {
-        explicit_def_null = true;
+    if( jo.has_string( "default" ) ) {
+        layer.default_monster.emplace( jo.get_string( "default" ) );
     }
     g.is_animal = jo.get_bool( "is_animal", false );
     if( jo.has_array( "monsters" ) ) {
+        int highest_frequency = 0;
         for( JsonObject mon : jo.get_array( "monsters" ) ) {
             bool isgroup = false;
             std::string id_name;
@@ -560,13 +662,9 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
             if( mon.has_int( "freq" ) ) {
                 freq = mon.get_int( "freq" );
             }
-            if( freq > max_freq.second ) {
-                if( !isgroup && event == holiday::none ) {
-                    max_freq = { mtype_id( id_name ), freq };
-                }
-            }
-            if( event == holiday::none ) {
-                freq_total += freq;
+            if( !isgroup && event == holiday::none && freq > highest_frequency ) {
+                layer.fallback_monster = mtype_id( id_name );
+                highest_frequency = freq;
             }
             int cost = mon.get_int( "cost_multiplier", 1 );
             int pack_min = 1;
@@ -606,32 +704,52 @@ void MonsterGroupManager::LoadMonsterGroup( const JsonObject &jo )
                 }
             }
 
-            g.event_freq[event] += freq;
-            g.monsters.push_back( new_mon_group );
-        }
-        // If no default monster specified, use the highest frequency spawn as the default
-        if( g.defaultMonster == mon_null && !explicit_def_null ) {
-            g.defaultMonster = max_freq.first;
+            g.monsters.push_back( std::move( new_mon_group ) );
         }
     }
     g.replace_monster_group = jo.get_bool( "replace_monster_group", false );
     g.new_monster_group = mongroup_id( jo.get_string( "new_monster_group_id",
                                        mongroup_id::NULL_ID().str() ) );
     if( jo.has_member( "replacement_time" ) ) {
-        mandatory( jo, false, "replacement_time", g.monster_group_time, time_bound_reader{ 1_days } );
+        time_duration value = 0_turns;
+        mandatory( jo, false, "replacement_time", value, time_bound_reader{ 1_days } );
+        layer.replacement_time = value;
     }
     g.is_safe = jo.get_bool( "is_safe", false );
-
-    g.freq_total = jo.get_int( "freq_total", ( extending ? g.freq_total : 0 ) + freq_total );
-    if( jo.get_bool( "auto_total", false ) ) { //Fit the max size to the sum of all freqs
-        int total = 0;
-        for( MonsterGroupEntry &mon : g.monsters ) {
-            total += mon.frequency;
-        }
-        g.freq_total = total;
+    if( jo.has_member( "freq_total" ) ) {
+        layer.frequency_total = jo.get_int( "freq_total" );
     }
+    layer.auto_total = jo.get_bool( "auto_total", false );
+    register_monster_group_layer( monsterGroupMap, std::move( layer ) );
+}
 
-    monsterGroupMap[g.id] = g;
+void MonsterGroupManager::AddPlatformMonsterGroup( MonsterGroup group, const std::string &source,
+        bool extend, std::optional<mtype_id> default_monster )
+{
+    monster_group_layer layer;
+    layer.values = std::move( group );
+    layer.source = source;
+    layer.replace = !extend;
+    layer.default_monster = std::move( default_monster );
+    layer.values.new_monster_group = mongroup_id::NULL_ID();
+    int highest_frequency = 0;
+    for( const MonsterGroupEntry &entry : layer.values.monsters ) {
+        if( !entry.is_group() && entry.frequency > highest_frequency ) {
+            highest_frequency = entry.frequency;
+            layer.fallback_monster = entry.mtype;
+        }
+    }
+    register_monster_group_layer( monsterGroupMap, std::move( layer ) );
+}
+
+void MonsterGroupManager::RemovePlatformMonsterGroupLayer( const mongroup_id &id )
+{
+    const auto found = monster_group_layers.find( id );
+    cata_assert( found != monster_group_layers.end() && !found->second.empty() );
+    found->second.pop_back();
+    if( found->second.empty() ) {
+        monster_group_layers.erase( found );
+    }
 }
 
 bool MonsterGroupManager::is_animal( const mongroup_id &group_name )
@@ -643,6 +761,7 @@ bool MonsterGroupManager::is_animal( const mongroup_id &group_name )
 void MonsterGroupManager::ClearMonsterGroups()
 {
     monsterGroupMap.clear();
+    monster_group_layers.clear();
     monster_blacklist.clear();
     monster_whitelist.clear();
     monster_whitelist_is_exclusive = false;

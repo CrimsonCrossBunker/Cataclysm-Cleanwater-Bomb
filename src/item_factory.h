@@ -214,7 +214,6 @@ class Item_factory
 
         /** Migrations transform items loaded from legacy saves */
         void load_migration( const JsonObject &jo, std::string_view source );
-        void set_migration_mod_order( const std::vector<mod_id> &mods );
 
         // Add or overwrite a migration
         void add_migration( const migration &m );
@@ -362,7 +361,6 @@ class Item_factory
 
         void clear();
 
-        std::vector<mod_id> migration_mod_order;
         void finalize_item_blacklist();
 
         /** Applies part of finalization that don't depend on other items. */

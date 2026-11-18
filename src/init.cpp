@@ -683,8 +683,36 @@ void DynamicDataLoader::load_all_from_json( const JsonValue &jsin, const std::st
     inp_mngr.pump_events();
 }
 
+void DynamicDataLoader::set_mod_load_order( const std::vector<mod_id> &mods )
+{
+    mod_load_order = mods;
+}
+
+std::tuple<int, std::size_t, std::string_view> DynamicDataLoader::source_load_order(
+    const std::string_view source ) const
+{
+    if( source == "core" ) {
+        return { 0, 0, {} };
+    }
+    const std::size_t separator = source.find( '#' );
+    const std::string_view owner = source.substr( 0, separator );
+    const auto found = std::find_if( mod_load_order.begin(), mod_load_order.end(),
+    [owner]( const mod_id & id ) {
+        return id.str() == owner;
+    } );
+    if( found == mod_load_order.end() ) {
+        return { 3, 0, {} };
+    }
+    const auto index = static_cast<std::size_t>( found - mod_load_order.begin() );
+    if( separator == std::string_view::npos ) {
+        return { 1, index, {} };
+    }
+    return { 2, index, source.substr( separator + 1 ) };
+}
+
 void DynamicDataLoader::unload_data()
 {
+    mod_load_order.clear();
     finalized = false;
 
     achievement::reset();

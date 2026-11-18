@@ -48,6 +48,7 @@
 #include "item.h"
 #include "item_activation.h"
 #include "item_contents.h"
+#include "init.h"
 #include "item_factory.h"
 #include "item_group.h"
 #include "item_pocket.h"
@@ -5147,34 +5148,10 @@ void itype::load( const JsonObject &jo, std::string_view src )
     replace_materials( replace_val, *this );
 }
 
-void Item_factory::set_migration_mod_order( const std::vector<mod_id> &mods )
-{
-    migration_mod_order = mods;
-}
-
 void Item_factory::add_migration( const migration &m )
 {
-    // JSON and Lua register at different stages. Match native load order:
-    // core, base packs, companion directories, then world-local data.
-    const auto load_position = [this]( std::string_view source ) ->
-    std::tuple<int, std::size_t, std::string_view> {
-        if( source == "core" ) {
-            return { 0, 0, {} };
-        }
-        const std::size_t separator = source.find( '#' );
-        const std::string_view owner = source.substr( 0, separator );
-        const auto found = std::find_if( migration_mod_order.begin(), migration_mod_order.end(),
-        [owner]( const mod_id & id ) {
-            return id.str() == owner;
-        } );
-        if( found == migration_mod_order.end() ) {
-            return { 3, 0, {} };
-        }
-        const auto index = static_cast<std::size_t>( found - migration_mod_order.begin() );
-        if( separator == std::string_view::npos ) {
-            return { 1, index, {} };
-        }
-        return { 2, index, source.substr( separator + 1 ) };
+    const auto load_position = []( const std::string_view source ) {
+        return DynamicDataLoader::get_instance().source_load_order( source );
     };
     const auto position = load_position( m.source );
     auto &entries = migrations[m.id];
@@ -5373,7 +5350,6 @@ void Item_factory::clear()
     migrated_ammo.clear();
     migrated_magazines.clear();
     migrations.clear();
-    migration_mod_order.clear();
 
     frozen = false;
 }

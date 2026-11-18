@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -287,7 +288,10 @@ class MonsterGroupManager
         cata::lua_platform::detail::monster_blacklist_snapshot();
         friend std::vector<std::string>
         cata::lua_platform::detail::monster_whitelist_snapshot();
-        static void LoadMonsterGroup( const JsonObject &jo );
+        static void LoadMonsterGroup( const JsonObject &jo, const std::string &source );
+        static void AddPlatformMonsterGroup( MonsterGroup group, const std::string &source,
+                                             bool extend, std::optional<mtype_id> default_monster );
+        static void RemovePlatformMonsterGroupLayer( const mongroup_id &id );
         static void LoadMonsterBlacklist( const JsonObject &jo );
         static void LoadMonsterWhitelist( const JsonObject &jo );
         static void FinalizeMonsterGroups();

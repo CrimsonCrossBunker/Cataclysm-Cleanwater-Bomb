@@ -6546,6 +6546,10 @@ function CcbPlatformContent.VehicleColorPalette(options) end
 ---@return MonsterGroupDefinition
 function CcbPlatformContent.MonsterGroup(options) end
 
+---Append entries to an existing group at the owning Mod's load position. An explicit default replaces the earlier default.
+---@param definition MonsterGroupDefinition
+function CcbPlatformContent.extend_monster_group(definition) end
+
 ---@param options OvermapConnectionDefinitionOptions
 ---@return OvermapConnectionDefinition
 function CcbPlatformContent.OvermapConnection(options) end

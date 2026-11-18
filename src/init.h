@@ -2,18 +2,22 @@
 #ifndef CATA_SRC_INIT_H
 #define CATA_SRC_INIT_H
 
+#include <cstddef>
 #include <functional>
 #include <iosfwd>
 #include <list>
 #include <map>
 #include <memory>
 #include <string> // IWYU pragma: keep
+#include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #include "cata_path.h"
 #include "memory_fast.h"
 #include "mod_world_option.h"
+#include "type_id.h"
 
 class JsonObject;
 class JsonValue;
@@ -63,7 +67,11 @@ class DynamicDataLoader
          */
         using deferred_json = std::list<std::pair<JsonObject, std::string>>;
 
+        void set_mod_load_order( const std::vector<mod_id> &mods );
+        std::tuple<int, std::size_t, std::string_view> source_load_order( std::string_view source ) const;
+
     private:
+        std::vector<mod_id> mod_load_order;
         bool finalized = false;
 
         struct cached_streams;
