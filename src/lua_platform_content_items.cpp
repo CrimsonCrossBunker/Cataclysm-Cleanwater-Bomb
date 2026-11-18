@@ -220,6 +220,7 @@ struct item_definition_data {
     };
     struct book_data {
         std::string skill;
+        std::string martial_art;
         std::int64_t required_level = 0;
         std::int64_t maximum_level = 0;
         std::int64_t intelligence = 0;
@@ -227,6 +228,8 @@ struct item_definition_data {
         std::int64_t fun = 0;
         std::int64_t chapters = 0;
         bool scannable = false;
+        bool generic = false;
+        std::vector<book_proficiency_bonus> proficiencies;
     };
     std::string id;
     std::string copy_from;
@@ -277,6 +280,7 @@ struct item_definition_data {
     std::string capture_size;
     std::optional<healing_data> healing;
     std::optional<activation_data> activation;
+    std::vector<std::string> learned_spells;
     std::string use_handler;
     std::string tick_handler;
     authored_text use_label;
@@ -1124,6 +1128,7 @@ struct item_definition_handle {
         }
         item_definition_data::book_data value;
         value.skill = options.get_or( "skill", std::string() );
+        value.martial_art = options.get_or( "martial_art", std::string() );
         value.required_level = options.get_or<std::int64_t>( "required_level", 0 );
         value.maximum_level = options.get_or<std::int64_t>( "maximum_level", 0 );
         value.intelligence = options.get_or<std::int64_t>( "intelligence", 0 );
@@ -1131,6 +1136,21 @@ struct item_definition_handle {
         value.fun = options.get_or<std::int64_t>( "fun", 0 );
         value.chapters = options.get_or<std::int64_t>( "chapters", 0 );
         value.scannable = options.get_or( "scannable", false );
+        value.generic = options.get_or( "generic", false );
+        if( const auto proficiencies = options.get<sol::optional<sol::table>>( "proficiencies" ) ) {
+            const std::size_t count = require_dense_array( *proficiencies, "book proficiencies", 0 );
+            value.proficiencies.reserve( count );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const sol::table choice = proficiencies->raw_get<sol::table>( index );
+                book_proficiency_bonus bonus;
+                bonus.id = proficiency_id( choice.get<std::string>( "id" ) );
+                bonus.time_factor = choice.get_or( "time_factor", bonus.time_factor );
+                bonus.fail_factor = choice.get_or( "fail_factor", bonus.fail_factor );
+                bonus.include_prereqs = choice.get_or( "include_prereqs", bonus.include_prereqs );
+                bonus.cap = choice.get_or( "cap", bonus.cap );
+                value.proficiencies.push_back( std::move( bonus ) );
+            }
+        }
         definition->book = std::move( value );
         return *this;
     }
@@ -1329,9 +1349,22 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &teach_spells( const sol::table &spells ) {
+        require_building_handle( token, *definition, "item" );
+        const std::size_t count = require_dense_array( spells, "learnable spells", 1 );
+        std::vector<std::string> ids;
+        ids.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            ids.push_back( spells.raw_get<std::string>( index ) );
+        }
+        definition->learned_spells = std::move( ids );
+        return *this;
+    }
+
     item_definition_handle &clear_use_actions() {
         require_building_handle( token, *definition, "item" );
         definition->clear_use_actions = true;
+        definition->learned_spells.clear();
         definition->use_handler.clear();
         definition->use_label = {};
         definition->use_description.reset();
@@ -3444,6 +3477,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "activate_effects", &item_definition_handle::activate_effects,
         "ammo_pocket", &item_definition_handle::ammo_pocket,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
+        "teach_spells", &item_definition_handle::teach_spells,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
         "clear_tick_actions", &item_definition_handle::clear_tick_actions,
@@ -5690,7 +5724,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     book.maximum_level < book.required_level ||
                     book.maximum_level > MAX_SKILL || book.intelligence < 0 ||
                     book.intelligence > std::numeric_limits<int>::max() ||
-                    book.read_time_turns <= 0 ||
+                    book.read_time_turns < 0 ||
                     book.read_time_turns > std::numeric_limits<int>::max() ||
                     book.fun < std::numeric_limits<int>::min() ||
                     book.fun > std::numeric_limits<int>::max() ||
@@ -5698,6 +5732,18 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "item '" + definition.id +
                                               "' has invalid book values" );
                 }
+                for( const book_proficiency_bonus &bonus : book.proficiencies ) {
+                    if( ( proficiency_ids.count( bonus.id.str() ) == 0 && !bonus.id.is_valid() ) ||
+                        !( bonus.time_factor >= 0.0f && bonus.time_factor < 1.0f ) ||
+                        !( bonus.fail_factor >= 0.0f && bonus.fail_factor < 1.0f ) ||
+                        !( bonus.cap > 0.0f && bonus.cap <= 1.0f ) ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has an invalid book proficiency bonus" );
+                    }
+                }
+            }
+            for( const std::string &spell : definition.learned_spells ) {
+                require_valid_id( spell, "learnable spell" );
             }
             validate_operation( entry.operation,
                                 item_controller->has_template( itype_id( definition.id ) ),
@@ -7287,6 +7333,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->book->was_loaded = true;
                         native->book->skill = source.skill.empty() ? skill_id::NULL_ID() :
                                                skill_id( source.skill );
+                        native->book->martial_art = source.martial_art.empty() ? matype_id::NULL_ID() :
+                                                    matype_id( source.martial_art );
                         native->book->req = static_cast<int>( source.required_level );
                         native->book->level = static_cast<int>( source.maximum_level );
                         native->book->intel = static_cast<int>( source.intelligence );
@@ -7295,9 +7343,14 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->book->fun = static_cast<int>( source.fun );
                         native->book->chapters = static_cast<int>( source.chapters );
                         native->book->is_scannable = source.scannable;
+                        native->book->generic = source.generic;
+                        native->book->proficiencies = source.proficiencies;
                     }
                     for( const auto &[damage, amount] : definition.melee_damage ) {
                         native->melee.damage_map[damage_type_id( damage )] = static_cast<float>( amount );
+                    }
+                    if( !definition.melee_damage.empty() ) {
+                        native->melee.finalize();
                     }
                     if( !definition.magazine_ammo.empty() ) {
                         if( !native->magazine ) {
@@ -7327,6 +7380,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.clear_use_actions ) {
                         native->use_methods.clear();
+                    }
+                    if( !definition.learned_spells.empty() ) {
+                        auto actor = std::make_unique<learn_spell_actor>();
+                        actor->spells = definition.learned_spells;
+                        native->use_methods.insert_or_assign( "learn_spell", use_function( std::move( actor ) ) );
                     }
                     if( !definition.deploy_furniture.empty() ) {
                         auto actor = std::make_unique<deploy_furn_actor>();
@@ -7780,9 +7838,22 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         }
     }
     for( const item_registration &entry : pimpl_->items ) {
-        if( !check( item_controller->get_generic_factory().is_valid( itype_id( entry.definition->id ) ),
-                    "item", entry.definition->id ) ) {
+        const item_definition_data &definition = *entry.definition;
+        if( !check( item_controller->get_generic_factory().is_valid( itype_id( definition.id ) ),
+                    "item", definition.id ) ) {
             return false;
+        }
+        if( definition.book && !definition.book->martial_art.empty() &&
+            !matype_id( definition.book->martial_art ).is_valid() ) {
+            error = "Lua-first item '" + definition.id + "' teaches an unknown martial art '" +
+                    definition.book->martial_art + "'";
+            return false;
+        }
+        for( const std::string &spell : definition.learned_spells ) {
+            if( !spell_id( spell ).is_valid() ) {
+                error = "Lua-first item '" + definition.id + "' teaches an unknown spell '" + spell + "'";
+                return false;
+            }
         }
     }
     for( const recipe_registration &entry : pimpl_->recipes ) {
@@ -8963,6 +9034,12 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, effect.permanent ? "permanent" : "temporary" );
                     }
                 }
+                if( !v.learned_spells.empty() ) {
+                    hash_part( state, "learn_spells" );
+                    for( const std::string &spell : v.learned_spells ) {
+                        hash_part( state, spell );
+                    }
+                }
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );
                 hash_text( v.use_label.translated );
@@ -9000,6 +9077,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     const item_definition_data::book_data &book = *v.book;
                     hash_part( state, "book" );
                     hash_part( state, book.skill );
+                    hash_part( state, book.martial_art );
                     hash_part( state, std::to_string( book.required_level ) );
                     hash_part( state, std::to_string( book.maximum_level ) );
                     hash_part( state, std::to_string( book.intelligence ) );
@@ -9007,6 +9085,14 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( book.fun ) );
                     hash_part( state, std::to_string( book.chapters ) );
                     hash_part( state, book.scannable ? "scannable" : "unscannable" );
+                    hash_part( state, book.generic ? "generic" : "specific" );
+                    for( const book_proficiency_bonus &bonus : book.proficiencies ) {
+                        hash_part( state, bonus.id.str() );
+                        std::ostringstream factors;
+                        factors << std::hexfloat << bonus.time_factor << ' ' << bonus.fail_factor << ' ' << bonus.cap;
+                        hash_part( state, factors.str() );
+                        hash_part( state, bonus.include_prereqs ? "include_prerequisites" : "no_prerequisites" );
+                    }
                 }
                 for( const auto &m : v.materials ) {
                     hash_part( state, m.id );

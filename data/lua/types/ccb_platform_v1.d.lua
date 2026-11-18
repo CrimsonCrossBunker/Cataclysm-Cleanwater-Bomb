@@ -796,15 +796,25 @@ function ItemDefinition:comestible(options) end
 ---@return ItemDefinition self
 function ItemDefinition:vitamin(vitamin_id, amount) end
 
+---@class BookProficiencyOptions
+---@field id string Native proficiency id.
+---@field time_factor? number Crafting time bonus in [0, 1). Defaults to 0.5.
+---@field fail_factor? number Crafting failure bonus in [0, 1). Defaults to 0.5.
+---@field include_prereqs? boolean Include prerequisites. Defaults to true.
+---@field cap? number Portion of the proficiency learnable from this book, in (0, 1]. Defaults to 1.
+
 ---@class BookDefinitionOptions
 ---@field skill? string Existing or same-transaction skill id. Omit for a book with no skill training.
+---@field martial_art? string Native martial art taught by a manual.
 ---@field required_level integer Minimum skill needed to understand the book.
 ---@field maximum_level integer Maximum skill level trained by the book.
 ---@field intelligence integer Minimum intelligence needed to read it.
----@field read_time_turns integer Positive time per chapter.
+---@field read_time_turns integer Non-negative native time per chapter. Zero is used for books without reading time.
 ---@field fun integer Reading enjoyment.
 ---@field chapters? integer Number of chapters; defaults to zero.
 ---@field scannable? boolean Whether the book supports scanning; defaults to false.
+---@field generic? boolean Track chapters per item instance; defaults to false.
+---@field proficiencies? BookProficiencyOptions[] Ordered proficiency bonuses granted by the book.
 
 ---@param options BookDefinitionOptions
 ---@return ItemDefinition self
@@ -899,7 +909,12 @@ function ItemDefinition:activate_effects(options) end
 ---@return ItemDefinition self
 function ItemDefinition:ammo_pocket(ammo_type, capacity) end
 
----Remove inherited native activation actions and any on_use staged before this call.
+---Install the native spell-learning action with the supplied spell menu order.
+---@param spells string[] Native spell IDs.
+---@return ItemDefinition self
+function ItemDefinition:teach_spells(spells) end
+
+---Remove inherited native activation actions and any on_use or teach_spells staged before this call.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
