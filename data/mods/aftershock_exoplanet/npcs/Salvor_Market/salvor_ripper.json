@@ -50,25 +50,6 @@
     "faction": "independents"
   },
   {
-    "type": "item_group",
-    "id": "afs_salvor_ripper_software",
-    "subtype": "collection",
-    "items": [
-      { "item": "afs_data_shard", "contents-item": "software_archiving", "variables": [ { "browsed": "true" } ] },
-      { "item": "afs_data_shard", "contents-item": "software_hacking", "variables": [ { "browsed": "true" } ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "afs_salvor_ripper_computers",
-    "subtype": "collection",
-    "items": [
-      { "item": "laptop", "prob": 80, "charges": [ 52, 500 ], "variables": [ { "browsed": "true" } ] },
-      { "item": "electrohack", "prob": 80, "charges": [ 52, 500 ] },
-      { "item": "afs_wrist_computer", "variables": [ { "browsed": "true" } ], "charges": [ 52, 500 ], "count": 2 }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_SALVOR_RIPPER",
     "dynamic_line": "&The stall is uncharacteristically colorful, plastered with advertisements for computers and lit by the contrasting glow of blue and green neon.  Its owner lies slumped in a chair, lazily tapping away at a wrist computer.  They don't bother to look at you until its clear you are here to trade.",

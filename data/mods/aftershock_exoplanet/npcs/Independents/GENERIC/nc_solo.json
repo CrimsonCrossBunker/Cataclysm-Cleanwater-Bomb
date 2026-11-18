@@ -46,38 +46,5 @@
       { "skill": "smg", "bonus": { "rng": [ 6, 8 ] } },
       { "skill": "rifle", "bonus": { "rng": [ 6, 8 ] } }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_SOLO_carry",
-    "subtype": "collection",
-    "items": [
-      { "item": "afs_UICASTA30", "charges": 30, "ammo-item": "afs_7.50mm_caseless", "count": 2 },
-      { "item": "knife_folding" },
-      { "group": "misc_smoking_legal", "prob": 33 },
-      {
-        "item": "afs_marsec_t72",
-        "ammo-item": "afs_7.50mm_caseless",
-        "charges": 9,
-        "contents-item": [ "barrel_ported" ],
-        "prob": 33
-      },
-      { "item": "afs_HE_grenade", "count": 2, "prob": 40 },
-      { "item": "afs_stimpack", "count": 3, "prob": 80 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_SOLO_wield",
-    "subtype": "collection",
-    "items": [
-      {
-        "item": "afs_gibrifle",
-        "variant": "branded",
-        "ammo-item": "afs_7.50mm_caseless",
-        "charges": 30,
-        "contents-item": [ "shoulder_strap", "recoil_stock", "compensator" ]
-      }
-    ]
   }
 ]

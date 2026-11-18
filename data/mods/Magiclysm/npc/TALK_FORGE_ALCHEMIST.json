@@ -53,21 +53,6 @@
     "proficiencies": [ "prof_alchemy" ]
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "NC_FORGE_LORD_STORE_ALCHEMIST",
-    "//": "Does not sell illegal potions, but will buy them.",
-    "items": [
-      { "item": "mercury", "prob": 70, "count": [ 1, 2 ], "charges": [ 50, -1 ] },
-      { "group": "magic_plants_common", "prob": 80, "count": [ 4, 8 ] },
-      { "group": "magic_plants_uncommon", "prob": 50, "count": [ 2, 5 ] },
-      { "group": "magic_plants_rare", "prob": 20, "count": [ 1, 3 ] },
-      { "group": "potions_common", "prob": 80, "count": [ 4, 8 ] },
-      { "group": "potions_uncommon", "prob": 40, "count": [ 2, 4 ] },
-      { "group": "potions_rare", "prob": 10, "count": [ 0, 2 ] }
-    ]
-  },
-  {
     "id": "TALK_FORGE_LORD_ALCHEMIST",
     "type": "talk_topic",
     "dynamic_line": [

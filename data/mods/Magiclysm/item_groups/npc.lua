@@ -187,3 +187,27 @@ do
     group:item("robe")
     content.add(group)
 end
+
+do
+    -- Does not sell illegal potions, but will buy them.
+    local group = content.ItemGroup { id = "NC_FORGE_LORD_STORE_ALCHEMIST", kind = "collection" }
+    group:entry { item = "mercury", count = { 1, 2 }, charges = { 50, -1 }, probability = 70 }
+    group:entry { group = "magic_plants_common", count = { 4, 8 }, probability = 80 }
+    group:entry { group = "magic_plants_uncommon", count = { 2, 5 }, probability = 50 }
+    group:entry { group = "magic_plants_rare", count = { 1, 3 }, probability = 20 }
+    group:entry { group = "potions_common", count = { 4, 8 }, probability = 80 }
+    group:entry { group = "potions_uncommon", count = { 2, 4 }, probability = 40 }
+    group:entry { group = "potions_rare", count = { 0, 2 }, probability = 10 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pirate_loadout", kind = "collection" }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    group:entry { item = "enchanted_blackpowder_pistol", charges = { 1, 1 }, ammo = { item = "flintlock_ammo" } }
+    content.add(group)
+end

@@ -21,30 +21,5 @@
       { "skill": "smg", "bonus": { "rng": [ 4, 6 ] } },
       { "skill": "rifle", "bonus": { "rng": [ 4, 6 ] } }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_UICA_GROUND_SOLDIER_carry",
-    "subtype": "collection",
-    "items": [
-      { "item": "ear_plugs", "custom-flags": [ "no_auto_equip" ] },
-      { "item": "afs_marsec_4", "charges": 14, "ammo-item": "afs_10mm_caseless_JHP" },
-      { "item": "afs_10mm_caseless_JHP", "count": [ 1, 2 ] },
-      { "item": "afs_sr77_45mag", "charges": 45, "ammo-item": "afs_7.50mm_caseless", "count": 2 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_UICA_GROUND_SOLDIER_wield",
-    "subtype": "collection",
-    "items": [
-      {
-        "item": "afs_sr77",
-        "variant": "military",
-        "ammo-item": "afs_7.50mm_caseless",
-        "charges": 45,
-        "contents-item": [ "shoulder_strap", "suppressor" ]
-      }
-    ]
   }
 ]

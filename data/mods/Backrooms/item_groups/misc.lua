@@ -737,3 +737,12 @@ do
     group:item("waystone")
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "backrooms_artifacts", kind = "distribution" }
+    group:entry {
+        group = "backrooms_strange_object_group",
+        artifact = { preset = "cult", power_level = 1250, max_attributes = 4, max_negative_power = -1000, resonant = true },
+    }
+    content.add(group)
+end

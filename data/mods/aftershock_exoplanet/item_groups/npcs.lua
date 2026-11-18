@@ -845,3 +845,203 @@ do
     group:item("bot_bloodhound_drone", 25)
     content.add(group)
 end
+
+do
+    -- The bare minimum matching suit to vist Salus. Prevents having to restart because Port Augustmoon is mising a part like the mask.
+    local group = content.ItemGroup { id = "afs_frontier_cryo_g_full_augustmoon", kind = "collection" }
+    group:entry {
+        item = "afs_frontier_cryo",
+        flags = {
+            "FIT",
+        },
+    }
+    group:entry {
+        item = "afs_frontier_cryomask",
+        flags = {
+            "FIT",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_SOLO_carry", kind = "collection" }
+    group:entry { item = "afs_UICASTA30", count = { 2, 2 }, charges = { 30, 30 }, ammo = { item = "afs_7.50mm_caseless" } }
+    group:item("knife_folding")
+    group:group("misc_smoking_legal", 33)
+    group:entry {
+        item = "afs_marsec_t72",
+        charges = { 9, 9 },
+        ammo = { item = "afs_7.50mm_caseless" },
+        contents = {
+            { item = "barrel_ported" },
+        },
+        probability = 33,
+    }
+    group:entry { item = "afs_HE_grenade", count = { 2, 2 }, probability = 40 }
+    group:entry { item = "afs_stimpack", count = { 3, 3 }, probability = 80 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_SOLO_wield", kind = "collection" }
+    group:entry {
+        item = "afs_gibrifle",
+        charges = { 30, 30 },
+        variant = "branded",
+        ammo = { item = "afs_7.50mm_caseless" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "recoil_stock" },
+            { item = "compensator" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_salvor_ripper_software", kind = "collection" }
+    group:entry {
+        item = "afs_data_shard",
+        variables = { browsed = "true" },
+        contents = {
+            { item = "software_archiving" },
+        },
+    }
+    group:entry {
+        item = "afs_data_shard",
+        variables = { browsed = "true" },
+        contents = {
+            { item = "software_hacking" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_salvor_ripper_computers", kind = "collection" }
+    group:entry { item = "laptop", charges = { 52, 500 }, variables = { browsed = "true" }, probability = 80 }
+    group:entry { item = "electrohack", charges = { 52, 500 }, probability = 80 }
+    group:entry { item = "afs_wrist_computer", count = { 2, 2 }, charges = { 52, 500 }, variables = { browsed = "true" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_GROUND_ENGINEER_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "afs_marsec_4", charges = { 14, 14 }, ammo = { item = "afs_10mm_caseless_JHP" } }
+    group:entry { item = "afs_10mm_caseless_JHP", count = { 1, 2 } }
+    group:entry { item = "afs_sr77_45mag", count = { 2, 2 }, charges = { 45, 45 }, ammo = { item = "afs_7.50mm_caseless" } }
+    group:item("afs_plasma_torch")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_GROUND_ENGINEER_wield", kind = "collection" }
+    group:entry {
+        item = "afs_sr77",
+        charges = { 45, 45 },
+        variant = "military",
+        ammo = { item = "afs_7.50mm_caseless" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_GROUND_SOLDIER_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "afs_marsec_4", charges = { 14, 14 }, ammo = { item = "afs_10mm_caseless_JHP" } }
+    group:entry { item = "afs_10mm_caseless_JHP", count = { 1, 2 } }
+    group:entry { item = "afs_sr77_45mag", count = { 2, 2 }, charges = { 45, 45 }, ammo = { item = "afs_7.50mm_caseless" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_GROUND_SOLDIER_wield", kind = "collection" }
+    group:entry {
+        item = "afs_sr77",
+        charges = { 45, 45 },
+        variant = "military",
+        ammo = { item = "afs_7.50mm_caseless" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_NAVAL_POLICE_carry", kind = "collection" }
+    group:entry {
+        item = "ear_plugs",
+        flags = {
+            "no_auto_equip",
+        },
+    }
+    group:entry { item = "afs_marsec_4", charges = { 14, 14 }, ammo = { item = "afs_10mm_caseless_JHP" } }
+    group:entry { item = "afs_10mm_caseless_JHP", count = { 1, 2 } }
+    group:entry { item = "shot_00", count = { 2, 2 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_UICA_NAVAL_POLICE_wield", kind = "collection" }
+    group:entry {
+        item = "afs_shotgun",
+        charges = { 9, 9 },
+        variant = "military",
+        ammo = { item = "shot_00" },
+        contents = {
+            { item = "shoulder_strap" },
+            { item = "suppressor" },
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "augustmoon_kit",
+        kind = "collection",
+        with_ammo = 100,
+        with_magazine = 100,
+        container = "afs_augustmoon_kit_box",
+        overflow = "spill",
+    }
+    group:item("knife_folding")
+    group:entry { group = "afs_escapepod_ration_bag_plastic_4", count = { 2, 2 } }
+    group:item("flashlight")
+    group:entry {
+        item = "afs_frontier_cryomask",
+        flags = {
+            "FIT",
+        },
+    }
+    group:entry {
+        item = "afs_frontier_cryo",
+        flags = {
+            "FIT",
+        },
+    }
+    group:item("backpack")
+    group:item("afs_thermos")
+    group:item("multi_cooker")
+    group:entry { item = "afs_seyfert_84K", container = "holster" }
+    group:item("afs_10mm_caseless_FMJ")
+    content.add(group)
+end

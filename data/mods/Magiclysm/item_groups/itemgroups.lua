@@ -4738,3 +4738,109 @@ do
     group:item("all_first_circle_upgrades_spellbook", 50)
     content.add(group)
 end
+
+do
+    -- default zombie clothes, purged of items ravenfolk wouldn't wear like shoes or gloves.
+    local group = content.ItemGroup { id = "default_ravenfolk_clothes", kind = "collection" }
+    group:entry { group = "coats_unisex", damage = { 1, 4 }, probability = 20 }
+    group:entry { group = "hatstore_hats", damage = { 1, 4 }, probability = 20 }
+    group:entry { group = "scarfs_unisex", damage = { 1, 4 }, probability = 20 }
+    group:entry { group = "accesories_personal_unisex", damage = { 1, 4 }, probability = 15 }
+    group:entry { group = "christmas_accesories_personal_unisex", damage = { 1, 4 }, event = "christmas", probability = 25 }
+    group:entry {
+        distribution = {
+            {
+                collection = {
+                    {
+                        distribution = {
+                            { group = "male_underwear", damage = { 1, 4 }, probability = 99 },
+                            { item = "union_suit", damage = { 1, 4 }, probability = 1 },
+                        },
+                    },
+                    {
+                        distribution = {
+                            {
+                                collection = {
+                                    { group = "pants_male", damage = { 1, 4 }, probability = 60 },
+                                    { group = "shirts_unisex", damage = { 1, 4 }, probability = 60 },
+                                    {
+                                        distribution = {
+                                            { item = "leather_belt", damage = { 1, 4 }, probability = 85 },
+                                            {
+                                                group = "christmas_belts",
+                                                damage = { 1, 4 },
+                                                event = "christmas",
+                                                probability = 25,
+                                            },
+                                        },
+                                        probability = 30,
+                                    },
+                                },
+                            },
+                            { item = "suit", damage = { 1, 4 }, probability = 5 },
+                            { item = "tux", damage = { 1, 4 }, probability = 1 },
+                            { item = "thawb", damage = { 1, 4 }, probability = 1 },
+                            { item = "cassock", damage = { 1, 4 }, probability = 1 },
+                            { item = "haori", damage = { 1, 4 }, probability = 1 },
+                        },
+                    },
+                    { group = "neckties", damage = { 1, 4 }, probability = 15 },
+                    { group = "accesories_personal_mens", damage = { 1, 4 }, probability = 15 },
+                },
+            },
+            {
+                collection = {
+                    { group = "female_underwear", damage = { 1, 4 }, probability = 90 },
+                    { group = "accesories_personal_womens", damage = { 1, 4 }, probability = 15 },
+                    {
+                        distribution = {
+                            {
+                                collection = {
+                                    { group = "pants_female", damage = { 1, 4 }, probability = 60 },
+                                    { group = "shirts_unisex", damage = { 1, 4 }, probability = 60 },
+                                },
+                                probability = 70,
+                            },
+                            {
+                                collection = {
+                                    {
+                                        distribution = {
+                                            { item = "dress", damage = { 1, 4 }, probability = 8000 },
+                                            { item = "sundress", damage = { 1, 4 }, probability = 4500 },
+                                            { item = "cheongsam", damage = { 1, 4 }, probability = 6 },
+                                            {
+                                                group = "christmas_dresses",
+                                                damage = { 1, 4 },
+                                                event = "christmas",
+                                                probability = 50,
+                                            },
+                                        },
+                                    },
+                                },
+                                probability = 30,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+    group:entry {
+        distribution = {
+            { item = "helmet_bike", damage = { 1, 4 }, probability = 50 },
+            { group = "clothing_biker", damage = { 1, 4 }, probability = 50 },
+        },
+        probability = 3,
+    }
+    content.add(group)
+end
+
+do
+    -- Reagents you'd use in crafting a wide variety of things, including alchemy and rituals.
+    local group = content.ItemGroup { id = "magical_reagents", kind = "distribution" }
+    group:entry { item = "mercury", charges = { 50, -1 }, probability = 15 }
+    group:group("magic_plants_common", 6)
+    group:group("magic_plants_uncommon", 3)
+    group:group("magic_plants_rare", 1)
+    content.add(group)
+end

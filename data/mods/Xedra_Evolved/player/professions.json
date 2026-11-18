@@ -2,21 +2,6 @@
   {
     "type": "item_group",
     "subtype": "collection",
-    "id": "suppressed_fn57",
-    "entries": [
-      { "item": "fn57mag", "ammo-item": "57mm_ss", "charges": 20 },
-      { "item": "fn57mag", "ammo-item": "57mm_ss", "charges": 20 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "torso_grenade_bandolier_jotunn",
-    "entries": [ { "item": "torso_bandolier_grenade", "ammo-item": "40x46mm_m576", "charges": 3 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
     "id": "xedra_mags_troll",
     "entries": [
       { "item": "8x40_25_mag", "ammo-item": "8mm_hvp", "charges": 25 },

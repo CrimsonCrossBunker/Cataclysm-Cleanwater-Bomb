@@ -2642,3 +2642,275 @@ do
     group:item("afs_UICASTA30", 40)
     content.add(group)
 end
+
+do
+    -- We could spawn clothes based on character selection, but that would require a lot of work.  Lets just say PC's taste is very specific.
+    local group = content.ItemGroup { id = "afs_your_ship_clothing", kind = "collection" }
+    group:entry {
+        item = "afs_leather_jacket",
+        count = { 5, 5 },
+        flags = {
+            "FIT",
+        },
+    }
+    group:entry {
+        item = "longshirt",
+        count = { 12, 12 },
+        flags = {
+            "FIT",
+        },
+    }
+    group:entry {
+        item = "pants",
+        count = { 8, 8 },
+        flags = {
+            "FIT",
+        },
+    }
+    group:entry {
+        group = "socks_unisex",
+        flags = {
+            "FIT",
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_mealgrub_precursor", kind = "collection" }
+    group:entry { item = "afs_mealgrub_spores", count = { 1, 6 } }
+    group:entry { item = "afs_mealgrub_medium", count = { 23, 6 }, probability = 80 }
+    group:entry { item = "afs_mealgrub_medium", count = { 2, 6 }, probability = 33 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_escapepod_shootout", kind = "collection" }
+    group:entry { item = "afs_seyfert_84K", charges = { 15, 19 }, ammo = { item = "afs_10mm_caseless_FMJ" } }
+    group:item("corpse")
+    group:group("afs_plastic_armor_g", 33)
+    group:group("afs_carbide_raider_armor_g", 10)
+    group:group("mil_armor", 10)
+    group:group("afs_colonist_shirt")
+    group:group("afs_colonist_pants")
+    group:group("afs_colonist_shoes")
+    group:group("drugs_soldier", 25)
+    content.add(group)
+end
+
+do
+    -- Survival kit for survival in terrestrial planets.  List based on the gear found on lifeboats.
+    local group = content.ItemGroup {
+        id = "afs_escape_pod_suppliesII",
+        kind = "collection",
+        container = "afs_landfall_kit_2",
+        overflow = "spill",
+    }
+    group:item("knife_folding")
+    group:item("flint_steel")
+    group:item("whistle_multitool")
+    group:entry { item = "water_clean", count = { 3, 3 }, container = "bottle_twoliter" }
+    group:entry { group = "afs_escapepod_ration_bag_plastic_4", count = { 3, 3 } }
+    group:entry { item = "cream_prot_cold", count = { 3, 3 } }
+    group:entry { item = "flashlight", charges = { 150, 150 } }
+    group:item("water_purifier")
+    group:entry {
+        item = "medium_battery_cell",
+        charges = { 600, 600 },
+        container = "multi_cooker",
+        ammo = { item = "battery" },
+    }
+    group:item("rope_6")
+    group:entry { item = "emer_blanket", count = { 2, 2 } }
+    group:item("afs_radiobeacon")
+    group:entry { item = "afs_landfall_gun", container = "back_holster" }
+    group:entry { item = "afs_7.50mm_rp", charges = { 18, 18 } }
+    group:item("afs_landfall_kit_2_instructions")
+    content.add(group)
+end
+
+do
+    -- Emergency Firefighting and repair tools for inside an habitat or spaceship. Can get as specialized as needed.
+    local group = content.ItemGroup { id = "afs_tools_space_emergency", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "extinguisher", charges = { 75, 100 }, probability = 35 },
+            { item = "throw_extinguisher", count = { 3, 5 }, probability = 75 },
+        },
+    }
+    group:entry {
+        item = "rebreather",
+        charges = { 60, 60 },
+        ammo = { item = "rebreather_filler_soda_lime" },
+        probability = 75,
+    }
+    group:entry {
+        distribution = {
+            { item = "fire_ax", probability = 20 },
+            { item = "crash_axe", probability = 80 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        collection = {
+            { item = "afs_foamgun" },
+            { item = "afs_foam_tank", charges = { 30, 30 }, ammo = { item = "afs_foamcrete" } },
+        },
+        probability = 10,
+    }
+    group:entry { item = "afs_oxygen_candle", count = { 2, 4 }, probability = 75 }
+    group:entry {
+        distribution = {
+            { group = "full_ifak" },
+            { group = "used_ifak" },
+        },
+        probability = 10,
+    }
+    content.add(group)
+end
+
+do
+    -- Fixes up spaceships, habitats and probably more.
+    local group = content.ItemGroup { id = "afs_tools_structural_repair", kind = "distribution" }
+    group:entry {
+        distribution = {
+            { group = "afs_tools_welding", probability = 30 },
+            {
+                collection = {
+                    { item = "afs_foamgun", count = { 1, 2 } },
+                    {
+                        item = "afs_foam_tank",
+                        count = { 1, 2 },
+                        charges = { 30, 30 },
+                        ammo = { item = "afs_foamcrete" },
+                    },
+                },
+                probability = 20,
+            },
+            {
+                collection = {
+                    { item = "plastic_sheet", count = { 3, 6 } },
+                    { group = "duct_tape_roll_part", count = { 1, 5 } },
+                },
+                probability = 50,
+            },
+        },
+        probability = 70,
+    }
+    group:group("tools_toolbox", 5)
+    group:group("afs_tools_plumbing", 15)
+    group:item("afs_imager", 10)
+    content.add(group)
+end
+
+do
+    -- tools used for sci-fi and not sci-fi welding.
+    local group = content.ItemGroup { id = "afs_tools_welding", kind = "collection", with_ammo = 75 }
+    group:entry {
+        distribution = {
+            { item = "welder", probability = 20 },
+            {
+                item = "squeeze_tube",
+                count = { 1, 2 },
+                contents = {
+                    { group = "afs_welding_paste_tube" },
+                },
+                probability = 20,
+            },
+            { item = "welder", probability = 20 },
+            {
+                collection = {
+                    { item = "oxy_torch", count = { 1, 2 } },
+                    { item = "tinyweldtank", count = { 1, 3 } },
+                    { item = "weldtank", count = { 1, 2 }, probability = 50 },
+                },
+                probability = 20,
+            },
+            {
+                collection = {
+                    {
+                        item = "afs_40g_plasma_civ",
+                        count = { 1, 2 },
+                        charges = { 16, 40 },
+                        ammo = { item = "afs_shydrogen" },
+                    },
+                    { item = "afs_plasma_torch", count = { 1, 2 }, probability = 50 },
+                },
+                probability = 40,
+            },
+        },
+        probability = 30,
+    }
+    group:entry { group = "afs_tools_welding_consumable", count = { 1, 2 }, probability = 10 }
+    group:item("polisher", 20)
+    group:item("angle_grinder", 20)
+    group:item("clamp", 10)
+    group:item("metal_file", 10)
+    group:item("hacksaw", 5)
+    group:item("saw", 5)
+    group:item("bow_saw", 5)
+    group:item("sandpaper", 10)
+    group:item("goggles_welding", 30)
+    content.add(group)
+end
+
+do
+    -- tools used by large farms
+    local group = content.ItemGroup { id = "afs_tools_agricultural_hazardous", kind = "distribution" }
+    group:entry {
+        collection = {
+            { item = "afs_foamgun" },
+            { item = "afs_foam_tank", count = { 1, 2 }, charges = { 30, 30 }, ammo = { item = "afs_foamtoxic" } },
+            { item = "prophylactic_antivenom", count = { 5, 5 }, probability = 1 },
+        },
+        probability = 10,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_uica_guns", kind = "distribution", with_ammo = 100, with_magazine = 100 }
+    group:item("afs_marsec_t72")
+    group:entry { item = "afs_sr77", variant = "military", ammo = { item = "afs_7.50mm_caseless" } }
+    group:entry { item = "afs_shotgun", variant = "military", ammo = { item = "shot_00" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_uicia_mags", kind = "distribution" }
+    group:entry { item = "afs_sr77_45mag", count = { 1, 3 }, charges = { 45, 45 }, ammo = { item = "afs_7.50mm_caseless" } }
+    group:entry {
+        item = "afs_marsec_14mag",
+        count = { 2, 5 },
+        charges = { 14, 14 },
+        ammo = { item = "afs_10mm_caseless_JHP" },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_any_laser_s_gun", kind = "distribution", with_ammo = 100, with_magazine = 100 }
+    group:item("afs_v29", 40)
+    group:item("afs_av22", 60)
+    group:entry {
+        item = "afs_archeotech_laspistol",
+        charges = { 15000, 15000 },
+        ammo = { item = "afs_battery_plus" },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "afs_any_laser_mag", kind = "distribution", with_ammo = 100 }
+    group:item("afs_cartridge", 10)
+    group:item("afs_bootleg_cartridge", 80)
+    group:item("afs_compact_cartridge", 10)
+    group:entry {
+        item = "afs_archeotech_cartridge",
+        charges = { 15000, 15000 },
+        ammo = { item = "afs_battery_plus" },
+        probability = 1,
+    }
+    content.add(group)
+end

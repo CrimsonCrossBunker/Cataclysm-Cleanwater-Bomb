@@ -39,3 +39,16 @@ do
     group:entry { item = "bolt_cf", charges = { 20, 20 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "suppressed_fn57", kind = "collection" }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm_ss" } }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm_ss" } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "torso_grenade_bandolier_jotunn", kind = "collection" }
+    group:entry { item = "torso_bandolier_grenade", charges = { 3, 3 }, ammo = { item = "40x46mm_m576" } }
+    content.add(group)
+end

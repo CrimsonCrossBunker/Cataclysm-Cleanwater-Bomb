@@ -867,3 +867,784 @@ do
     group:entry { group = "wallets_phavian", damage = { 1, 4 }, probability = 5 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "biokinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "biokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "biokinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "biokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "biokinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "biokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "biokinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "biokinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "biokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "biokinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "biokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "biokinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "biokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "biokinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "clairsentient_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "clairsentient_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "clairsentient_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "clairsentient_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "clairsentient_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "clairsentient_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "clairsentient_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "clairsentient_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "clairsentient_crystal_artifact_item",
+        artifact = {
+            preset = "clairsentient_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "clairsentient_crystal_artifact_item",
+        artifact = {
+            preset = "clairsentient_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "clairsentient_crystal_artifact_item",
+        artifact = {
+            preset = "clairsentient_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "electrokinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "electrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "electrokinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "electrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "electrokinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "electrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "electrokinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "electrokinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "electrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "electrokinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "electrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "electrokinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "electrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "electrokinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "photokinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "photokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "photokinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "photokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "photokinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "photokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "photokinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "photokinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "photokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "photokinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "photokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "photokinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "photokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "photokinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pyrokinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "pyrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "pyrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "pyrokinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "pyrokinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "pyrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "pyrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "pyrokinetic_crystal_artifact_item",
+        artifact = {
+            preset = "pyrokinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "telekinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "telekinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telekinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "telekinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telekinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "telekinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telekinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "telekinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "telekinetic_crystal_artifact_item",
+        artifact = {
+            preset = "telekinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "telekinetic_crystal_artifact_item",
+        artifact = {
+            preset = "telekinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "telekinetic_crystal_artifact_item",
+        artifact = {
+            preset = "telekinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "telepathic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "telepathic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telepathic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "telepathic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telepathic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "telepathic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "telepathic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "telepathic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "telepathic_crystal_artifact_item",
+        artifact = {
+            preset = "telepathic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "telepathic_crystal_artifact_item",
+        artifact = {
+            preset = "telepathic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "telepathic_crystal_artifact_item",
+        artifact = {
+            preset = "telepathic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "teleportation_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "teleportation_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "teleportation_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "teleportation_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "teleportation_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "teleportation_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "teleportation_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "teleportation_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "teleportation_crystal_artifact_item",
+        artifact = {
+            preset = "teleportation_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "teleportation_crystal_artifact_item",
+        artifact = {
+            preset = "teleportation_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "teleportation_crystal_artifact_item",
+        artifact = {
+            preset = "teleportation_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "vitakinetic_crystal_awakening_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "vitakinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "vitakinetic_matrix_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "vitakinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "vitakinetic_matrix_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "vitakinetic_crystal_awakening_artifact_item",
+        artifact = {
+            preset = "vitakinetic_matrix_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "vitakinetic_crystal_artifact_procgen", kind = "distribution" }
+    group:entry {
+        group = "vitakinetic_crystal_artifact_item",
+        artifact = {
+            preset = "vitakinetic_crystal_procgen",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "vitakinetic_crystal_artifact_item",
+        artifact = {
+            preset = "vitakinetic_crystal_procgen",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "vitakinetic_crystal_artifact_item",
+        artifact = {
+            preset = "vitakinetic_crystal_procgen",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = true,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mom_texopapalotl_crew_shed_weapon", kind = "collection" }
+    group:entry {
+        item = "mom_lightning_rifle",
+        charges = { 85, 120 },
+        damage = { 0, 2 },
+        variant = "mom_lightning_rifle_non_fifth_sun",
+        ammo = { item = "mom_lightning_rifle_ammo" },
+        probability = 70,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "mom_texopapalotl_crew_shed_gear", kind = "collection" }
+    group:entry {
+        item = "itzcuauhtli_wrist_computer",
+        charges = { 6500, 8500 },
+        damage = { 0, 2 },
+        variant = "itzcuauhtli_wrist_computer_non_fifth_sun",
+    }
+    group:entry {
+        item = "itzcuauhtli_tunic_jaguar",
+        damage = { 1, 3 },
+        variant = "itzcuauhtli_tunic_jaguar_non_fifth_sun",
+        probability = 90,
+    }
+    group:entry {
+        item = "itzcuauhtli_pants",
+        damage = { 1, 3 },
+        variant = "itzcuauhtli_pants_non_fifth_sun",
+        probability = 90,
+    }
+    group:entry {
+        item = "bio_dangersight_eyes_non_fifth_sun",
+        damage = { 1, 3 },
+        flags = {
+            "NO_STERILE",
+            "NO_PACKED",
+            "FILTHY",
+        },
+        probability = 70,
+    }
+    group:entry {
+        item = "mom_fifth_sun_standard_body_armor_non_fifth_sun",
+        charges = { 350, 650 },
+        damage = { 1, 3 },
+        probability = 70,
+    }
+    group:entry { item = "itzcuauhtli_boots", damage = { 0, 2 }, variant = "itzcuauhtli_boots_standard_non_fifth_sun" }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dist_shield_belts", kind = "distribution" }
+    group:entry {
+        item = "medium_battery_electronoetic_refined",
+        charges = { 100, 448 },
+        container = "psionic_shield_belt",
+        ammo = { item = "battery" },
+        probability = 1,
+    }
+    group:entry {
+        item = "medium_battery_electronoetic",
+        charges = { 20, 168 },
+        container = "psionic_shield_belt",
+        ammo = { item = "battery" },
+        probability = 4,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dist_fire_shield_belts", kind = "distribution" }
+    group:entry {
+        item = "medium_battery_electronoetic_refined",
+        charges = { 100, 448 },
+        container = "psionic_fire_shield_belt",
+        ammo = { item = "battery" },
+        probability = 1,
+    }
+    group:entry {
+        item = "medium_battery_electronoetic",
+        charges = { 20, 168 },
+        container = "psionic_fire_shield_belt",
+        ammo = { item = "battery" },
+        probability = 4,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "collection_mindsight_and_note", kind = "collection" }
+    group:entry {
+        distribution = {
+            {
+                item = "light_battery_electronoetic",
+                charges = { 20, 48 },
+                container = "psionic_mindsight_glasses",
+                ammo = { item = "battery" },
+                probability = 80,
+            },
+            {
+                item = "light_battery_electronoetic_refined",
+                charges = { 60, 128 },
+                container = "psionic_mindsight_glasses",
+                ammo = { item = "battery" },
+                probability = 20,
+            },
+        },
+    }
+    group:item("lab_file_QD944_P_item")
+    content.add(group)
+end

@@ -21,30 +21,5 @@
       { "skill": "shotgun", "bonus": { "rng": [ 4, 6 ] } },
       { "skill": "rifle", "bonus": { "rng": [ 4, 6 ] } }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_UICA_NAVAL_POLICE_carry",
-    "subtype": "collection",
-    "items": [
-      { "item": "ear_plugs", "custom-flags": [ "no_auto_equip" ] },
-      { "item": "afs_marsec_4", "charges": 14, "ammo-item": "afs_10mm_caseless_JHP" },
-      { "item": "afs_10mm_caseless_JHP", "count": [ 1, 2 ] },
-      { "item": "shot_00", "count": 2 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_UICA_NAVAL_POLICE_wield",
-    "subtype": "collection",
-    "items": [
-      {
-        "item": "afs_shotgun",
-        "variant": "military",
-        "ammo-item": "shot_00",
-        "charges": 9,
-        "contents-item": [ "shoulder_strap", "suppressor" ]
-      }
-    ]
   }
 ]

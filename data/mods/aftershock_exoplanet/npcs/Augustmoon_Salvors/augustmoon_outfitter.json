@@ -35,16 +35,6 @@
     ]
   },
   {
-    "id": "afs_frontier_cryo_g_full_augustmoon",
-    "type": "item_group",
-    "//": "The bare minimum matching suit to vist Salus. Prevents having to restart because Port Augustmoon is mising a part like the mask.",
-    "subtype": "collection",
-    "entries": [
-      { "item": "afs_frontier_cryo", "custom-flags": [ "FIT" ] },
-      { "item": "afs_frontier_cryomask", "custom-flags": [ "FIT" ] }
-    ]
-  },
-  {
     "type": "npc",
     "id": "augustmoon_outfitter",
     "name_suffix": "outfitter clerk",

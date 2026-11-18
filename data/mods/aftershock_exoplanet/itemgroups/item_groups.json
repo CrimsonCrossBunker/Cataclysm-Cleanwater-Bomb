@@ -252,21 +252,5 @@
         { "item": "trident", "prob": 70 }
       ]
     }
-  },
-  {
-    "id": "afs_escapepod_shootout",
-    "type": "item_group",
-    "subtype": "collection",
-    "entries": [
-      { "item": "afs_seyfert_84K", "charges": [ 15, 19 ], "ammo-item": "afs_10mm_caseless_FMJ" },
-      { "item": "corpse" },
-      { "group": "afs_plastic_armor_g", "prob": 33 },
-      { "group": "afs_carbide_raider_armor_g", "prob": 10 },
-      { "group": "mil_armor", "prob": 10 },
-      { "group": "afs_colonist_shirt", "prob": 100 },
-      { "group": "afs_colonist_pants", "prob": 100 },
-      { "group": "afs_colonist_shoes", "prob": 100 },
-      { "group": "drugs_soldier", "prob": 25 }
-    ]
   }
 ]

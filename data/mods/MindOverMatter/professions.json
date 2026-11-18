@@ -997,15 +997,6 @@
     "chargen_allow_npc": false
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "lightning_rifle_ammo_mags",
-    "entries": [
-      { "item": "mom_lightning_rifle_mag", "ammo-item": "mom_lightning_rifle_ammo", "charges": 120 },
-      { "item": "mom_lightning_rifle_mag", "ammo-item": "mom_lightning_rifle_ammo", "charges": 120 }
-    ]
-  },
-  {
     "type": "profession",
     "id": "paranormal_investigator",
     "copy-from": "paranormal_investigator",

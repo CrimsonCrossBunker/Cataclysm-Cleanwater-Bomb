@@ -54,19 +54,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "pirate_loadout",
-    "entries": [
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 },
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 },
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 },
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 },
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 },
-      { "item": "enchanted_blackpowder_pistol", "ammo-item": "flintlock_ammo", "charges": 1 }
-    ]
-  },
-  {
     "id": "TALK_FORGE_LORD_REAGENT",
     "type": "talk_topic",
     "dynamic_line": {

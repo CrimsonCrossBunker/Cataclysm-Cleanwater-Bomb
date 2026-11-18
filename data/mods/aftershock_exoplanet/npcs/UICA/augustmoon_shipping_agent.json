@@ -91,26 +91,5 @@
       { "u_spawn_item": "augustmoon_kit", "count": 1, "use_item_group": true },
       { "u_add_var": "augustmoon_kit", "value": "yes" }
     ]
-  },
-  {
-    "id": "augustmoon_kit",
-    "type": "item_group",
-    "subtype": "collection",
-    "container-item": "afs_augustmoon_kit_box",
-    "on_overflow": "spill",
-    "ammo": 100,
-    "magazine": 100,
-    "entries": [
-      { "item": "knife_folding" },
-      { "count": 2, "group": "afs_escapepod_ration_bag_plastic_4" },
-      { "item": "flashlight" },
-      { "item": "afs_frontier_cryomask", "custom-flags": [ "FIT" ] },
-      { "item": "afs_frontier_cryo", "custom-flags": [ "FIT" ] },
-      { "item": "backpack" },
-      { "item": "afs_thermos" },
-      { "item": "multi_cooker" },
-      { "item": "afs_seyfert_84K", "container-item": "holster" },
-      { "item": "afs_10mm_caseless_FMJ" }
-    ]
   }
 ]

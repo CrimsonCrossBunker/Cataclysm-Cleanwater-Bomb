@@ -39,3 +39,40 @@ do
     group:item("warhammer")
     content.add(group)
 end
+
+do
+    -- stuff the goblins 'eat', mostly there for flavor, pun intended
+    local group = content.ItemGroup {
+        id = "orc_village_foodstuffs",
+        kind = "collection",
+        container = "bag_canvas",
+        overflow = "spill",
+    }
+    group:item("skull_human", 10)
+    group:item("human_tallow", 2)
+    group:item("bone_human", 20)
+    group:item("human_tallow", 15)
+    group:entry { item = "wastebread", count = { 0, 8 }, probability = 70 }
+    group:entry { item = "dry_fruit", count = { 0, 8 }, probability = 70 }
+    group:entry { item = "dry_veggy", count = { 0, 8 }, probability = 70 }
+    group:entry {
+        item = "meat_salted",
+        count = { 0, 3 },
+        components = {
+            "human_flesh",
+            "salt",
+        },
+        probability = 50,
+    }
+    group:entry { item = "meat_salted", count = { 0, 8 }, probability = 50 }
+    group:entry {
+        item = "meat_smoked",
+        count = { 0, 3 },
+        components = {
+            "human_flesh",
+        },
+        probability = 70,
+    }
+    group:entry { item = "meat_smoked", count = { 0, 8 }, probability = 50 }
+    content.add(group)
+end

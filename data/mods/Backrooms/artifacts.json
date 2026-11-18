@@ -96,20 +96,5 @@
       }
     ],
     "category": "other"
-  },
-  {
-    "type": "item_group",
-    "id": "backrooms_artifacts",
-    "subtype": "distribution",
-    "entries": [
-      {
-        "group": "backrooms_strange_object_group",
-        "artifact": {
-          "procgen_id": "cult",
-          "rules": { "power_level": 1250, "max_attributes": 4, "max_negative_power": -1000, "resonant": true }
-        },
-        "prob": 100
-      }
-    ]
   }
 ]

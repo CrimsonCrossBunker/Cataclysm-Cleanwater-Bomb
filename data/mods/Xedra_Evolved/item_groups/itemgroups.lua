@@ -2295,3 +2295,758 @@ do
     group:item("museum_plaques_items", 80)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "dreamer_artifact", kind = "distribution" }
+    group:entry {
+        group = "dreamer_artifacts",
+        artifact = { preset = "dreamer_artifacts", power_level = 500, max_attributes = 1, resonant = false },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_q_staff_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_q_staff",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_longsword_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_longsword",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_warhammer_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_warhammer",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_spear_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_spear",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_halberd_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_halberd",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_glaive_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_glaive",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_naginata_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_naginata",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_mace_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_mace",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_morningstar_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_morningstar",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_estoc_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_estoc",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_arming_sword_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_arming_sword",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_broadsword_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_broadsword",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_battleaxe_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_battleaxe",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_katana_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_katana",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_knife_combat_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_knife_combat",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_kris_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_kris",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_kukri_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_kukri",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_nodachi_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_nodachi",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_rapier_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_rapier",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_tanto_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_tanto",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_wakizashi_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_wakizashi",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_zweihander_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_zweihander",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_khopesh_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_khopesh",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_lucerne_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_lucerne",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_knuckle_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_knuckle",
+        artifact = {
+            preset = "dreamsmith_lottery_atk",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_fullhelmet_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_fullhelmet",
+        flags = {
+            "FIT",
+        },
+        artifact = {
+            preset = "dreamsmith_lottery_def_head",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_helmet_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_helmet",
+        flags = {
+            "FIT",
+        },
+        artifact = {
+            preset = "dreamsmith_lottery_def_head",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_plate_armor_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_plate_armor",
+        flags = {
+            "FIT",
+        },
+        artifact = {
+            preset = "dreamsmith_lottery_def_body",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_armguard_plate_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_armguard_plate",
+        flags = {
+            "FIT",
+        },
+        artifact = {
+            preset = "dreamsmith_lottery_def_hands",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "dreamforged_boots_ench", kind = "distribution" }
+    group:entry {
+        item = "dreamforged_boots",
+        flags = {
+            "FIT",
+        },
+        artifact = {
+            preset = "dreamsmith_lottery_def_feet",
+            power_level = 5000,
+            max_attributes = 4,
+            max_negative_power = 0,
+            resonant = false,
+        },
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "zebra_pistol_cache", kind = "collection" }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm_ss" } }
+    group:entry { item = "fn57mag", charges = { 20, 20 }, ammo = { item = "57mm_ss" } }
+    group:item("fn57_sup")
+    content.add(group)
+end
+
+do
+    -- Foreign agent safehouse pistol group.
+    local group = content.ItemGroup { id = "vektor_pistol_cache", kind = "collection" }
+    group:entry { item = "sr1vektor_mag_18rd", charges = { 18, 18 }, ammo = { item = "9x21mm" } }
+    group:entry { item = "sr1vektor_mag_18rd", charges = { 18, 18 }, ammo = { item = "9x21mm" } }
+    group:item("sr1vektor_9x21mm")
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "portable_non_flashlight_light_sources", kind = "distribution" }
+    group:entry { item = "candle", charges = { 5, 50 }, probability = 3 }
+    group:entry { item = "gasoline_lantern", charges = { 0, -1 }, probability = 5 }
+    group:entry { item = "electric_lantern", charges = { 0, 100 }, probability = 8 }
+    group:entry { item = "oil_lamp", charges = { 0, -1 }, probability = 5 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "nether_cabin_ritual_ingredients", kind = "distribution" }
+    group:group("hedge_magick_materials", 200)
+    group:entry { item = "lotus_blossom", count = { 8, 14 }, wrapper = "bag_zipper", container = "null", probability = 30 }
+    group:entry { item = "candle", charges = { 10, -1 }, probability = 75 }
+    group:entry { item = "corpse_yugg_jade_fragments", count = { 1, 3 }, probability = 15 }
+    group:entry { item = "blank_blood", container = "bottle_plastic", probability = 15 }
+    group:item("kreck_loot_star_stone", 15)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "minor_spark_artifact", kind = "distribution" }
+    group:entry {
+        group = "minor_spark_artifacts",
+        artifact = {
+            preset = "spark_items",
+            power_level = 500,
+            max_attributes = 2,
+            max_negative_power = -250,
+            resonant = true,
+        },
+    }
+    content.add(group)
+end
+
+do
+    -- Very small chance of a powerful, non-resonant artifact
+    local group = content.ItemGroup { id = "xe_nether_cult_artifact", kind = "distribution" }
+    group:entry {
+        group = "nether_cult_items_wielded",
+        artifact = {
+            preset = "nether_cult_wield",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "nether_cult_items_wielded",
+        artifact = {
+            preset = "nether_cult_wield",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "nether_cult_items_wielded",
+        artifact = {
+            preset = "nether_cult_wield",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = false,
+        },
+        probability = 1,
+    }
+    group:entry {
+        group = "nether_cult_items_worn",
+        artifact = {
+            preset = "nether_cult_worn",
+            power_level = 1250,
+            max_attributes = 4,
+            max_negative_power = -1000,
+            resonant = true,
+        },
+    }
+    group:entry {
+        group = "nether_cult_items_worn",
+        artifact = {
+            preset = "nether_cult_worn",
+            power_level = 2500,
+            max_attributes = 6,
+            max_negative_power = -1500,
+            resonant = true,
+        },
+        probability = 10,
+    }
+    group:entry {
+        group = "nether_cult_items_worn",
+        artifact = {
+            preset = "nether_cult_worn",
+            power_level = 5000,
+            max_attributes = 8,
+            max_negative_power = -2500,
+            resonant = false,
+        },
+        probability = 1,
+    }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "changeling_troll_death_drops", kind = "collection" }
+    group:entry {
+        item = "footrags_leather",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 70,
+    }
+    group:entry {
+        item = "loincloth",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 70,
+    }
+    group:entry {
+        item = "pants_leather",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 55,
+    }
+    group:entry { item = "xe_troll_club", damage = { 1, 2 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "changeling_troll_manbreaker_death_drops", kind = "collection" }
+    group:entry {
+        item = "footrags_leather",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 70,
+    }
+    group:entry {
+        item = "loincloth",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 70,
+    }
+    group:entry {
+        item = "pants_leather",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 55,
+    }
+    group:entry {
+        item = "chestwrap",
+        damage = { 1, 4 },
+        flags = {
+            "OVERSIZE",
+            "PREFIX_XL",
+        },
+        probability = 55,
+    }
+    group:entry { item = "xl_armor_troll_moons_tears", damage = { 1, 3 } }
+    group:entry { item = "xl_helm_troll_moons_tears", damage = { 1, 3 }, probability = 75 }
+    group:entry { item = "xl_gauntlets_troll_moons_tears", damage = { 1, 3 }, probability = 75 }
+    group:entry { item = "xl_boots_troll_moons_tears", damage = { 1, 3 }, probability = 75 }
+    group:entry { item = "xe_troll_giant_mace", damage = { 1, 2 } }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "feral_agent_death_drops", kind = "collection", with_ammo = 20, with_magazine = 100 }
+    group:entry {
+        distribution = {
+            { item = "fn57_sup", damage = { 2, 4 } },
+            { item = "fn57", damage = { 2, 4 }, variant = "fn57" },
+        },
+    }
+    group:entry { group = "security_armor", damage = { 0, 2 }, probability = 30 }
+    group:entry { group = "security_gear", damage = { 0, 2 }, probability = 50 }
+    group:entry { group = "cop_gloves", damage = { 1, 4 }, probability = 30 }
+    group:entry { item = "pants", damage = { 1, 4 } }
+    group:entry { item = "dress_shoes", damage = { 1, 4 }, probability = 70 }
+    group:entry { group = "security_torso", damage = { 1, 4 }, probability = 70 }
+    group:entry { group = "underwear", damage = { 1, 4 } }
+    group:group("clothing_glasses", 5)
+    group:group("clothing_watch", 5)
+    group:entry { group = "wallets", damage = { 1, 4 } }
+    group:entry { item = "fn57mag", charges = { 0, 10 }, ammo = { item = "57mm" }, probability = 50 }
+    group:entry { item = "fn57mag", charges = { 0, 15 }, ammo = { item = "57mm" }, probability = 50 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup {
+        id = "feral_agent_p90_death_drops",
+        kind = "collection",
+        with_ammo = 20,
+        with_magazine = 100,
+    }
+    group:entry { item = "fn_p90", damage = { 2, 4 } }
+    group:entry { group = "security_armor", damage = { 0, 2 }, probability = 30 }
+    group:entry { group = "security_gear", damage = { 0, 2 }, probability = 50 }
+    group:entry { group = "cop_gloves", damage = { 1, 4 }, probability = 30 }
+    group:entry { item = "pants", damage = { 1, 4 } }
+    group:entry { item = "dress_shoes", damage = { 1, 4 }, probability = 70 }
+    group:entry { group = "security_torso", damage = { 1, 4 }, probability = 70 }
+    group:entry { group = "underwear", damage = { 1, 4 } }
+    group:group("clothing_glasses", 5)
+    group:group("clothing_watch", 5)
+    group:entry { group = "wallets", damage = { 1, 4 } }
+    group:entry { item = "fnp90mag", charges = { 0, 50 }, ammo = { item = "57mm" }, probability = 50 }
+    group:entry { item = "fnp90mag", charges = { 0, 50 }, ammo = { item = "57mm" }, probability = 50 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "alchemical_materials", kind = "distribution" }
+    group:item("chemistry_set", 25)
+    group:item("mortar_pestle", 40)
+    group:entry { item = "faewild", count = { 3, 12 }, wrapper = "bag_zipper", container = "null", probability = 15 }
+    group:entry { item = "wyld_candy", sealed = false, wrapper = "wrapper_wyld", container = "null", probability = 15 }
+    group:entry { item = "lotus_blossom", count = { 2, 16 }, wrapper = "bag_zipper", container = "null", probability = 15 }
+    group:entry { item = "corpse_ash", count = { 5, 10 }, wrapper = "jug_plastic", container = "null", probability = 15 }
+    group:entry { item = "wild_herbs", count = { 20, 80 }, wrapper = "bag_zipper", container = "null", probability = 75 }
+    group:entry { item = "poppy_bud", count = { 2, 16 }, wrapper = "bag_zipper", container = "null", probability = 15 }
+    group:group("lye_powder_bottle_part", 50)
+    group:entry { group = "oxy_powder_bottle_part", charges = { 100, -1 }, probability = 50 }
+    group:entry { item = "scrap_copper", count = { 5, 15 }, probability = 40 }
+    group:group("jewelry_safe", 2)
+    group:group("alchemy_mutagen_samples", 5)
+    group:entry { item = "scrap_dreamdross", count = { 1, 4 }, probability = 50 }
+    group:entry { item = "water_clean", charges = { 1, -1 }, sealed = false, container = "bottle_plastic", probability = 90 }
+    group:group("bleach_jug_part", 20)
+    group:entry { item = "chem_washing_soda", count = { 1, -1 }, probability = 15 }
+    group:entry { item = "chem_baking_soda", count = { 1, -1 }, probability = 25 }
+    group:group("ethanol_bottle_liter_part", 40)
+    group:entry { item = "chem_nitric_acid", charges = { 1, -1 }, probability = 5 }
+    group:group("manganesedioxide_small_bottle_part", 5)
+    group:entry { item = "chem_sulphur", count = { 1, -1 }, probability = 25 }
+    group:entry { item = "chem_sulphuric_acid", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "chem_muriatic_acid", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "chem_hexamine", charges = { 1, -1 }, probability = 5 }
+    group:entry { item = "denat_alcohol", charges = { 250, -1 }, probability = 10 }
+    group:entry { item = "methed_alcohol", charges = { 250, -1 }, probability = 1 }
+    group:group("jewelry_safe", 5)
+    group:item("xe_elder_ginseng", 1)
+    content.add(group)
+end

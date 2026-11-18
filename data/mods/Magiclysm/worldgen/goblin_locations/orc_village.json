@@ -29,27 +29,6 @@
     }
   },
   {
-    "id": "orc_village_foodstuffs",
-    "//": "stuff the goblins 'eat', mostly there for flavor, pun intended",
-    "type": "item_group",
-    "subtype": "collection",
-    "on_overflow": "spill",
-    "container-item": "bag_canvas",
-    "entries": [
-      { "item": "skull_human", "prob": 10 },
-      { "item": "human_tallow", "prob": 2 },
-      { "item": "bone_human", "prob": 20 },
-      { "item": "human_tallow", "prob": 15 },
-      { "item": "wastebread", "count": [ 0, 8 ], "prob": 70 },
-      { "item": "dry_fruit", "count": [ 0, 8 ], "prob": 70 },
-      { "item": "dry_veggy", "count": [ 0, 8 ], "prob": 70 },
-      { "item": "meat_salted", "components": [ "human_flesh", "salt" ], "count": [ 0, 3 ], "prob": 50 },
-      { "item": "meat_salted", "count": [ 0, 8 ], "prob": 50 },
-      { "item": "meat_smoked", "components": [ "human_flesh" ], "count": [ 0, 3 ], "prob": 70 },
-      { "item": "meat_smoked", "count": [ 0, 8 ], "prob": 50 }
-    ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "human_gore",
     "//": "lore: brutally slaughtered human, only scraps of it remain. the goblins have taken everything they need from it and left the rest there to frighten every human that comes close to their outpost. can be reused for other purposes, such as humans eaten by animals.",
