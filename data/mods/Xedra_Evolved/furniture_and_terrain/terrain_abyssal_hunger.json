@@ -49,19 +49,5 @@
     "connects_to": "WALL",
     "flags": [ "NOITEM", "SUPPORTS_ROOF", "WALL", "NO_SCENT", "BLOCK_WIND" ],
     "looks_like": "t_concrete_wall_flesh"
-  },
-  {
-    "type": "furniture",
-    "id": "f_shard_location",
-    "name": "shard-filled brain chunk",
-    "description": "A chunk of brain matter holding some shards akin to the one you are looking for.  Examine to pick one.",
-    "//": "On examine, activates the EOC cthat grants the player the shard before sending them back to the ritual point.",
-    "symbol": "S",
-    "bgcolor": "dark_gray",
-    "move_cost_mod": -1,
-    "coverage": 100,
-    "required_str": -1,
-    "flags": [ "NOCOLLIDE", "NO_PICKUP_ON_EXAMINE", "TRANSPARENT" ],
-    "examine_action": { "type": "effect_on_condition", "effect_on_conditions": [ "EOC_ABYSSAL_HUNGER_GRANT_SHARD" ] }
   }
 ]

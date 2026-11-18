@@ -189,3 +189,5 @@ require("nether_sorcery_study")
 require("inventor_research")
 
 require("heartvine_communion")
+
+require("abyssal_hunger")

@@ -14,27 +14,5 @@
     "flags": [ "SECRET" ],
     "category": "CC_XEDRA",
     "subcategory": "CSC_XEDRA_RESEARCH"
-  },
-  {
-    "id": "bait_abyssal_hunger",
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
-    "name": "bait the Abyssal Hunger",
-    "description": "Attract the attention of a titanic nether being, being swallowed in the process.  Getting out will be a grueling task but will reward you with the shard you are looking for.",
-    "components": [
-      [ [ "chunk_sulfur", 8 ] ],
-      [ [ "meat", 20 ] ],
-      [ [ "human_flesh", 20 ], [ "demihuman_flesh", 20 ], [ "mutant_human_flesh", 20 ] ],
-      [ [ "mutant_meat", 20 ], [ "mutant_human_flesh", 20 ] ],
-      [ [ "fae_meat", 20 ] ],
-      [ [ "hard_liquor", 10, "LIST" ] ]
-    ],
-    "time": "30 m",
-    "skill_used": "deduction",
-    "difficulty": 2,
-    "flags": [ "SECRET" ],
-    "category": "CC_XEDRA",
-    "subcategory": "CSC_XEDRA_MISC",
-    "result_eocs": [ "EOC_ENTER_ABYSSAL_HUNGER_DUNGEON" ]
   }
 ]
