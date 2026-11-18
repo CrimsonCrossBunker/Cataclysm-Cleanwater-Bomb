@@ -274,6 +274,7 @@ static const ter_str_id ter_t_gas_pump_smashed( "t_gas_pump_smashed" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_reb_cage( "t_reb_cage" );
+static const ter_str_id ter_t_rock( "t_rock" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 static const ter_str_id ter_t_rootcellar( "t_rootcellar" );
 static const ter_str_id ter_t_stump( "t_stump" );
@@ -10111,8 +10112,8 @@ point map::sees_cache_key( const tripoint_bub_ms &from, const tripoint_bub_ms &t
 
     // A little gross, just pack the values into an integer.
     return point(
-               min.x() << 20 | min.y() << 10 | ( layer_for_z( min.z() ) ),
-               max.x() << 20 | max.y() << 10 | ( layer_for_z( max.z() ) )
+               min.x() << 20 | min.y() << 10 | layer_for_z( min.z() ),
+               max.x() << 20 | max.y() << 10 | layer_for_z( max.z() )
            );
 }
 
@@ -11235,9 +11236,7 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         set_floor_cache_dirty( z );
         set_pathfinding_cache_dirty( z );
         if( ( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) && !MAPBUFFER.submap_exists( pos ) ) {
-            static const ter_str_id rock( "t_rock" );
-            static const ter_str_id air( "t_open_air" );
-            MAPBUFFER.generate_uniform( pos, z < 0 ? rock : air );
+            MAPBUFFER.generate_uniform( pos, z < 0 ? ter_t_rock : ter_t_open_air );
         }
         submap *const tmpsub = MAPBUFFER.lookup_submap( pos );
         const size_t index = get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) );
@@ -11432,7 +11431,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
     grow_plant( p, &get_avatar() );
 }
 
-void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
+void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval )
 {
     const furn_t &initial_furn = this->furn( p ).obj();
     if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
@@ -11485,7 +11484,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
     const int initial_max_water = iexamine::get_plant_max_water( initial_furn );
     if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
         effective_growth_time = update_crop_climate( *this, p, *seed, initial_furn, crop_growth_speed,
-                                crop_water_consumption );
+                                crop_water_consumption, finish_crop_interval );
     } else if( initial_max_water > 0 ) {
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
         if( !seed->has_var( "seed_effective_growth_turns" ) ||

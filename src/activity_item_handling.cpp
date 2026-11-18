@@ -1,15 +1,23 @@
 #include "activity_handlers.h" // IWYU pragma: associated
 #include "activity_item_handling.h" // IWYU pragma: associated
 
+#include <activity_actor.h>
+#include <character_id.h>
+#include <clone_ptr.h>
+#include <item_activation.h>
+#include <item_source.h>
 #include <line.h>
+#include <safe_reference.h>
+#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
 #include <climits>
-#include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <deque>
 #include <functional>
+#include <initializer_list>
 #include <list>
 #include <memory>
 #include <optional>
@@ -32,11 +40,8 @@
 #include "character_action_guard.h"
 #include "chopping_activity.h"
 #include "clzones.h"
-#include "zone_work.h"
-#include "vehicle_uid.h"
 #include "construction.h"
 #include "coordinates.h"
-#include "craft_command.h"
 #include "craft_reservation.h"
 #include "crafting.h"
 #include "creature.h"
@@ -92,10 +97,12 @@
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_selector.h"
+#include "vehicle_uid.h"
 #include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
+#include "zone_work.h"
 
 static const activity_id ACT_FETCH_REQUIRED( "ACT_FETCH_REQUIRED" );
 static const activity_id ACT_MOVE_LOOT( "ACT_MOVE_LOOT" );
@@ -255,7 +262,7 @@ static item_location carried_study_book( Character &you, bool ignore_darkness = 
 
 static item_location find_study_book( const tripoint_abs_ms &zone_pos, Character &you )
 {
-    const auto query = active_zone_query( you );
+    const zone_query_context query = active_zone_query( you );
     map &here = get_map();
     const zone_data *zone = zone_manager::get_manager().get_zone_at(
                                 zone_pos, zone_type_STUDY_ZONE, _fac_id( you ), &query );
@@ -496,7 +503,7 @@ static std::vector<item_location> try_to_put_into_vehicle( Character &c, item_dr
 
 static itype_id get_first_fertilizer_itype( Character &you, const tripoint_abs_ms &src )
 {
-    const auto query = active_zone_query( you );
+    const zone_query_context query = active_zone_query( you );
     const zone_manager &mgr = zone_manager::get_manager();
     std::vector<zone_data> zones = mgr.get_zones( zone_type_FARM_PLOT, src, _fac_id( you ), &query );
     for( const zone_data &zone : zones ) {
@@ -871,7 +878,7 @@ vehicle *grabbed_cart( const Character &who, const map &here )
     if( who.get_grab_type() != object_type::VEHICLE || !who.grab_matches( here ) ) {
         return nullptr;
     }
-    const auto vp = here.veh_at( who.pos_bub( here ) + who.grab_point );
+    const optional_vpart_position vp = here.veh_at( who.pos_bub( here ) + who.grab_point );
     return vp ? &vp->vehicle() : nullptr;
 }
 
@@ -896,9 +903,9 @@ struct zone_route_cache {
     bool initialized = false;
     safe_reference<map> context;
     time_point turn = calendar::before_time_starts;
-    uint64_t map_revision = 0;
-    uint64_t grab_generation = 0;
-    int64_t vehicle_id = 0;
+    std::uint64_t map_revision = 0;
+    std::uint64_t grab_generation = 0;
+    std::int64_t vehicle_id = 0;
 
     void ensure_valid( const Character &who ) {
         map &here = get_map();
@@ -907,7 +914,7 @@ struct zone_route_cache {
         int cur_arm_str = 0;
         units::mass cur_veh_mass = 0_gram;
         const vehicle *cart = grabbed_cart( who, here );
-        const int64_t current_vehicle = cart ? cart->uid().get_value() : 0;
+        const std::int64_t current_vehicle = cart ? cart->uid().get_value() : 0;
         if( cart ) {
             if( cart->get_points().size() == 1 ) {
                 cur_arm_str = who.get_arm_str();
@@ -2033,7 +2040,7 @@ bool are_requirements_nearby(
     Character &you, const activity_id &activity_to_restore, const bool in_loot_zones,
     const tripoint_bub_ms &src_loc )
 {
-    const auto query = active_zone_query( you );
+    const zone_query_context query = active_zone_query( you );
     zone_manager &mgr = zone_manager::get_manager();
     temp_crafting_inventory temp_inv;
     units::volume volume_allowed;
@@ -2170,7 +2177,7 @@ static activity_reason_info vehicle_work_can_do( const activity_id &, Character 
         }
         if( other.activity && other.activity.placement != player_activity::invalid_place )
         {
-            const auto work_spot = here.get_bub( other.activity.placement );
+            const tripoint_bub_ms work_spot = here.get_bub( other.activity.placement );
             if( work_spot == src_loc ) {
                 return do_activity_reason::ALREADY_WORKING;
             }
@@ -2478,7 +2485,7 @@ activity_reason_info multi_read_activity_actor::multi_activity_can_do( Character
 activity_reason_info multi_study_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
     const tripoint_abs_ms abspos = here.get_abs( src_loc );
@@ -2517,7 +2524,7 @@ activity_reason_info multi_chop_planks_activity_actor::multi_activity_can_do( Ch
 activity_reason_info multi_build_construction_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
 
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
@@ -2553,7 +2560,7 @@ activity_reason_info multi_build_construction_activity_actor::multi_activity_can
 activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character &you,
         const tripoint_bub_ms &src_loc )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
 
     map &here = get_map();
 
@@ -2598,7 +2605,7 @@ activity_reason_info multi_farm_activity_actor::multi_activity_can_do( Character
         }
         // there's a plant that isn't overgrown or harvestable, water it if needed and possible
         else if( here.has_flag_furn( ter_furn_flag::TFLAG_PLANT, src_loc ) &&
-                 iexamine::can_water_plant( you, src_loc ) ) {
+                 iexamine::plant_needs_water( you, src_loc ) ) {
             return activity_reason_info::ok( do_activity_reason::NEEDS_WATERING );
         }
         // there's a plant that isn't overgrown or harvestable, apply fertilizer if possible
@@ -3097,7 +3104,7 @@ void add_basecamp_storage_to_loot_zone_list(
     zone_manager &mgr, const tripoint_bub_ms &src_loc, Character &you,
     std::vector<tripoint_bub_ms> &loot_zone_spots, std::vector<tripoint_bub_ms> &combined_spots )
 {
-    const auto query = active_zone_query( you );
+    const zone_query_context query = active_zone_query( you );
     if( npc *const guy = you.is_player_controlled() ? nullptr : dynamic_cast<npc *>( &you ) ) {
         map &here = get_map();
         if( guy->assigned_camp &&
@@ -3127,7 +3134,7 @@ std::vector<std::tuple<tripoint_bub_ms, itype_id, int>>
         fetch_required_activity_actor::requirements_map( Character &you,
                 const int distance )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirement_map;
     if( !fetch_activity_valid( you ) ) {
         return requirement_map;
@@ -3777,7 +3784,7 @@ void prune_dangerous_field_locations( std::unordered_set<tripoint_abs_ms> &src_s
 std::unordered_set<tripoint_abs_ms> generic_locations( Character &you, const activity_id &act_id,
         const zone_query_context *query )
 {
-    const auto owned_query = active_zone_query( you );
+    const zone_query_context owned_query = active_zone_query( you );
     if( !query ) {
         query = &owned_query;
     }
@@ -3813,7 +3820,7 @@ std::unordered_set<tripoint_abs_ms>
 multi_build_construction_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
 
@@ -3853,7 +3860,7 @@ std::unordered_set<tripoint_abs_ms> multi_read_activity_actor::multi_activity_lo
 std::unordered_set<tripoint_abs_ms> multi_study_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     zone_manager &mgr = zone_manager::get_manager();
@@ -3892,7 +3899,7 @@ std::unordered_set<tripoint_abs_ms> multi_craft_activity_actor::multi_activity_l
 std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
@@ -3913,7 +3920,7 @@ std::unordered_set<tripoint_abs_ms> multi_fish_activity_actor::multi_activity_lo
 std::unordered_set<tripoint_abs_ms> multi_mop_activity_actor::multi_activity_locations(
     Character &you )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     const activity_id act_id = get_type();
     map &here = get_map();
     std::unordered_set<tripoint_abs_ms> src_set = multi_activity_actor::generic_locations( you,
@@ -3933,7 +3940,7 @@ bool multi_farm_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
 
     map &here = get_map();
     const zone_manager &mgr = zone_manager::get_manager();
@@ -4055,7 +4062,7 @@ bool multi_build_construction_activity_actor::multi_activity_do( Character &you,
         const activity_reason_info &act_info,
         const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc )
 {
-    const auto query = query_for( you );
+    const zone_query_context query = query_for( you );
     map &here = get_map();
     const do_activity_reason &reason = act_info.reason;
     const zone_manager &mgr = zone_manager::get_manager();
@@ -4543,7 +4550,7 @@ static bool comestible_sort_compare( Character &you, const item_location &lhs,
 
 int get_auto_consume_moves( Character &you, const bool food )
 {
-    const auto query = active_zone_query( you );
+    const zone_query_context query = active_zone_query( you );
     if( you.is_npc() ) {
         return 0;
     }

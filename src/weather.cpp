@@ -34,7 +34,6 @@
 #include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
-#include "map_scale_constants.h"
 #include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "math_defines.h"
@@ -219,7 +218,7 @@ static void proc_weather_sum( const weather_type_id &wtype, weather_sum &data,
     data.radiant_exposure += tick_irradiance * to_seconds<int>( tick_size );
 }
 
-static std::optional<double> regional_precipitation_rate( const weather_type_id &type,
+std::optional<double> regional_precipitation_rate( const weather_type_id &type,
         const w_point &sample )
 {
     const std::string &id = type.str();

@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:d77e9391860aa91947acd82d29a1c7a86cb7f1d3829ac0ca10010766fedfac6d",
+    "source_fingerprint": "sha256:cc52f93ece0f156e55c86acdff1e9cfcdaf6bde18012dc4b009c84a35bc93ce8",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -30,7 +30,7 @@
     ],
     "observed_not_registered": [],
     "tracked_json_files": 6879,
-    "top_level_objects": 97814,
+    "top_level_objects": 97815,
     "top_level_objects_without_string_type": 0,
     "schema_complete_types": 0
   },
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4505
+            "line": 4511
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4706
+            "line": 4712
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4469
+            "line": 4475
           }
         ],
         "confidence": "lexical_only"
@@ -6733,7 +6733,7 @@
       ],
       "compile_conditional_variants": false,
       "instance_evidence": {
-        "occurrences": 2737,
+        "occurrences": 2738,
         "examples": [
           {
             "path": "data/json/mapgen/debug.json",
@@ -9534,7 +9534,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4348
+            "line": 4354
           }
         ],
         "confidence": "lexical_only"
@@ -11166,7 +11166,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4665
+            "line": 4671
           }
         ],
         "confidence": "lexical_only"
