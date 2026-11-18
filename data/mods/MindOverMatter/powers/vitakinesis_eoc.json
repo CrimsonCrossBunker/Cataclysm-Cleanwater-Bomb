@@ -231,49 +231,6 @@
     ]
   },
   {
-    "id": "ACT_VITAKIN_WAKEFUL_REST_MEDITATE",
-    "type": "activity_type",
-    "activity_level": "SLEEP_EXERCISE",
-    "verb": "meditating",
-    "based_on": "time",
-    "can_resume": false,
-    "rooted": true,
-    "do_turn_eoc": "EOC_VITAKIN_WAKEFUL_REST_MEDITATE"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VITAKIN_WAKEFUL_REST_MEDITATE",
-    "condition": { "math": [ "u_val('sleepiness') + u_val('sleep_deprivation') >= 0" ] },
-    "effect": [ { "run_eocs": [ "EOC_VITAKIN_SLEEP_SLEEPINESS", "EOC_VITAKIN_SLEEP_DEPRIVATION" ] } ],
-    "false_effect": [
-      { "u_message": "You are fully refreshed, and end your meditations.", "type": "good" },
-      "u_cancel_activity",
-      { "u_lose_effect": "effect_vitakin_wakeful_resting" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VITAKIN_SLEEP_SLEEPINESS",
-    "condition": {
-      "and": [
-        { "math": [ "u_val('sleepiness') >= 0" ] },
-        {
-          "x_in_y_chance": {
-            "x": 1,
-            "y": { "math": [ "max( (55 - ( u_spell_level('vita_sleeping_trance') * 2) - u_skill('metaphysics') ), 15 )" ] }
-          }
-        }
-      ]
-    },
-    "effect": [ { "math": [ "u_val('sleepiness') -= 1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_VITAKIN_SLEEP_DEPRIVATION",
-    "condition": { "math": [ "u_val('sleep_deprivation') >= 0" ] },
-    "effect": { "math": [ "u_val('sleep_deprivation') -= 1" ] }
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_VITAKIN_HEALING_TRANCE",
     "effect": [

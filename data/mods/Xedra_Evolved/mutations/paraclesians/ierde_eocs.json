@@ -351,35 +351,6 @@
     "false_effect": [ { "u_message": "You're feeling refreshed and have no need to begin a vigil.", "type": "mixed" } ]
   },
   {
-    "id": "ACT_IERDE_NO_SLEEP_MEDITATE",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "watching",
-    "based_on": "time",
-    "can_resume": false,
-    "rooted": true,
-    "do_turn_eoc": "EOC_IERDE_NO_SLEEP_MEDITATE_TURN"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IERDE_NO_SLEEP_MEDITATE_TURN",
-    "condition": { "math": [ "u_val('sleepiness') + u_val('sleep_deprivation') >= 0" ] },
-    "effect": [ { "run_eocs": [ "EOC_IERDE_SLEEP_SLEEPINESS", "EOC_IERDE_SLEEP_DEPRIVATION" ] } ],
-    "false_effect": [ { "u_message": "You are fully refreshed and end your vigil." }, "u_cancel_activity" ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IERDE_SLEEP_SLEEPINESS",
-    "condition": { "and": [ { "math": [ "u_val('sleepiness') >= 0" ] }, { "x_in_y_chance": { "x": 1, "y": 35 } } ] },
-    "effect": [ { "math": [ "u_val('sleepiness') -= 1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_IERDE_SLEEP_DEPRIVATION",
-    "condition": { "math": [ "u_val('sleep_deprivation') >= 0" ] },
-    "effect": { "math": [ "u_val('sleep_deprivation') -= 1" ] }
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_IERDE_EARTHEN_SHIELD_SPELL",
     "condition": {
