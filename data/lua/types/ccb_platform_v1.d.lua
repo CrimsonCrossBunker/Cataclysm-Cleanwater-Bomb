@@ -8718,6 +8718,7 @@ function CcbPlatformInteractionApi.input_text(title, options) end
 ---@return integer|nil value
 function CcbPlatformInteractionApi.input_number(description, default_value) end
 
+---In headless engine tests, required menus select the first enabled entry and optional menus cancel.
 ---@param entries CcbPlatformInteractionChoice[] Nonempty dense array, limited only by native int row indices.
 ---@param options? CcbPlatformInteractionChoiceOptions
 ---@return CcbPlatformInteractionChoiceResult
@@ -13625,6 +13626,23 @@ function CcbEffectsApi.remove(creature, effect, body_part) end
 
 ---@class CcbProficienciesApi
 local CcbProficienciesApi = {}
+
+---@param id GameId GameId<proficiency>.
+---@return table Definition snapshot with time_to_learn as TimeDuration.
+function CcbProficienciesApi.definition(id) end
+
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<proficiency>.
+---@return CcbResult result The state snapshot in value includes practiced and remaining as TimeDuration.
+function CcbProficienciesApi.get(character, id) end
+
+---Write the native practiced time directly. A negative time removes the proficiency.
+---At or beyond the learning threshold, the engine clears partial progress and tries to learn it with native prerequisites.
+---@param character GameHandle Exact live Character.
+---@param id GameId GameId<proficiency>.
+---@param progress TimeDuration Native signed turn range.
+---@return CcbResult result The before and after proficiency snapshots are in value.
+function CcbProficienciesApi.set_practiced_time(character, id, progress) end
 
 ---Read whether an exact Character knows a proficiency using native ID-text lookup.
 ---Unknown IDs return false, matching Character::has_proficiency; no registry lookup is required.

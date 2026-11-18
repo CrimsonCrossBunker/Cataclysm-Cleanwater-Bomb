@@ -684,11 +684,12 @@ sol::table set_progress_state(
     const script_game_id &requested_id,
     const script_time_duration &requested_progress,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation, const bool validate_progress )
 {
-    require_proficiency_id(
-        requested_id, "services.proficiencies.set_progress" );
-    if( requested_progress.turns() < 0 ) {
+    require_proficiency_id( requested_id, validate_progress ?
+                            "services.proficiencies.set_progress" :
+                            "services.proficiencies.set_practiced_time" );
+    if( validate_progress && requested_progress.turns() < 0 ) {
         throw std::invalid_argument(
             "services.proficiencies.set_progress progress "
             "cannot be negative" );
@@ -707,12 +708,12 @@ sol::table set_progress_state(
     const time_duration progress =
         requested_progress.to_native();
     const time_duration total = definition.time_to_learn();
-    if( progress > total ) {
+    if( validate_progress && progress > total ) {
         throw std::invalid_argument(
             "services.proficiencies.set_progress progress "
             "cannot exceed time_to_learn" );
     }
-    if( progress == total &&
+    if( validate_progress && progress == total &&
         !character->has_prof_prereqs( id ) ) {
         throw std::invalid_argument(
             "services.proficiencies.set_progress cannot complete "
@@ -848,7 +849,19 @@ void install_proficiency_api(
         return set_progress_state(
                    lua_state, handle, id, progress,
                    current_runtime_generation(),
-                   current_world_generation() );
+                   current_world_generation(), true );
+    } );
+    proficiencies.set_function(
+        "set_practiced_time",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+            const script_game_id & id,
+    const script_time_duration & progress ) {
+        require_write();
+        return set_progress_state(
+                   lua_state, handle, id, progress,
+                   current_runtime_generation(),
+                   current_world_generation(), false );
     } );
     services["proficiencies"] = std::move( proficiencies );
 }

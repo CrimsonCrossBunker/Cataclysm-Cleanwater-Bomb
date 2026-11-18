@@ -23,6 +23,7 @@ extern "C" {
 
 #include "action.h"
 #include "avatar.h"
+#include "cached_options.h"
 #include "coordinates.h"
 #include "game.h"
 #include "input_popup.h"
@@ -1098,21 +1099,39 @@ sol::table choose_interaction_entry(
     sol::this_state lua, const sol::table &requested_entries,
     const sol::optional<sol::table> &requested_options )
 {
-    uilist menu;
-    const std::vector<std::string> ids = prepare_game_interaction_menu(
-            menu, requested_entries, requested_options );
-    menu.query();
-    const bool accepted = menu.ret >= 0 &&
-                          menu.ret < static_cast<int>( ids.size() );
+    int selected = -1;
+    std::string selected_id;
+    if( test_mode ) {
+        const std::vector<interaction_choice> choices = read_interaction_choices( requested_entries );
+        const interaction_choice_options options = read_interaction_choice_options( requested_options );
+        if( !options.allow_cancel ) {
+            const auto first = std::find_if( choices.begin(), choices.end(),
+            []( const interaction_choice & choice ) {
+                return choice.enabled;
+            } );
+            if( first != choices.end() ) {
+                selected = static_cast<int>( first - choices.begin() );
+                selected_id = first->id;
+            }
+        }
+    } else {
+        uilist menu;
+        const std::vector<std::string> ids = prepare_game_interaction_menu(
+                menu, requested_entries, requested_options );
+        menu.query();
+        if( menu.ret >= 0 && menu.ret < static_cast<int>( ids.size() ) ) {
+            selected = menu.ret;
+            selected_id = ids[static_cast<std::size_t>( selected )];
+        }
+    }
+    const bool accepted = selected >= 0;
     sol::state_view state( lua );
     sol::table value = state.create_table();
     value["accepted"] = accepted;
     value["cancelled"] = !accepted;
     if( accepted ) {
-        const std::size_t index =
-            static_cast<std::size_t>( menu.ret );
-        value["index"] = index + 1;
-        value["id"] = ids[index];
+        value["index"] = selected + 1;
+        value["id"] = selected_id;
     } else {
         value["index"] = sol::nil;
         value["id"] = sol::nil;
