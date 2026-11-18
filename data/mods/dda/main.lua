@@ -149,6 +149,8 @@ require("void_spider_death")
 
 require("void_spider_spells")
 
+require("anomalous_mp3")
+
 require("highland_incense_content")
 
 require("highland_incense")
