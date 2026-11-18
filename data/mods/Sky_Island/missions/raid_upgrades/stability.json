@@ -1,36 +1,5 @@
 [
   {
-    "id": "SKYISLAND_UPGRADE_stability1",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 1",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Warped Tincture from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 9 pulses instead of the default 8, allowing you to stay out 12.5% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability1",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability1" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 9 pulses instead of the default 8, allowing you to stay out 12.5% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 1" ] },
-        { "u_forget_recipe": "upgradekey_stability1" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_stability1",
     "type": "ITEM",
     "category": "spare_parts",
@@ -42,37 +11,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_stability2",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 2",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Surreal Shield from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 10 pulses instead of the default 8, allowing you to stay out 25% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability2",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability2" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 10 pulses instead of the default 8, allowing you to stay out 25% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 2" ] },
-        { "u_forget_recipe": "upgradekey_stability2" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_stability2",
@@ -88,37 +26,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_stability3",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 3",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft Warpstream Plating from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 11 pulses instead of the default 8, allowing you to stay out 37.5% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability3",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability3" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 11 pulses instead of the default 8, allowing you to stay out 37.5% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 3" ] },
-        { "u_forget_recipe": "upgradekey_stability3" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_stability3",
     "type": "ITEM",
     "category": "spare_parts",
@@ -130,37 +37,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_stability4",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 4",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Fortitude of the Island from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 12 pulses instead of the default 8, allowing you to stay out 50% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability4",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability4" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 12 pulses instead of the default 8, allowing you to stay out 50% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 4" ] },
-        { "u_forget_recipe": "upgradekey_stability4" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_stability4",
@@ -176,37 +52,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_stability5",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 5",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Explorer's Ward from things helping to withstand harsh conditions.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 13 pulses instead of the default 8, allowing you to stay out 62.5% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability5",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability5" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 13 pulses instead of the default 8, allowing you to stay out 62.5% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 5" ] },
-        { "u_forget_recipe": "upgradekey_stability5" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_stability5",
     "type": "ITEM",
     "category": "spare_parts",
@@ -220,37 +65,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_stability6",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 6",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft an Island-Bound Armor from various armors from this world and from others.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 14 pulses instead of the default 8, allowing you to stay out 75% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability6",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability6" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 14 pulses instead of the default 8, allowing you to stay out 75% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 6" ] },
-        { "u_forget_recipe": "upgradekey_stability6" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_stability6",
     "type": "ITEM",
     "category": "spare_parts",
@@ -262,37 +76,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_stability7",
-    "type": "mission_definition",
-    "name": "Upgrade: Stability 7",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Triune Anchor from the corpse of a yugg and rare ressources.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: You will begin every expedition with the ability to withstand 15 pulses instead of the default 8, allowing you to stay out 87.5% longer before warpsickness takes over.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_stability7",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_stability7" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: You will begin every expedition with the ability to withstand 15 pulses instead of the default 8, allowing you to stay out 87.5% longer before warpsickness takes over.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonuspulses = 7" ] },
-        { "u_forget_recipe": "upgradekey_stability7" },
-        {
-          "u_message": "Your resistance to the chaos of the warpstream increases.  In every future expedition, you will be able to endure an additional warp pulse and stay earthside longer.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_stability7",

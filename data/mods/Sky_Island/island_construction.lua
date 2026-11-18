@@ -1,8 +1,8 @@
 local ccb = require("ccb")
 local services = ccb.services
-local content = ccb.content
 local state = require("raid_state")
 local island = require("island_memory")
+local install_upgrade = require("upgrade_mission")
 local id = services.types.id
 local M = {}
 
@@ -77,25 +77,12 @@ end
 
 local function install_project(options, progress, level, build, intro, done)
     local item = options.item
-    local start = "sky_island_build_start_" .. options.id
-    local finish = "sky_island_build_finish_" .. options.id
-    ccb.runtime.handler(start, function(payload)
-        state.checked(services.recipes.learn(payload.character, id("recipe", item)))
-        state.message(payload.character, intro(), "neutral", true)
-    end)
-    ccb.runtime.handler(finish, function(payload)
+    install_upgrade(options, intro, function(character)
         state.set(progress, level)
-        state.checked(services.recipes.forget(payload.character, id("recipe", item)))
-        build(payload.character)
-        state.message(payload.character, done(), "neutral", true)
+        state.checked(services.recipes.forget(character, id("recipe", item)))
+        build(character)
+        state.message(character, done(), "neutral", true)
     end)
-    options.goal = "MGOAL_FIND_ITEM"
-    options.item_count = 1
-    options.has_generic_rewards = false
-    local mission = content.Mission(options)
-    mission:start_with(start)
-    mission:finish_with(finish)
-    content.add(mission)
 end
 
 install_project({

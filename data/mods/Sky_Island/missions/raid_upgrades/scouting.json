@@ -1,36 +1,5 @@
 [
   {
-    "id": "SKYISLAND_UPGRADE_scouting1",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 1",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Scouting Lens from high quality lenses and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals slightly more of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting1",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting1" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals slightly more of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 1" ] },
-        { "u_forget_recipe": "upgradekey_scouting1" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will be scouted just a little better.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_scouting1",
     "type": "ITEM",
     "category": "spare_parts",
@@ -42,37 +11,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_scouting2",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 2",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Scouting Scope from a pair of binoculars and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a bit more of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting2",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting2" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a bit more of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 2" ] },
-        { "u_forget_recipe": "upgradekey_scouting2" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide better map scouting.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_scouting2",
@@ -88,37 +26,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_scouting3",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 3",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Vision Amplifier from high quality optics and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals even more of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting3",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting3" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals even more of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 4" ] },
-        { "u_forget_recipe": "upgradekey_scouting3" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide even better scouting on your map.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_scouting3",
     "type": "ITEM",
     "category": "spare_parts",
@@ -130,37 +37,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_scouting4",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 4",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Third Eye Charm from medical grade optics and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a lot of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting4",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting4" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a lot of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 6" ] },
-        { "u_forget_recipe": "upgradekey_scouting4" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will be provide exceptional scouting.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_scouting4",
@@ -176,37 +52,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_scouting5",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 5",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft an Eye of the Island from experimental optics and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting5",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting5" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 10" ] },
-        { "u_forget_recipe": "upgradekey_scouting5" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide a huge scouting radius.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_scouting5",
     "type": "ITEM",
     "category": "spare_parts",
@@ -218,37 +63,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_scouting6",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 6",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a warpforged telescope from sensors and telescopes.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting6",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting6" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 14" ] },
-        { "u_forget_recipe": "upgradekey_scouting6" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide a huge scouting radius.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_scouting6",
@@ -264,37 +78,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_scouting7",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 7",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft an Agglomerated Oculus from ocular enhancements and petrified eyes.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting7",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting7" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 18" ] },
-        { "u_forget_recipe": "upgradekey_scouting7" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide a huge scouting radius.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_scouting7",
     "type": "ITEM",
     "category": "spare_parts",
@@ -306,37 +89,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_scouting8",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting 8",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Other Eye of the Island from outworldly sensors and esoteric notes.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scouting8",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scouting8" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Reveals a huge amount of the map around exit points and mission targets.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingdistancetargets = 22" ] },
-        { "u_forget_recipe": "upgradekey_scouting8" },
-        {
-          "u_message": "Your vision expands.  Future missions and exits will provide a huge scouting radius.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_scouting8",
@@ -352,37 +104,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_scoutingclairvoyance1",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting Clairvoyance 1",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Higher Viewpoint from notes on the psychic and things that belong to the dead.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: See everything near you for a short time when beginning a mission.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scoutingclairvoyance1",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scoutingclairvoyance1" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: See everything near you for a short time when beginning a mission.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingclairvoyancetime = 20" ] },
-        { "u_forget_recipe": "upgradekey_scoutingclairvoyance1" },
-        {
-          "u_message": "Your vision expands.  You will see everything near you for a short time when beginning a mission.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_scoutingclairvoyance1",
     "type": "ITEM",
     "category": "spare_parts",
@@ -394,37 +115,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_scoutingclairvoyance2",
-    "type": "mission_definition",
-    "name": "Upgrade: Scouting Clairvoyance 2",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the All-Seeing Effigy from the remains of the observers and detection tools.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: See everything near you at the start of a mission of a longer time.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_scoutingclairvoyance2",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_scoutingclairvoyance2" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: See everything near you at the start of a mission of a longer time.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "scoutingclairvoyancetime = 60" ] },
-        { "u_forget_recipe": "upgradekey_scoutingclairvoyance2" },
-        {
-          "u_message": "Your vision expands.  You will see everything near you for a longer time at the beginning of a mission.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_scoutingclairvoyance2",

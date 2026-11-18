@@ -1,36 +1,5 @@
 [
   {
-    "id": "SKYISLAND_UPGRADE_exit1",
-    "type": "mission_definition",
-    "name": "Unlock: Two Exits per Expedition",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft an Escape Charm from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Every expedition will now have two different locations you can exit from.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_exit1",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_exit1" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Every expedition will now have two different locations you can exit from.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonusexits = 1" ] },
-        { "u_forget_recipe": "upgradekey_exit1" },
-        {
-          "u_message": "You close your eyes and through the flow of turbulent warpstream, an invisible maze manifests.  A thousand potential passages brush smooth stone across your consciousness, and the meaning of this reality glimmers faintly, a dancing splinter of light in the distance.  You've been here before, you are here now, and you will be here again.\nWhen you open your eyes, you're back where you began.  You haven't moved, but it feels as though the world has.\n\nIn every future expedition, you will now be able to find two different locations you can exit from.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_exit1",
     "type": "ITEM",
     "category": "spare_parts",
@@ -42,37 +11,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_exit2",
-    "type": "mission_definition",
-    "name": "Unlock: Three Exits per Expedition",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft the Blindfold of Egress from experimental materials and miscellaneous parts.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Every expedition will now have three different locations you can exit from.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_exit2",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_exit2" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Every expedition will now have three different locations you can exit from.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonusexits = 2" ] },
-        { "u_forget_recipe": "upgradekey_exit2" },
-        {
-          "u_message": "Again you see in blindness, and before you stretches a vast invisible labyrinth beneath an empty sky.  You race forward, tracing paths spoken to you in dreams, and an origami spiderweb crumples and breathes out underfoot.  At last, at the seashell's center, lies the cornucopia's smallest door.\nWhen at last you open your eyes, you find yourself where you began, unmoved, yet changed.\n\nIn every future expedition, you will now be able to find three different locations you can exit from.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_exit2",
@@ -88,37 +26,6 @@
     "color": "white"
   },
   {
-    "id": "SKYISLAND_UPGRADE_exit3",
-    "type": "mission_definition",
-    "name": "Unlock: Four Exits per Expedition",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft a Thrice-Sided Door from locks and doormats.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Every expedition will now have four different locations you can exit from.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_exit3",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_exit3" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Every expedition will now have four different locations you can exit from.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonusexits = 3" ] },
-        { "u_forget_recipe": "upgradekey_exit3" },
-        {
-          "u_message": "Again you see in blindness, and before you stretches a vast invisible labyrinth beneath an empty sky.  You race forward, tracing paths spoken to you in dreams, and an origami spiderweb crumples and breathes out underfoot.  At last, at the seashell's center, lies the cornucopia's smallest door.\nWhen at last you open your eyes, you find yourself where you began, unmoved, yet changed.\n\nIn every future expedition, you will now be able to find four different locations you can exit from.",
-          "type": "mixed"
-        }
-      ]
-    }
-  },
-  {
     "id": "upgradekey_exit3",
     "type": "ITEM",
     "category": "spare_parts",
@@ -130,37 +37,6 @@
     "material": [ "stone" ],
     "symbol": "V",
     "color": "white"
-  },
-  {
-    "id": "SKYISLAND_UPGRADE_exit4",
-    "type": "mission_definition",
-    "name": "Unlock: Five Exits per Expedition",
-    "description": "Completing this mission will unlock a permanent upgrade for all future expeditions.\n\nCraft an Intangible Door Stopper from door hinges and breaching tools.  The Heart of the Island has already placed the recipe inside your mind.\n\nEFFECT: Every expedition will now have four different locations you can exit from.",
-    "goal": "MGOAL_FIND_ITEM",
-    "item": "upgradekey_exit4",
-    "count": 1,
-    "difficulty": 0,
-    "value": 0,
-    "has_generic_rewards": false,
-    "start": {
-      "effect": [
-        { "u_learn_recipe": "upgradekey_exit4" },
-        {
-          "u_message": "Somehow, you understand the statue is calling out for something that can strengthen its power.\nA new recipe has been learned.  Craft this artifact to permanently upgrade the island.\n\nEFFECT: Every expedition will now have four different locations you can exit from.",
-          "popup": true
-        }
-      ]
-    },
-    "end": {
-      "effect": [
-        { "math": [ "bonusexits = 4" ] },
-        { "u_forget_recipe": "upgradekey_exit4" },
-        {
-          "u_message": "Again you see in blindness, and before you stretches a vast invisible labyrinth beneath an empty sky.  You race forward, tracing paths spoken to you in dreams, and an origami spiderweb crumples and breathes out underfoot.  At last, at the seashell's center, lies the cornucopia's smallest door.\nWhen at last you open your eyes, you find yourself where you began, unmoved, yet changed.\n\nIn every future expedition, you will now be able to find five different locations you can exit from.",
-          "type": "mixed"
-        }
-      ]
-    }
   },
   {
     "id": "upgradekey_exit4",
