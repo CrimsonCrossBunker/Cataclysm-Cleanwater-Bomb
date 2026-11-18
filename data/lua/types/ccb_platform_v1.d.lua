@@ -1037,6 +1037,8 @@ function ItemDefinition:armor_portion(options) end
 ---@field transparent? boolean The contents are visible.
 ---@field fire_protection? boolean Protects contents from exploding in fire.
 ---@field holster? boolean The pocket holds at most one item; defaults to false.
+---@field forbidden? boolean Internal pocket unavailable for ordinary item insertion; defaults to false.
+---@field description? string|LocalizedText Pocket description displayed to the player.
 ---@field weight_multiplier? number Contents weight multiplier; defaults to one.
 ---@field volume_multiplier? number Contents volume multiplier; defaults to one.
 ---@field volume_encumber_modifier? number Encumbrance multiplier due to contents; defaults to one.
@@ -1045,6 +1047,7 @@ function ItemDefinition:armor_portion(options) end
 ---@field sealed_spoil_multiplier? number Makes the pocket sealable and sets the sealed spoilage multiplier.
 ---@field allowed_items? string[] When supplied, only these item IDs are accepted.
 ---@field allowed_flags? string[] When supplied, accepts items with any listed flag.
+---@field allowed_materials? string[] Accepts items with any listed base material, alongside the item and flag restrictions.
 
 ---Append an ordinary native storage pocket. Existing pockets keep their order.
 ---@param options ItemContainerPocketOptions
@@ -1191,10 +1194,19 @@ function ItemDefinition:teach_spells(spells) end
 ---@return ItemDefinition self
 function ItemDefinition:martial_arts_manual() end
 
----Remove inherited native activation actions and staged on_use, transformations, treatment, spell use, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
+---Remove inherited native activation actions and staged on_use, transformations, messages, treatment, spell use, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
+
+---@class ItemUseMessageOptions
+---@field message? string|LocalizedText Message shown on use, with optional %s for the item name.
+---@field menu_text? string|LocalizedText Label in the item use menu.
+
+---Install the native message action, which displays text without consuming charges.
+---@param options ItemUseMessageOptions
+---@return ItemDefinition self
+function ItemDefinition:message_on_use(options) end
 
 ---Append one named Lua callback to the item's native active-processing actions.
 ---The callback has the same item/character/position payload as on_use; character is nil for an uncarried item.
@@ -1212,6 +1224,13 @@ function ItemDefinition:clear_tick_actions() end
 ---@class ToolDefinitionOptions
 ---@field ammo_types? string[] Native ammunition types accepted by the tool. Omission inherits; an empty array clears them.
 ---@field charges_per_use? integer Non-negative native signed-int charge requirement for activation. Omission inherits; the use handler's return value controls actual consumption.
+---@field max_charges? integer Non-negative native maximum charge count.
+---@field initial_charges? integer Non-negative native starting charge count for newly created tools.
+---@field charge_factor? integer Positive multiplier used for component and charge accounting.
+---@field turns_per_charge? integer Non-negative native turns per charge while active.
+---@field power_milliwatts? integer Non-negative power draw in milliwatts.
+---@field crafting_subtype? string Item type treated as equivalent for tool requirements.
+---@field revert_message? string|LocalizedText Message displayed on the native tool reversion path.
 
 ---Ensure the native tool slot exists; unspecified settings remain inherited or use native defaults for a new tool.
 ---@param options? ToolDefinitionOptions

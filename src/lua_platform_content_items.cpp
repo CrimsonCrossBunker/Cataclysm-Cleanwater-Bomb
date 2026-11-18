@@ -396,7 +396,35 @@ std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_
 struct item_definition_data {
     struct tool_data {
         std::optional<std::set<std::string>> ammo_types;
-        std::optional<std::int64_t> charges_per_use;
+        std::optional<int> charges_per_use;
+        std::optional<int> max_charges;
+        std::optional<int> initial_charges;
+        std::optional<int> charge_factor;
+        std::optional<int> turns_per_charge;
+        std::optional<units::power> power_draw;
+        std::optional<itype_id> subtype;
+        std::optional<authored_text> revert_message;
+
+        struct charge_setting {
+            const char *name;
+            std::optional<int> tool_data::*authored;
+            int islot_tool::*native;
+        };
+        static constexpr charge_setting charge_settings[] = {
+            { "charges_per_use", &tool_data::charges_per_use, &islot_tool::charges_per_use },
+            { "max_charges", &tool_data::max_charges, &islot_tool::max_charges },
+            { "initial_charges", &tool_data::initial_charges, &islot_tool::def_charges },
+            { "charge_factor", &tool_data::charge_factor, &islot_tool::charge_factor },
+            { "turns_per_charge", &tool_data::turns_per_charge, &islot_tool::turns_per_charge },
+        };
+    };
+    struct container_pocket_data {
+        pocket_data native;
+        authored_text description;
+    };
+    struct use_message_data {
+        authored_text message;
+        authored_text name;
     };
     struct magazine_well_data {
         bool rigid = false;
@@ -566,7 +594,7 @@ struct item_definition_data {
     bool has_armor = false;
     std::optional<tool_data> tool;
     std::vector<magazine_well_data> magazine_wells;
-    std::vector<pocket_data> container_pockets;
+    std::vector<container_pocket_data> container_pockets;
     bool replace_pockets = false;
     std::optional<armor_data> armor;
     std::vector<armor_portion_definition> armor_portions;
@@ -577,6 +605,7 @@ struct item_definition_data {
     std::optional<map_reveal> reveal_map;
     std::set<std::string> native_use_actions;
     std::string capture_size;
+    std::optional<use_message_data> use_message;
     std::optional<heal_actor> healing;
     std::optional<cast_spell_actor> spell_use;
     itype_id assembled_belt;
@@ -1694,8 +1723,26 @@ struct item_definition_handle {
                     value.ammo_types->insert( ammo->get<std::string>( index ) );
                 }
             }
-            if( const auto charges = options->get<sol::optional<std::int64_t>>( "charges_per_use" ) ) {
-                value.charges_per_use = *charges;
+            for( const auto &setting : item_definition_data::tool_data::charge_settings ) {
+                if( const auto charge = read_nonnegative_item_int( *options, setting.name ) ) {
+                    value.*setting.authored = *charge;
+                }
+            }
+            if( value.charge_factor && *value.charge_factor == 0 ) {
+                throw std::invalid_argument( "tool charge_factor must be positive" );
+            }
+            if( const auto power = options->get<sol::optional<std::int64_t>>( "power_milliwatts" ) ) {
+                if( *power < 0 ) {
+                    throw std::invalid_argument( "tool power draw must be nonnegative" );
+                }
+                value.power_draw = units::from_milliwatt( *power );
+            }
+            if( const auto subtype = options->get<sol::optional<std::string>>( "crafting_subtype" ) ) {
+                value.subtype = itype_id( *subtype );
+            }
+            const sol::object revert_message = ( *options )["revert_message"];
+            if( revert_message.valid() && revert_message.get_type() != sol::type::nil ) {
+                value.revert_message = read_singular_text( revert_message, {}, "tool revert message" );
             }
             definition->tool = std::move( value );
         }
@@ -1829,6 +1876,16 @@ struct item_definition_handle {
         pocket.fire_protection = options.get_or( "fire_protection", false );
         pocket.rigid = options.get_or( "rigid", false );
         pocket.holster = options.get_or( "holster", false );
+        pocket.forbidden = options.get_or( "forbidden", false );
+        const authored_text description = read_text_option( options, "description", {},
+                                          "container pocket description" );
+        pocket.description = description.native();
+        if( const auto materials = options.get<sol::optional<sol::table>>( "allowed_materials" ) ) {
+            const std::size_t count = require_dense_array( *materials, "container pocket allowed materials", 0 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                pocket.material_restriction.insert( material_id( materials->raw_get<std::string>( index ) ) );
+            }
+        }
         if( const auto flags = options.get<sol::optional<sol::table>>( "allowed_flags" ) ) {
             const std::size_t count = require_dense_array( *flags, "container pocket allowed flags", 0 );
             for( std::size_t index = 1; index <= count; ++index ) {
@@ -1845,7 +1902,7 @@ struct item_definition_handle {
                 }
             }
         }
-        definition->container_pockets.push_back( std::move( pocket ) );
+        definition->container_pockets.push_back( { std::move( pocket ), description } );
         return *this;
     }
 
@@ -1900,6 +1957,15 @@ struct item_definition_handle {
             throw std::invalid_argument( "item capture requires a native creature size" );
         }
         definition->capture_size = size;
+        return *this;
+    }
+
+    item_definition_handle &message_on_use( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        definition->use_message = item_definition_data::use_message_data{
+            read_text_option( options, "message", {}, "item use message" ),
+            read_text_option( options, "menu_text", {}, "item use message menu text" )
+        };
         return *this;
     }
 
@@ -2074,6 +2140,7 @@ struct item_definition_handle {
         definition->deploy_appliance.clear();
         definition->reveal_map.reset();
         definition->healing.reset();
+        definition->use_message.reset();
         definition->spell_use.reset();
         definition->assembled_belt = itype_id();
         definition->transform_use.reset();
@@ -4263,6 +4330,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "deploy_appliance", &item_definition_handle::deploy_appliance,
         "reveal_map", &item_definition_handle::reveal_map,
         "native_use", &item_definition_handle::native_use,
+        "message_on_use", &item_definition_handle::message_on_use,
         "capture_creature", &item_definition_handle::capture_creature,
         "heal", &item_definition_handle::heal,
         "cast_spell", &item_definition_handle::cast_spell,
@@ -6498,10 +6566,6 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             if( definition.tool ) {
                 const auto &tool = *definition.tool;
-                if( tool.charges_per_use &&
-                    ( *tool.charges_per_use < 0 || !native_int( *tool.charges_per_use ) ) ) {
-                    throw std::runtime_error( "item '" + definition.id + "' has an invalid tool charge cost" );
-                }
                 if( tool.ammo_types ) {
                     for( const std::string &ammo : *tool.ammo_types ) {
                         if( ammo.empty() || ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
@@ -6538,7 +6602,15 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                   ( definition.armor->max_worn && !native_int( *definition.armor->max_worn ) ) ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has invalid armor values" );
             }
-            for( const pocket_data &pocket : definition.container_pockets ) {
+            for( const auto &container : definition.container_pockets ) {
+                const pocket_data &pocket = container.native;
+                for( const material_id &material : pocket.material_restriction ) {
+                    if( material_ids.count( material.str() ) == 0 && !material.is_valid() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has an unknown container pocket material '" +
+                                                  material.str() + "'" );
+                    }
+                }
                 for( const flag_id &flag : pocket.get_flag_restrictions() ) {
                     if( flag.is_null() || flag.str().empty() ||
                         ( check_engine_state && json_flag_ids.count( flag.str() ) == 0 && !flag.is_valid() ) ) {
@@ -8301,8 +8373,19 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                 native->tool->ammo_id.insert( ammotype( ammo ) );
                             }
                         }
-                        if( tool.charges_per_use ) {
-                            native->tool->charges_per_use = static_cast<int>( *tool.charges_per_use );
+                        for( const auto &setting : item_definition_data::tool_data::charge_settings ) {
+                            if( const auto &charge = tool.*setting.authored ) {
+                                ( *native->tool ).*setting.native = *charge;
+                            }
+                        }
+                        if( tool.power_draw ) {
+                            native->tool->power_draw = *tool.power_draw;
+                        }
+                        if( tool.subtype ) {
+                            native->tool->subtype = *tool.subtype;
+                        }
+                        if( tool.revert_message ) {
+                            native->tool->revert_msg = tool.revert_message->native();
                         }
                     }
                     if( definition.replace_pockets ) {
@@ -8322,8 +8405,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native->pockets.push_back( std::move( pocket ) );
                     }
-                    native->pockets.insert( native->pockets.end(), definition.container_pockets.begin(),
-                                            definition.container_pockets.end() );
+                    for( const auto &container : definition.container_pockets ) {
+                        native->pockets.push_back( container.native );
+                    }
                     if( definition.has_armor && !native->armor ) {
                         native->armor = cata::make_value<islot_armor>();
                         native->armor->was_loaded = true;
@@ -8552,6 +8636,12 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.healing ) {
                         native->use_methods.insert_or_assign( "heal",
                                 use_function( std::make_unique<heal_actor>( *definition.healing ) ) );
+                    }
+                    if( definition.use_message ) {
+                        auto actor = std::make_unique<message_iuse>();
+                        actor->name = definition.use_message->name.native();
+                        actor->message = definition.use_message->message.native();
+                        native->use_methods.insert_or_assign( "message", use_function( std::move( actor ) ) );
                     }
                     if( definition.spell_use ) {
                         native->use_methods.insert_or_assign( "cast_spell",
@@ -10292,7 +10382,17 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
                 if( v.tool ) {
-                    hash_part( state, v.tool->charges_per_use ? std::to_string( *v.tool->charges_per_use ) : "inherit_tool_cost" );
+                    for( const auto &setting : item_definition_data::tool_data::charge_settings ) {
+                        const auto &charge = ( *v.tool ).*setting.authored;
+                        hash_part( state, charge ? std::to_string( *charge ) : "inherit" );
+                    }
+                    hash_part( state, v.tool->power_draw ?
+                               std::to_string( units::to_milliwatt( *v.tool->power_draw ) ) : "inherit_power" );
+                    hash_part( state, v.tool->subtype ? v.tool->subtype->str() : "inherit_subtype" );
+                    if( v.tool->revert_message ) {
+                        hash_part( state, "tool_revert_message" );
+                        hash_part( state, *v.tool->revert_message );
+                    }
                     hash_part( state, v.tool->ammo_types ? "tool_ammo" : "inherit_tool_ammo" );
                     if( v.tool->ammo_types ) {
                         for( const std::string &ammo : *v.tool->ammo_types ) {
@@ -10308,7 +10408,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, flag );
                     }
                 }
-                for( const pocket_data &pocket : v.container_pockets ) {
+                for( const auto &container : v.container_pockets ) {
+                    const pocket_data &pocket = container.native;
                     hash_part( state, "container_pocket" );
                     hash_part( state, std::to_string( units::to_milliliter( pocket.raw_volume_capacity ) ) );
                     hash_part( state, std::to_string( units::to_milligram( pocket.max_contains_weight ) ) );
@@ -10329,10 +10430,16 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                     hash_part( state, factors.str() );
                     for( const bool option : { pocket.watertight, pocket.airtight, pocket.open_container,
-                                              pocket.transparent, pocket.fire_protection, pocket.rigid, pocket.holster } ) {
+                                              pocket.transparent, pocket.fire_protection, pocket.rigid, pocket.holster,
+                                              pocket.forbidden } ) {
                         hash_part( state, option ? "yes" : "no" );
                     }
                     hash_part( state, pocket.default_magazine.str() );
+                    hash_part( state, container.description );
+                    for( const material_id &material : pocket.material_restriction ) {
+                        hash_part( state, "allowed_material" );
+                        hash_part( state, material.str() );
+                    }
                     for( const flag_id &flag : pocket.get_flag_restrictions() ) {
                         hash_part( state, "allowed_flag" );
                         hash_part( state, flag.str() );
@@ -10377,6 +10484,11 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
                 hash_part( state, v.deploy_furniture );
                 hash_part( state, v.capture_size );
+                if( v.use_message ) {
+                    hash_part( state, "message_on_use" );
+                    hash_part( state, v.use_message->name );
+                    hash_part( state, v.use_message->message );
+                }
                 if( v.healing ) {
                     const heal_actor &heal = *v.healing;
                     hash_part( state, "heal" );
