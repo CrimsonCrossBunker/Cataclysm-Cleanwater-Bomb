@@ -2164,3 +2164,18 @@ do
     }
     content.add(book)
 end
+
+do
+    -- 5 Animist spells, 2 Biomancer spell
+    local book = content.Item {
+        id = "necronomicon",
+        name = content.plural_text("grimoire", "grimoires"),
+        price_cents = 4500000,
+        price_postapoc_cents = 100000,
+        copy_from = "necronomicon",
+        looks_like = "necronomicon",
+    }
+    book:clear_use_actions()
+    book:teach_spells({ "animist_see_invisibility", "rupture", "dominate", "animist_sense_outsiders", "biomancer_baleful_polymorph", "biomancer_carrion_feast", "animist_do_psionic_damage_to_head" })
+    content.replace(book)
+end

@@ -147,3 +147,32 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "research_notes_abstract",
+        name = content.plural_text("research notes abstract", "research notes abstracts"),
+        description = content.text("A bunch of loose notes for researching bugs, which you're probably doing if you can see this."),
+        mass_milligrams = 50000,
+        volume_ml = 15,
+        longest_side_mm = 220,
+        color = "white",
+        symbol = ",",
+        variant_kind = "generic",
+        melee_to_hit = -3,
+    }
+    book:material("paper", 1)
+    book:clear_flags()
+    book:flag("TRADER_AVOID")
+    book:flag("TINDER")
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 0,
+        read_time_turns = 0,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+    }
+    content.add(book)
+end

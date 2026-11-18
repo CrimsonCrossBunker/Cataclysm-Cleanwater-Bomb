@@ -153,3 +153,103 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "manual_meditation",
+        category = "manuals",
+        name = content.plural_text("Meditation and You", "copies of Meditation and You"),
+        description = content.text("A description of simple meditation and breathing techniques, intended for a beginner."),
+        mass_milligrams = 1454000,
+        volume_ml = 1250,
+        price_cents = 2500,
+        price_postapoc_cents = 150,
+        symbol = "?",
+        looks_like = "book_nonf_hard_psych_moodalm",
+        color = "white",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 3)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 900,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+        skill = "metaphysics",
+    }
+    book:variants {
+        {
+            id = "manual_meditation_1",
+            name = content.plural_text("Zen Mind, Beginner's Mind", "copies of Zen Mind, Beginner's Mind"),
+            description = content.text("This is a transcription of lectures given by Suzuki Shunryū, a Buddhist monk who founded the first Zen Buddhist monastery in the United States, containing discussion about Zen meditation and practice."),
+            weight = 1,
+        },
+        {
+            id = "manual_meditation_2",
+            name = content.plural_text("How to Meditate: A Practical Guide to Making Friends with Your Mind", "copies of How to Meditate: A Practical Guide to Making Friends with Your Mind"),
+            description = content.text("A book on meditation written for a general audience, containing simple techniques on breathing and mindfulness."),
+            weight = 1,
+        },
+        {
+            id = "manual_meditation_3",
+            name = content.plural_text("The Wandering Mind: What Medieval Monks Tell Us about Distraction", "copies of The Wandering Mind: What Medieval Monks Tell Us about Distraction"),
+            description = content.text("A history of monastic attempts at finding calm and peace in the midst of a profane world.  There are far fewer daily distractions now than pre-Cataclysm but there's still some useful techniques you could gain here."),
+            weight = 1,
+        },
+        {
+            id = "manual_meditation_4",
+            name = content.plural_text("The Miracle of Mindfulness: An Introduction to the Practice of Meditation", "copies of The Miracle of Mindfulness: An Introduction to the Practice of Meditation"),
+            description = content.text("A translation of a letter written by Thich Nhat Hanh to colleagues in Viet Nam, this book focuses on mindfulness and breathwork."),
+            weight = 1,
+        },
+    }
+    content.add(book)
+end
+
+do
+    -- Advanced meditation is controversial but I have to make the distinction somewhere.
+    local book = content.Item {
+        id = "manual_meditation_int",
+        category = "manuals",
+        name = content.plural_text("Secrets of the Zen Masters", "copies of Secrets of the Zen Masters"),
+        description = content.text("This book purports to contain hidden tips that will make you serene and calm in the face of the most grievous calamities.  Cataclysms, one might say."),
+        copy_from = "manual_meditation",
+        looks_like = "manual_meditation",
+    }
+    book:book {
+        required_level = 3,
+        maximum_level = 3,
+        intelligence = 9,
+        read_time_turns = 1200,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        skill = "metaphysics",
+    }
+    book:variants {
+        {
+            id = "manual_meditation_int_1",
+            name = content.plural_text("The Mind Illuminated: A Complete Meditation Guide Integrating Buddhist Wisdom and Brain Science for Greater Mindfulness", "copies of The Mind Illuminated: A Complete Meditation Guide Integrating Buddhist Wisdom and Brain Science for Greater Mindfulness"),
+            description = content.text("Written by a neuroscientist and meditator practitioner, this book offers a ten-step meditation program that combines science with traditional meditation techniques."),
+            weight = 1,
+        },
+        {
+            id = "manual_meditation_int_2",
+            name = content.plural_text("Mastering the Core Teachings of the Buddha: An Unusually Hardcore Dharma Book", "copies of Mastering the Core Teachings of the Buddha: An Unusually Hardcore Dharma Book"),
+            description = content.text("This book argues that meditation is not an eternal progression but can be mastered just like any other skill, and it will tell you how to do it."),
+            weight = 1,
+        },
+        {
+            id = "manual_meditation_int_3",
+            name = content.plural_text("Not Always So: Practicing the True Spirit of Zen", "copies of Not Always So: Practicing the True Spirit of Zen"),
+            description = content.text("A continuation of the lessons expounded on in \"Zen Mind, Beginner's Mind\", this book contains a myriad of parables and koans to help the student grasp the nature of meditation."),
+            weight = 1,
+        },
+    }
+    content.add(book)
+end

@@ -31,27 +31,6 @@
     "volume": "1 ml"
   },
   {
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "id": "grimy_recipe",
-    "category": "manuals",
-    "symbol": "0",
-    "color": "white",
-    "name": { "str": "grimy handwritten recipe" },
-    "description": "A scrap of paper.  Something's written on it, scrawled in bad handwriting.  You can barely make out the words 'Blood treatment' followed by a list of ingredients.",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "paper" ],
-    "flags": [ "TRADER_AVOID" ],
-    "weight": "1 g",
-    "volume": "1 ml",
-    "required_level": 1,
-    "intelligence": 6,
-    "time": "5 m",
-    "read_skill": "cooking",
-    "read_fun": -2
-  },
-  {
     "id": "vampire_mentor_book",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

@@ -1024,3 +1024,1417 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "decoy_elfa",
+        name = content.plural_text("standpipe maintenance log", "standpipe maintenance logs"),
+        description = content.text("This binder details the scheduled maintenance for several plumbing systems throughout the facility."),
+        mass_milligrams = 400000,
+        volume_ml = 750,
+        price_cents = 400,
+        price_postapoc_cents = 50,
+        symbol = "?",
+        looks_like = "record_patient",
+        color = "light_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("plastic", 1)
+    book:book {
+        required_level = 1,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 2700,
+        fun = -2,
+        chapters = 0,
+        scannable = true,
+        skill = "mechanics",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "mag_comic",
+        name = content.plural_text("comic book", "comic books"),
+        description = content.text("A super-hero comic."),
+        mass_milligrams = 60000,
+        volume_ml = 250,
+        price_cents = 300,
+        price_postapoc_cents = 50,
+        symbol = "?",
+        looks_like = "mag_glam",
+        color = "light_cyan",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 0,
+        read_time_turns = 420,
+        fun = 2,
+        chapters = 0,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "mag_news",
+        name = content.plural_text("TIME magazine", "TIME magazines"),
+        description = content.text("Current events concerning a bunch of people who're all (un)dead now."),
+        copy_from = "book_nonf_zine_news_tpl",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_crime",
+        name = content.plural_text("crime novel", "crime novels"),
+        description = content.text("After their diamond heist goes wrong, the surviving criminals begin to suspect that one of them is a police informant."),
+        copy_from = "book_fict_soft_collection_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 1200,
+        fun = 3,
+        chapters = 24,
+        scannable = true,
+        generic = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_crime2",
+        name = content.plural_text("crime novel", "crime novels"),
+        description = content.text("A story about three people in the fictional city of Los Santos: a gangster, an upper-class man, and a psychopath.  They eventually band together to pull off the biggest heist in the city's history."),
+        copy_from = "novel_crime",
+        looks_like = "novel_crime",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 1080,
+        fun = 3,
+        chapters = 21,
+        scannable = true,
+        generic = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_crime_midnight",
+        name = content.plural_text("Midnight Cop", "copies of Midnight Cop"),
+        description = content.text("In this bare-knuckled potboiler, a ruthless police detective schemes to shut down local crime lords by pitting them against each other.  When long-simmering resentments finally flare the city learns why they call it \"the dead of night.\""),
+        copy_from = "book_fict_soft_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 5,
+        read_time_turns = 1440,
+        fun = 2,
+        chapters = 8,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "paperback_romance_circuses",
+        name = content.plural_text("Love and Circuses", "copies of Love and Circuses"),
+        description = content.text("The passionate saga of two Boston politicians fiercely battling each other for the mayor's office, and for Lydia's hand in marriage."),
+        mass_milligrams = 311000,
+        copy_from = "paperback_romance_spb",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 660,
+        fun = 2,
+        chapters = 10,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "paperback_romance_cloven",
+        name = content.plural_text("Cloven Kisses", "copies of Cloven Kisses"),
+        description = content.text("When the devil falls in love with a warlock, his proposal must be infernally wicked.  Will hooves, horns, and the scent of sulfur condemn love's flames to hellfire?"),
+        copy_from = "paperback_romance_lnl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 14,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "paperback_romance_conq",
+        name = content.plural_text("Conquer Me Sweetly", "copies of Conquer Me Sweetly"),
+        description = content.text("Sweet Providence Books is delighted to offer you this romantic tale of delicious dalliances and daring delights."),
+        copy_from = "paperback_romance_spb",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 660,
+        fun = 2,
+        chapters = 7,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "paperback_romance_diodes",
+        name = content.plural_text("Blood Diodes", "copies of Blood Diodes"),
+        description = content.text("He is an automaton, she is a reformed vampire, can love find a way?  In this edgy romance by acclaimed author Kea Dekker, heartbreak is just the beginning."),
+        copy_from = "paperback_romance_lnl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 17,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    -- isbn13: 9781568364278
+    -- 3 (2+1)
+    local book = content.Item {
+        id = "novel_samurai",
+        name = content.plural_text("samurai novel", "samurai novels"),
+        description = content.text("The classic tale of a wandering swordsman who comes to a small settlement and is hired to help the townsfolk defend themselves from a band of marauding outlaws.  This hardback is quite hefty."),
+        mass_milligrams = 1090000,
+        volume_ml = 1367,
+        longest_side_mm = 220,
+        price_cents = 3499,
+        copy_from = "book_fict_hard_tpl",
+    }
+    book:clear_melee_damage()
+    book:melee_damage("bash", 3)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 1200,
+        fun = 2,
+        chapters = 28,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_satire",
+        name = content.plural_text("satire novel", "satire novels"),
+        description = content.text("A political satire of the pre-apocalypse world.  Looking back on it from this side of Armageddon makes it seem all the more ridiculous."),
+        mass_milligrams = 520000,
+        copy_from = "book_fict_soft_satire_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1200,
+        fun = 2,
+        chapters = 23,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_satire_catch",
+        name = content.plural_text("Catch-22", "copies of Catch-22"),
+        description = content.text("There is a short informational forward in this paperback edition of Catch-22.  Apparently the original title for Joseph Heller's excruciatingly brilliant war satire was \"Catch-11.\""),
+        mass_milligrams = 480000,
+        copy_from = "book_fict_soft_satire_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1200,
+        fun = 2,
+        chapters = 42,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    -- isbn13: 9780802130112
+    local book = content.Item {
+        id = "book_fict_soft_satire_mandm",
+        name = content.plural_text("The Master and Margarita", "copies of Master and Margarita"),
+        description = content.text("Featuring a cast that includes Satan, Pontius Pilate, Jesus Christ, vampires, a talking cat, and the literary elite of Moscow, this novel by Mikhail Bulgakov explores philosophical issues on the nature of good and evil."),
+        mass_milligrams = 441000,
+        volume_ml = 719,
+        longest_side_mm = 210,
+        copy_from = "book_fict_soft_satire_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1200,
+        fun = 2,
+        chapters = 32,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_satire_cats",
+        name = content.plural_text("Cat's Cradle", "copies of Cat's Cradle"),
+        description = content.text("A paperback edition of Kurt Vonnegut's fourth novel, in which the threat of nuclear destruction isn't much of an influence on human nature."),
+        mass_milligrams = 360000,
+        copy_from = "book_fict_soft_satire_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 60,
+        fun = 1,
+        chapters = 127,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_swash_blkfreight",
+        name = content.plural_text("The Black Freighter", "copies of The Black Freighter"),
+        description = content.text("Who watches the watchmen?  Pirate Jenny, that's who!  This swashbuckling adventure novel will make you feel swell."),
+        copy_from = "book_fict_soft_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 5,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 8,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_swash_searovers",
+        name = content.plural_text("Captain Gosnold and the Sea Rovers of Buzzards Bay", "copies of The Sea Rovers"),
+        description = content.text("This lengthy paperback novel describes the ocean exploits of Captain Gosnold.  The British consider him an outlaw, but in America he is a patriot."),
+        mass_milligrams = 611000,
+        price_cents = 1049,
+        copy_from = "book_fict_soft_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 5,
+        read_time_turns = 720,
+        fun = 2,
+        chapters = 24,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_war",
+        name = content.plural_text("war novel", "war novels"),
+        description = content.text("A thrilling narrative of survival in a prisoner of war camp during the Second World War, filled with riveting subplots about rat farming and dysentery."),
+        mass_milligrams = 686000,
+        price_postapoc_cents = 50,
+        copy_from = "book_fict_soft_collection_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 7,
+        read_time_turns = 1200,
+        fun = 3,
+        chapters = 28,
+        scannable = true,
+        generic = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_war2",
+        name = content.plural_text("war novel", "war novels"),
+        description = content.text("A story about a Bosnian citizen who goes through many hardships and near death during the breakup of Yugoslavia."),
+        copy_from = "novel_war",
+        looks_like = "novel_war",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 7,
+        read_time_turns = 960,
+        fun = 3,
+        chapters = 24,
+        scannable = true,
+        generic = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_west_atwixt",
+        name = content.plural_text("Atwixt a Brace of Cacti", "copies of Atwixt a Brace of Cacti"),
+        description = content.text("A grizzled clodhopper interviews a mess of rangehands, flummoxing longhorns and tenderfoot alike in a flusteration of jawing."),
+        price_cents = 1199,
+        copy_from = "paperback_western_em",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 16,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_west_beans",
+        name = content.plural_text("Six Beans in the Wheel", "copies of Six Beans in the Wheel"),
+        description = content.text("The safety is off in this gun slinging tale of revenge and redemption by acclaimed author El Amor."),
+        copy_from = "paperback_western_em",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 14,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_west_riot",
+        name = content.plural_text("Riot on the Range", "copies of Riot on the Range"),
+        description = content.text("Best selling author El Amor paints a visceral study in red with his latest western saga: Riot on the Range."),
+        copy_from = "paperback_western_em",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 15,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_west_vaq",
+        name = content.plural_text("Vaquero Sun", "copies of Vaquero Sun"),
+        description = content.text("Western author El Amor relates the story of a dispossessed young man inspired by a heat stroke delusion to pursue justice against an evil land baron."),
+        copy_from = "paperback_western_em",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 18,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_west_vride",
+        name = content.plural_text("The Vendetta Riders", "copies of The Vendetta Riders"),
+        description = content.text("A wild young man, fast on the draw, who thinks he has nothing to lose, falls in with a group of gun runners."),
+        copy_from = "paperback_western_em",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 15,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "classic_literature",
+        name = content.plural_text("book of classic literature", "books of classic literature"),
+        description = content.text("A book of classic literature, timeless and enjoyable but a bit dense to read."),
+        mass_milligrams = 350000,
+        volume_ml = 750,
+        price_cents = 2000,
+        price_postapoc_cents = 50,
+        looks_like = "tall_tales",
+        color = "light_blue",
+        symbol = "?",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 7,
+        read_time_turns = 1680,
+        fun = 3,
+        chapters = 40,
+        scannable = true,
+        generic = true,
+    }
+    book:variants {
+        {
+            id = "classic1",
+            name = content.plural_text("Bleak House", "copies of Bleak House"),
+            description = content.text("This is a copy of Dickens' \"Bleak House\"."),
+        },
+        {
+            id = "classic2",
+            name = content.plural_text("Great Expectations", "copies of Great Expectations"),
+            description = content.text("This is a copy of \"Great Expectations\" by Charles Dickens."),
+        },
+        {
+            id = "classic3",
+            name = content.plural_text("Under the Beech Trees", "copies of Under the Beech Trees"),
+            description = content.text("This is a copy of William Shinderling's \"Under the Beech Trees\"."),
+        },
+        {
+            id = "classic4",
+            name = content.plural_text("Pride and Prejudice, Sense and Sensibility, and Emma", "copies of Pride and Prejudice, Sense and Sensibility, and Emma"),
+            description = content.text("This is a collection of three Jane Austen novels: \"Pride and Prejudice\", \"Sense and Sensibility\", and \"Emma\"."),
+        },
+        {
+            id = "classic5",
+            name = content.plural_text("Lord of the Flies", "copies of Lord of the Flies"),
+            description = content.text("This is a well-worn paperback copy of \"Lord of the Flies\"."),
+        },
+        {
+            id = "classic6",
+            name = content.plural_text("To Kill a Mockingbird", "copies of To Kill a Mockingbird"),
+            description = content.text("This is a copy of \"To Kill a Mockingbird\" by Harper Lee."),
+        },
+        {
+            id = "classic7",
+            name = content.plural_text("The Great Gatsby", "copies of The Great Gatsby"),
+            description = content.text("This is a copy of F. Scott Fitzgerald's \"The Great Gatsby.\""),
+        },
+        {
+            id = "classic8",
+            name = content.plural_text("He Walks", "copies of He Walks"),
+            description = content.text("This is a copy of Michael Abanaderly's lesser-known work, \"He Walks\"."),
+        },
+        {
+            id = "classic9",
+            name = content.plural_text("Ray Bradbury science fiction stories", "copies of Ray Bradbury science fiction stories"),
+            description = content.text("This is a collection of several vintage science fiction stories by Ray Bradbury."),
+        },
+        {
+            id = "classic10",
+            name = content.plural_text("The Adventures of Tom Sawyer", "copies of The Adventures of Tom Sawyer"),
+            description = content.text("This is a copy of \"The Adventures of Tom Sawyer\" by Mark Twain."),
+        },
+        {
+            id = "classic11",
+            name = content.plural_text("Innocents Abroad", "copies of Innocents Abroad"),
+            description = content.text("This is an illustrated copy of \"Innocents Abroad\" by Mark Twain."),
+        },
+        {
+            id = "classic12",
+            name = content.plural_text("Dracula", "copies of Dracula"),
+            description = content.text("This is a copy of Bram Stoker's \"Dracula\", with scholarly commentary in the margins."),
+        },
+        {
+            id = "classic13",
+            name = content.plural_text("War and Peace", "copies of War and Peace"),
+            description = content.text("This is a large print copy of Tolstoy's \"War and Peace\".  It might make a decent improvised weapon."),
+        },
+        {
+            id = "classic14",
+            name = content.plural_text("Dark Days Ahead", "copies of Dark Days Ahead"),
+            description = content.text("This is a paperback copy of the well-known classic \"Dark Days Ahead\", by M. G. Ranade.  There are scrawled margin notes all over it, apparently the workings of a confused and feverish mind."),
+        },
+        {
+            id = "classic15",
+            name = content.plural_text("Jane Eyre", "copies of Jane Eyre"),
+            description = content.text("This is a copy of \"Jane Eyre\".  The cover art is quite out of place, making it look more like a dime-store romance novel."),
+        },
+        {
+            id = "classic16",
+            name = content.plural_text("The Gunslinger", "copies of The Gunslinger"),
+            description = content.text("This is a perfectly preserved hardcover copy of \"The Gunslinger\" by Stephen King, autographed by the author.  It contains a certificate of authenticity pronouncing it to be a first edition."),
+        },
+        {
+            id = "classic17",
+            name = content.plural_text("Wuthering Heights", "copies of Wuthering Heights"),
+            description = content.text("This paperback copy of \"Wuthering Heights\" has a large coffee stain on the first page."),
+        },
+        {
+            id = "classic18",
+            name = content.plural_text("Lady Chatterly's Lover", "copies of Lady Chatterly's Lover"),
+            description = content.text("This is a hardbound copy of \"Lady Chatterly's Lover\", by D. H. Lawrence.  It has some very explicit illustrations."),
+        },
+        {
+            id = "classic19",
+            name = content.plural_text("The Catcher in the Rye", "copies of The Catcher in the Rye"),
+            description = content.text("This is a hardbound copy of \"The Catcher in the Rye.\".  It has some very nicely done illustrations."),
+        },
+        {
+            id = "classic20",
+            name = content.plural_text("Don Quixote", "copies of Don Quixote"),
+            description = content.text("This is a collection of classic renaissance era stories, headlined by \"Don Quixote\"."),
+        },
+        {
+            id = "classic21",
+            name = content.plural_text("The Fellowship of the Ring", "copies of The Fellowship of the Ring"),
+            description = content.text("This is a paperback copy of \"The Fellowship of the Ring\" by Tolkien."),
+        },
+        {
+            id = "classic22",
+            name = content.plural_text("The Two Towers", "copies of The Two Towers"),
+            description = content.text("This is a paperback copy of \"The Two Towers\" by Tolkien."),
+        },
+        {
+            id = "classic23",
+            name = content.plural_text("The Return of the King", "copies of The Return of the King"),
+            description = content.text("This is a paperback copy of \"The Return of the King\" by Tolkien."),
+        },
+        {
+            id = "classic24",
+            name = content.plural_text("The Works of George Orwell", "copies of The Works of George Orwell"),
+            description = content.text("This is a hardbound collection of George Orwell's works, including \"1984\" and \"Animal Farm\" as well as many of his less infamous titles."),
+        },
+        {
+            id = "classic25",
+            name = content.plural_text("Little Women", "copies of Little Women"),
+            description = content.text("This is a paperback copy of \"Little Women\" by Louisa May Alcott.  It appears to have been read a great many times."),
+        },
+        {
+            id = "classic26",
+            name = content.plural_text("Of Mice and Men", "copies of Of Mice and Men"),
+            description = content.text("This is a paperback copy of \"Of Mice and Men\" by Steinbeck."),
+        },
+        {
+            id = "classic27",
+            name = content.plural_text("Run and Run Again", "copies of Run and Run Again"),
+            description = content.text("This is a hefty hardcover copy of \"Run and Run Again\" by Finn Calpay.  There is a lengthy forward about the controversy around the book's release."),
+        },
+        {
+            id = "classic28",
+            name = content.plural_text("The Gates Have Opened", "copies of The Gates Have Opened"),
+            description = content.text("This is a hardcover copy of \"The Gates Have Opened\" by Arianna Methusalah.  You feel like you've read this before, but can't remember where.  Something about the book fills you with unease."),
+        },
+        {
+            id = "classic29",
+            name = content.plural_text("The Count of Monte Cristo", "copies of The Count of Monte Cristo"),
+            description = content.text("This is a copy of \"The Count of Monte Cristo\" by Alexandre Dumas."),
+        },
+        {
+            id = "classic30",
+            name = content.plural_text("The Secret Garden", "copies of The Secret Garden"),
+            description = content.text("This is a copy of \"The Secret Garden\" by Frances Burnett."),
+        },
+        {
+            id = "classic31",
+            name = content.plural_text("Lieutenant Hornblower", "copies of Lieutenant Hornblower"),
+            description = content.text("This is a copy of \"Lieutenant Hornblower\" by C.S. Forester."),
+        },
+        {
+            id = "classic32",
+            name = content.plural_text("Master and Commander", "copies of Master and Commander"),
+            description = content.text("This is a copy of \"Master and Commander\" by Patrick O'Brian."),
+        },
+        {
+            id = "classic33",
+            name = content.plural_text("The Warden", "copies of The Warden"),
+            description = content.text("This is a copy of \"The Warden\" by Anthony Trollope."),
+        },
+        {
+            id = "classic34",
+            name = content.plural_text("The Far Side of the World", "copies of The Far Side of the World"),
+            description = content.text("This is a copy of \"The Far Side of the World\" by Patrick O'Brian."),
+        },
+        {
+            id = "classic35",
+            name = content.plural_text("HMS Surprise", "copies of HMS Surprise"),
+            description = content.text("This is a copy of \"HMS Surprise\" by Patrick O'Brian."),
+        },
+        {
+            id = "classic36",
+            name = content.plural_text("Barchester Towers", "copies of Barchester Towers"),
+            description = content.text("This is a copy of \"Barchester Towers\" by Anthony Trollope."),
+        },
+        {
+            id = "classic37",
+            name = content.plural_text("The Land Ironclads", "copies of The Land Ironclads"),
+            description = content.text("This is a copy of \"The Land Ironclads\" by H.G. Wells."),
+        },
+        {
+            id = "classic38",
+            name = content.plural_text("The Great Boer War", "copies of The Great Boer War"),
+            description = content.text("This is a copy of \"The Great Boer War\" by Arthur Conan Doyle."),
+        },
+        {
+            id = "classic39",
+            name = content.plural_text("The Crime of the Congo", "copies of The Crime of the Congo"),
+            description = content.text("This is a copy of \"The Crime of the Congo\" by Arthur Conan Doyle."),
+        },
+        {
+            id = "classic40",
+            name = content.plural_text("The Parasite", "copies of The Parasite"),
+            description = content.text("This is a copy of \"The Parasite\" by Arthur Conan Doyle."),
+        },
+        {
+            id = "classic41",
+            name = content.plural_text("By Stroke of Sword", "copies of By Stroke of Sword"),
+            description = content.text("This is a copy of \"By Stroke of Sword\" by Andrew Balfour."),
+        },
+        {
+            id = "classic42",
+            name = content.plural_text("The Secret Agent", "copies of The Secret Agent"),
+            description = content.text("This is a copy of \"The Secret Agent\" by Joseph Conrad."),
+        },
+        {
+            id = "classic43",
+            name = content.plural_text("Lord Jim", "copies of Lord Jim"),
+            description = content.text("This is a copy of \"Lord Jim\" by Joseph Conrad."),
+        },
+        {
+            id = "classic44",
+            name = content.plural_text("Vanity Fair", "copies of Vanity Fair"),
+            description = content.text("This is a copy of \"Vanity Fair\" by William Makepeace Thackeray."),
+        },
+        {
+            id = "classic45",
+            name = content.plural_text("The Luck of Barry Lyndon", "copies of The Luck of Barry Lyndon"),
+            description = content.text("This is a copy of \"The Luck of Barry Lyndon\" by William Makepeace Thackeray."),
+        },
+        {
+            id = "classic46",
+            name = content.plural_text("North and South", "copies of North and South"),
+            description = content.text("This is a copy of \"North and South\" by Elizabeth Gaskell."),
+        },
+        {
+            id = "classic47",
+            name = content.plural_text("The Mayor of Casterbridge", "copies of The Mayor of Casterbridge"),
+            description = content.text("This is a copy of \"The Mayor of Casterbridge\" by Thomas Hardy."),
+        },
+        {
+            id = "classic48",
+            name = content.plural_text("Wessex Tales", "copies of Wessex Tales"),
+            description = content.text("This is a copy of \"Wessex Tales\" by Thomas Hardy."),
+        },
+        {
+            id = "classic49",
+            name = content.plural_text("Far from the Madding Crowd", "copies of Far from the Madding Crowd"),
+            description = content.text("This is a copy of \"Far from the Madding Crowd\" by Thomas Hardy."),
+        },
+        {
+            id = "classic50",
+            name = content.plural_text("Captains Courageous", "copies of Captains Courageous"),
+            description = content.text("This is a copy of \"Captains Courageous\" by Rudyard Kipling."),
+        },
+        {
+            id = "classic51",
+            name = content.plural_text("The Canterbury Tales", "copies of The Canterbury Tales"),
+            description = content.text("This is a copy of \"The Canterbury Tales\" by Geoffrey Chaucer."),
+        },
+        {
+            id = "classic52",
+            name = content.plural_text("Harold, the Last of the Saxons", "copies of Harold, the Last of the Saxons"),
+            description = content.text("This is a copy of \"Harold, the Last of the Saxons\" by Edward Bulwer-Lytton."),
+        },
+        {
+            id = "classic53",
+            name = content.plural_text("Mr Midshipman Easy", "copies of Mr Midshipman Easy"),
+            description = content.text("This is a copy of \"Mr Midshipman Easy\" by Frederick Marryat."),
+        },
+        {
+            id = "classic54",
+            name = content.plural_text("Peter Simple", "copies of Peter Simple"),
+            description = content.text("This is a copy of \"Peter Simple\" by Frederick Marryat."),
+        },
+        {
+            id = "classic55",
+            name = content.plural_text("The Three Musketeers", "copies of The Three Musketeers"),
+            description = content.text("A paperback copy of \"The Three Musketeers\" by Alexandre Dumas, the gravitas somewhat spoiled by being the glossy movie tie-in version."),
+        },
+        {
+            id = "classic56",
+            name = content.plural_text("The Life and Opinions of Tristram Shandy, Gentleman", "copies of The Life and Opinions of Tristram Shandy, Gentleman"),
+            description = content.text("This is a copy of \"The Life and Opinions of Tristram Shandy, Gentleman\" by Laurence Sterne."),
+        },
+        {
+            id = "classic57",
+            name = content.plural_text("The Time Machine", "copies of The Time Machine"),
+            description = content.text("This is a copy of \"The Time Machine\" by H.G. Wells."),
+        },
+        {
+            id = "classic58",
+            name = content.plural_text("The Fall of the House of Usher", "copies of The Fall of the House of Usher"),
+            description = content.text("This is a copy of several works by Edgar Allan Poe.  \"The Fall of the House of Usher\" heads the list."),
+        },
+        {
+            id = "classic59",
+            name = content.plural_text("The Silmarillion", "copies of The Silmarillion"),
+            description = content.text("This is a copy of \"The Silmarillion\" by Tolkien.  Maybe you could bludgeon someone with it if it came to that."),
+        },
+        {
+            id = "classic60",
+            name = content.plural_text("The Turn of the Screw", "copies of The Turn of the Screw"),
+            description = content.text("This is a copy of \"The Turn of the Screw\" by Henry James."),
+        },
+        {
+            id = "classic61",
+            name = content.plural_text("The Call of the Wild", "copies of The Call of the Wild"),
+            description = content.text("This is a copy of \"The Call of the Wild\" by Jack London."),
+        },
+        {
+            id = "classic62",
+            name = content.plural_text("Frankenstein", "copies of Frankenstein"),
+            description = content.text("This is a copy of \"Frankenstein\" by Mary Shelley."),
+        },
+        {
+            id = "classic63",
+            name = content.plural_text("Tevye the Dairyman", "copies of Tevye the Dairyman"),
+            description = content.text("This is a copy of \"Tevye the Dairyman\" by Sholem Aleichem, translated into English."),
+        },
+        {
+            id = "classic64",
+            name = content.plural_text("Another Country", "copies of Another Country"),
+            description = content.text("This is a copy of \"Another Country \" by James Baldwin."),
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "collector_book",
+        name = content.plural_text("collector's edition book", "collector's edition books"),
+        description = content.text("A unique, valuable book that has been kept as a collector's item."),
+        mass_milligrams = 400000,
+        volume_ml = 750,
+        price_cents = 4550,
+        price_postapoc_cents = 50,
+        looks_like = "tall_tales",
+        color = "light_blue",
+        symbol = "?",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("cardboard", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 7,
+        read_time_turns = 1680,
+        fun = 4,
+        chapters = 40,
+        scannable = true,
+        generic = true,
+    }
+    book:variants {
+        {
+            id = "fancy1",
+            name = content.plural_text("collector's edition of A Tale of Two Cities", "copies of collector's edition of A Tale of Two Cities"),
+            description = content.text("This is a high-quality leather bound copy of Charles Dickens' \"A Tale of Two Cities\"."),
+        },
+        {
+            id = "fancy2",
+            name = content.plural_text("collector's edition of Oliver Twist", "copies of collector's edition of Oliver Twist"),
+            description = content.text("This is a very old but well-preserved copy of Charles Dickens' \"Oliver Twist\"."),
+        },
+        {
+            id = "fancy3",
+            name = content.plural_text("collector's edition of Pride and Prejudice", "copies of collector's edition of Pride and Prejudice"),
+            description = content.text("This high-quality copy of Jane Austen's \"Pride and Prejudice\" is dog-eared and looks to have been read many times."),
+        },
+        {
+            id = "fancy4",
+            name = content.plural_text("collector's edition of Vanity before Justice", "copies of collector's edition of Vanity before Justice"),
+            description = content.text("This is a hefty, hardcover print of William Shinderling's \"Vanity before Justice\" with beautiful illustrations."),
+        },
+        {
+            id = "fancy5",
+            name = content.plural_text("collector's edition of Sense and Sensibility", "copies of collector's edition of Sense and Sensibility"),
+            description = content.text("This copy of Jane Austen's \"Sense and Sensibility\" has a certificate of authenticity declaring it to be an early edition.  It would have been worth an enormous amount of money, not long ago."),
+        },
+        {
+            id = "fancy6",
+            name = content.plural_text("collector's edition of To Kill a Mockingbird", "copies of collector's edition of To Kill a Mockingbird"),
+            description = content.text("This is an excellent quality copy of \"To Kill a Mockingbird\" by Harper Lee."),
+        },
+        {
+            id = "fancy7",
+            name = content.plural_text("collector's edition of The Great Gatsby", "copies of collector's edition of The Great Gatsby"),
+            description = content.text("This is a high-quality leather bound copy of F. Scott Fitzgerald's \"The Great Gatsby.\""),
+        },
+        {
+            id = "fancy8",
+            name = content.plural_text("collector's edition of Lady Wanderlust", "copies of collector's edition of Lady Wanderlust"),
+            description = content.text("This is a hefty, hardcover print of Michael Abanaderly's opus, \"Lady Wanderlust\".  It is over a hundred years old, but doesn't look it."),
+        },
+        {
+            id = "fancy9",
+            name = content.plural_text("collector's edition of Fahrenheit 451", "copies of collector's edition of Fahrenheit 451"),
+            description = content.text("This copy of Ray Bradbury's \"Fahrenheit 451\" has a certificate of authenticity declaring it to be an early edition.  It would have been worth an enormous amount of money, not long ago."),
+        },
+        {
+            id = "fancy10",
+            name = content.plural_text("collector's edition of Pride and Prejudice and Zombies", "copies of collector's edition of Pride and Prejudice and Zombies"),
+            description = content.text("This high-quality copy of \"Pride and Prejudice and Zombies\" has been autographed by the author."),
+        },
+        {
+            id = "fancy11",
+            name = content.plural_text("collector's edition of The Adventures of Huckleberry Finn", "copies of collector's edition of The Adventures of Huckleberry Finn"),
+            description = content.text("This is a high-quality leather bound copy of \"The Adventures of Huckleberry Finn\" by Mark Twain.  It contains some margin notes which themselves are quite old, and look to have been done by a scholar of some sort."),
+        },
+        {
+            id = "fancy12",
+            name = content.plural_text("collector's edition of Dracula", "copies of collector's edition of Dracula"),
+            description = content.text("This is a very nice print of Bram Stoker's \"Dracula\".  It has a certificate of authenticity with it that declares it a genuine early edition."),
+        },
+        {
+            id = "fancy13",
+            name = content.plural_text("collector's edition of The Hitchhiker's Guide to the Galaxy", "copies of collector's edition of The Hitchhiker's Guide to the Galaxy"),
+            description = content.text("This copy of Douglas Adams' \"The Hitchhiker's Guide to the Galaxy\" has a certificate of authenticity declaring it to be a first edition, and is autographed by the author himself."),
+        },
+        {
+            id = "fancy14",
+            name = content.plural_text("collector's edition of Dark Days Ahead", "copies of collector's edition of Dark Days Ahead"),
+            description = content.text("This is a high-quality leather bound copy of the well-known classic \"Dark Days Ahead\", by M. G. Ranade."),
+        },
+        {
+            id = "fancy15",
+            name = content.plural_text("collector's edition of Oryx and Crake", "copies of collector's edition of Oryx and Crake"),
+            description = content.text("This is a well-kept leather bound copy of \"Oryx and Crake\" by Margaret Atwood.  Inscribed in the inner cover is a faded note wishing the owner a happy birthday."),
+        },
+        {
+            id = "fancy16",
+            name = content.plural_text("collector's edition of The Gunslinger", "copies of collector's edition of The Gunslinger"),
+            description = content.text("This is a perfectly preserved hardcover copy of \"The Gunslinger\" by Stephen King, autographed by the author.  It contains a certificate of authenticity pronouncing it to be a first edition."),
+        },
+        {
+            id = "fancy17",
+            name = content.plural_text("collector's edition of 1984", "copies of collector's edition of 1984"),
+            description = content.text("This bright orange hardcover copy of \"1984\" by George Orwell has been carefully preserved, and appears to be a first or second edition judging from the publisher's information."),
+        },
+        {
+            id = "fancy18",
+            name = content.plural_text("collector's edition of Lady Chatterly's Lover", "copies of collector's edition of Lady Chatterly's Lover"),
+            description = content.text("This is a very nice copy of \"Lady Chatterly's Lover\", probably quite expensive in the days before the apocalypse."),
+        },
+        {
+            id = "fancy19",
+            name = content.plural_text("collector's edition of The Handmaid's Tale", "copies of collector's edition of The Handmaid's Tale"),
+            description = content.text("This is a high quality early edition hardcover copy of \"The Handmaid's Tale\" by Margaret Atwood, signed by the author."),
+        },
+        {
+            id = "fancy20",
+            name = content.plural_text("collector's edition of Don Quixote", "copies of collector's edition of Don Quixote"),
+            description = content.text("This ancient and worn book looks to be an 18th or early 19th century handwritten copy of \"Don Quixote\".  In the days of book traders it would have been worth an absolute fortune.  Now it's either a priceless piece of history, some light reading before bed, or excellent kindling."),
+        },
+        {
+            id = "fancy21",
+            name = content.plural_text("collector's edition of The Colour of Magic", "copies of collector's edition of The Colour of Magic"),
+            description = content.text("This is a first edition copy of Terry Pratchett's \"The Colour of Magic\".  In the inner cover is a handwritten note that reads \"To Chris, thanks for believing I could do it.  Best regards, Terry.\""),
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "occult_economicon",
+        name = content.plural_text("The Economicon of Dobbs", "copies of The Economicon"),
+        description = content.text("These are the prescriptures Pile 18 Disk sg30 File 14.  \"Look, small brain of pink earth inside my null-grasping, and she/he receives Logos; and it lay with the Wor.\""),
+        mass_milligrams = 120000,
+        volume_ml = 300,
+        price_cents = 2699,
+        copy_from = "paperback_occult",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 600,
+        fun = 1,
+        chapters = 4,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "occult_bobliographon",
+        name = content.plural_text("The Bobliographon", "copies of The Bobliographon"),
+        description = content.text("The back cover of this cheaply published paperback reads: \"These newly-released SubGenius revelations will SHOCK those who think they know Bob!  Unpredictables are not alone and possess amazing hidden powers of their own!  In a world without slack, a yeti lust revival saunters about.  WARNING: Do not fail to pay full price for this book; JHVH-1's wrath knows some bounds.\""),
+        copy_from = "paperback_occult",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 720,
+        fun = 1,
+        chapters = 30,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "occult_glimpses",
+        name = content.plural_text("Glimpses of Solomon in Yellow", "copies of Solomon in Yellow"),
+        description = content.text("This paperback is titled \"Glimpses of Solomon in Yellow; The Initiation Rites of the Starry Wisdom Covenant, by Dr. Enoch Craven.\"  It describes not just the investiture of new adherents, but the history and beliefs of the Church of Starry Wisdom.  Someone has defaced the sparse citations section by scrawling \"PUPPETS OF ROME!\" over its few pages.  The book does not provide any biography for Dr. Craven, let alone academic credentials."),
+        mass_milligrams = 557000,
+        price_cents = 3200,
+        copy_from = "paperback_occult",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 2100,
+        fun = 1,
+        chapters = 40,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "necronomicon",
+        name = content.plural_text("grimoire", "grimoires"),
+        description = content.text("A hefty book with a thick leather cover and metal clasps.  Both covers are completely empty, though on the first page there is an author's name written in English: \"Abdul Alhazred\"; below it the book title is written in Arabian: \"العزيف\", and below it in Greek: \"Νεκρονομικόν\".  The book looks very old and sinister."),
+        mass_milligrams = 1887000,
+        volume_ml = 1250,
+        price_cents = 4550,
+        price_postapoc_cents = 50,
+        symbol = "?",
+        color = "light_gray",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("leather", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 0,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 24,
+        scannable = true,
+    }
+    content.upsert_item(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_judaica_siddur",
+        name = content.plural_text("Siddur", "Siddurs"),
+        description = content.text("A Siddur, or prayerbook, contains the set order of prayers for Jewish religious services.  This one is comprehensive, divided into morning, afternoon, and evening prayers for both weekdays and Shabbat, along with separate sections for minor and major holidays."),
+        mass_milligrams = 750000,
+        volume_ml = 1000,
+        longest_side_mm = 200,
+        copy_from = "book_nonf_hard_phil_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 2700,
+        fun = 1,
+        chapters = 18,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_judaica_hardcover",
+        name = content.plural_text("Judaica hardcover", "Judaica hardcovers"),
+        description = content.text("This is a book of Judaica.  You're a real mensch if you managed to find this one."),
+        mass_milligrams = 420000,
+        volume_ml = 773,
+        longest_side_mm = 180,
+        copy_from = "book_nonf_hard_phil_tpl",
+        variant_kind = "generic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 2700,
+        fun = 1,
+        chapters = 18,
+        scannable = true,
+    }
+    book:variants {
+        {
+            id = "book_judaica_hardcover_2",
+            name = content.plural_text("Hell in Jewish Literature", "copies of Hell in Jewish Literature"),
+            description = content.text("A analysis of rabbinic discussions of Gehinnom, the Jewish afterlife for the cleansing of sins, including how big it is, how hot it is, who goes there, how long they stay there, whether there is any relief from their punishments in the meantime, and exactly what shape Gehinnom is."),
+        },
+        {
+            id = "book_judaica_hardcover_3",
+            name = content.plural_text("Mimekor Yisrael, Book One: The National Tales", "copies of Mimekor Yisrael, Book One: The National Tales"),
+            description = content.text("A collection of Jewish folktales, from Ashmedai king of demons to golem-making rabbis, from the Torah scholar who showed Aristotle the futility of philosophy to how Satan refused to bow to Adam because Adam was created from the dust of the earth, from martyrs murdered by Christian persecutors to General Joab single-handedly killing two thousand Amalekites so that when the blood ran out like a river through the city gates his troops knew to stop besieging the city and assault it, and dozens more besides."),
+        },
+        {
+            id = "book_judaica_hardcover_4",
+            name = content.plural_text("On the Doorposts of Your House", "copies of On the Doorposts of Your House"),
+            description = content.text("A list of prayers, meditations, and rituals for use at home, from lighting the Shabbat candles to welcoming a new child into the household."),
+        },
+        {
+            id = "book_judaica_hardcover_5",
+            name = content.plural_text("The Observant Life: The Wisdom of Contemporary Judaism for Contemporary Jews", "copies of The Observant Life: The Wisdom of Contemporary Judaism for Contemporary Jews"),
+            description = content.text("A long discussion of the ways in which Judaism's ancient rituals, traditions, and ethical practices are still relevant and meaningful in the modern world.  Unfortunately, there's no discussion of post-apocalyptic Judaism."),
+        },
+        {
+            id = "book_judaica_hardcover_6",
+            name = content.plural_text("Siddur Tisha b'Av", "copies of Siddur Tisha b'Av"),
+            description = content.text("A prayerbook for Tisha b'Av, the most solemn day in the Jewish year.  This one also contains the full text of the book of Lamentations and selected commentaries."),
+        },
+        {
+            id = "book_judaica_hardcover_7",
+            name = content.plural_text("Coming to Terms with America: Essays on Jewish History, Religion, and Culture", "copies of Coming to Terms with America: Essays on Jewish History, Religion, and Culture"),
+            description = content.text("A series of fifteen essays by Jonathan Sarna on Jews' attempt to be both distinctively Jewish but also definitely American, covering the American Revolution through to contemporary times."),
+        },
+        {
+            id = "book_judaica_hardcover_8",
+            name = content.plural_text("In This Hour", "copies of In This Hour"),
+            description = content.text("An English translation of works written by Rabbi Abraham Joshua Heschel during the Nazi rule of Germany and Rabbi Heschel's exile in England, concerning historic and current persecution and his vision for Jewish education."),
+        },
+        {
+            id = "book_judaica_hardcover_9",
+            name = content.plural_text("Jewish Literacy: The Most Important Things to Know About the Jewish Religion, Its People and Its History", "copies of Jewish Literacy: The Most Important Things to Know About the Jewish Religion, Its People and Its History"),
+            description = content.text("Rabbi Joseph Telushkin's encyclopedic tome of Jewish life, running to hundreds of chapters and answering questions about the Hebrew bible, the Talmud, the holidays and rituals, the Holocaust, Israel and the diaspora, and everything in between."),
+        },
+        {
+            id = "book_judaica_hardcover_10",
+            name = content.plural_text("Biblical Literacy: The Most Important People, Events and Ideas of the Hebrew Bible", "copies of Biblical Literacy: The Most Important People, Events and Ideas of the Hebrew Bible"),
+            description = content.text("Rabbi Joseph Telushkin's exploration and analysis of the Hebrew Bible, containing a myriad of commentary and analysis, including on famous stories like the Binding of Isaac or the Exodus, a discussion of the weekly Torah readings that form part of the Jewish liturgical calendar, and a list of all 613 mitzvot."),
+        },
+        {
+            id = "book_judaica_hardcover_11",
+            name = content.plural_text("This Is Real and You Are Completely Unprepared", "copies of This Is Real and You Are Completely Unprepared"),
+            description = content.text("An in-depth discussion of the High Holy Days, starting with the Three Weeks and Nine Days before Tisha b'Av and continuing all the way through Sukkot, as a single period of rising and falling emotion, wherein each individual prepares themselves to stand before God.  A very well-known book that some people read every year and others mean to get around to finally reading this year."),
+        },
+        {
+            id = "book_judaica_hardcover_12",
+            name = content.plural_text("OU Manual for Checking Fruits and Vegetables", "copies of the OU Manual for Checking Fruits and Vegetables"),
+            description = content.text("A comprehensive guide to checking produce for insect infestation and how to prepare produce according to Jewish dietary law."),
+        },
+        {
+            id = "book_judaica_hardcover_13",
+            name = content.plural_text("Shalom Rav, Volume 1", "copies of Shalom Rav, Volume 1"),
+            description = content.text("Rabbi Shalom Rosner's commentary on the weekly Torah portion, covering the books of Genesis and Exodus."),
+        },
+        {
+            id = "book_judaica_hardcover_14",
+            name = content.plural_text("Shalom Rav, Volume 2", "copies of Shalom Rav, Volume 2"),
+            description = content.text("Rabbi Shalom Rosner's commentary on the weekly Torah portion, covering the books of Leviticus, Numbers, and Deuteronomy."),
+        },
+        {
+            id = "book_judaica_hardcover_15",
+            name = content.plural_text("The Origins of Judaism: An Archaeological-Historical Reappraisal", "copies of The Origins of Judaism: An Archaeological-Historical Reappraisal"),
+            description = content.text("An examination of the archaeological evidence behind the beginning of many Jewish traditions, including eschewing pork, adopting tefillin and placing mezuzot on doorposts, and circumcision."),
+        },
+        {
+            id = "book_judaica_hardcover_16",
+            name = content.plural_text("The Guide for the Perplexed", "copies of the Guide for the Perplexed"),
+            description = content.text("An English translation of the great sage Rabbi Moses ben Maimon's work finding common points between natural philosophy and Talmudic scholarship.  Contains the famous Thirteen Principles of Faith, accepted by many Jews as a summary of the fundamental beliefs of Judaism."),
+        },
+        {
+            id = "book_judaica_hardcover_17",
+            name = content.plural_text("Jewish Publication Society Torah Commentary: Genesis", "copies of the Jewish Publication Society Torah Commentary: Genesis"),
+            description = content.text("A series of Torah commentaries written by scholars and academics, containing the traditional Hebrew text, a translation, and various notes.  This volume is for the book of Genesis."),
+        },
+        {
+            id = "book_judaica_hardcover_18",
+            name = content.plural_text("Jewish Publication Society Torah Commentary: Exodus", "copies of the Jewish Publication Society Torah Commentary: Exodus"),
+            description = content.text("A series of Torah commentaries written by scholars and academics, containing the traditional Hebrew text, a translation, and various notes.  This volume is for the book of Exodus."),
+        },
+        {
+            id = "book_judaica_hardcover_19",
+            name = content.plural_text("Jewish Publication Society Torah Commentary: Leviticus", "copies of the Jewish Publication Society Torah Commentary: Leviticus"),
+            description = content.text("A series of Torah commentaries written by scholars and academics, containing the traditional Hebrew text, a translation, and various notes.  This volume is for the book of Leviticus."),
+        },
+        {
+            id = "book_judaica_hardcover_20",
+            name = content.plural_text("Jewish Publication Society Torah Commentary: Numbers", "copies of the Jewish Publication Society Torah Commentary: Numbers"),
+            description = content.text("A series of Torah commentaries written by scholars and academics, containing the traditional Hebrew text, a translation, and various notes.  This volume is for the book of Numbers."),
+        },
+        {
+            id = "book_judaica_hardcover_21",
+            name = content.plural_text("Jewish Publication Society Torah Commentary: Deuteronomy", "copies of the Jewish Publication Society Torah Commentary: Deuteronomy"),
+            description = content.text("A series of Torah commentaries written by scholars and academics, containing the traditional Hebrew text, a translation, and various notes.  This volume is for the book of Deuteronomy."),
+        },
+        {
+            id = "book_judaica_hardcover_22",
+            name = content.plural_text("Shulchan Arukh", "copies of the Shulchan Arukh"),
+            description = content.text("Compiled by Rabbi Yosef Karo in the 16th century, the Shuchan Arukh is the most widely-consulted and authoritative compilation of Jewish law lasting into the present day.  If you need to convene a post-Cataclysmic Beit Din, keep this with you and you'll be set."),
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_judaica_softcover",
+        name = content.plural_text("Judaica softcover", "Judaica softcovers"),
+        description = content.text("This is a book of Judaica.  You're a real mensch if you managed to find this one."),
+        mass_milligrams = 227000,
+        volume_ml = 421,
+        copy_from = "book_nonf_soft_phil_tpl",
+        variant_kind = "generic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 2700,
+        fun = 1,
+        chapters = 18,
+        scannable = true,
+    }
+    book:variants {
+        {
+            id = "book_judaica_softcover_1",
+            name = content.plural_text("A Short History of the Jewish People: From Legendary Times to Modern Statehood", "copies of A Short History of the Jewish People: From Legendary Times to Modern Statehood"),
+            description = content.text("A survey-level study of Jewish history, from Biblical times through to the 1990s.  At only 250 pages long, it is by necessity very brief on any individual topic."),
+        },
+        {
+            id = "book_judaica_softcover_2",
+            name = content.plural_text("I and Thou", "copies of I and Thou"),
+            description = content.text("An English translation of Martin Buber's philosophical work on the relationships of human beings to each other and to God."),
+        },
+        {
+            id = "book_judaica_softcover_3",
+            name = content.plural_text("Living a Jewish Life", "copies of Living a Jewish Life"),
+            description = content.text("Anita Diamant's survey-level discussion of the daily practices and rituals of Jewish life.  Originally mostly superseded by the free availability of information on the internet, it's much more useful now for everyone who feels bad that they didn't attend their synagogue often enough before it was overrun."),
+        },
+        {
+            id = "book_judaica_softcover_4",
+            name = content.plural_text("What Is a Jew", "copies of What Is a Jew"),
+            description = content.text("Rabbi Morris Kertzer's introductory text about Judaism and Jewish beliefs, written as a series of questions and then answers, primarily from a Reform viewpoint but with explicit mention of where Conservative or Orthodox Jews would disagree."),
+        },
+        {
+            id = "book_judaica_softcover_5",
+            name = content.plural_text("The Way of Humanity: According to Chasidic Teachings", "copies of The Way of Humanity: According to Chasidic Teachings"),
+            description = content.text("An English translation of lectures given by Martin Buber on six traditional Chasidic stories from the 18th and 19th centuries."),
+        },
+        {
+            id = "book_judaica_softcover_6",
+            name = content.plural_text("Megillat Esther: The Book of Esther", "copies of Megillat Esther: The Book of Esther"),
+            description = content.text("A comprehensive work for celebrating Purim, this book contains the complete Book of Esther in Hebrew, multiple English translations, commentary on each of its chapters, and commentary on certain verses by a group of Conservative rabbis.  Cursed be Haman (booo)!"),
+        },
+        {
+            id = "book_judaica_softcover_7",
+            name = content.plural_text("Halakhic Man", "copies of Halakhic Man"),
+            description = content.text("Rabbi Joseph Soloveitchik's argument on the proper path to moral virtue through Torah scholarship and observance to the law, through the intellect and not through mystical experience or surrender to God."),
+        },
+        {
+            id = "book_judaica_softcover_8",
+            name = content.plural_text("Maxwell House Haggadah", "copies of the Maxwell House Haggadah"),
+            description = content.text("Just like bubbe used to have at the Seder.  A true classic of the Jewish people despite its origin as a marketing tactic to sell coffee, the Maxwell House Haggadah has sold millions of copies and graced the Passover tables of millions of families."),
+        },
+        {
+            id = "book_judaica_softcover_9",
+            name = content.plural_text("Reviving Synagogue Communities Using Smart Tech", "copies of Reviving Synagogue Communities Using Smart Tech"),
+            description = content.text("A discussion of ways to use modern technology to alleviate the administrative burden on clergy and synagogue staff but without losing the human touch that leads to a proper religious community."),
+        },
+        {
+            id = "book_judaica_softcover_10",
+            name = content.plural_text("On Repentance And Repair: Making Amends in an Unapologetic World", "copies of On Repentance And Repair: Making Amends in an Unapologetic World"),
+            description = content.text("Rabbi Danya Ruttenberg's commentary on the great Jewish philosopher Maimonides ideas about \"Tikkun Olam\", often translated as \"Repairing the World,\" and how while popular ideas of forgiveness often involve moving on after the apology, the Hebrew word \"teshuvah\" means something closer to \"return.\"  True repentance, then, involves making restitution for error and harm and attempting to return the world to the way it was before the damage was done."),
+        },
+        {
+            id = "book_judaica_softcover_11",
+            name = content.plural_text("Beyond Breaking the Glass: A Spiritual Guide to Your Jewish Wedding, Revised Edition", "copies of Beyond Breaking the Glass: A Spiritual Guide to Your Jewish Wedding, Revised Edition"),
+            description = content.text("A practical guide to throwing a Jewish wedding, including checklists, a timeline, and ways to make traditional rituals resonate with modern wedding guests."),
+        },
+        {
+            id = "book_judaica_softcover_12",
+            name = content.plural_text("People Love Dead Jews: Reports from a Haunted Present", "copies of People Love Dead Jews: Reports from a Haunted Present "),
+            description = content.text("Dara Horn's exploration of the modern rise of antisemitism, why there is so much interest in Jewish tragedy and comparatively little interest in Jewish culture, and why non-Jews feature so often and so prominently in popular stories of the Holocaust.  It would probably have been riveting and insightful before the Cataclysm made such concerns mostly irrelevant."),
+        },
+        {
+            id = "book_judaica_softcover_13",
+            name = content.plural_text("God in Search of Man : A Philosophy of Judaism", "copies of God in Search of Man : A Philosophy of Judaism "),
+            description = content.text("Rabbi Abraham Joshua Heschel's philosophical work on religious thought, on revelation and the problem of evil, and on the nature of a God who seeks a partner in humanity."),
+        },
+        {
+            id = "book_judaica_softcover_14",
+            name = content.plural_text("Not in God's Name: Confronting Religious Violence", "copies of Not in God's Name: Confronting Religious Violence "),
+            description = content.text("Rabbi Abraham Joshua Heschel's answer to the claim that religion is fundamentally divisive and encourages conflict.  His main argument is that religiously-motivated violence stems from misreadings of sacred texts."),
+        },
+        {
+            id = "book_judaica_softcover_15",
+            name = content.plural_text("When Bad Things Happen to Good People", "copies of When Bad Things Happen to Good People"),
+            description = content.text("A meditation on meaningless tragedy and why the disaster and sorrow in the world is unevenly distributed.  Written decades before the Cataclysm, but the author was obviously on to something."),
+        },
+        {
+            id = "book_judaica_softcover_16",
+            name = content.plural_text("The Jewish War: Revised Edition", "copies of The Jewish War: Revised Edition"),
+            description = content.text("An account of the Roman conquest of Judea and the destruction of the Temple written by Josephus, the first century Judean rebel turned Roman negotiator."),
+        },
+        {
+            id = "book_judaica_softcover_17",
+            name = content.plural_text("Standing Again at Sinai: Judaism from a Feminist Perspective", "copies of Standing Again at Sinai: Judaism from a Feminist Perspective"),
+            description = content.text("A critique of Jewish practice by a Jewish feminist theologian."),
+        },
+        {
+            id = "book_judaica_softcover_18",
+            name = content.plural_text("Zohar: The Book of Splendor: Basic Readings from the Kabbalah", "copies of Zohar: The Book of Splendor: Basic Readings from the Kabbalah"),
+            description = content.text("A book of Jewish mysticism often attributed to the great rabbi Shimon bar Yochai, the Zohar is the central work of Kabbalah.  This is an abridged version containing selected passages from the full text."),
+        },
+        {
+            id = "book_judaica_softcover_19",
+            name = content.plural_text("Miriam's Tambourine: Jewish Folktales from Around the World", "copies of Miriam's Tambourine: Jewish Folktales from Around the World"),
+            description = content.text("A collection of over fifty Jewish folktales, from classics like the story of Miriam's well or Rabbi Loew and the golem or the life of the Baal Shem Tov, to Jewish versions of modern cultural classics like Snow White or Sinbad."),
+        },
+        {
+            id = "book_judaica_softcover_20",
+            name = content.plural_text("From the Maccabees to the Mishnah", "copies of From the Maccabees to the Mishnah"),
+            description = content.text("A history of the development of Rabbinic Judaism, from the Jewish Revolt in the first century to the writing of the Mishnah, and how Judaism and Christianity fully separated."),
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "european_comic",
+        name = content.plural_text("european comic", "european comics"),
+        description = content.text("A comic book in the franco-belgian format, large, fully colored with a hard cover."),
+        mass_milligrams = 330000,
+        volume_ml = 280,
+        longest_side_mm = 320,
+        copy_from = "mag_comic",
+        looks_like = "mag_comic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 0,
+        read_time_turns = 1800,
+        fun = 2,
+        chapters = 0,
+        scannable = true,
+    }
+    book:variants {
+        {
+            id = "generic",
+            weight = 2,
+        },
+        {
+            id = "tintin",
+            name = content.plural_text("the adventures of tintin", "the adventures of tintin comics"),
+            description = content.text("This album is part of the Adventures of Tintin series, which is about a young reporter called Tintin, his dog Snowy and his friends, particularly Captain Haddock, as they travel across the world solving mysteries, uncovering conspiracies, and foiling criminals."),
+            append = true,
+            weight = 5,
+        },
+        {
+            id = "asterix",
+            name = content.plural_text("asterix", "asterix comics"),
+            description = content.text("This album is part of the Asterix series, which is about the eponymous gaulish warrior, his friend Obelix and his dog Idefix, holding out against the roman invaders thanks to a magic potion giving them supernatural strength."),
+            append = true,
+            weight = 4,
+        },
+        {
+            id = "lucky_luke",
+            name = content.plural_text("lucky luke", "lucky luke comics"),
+            description = content.text("This album is part of the Lucky Luke series, which is about a cowboy named Lucky Luke, \"the man who shoots faster than his shadow,\" and his horse Jolly Jumper bringing justice across the far west."),
+            append = true,
+            weight = 3,
+        },
+        {
+            id = "smurfs",
+            name = content.plural_text("the smurfs", "the smurfs comics"),
+            description = content.text("This album is part of the Smurfs series, which is about a community of tiny blue creatures called Smurfs who live in a hidden village deep in the forest led by Papa Smurf"),
+            append = true,
+            weight = 3,
+        },
+        {
+            id = "dungeon",
+            name = content.plural_text("dungeon", "dungeon comics"),
+            description = content.text("This album is part of the Dungeon series, which is mainly about the adventures of Herbert the duck and Marvin the dragon working for the \"dungeon\", a business establishment where heroes come in search of adventure and treasure and invariably die."),
+            append = true,
+            weight = 1,
+        },
+        {
+            id = "metabarons",
+            name = content.plural_text("the saga of the meta-barons", "the saga of the meta-barons comics"),
+            description = content.text("This album is part of the saga of the meta-barons series, which is about a dynasty of space warriors called the meta-barons, the narration is made by a duo of quirky robots, Tonto and Lothar, as they chronicle the life of each of them."),
+            append = true,
+            weight = 1,
+        },
+    }
+    content.add(book)
+end

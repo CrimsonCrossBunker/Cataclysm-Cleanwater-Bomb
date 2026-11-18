@@ -296,3 +296,35 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "book_icef",
+        category = "manuals",
+        name = content.plural_text("Internal Combustion Fundamentals", "copies of Internal Combustion Fundamentals"),
+        description = content.text("A college-level textbook that details the operation, maintenance, and repair of internal combustion engines."),
+        mass_milligrams = 1587000,
+        volume_ml = 1500,
+        price_cents = 5950,
+        price_postapoc_cents = 2250,
+        symbol = "?",
+        color = "blue",
+        looks_like = "textbook_botany",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("cardboard", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 4)
+    book:book {
+        required_level = 4,
+        maximum_level = 8,
+        intelligence = 8,
+        read_time_turns = 1800,
+        fun = -1,
+        chapters = 0,
+        scannable = true,
+        skill = "mechanics",
+    }
+    content.add(book)
+end

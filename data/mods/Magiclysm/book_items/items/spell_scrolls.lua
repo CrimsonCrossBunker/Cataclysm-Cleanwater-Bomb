@@ -3258,3 +3258,29 @@ do
     book:teach_spells({ "technomancer_arete_buff_spell" })
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "spell_scroll",
+        name = content.plural_text("Spell Scroll", "Spell Scrolls"),
+        category = "manuals",
+        mass_milligrams = 475000,
+        volume_ml = 500,
+        price_cents = 4000,
+        symbol = "?",
+        color = "white",
+        abstract = true,
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 0,
+        read_time_turns = 0,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+    }
+    content.add(book)
+end

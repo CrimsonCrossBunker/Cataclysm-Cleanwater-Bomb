@@ -143,3 +143,33 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "grimy_recipe",
+        category = "manuals",
+        symbol = "0",
+        color = "white",
+        name = content.plural_text("grimy handwritten recipe", "grimy handwritten recipes"),
+        description = content.text("A scrap of paper.  Something's written on it, scrawled in bad handwriting.  You can barely make out the words 'Blood treatment' followed by a list of ingredients."),
+        price_cents = 0,
+        price_postapoc_cents = 0,
+        mass_milligrams = 1000,
+        volume_ml = 1,
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_flags()
+    book:flag("TRADER_AVOID")
+    book:book {
+        required_level = 1,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 300,
+        fun = -2,
+        chapters = 0,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end

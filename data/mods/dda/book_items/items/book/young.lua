@@ -140,3 +140,197 @@ do
     }
     content.add(book)
 end
+
+do
+    -- The ids below represent the Aarne-Thompson System of folklore classification.  Do not change.
+    local book = content.Item {
+        id = "fairy_tales",
+        name = content.plural_text("book of fairy tales", "books of fairy tales"),
+        description = content.text("An amusing collection of folklore featuring the usual cast of fairies, goblins, and trolls."),
+        mass_milligrams = 410000,
+        volume_ml = 750,
+        price_cents = 950,
+        price_postapoc_cents = 100,
+        symbol = "?",
+        looks_like = "story_book",
+        color = "light_blue",
+        variant_kind = "generic",
+        snippet_category = "auto:fairy_tales",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 1080,
+        fun = 3,
+        chapters = 24,
+        scannable = true,
+    }
+
+    local snippets = content.SnippetCategory { id = "auto:fairy_tales" }
+    snippets:entry {
+        id = "fairyat_41",
+        text = content.text("This fairy tale is about a wolf who eats so much salted meat she becomes trapped in the butcher's cellar."),
+    }
+    snippets:entry {
+        id = "fairyat_50",
+        text = content.text("In this traditional story of beastly intrigue, a clever fox convinces an elderly lion to kill a derogatory wolf."),
+    }
+    snippets:entry {
+        id = "fairyat_111",
+        text = content.text("An illustrated fairy tale book about a conversation between a mouse and a cat."),
+    }
+    snippets:entry {
+        id = "fairyat_112",
+        text = content.text("This illustrated fairy tale relates how a city mouse did visit his cousin in the country, and how each regarded the other's quality of life."),
+    }
+    snippets:entry {
+        id = "fairyat_155",
+        text = content.text("A fable in which the jackal wins the day via clever foolishness."),
+    }
+    snippets:entry {
+        id = "fairyat_156",
+        text = content.text("A slave mistakenly wanders into a lion's den - thus begins a fable which demonstrates mutual dependence regardless of size or status."),
+    }
+    snippets:entry {
+        id = "fairyat_171",
+        text = content.text("An amusing collection of stories featuring \"Goldilocks and The Three Bears\" on the cover."),
+    }
+    snippets:entry {
+        id = "fairyat_222",
+        text = content.text("A well illustrated fairy tale about a war between the birds and the beasts, with particulars on the wartime conduct and eventual fate of the bat."),
+    }
+    snippets:entry {
+        id = "fairyat_285",
+        text = content.text("This book, titled \"The Rattlesnake's Vengeance\" is a collection of Cherokee myths and legends.  \"285D\" is hand-written in pencil on the title page."),
+    }
+    snippets:entry {
+        id = "fairyat_328",
+        text = content.text("This fairy tale book is a regional variant of \"Jack and the Beanstalk.\""),
+    }
+    snippets:entry {
+        id = "fairyat_333",
+        text = content.text("This fairy tale book is titled \"Little Red Cap.\"  It details a red-cloaked child's various encounters with talking wolves."),
+    }
+    snippets:entry {
+        id = "fairyat_366",
+        text = content.text("A collection of ghost stories warning about the dangers of stealing from the dead."),
+    }
+    snippets:entry {
+        id = "fairyat_402",
+        text = content.text("An Irish fairy tale in which a Celtic poet marries a princess who has been cursed with the head of a pig."),
+    }
+    snippets:entry {
+        id = "fairyat_408",
+        text = content.text("A book of Italian fairy tales translated into English.  The cover features an orange fairy juggling a lemon, a lime, and a tangerine."),
+    }
+    snippets:entry {
+        id = "fairyat_451",
+        text = content.text("A book of fables about people who change into birds."),
+    }
+    snippets:entry {
+        id = "fairyat_475",
+        text = content.text("This compendium of amusing folk tales about the devil is titled \"Hell's Kettle: Legends of the Devil.\""),
+    }
+    snippets:entry {
+        id = "fairyat_530",
+        text = content.text("This charming book of Swedish fables is titled \"The Glass Mountain and the Princess.\""),
+    }
+    snippets:entry {
+        id = "fairyat_555",
+        text = content.text("A collection of fairy tale stories warning against the consequences of extreme greed."),
+    }
+    snippets:entry {
+        id = "fairyat_570",
+        text = content.text("This fable book is titled \"The Rabbit Herd.\"  Inside are woodcut illustrations of a peasant boy playing his flute for a mob of mischievous hares."),
+    }
+    snippets:entry {
+        id = "fairyat_591",
+        text = content.text("This book is titled \"The Thieving Pot: Folktales of the Arab World.\""),
+    }
+    snippets:entry {
+        id = "fairyat_653",
+        text = content.text("A book of legends collected by Traveller Johnny Cassidy in the 1960s."),
+    }
+    snippets:entry {
+        id = "fairyat_758",
+        text = content.text("A book by the Brothers Grimm, titled \"Eve's Unequal Children.\""),
+    }
+    snippets:entry {
+        id = "fairyat_766",
+        text = content.text("This book of fables expands upon the legend of the Seven Sleepers of Ephesus."),
+    }
+    snippets:entry {
+        id = "fairyat_1060",
+        text = content.text("In this fairy tale, a strong man frightens an ogre by squeezing water out of a stone."),
+    }
+    snippets:entry {
+        id = "fairyat_1084",
+        text = content.text("This book of rustic folk tales bears the title \"How to Shout Down the Devil.\""),
+    }
+    snippets:entry {
+        id = "fairyat_1287",
+        text = content.text("The title of this book is \"Village Folk-tales of Ceylon.\"  It includes fables about logical errors and foolish misjudgments of the Kadambawa men."),
+    }
+    snippets:entry {
+        id = "fairyat_1461",
+        text = content.text("This book of folk tales is titled \"The Girl with the Ugly Name, and Other Stories.\""),
+    }
+    snippets:entry {
+        id = "fairyat_2025",
+        text = content.text("Titled \"The Fleeing Pancake\", this collection of silly folk tales is suitable for small children."),
+    }
+    content.add(snippets)
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_ya_adrk",
+        name = content.plural_text("The Adorkable Girl", "copies of The Adorkable Girl"),
+        description = content.text("When a therapist's daughter transfers to a new school, she decides to change her personality type.  As her social life begins to blossom, can she maintain a healthy boundary between her home life and her public persona?"),
+        mass_milligrams = 350000,
+        copy_from = "book_fict_soft_ya_quiddity",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 5,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 17,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_fict_soft_ya_bjak",
+        name = content.plural_text("Becoming Jackson", "copies of Becoming Jackson"),
+        description = content.text("When Jackson gains the mystical talent to alter his appearance on command, will he be able to recognize himself in his own mirror?"),
+        copy_from = "book_fict_soft_ya_vanilla",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "novel_coa2",
+        name = content.plural_text("Pantheon: The Story of an Iranian Youth", "copies of Pantheon: The Story of an Iranian Youth"),
+        description = content.text("A hard cover graphic novel about a young girl living in Iran during the 1980's, seeing the world change around her as Iraq invaded her country."),
+        longest_side_mm = 270,
+        copy_from = "book_fict_hard_ya_quiddity",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 5,
+        read_time_turns = 960,
+        fun = 2,
+        chapters = 14,
+        scannable = true,
+    }
+    content.add(book)
+end

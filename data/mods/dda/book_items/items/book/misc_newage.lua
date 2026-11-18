@@ -89,3 +89,24 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "book_newage_horoscopes",
+        name = content.plural_text("Your Year in Horoscopes", "copies of Your Year in Horoscopes"),
+        description = content.text("A long, thorough list of horoscopes, sorted by date and by zodiac sign.  Today, you should \"take a minute to relax - It's not the end of the world.\""),
+        volume_ml = 862,
+        mass_milligrams = 450000,
+        copy_from = "book_pulp_newage_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 40,
+        scannable = true,
+    }
+    content.add(book)
+end

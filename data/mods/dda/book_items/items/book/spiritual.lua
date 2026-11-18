@@ -1452,3 +1452,761 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "holybook_east",
+        name = content.plural_text("Holy Books of the East", "copies of the Holy Books of the East"),
+        description = content.text("It is a monumental 50-volume set of English translations of Asian religious texts.  It incorporates the essential sacred texts of Hinduism, Buddhism, Taoism, Confucianism, Zoroastrianism, Jainism, and Islam."),
+        mass_milligrams = 1000000,
+        volume_ml = 1500,
+        copy_from = "holybook_abstract",
+        variant_kind = "generic",
+    }
+    book:variants {
+        {
+            id = "holybook_east1",
+            name = content.plural_text("Sacred Book of the East Vol. 1", "copies of the first volume of the Sacred Books of the East"),
+            description = content.text("It contains The Upanishads, part 1/2: Khândogya Upanishad, Talavakâra (or Kena-Upanishad), Aitareya-Âranyaka, Kaushîtaki-Brâhmana and Vâjasaneyi-Sâmhita Upanishad."),
+            append = true,
+        },
+        {
+            id = "holybook_east2",
+            name = content.plural_text("Sacred Books of the East Vol. 2", "copies of the second volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Laws of the Aryas (Dharmasastra), part 1/2: Âpastamba, Gautama, Vâsishtha and Baudhâyana."),
+            append = true,
+        },
+        {
+            id = "holybook_east3",
+            name = content.plural_text("Sacred Books of the East Vol. 3", "copies of the third volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Books of China, part 1/6, the texts of Confucianism: The Shû King (Classic of History), Book of Thang, Books of Yu, Books of Hsiâ, Books of Shang, Books of Kâu, Shih King, the Book of Odes (Classic of Poetry, I - Odes of the Temple and the Altar, II - Minor Odes of the Kingdom, III - Major Odes of the Kingdom, IV - Lessons from the States) and The Hsiâo King (Classic of Filial Piety)."),
+            append = true,
+        },
+        {
+            id = "holybook_east4",
+            name = content.plural_text("Sacred Books of the East Vol. 4", "copies of the fourth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Zend-Avesta, part 1/3: Vendîdâd."),
+            append = true,
+        },
+        {
+            id = "holybook_east5",
+            name = content.plural_text("Sacred Books of the East Vol. 5", "copies of the fifth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Pahlavi Texts, part 1/5: Bundahis, selections of Zâd-sparam, Bahman Yast, Shâyast lâ-Shâyast."),
+            append = true,
+        },
+        {
+            id = "holybook_east6",
+            name = content.plural_text("Sacred Books of the East Vol. 6", "copies of the sixth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Holy Qur'an part 1/2, from chapters I to XVI."),
+            append = true,
+        },
+        {
+            id = "holybook_east7",
+            name = content.plural_text("Sacred Books of the East Vol. 7", "copies of the seventh volume of the Sacred Books of the East"),
+            description = content.text("It contains The Institutes of Vishnu."),
+            append = true,
+        },
+        {
+            id = "holybook_east8",
+            name = content.plural_text("Sacred Books of the East Vol. 8", "copies of the eighth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Bhagavadgitâ: Sanatsugâtîya and Anugitâ."),
+            append = true,
+        },
+        {
+            id = "holybook_east9",
+            name = content.plural_text("Sacred Books of the East Vol. 9", "copies of the ninth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Holy Qur'an, part 2/2, from chapters XVII to CXIV."),
+            append = true,
+        },
+        {
+            id = "holybook_east10",
+            name = content.plural_text("Sacred Books of the East Vol. 10", "copies of the tenth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Dhammapada: a collection of verses, and the Sutta-Nipâta: a collection of discourses, being one of the canonical books of the Buddhists."),
+            append = true,
+        },
+        {
+            id = "holybook_east11",
+            name = content.plural_text("Sacred Books of the East Vol. 11", "copies of the eleventh volume of the Sacred Books of the East"),
+            description = content.text("It contains the Buddhist Suttas: Mahā-parinibbāna Suttanta, Dhamma-kakka-ppavattana Sutta, Tevigga Sutta'anta, Âkankheyya Sutta'a, Ketokhila Sutta'a, Mahâ-Sudassana Sutta'anta and Sabbâsava Sutta'a."),
+            append = true,
+        },
+        {
+            id = "holybook_east12",
+            name = content.plural_text("Sacred Books of the East Vol. 12", "copies of the twelfth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Satapatha Brahmana, part 1/5: Mâdhyandina Shakha from I to II."),
+            append = true,
+        },
+        {
+            id = "holybook_east13",
+            name = content.plural_text("Sacred Books of the East Vol. 13", "copies of the thirteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vinaya Texts, part 1/3: Pātimokkha and Mahâvagga, from I to IV."),
+            append = true,
+        },
+        {
+            id = "holybook_east14",
+            name = content.plural_text("Sacred Books of the East Vol. 14", "copies of the fourteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Laws of the Aryas, part 2/2: Vâsishtha, Baudhâyana and Parisishta."),
+            append = true,
+        },
+        {
+            id = "holybook_east15",
+            name = content.plural_text("Sacred Books of the East Vol. 15", "copies of the fifteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Upanishads, part 2/2: Katha Upanishad, Mundaka Upanishad, Taittiriya Upanishad, Brhadaranyaka Upanishad, Svetasvatara Upanishad, Prasna Upanishad and Maitrayani Upanishad."),
+            append = true,
+        },
+        {
+            id = "holybook_east16",
+            name = content.plural_text("Sacred Books of the East Vol. 16", "copies of the sixteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Books of China, part 2/6, the texts of Confucianism: Yi King (I Ching)."),
+            append = true,
+        },
+        {
+            id = "holybook_east17",
+            name = content.plural_text("Sacred Books of the East Vol. 17", "copies of the seventeenth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vinaya Texts, part 2/3: Mahavagga, from V to X, and Kullavagga, from I to II."),
+            append = true,
+        },
+        {
+            id = "holybook_east18",
+            name = content.plural_text("Sacred Books of the East Vol. 18", "copies of the eighteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Pahlavi Texts, part 2/5: Dâdistân-i Dinik and the Epistles of Mânûskihar."),
+            append = true,
+        },
+        {
+            id = "holybook_east19",
+            name = content.plural_text("Sacred Books of the East Vol. 19", "copies of the nineteenth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Fo-sho-hing-tsan-king: a life of Buddha, by Ashvaghosha, and the Bodhisattva."),
+            append = true,
+        },
+        {
+            id = "holybook_east20",
+            name = content.plural_text("Sacred Books of the East Vol. 20", "copies of the twenty volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vinaya Texts, part 3/3: Kullavagga, from IV to XII."),
+            append = true,
+        },
+        {
+            id = "holybook_east21",
+            name = content.plural_text("Sacred Books of the East Vol. 21", "copies of the twentieth-first volume of the Sacred Books of the East"),
+            description = content.text("It contains The Saddharma-Pundarika (or The Lotus of the True Law)."),
+            append = true,
+        },
+        {
+            id = "holybook_east22",
+            name = content.plural_text("Sacred Books of the East Vol. 22", "copies of the twenty-second volume of the Sacred Books of the East"),
+            description = content.text("It contains the Jaina Sutras, part 1/2: Âkârânga sutra and Kalpa sutra."),
+            append = true,
+        },
+        {
+            id = "holybook_east23",
+            name = content.plural_text("Sacred Books of the East Vol. 23", "copies of the twenty-third volume of the Sacred Books of the East"),
+            description = content.text("It contains The Zend-Avesta, part 2/3: Sîrôzahs, Yasts and Nyâyis."),
+            append = true,
+        },
+        {
+            id = "holybook_east24",
+            name = content.plural_text("Sacred Books of the East Vol. 24", "copies of the twenty-fourth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Pahlavi Texts, part 3/5: Dinai Mainog-i khirad, Sikand-Gümanik Vigar and Sad Dar."),
+            append = true,
+        },
+        {
+            id = "holybook_east25",
+            name = content.plural_text("Sacred Books of the East Vol. 25", "copies of the twenty-fifth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Laws of Manu, with extracts from seven commentaries."),
+            append = true,
+        },
+        {
+            id = "holybook_east26",
+            name = content.plural_text("Sacred Books of the East Vol. 26", "copies of the twenty-sixth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Satapatha Brahmana, part 2/5: Mâdhyandina Shakha from III to IV."),
+            append = true,
+        },
+        {
+            id = "holybook_east27",
+            name = content.plural_text("Sacred Books of the East Vol. 27", "copies of the twenty-seventh volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Books of China, part 3/6, the texts of Confucianism: The Li Ki I (Book of Rites)."),
+            append = true,
+        },
+        {
+            id = "holybook_east28",
+            name = content.plural_text("Sacred Books of the East Vol. 28", "copies of the twenty-eight volume of the Sacred Books of the East"),
+            description = content.text("It contains The Sacred Books of China, part 4/6, the texts of Confucianism: The Li Ki II (Book of Rites)."),
+            append = true,
+        },
+        {
+            id = "holybook_east29",
+            name = content.plural_text("Sacred Books of the East Vol. 29", "copies of the twenty-ninth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Grihya-sutras, part 1/2, rules of Vedic domestic ceremonies: Sankhyayana-Grihya-sutra, Āsvalāyana-Grihya-sutra, Paraskara-Grihya-sutra and Khadia-Grihya-sutra."),
+            append = true,
+        },
+        {
+            id = "holybook_east30",
+            name = content.plural_text("Sacred Books of the East Vol. 30", "copies of the thirtieth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Grihya-sutras, part 2/2, rules of Vedic domestic ceremonies: Gobhila, Hiranyakesin, Apastamba and Yajna Paribhashasutras."),
+            append = true,
+        },
+        {
+            id = "holybook_east31",
+            name = content.plural_text("Sacred Books of the East Vol. 31", "copies of the thirty-first volume of the Sacred Books of the East"),
+            description = content.text("It contains The Zend-Avesta, part 3/3: Yasna, Visparad, Afrinagân, Gâhs and miscellaneous fragments."),
+            append = true,
+        },
+        {
+            id = "holybook_east32",
+            name = content.plural_text("Sacred Books of the East Vol. 32", "copies of the thirty-second volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vedic Hymns, part 1/2: Hymns to the Maruts, Hymns to Rudra, Hymns to Vâyu, Hymns to Vâta and a bibliographical list of the more important publications on the Rigveda."),
+            append = true,
+        },
+        {
+            id = "holybook_east33",
+            name = content.plural_text("Sacred Books of the East Vol. 33", "copies of the thirty-third volume of the Sacred Books of the East"),
+            description = content.text("It contains The Minor Law-Books: Brihaspati."),
+            append = true,
+        },
+        {
+            id = "holybook_east34",
+            name = content.plural_text("Sacred Books of the East Vol. 34", "copies of the thirty-fourth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vedanta-Sutras, part 1/3: Commentary by Sankaracharya, part 1 of 2, and the Adhyâya I–II (Pâda I–II)."),
+            append = true,
+        },
+        {
+            id = "holybook_east35",
+            name = content.plural_text("Sacred Books of the East Vol. 35", "copies of the thirty-fifth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Questions of King Milinda, part 1/2."),
+            append = true,
+        },
+        {
+            id = "holybook_east36",
+            name = content.plural_text("Sacred Books of the East Vol. 36", "copies of the thirty-sixth volume of the Sacred Books of the East"),
+            description = content.text("It contains The Questions of King Milinda, part 2/2."),
+            append = true,
+        },
+        {
+            id = "holybook_east37",
+            name = content.plural_text("Sacred Books of the East Vol. 37", "copies of the thirty-seventh volume of the Sacred Books of the East"),
+            description = content.text("It contains the Pahlavi Texts, part 4/5: Contents of the Nasks."),
+            append = true,
+        },
+        {
+            id = "holybook_east38",
+            name = content.plural_text("Sacred Books of the East Vol. 38", "copies of the thirty-eight volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vedanta-Sutras, part 2/3: Commentary by Sankaracharya, part 2 of 2, and Adhyâya II to IV (Pâda III to IV)."),
+            append = true,
+        },
+        {
+            id = "holybook_east39",
+            name = content.plural_text("Sacred Books of the East Vol. 39", "copies of the thirty-ninth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Texts of Taoism, part 1/2: The Tao Te Ching of Lao Dze (Lao Tsu) and The Writings of Chuang-tse, from I to XVII."),
+            append = true,
+        },
+        {
+            id = "holybook_east40",
+            name = content.plural_text("Sacred Books of the East Vol. 40", "copies of the fourtieth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Texts of Taoism, part 2/2: The Writings of Chuang-tse, from XVII to XXXIII, The Thai-shang tractate of actions and their retributions, other Taoist texts and the Index to volumes 39 and 40."),
+            append = true,
+        },
+        {
+            id = "holybook_east41",
+            name = content.plural_text("Sacred Books of the East Vol. 41", "copies of the forty-first volume of the Sacred Books of the East"),
+            description = content.text("It contains the Satapatha Brahmana, part 3/5: Mâdhyandina Shakha from V to VII."),
+            append = true,
+        },
+        {
+            id = "holybook_east42",
+            name = content.plural_text("Sacred Books of the East Vol. 42", "copies of the forty-second volume of the Sacred Books of the East"),
+            description = content.text("It contains the Hymns of the Atharvaveda, together With Extracts From the Ritual Books and the Commentaries."),
+            append = true,
+        },
+        {
+            id = "holybook_east43",
+            name = content.plural_text("Sacred Books of the East Vol. 43", "copies of the forty-third volume of the Sacred Books of the East"),
+            description = content.text("It contains the Satapatha Brahmana, part 4/5: the Mâdhyandina Shakha VII, IX and X."),
+            append = true,
+        },
+        {
+            id = "holybook_east44",
+            name = content.plural_text("Sacred Books of the East Vol. 44", "copies of the forty-fourth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Satapatha Brahmana, part 5/5: the Mâdhyandina Shakha from XI to XIV."),
+            append = true,
+        },
+        {
+            id = "holybook_east45",
+            name = content.plural_text("Sacred Books of the East Vol. 45", "copies of the forty-fifth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Jaina Sutras, part 2 of 2: Uttaradhyayana Sutra and Sutrakritânga Sutra."),
+            append = true,
+        },
+        {
+            id = "holybook_east46",
+            name = content.plural_text("Sacred Books of the East Vol. 46", "copies of the forty-sixth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vedic Hymns, part 2/2: Hymns to Agni (Mandalas I to V)."),
+            append = true,
+        },
+        {
+            id = "holybook_east47",
+            name = content.plural_text("Sacred Books of the East Vol. 47", "copies of the forty-seventh volume of the Sacred Books of the East"),
+            description = content.text("It contains the Pahlavi Texts, part 5/5: The Marvels of Zoroastrianism."),
+            append = true,
+        },
+        {
+            id = "holybook_east48",
+            name = content.plural_text("Sacred Books of the East Vol. 48", "copies of the forty-eighth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Vedanta-Sutras, part 3/3, with the commentary of Râmânuja."),
+            append = true,
+        },
+        {
+            id = "holybook_east49",
+            name = content.plural_text("Sacred Books of the East Vol. 49", "copies of the forty-ninth volume of the Sacred Books of the East"),
+            description = content.text("It contains the Buddhist Mahayana Texts, part 1/2: Buddha-karita of Aśvaghosa, the Buddhist Mahayana Texts, part 2/2: Longer Sukhâvati-vyuha and Shorter Sukhâvati-vyuha, Vagrakkhedika, the longer Pragnâ-pâramitâ-hridaya-sutra, the shorter Pragnâ-pâramitâ-hridaya-sutra and the Amitâyur dhyâna-sutra."),
+            append = true,
+        },
+        {
+            id = "holybook_east50",
+            name = content.plural_text("Sacred Books of the East Vol. 50", "copies of the fiftieth volume of the Sacred Books of the East"),
+            description = content.text("It contains a nice general index to the names and subject-matter of the Sacred Books of the East."),
+            append = true,
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "holybook_nag_hammadi",
+        name = content.plural_text("Nag Hammadi Codex", "Nag Hammadi Codices"),
+        description = content.text("A translation of some of the gnostic texts and early biblical apocrypha recovered from the Nag Hammadi library in Egypt.  Obviously heretical, but the zombies aren't the type to discriminate."),
+        mass_milligrams = 281000,
+        volume_ml = 1000,
+        copy_from = "holybook_abstract",
+        variant_kind = "generic",
+    }
+    book:variants {
+        {
+            id = "holybook_nag_hammadi_01",
+            name = content.plural_text("Nag Hammadi Codex I", "copies of the first Nag Hammadi Codex"),
+            description = content.text("It contains the Prayer of the Apostle Paul, the Apocryphon of James, the Gospel of Truth, the Treatise on the Resurrection, and the Tripartite Tractate."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_02",
+            name = content.plural_text("Nag Hammadi Codex II", "copies of the second Nag Hammadi Codex"),
+            description = content.text("It contains the Apocryphon of John (version 1), the Gospel of Thomas, the Gospel of Phillip, the Hypostasis of the Archons, On the Origin of the World, the Exegesis of the Soul, and the Book of Thomas the Contender."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_03",
+            name = content.plural_text("Nag Hammadi Codex III", "copies of the third Nag Hammadi Codex"),
+            description = content.text("It contains the Apocryphon of John (version 2), Holy Book of the Great Invisible Spirit, Eugnostos the Blessed, The Sophia of Jesus Christ, and the Dialogue of the Savior."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_04",
+            name = content.plural_text("Nag Hammadi Codex IV", "copies of the fourth Nag Hammadi Codex"),
+            description = content.text("It contains the Apocryphon of John (version 1) and Holy Book of the Great Invisible Spirit."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_05",
+            name = content.plural_text("Nag Hammadi Codex V", "copies of the fifth Nag Hammadi Codex"),
+            description = content.text("It contains Eugnostos the Blessed, the Apocalypse of Paul, the First Apocalypse of James, the Second Apocalypse of James, and the Apocalypse of Adam."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_06",
+            name = content.plural_text("Nag Hammadi Codex VI", "copies of the sixth Nag Hammadi Codex"),
+            description = content.text("It contains the Acts of Peter and the Twelve Apostles, The Thunder/Perfect Mind, Authoritative Teaching, the Context of Our Great Power, fragments of Plato's Republic, The Discourse of the Eight and Ninth, the Prayer of Thanksgiving, and Asclepius."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_07",
+            name = content.plural_text("Nag Hammadi Codex VII", "copies of the seventh Nag Hammadi Codex"),
+            description = content.text("It contains the Paraphrase of Shem, the Second Treatise of the Great Seth, Gnostic Apocalypse of Peter, the Teachings of Sylvanus, and the Three Steles of Seth."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_08",
+            name = content.plural_text("Nag Hammadi Codex VIII", "copies of the eighth Nag Hammadi Codex"),
+            description = content.text("It contains Zostrianos and the Letter of Peter to Philip."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_09",
+            name = content.plural_text("Nag Hammadi Codex IX", "copies of the ninth Nag Hammadi Codex"),
+            description = content.text("It contains Melchizedek, the Thought of Norea, and the Testimony of Truth."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_10",
+            name = content.plural_text("Nag Hammadi Codex X", "copies of the tenth Nag Hammadi Codex"),
+            description = content.text("It contains Marsanes."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_11",
+            name = content.plural_text("Nag Hammadi Codex XI", "copies of the eleventh Nag Hammadi Codex"),
+            description = content.text("It contains the Interpretation of Knowledge, a Valentinian Exposition, Allogenes, and Hypsiphrone."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_12",
+            name = content.plural_text("Nag Hammadi Codex XII", "copies of the twelfth Nag Hammadi Codex"),
+            description = content.text("It contains the Sentences of Sextus, the Gospel of Truth, and various fragmented texts."),
+            append = true,
+        },
+        {
+            id = "holybook_nag_hammadi_13",
+            name = content.plural_text("Nag Hammadi Codex XIII", "copies of the thirteenth Nag Hammadi Codex"),
+            description = content.text("It contains Trimorphic Protennoia, On the Origin of the World, and various fragmented texts."),
+            append = true,
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "holybook_satanic",
+        name = content.plural_text("The Satanic Bible", "copies of The Satanic Bible"),
+        description = content.text("A collection of essays, observations, and rituals published by Anton LaVey in 1969."),
+        mass_milligrams = 130000,
+        volume_ml = 250,
+        price_cents = 550,
+        price_postapoc_cents = 50,
+        symbol = "?",
+        looks_like = "story_book",
+        color = "dark_gray",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_flags()
+    book:flag("INSPIRATIONAL")
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 600,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "holybook_talmud",
+        name = content.plural_text("Talmud", "volumes of the Talmud"),
+        description = content.text("One of the central texts of Rabbinic Judaism, the Talmud expounds upon the Hebrew Bible with teachings and opinions of thousands of rabbis."),
+        mass_milligrams = 2041000,
+        volume_ml = 1500,
+        copy_from = "holybook_abstract",
+        variant_kind = "generic",
+    }
+    book:variants {
+        {
+            id = "holybook_talmud_01",
+            name = content.plural_text("Talmud, Vol. 1, Tractate Berakhot (Part 1)", "copies of the Talmud, Vol. 1, Tractate Berakhot (Part 1)"),
+            description = content.text("This is volume 1 of 51, containing the first part of Tractate Berakhot.  It is concerned with rules relating to the Shema and the Amidah."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_02",
+            name = content.plural_text("Talmud, Vol. 2, Tractate Berakhot (Part 2)", "copies of the Talmud, Vol. 2, Tractate Berakhot (Part 2)"),
+            description = content.text("This is volume 2 of 51, containing the second part of Tractate Berakhot.  It discusses rules relating to prayers, primarily those before or after eating but it also touches on prayers that occur on special occasions such as hearing thunder or being unexpectedly delivered from danger."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_03",
+            name = content.plural_text("Talmud, Vol. 3, Tractate Pe'ah", "copies of the Talmud, Vol. 3, Tractate Pe'ah"),
+            description = content.text("This is volume 3 of 51, containing Tractate Pe'ah.  It discusses agriculture, of harvesting, and providing food for the poor."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_04",
+            name = content.plural_text("Talmud, Vol. 4, Tractate Demai", "copies of the Talmud, Vol. 4, Tractate Demai"),
+            description = content.text("This is volume 4 of 51, containing Tractate Demai.  It discusses rules for dubiously-tithed produce."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_05",
+            name = content.plural_text("Talmud, Vol. 5, Tractate Kilayim", "copies of the Talmud, Vol. 5, Tractate Kilayim"),
+            description = content.text("This is volume 5 of 51, containing Tractate Kilayim.  It discusses prohibitions on the mixing of different kinds, such as wearing wool and linen clothing or planting anything other than grapes in a vineyard."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_06",
+            name = content.plural_text("Talmud, Vol. 6, Tractate Shevi'it (Part 1)", "copies of the Talmud, Vol. 6, Tractate Shevi'it (Part 1)"),
+            description = content.text("This is volume 6a of 51, containing the first part of Tractate Shevi'it.  It discusses the Shemitah year, the seventh year where fields must lie fallow."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_07",
+            name = content.plural_text("Talmud, Vol. 7, Tractate Shevi'it (Part 2)", "copies of the Talmud, Vol. 7, Tractate Shevi'it (Part 2)"),
+            description = content.text("This is volume 7 of 51, containing the second part of Tractate Shevi'it.  It continues the discussion of the Shemitah year, the seventh year where fields must lie fallow."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_08",
+            name = content.plural_text("Talmud, Vol. 8, Tractate Terumot (Part 1)", "copies of the Talmud, Vol. 8, Tractate Terumot (Part 1)"),
+            description = content.text("This is volume 8 of 51, containing the first part of Tractate Terumot.  It discusses terumot, portions of agriculture produce that are given directly to the Kohanim priestly class."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_09",
+            name = content.plural_text("Talmud, Vol. 9, Tractate Terumot (Part 2)", "copies of the Talmud, Vol. 9, Tractate Terumot (Part 2)"),
+            description = content.text("This is volume 9 of 51, containing the second part of Tractate Terumot.  It continues the discussion of terumot, portions of agriculture produce that are given directly to the Kohanim priestly class."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_10",
+            name = content.plural_text("Talmud, Vol. 10, Tractate Maasrot", "copies of the Talmud, Vol. 10, Tractate Maasrot"),
+            description = content.text("This is volume 10 of 51, containing Tractate Maasrot.  It discusses the separation of the harvest into tithes, and the portions given to the Tribe of Levi, the poor, or the people of Jerusalem."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_11",
+            name = content.plural_text("Talmud, Vol. 11, Tractate Maaser Sheni", "copies of the Talmud, Vol. 11, Tractate Maaser Sheni"),
+            description = content.text("This is volume 11 of 51, containing Tractate Maaser Sheni.  It discusses the practice of consuming a portion of the yearly harvest in Jerusalem, or exchanging it for money used to buy food in Jerusalem to hold a feast."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_12",
+            name = content.plural_text("Talmud, Vol. 12, Tractate Challah", "copies of the Talmud, Vol. 12, Tractate Challah"),
+            description = content.text("This is volume 12 of 51, containing Tractate Challah.  It discusses the practice of baking bread with the first portion of harvested grain and tithing it as an offering."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_13",
+            name = content.plural_text("Talmud, Vol. 13, Tractates Orlah & Bikkurim", "copies of the Talmud, Vol. 13, Tractates Orlah & Bikkurim"),
+            description = content.text("This is volume 13 of 51, containing Tractates Orlah and Bikkurim.  Both tractates discuss the practice of letting a fruit tree grow for three years before harvesting it."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_14",
+            name = content.plural_text("Talmud, Vol. 14, Tractate Shabbat (Part 1)", "copies of the Talmud, Vol. 14, Tractate Shabbat (Part 1)"),
+            description = content.text("This is volume 14 of 51, containing the first part of Tractate Shabbat.  It discusses the thirty-nine types of prohibited labor."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_15",
+            name = content.plural_text("Talmud, Vol. 15, Tractate Shabbat (Part 2)", "copies of the Talmud, Vol. 15, Tractate Shabbat (Part 2)"),
+            description = content.text("This is volume 15 of 51, containing the second part of Tractate Shabbat.  It discusses the prohibitions of carrying items or transporting animals on Shabbat."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_16",
+            name = content.plural_text("Talmud, Vol. 16, Tractate Shabbat (Part 3)", "copies of the Talmud, Vol. 16, Tractate Shabbat (Part 3)"),
+            description = content.text("This is volume 16 of 51, containing the third part of Tractate Shabbat.  It discusses the positive commandments of Shabbat, such as lighting candles and eating a festive meal, and continues the discussion of prohibited types of labor."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_17",
+            name = content.plural_text("Talmud, Vol. 17, Tractate Eruvin (Part 1)", "copies of the Talmud, Vol. 17, Tractate Eruvin (Part 1)"),
+            description = content.text("This is volume 17 of 51, containing the first part of Tractate Eruvin.  It discusses the ways to expand the allowable areas in which one may carrying items or transport items on Shabbat."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_18",
+            name = content.plural_text("Talmud, Vol. 18, Tractate Eruvin (Part 2)", "copies of the Talmud, Vol. 18, Tractate Eruvin (Part 2)"),
+            description = content.text("This is volume 18 of 51, containing the second part of Tractate Eruvin.  It continues discussing the ways to expand the allowable areas in which one may carrying items or transport items on Shabbat."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_19",
+            name = content.plural_text("Talmud, Vol. 19, Tractate Pesachim (Part 1)", "copies of the Talmud, Vol. 19, Tractate Pesachim (Part 1)"),
+            description = content.text("This is volume 19 of 51, containing the first part of Tractate Pesachim.  It discusses laws relating to Passover, such as the proper disposal of leaven and the preparation of unleavened bread."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_20",
+            name = content.plural_text("Talmud, Vol. 20, Tractate Pesachim (Part 2)", "copies of the Talmud, Vol. 20, Tractate Pesachim (Part 2)"),
+            description = content.text("This is volume 20 of 51, containing the second part of Tractate Pesachim.  It continues the discussion of laws relating to Passover, such as whether servants are allowed to slaughter the Passover sacrifice or what to do if the Seder occurs on a Friday night."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_21",
+            name = content.plural_text("Talmud, Vol. 21, Tractate Shekalim", "copies of the Talmud, Vol. 21, Tractate Shekalim"),
+            description = content.text("This is volume 21 of 51, containing Tractate Shekalim.  It discusses the taxes paid to maintain the Temple and the priesthood."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_22",
+            name = content.plural_text("Talmud, Vol. 22, Tractate Yoma", "copies of the Talmud, Vol. 22, Tractate Yoma"),
+            description = content.text("This is volume 22 of 51, containing Tractate Yoma.  It discusses the rituals and laws related to Yom Kippur, primarily concerned with the Temple service."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_23",
+            name = content.plural_text("Talmud, Vol. 23, Tractate Sukkah", "copies of the Talmud, Vol. 23, Tractate Sukkah"),
+            description = content.text("This is volume 23 of 51, containing Tractate Sukkah.  It discusses the rituals and laws related to Sukkot, such as dwelling in the Sukkah and the four species of plants."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_24",
+            name = content.plural_text("Talmud, Vol. 24, Tractate Beitzah", "copies of the Talmud, Vol. 24, Tractate Beitzah"),
+            description = content.text("This is volume 24 of 51, containing Tractate Beitzah.  It discusses laws common to all Torah-derived holidays, such as prohibitions on work and the proper preparation of food."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_25",
+            name = content.plural_text("Talmud, Vol. 25, Tractate Rosh Hashanah", "copies of the Talmud, Vol. 25, Tractate Rosh Hashanah"),
+            description = content.text("This is volume 25 of 51, containing Tractate Rosh Hashanah.  It discusses rituals and laws related to Rosh Hashanah, such as blowing the shofar, as well as the proper way to celebrate the festival of a new month."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_26",
+            name = content.plural_text("Talmud, Vol. 26, Tractate Taanit", "copies of the Talmud, Vol. 26, Tractate Taanit"),
+            description = content.text("This is volume 26 of 51, containing Tractate Taanit.  It discusses laws related to fasting, as well as proper method of praying for rain to avoid famine."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_27",
+            name = content.plural_text("Talmud, Vol. 27, Tractate Megillah", "copies of the Talmud, Vol. 27, Tractate Megillah"),
+            description = content.text("This is volume 27 of 51, containing Tractate Megillah.  It discusses laws of reading the Book of Esther on Purim, as well as commentary on the story of Esther itself."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_28",
+            name = content.plural_text("Talmud, Vol. 28, Tractate Chagigah", "copies of the Talmud, Vol. 28, Tractate Chagigah"),
+            description = content.text("This is volume 28 of 51, containing Tractate Chagigah.  It discusses the practice of offering ritual sacrifices at the Temple on festival days, with frequent interruptions to discuss the Book of Genesis."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_29",
+            name = content.plural_text("Talmud, Vol. 29, Tractate Moed Katan", "copies of the Talmud, Vol. 29, Tractate Moed Katan"),
+            description = content.text("This is volume 29 of 51, containing Tractate Moed Katan.  It discusses Chol HaMoed, the minor holidays in between the first and last days of Sukkot and Passover.  It also has the famous story of the Oven of Akhnai, from which the principle is derived that \"The Torah is not in heaven\"."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_30",
+            name = content.plural_text("Talmud, Vol. 30, Tractate Yevamot (Part 1)", "copies of the Talmud, Vol. 30, Tractate Yevamot (Part 1)"),
+            description = content.text("This is volume 30 of 51, containing the first part of Tractate Yevamot.  It deals with the laws of Yibbum, often translated as \"Levirate marriage,\" the requirement of a man to marry his brother's widow."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_31",
+            name = content.plural_text("Talmud, Vol. 31, Tractate Yevamot (Part 2)", "copies of the Talmud, Vol. 31, Tractate Yevamot (Part 2)"),
+            description = content.text("This is volume 31 of 51, containing the second part of Tractate Yevamot.  It continues the discussion of the laws of Yibbum, often translated as \"Levirate marriage,\" and the circumstances in which it does or does not apply."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_32",
+            name = content.plural_text("Talmud, Vol. 32, Tractate Ketubot (Part 1)", "copies of the Talmud, Vol. 32, Tractate Ketubot (Part 1)"),
+            description = content.text("This is volume 32 of 51, containing the first part of Tractate Ketubot.  It discusses the marriage contract (Ketubah), and the marital obligations between husband and wife."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_33",
+            name = content.plural_text("Talmud, Vol. 33, Tractate Ketubot (Part 2)", "copies of the Talmud, Vol. 33, Tractate Ketubot (Part 2)"),
+            description = content.text("This is volume 33 of 51, containing the second part of Tractate Ketubot.  It continues the discussion of the marriage contract, as well as divorce and giving formal testimony."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_34",
+            name = content.plural_text("Talmud, Vol. 34, Tractate Nedarim", "copies of the Talmud, Vol. 34, Tractate Nedarim"),
+            description = content.text("This is volume 34 of 51, containing Tractate Nedarim.  It deals with the making and breaking of vows and the conditions under which vows are automatically void."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_35",
+            name = content.plural_text("Talmud, Vol. 35, Tractate Nazir (Part 1)", "copies of the Talmud, Vol. 35, Tractate Nazir (Part 1)"),
+            description = content.text("This is volume 35 of 51, containing the first part of Tractate Nazir.  It deals with Nazirites, who make vows to abstain from wine, cutting their hair, and avoiding contact with the dead."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_36",
+            name = content.plural_text("Talmud, Vol. 36, Tractate Nazir (Part 2)", "copies of the Talmud, Vol. 36, Tractate Nazir (Part 2)"),
+            description = content.text("This is volume 36 of 51, containing the second part of Tractate Nazir.  It continues the discussion of Nazirite vows, as well as the transmission of ritual impurity between objects."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_37",
+            name = content.plural_text("Talmud, Vol. 37, Tractate Sotah (Part 1)", "copies of the Talmud, Vol. 37, Tractate Sotah (Part 1)"),
+            description = content.text("This is volume 37 of 51, containing the first part of Tractate Sotah.  It contains a discussion of the sotah, or \"bitter water\", ritual for a woman suspected of adultery by her husband."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_38",
+            name = content.plural_text("Talmud, Vol. 38, Tractate Sotah (Part 2)", "copies of the Talmud, Vol. 38, Tractate Sotah (Part 2)"),
+            description = content.text("This is volume 38 of 51, containing the second part of Tractate Sotah.  It continues a discussion of the sotah, as well as a long discussion over the entrance of the Israelites into the land of Israel."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_39",
+            name = content.plural_text("Talmud, Vol. 39, Tractate Gittin (Part 1)", "copies of the Talmud, Vol. 39, Tractate Gittin (Part 1)"),
+            description = content.text("This is volume 39 of 51, containing the first part of Tractate Gittin.  It discusses the Get, the formal document of divorce, and the specifications for its preparation and writing."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_40",
+            name = content.plural_text("Talmud, Vol. 40, Tractate Gittin (Part 2)", "copies of the Talmud, Vol. 40, Tractate Gittin (Part 2)"),
+            description = content.text("This is volume 40 of 51, containing the second part of Tractate Gittin.  It continues the discussion of the Get, as well the process of  \"Tikkun Olam\", or repairing the world."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_41",
+            name = content.plural_text("Talmud, Vol. 41, Tractate Kiddushin", "copies of the Talmud, Vol. 41, Tractate Kiddushin"),
+            description = content.text("This is volume 41 of 51, containing Tractate Kiddushin.  It discusses the laws of betrothal and the rules governing interactions between unmarried men and women."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_42",
+            name = content.plural_text("Talmud, Vol. 42, Tractate Bava Kamma", "copies of the Talmud, Vol. 42, Tractate Bava Kamma"),
+            description = content.text("This is volume 42 of 51, containing Tractate Bava Kamma.  It discusses torts and the proper ways to deal with damages inflicted on people and property."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_43",
+            name = content.plural_text("Talmud, Vol. 43, Tractate Bava Metzia", "copies of the Talmud, Vol. 43, Tractate Bava Metzia"),
+            description = content.text("This is volume 43 of 51, containing Tractate Bava Metzia.  It discusses interpersonal disputes such as lost property, renting, and obligations of workers and employers, with a digression into how great sages who spend their lives studying Torah are.  It also reiterates the story of the Oven of Akhnai."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_44",
+            name = content.plural_text("Talmud, Vol. 44, Tractate Bava Basra", "copies of the Talmud, Vol. 44, Tractate Bava Basra"),
+            description = content.text("This is volume 44 of 51, containing Tractate Bava Basra.  It discusses business relationships and the laws of inheritance."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_45",
+            name = content.plural_text("Talmud, Vol. 45, Tractate Sanhedrin (Part 1)", "copies of the Talmud, Vol. 45, Tractate Sanhedrin (Part 1)"),
+            description = content.text("This is volume 45 of 51, containing the first part of Tractate Sanhedrin.  It discusses the selection of judges and the formation of courts."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_46",
+            name = content.plural_text("Talmud, Vol. 46, Tractate Sanhedrin (Part 2)", "copies of the Talmud, Vol. 46, Tractate Sanhedrin (Part 2)"),
+            description = content.text("This is volume 46 of 51, containing the first part of Tractate Sanhedrin.  It continues the discussion of judges, the punishments administered by the courts, and ends with a discussion of who will have a place in Olam Haba, the afterlife."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_47",
+            name = content.plural_text("Talmud, Vol. 47, Tractate Shevuot", "copies of the Talmud, Vol. 47, Tractate Shevuot"),
+            description = content.text("This is volume 47 of 51, containing Tractate Shevuot.  It discusses formal oaths, such as those taken by witnesses in court."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_48",
+            name = content.plural_text("Talmud, Vol. 48, Tractate Avodah Zara (Part 1)", "copies of the Talmud, Vol. 48, Tractate Avodah Zara (Part 1)"),
+            description = content.text("This is volume 48 of 51, containing the first part of Tractate Avodah Zara.  It discusses forbidden idolatry and the laws regulating contact and commerce with idolators."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_49",
+            name = content.plural_text("Talmud, Vol. 49, Tractate Avodah Zara (Part 2)", "copies of the Talmud, Vol. 49, Tractate Avodah Zara (Part 2)"),
+            description = content.text("This is volume 49 of 51, containing the second part of Tractate Avodah Zara.  It continues the discussion of contact and commerce with idolators, including the prohibition on buying or consuming wine that may have been used in sacrifices to idols."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_50",
+            name = content.plural_text("Talmud, Vol. 50, Tractates Makkot & Horayot", "copies of the Talmud, Vol. 50, Tractates Makkot & Horayot"),
+            description = content.text("This is volume 50 of 51, containing Tractates Makkot and Horayot.  Tractate Makkot discusses punishments administered by a court of law and Tractate Horayot discuss redress for errors committed by the court and how to atone for sins committed by kings, high priests, and other officials."),
+            append = true,
+        },
+        {
+            id = "holybook_talmud_51",
+            name = content.plural_text("Talmud, Vol. 51, Tractate Niddah", "copies of the Talmud, Vol. 51, Tractate Niddah"),
+            description = content.text("This is volume 51 of 51, containing Tractate Niddah.  It discusses the ritual status of a menstruating woman, the prohibition on marital relations, and different kinds of bloody discharges."),
+            append = true,
+        },
+    }
+    content.add(book)
+end

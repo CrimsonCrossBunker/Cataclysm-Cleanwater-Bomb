@@ -674,3 +674,421 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "cookbook_useless",
+        category = "manuals",
+        name = content.plural_text("The Generic Cookbook", "copies of The Generic Cookbook"),
+        description = content.text("Just your standard cookbook filled with recipes that you could almost certainly come up with on your own."),
+        symbol = "?",
+        looks_like = "cookbook",
+        color = "red",
+        copy_from = "book_nonf_soft_tpl",
+        variant_kind = "generic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 2,
+        intelligence = 4,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 18,
+        scannable = true,
+        skill = "cooking",
+    }
+    book:variants {
+        {
+            id = "cookbook_useless_main_salads",
+            name = content.plural_text("Main Course Salads", "copies of Main Course Salads"),
+            description = content.text("A classic cookbook filled with recipes for hearty salads."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_cook_everything",
+            name = content.plural_text("How to Cook Everything", "copies of How to Cook Everything"),
+            description = content.text("An introductory cookbook containing a few simple recipes from every type of cuisine."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_simple_food",
+            name = content.plural_text("The Art of Simple Food", "copies of The Art of Simple Food"),
+            description = content.text("A cookbook with a variety of recipes, mostly focusing on vegetables."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_better_homes_gardens",
+            name = content.plural_text("The Better Homes & Gardens Cook Book", "copies of The Better Homes & Gardens Cook Book"),
+            description = content.text("Its red and white cover famous across America, this cookbook contains recipes for all sorts of staple foods."),
+            weight = 2,
+        },
+        {
+            id = "cookbook_useless_sad_bastard",
+            name = content.plural_text("The Sad Bastard Cookbook: Food You Can Make So You Don't Die", "copies of The Sad Bastard Cookbook: Food You Can Make So You Don't Die"),
+            description = content.text("When your cooking is limited to 'microwave TV dinners', you need a book like this to elevate you to boiling water without burning it."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_boil_water",
+            name = content.plural_text("How to Boil Water", "copies of How to Boil Water"),
+            description = content.text("A cookbook for a complete beginner who's probably never turned a stove on before."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_everyday_cook",
+            name = content.plural_text("EveryDayCook: A Cookbook", "copies of EveryDayCook: A Cookbook"),
+            description = content.text("A cookbook with simple recipes, organized by time of day and meal rather than type of food."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_dont_feel_like_cooking",
+            name = content.plural_text("What to Cook When You Don't Feel Like Cooking", "copies of What to Cook When You Don't Feel Like Cooking"),
+            description = content.text("Based on a popular blog, this book focuses on using minimal ingredients to make simple recipes."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_college_cookbook_beginners",
+            name = content.plural_text("College Cookbook for Beginners", "copies of College Cookbook for Beginners"),
+            description = content.text("A cookbook for students finally unleashed into their own kitchens."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_super_easy_cookbook_beginners",
+            name = content.plural_text("Super Easy Cookbook for Beginners: 5-Ingredient Recipes and Essential Techniques to Get You Started in the Kitchen", "copies of Super Easy Cookbook for Beginners: 5-Ingredient Recipes and Essential Techniques to Get You Started in the Kitchen"),
+            description = content.text("A cookbook for beginners focused on recipes that only require five ingredients."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_five_ingredients_bro",
+            name = content.plural_text("5 Ingredients, Bro! A No-Stress Cookbook for Teens", "copies of 5 Ingredients, Bro! A No-Stress Cookbook for Teens"),
+            description = content.text("A cookbook for beginners focused on recipes that only require five ingredients, designed for teenagers."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_the_beginners_cookbook_easy_delicious",
+            name = content.plural_text("The Beginner's Cookbook: Simple - Easy - Delicious", "copies of The Beginner's Cookbook: Simple - Easy - Delicious"),
+            description = content.text("A cookbook with a variety of simple recipes like pizza, roast chicken, and risotto."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_five_ingredient_college",
+            name = content.plural_text("The 5-Ingredient College Cookbook: Recipes to Survive the Next Four Years", "copies of The 5-Ingredient College Cookbook: Recipes to Survive the Next Four Years"),
+            description = content.text("Another of the 'five-ingredient' genre of cookbooks, this one focused on college students."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_the_beginners_cookbook_easy_delicious",
+            name = content.plural_text("Quick and Delicious: 100 Recipes to Cook in 30 Minutes or Less", "copies of Quick and Delicious: 100 Recipes to Cook in 30 Minutes or Less"),
+            description = content.text("Gordon Ramsey's cookbook of simple recipes you can make with things you (hopefully) already have in your kitchen."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_useless_complete_for_beginners",
+            name = content.plural_text("The Complete Cookbook for Beginners : Essential Skills and Step-by-Step Techniques", "copies of The Complete Cookbook for Beginners : Essential Skills and Step-by-Step Techniques"),
+            description = content.text("A cookbook with 101 simple recipes, including tips for setting up a kitchen."),
+            weight = 1,
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "brewing_cookbook",
+        category = "manuals",
+        name = content.plural_text("The Homebrewer's Bible", "copies of The Homebrewer's Bible"),
+        description = content.text("A book full of easy-to-follow recipes and useful advice on homebrewing, malting, and fermenting.  It even smells faintly of booze."),
+        mass_milligrams = 1587000,
+        volume_ml = 1500,
+        price_cents = 4950,
+        price_postapoc_cents = 1500,
+        looks_like = "cookbook",
+        symbol = "?",
+        color = "blue",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 4)
+    book:book {
+        required_level = 2,
+        maximum_level = 4,
+        intelligence = 8,
+        read_time_turns = 900,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+        skill = "cooking",
+        proficiencies = {
+            { id = "prof_fermenting", time_factor = 0.1, fail_factor = 0.25 },
+            { id = "prof_brewing", time_factor = 0.25, fail_factor = 0.5 },
+            { id = "prof_winemaking", time_factor = 0.1, fail_factor = 0.25 },
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "mag_cooking",
+        category = "manuals",
+        name = content.plural_text("Bon Appetit", "issues of Bon Appetit"),
+        description = content.text("Exciting recipes and restaurant reviews.  Full of handy tips about cooking."),
+        mass_milligrams = 60000,
+        volume_ml = 250,
+        price_cents = 450,
+        price_postapoc_cents = 500,
+        symbol = "?",
+        color = "pink",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 1,
+        intelligence = 5,
+        read_time_turns = 480,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_liverforkids",
+        category = "manuals",
+        name = content.plural_text("Liver-Licious Recipes Your Kids Will Love", "copies of Liver-Licious Recipes"),
+        description = content.text("This cookbook is written by liver enthusiast Tamsyn Beckerleg.  Inside you'll find a great deal of anecdotes about the near-certain ruination of children who refuse to eat their liver."),
+        mass_milligrams = 600000,
+        volume_ml = 800,
+        price_cents = 1999,
+        price_postapoc_cents = 500,
+        copy_from = "book_nonf_hard_cook_tpl",
+    }
+    book:book {
+        required_level = 1,
+        maximum_level = 2,
+        intelligence = 5,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 12,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_bloodforgood",
+        category = "manuals",
+        name = content.plural_text("Blood for the Greater Good", "copies of Blood for the Greater Good"),
+        description = content.text("A recipe book compiled by blood-as-food advocate Alžbeta Bátoriová.  The consumption of blood is a taboo among members of many Abrahamic religions, but they aren't going to stop you now.  This book has bonus material for those with particular tastes."),
+        mass_milligrams = 600000,
+        volume_ml = 800,
+        price_cents = 1999,
+        price_postapoc_cents = 500,
+        copy_from = "book_nonf_hard_cook_tpl",
+    }
+    book:book {
+        required_level = 1,
+        maximum_level = 2,
+        intelligence = 5,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 18,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_daintydishes",
+        name = content.plural_text("Dainty Dishes Fit for a King", "copies of Dainty Dishes"),
+        description = content.text("This cookbook contains many fanciful recipes.  Some of them are even worth the trouble to actually prepare.  Lovely pen and ink illustrations of overweight knights and gluttonous monks line the pages."),
+        volume_ml = 900,
+        price_cents = 3000,
+        price_postapoc_cents = 750,
+        copy_from = "cookbook_liverforkids",
+        looks_like = "cookbook_liverforkids",
+    }
+    book:book {
+        required_level = 1,
+        maximum_level = 3,
+        intelligence = 5,
+        read_time_turns = 720,
+        fun = 1,
+        chapters = 12,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_eatyrway",
+        category = "manuals",
+        name = content.plural_text("Eat Your Way to a Fit Physique", "copies of Eat Your Way"),
+        description = content.text("This self-help book, by \"acclaimed nutrition and health guru Amar de Freitas,\" is as dubious as its title.  Worse, it is boring.  It does, however, contain a few basic cooking instructions."),
+        volume_ml = 1100,
+        price_cents = 2500,
+        price_postapoc_cents = 750,
+        copy_from = "book_nonf_soft_cook_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 1,
+        intelligence = 4,
+        read_time_turns = 840,
+        fun = -1,
+        chapters = 14,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_foodfashions",
+        name = content.plural_text("Food Fashions for Young Moderns", "copies of Food Fashions"),
+        description = content.text("A cookbook professing itself to be for those seeking \"daring and sophisticated flavors.\"  The book exhorts the reader to defy convention and break the rules, and then presents a number of useful rules and conventions for preparing food."),
+        price_cents = 3999,
+        price_postapoc_cents = 750,
+        copy_from = "cookbook_liverforkids",
+        looks_like = "cookbook_liverforkids",
+    }
+    book:book {
+        required_level = 2,
+        maximum_level = 4,
+        intelligence = 7,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 12,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    -- Statistics derived from a real book.
+    local book = content.Item {
+        id = "cookbook_indian",
+        category = "manuals",
+        name = content.plural_text("Tasting India", "copies of Tasting India"),
+        description = content.text("A thick hardcover book as much about Indian culture as it is a cookbook, clearly written with adoration."),
+        mass_milligrams = 2950000,
+        volume_ml = 3215,
+        price_cents = 6000,
+        price_postapoc_cents = 750,
+        color = "yellow",
+        looks_like = "cookbook",
+        copy_from = "book_nonf_hard_cook_tpl",
+    }
+    book:clear_melee_damage()
+    book:melee_damage("bash", 7)
+    book:book {
+        required_level = 1,
+        maximum_level = 3,
+        intelligence = 7,
+        read_time_turns = 1200,
+        fun = 1,
+        chapters = 18,
+        scannable = true,
+        skill = "cooking",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "cookbook_curry",
+        category = "manuals",
+        name = content.plural_text("Curry cookbook", "copies of Curry cookbook"),
+        description = content.text("A book for making curry, the greatest of all meals."),
+        symbol = "?",
+        color = "green",
+        copy_from = "book_nonf_soft_tpl",
+        variant_kind = "generic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 3,
+        intelligence = 4,
+        read_time_turns = 600,
+        fun = 0,
+        chapters = 18,
+        scannable = true,
+        skill = "cooking",
+    }
+    book:variants {
+        {
+            id = "cookbook_curry_fifty_great",
+            name = content.plural_text("50 Great Curries of India", "copies of 50 Great Curries of India"),
+            description = content.text("This best-selling cookbook contains 50 curry recipes, ranging from classics like Goa lamb vindaloo or rogan josh to less well-known ones like mango and yogurt curry."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_easy_indian_curries",
+            name = content.plural_text("Easy Indian Curry Recipes for Beginners", "copies of Easy Indian Curry Recipes for Beginners"),
+            description = content.text("A curry cookbook designed for first-time curry makers, including ingredient substitutions and a guide to commonly-used spices."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_home_kitchens",
+            name = content.plural_text("Curry: Recipes From Indian Home Kitchens", "copies of Curry: Recipes From Indian Home Kitchens"),
+            description = content.text("A curry cookbook with a variety of curries from across India."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_easy_simple_guide",
+            name = content.plural_text("Easy Curry Cookbook: Cook Delicious Curries with this Simple Guide", "copies of Easy Curry Cookbook: Cook Delicious Curries with this Simple Guide"),
+            description = content.text("A simple cookbook designed for curry beginners."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_easy_indian_curries",
+            name = content.plural_text("The Greatest Indian Curries Ever Created!: A Cookbook of 50 Delicious Curry Recipes Direct from India", "copies of The Greatest Indian Curries Ever Created!: A Cookbook of 50 Delicious Curry Recipes Direct from India"),
+            description = content.text("This cookbook contains a variety of recipes to suit any taste."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_just_chicken_curries",
+            name = content.plural_text("No Worries, Just Chicken Curries: Over 70 incredible Indian chicken recipes", "copies of No Worries, Just Chicken Curries: Over 70 incredible Indian chicken recipes"),
+            description = content.text("Not just chicken curry, this contains recipes for sauces and vegetable sides as well."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_indian_restaurant_at_home",
+            name = content.plural_text("Indian Restaurant Curries at Home, Volume 1", "copies of Indian Restaurant Curries at Home, Volume 1"),
+            description = content.text("A cookbook filled with recipes that replicate curries served in famous British restaurants."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_ultimate_curry_cookbook",
+            name = content.plural_text("The Ultimate Curry Cookbook: Mouth-Watering and Soul Satisfying Curries", "copies of The Ultimate Curry Cookbook: Mouth-Watering and Soul Satisfying Curries"),
+            description = content.text("This cookbook has 50 curry recipes from around the world, created using simple ingredients."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_thai",
+            name = content.plural_text("Thai Curry Cookbook - Exploring Thailand’s Rich and Spicy Curry Traditions", "copies of Thai Curry Cookbook - Exploring Thailand’s Rich and Spicy Curry Traditions"),
+            description = content.text("A cookbook with a variety of Thai curries, from regional specialties to street food."),
+            weight = 1,
+        },
+        {
+            id = "cookbook_curry_thai_simple",
+            name = content.plural_text("The Good Old Thai Curry Cookbook: Classic Thai Recipes Featuring Red, Green, and Yellow Curries", "copies of The Good Old Thai Curry Cookbook: Classic Thai Recipes Featuring Red, Green, and Yellow Curries"),
+            description = content.text("A cookbook focused on breaking down red, green, and yellow curries with step-by-step instructions.  You're not sure the cutesy names for all the curries are authentic, though."),
+            weight = 1,
+        },
+    }
+    content.add(book)
+end

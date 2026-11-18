@@ -79,3 +79,47 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "novel_pulp",
+        name = content.plural_text("pulp novel", "pulp novels"),
+        description = content.text("A hardboiled detective tale filled with hard hitting action and intrigue."),
+        copy_from = "book_fict_soft_pulp_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 1080,
+        fun = 2,
+        chapters = 14,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    -- isbn13: 9781612420530
+    -- this is also scifi
+    -- Broad is a dismissive and outdated term that simply means "woman."  The term is used because it evokes the (decidedly misogynistic) era in which the pulp genre gained popularity within the United States.
+    local book = content.Item {
+        id = "book_fict_soft_pulp_ddive",
+        name = content.plural_text("The Deep Dive", "copies of The Deep Dive"),
+        description = content.text("This dimestore short story about space travel is written by a broad named \"Lee Racket.\""),
+        mass_milligrams = 154000,
+        volume_ml = 206,
+        longest_side_mm = 190,
+        copy_from = "book_fict_soft_pulp_tpl",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 900,
+        fun = 2,
+        chapters = 12,
+        scannable = true,
+    }
+    content.add(book)
+end

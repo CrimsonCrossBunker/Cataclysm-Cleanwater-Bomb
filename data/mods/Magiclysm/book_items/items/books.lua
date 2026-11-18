@@ -125,3 +125,34 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "spellcraft_theory",
+        category = "manuals",
+        name = content.plural_text("Spellcraft Theory", "copies of Spellcraft Theory"),
+        description = content.text("A intermediate textbook on magical theories."),
+        mass_milligrams = 1587000,
+        volume_ml = 1750,
+        longest_side_mm = 220,
+        price_cents = 8200,
+        price_postapoc_cents = 750,
+        symbol = "?",
+        color = "blue",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 5)
+    book:book {
+        required_level = 2,
+        maximum_level = 4,
+        intelligence = 12,
+        read_time_turns = 3600,
+        fun = -1,
+        chapters = 0,
+        scannable = true,
+        skill = "spellcraft",
+    }
+    content.add(book)
+end

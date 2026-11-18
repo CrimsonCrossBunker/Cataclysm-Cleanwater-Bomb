@@ -1065,3 +1065,60 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "recipe_lab_cvd",
+        category = "manuals",
+        name = content.plural_text("lab journal-Gustav", "lab journals-Gustav"),
+        description = content.text("This paper notebook is mostly full of boring logs, experimental observations and notes.  Mixed in, however, are musings on how to use the lab's vapor deposition machine to deposit amorphous carbon in a diamond-like form onto common metals.  The author's intended goal was a better non-stick frying pan, but you can think of a couple of better uses for it."),
+        mass_milligrams = 600000,
+        volume_ml = 500,
+        price_cents = 50000,
+        price_postapoc_cents = 2000,
+        symbol = "?",
+        looks_like = "recipe_lab_elec",
+        color = "light_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 9,
+        maximum_level = 10,
+        intelligence = 13,
+        read_time_turns = 2700,
+        fun = -1,
+        chapters = 0,
+        scannable = true,
+        skill = "fabrication",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "recipe_migo_plate",
+        category = "manuals",
+        name = content.plural_text("WX010 Living Armor Observations", "copies of WX010 Living Armor Observations"),
+        description = content.text("This sheaf of papers seems to describe maintenance on a new form of ballistic armor.  \"the regenerative plates though promising for field use do require maintenance or combat to stop from becoming overgrown\"."),
+        mass_milligrams = 50000,
+        volume_ml = 500,
+        price_cents = 125000,
+        price_postapoc_cents = 10,
+        symbol = "?",
+        color = "blue",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 1,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 900,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        skill = "fabrication",
+    }
+    content.add(book)
+end

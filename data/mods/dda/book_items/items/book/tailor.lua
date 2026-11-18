@@ -277,3 +277,108 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "mag_tailor",
+        category = "manuals",
+        name = content.plural_text("Sew Awesome Monthly", "Sew Awesome Monthlies"),
+        description = content.text("A well presented monthly magazine all about knitting, crocheting, and needlepoint.  Filled with ideas and project patterns."),
+        mass_milligrams = 75000,
+        volume_ml = 250,
+        price_cents = 400,
+        price_postapoc_cents = 500,
+        symbol = "?",
+        looks_like = "mag_glam",
+        color = "pink",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 1,
+        intelligence = 5,
+        read_time_turns = 480,
+        fun = 2,
+        chapters = 0,
+        scannable = true,
+        skill = "tailor",
+        proficiencies = {
+            { id = "prof_knitting", time_factor = 0.15, fail_factor = 0.1 },
+            { id = "prof_closures", time_factor = 0.2, fail_factor = 0.1 },
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "bp_nomad_cowl",
+        name = content.plural_text("nomad cowl blueprint", "nomad cowl blueprints"),
+        description = content.text("A simple printed pamphlet with clear illustrations and very few words describing how to make what appears to be a well-designed and comfortable cowl offering protection from the elements and physical injury.  The directions do not offer much guidance beyond the plans themselves; this will take a little skill to interpret."),
+        color = "dark_gray",
+        copy_from = "exodii_blueprint",
+    }
+    book:book {
+        required_level = 4,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1800,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        proficiencies = {
+            { id = "prof_closures_waterproofing", fail_factor = 0.05 },
+            { id = "prof_leatherworking", fail_factor = 0.05 },
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "bp_nomad_bodyglove",
+        name = content.plural_text("nomad bodyglove blueprint", "nomad bodyglove blueprints"),
+        description = content.text("A simple printed pamphlet with clear illustrations and very few words describing how to make what appears to be a tight-fitting but protective bodysuit, with options to reinforce it with Kevlar threads.  The directions do not offer much guidance beyond the plans themselves; this will take a little skill to interpret."),
+        color = "blue",
+        copy_from = "exodii_blueprint",
+    }
+    book:book {
+        required_level = 4,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1800,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        proficiencies = {
+            { id = "prof_closures_waterproofing", fail_factor = 0.05 },
+            { id = "prof_leatherworking", fail_factor = 0.05 },
+        },
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "bp_nomad_jumpsuit",
+        name = content.plural_text("nomad jumpsuit blueprint", "nomad jumpsuit blueprints"),
+        description = content.text("A simple printed pamphlet with clear illustrations and very few words describing how to make what appears to be a jumpsuit designed to survive the long-term wear and tear of exploring the apocalyptic wasteland, with a lot of storage capacity.  The directions do not offer much guidance beyond the plans themselves; this will take a little skill to interpret.  There seems to be room within the directions to make a simpler, lighter version, or a leather-reinforced version."),
+        color = "green",
+        copy_from = "exodii_blueprint",
+    }
+    book:book {
+        required_level = 4,
+        maximum_level = 0,
+        intelligence = 8,
+        read_time_turns = 1800,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        proficiencies = {
+            { id = "prof_closures_waterproofing", fail_factor = 0.05 },
+            { id = "prof_leatherworking", fail_factor = 0.05 },
+        },
+    }
+    content.add(book)
+end

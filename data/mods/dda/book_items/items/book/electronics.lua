@@ -406,3 +406,118 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "recipe_atomic_battery",
+        category = "manuals",
+        name = content.plural_text("computer printout", "computer printouts"),
+        description = content.text("One side of this sheet is printed with a meaningless jumble of characters, but the other side shows a complicated, hand-drawn circuit diagram."),
+        mass_milligrams = 10000,
+        volume_ml = 12,
+        price_cents = 40000,
+        price_postapoc_cents = 1250,
+        symbol = "?",
+        color = "light_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 6,
+        maximum_level = 0,
+        intelligence = 12,
+        read_time_turns = 3600,
+        fun = -3,
+        chapters = 0,
+        scannable = true,
+        skill = "electronics",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "recipe_augs",
+        category = "manuals",
+        name = content.plural_text("The Role of Robotics in Modern Day Manufacturing", "copies of The Role of Robotics in Modern Day Manufacturing"),
+        description = content.text("A hefty book containing a whole bunch of technical info on industrial robotics.  While constructing these robots are no doubt outside any realm of feasibility, the information provided still has a fair bit to teach about complex electronics."),
+        mass_milligrams = 1500000,
+        volume_ml = 1250,
+        price_cents = 3000,
+        price_postapoc_cents = 750,
+        symbol = "?",
+        color = "pink",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 4,
+        maximum_level = 5,
+        intelligence = 10,
+        read_time_turns = 2700,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+        skill = "electronics",
+    }
+    content.upsert_item(book)
+end
+
+do
+    local book = content.Item {
+        id = "recipe_lab_elec",
+        category = "manuals",
+        name = content.plural_text("lab journal-Herrera", "lab journals-Herrera"),
+        description = content.text("This hefty binder contains a multitude of diagrams and technical specifications for various electronic materials.  Some of the diagrams use symbols you've not seen before…"),
+        mass_milligrams = 2000000,
+        volume_ml = 2400,
+        price_cents = 56000,
+        price_postapoc_cents = 2000,
+        symbol = "?",
+        color = "light_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("plastic", 1)
+    book:book {
+        required_level = 5,
+        maximum_level = 8,
+        intelligence = 13,
+        read_time_turns = 2700,
+        fun = -2,
+        chapters = 0,
+        scannable = true,
+        skill = "electronics",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "repeater_mod_guide",
+        category = "manuals",
+        name = content.plural_text("plans for a radio repeater mod", "plans for a radio repeater mod"),
+        description = content.text("Instructions on how to create a mod for a radio station terminal which converts the entire system into a repeater."),
+        mass_milligrams = 5000,
+        volume_ml = 250,
+        price_cents = 5000,
+        price_postapoc_cents = 1000,
+        symbol = "?",
+        color = "blue",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 1)
+    book:book {
+        required_level = 2,
+        maximum_level = 0,
+        intelligence = 10,
+        read_time_turns = 1200,
+        fun = -1,
+        chapters = 0,
+        scannable = true,
+        skill = "electronics",
+    }
+    content.add(book)
+end

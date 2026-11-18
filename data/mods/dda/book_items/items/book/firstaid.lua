@@ -274,3 +274,37 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "manual_first_aid",
+        category = "manuals",
+        name = content.plural_text("The Big Book of First Aid", "copies of The Big Book of First Aid"),
+        description = content.text("It's big and heavy, but full of great information about first aid."),
+        mass_milligrams = 454000,
+        volume_ml = 1250,
+        price_cents = 2500,
+        price_postapoc_cents = 1250,
+        symbol = "?",
+        color = "green",
+        variant_kind = "generic",
+        ascii_picture = "manual_first_aid",
+    }
+    book:material("paper", 1)
+    book:material("cardboard", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 3,
+        intelligence = 8,
+        read_time_turns = 1200,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        skill = "firstaid",
+        proficiencies = {
+            { id = "prof_wound_care", time_factor = 0.75, fail_factor = 0.5 },
+            { id = "prof_wound_care_expert", time_factor = 0.75, fail_factor = 0.5 },
+        },
+    }
+    content.add(book)
+end

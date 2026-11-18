@@ -85,16 +85,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_farm_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Goody Osborne's Booke of Remedies", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_make_plants_grow", "hedge_ward_off_rain", "hedge_cure_cold_or_flu" ] }
-  },
-  {
     "id": "spellbook_hedge_ward_demons",
     "type": "ITEM",
     "name": { "str": "Malleus Maleficarum", "str_pl": "copies of Malleus Maleficarum" },
@@ -180,16 +170,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_ward_demons_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Malleus Maleficarum", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_evil_eye_ward", "hedge_see_nether_eye_paste", "hedge_bless_steel_weapon" ] }
-  },
-  {
     "id": "spellbook_hedge_doctor_book",
     "type": "ITEM",
     "name": { "str": "The Cunning Book of Home and Hearth", "str_pl": "copies of The Cunning Book of Home and Hearth" },
@@ -273,16 +253,6 @@
         }
       ]
     }
-  },
-  {
-    "id": "spellbook_hedge_doctor_book_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell The Cunning Book of Home and Hearth", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_increase_healing_rate", "hedge_cure_cold_or_flu", "hedge_light_fire" ] }
   },
   {
     "id": "spellbook_hedge_blood_book",
@@ -373,16 +343,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_blood_book_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Book of Bloodstoppers and Bearwalkers", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_increase_bandaging_rate", "hedge_turn_into_bear" ] }
-  },
-  {
     "id": "spellbook_hedge_ward_dreams",
     "type": "ITEM",
     "name": {
@@ -471,16 +431,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_ward_dreams_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Book of Ward your Dreams for a Good Night's Sleep", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_no_nightmares" ] }
-  },
-  {
     "id": "spellbook_hedge_snare_changelings",
     "type": "ITEM",
     "name": { "str": "Monas Hieroglyphica", "str_pl": "copies of Monas Hieroglyphica" },
@@ -564,16 +514,6 @@
         }
       ]
     }
-  },
-  {
-    "id": "spellbook_hedge_snare_changelings_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Book of Hedge Snare Changelings", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_changeling_snare" ] }
   },
   {
     "id": "spellbook_hedge_bathhouse_midnight",
@@ -664,19 +604,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_bathhouse_midnight_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Book of The Bathhouse at Midnight", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": {
-      "type": "learn_spell",
-      "spells": [ "hedge_clairvoyance_cone", "hedge_walk_on_water", "hedge_evil_eye_ward", "hedge_cure_cold_or_flu" ]
-    }
-  },
-  {
     "id": "spellbook_hedge_abramelin_the_mage",
     "type": "ITEM",
     "name": {
@@ -760,26 +687,6 @@
             { "u_remove_item_with": "spellbook_hedge_abramelin_the_mage_spell_stub" }
           ]
         }
-      ]
-    }
-  },
-  {
-    "id": "spellbook_hedge_abramelin_the_mage_spell_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Spell Book of the Sacred Magic of Abramelin the Mage", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": {
-      "type": "learn_spell",
-      "spells": [
-        "hedge_walk_on_water_magic_square",
-        "hedge_breathe_water_magic_square",
-        "hedge_bash_terrain_magic_square",
-        "hedge_food_or_drink_magic_square",
-        "hedge_armed_men_magic_square",
-        "hedge_invisibility_magic_square"
       ]
     }
   },
@@ -872,19 +779,6 @@
     }
   },
   {
-    "id": "spellbook_hedge_psychic_defense_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": {
-      "str_sp": "The Real Actual Psychic Self-Defense: The Classic Instruction Manual for Protecting Yourself Against Paranormal Attack",
-      "//~": "NO_I18N"
-    },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_astral_projection", "hedge_protect_the_mind" ] }
-  },
-  {
     "id": "spellbook_hedge_book_of_raziel",
     "type": "ITEM",
     "name": { "str": "Sefer Raziel HaMalakh", "str_pl": "copies of Sefer Raziel HaMalakh" },
@@ -966,25 +860,6 @@
             { "u_remove_item_with": "spellbook_hedge_book_of_raziel_spell_stub" }
           ]
         }
-      ]
-    }
-  },
-  {
-    "id": "spellbook_hedge_book_of_raziel_spell_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "name": { "str_sp": "The Real Actual Sefer Raziel HaMalakh", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": {
-      "type": "learn_spell",
-      "spells": [
-        "hedge_luck_spell",
-        "hedge_extinguish_fire_spell",
-        "hedge_raziel_amulet_protection",
-        "hedge_prevent_wild_animal_attacks",
-        "hedge_chicken_sacrifice_make_rain"
       ]
     }
   },
@@ -1072,17 +947,5 @@
         }
       ]
     }
-  },
-  {
-    "id": "spellbook_hedge_avodah_zarah_spell_stub",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "category": "manuals",
-    "copy-from": "magic_square_base",
-    "weight": "0 g",
-    "extend": { "flags": [ "ZERO_WEIGHT" ] },
-    "name": { "str_sp": "The Real Actual Excerpts of Avodah Zarah", "//~": "NO_I18N" },
-    "description": { "str": "The temporary item that teaches you spells.", "//~": "NO_I18N" },
-    "use_action": { "type": "learn_spell", "spells": [ "hedge_scare_shabriri" ] }
   }
 ]

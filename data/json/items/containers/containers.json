@@ -153,18 +153,6 @@
     "color": "white"
   },
   {
-    "id": "bag_durasack_cement",
-    "type": "ITEM",
-    "subtypes": [ "BOOK" ],
-    "name": { "str": "durable plastic sack, cement" },
-    "looks_like": "bag_plastic",
-    "description": "A large and sturdy sack, made out of woven polypropylene.  Stores cement and has instructions on how to use it to make mortar.",
-    "//": "book data is used so item can work as book and provide recipes",
-    "copy-from": "bag_durasack",
-    "max_level": 0,
-    "read_skill": "fabrication"
-  },
-  {
     "id": "bag_canvas",
     "type": "ITEM",
     "category": "container",

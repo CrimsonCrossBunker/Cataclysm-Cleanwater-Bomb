@@ -109,3 +109,63 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "mag_deduction",
+        category = "manuals",
+        name = content.plural_text("Esoteric Investigations Weekly", "issues of Esoteric Investigations Weekly"),
+        description = content.text("A magazine for occult investigators.  These types of magazines proliferated in the decade prior to the Cataclysm."),
+        mass_milligrams = 60000,
+        volume_ml = 250,
+        price_cents = 480,
+        price_postapoc_cents = 250,
+        symbol = "?",
+        looks_like = "mag_glam",
+        color = "brown_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 1,
+        intelligence = 8,
+        read_time_turns = 480,
+        fun = 1,
+        chapters = 0,
+        scannable = true,
+        skill = "deduction",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "book_deduction_black_iron_prison",
+        category = "manuals",
+        name = content.plural_text("Escaping the Black Iron Prison", "copies of Escaping the Black Iron Prison"),
+        description = content.text("A hardbound book detailing numerous rituals and thought modifications in order to teach its readers how to break the shackles of mundanity."),
+        mass_milligrams = 1360000,
+        volume_ml = 2000,
+        price_cents = 8500,
+        price_postapoc_cents = 1250,
+        symbol = "?",
+        color = "black_white",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:material("cardboard", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 4)
+    book:book {
+        required_level = 3,
+        maximum_level = 4,
+        intelligence = 10,
+        read_time_turns = 1800,
+        fun = 0,
+        chapters = 0,
+        scannable = true,
+        skill = "deduction",
+    }
+    content.add(book)
+end

@@ -365,3 +365,105 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "afs_welcome1_book",
+        name = content.plural_text("Unofficial History of Salus IV Vol. 1", "copies of Unofficial History of Salus IV Vol. 1"),
+        description = content.text("Welcome to Frozen Hell, an unofficial history of Salus IV by Bette Lapin.  Salus IV was founded in the early days of the Hyperspace Era as a joint venture between Mercurial Genomics and a Soviet Design Bureau.  At its height several hundred years ago Salus IV had just over 110 million citizens (including both uplifts and humans). However, that population had begun to decline even before the Discontinuity as people migrated to planets that, while more hostile to life during the earliest colonization phases than Salus IV, were much simpler to terraform into a place more enjoyable by human and uplift citizens."),
+        mass_milligrams = 700000,
+        volume_ml = 750,
+        price_cents = 5000,
+        price_postapoc_cents = 1000,
+        looks_like = "ZSG",
+        symbol = "?",
+        color = "light_blue",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 4,
+        read_time_turns = 1200,
+        fun = 2,
+        chapters = 3,
+        scannable = true,
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "textbook_atomic",
+        category = "manuals",
+        name = content.plural_text("Nuclear Physics Made Easy", "copies of Nuclear Physics Made Easy"),
+        description = content.text("A book detailing the workings of state of the art atomic technology, and the physics behind it."),
+        mass_milligrams = 2063000,
+        volume_ml = 2000,
+        price_cents = 9200,
+        symbol = "?",
+        looks_like = "adv_chemistry",
+        color = "light_green",
+        variant_kind = "generic",
+    }
+    book:material("paper", 1)
+    book:clear_melee_damage()
+    book:melee_damage("bash", 8)
+    book:book {
+        required_level = 5,
+        maximum_level = 7,
+        intelligence = 13,
+        read_time_turns = 3000,
+        fun = -1,
+        chapters = 0,
+        scannable = true,
+        skill = "electronics",
+    }
+    content.add(book)
+end
+
+do
+    local book = content.Item {
+        id = "schematics_chickenbot",
+        name = content.plural_text("Pathfinder schematics", "Pathfinder schematics"),
+        description = content.text("Bearing the logo of Wraitheon, those are assembly plans, design specs, and technical drawings for the Pathfinder.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts."),
+        copy_from = "schematics_generic",
+    }
+    content.upsert_item(book)
+end
+
+do
+    local book = content.Item {
+        id = "schematics_tankbot",
+        name = content.plural_text("Regulator schematics", "Regulator schematics"),
+        description = content.text("Bearing the logo of Wraitheon, those are assembly plans, design specs, and technical drawings for the Regulator.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts."),
+        copy_from = "schematics_generic",
+    }
+    content.upsert_item(book)
+end
+
+do
+    local book = content.Item {
+        id = "schematics_tripod",
+        name = content.plural_text("tripod schematics", "tripod schematics"),
+        description = content.text("Bearing the logo of Honda, those are assembly plans, design specs, and technical drawings for the tripod.  Most of this is useless to you, but you could use the assembly plans to re-assemble the robot from salvaged parts."),
+        copy_from = "schematics_generic",
+    }
+    content.upsert_item(book)
+end
+
+do
+    local book = content.Item {
+        id = "recipe_augs",
+        name = content.plural_text("Augmentative Tech Review", "issues of Augmentative Tech Review"),
+        description = content.text("This annual publication covers the various ways in which people use technology to improve their bodies.  There are a few in-depth and thoroughly illustrated articles on prosthetics, though they tend to use too much jargon."),
+        mass_milligrams = 400000,
+        volume_ml = 500,
+        symbol = "?",
+        color = "pink",
+        copy_from = "recipe_augs",
+        looks_like = "recipe_augs",
+    }
+    content.replace(book)
+end

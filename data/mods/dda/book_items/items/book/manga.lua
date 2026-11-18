@@ -131,3 +131,29 @@ do
     }
     content.add(book)
 end
+
+do
+    local book = content.Item {
+        id = "book_fic_manga",
+        name = content.plural_text("manga volume", "manga volumes"),
+        description = content.text("A small book of comics from Japan, with adventurers in another world, schoolkids enjoying the last days of summer, giant robots, or men yelling as they power up their attacks."),
+        mass_milligrams = 200000,
+        volume_ml = 350,
+        longest_side_mm = 180,
+        price_cents = 795,
+        symbol = "?",
+        looks_like = "story_book",
+        color = "green",
+        variant_kind = "generic",
+    }
+    book:book {
+        required_level = 0,
+        maximum_level = 0,
+        intelligence = 6,
+        read_time_turns = 1200,
+        fun = 3,
+        chapters = 5,
+        scannable = true,
+    }
+    content.add(book)
+end
