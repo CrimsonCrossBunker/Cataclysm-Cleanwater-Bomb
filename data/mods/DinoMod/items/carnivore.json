@@ -20,51 +20,6 @@
   },
   {
     "type": "ITEM",
-    "id": "skull_dino_small",
-    "name": { "str": "smaller dinosaur skull" },
-    "description": "The skull of a smaller plant eating dinosaur.",
-    "category": "spare_parts",
-    "looks_like": "skull_human",
-    "weight": "1 kg",
-    "volume": "1400 ml",
-    "symbol": "@",
-    "color": "white",
-    "price": "10 cent",
-    "price_postapoc": "10 cent",
-    "material": [ "bone" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_dino_med",
-    "name": { "str": "dinosaur skull" },
-    "description": "The skull of a plant eating dinosaur.",
-    "category": "spare_parts",
-    "looks_like": "skull_human",
-    "weight": "2 kg",
-    "volume": "2800 ml",
-    "symbol": "@",
-    "color": "white",
-    "price": "20 cent",
-    "price_postapoc": "20 cent",
-    "material": [ "bone" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_dino_large",
-    "name": { "str": "larger dinosaur skull" },
-    "description": "The skull of a larger plant eating dinosaur.",
-    "category": "spare_parts",
-    "looks_like": "skull_human",
-    "weight": "4 kg",
-    "volume": "5600 ml",
-    "symbol": "@",
-    "color": "white",
-    "price": "40 cent",
-    "price_postapoc": "40 cent",
-    "material": [ "bone" ]
-  },
-  {
-    "type": "ITEM",
     "id": "skull_dino_pred_small",
     "name": { "str": "smaller dinosaur predator skull" },
     "description": "A smaller dinosaur skull with sharp teeth.",
@@ -134,45 +89,5 @@
     "id": "skull_giganotosaurus",
     "name": { "str": "giganotosaurus skull" },
     "copy-from": "skull_dino_pred_large"
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_lokiceratops",
-    "name": { "str": "lokiceratops skull" },
-    "description": "Large dinosaur skull with two large horns above the eyes and a large crest with two large horns pointing out and down.",
-    "copy-from": "skull_dino_large",
-    "qualities": [ [ "COOK", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_triceratops",
-    "name": { "str": "triceratops skull" },
-    "description": "Large dinosaur skull with three large horns and a large crest.",
-    "copy-from": "skull_dino_large",
-    "qualities": [ [ "COOK", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_torosaurus",
-    "name": { "str": "torosaurus skull" },
-    "description": "Large dinosaur skull with three large horns and a large crest.",
-    "copy-from": "skull_dino_large",
-    "qualities": [ [ "COOK", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_styracosaurus",
-    "name": { "str": "styracosaurus skull" },
-    "description": "Large dinosaur skull with a large horn above the nose and a spiked crest.",
-    "copy-from": "skull_dino_large",
-    "qualities": [ [ "COOK", 1 ] ]
-  },
-  {
-    "type": "ITEM",
-    "id": "skull_centrosaurus",
-    "name": { "str": "centrosaurus skull" },
-    "description": "Large dinosaur skull with a large horn above the nose and a bony crest.",
-    "copy-from": "skull_dino_large",
-    "qualities": [ [ "COOK", 1 ] ]
   }
 ]
