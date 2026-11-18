@@ -724,18 +724,34 @@ void install_mapgen_service_api(
     },
     "spawn_group", &add_patch_monster_group,
     "spawn_npc", []( mapgen_patch &patch, const std::string &id,
-    const sol::object &x, const sol::object &y,
-    const sol::optional<sol::object> &repetitions, const sol::optional<bool> &mission_target ) {
+    const sol::object &x, const sol::object &y, const sol::optional<sol::table> &options ) {
         const npc_template_id npc( id );
         if( !npc.is_valid() ) {
             throw std::invalid_argument( "Mapgen patch requires a valid NPC template" );
         }
         jmapgen_place where = patch_at( x, y );
-        if( repetitions ) {
-            where.repeat = patch_range( *repetitions, 0, std::numeric_limits<std::int16_t>::max(),
-                                         "repetitions" );
+        bool target = false;
+        std::string unique_id;
+        if( options ) {
+            const sol::object repetitions = options->raw_get<sol::object>( "repetitions" );
+            if( repetitions.valid() ) {
+                where.repeat = patch_range( repetitions, 0, std::numeric_limits<std::int16_t>::max(),
+                                             "repetitions" );
+            }
+            target = options->get_or( "mission_target", false );
+            unique_id = options->get_or( "unique_id", std::string() );
         }
-        patch.add_npc( where, npc, mission_target.value_or( false ) );
+        patch.add_npc( where, npc, target, unique_id );
+    },
+    "remove_npc", []( mapgen_patch &patch, const std::string &id, const std::string &unique_id ) {
+        const npc_template_id npc( id );
+        if( !npc.is_valid() || unique_id.empty() ) {
+            throw std::invalid_argument( "Mapgen patch removal requires a valid NPC template and unique id" );
+        }
+        patch.remove_npc( npc, unique_id );
+    },
+    "clear_items", []( mapgen_patch & patch, int x1, int y1, int x2, int y2 ) {
+        patch.clear_items( point( x1, y1 ), point( x2, y2 ) );
     },
     "stamp", []( mapgen_patch &patch, const mapgen_patch &layout,
     const sol::object &x, const sol::object &y ) {

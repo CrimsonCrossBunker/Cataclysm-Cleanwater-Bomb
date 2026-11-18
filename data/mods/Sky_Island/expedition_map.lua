@@ -141,21 +141,21 @@ end
 
 function M.assassin1()
     local patch = mapgen.patch()
-    patch:spawn_npc("bandit", encounter_range, encounter_range, 1, true)
+    patch:spawn_npc("bandit", encounter_range, encounter_range, { mission_target = true })
     return patch
 end
 
 function M.assassin2()
     local patch = mapgen.patch()
-    patch:spawn_npc("thug", encounter_range, encounter_range, 1, true)
+    patch:spawn_npc("thug", encounter_range, encounter_range, { mission_target = true })
     return patch
 end
 
 function M.assassin3()
     local patch = mapgen.patch()
-    patch:spawn_npc("thug", encounter_range, encounter_range, { 1, 2 }, true)
-    patch:spawn_npc("bandit", encounter_range, encounter_range, { 0, 1 }, true)
-    patch:spawn_npc("bandit", encounter_range, encounter_range, 1, true)
+    patch:spawn_npc("thug", encounter_range, encounter_range, { repetitions = { 1, 2 }, mission_target = true })
+    patch:spawn_npc("bandit", encounter_range, encounter_range, { repetitions = { 0, 1 }, mission_target = true })
+    patch:spawn_npc("bandit", encounter_range, encounter_range, { mission_target = true })
     return patch
 end
 

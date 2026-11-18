@@ -605,7 +605,10 @@ class mapgen_patch final : private update_mapgen_function_json
         void add_monster_group( const jmapgen_place &where, const mongroup_id &group,
                                 const jmapgen_int &pack_size, bool one_or_none,
                                 bool mission_target, const std::optional<translation> &name );
-        void add_npc( const jmapgen_place &where, const npc_template_id &id, bool mission_target );
+        void add_npc( const jmapgen_place &where, const npc_template_id &id, bool mission_target,
+                      const std::string &unique_id );
+        void remove_npc( const npc_template_id &id, const std::string &unique_id );
+        void clear_items( const point &first, const point &last );
         void add_stamp( const jmapgen_place &where, const mapgen_patch &layout );
         ret_val<void> run( const tripoint_abs_omt &position, mission *active_mission,
                            bool cancel_on_collision ) const;

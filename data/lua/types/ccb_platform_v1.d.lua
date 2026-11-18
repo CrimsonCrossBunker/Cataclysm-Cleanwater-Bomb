@@ -8364,6 +8364,11 @@ function ScriptMapgenContext:fill_groundcover() end
 ---@field mission_target? boolean Bind spawned creatures to the active mission passed to run_update.
 ---@field name? string|LocalizedText Creature name.
 
+---@class MapgenPatchNpcOptions
+---@field repetitions? MapgenPatchRange Defaults to one.
+---@field mission_target? boolean Bind the last spawned NPC as the mission target.
+---@field unique_id? string Native unique NPC id. Skips placement if the id already exists.
+
 ---@class MapgenPatch
 local MapgenPatch = {}
 
@@ -8389,9 +8394,20 @@ function MapgenPatch:spawn_group(group, x, y, options) end
 ---@param template string Native NPC template ID.
 ---@param x MapgenPatchRange
 ---@param y MapgenPatchRange
----@param repetitions? MapgenPatchRange Defaults to one.
----@param mission_target? boolean Bind the last spawned NPC as the mission target.
-function MapgenPatch:spawn_npc(template, x, y, repetitions, mission_target) end
+---@param options? MapgenPatchNpcOptions
+function MapgenPatch:spawn_npc(template, x, y, options) end
+
+---Remove live NPCs in the updated OMT matching both identities.
+---@param template string Native NPC template ID.
+---@param unique_id string Native unique NPC id.
+function MapgenPatch:remove_npc(template, unique_id) end
+
+---Clear items in an inclusive local rectangle. Uses native mapgen collision checks.
+---@param x1 integer
+---@param y1 integer
+---@param x2 integer
+---@param y2 integer
+function MapgenPatch:clear_items(x1, y1, x2, y2) end
 
 ---Place a snapshot of another patch in the native nested placement phase.
 ---@param layout MapgenPatch

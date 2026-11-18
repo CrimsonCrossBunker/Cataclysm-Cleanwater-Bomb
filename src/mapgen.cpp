@@ -2256,8 +2256,8 @@ class jmapgen_npc : public jmapgen_piece
         bool target;
         std::vector<trait_id> traits;
         std::string unique_id;
-        jmapgen_npc( const npc_template_id &id, bool mission_target )
-            : npc_class( id ), target( mission_target ) {}
+        jmapgen_npc( const npc_template_id &id, bool mission_target, const std::string &unique )
+            : npc_class( id ), target( mission_target ), unique_id( unique ) {}
         jmapgen_npc( const JsonObject &jsi, std::string_view/*context*/ ) :
             npc_class( jsi.get_member( "class" ) )
             , target( jsi.get_bool( "target", false ) ) {
@@ -3770,6 +3770,8 @@ class jmapgen_remove_npcs : public jmapgen_piece
     public:
         std::string npc_class;
         std::string unique_id;
+        jmapgen_remove_npcs( const npc_template_id &id, const std::string &unique )
+            : npc_class( id.str() ), unique_id( unique ) {}
         jmapgen_remove_npcs( const JsonObject &jsi, std::string_view /*context*/ ) {
             optional( jsi, false, "class", npc_class );
             optional( jsi, false, "unique_id", unique_id );
@@ -8068,8 +8070,9 @@ namespace
 class jmapgen_patch_stamp final : public jmapgen_piece
 {
     public:
-        jmapgen_patch_stamp( jmapgen_objects placements, const enum_bitset<jmapgen_flags> &flags )
-            : placements_( std::move( placements ) ), flags_( flags ) {
+        jmapgen_patch_stamp( jmapgen_objects placements, std::vector<jmapgen_setmap> setmap,
+                             const enum_bitset<jmapgen_flags> &flags )
+            : placements_( std::move( placements ) ), setmap_( std::move( setmap ) ), flags_( flags ) {
             placements_.finalize();
         }
 
@@ -8081,16 +8084,23 @@ class jmapgen_patch_stamp final : public jmapgen_piece
                     const jmapgen_int &z, const std::string &context ) const override {
             const tripoint_rel_ms offset( x.get(), y.get(), z.get() );
             const mapgendata nested( dat, {}, flags_ );
-            apply_mapgen_in_phases( nested, {}, placements_, offset, context );
+            apply_mapgen_in_phases( nested, setmap_, placements_, offset, context );
         }
 
         ret_val<void> has_vehicle_collision( const mapgendata &dat,
                                              const tripoint_rel_ms &offset ) const override {
+            for( const jmapgen_setmap &piece : setmap_ ) {
+                const ret_val<void> collision = piece.has_vehicle_collision( dat, offset );
+                if( !collision.success() ) {
+                    return collision;
+                }
+            }
             return placements_.has_vehicle_collision( dat, offset );
         }
 
     private:
         jmapgen_objects placements_;
+        std::vector<jmapgen_setmap> setmap_;
         enum_bitset<jmapgen_flags> flags_;
 };
 } // namespace
@@ -8123,18 +8133,35 @@ void mapgen_patch::add_monster_group( const jmapgen_place &where, const mongroup
 }
 
 void mapgen_patch::add_npc( const jmapgen_place &where, const npc_template_id &id,
-                            bool mission_target )
+                            bool mission_target, const std::string &unique_id )
 {
-    add_piece( where, make_shared_fast<jmapgen_npc>( id, mission_target ) );
+    add_piece( where, make_shared_fast<jmapgen_npc>( id, mission_target, unique_id ) );
+}
+
+void mapgen_patch::remove_npc( const npc_template_id &id, const std::string &unique_id )
+{
+    add_piece( jmapgen_place(), make_shared_fast<jmapgen_remove_npcs>( id, unique_id ) );
+}
+
+void mapgen_patch::clear_items( const point &first, const point &last )
+{
+    if( first.x < 0 || first.y < 0 || last.x < first.x || last.y < first.y ||
+        last.x >= mapgensize.x() || last.y >= mapgensize.y() ) {
+        throw std::invalid_argument( "Mapgen patch item rectangle must fit in one OMT" );
+    }
+    setmap_points.emplace_back( jmapgen_int( first.x ), jmapgen_int( first.y ), jmapgen_int( 0 ),
+                               jmapgen_int( last.x ), jmapgen_int( last.y ), JMAPGEN_SETMAP_SQUARE_ITEM_REMOVE,
+                               jmapgen_int( 0 ) );
+    extent_ = point( std::max( extent_.x, last.x ), std::max( extent_.y, last.y ) );
 }
 
 void mapgen_patch::add_stamp( const jmapgen_place &where, const mapgen_patch &layout )
 {
-    if( layout.objects.empty() ) {
+    if( layout.objects.empty() && layout.setmap_points.empty() ) {
         throw std::invalid_argument( "Mapgen stamp layout must contain a placement" );
     }
-    add_piece( where, make_shared_fast<jmapgen_patch_stamp>( layout.objects, layout.flags_ ),
-               layout.extent_ );
+    add_piece( where, make_shared_fast<jmapgen_patch_stamp>( layout.objects, layout.setmap_points,
+               layout.flags_ ), layout.extent_ );
 }
 
 void mapgen_patch::add_piece( const jmapgen_place &where,
