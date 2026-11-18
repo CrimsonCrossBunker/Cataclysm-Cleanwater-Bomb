@@ -57,6 +57,7 @@ require("enchantments")
 require("enchantment_variables")
 
 require("effect_enchantments")
+require("psi_shared_effects")
 
 require("mutation_enchantments")
 

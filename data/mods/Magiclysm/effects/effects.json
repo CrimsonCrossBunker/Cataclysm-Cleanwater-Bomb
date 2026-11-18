@@ -1597,20 +1597,6 @@
   },
   {
     "type": "effect_type",
-    "id": "telepathic_ignorance",
-    "//": "id is hardcoded, used by the Animist spell A Shadow in the Crowd",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "telepathic_ignorance_self",
-    "//": "id is hardcoded, used by the Animist spell A Shadow in the Crowd",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
     "id": "effect_mring_fire_protection",
     "//": "Hidden effect, used so the ring of fire protection will stop you from being set on fire",
     "name": [ "" ],

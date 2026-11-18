@@ -12,3 +12,9 @@ content.add(content.EffectType {
 }
     :removes_effect("effect_electrokinetic_pain_immune")
     :enchantment("INLINE_ENCH_effect_electrokinetic_speed_boost_npc_0"))
+
+content.add(content.EffectType {
+    id = "asked_to_vitakinetic_heal",
+    name = "Asked to heal",
+    description = "You were asked if you wanted your illness healed and you said no.",
+})

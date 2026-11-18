@@ -192,3 +192,177 @@ content.add(content.EffectType {
     intensity_decay_step = 1,
     intensity_decay_tick = 1,
 })
+
+-- Separate ID to allow telepaths and telepathy-immune monsters to defend against it.
+content.upsert_effect_type(content.EffectType {
+    id = "psi_stunned",
+    name = ccb.content.text("Stunned"),
+    description = ccb.content.text("Your mind is reeling."),
+    apply_message = ccb.content.text("You're stunned!"),
+    rating = "bad",
+    show_in_info = true,
+}
+    :flag("DISABLE_FLIGHT")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :flag("NO_SPELLCASTING")
+    :flag("NO_PSIONICS")
+    :immune_character_flag("TEEPSHIELD")
+    :immune_character_flag("TEEP_IMMUNE")
+    :limb_score("balance", { multiplier = 0.2 })
+    :limb_score("reaction", { multiplier = 0.0 }))
+
+content.add(content.EffectType {
+    id = "effect_biokin_overload",
+    name = ccb.content.text("Weakened"),
+    description = ccb.content.text("Your muscles and coordination are impaired."),
+    apply_message = ccb.content.text("Your muscles tremble with weakness!"),
+    remove_message = ccb.content.text("New strength fills you!"),
+    rating = "bad",
+    maximum_intensity = 10,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_biokin_overload_0")
+    :modifier("strength", "amount", { base = -2, per_intensity = -1.2 })
+    :modifier("dexterity", "amount", { base = -2, per_intensity = -1.2 })
+    :limb_score("lift", { multiplier = 0.9, resisted_multiplier = 1.0, per_intensity = -0.05, resisted_per_intensity = -0.00125 })
+    :limb_score("grip", { multiplier = 0.8, resisted_multiplier = 1.0, per_intensity = -0.1, resisted_per_intensity = -0.025 })
+    :limb_score("block", { multiplier = 0.9, resisted_multiplier = 1.0, per_intensity = -0.05, resisted_per_intensity = -0.00125 }))
+
+-- This effect and the one below exist so a clairsentient can't cure their powers going haywire using their own powers.
+content.add(content.EffectType {
+    id = "blind_clair_overload",
+    name = ccb.content.text("Blind"),
+    description = ccb.content.text("Darkness obscures your vision."),
+    apply_message = ccb.content.text("You're blinded!"),
+    remove_message = ccb.content.text("Your sight returns!"),
+    rating = "bad",
+    show_in_info = true,
+}
+    :flag("BLIND")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :removes_effect("glare")
+    :removes_effect("snow_glare")
+    :removes_effect("darkness")
+    :limb_score("vision", { multiplier = 0.0 })
+    :limb_score("night_vis", { multiplier = 0.0 })
+    :limb_score("reaction", { multiplier = 0.2 }))
+
+content.add(content.EffectType {
+    id = "deaf_clair_overload",
+    name = ccb.content.text("Deaf"),
+    description = ccb.content.text("You can't hear anything."),
+    apply_message = ccb.content.text("All sound is blotted out!"),
+    remove_message = ccb.content.text("You can hear again!"),
+    rating = "bad",
+    maximum_intensity = 3,
+    intensity_duration_turns = 100,
+}
+    :flag("DEAF")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :limb_score("reaction", { multiplier = 0.9, per_intensity = -0.2 }))
+
+content.add(content.EffectType {
+    id = "effect_electrokin_overload",
+    name = ccb.content.text("Jerky"),
+    description = ccb.content.text("You muscles don't seem to be reacting exactly the way you want them to."),
+    apply_message = ccb.content.text("Your limbs twitch involuntarily!"),
+    remove_message = ccb.content.text("The twitching stops"),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_electrokin_overload_0")
+    :limb_score("reaction", { multiplier = 0.8, per_intensity = -0.2 })
+    :limb_score("grip", { multiplier = 0.8 })
+    :limb_score("block", { multiplier = 0.8 }))
+
+content.add(content.EffectType {
+    id = "effect_photokin_myopia_overload",
+    name = ccb.content.text("Blurred Sight"),
+    description = ccb.content.text("Objects in the distance aren't where they seem to be."),
+    apply_message = ccb.content.text("Your vision blurs."),
+    remove_message = ccb.content.text("You shake your head as your vision clears."),
+    rating = "bad",
+    show_in_info = true,
+}
+    :flag("MYOPIC_SUPERNATURAL")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("hit", "amount", { base = -2 })
+    :limb_score("vision", { multiplier = 0.5 })
+    :limb_score("night_vis", { multiplier = 0.5 }))
+
+content.add(content.EffectType {
+    id = "blind_photokin_overload",
+    name = ccb.content.text("Blind"),
+    description = ccb.content.text("Overwhelming light obscures your vision."),
+    apply_message = ccb.content.text("You're blinded!"),
+    remove_message = ccb.content.text("Your sight returns!"),
+    rating = "bad",
+    show_in_info = true,
+}
+    :flag("BLIND")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :removes_effect("darkness")
+    :limb_score("vision", { multiplier = 0.0 })
+    :limb_score("night_vis", { multiplier = 0.0 })
+    :limb_score("reaction", { multiplier = 0.2 }))
+
+content.add(content.EffectType {
+    id = "effect_pyrokin_overload",
+    name = ccb.content.text("Feverish"),
+    description = ccb.content.text("You feel much too warm."),
+    apply_message = "",
+    remove_message = ccb.content.text("The air feels much cooler now."),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_pyrokin_overload_0")
+    :enchantment("INLINE_ENCH_effect_pyrokin_overload_1")
+    :modifier("perception", "amount", { base = -2 })
+    :modifier("health", "minimum", { base = -1 })
+    :modifier("health", "chance_numerator", { base = 25 })
+    :limb_score("breathing", { multiplier = 0.7 }))
+
+content.add(content.EffectType {
+    id = "effect_telekin_overload",
+    name = ccb.content.text("Oppressive Weight"),
+    description = ccb.content.text("Everything feels so much heavier."),
+    apply_message = ccb.content.text("The air itself seems to press down on you!"),
+    remove_message = ccb.content.text("The oppressive weight vanishes."),
+    rating = "bad",
+    maximum_intensity = 10,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_telekin_overload_0")
+    :limb_score("balance", { multiplier = 0.7 })
+    :limb_score("reaction", { multiplier = 0.7 }))
+
+content.add(content.EffectType {
+    id = "effect_vitakin_overload",
+    name = ccb.content.text("Muscle Weakness"),
+    description = ccb.content.text("Your muscles and coordination are impaired."),
+    apply_message = ccb.content.text("You feel awful!"),
+    remove_message = ccb.content.text("You don't feel as bad anymore!"),
+    rating = "bad",
+    maximum_intensity = 10,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_vitakin_overload_0")
+    :enchantment("INLINE_ENCH_effect_vitakin_overload_1")
+    :modifier("sleepiness", "tick", { base = 300 })
+    :modifier("sleepiness", "minimum", { base = 1, per_intensity = 1 })
+    :modifier("health", "minimum", { base = -1, per_intensity = -1 })
+    :modifier("health", "tick", { base = 400 })
+    :limb_score("breathing", { multiplier = 0.8 })
+    :limb_score("manip", { multiplier = 0.8 }))
+
+content.add(content.EffectType {
+    id = "effect_asthma_disease_absorbed",
+    name = ccb.content.text("Difficulty Breathing"),
+    description = ccb.content.text("You're having a very hard time taking in enough air."),
+    apply_message = "",
+    remove_message = ccb.content.text("You can finally breathe freely."),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("stamina", "amount", { base = -1000 })
+    :limb_score("breathing", { multiplier = 0.8 }))

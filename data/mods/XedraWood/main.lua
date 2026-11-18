@@ -47,6 +47,7 @@ require("tool_qualities")
 require("requirements")
 
 require("effect_enchantments")
+require("effects.psi_effects")
 
 require("mutation_enchantments")
 

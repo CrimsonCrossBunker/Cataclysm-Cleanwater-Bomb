@@ -56,6 +56,7 @@ require("enchantment_values")
 require("school_enchantments")
 
 require("effect_enchantments")
+require("effects.telepathic_ignorance")
 
 require("mutation_enchantments")
 

@@ -118,3 +118,75 @@ content.add(content.EffectType {
         rates = { { minimum = 3, maximum = 6 } },
         tick_turns = { 5 },
     }))
+
+content.add(content.EffectType {
+    id = "effect_disease_psionic_drain",
+    name = ccb.content.text("Nether-Attunement"),
+    description = ccb.content.text("You feel a little odd and your control over your powers isn't as sure as it was.  There might be unexpected results of you channeling psionics now."),
+    remove_message = ccb.content.text("You take a deep breath as the strange feelings fade.  You are in full control of your powers once again."),
+    maximum_intensity = 12,
+}
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message(ccb.content.text("The constant hum of power fades, just a little.  It's easier to think now."), "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :decay_message(ccb.content.text("The roar of the Nether subsides.  You can finally hear your own thoughts again."), "mixed")
+    :decay_message("", "mixed")
+    :decay_message("", "mixed")
+    :apply_message(ccb.content.text("You feel a little odd, like you've just awoken from a dream.  All that psionic channeling might have unexpected effects."), "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message(ccb.content.text("Your mind thrums with power.  It's intoxicating, but growing increasingly harder to control."), "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message("", "mixed")
+    :apply_message(ccb.content.text("Your whole body pulses with a raging torrent of energy.  It's taking almost all of your concentration to hold on."), "mixed")
+    :apply_message("", "mixed"))
+
+content.add(content.EffectType {
+    id = "effect_nether_attunement_clair_blurred_sight",
+    name = ccb.content.text("Blurred Sight"),
+    description = ccb.content.text("Your vision is blurry."),
+    remove_message = ccb.content.text("Your vision finally clears."),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :flag("HYPEROPIC")
+    :flag("MYOPIC_SUPERNATURAL")
+    :limb_score("night_vis", { multiplier = 0.1 })
+    :limb_score("vision", { multiplier = 0.2 }))
+
+content.add(content.EffectType {
+    id = "effect_psi_reduced_breathing",
+    name = ccb.content.text("Short of Breath"),
+    description = ccb.content.text("You're having a hard time getting enough air."),
+    remove_message = ccb.content.text("You finally manage to catch your breath"),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("cough", "chance_numerator", { base = 20 })
+    :modifier("cough", "tick", { base = 120 })
+    :limb_score("breathing", { multiplier = 0.5 })
+    :limb_score("lift", { multiplier = 0.8 }))
+
+content.add(content.EffectType {
+    id = "effect_nether_attunement_pyrokinetic_fever",
+    name = ccb.content.text("Feverish"),
+    description = ccb.content.text("You feel feverish and weak."),
+    remove_message = ccb.content.text("Your fever finally breaks."),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :enchantment("INLINE_ENCH_effect_nether_attunement_pyrokinetic_fever_0")
+    :limb_score("grip", { multiplier = 0.8 })
+    :limb_score("block", { multiplier = 0.8 })
+    :limb_score("manip", { multiplier = 0.8 })
+    :limb_score("lift", { multiplier = 0.8 }))

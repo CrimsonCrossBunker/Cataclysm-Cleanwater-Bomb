@@ -115,6 +115,7 @@ require("location_enchantments")
 require("martial_enchantments")
 
 require("effect_enchantments")
+require("effects.telepathic_ignorance")
 
 require("mutation_enchantments")
 

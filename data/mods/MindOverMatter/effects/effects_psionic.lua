@@ -1552,3 +1552,126 @@ content.add(content.EffectType {
 }
     :removes_effect("pre_conjunctivitis_bacterial")
     :removes_effect("conjunctivitis_bacterial"))
+
+content.add(content.EffectType {
+    id = "effect_psi_intense_concentration",
+    name = ccb.content.text("Intense Concentration"),
+    description = ccb.content.text("It's taking a lot of concentration to maintain your powers."),
+    apply_message = "",
+    remove_message = "",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("dodge", "amount", { base = -1 })
+    :limb_score("breathing", { multiplier = 0.95 })
+    :limb_score("reaction", { multiplier = 0.97 }))
+
+content.add(content.EffectType {
+    id = "effect_biokin_flexibility",
+    name = ccb.content.text("Flexibility"),
+    description = ccb.content.text("You are enhancing your range of motion."),
+    apply_message = "",
+    remove_message = ccb.content.text("Your joints creak as your limbs lose their flexibility."),
+    rating = "good",
+    maximum_duration_turns = 60,
+    duration_add_percent = 1,
+}
+    :flag("DOWNED_RECOVERY")
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :removes_effect("grabbed")
+    :enchantment("INLINE_ENCH_effect_biokin_flexibility_0")
+    :limb_score("reaction", { multiplier = 2.0 })
+    :limb_score("block", { multiplier = 1.2 })
+    :limb_score("crawl", { multiplier = 1.5 }))
+
+content.add(content.EffectType {
+    id = "effect_telekinetic_slowfall",
+    name = ccb.content.text("Slowfall"),
+    description = ccb.content.text("The ground isn't as eager to receive you."),
+    apply_message = "",
+    remove_message = ccb.content.text("You suddenly feel much heavier."),
+    maximum_duration_turns = 60,
+    duration_add_percent = 10,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :flag("ONE_STORY_FALL")
+    :enchantment("INLINE_ENCH_effect_telekinetic_slowfall_0")
+    :limb_score("swim", { multiplier = 3.0 }))
+
+content.add(content.EffectType {
+    id = "effect_telekinetic_aegis",
+    name = ccb.content.text("Aegis"),
+    description = ccb.content.text("You are nearly invincible."),
+    apply_message = "",
+    remove_message = ccb.content.text("The air loses its structure and you are vulnerable once again."),
+    rating = "good",
+    maximum_duration_turns = 20,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :flag("EFFECT_IMPEDING")
+    :removes_effect("grabbed")
+    :enchantment("INLINE_ENCH_effect_telekinetic_aegis_0")
+    :limb_score("lift", { multiplier = 0.51 })
+    :limb_score("grip", { multiplier = 0.25 }))
+
+content.upsert_effect_type(content.EffectType {
+    id = "effect_telepath_sense_minds",
+    name = ccb.content.text("Sensing Minds"),
+    description = ccb.content.text("You are looking out for other minds."),
+    apply_message = "",
+    remove_message = ccb.content.text("Your awareness of other minds fades away."),
+    rating = "good",
+    maximum_duration_turns = 604800,
+    maximum_intensity = 50,
+}
+    :enchantment("INLINE_ENCH_effect_telepath_sense_minds_0"))
+
+content.upsert_effect_type(content.EffectType {
+    id = "telepathic_ignorance",
+    name = ccb.content.text("Ignorance"),
+    description = ccb.content.text("You're positive that no one is there."),
+    apply_message = "",
+    remove_message = ccb.content.text("Wait a minute, there *is* someone there!"),
+    rating = "bad",
+    show_in_info = true,
+})
+
+-- hidden effect so the monster knows who to ignore
+content.upsert_effect_type(content.EffectType {
+    id = "telepathic_ignorance_self",
+    name = "",
+    description = "",
+    rating = "good",
+    maximum_duration_turns = 1800,
+})
+
+content.upsert_effect_type(content.EffectType {
+    id = "effect_telepathic_psi_armor",
+    name = ccb.content.text("Telepathic Shield"),
+    description = ccb.content.text("Your mind is warded against telepathic attack or detection."),
+    apply_message = "",
+    remove_message = ccb.content.text("Your thoughts are once again unguarded."),
+    rating = "good",
+    maximum_duration_turns = 604800,
+    maximum_intensity = 17,
+}
+    :flag("TEEPSHIELD")
+    :removes_effect("taint")
+    :removes_effect("tindrift")
+    :removes_effect("hallu")
+    :removes_effect("hallucination_attacks")
+    :removes_effect("visuals")
+    :removes_effect("fearparalyze")
+    :removes_effect("amigara")
+    :removes_effect("psi_stunned")
+    :removes_effect("telepathic_ignorance"))
+
+content.add(content.EffectType {
+    id = "effect_vitakin_hurt",
+    name = ccb.content.text("Enervating Touch"),
+    description = "This reduces monsters' regeneration.  It's a bug if you have it.",
+    rating = "bad",
+    maximum_duration_turns = 18000,
+    show_in_info = true,
+}
+    :enchantment("INLINE_ENCH_effect_vitakin_hurt_0")
+    :modifier("hit", "amount", { base = -1 }))
