@@ -727,6 +727,7 @@ local ModDefinition = {}
 ---@field fall_damage_reduction? integer Native fall damage reduction when landing on this item.
 ---@field repair_like? string Item type used to resolve repair tools for this item.
 ---@field source_monster? string Native monster type used as the source of a corpse.
+---@field capture_capacity? 'TINY'|'SMALL'|'MEDIUM'|'LARGE'|'HUGE' Maximum creature size for native capture actions, including vehicle carriers.
 ---@field field_emissions? string[] Replace the native field emission IDs used while this item processes.
 ---@field repair_materials? string[] Replace the native material IDs used to resolve compatible repair tools.
 ---@field expand_snippets? boolean Expand description snippet tags when the item is created.
@@ -1235,7 +1236,7 @@ function ItemDefinition:teach_spells(spells) end
 ---@return ItemDefinition self
 function ItemDefinition:martial_arts_manual() end
 
----Remove inherited activation actions and reset staged callbacks, transformations, messages, treatment, spell use, cable linking, instrument activation, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
+---Remove inherited activation actions and reset staged callbacks, transformations, messages, treatment, spell use, cable linking, capture, deployment, fire starting, trap placement, instrument activation, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
@@ -1263,6 +1264,53 @@ function ItemDefinition:message_on_use(options) end
 ---@param options ItemCableLinkOptions
 ---@return ItemDefinition self
 function ItemDefinition:link_cable(options) end
+
+---@class ItemMonsterDeploymentOptions
+---@field monster string Native monster type deployed by the item.
+---@field place_randomly? boolean Select an available adjacent tile randomly.
+---@field is_pet? boolean Mark a friendly deployed monster as a pet.
+---@field moves? integer Deployment cost in moves. Defaults to 100.
+---@field difficulty? integer Native programming difficulty. Defaults to zero.
+---@field need_charges? integer Minimum charges needed for deployment.
+---@field skills? string[] Skills used by the native programming check.
+---@field friendly_message? string|LocalizedText Message shown after successful programming.
+---@field hostile_message? string|LocalizedText Message shown after failed programming.
+
+---Install the native item deployment action with its normal placement and programming checks.
+---@param options ItemMonsterDeploymentOptions
+---@return ItemDefinition self
+function ItemDefinition:deploy_monster(options) end
+
+---@class ItemFirestarterOptions
+---@field moves? integer Move cost with good fuel. Defaults to 100.
+---@field moves_slow? integer Move cost with mediocre fuel. Defaults to 1000.
+---@field need_sunlight? boolean Require enough sunlight for native fire starting.
+---@field qualities_needed? table<string, integer> Native tool quality requirements by ID.
+
+---Install the native fire-starting action and its targeting flow.
+---@param options ItemFirestarterOptions
+---@return ItemDefinition self
+function ItemDefinition:firestarter(options) end
+
+---@class ItemTrapPlacementVariant
+---@field trap string Native trap ID placed on the selected tile.
+---@field moves? integer Base placement move cost. Defaults to 100.
+---@field practice? integer Trap-setting practice awarded. Defaults to zero.
+---@field message? string|LocalizedText Placement message, with optional terrain name substitution.
+
+---@class ItemTrapPlacementOptions : ItemTrapPlacementVariant
+---@field allow_underwater? boolean Permit placement while underwater.
+---@field allow_under_player? boolean Permit placement on the character's tile.
+---@field needs_solid_neighbor? boolean Require solid terrain on opposite sides of the trap.
+---@field needs_neighbor_terrain? string Require the named native terrain nearby.
+---@field outer_layer_trap? string Native trap ID for the outer layer of a multi-tile trap.
+---@field bury_question? string|LocalizedText Native burial prompt. Supply together with buried.
+---@field buried? ItemTrapPlacementVariant Alternate trap and placement properties when buried.
+
+---Install the native trap placement action with its ordinary restrictions.
+---@param options ItemTrapPlacementOptions
+---@return ItemDefinition self
+function ItemDefinition:place_trap(options) end
 
 ---Append one named Lua callback to the item's native active-processing actions.
 ---The callback has the same item/character/position payload as on_use; character is nil for an uncarried item.

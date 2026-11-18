@@ -468,6 +468,17 @@ std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_
 }
 
 struct item_definition_data {
+    struct monster_deployment_data {
+        place_monster_iuse actor;
+        authored_text friendly_message;
+        authored_text hostile_message;
+    };
+    struct trap_placement_data {
+        place_trap_actor actor;
+        authored_text message;
+        authored_text bury_question;
+        authored_text buried_message;
+    };
     struct cable_link_data {
         link_up_actor actor;
         authored_text menu_text;
@@ -694,7 +705,11 @@ struct item_definition_data {
     std::optional<map_reveal> reveal_map;
     std::set<std::string> native_use_actions;
     std::optional<cable_link_data> cable_link;
+    std::optional<monster_deployment_data> monster_deployment;
+    std::optional<trap_placement_data> trap_placement;
+    std::optional<firestarter_actor> fire_starting;
     std::string capture_size;
+    bool capture_on_use = false;
     std::optional<use_message_data> use_message;
     std::optional<heal_actor> healing;
     std::optional<cast_spell_actor> spell_use;
@@ -2081,6 +2096,7 @@ struct item_definition_handle {
             throw std::invalid_argument( "item capture requires a native creature size" );
         }
         definition->capture_size = size;
+        definition->capture_on_use = true;
         return *this;
     }
 
@@ -2112,6 +2128,96 @@ struct item_definition_handle {
         data.menu_text = read_text_option( options, "menu_text", {}, "cable link menu text" );
         actor.menu_text = data.menu_text.native();
         definition->cable_link.emplace( std::move( data ) );
+        return *this;
+    }
+
+    item_definition_handle &deploy_monster( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::monster_deployment_data data;
+        place_monster_iuse &actor = data.actor;
+        actor.mtypeid = mtype_id( options.get<std::string>( "monster" ) );
+        if( actor.mtypeid.is_empty() || actor.mtypeid.is_null() ) {
+            throw std::invalid_argument( "item monster deployment needs a monster type ID" );
+        }
+        actor.place_randomly = options.get_or( "place_randomly", false );
+        actor.is_pet = options.get_or( "is_pet", false );
+        actor.moves = item_option_int( options.get_or<std::int64_t>( "moves", 100 ), "monster deployment moves" );
+        actor.difficulty = item_option_int( options.get_or<std::int64_t>( "difficulty", 0 ),
+                                            "monster programming difficulty" );
+        actor.need_charges = read_nonnegative_item_int( options, "need_charges" ).value_or( 0 );
+        if( const auto skills = options.get<sol::optional<sol::table>>( "skills" ) ) {
+            const std::size_t count = require_dense_array( *skills, "monster deployment skills", 0 );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                actor.skills.emplace( skills->raw_get<std::string>( i ) );
+            }
+        }
+        data.friendly_message = read_text_option( options, "friendly_message", {}, "friendly deployment message" );
+        data.hostile_message = read_text_option( options, "hostile_message", {}, "hostile deployment message" );
+        actor.friendly_msg = data.friendly_message.native();
+        actor.hostile_msg = data.hostile_message.native();
+        definition->monster_deployment.emplace( std::move( data ) );
+        return *this;
+    }
+
+    item_definition_handle &firestarter( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        firestarter_actor actor;
+        actor.moves_cost_fast = item_option_int( options.get_or<std::int64_t>( "moves", 100 ),
+                                "firestarter moves" );
+        actor.moves_cost_slow = item_option_int( options.get_or<std::int64_t>( "moves_slow", 1000 ),
+                                "firestarter slow moves" );
+        actor.need_sunlight = options.get_or( "need_sunlight", false );
+        if( const auto qualities = options.get<sol::optional<sol::table>>( "qualities_needed" ) ) {
+            for( const auto &entry : *qualities ) {
+                if( entry.first.get_type() != sol::type::string || !entry.second.is<lua_Integer>() ) {
+                    throw std::invalid_argument( "firestarter qualities need IDs and integer levels" );
+                }
+                actor.qualities_needed.emplace( quality_id( entry.first.as<std::string>() ),
+                                                item_option_int( entry.second.as<std::int64_t>(),
+                                                        "firestarter quality level" ) );
+            }
+        }
+        definition->fire_starting.emplace( std::move( actor ) );
+        return *this;
+    }
+
+    item_definition_handle &place_trap( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        const auto read_placement = []( const sol::table &source, place_trap_actor::data &placement ) {
+            placement.trap = trap_str_id( source.get<std::string>( "trap" ) );
+            if( placement.trap.is_empty() || placement.trap.is_null() ) {
+                throw std::invalid_argument( "item trap placement needs a trap ID" );
+            }
+            placement.moves = item_option_int( source.get_or<std::int64_t>( "moves", 100 ),
+                                               "trap placement moves" );
+            placement.practice = item_option_int( source.get_or<std::int64_t>( "practice", 0 ),
+                                                  "trap placement practice" );
+            authored_text message = read_text_option( source, "message", {}, "trap placement message" );
+            placement.done_message = message.native();
+            return message;
+        };
+        item_definition_data::trap_placement_data data;
+        place_trap_actor &actor = data.actor;
+        data.message = read_placement( options, actor.unburied_data );
+        actor.allow_underwater = options.get_or( "allow_underwater", false );
+        actor.allow_under_player = options.get_or( "allow_under_player", false );
+        actor.needs_solid_neighbor = options.get_or( "needs_solid_neighbor", false );
+        if( const auto terrain = options.get<sol::optional<std::string>>( "needs_neighbor_terrain" ) ) {
+            actor.needs_neighbor_terrain = ter_str_id( *terrain );
+        }
+        if( const auto outer = options.get<sol::optional<std::string>>( "outer_layer_trap" ) ) {
+            actor.outer_layer_trap = trap_str_id( *outer );
+        }
+        const auto buried = options.get<sol::optional<sol::table>>( "buried" );
+        data.bury_question = read_text_option( options, "bury_question", {}, "trap burial question" );
+        if( static_cast<bool>( buried ) != !data.bury_question.empty() ) {
+            throw std::invalid_argument( "buried trap placement needs both a prompt and a buried trap" );
+        }
+        if( buried ) {
+            actor.bury_question = data.bury_question.native();
+            data.buried_message = read_placement( *buried, actor.buried_data );
+        }
+        definition->trap_placement.emplace( std::move( data ) );
         return *this;
     }
 
@@ -2298,6 +2404,10 @@ struct item_definition_handle {
         definition->healing.reset();
         definition->use_message.reset();
         definition->cable_link.reset();
+        definition->monster_deployment.reset();
+        definition->trap_placement.reset();
+        definition->fire_starting.reset();
+        definition->capture_on_use = false;
         definition->play_instrument = false;
         definition->spell_use.reset();
         definition->assembled_belt = itype_id();
@@ -4607,6 +4717,9 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "reveal_map", &item_definition_handle::reveal_map,
         "native_use", &item_definition_handle::native_use,
         "link_cable", &item_definition_handle::link_cable,
+        "deploy_monster", &item_definition_handle::deploy_monster,
+        "firestarter", &item_definition_handle::firestarter,
+        "place_trap", &item_definition_handle::place_trap,
         "message_on_use", &item_definition_handle::message_on_use,
         "capture_creature", &item_definition_handle::capture_creature,
         "heal", &item_definition_handle::heal,
@@ -5042,6 +5155,12 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         if( const auto monster = options.get<sol::optional<std::string>>( "source_monster" ) ) {
             definition->source_monster = mtype_id( *monster );
+        }
+        if( const auto size = options.get<sol::optional<std::string>>( "capture_capacity" ) ) {
+            if( Creature::size_map.count( *size ) == 0 ) {
+                throw std::invalid_argument( "item capture capacity needs a native creature size" );
+            }
+            definition->capture_size = *size;
         }
         if( const auto duration = options.get<sol::optional<std::int64_t>>( "countdown_turns" ) ) {
             const int count = item_option_int( *duration, "item countdown" );
@@ -8932,6 +9051,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( !definition.capture_size.empty() ) {
                         native->properties["creature_size_capacity"] = definition.capture_size;
+                    }
+                    if( definition.capture_on_use ) {
                         native->use_methods.insert_or_assign( "CAPTURE_MONSTER_ACT",
                                 Item_factory::usage_from_string( "CAPTURE_MONSTER_ACT" ) );
                     }
@@ -8956,6 +9077,18 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native->use_methods.insert_or_assign( "link_up",
                                 use_function( std::make_unique<link_up_actor>( link.actor ) ) );
+                    }
+                    if( definition.monster_deployment ) {
+                        native->use_methods.insert_or_assign( "place_monster",
+                                use_function( std::make_unique<place_monster_iuse>( definition.monster_deployment->actor ) ) );
+                    }
+                    if( definition.fire_starting ) {
+                        native->use_methods.insert_or_assign( "firestarter",
+                                use_function( std::make_unique<firestarter_actor>( *definition.fire_starting ) ) );
+                    }
+                    if( definition.trap_placement ) {
+                        native->use_methods.insert_or_assign( "place_trap",
+                                use_function( std::make_unique<place_trap_actor>( definition.trap_placement->actor ) ) );
                     }
                     if( definition.play_instrument ) {
                         native->use_methods.insert_or_assign( "play_instrument",
@@ -9446,6 +9579,44 @@ bool items_content_transaction::validate_finalized( std::string &error ) const
         for( const std::string &spell : definition.learned_spells ) {
             if( !spell_id( spell ).is_valid() ) {
                 error = "Lua-first item '" + definition.id + "' teaches an unknown spell '" + spell + "'";
+                return false;
+            }
+        }
+        const auto check_action_reference = [&definition, &error]( const auto &id, const char *kind ) {
+            if( id.is_valid() ) {
+                return true;
+            }
+            error = "Lua-first item '" + definition.id + "' references unknown " + kind +
+                    " '" + id.str() + "'";
+            return false;
+        };
+        if( definition.monster_deployment ) {
+            const place_monster_iuse &actor = definition.monster_deployment->actor;
+            if( !check_action_reference( actor.mtypeid, "deployment monster" ) ) {
+                return false;
+            }
+            for( const skill_id &skill : actor.skills ) {
+                if( !check_action_reference( skill, "deployment skill" ) ) {
+                    return false;
+                }
+            }
+        }
+        if( definition.fire_starting ) {
+            for( const auto &quality : definition.fire_starting->qualities_needed ) {
+                if( !check_action_reference( quality.first, "firestarter quality" ) ) {
+                    return false;
+                }
+            }
+        }
+        if( definition.trap_placement ) {
+            const place_trap_actor &actor = definition.trap_placement->actor;
+            if( !check_action_reference( actor.unburied_data.trap, "trap" ) ||
+                ( !actor.bury_question.empty() &&
+                  !check_action_reference( actor.buried_data.trap, "buried trap" ) ) ||
+                ( !actor.outer_layer_trap.is_null() &&
+                  !check_action_reference( actor.outer_layer_trap, "outer layer trap" ) ) ||
+                ( !actor.needs_neighbor_terrain.is_null() &&
+                  !check_action_reference( actor.needs_neighbor_terrain, "trap neighboring terrain" ) ) ) {
                 return false;
             }
         }
@@ -10862,6 +11033,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
                 hash_part( state, v.deploy_furniture );
                 hash_part( state, v.capture_size );
+                hash_part( state, v.capture_on_use ? "capture_on_use" : "no_capture_action" );
                 if( v.use_message ) {
                     hash_part( state, "message_on_use" );
                     hash_part( state, v.use_message->name );
@@ -10890,6 +11062,56 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
                 if( v.play_instrument ) {
                     hash_part( state, "play_instrument" );
+                }
+                if( v.monster_deployment ) {
+                    const auto &deployment = *v.monster_deployment;
+                    const place_monster_iuse &actor = deployment.actor;
+                    hash_part( state, "deploy_monster" );
+                    hash_part( state, actor.mtypeid.str() );
+                    hash_part( state, deployment.friendly_message );
+                    hash_part( state, deployment.hostile_message );
+                    hash_part( state, actor.place_randomly ? "random" : "choose" );
+                    hash_part( state, actor.is_pet ? "pet" : "programmed" );
+                    hash_part( state, std::to_string( actor.moves ) );
+                    hash_part( state, std::to_string( actor.difficulty ) );
+                    hash_part( state, std::to_string( actor.need_charges ) );
+                    hash_part( state, std::to_string( actor.skills.size() ) );
+                    for( const skill_id &skill : actor.skills ) {
+                        hash_part( state, skill.str() );
+                    }
+                }
+                if( v.fire_starting ) {
+                    const firestarter_actor &actor = *v.fire_starting;
+                    hash_part( state, "firestarter" );
+                    hash_part( state, std::to_string( actor.moves_cost_fast ) );
+                    hash_part( state, std::to_string( actor.moves_cost_slow ) );
+                    hash_part( state, actor.need_sunlight ? "sunlight" : "any_light" );
+                    hash_part( state, std::to_string( actor.qualities_needed.size() ) );
+                    for( const auto &[quality, level] : actor.qualities_needed ) {
+                        hash_part( state, quality.str() );
+                        hash_part( state, std::to_string( level ) );
+                    }
+                }
+                if( v.trap_placement ) {
+                    const auto &placement = *v.trap_placement;
+                    const place_trap_actor &actor = placement.actor;
+                    const auto hash_placement = [&state]( const place_trap_actor::data &data,
+                    const authored_text &message ) {
+                        hash_part( state, data.trap.str() );
+                        hash_part( state, std::to_string( data.moves ) );
+                        hash_part( state, std::to_string( data.practice ) );
+                        hash_part( state, message );
+                    };
+                    hash_part( state, "place_trap" );
+                    hash_placement( actor.unburied_data, placement.message );
+                    hash_placement( actor.buried_data, placement.buried_message );
+                    hash_part( state, placement.bury_question );
+                    hash_part( state, actor.needs_neighbor_terrain.str() );
+                    hash_part( state, actor.outer_layer_trap.str() );
+                    for( const bool option : { actor.allow_underwater, actor.allow_under_player,
+                                                actor.needs_solid_neighbor } ) {
+                        hash_part( state, option ? "enabled" : "disabled" );
+                    }
                 }
                 if( v.healing ) {
                     const heal_actor &heal = *v.healing;
