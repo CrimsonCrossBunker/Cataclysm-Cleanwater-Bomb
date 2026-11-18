@@ -89,6 +89,7 @@ extern "C" {
 #include "requirements.h"
 #include "scent_map.h"
 #include "skill.h"
+#include "sounds.h"
 #include "subbodypart.h"
 #include "translation.h"
 #include "type_id.h"
@@ -163,6 +164,18 @@ struct quality_level {
     std::int64_t level = 1;
     float speed = 1.0f;
 };
+
+quality_level read_item_quality( const std::string &id, const std::int64_t level,
+                                 const double speed )
+{
+    if( id.empty() || level < std::numeric_limits<int>::min() ||
+        level > std::numeric_limits<int>::max() || !std::isfinite( speed ) ||
+        speed <= 0.0 || speed > std::numeric_limits<float>::max() ||
+        static_cast<float>( speed ) == 0.0f ) {
+        throw std::runtime_error( "item quality requires an id, native level and positive speed" );
+    }
+    return { id, level, static_cast<float>( speed ) };
+}
 
 struct item_numeric_adjustment {
     std::optional<double> factor;
@@ -378,6 +391,49 @@ struct item_transform_action {
     bool need_worn = false;
 };
 
+item_transform_action read_item_transform_action( const sol::table &options )
+{
+    item_transform_action action;
+    action.result = read_item_transformation( options.get<sol::table>( "result" ) );
+    action.message = read_text_option( options, "message", {}, "item transform message" );
+    action.menu_text = read_text_option( options, "menu_text", {}, "item transform menu text" );
+    action.moves = item_option_int( options.get_or<std::int64_t>( "moves", 0 ), "item transform move cost" );
+    if( action.moves < 0 ) {
+        throw std::invalid_argument( "item transform move cost cannot be negative" );
+    }
+    action.need_empty = options.get_or( "need_empty", false );
+    action.need_wielding = options.get_or( "need_wielding", false );
+    action.need_worn = options.get_or( "need_worn", false );
+    action.chance = read_nonnegative_item_int( options, "chance" ).value_or( 100 );
+    action.sound_volume = item_option_int( options.get_or<std::int64_t>( "sound_volume", 0 ),
+                                           "item transform sound volume" );
+    action.need_charges = read_nonnegative_item_int( options, "need_charges" ).value_or( 0 );
+    action.need_fire = read_nonnegative_item_int( options, "need_fire" ).value_or( 0 );
+    action.ammo_scale = read_nonnegative_item_int( options, "ammo_scale" );
+    action.set_timer = options.get_or( "set_timer", false );
+    if( action.chance > 100 || ( action.set_timer && action.result.target_timer != 0_seconds ) ) {
+        throw std::invalid_argument( "item transform chance or timer is invalid" );
+    }
+    const auto read_message = [&options]( const char *field ) -> std::optional<authored_text> {
+        const sol::object value = options[field];
+        if( value.valid() && value.get_type() != sol::type::nil ) {
+            return read_singular_text( value, {}, field );
+        }
+        return std::nullopt;
+    };
+    action.damage_failure_message = read_message( "damage_failure_message" );
+    action.need_charges_message = read_message( "need_charges_message" );
+    action.need_fire_message = read_message( "need_fire_message" );
+    if( const auto minimum_age = options.get<sol::optional<std::int64_t>>( "minimum_age_turns" ) ) {
+        action.minimum_age = item_option_int( *minimum_age, "item transform minimum age" );
+        action.not_ready = read_text_option( options, "not_ready_message", {}, "delayed transform message" );
+        if( *action.minimum_age < 0 || action.not_ready.empty() ) {
+            throw std::invalid_argument( "delayed item transform requires a nonnegative age and a message" );
+        }
+    }
+    return action;
+}
+
 std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_action &action )
 {
     std::unique_ptr<iuse_transform> actor;
@@ -412,6 +468,20 @@ std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_
 }
 
 struct item_definition_data {
+    struct cable_link_data {
+        link_up_actor actor;
+        authored_text menu_text;
+        std::optional<int> ammo_scale;
+    };
+    struct tick_sound_data {
+        sound_iuse actor;
+        authored_text message;
+    };
+    struct tick_music_data {
+        musical_instrument_actor actor;
+        std::vector<authored_text> player_text;
+        std::vector<authored_text> npc_text;
+    };
     struct tool_data {
         std::optional<std::set<std::string>> ammo_types;
         std::optional<int> charges_per_use;
@@ -585,6 +655,7 @@ struct item_definition_data {
     std::optional<mounted_charge_profile> mounted_charge;
     bool clear_mounted_charge = false;
     std::vector<quality_level> qualities;
+    std::optional<std::vector<quality_level>> charged_qualities;
     std::vector<std::pair<quality_id, int>> quality_adjustments;
     bool replace_qualities = false;
     std::set<std::string> flags;
@@ -603,6 +674,12 @@ struct item_definition_data {
     bool has_magazine_capacity = false;
     bool clear_use_actions = false;
     bool clear_tick_actions = false;
+    std::set<std::string> native_tick_actions;
+    std::optional<item_transform_action> tick_transform;
+    std::optional<tick_sound_data> tick_sound;
+    std::optional<tick_music_data> tick_music;
+    std::variant<std::monostate, std::string, cast_spell_actor> expiry_action;
+    bool play_instrument = false;
     bool has_tool = false;
     bool has_armor = false;
     std::optional<tool_data> tool;
@@ -616,6 +693,7 @@ struct item_definition_data {
     std::string deploy_appliance;
     std::optional<map_reveal> reveal_map;
     std::set<std::string> native_use_actions;
+    std::optional<cable_link_data> cable_link;
     std::string capture_size;
     std::optional<use_message_data> use_message;
     std::optional<heal_actor> healing;
@@ -1524,14 +1602,7 @@ struct item_definition_handle {
     item_definition_handle &quality( const std::string &id, std::int64_t level,
                                      const sol::optional<double> &speed ) {
         require_building_handle( token, *definition, "item" );
-        const double selected_speed = speed.value_or( 1.0 );
-        if( id.empty() || level < std::numeric_limits<int>::min() ||
-            level > std::numeric_limits<int>::max() || !std::isfinite( selected_speed ) ||
-            selected_speed <= 0.0 || selected_speed > std::numeric_limits<float>::max() ||
-            static_cast<float>( selected_speed ) == 0.0f ) {
-            throw std::runtime_error( "item quality requires an id, native level and positive speed" );
-        }
-        definition->qualities.push_back( { id, level, static_cast<float>( selected_speed ) } );
+        definition->qualities.push_back( read_item_quality( id, level, speed.value_or( 1.0 ) ) );
         return *this;
     }
 
@@ -2013,6 +2084,37 @@ struct item_definition_handle {
         return *this;
     }
 
+    item_definition_handle &link_cable( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::cable_link_data data;
+        link_up_actor &actor = data.actor;
+        actor.cable_length = item_option_int( options.get_or<std::int64_t>( "cable_length", -1 ),
+                                             "cable length" );
+        actor.charge_rate = units::from_milliwatt( options.get_or<std::int64_t>( "charge_milliwatts", 0 ) );
+        actor.efficiency = item_option_float( options, "efficiency", 0.85 );
+        actor.move_cost = item_option_int( options.get_or<std::int64_t>( "move_cost", 5 ),
+                                          "cable link move cost" );
+        actor.targets = { link_state::no_link, link_state::vehicle_port };
+        if( const auto targets = options.get<sol::optional<sol::table>>( "targets" ) ) {
+            actor.targets.clear();
+            const std::size_t count = require_dense_array( *targets, "cable link targets", 0 );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                actor.targets.insert( io::string_to_enum<link_state>( targets->raw_get<std::string>( i ) ) );
+            }
+        }
+        if( const auto extend = options.get<sol::optional<sol::table>>( "can_extend" ) ) {
+            const std::size_t count = require_dense_array( *extend, "cable extension IDs", 0 );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                actor.can_extend.insert( extend->raw_get<std::string>( i ) );
+            }
+        }
+        data.ammo_scale = read_nonnegative_item_int( options, "ammo_scale" );
+        data.menu_text = read_text_option( options, "menu_text", {}, "cable link menu text" );
+        actor.menu_text = data.menu_text.native();
+        definition->cable_link.emplace( std::move( data ) );
+        return *this;
+    }
+
     item_definition_handle &message_on_use( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
         definition->use_message = item_definition_data::use_message_data{
@@ -2070,8 +2172,7 @@ struct item_definition_handle {
         return *this;
     }
 
-    item_definition_handle &cast_spell( const sol::table &options ) {
-        require_building_handle( token, *definition, "item" );
+    static cast_spell_actor read_spell_action( const sol::table &options ) {
         cast_spell_actor action;
         action.item_spell = spell_id( options.get<std::string>( "spell" ) );
         action.spell_level = item_option_int( options.get<std::int64_t>( "level" ), "item spell level" );
@@ -2080,29 +2181,26 @@ struct item_definition_handle {
         }
         action.no_fail = options.get_or( "no_fail", false );
         action.need_worn = options.get_or( "need_worn", false );
-        action.chance = read_nonnegative_item_int( options, "chance" ).value_or( 100 );
-        action.sound_volume = item_option_int( options.get_or<std::int64_t>( "sound_volume", 0 ),
-                                               "item transform sound volume" );
-        action.need_charges = read_nonnegative_item_int( options, "need_charges" ).value_or( 0 );
-        action.need_fire = read_nonnegative_item_int( options, "need_fire" ).value_or( 0 );
-        action.ammo_scale = read_nonnegative_item_int( options, "ammo_scale" );
-        action.set_timer = options.get_or( "set_timer", false );
-        if( action.chance > 100 || ( action.set_timer && action.result.target_timer != 0_seconds ) ) {
-            throw std::invalid_argument( "item transform chance or timer is invalid" );
-        }
-        const auto read_message = [&options]( const char *field ) -> std::optional<authored_text> {
-            const sol::object value = options[field];
-            if( value.valid() && value.get_type() != sol::type::nil ) {
-                return read_singular_text( value, {}, field );
-            }
-            return std::nullopt;
-        };
-        action.damage_failure_message = read_message( "damage_failure_message" );
-        action.need_charges_message = read_message( "need_charges_message" );
-        action.need_fire_message = read_message( "need_fire_message" );
         action.need_wielding = options.get_or( "need_wielding", false );
         action.mundane = options.get_or( "mundane", false );
-        definition->spell_use.emplace( std::move( action ) );
+        return action;
+    }
+
+    item_definition_handle &cast_spell( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        definition->spell_use.emplace( read_spell_action( options ) );
+        return *this;
+    }
+
+    item_definition_handle &cast_spell_on_expiry( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        definition->expiry_action.emplace<cast_spell_actor>( read_spell_action( options ) );
+        return *this;
+    }
+
+    item_definition_handle &play_instrument() {
+        require_building_handle( token, *definition, "item" );
+        definition->play_instrument = true;
         return *this;
     }
 
@@ -2117,23 +2215,8 @@ struct item_definition_handle {
 
     item_definition_handle &transform_on_use( const sol::table &options ) {
         require_building_handle( token, *definition, "item" );
-        item_transform_action action;
-        action.result = read_item_transformation( options.get<sol::table>( "result" ) );
-        action.message = read_text_option( options, "message", {}, "item transform message" );
-        action.menu_text = read_text_option( options, "menu_text", {}, "item transform menu text" );
-        action.moves = item_option_int( options.get_or<std::int64_t>( "moves", 0 ), "item transform move cost" );
-        if( action.moves < 0 ) {
-            throw std::invalid_argument( "item transform move cost cannot be negative" );
-        }
-        action.need_empty = options.get_or( "need_empty", false );
-        action.need_wielding = options.get_or( "need_wielding", false );
-        action.need_worn = options.get_or( "need_worn", false );
-        if( const auto minimum_age = options.get<sol::optional<std::int64_t>>( "minimum_age_turns" ) ) {
-            action.minimum_age = item_option_int( *minimum_age, "item transform minimum age" );
-            action.not_ready = read_text_option( options, "not_ready_message", {}, "delayed transform message" );
-            if( *action.minimum_age < 0 || action.not_ready.empty() ) {
-                throw std::invalid_argument( "delayed item transform requires a nonnegative age and a message" );
-            }
+        item_transform_action action = read_item_transform_action( options );
+        if( action.minimum_age ) {
             definition->delayed_transform_use = std::move( action );
         } else {
             definition->transform_use = std::move( action );
@@ -2214,6 +2297,8 @@ struct item_definition_handle {
         definition->reveal_map.reset();
         definition->healing.reset();
         definition->use_message.reset();
+        definition->cable_link.reset();
+        definition->play_instrument = false;
         definition->spell_use.reset();
         definition->assembled_belt = itype_id();
         definition->transform_use.reset();
@@ -2260,6 +2345,83 @@ struct item_definition_handle {
         require_building_handle( token, *definition, "item" );
         definition->clear_tick_actions = true;
         definition->tick_handler.clear();
+        definition->native_tick_actions.clear();
+        definition->tick_transform.reset();
+        definition->tick_sound.reset();
+        definition->tick_music.reset();
+        return *this;
+    }
+
+    item_definition_handle &native_on_tick( const std::string &action ) {
+        require_building_handle( token, *definition, "item" );
+        if( !Item_factory::has_parameterless_iuse( action ) ) {
+            throw std::invalid_argument( "unknown native item tick action '" + action + "'" );
+        }
+        definition->native_tick_actions.insert( action );
+        return *this;
+    }
+
+    item_definition_handle &native_on_expiry( const std::string &action ) {
+        require_building_handle( token, *definition, "item" );
+        if( !Item_factory::has_parameterless_iuse( action ) ) {
+            throw std::invalid_argument( "unknown native item expiry action '" + action + "'" );
+        }
+        definition->expiry_action.emplace<std::string>( action );
+        return *this;
+    }
+
+    item_definition_handle &transform_on_tick( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_transform_action action = read_item_transform_action( options );
+        if( action.set_timer || action.minimum_age ) {
+            throw std::invalid_argument( "item tick transformations do not offer interactive choices or delays" );
+        }
+        definition->tick_transform = std::move( action );
+        return *this;
+    }
+
+    item_definition_handle &sound_on_tick( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::tick_sound_data data;
+        sound_iuse &actor = data.actor;
+        actor.sound_volume = item_option_int( options.get_or<std::int64_t>( "volume", 0 ), "tick sound volume" );
+        actor.sound_type = io::string_to_enum<sounds::sound_t>(
+                               options.get_or( "kind", std::string( "alarm" ) ) );
+        actor.sound_id = options.get_or( "sound_id", std::string( "misc" ) );
+        actor.sound_variant = options.get_or( "sound_variant", std::string( "default" ) );
+        data.message = read_text_option( options, "message", {}, "item tick sound" );
+        actor.sound_message = data.message.native();
+        definition->tick_sound.emplace( std::move( data ) );
+        return *this;
+    }
+
+    item_definition_handle &music_on_tick( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::tick_music_data data;
+        musical_instrument_actor &actor = data.actor;
+        actor.volume = item_option_int( options.get<std::int64_t>( "volume" ), "instrument volume" );
+        actor.fun = item_option_int( options.get<std::int64_t>( "fun" ), "instrument fun" );
+        actor.fun_bonus = item_option_int( options.get_or<std::int64_t>( "fun_bonus", 0 ), "instrument fun bonus" );
+        actor.speed_penalty = item_option_int( options.get_or<std::int64_t>( "speed_penalty", 10 ),
+                                              "instrument speed penalty" );
+        const int interval = item_option_int( options.get<std::int64_t>( "description_interval_turns" ),
+                                              "instrument description interval" );
+        if( interval <= 0 ) {
+            throw std::invalid_argument( "instrument description interval must be positive" );
+        }
+        actor.description_frequency = time_duration::from_turns( interval );
+        const auto read_descriptions = [&options]( const char *key, auto &authored, auto &messages ) {
+            if( const auto list = options.get<sol::optional<sol::table>>( key ) ) {
+                const std::size_t count = require_dense_array( *list, key, 0 );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    authored.push_back( read_singular_text( list->raw_get<sol::object>( i ), {}, key ) );
+                    messages.push_back( authored.back().native() );
+                }
+            }
+        };
+        read_descriptions( "player_descriptions", data.player_text, actor.player_descriptions );
+        read_descriptions( "npc_descriptions", data.npc_text, actor.npc_descriptions );
+        definition->tick_music.emplace( std::move( data ) );
         return *this;
     }
 
@@ -4183,6 +4345,45 @@ void hash_item_transformation( std::uint64_t &state, const item_transformation &
     hash_part( state, std::to_string( to_turns<int>( result.target_timer ) ) );
 }
 
+void hash_item_transform_action( std::uint64_t &state, const item_transform_action &action )
+{
+    hash_part( state, action.minimum_age ? "delayed_transform" : "transform" );
+    hash_item_transformation( state, action.result );
+    hash_part( state, action.message );
+    hash_part( state, action.menu_text );
+    hash_part( state, std::to_string( action.moves ) );
+    hash_part( state, std::to_string( action.chance ) );
+    hash_part( state, std::to_string( action.sound_volume ) );
+    hash_part( state, std::to_string( action.need_charges ) );
+    hash_part( state, std::to_string( action.need_fire ) );
+    hash_part( state, action.ammo_scale ? std::to_string( *action.ammo_scale ) : "inherit_ammo_scale" );
+    for( const bool required : { action.need_empty, action.need_wielding, action.need_worn,
+                                  action.set_timer } ) {
+        hash_part( state, required ? "required" : "optional" );
+    }
+    for( const auto *message : { &action.damage_failure_message, &action.need_charges_message,
+                                 &action.need_fire_message } ) {
+        hash_part( state, *message ? "specified" : "default" );
+        if( *message ) {
+            hash_part( state, **message );
+        }
+    }
+    if( action.minimum_age ) {
+        hash_part( state, std::to_string( *action.minimum_age ) );
+        hash_part( state, action.not_ready );
+    }
+}
+
+void hash_item_spell_action( std::uint64_t &state, const cast_spell_actor &spell )
+{
+    hash_part( state, "cast_spell" );
+    hash_part( state, spell.item_spell.str() );
+    hash_part( state, std::to_string( spell.spell_level ) );
+    for( const bool option : { spell.no_fail, spell.need_worn, spell.need_wielding, spell.mundane } ) {
+        hash_part( state, option ? "enabled" : "disabled" );
+    }
+}
+
 template<typename Registration>
 bool defines_registration(
     const std::vector<Registration> &entries, const std::string_view id )
@@ -4405,10 +4606,13 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "deploy_appliance", &item_definition_handle::deploy_appliance,
         "reveal_map", &item_definition_handle::reveal_map,
         "native_use", &item_definition_handle::native_use,
+        "link_cable", &item_definition_handle::link_cable,
         "message_on_use", &item_definition_handle::message_on_use,
         "capture_creature", &item_definition_handle::capture_creature,
         "heal", &item_definition_handle::heal,
         "cast_spell", &item_definition_handle::cast_spell,
+        "cast_spell_on_expiry", &item_definition_handle::cast_spell_on_expiry,
+        "play_instrument", &item_definition_handle::play_instrument,
         "assemble_ammo_belt", &item_definition_handle::assemble_ammo_belt,
         "transform_on_use", &item_definition_handle::transform_on_use,
         "transform_into", &item_definition_handle::transform_into,
@@ -4420,6 +4624,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
         "clear_tick_actions", &item_definition_handle::clear_tick_actions,
+        "native_on_tick", &item_definition_handle::native_on_tick,
+        "native_on_expiry", &item_definition_handle::native_on_expiry,
+        "transform_on_tick", &item_definition_handle::transform_on_tick,
+        "sound_on_tick", &item_definition_handle::sound_on_tick,
+        "music_on_tick", &item_definition_handle::music_on_tick,
         "on_tick", &item_definition_handle::on_tick,
         "on_consume", &item_definition_handle::on_consume );
     ccb.new_usertype<recipe_definition_handle>(
@@ -4842,6 +5051,17 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             definition->countdown_interval = time_duration::from_turns( count );
         }
         definition->replace_qualities = options.get_or( "replace_qualities", false );
+        if( const auto qualities = options.get<sol::optional<sol::table>>( "charged_qualities" ) ) {
+            const std::size_t count = require_dense_array( *qualities, "charged tool qualities", 0 );
+            auto &values = definition->charged_qualities.emplace();
+            values.reserve( count );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                const sol::table entry = qualities->raw_get<sol::table>( i );
+                values.push_back( read_item_quality( entry.get<std::string>( "id" ),
+                                                     entry.get<std::int64_t>( "level" ),
+                                                     entry.get_or( "speed", 1.0 ) ) );
+            }
+        }
         definition->replace_pockets = options.get_or( "replace_pockets", false );
         definition->throwing_recovery_chance = read_nonnegative_item_int( options, "throwing_recovery_chance" );
         if( definition->throwing_recovery_chance && *definition->throwing_recovery_chance > 100 ) {
@@ -6613,6 +6833,17 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
                 if( !native_int( quality.level ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' has an invalid quality level" );
+                }
+            }
+            if( definition.charged_qualities ) {
+                std::set<std::string> ids;
+                for( const quality_level &quality : *definition.charged_qualities ) {
+                    if( !ids.insert( quality.id ).second ||
+                        ( tool_quality_ids.count( quality.id ) == 0 && !quality_id( quality.id ).is_valid() ) ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has a duplicate or unknown charged quality '" +
+                                                  quality.id + "'" );
+                    }
                 }
             }
             for( const std::string &flag : definition.flags ) {
@@ -8392,6 +8623,13 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             static_cast<int>( quality.level ), quality.speed
                         };
                     }
+                    if( definition.charged_qualities ) {
+                        native->charged_qualities.clear();
+                        for( const quality_level &quality : *definition.charged_qualities ) {
+                            native->charged_qualities.emplace( quality_id( quality.id ),
+                                    itype::item_quality{ static_cast<int>( quality.level ), quality.speed } );
+                        }
+                    }
                     for( const auto &[quality, offset] : definition.quality_adjustments ) {
                         const auto existing_quality = native->qualities.find( quality );
                         if( existing_quality == native->qualities.end() ) {
@@ -8711,6 +8949,18 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->use_methods.insert_or_assign( "cast_spell",
                                 use_function( std::make_unique<cast_spell_actor>( *definition.spell_use ) ) );
                     }
+                    if( definition.cable_link ) {
+                        const auto &link = *definition.cable_link;
+                        if( link.ammo_scale ) {
+                            native->ammo_scale.emplace( "link_up", *link.ammo_scale );
+                        }
+                        native->use_methods.insert_or_assign( "link_up",
+                                use_function( std::make_unique<link_up_actor>( link.actor ) ) );
+                    }
+                    if( definition.play_instrument ) {
+                        native->use_methods.insert_or_assign( "play_instrument",
+                                use_function( std::make_unique<play_instrument_iuse>() ) );
+                    }
                     if( !definition.assembled_belt.is_empty() ) {
                         auto actor = std::make_unique<ammobelt_actor>();
                         actor->belt = definition.assembled_belt;
@@ -8746,6 +8996,30 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.clear_tick_actions ) {
                         native->tick_action.clear();
+                    }
+                    for( const std::string &action : definition.native_tick_actions ) {
+                        native->tick_action.insert_or_assign( action, Item_factory::usage_from_string( action ) );
+                    }
+                    if( definition.tick_transform ) {
+                        const item_transform_action &transform = *definition.tick_transform;
+                        if( transform.ammo_scale ) {
+                            native->ammo_scale.emplace( "transform", *transform.ammo_scale );
+                        }
+                        native->tick_action.insert_or_assign( "transform",
+                                use_function( make_item_transform_actor( transform ) ) );
+                    }
+                    if( definition.tick_sound ) {
+                        native->tick_action.insert_or_assign( "sound",
+                                use_function( std::make_unique<sound_iuse>( definition.tick_sound->actor ) ) );
+                    }
+                    if( definition.tick_music ) {
+                        native->tick_action.insert_or_assign( "musical_instrument",
+                                use_function( std::make_unique<musical_instrument_actor>( definition.tick_music->actor ) ) );
+                    }
+                    if( const auto *action = std::get_if<std::string>( &definition.expiry_action ) ) {
+                        native->countdown_action = Item_factory::usage_from_string( *action );
+                    } else if( const auto *spell = std::get_if<cast_spell_actor>( &definition.expiry_action ) ) {
+                        native->countdown_action = use_function( std::make_unique<cast_spell_actor>( *spell ) );
                     }
                     if( !definition.tick_handler.empty() ) {
                         const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
@@ -10386,6 +10660,17 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                 }
                 hash_part( state, v.replace_qualities ? "replace_qualities" : "inherit_qualities" );
+                if( v.charged_qualities ) {
+                    hash_part( state, "charged_qualities" );
+                    hash_part( state, std::to_string( v.charged_qualities->size() ) );
+                    for( const quality_level &quality : *v.charged_qualities ) {
+                        std::ostringstream speed;
+                        speed << std::hexfloat << quality.speed;
+                        hash_part( state, quality.id );
+                        hash_part( state, std::to_string( quality.level ) );
+                        hash_part( state, speed.str() );
+                    }
+                }
                 for( const auto &[quality, offset] : v.quality_adjustments ) {
                     hash_part( state, "adjust_quality" );
                     hash_part( state, quality.str() );
@@ -10443,6 +10728,37 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.clear_flags ? "clear_item_flags" : "inherit_item_flags" );
                 hash_part( state, v.clear_melee_damage ? "clear_melee_damage" : "inherit_melee_damage" );
                 hash_part( state, v.clear_tick_actions ? "clear_tick_actions" : "inherit_tick_actions" );
+                for( const std::string &action : v.native_tick_actions ) {
+                    hash_part( state, "native_on_tick" );
+                    hash_part( state, action );
+                }
+                if( v.tick_transform ) {
+                    hash_part( state, "transform_on_tick" );
+                    hash_item_transform_action( state, *v.tick_transform );
+                }
+                if( v.tick_sound ) {
+                    const auto &sound = *v.tick_sound;
+                    hash_part( state, "sound_on_tick" );
+                    hash_part( state, sound.message );
+                    hash_part( state, std::to_string( sound.actor.sound_volume ) );
+                    hash_part( state, io::enum_to_string( sound.actor.sound_type ) );
+                    hash_part( state, sound.actor.sound_id );
+                    hash_part( state, sound.actor.sound_variant );
+                }
+                if( v.tick_music ) {
+                    const auto &music = *v.tick_music;
+                    hash_part( state, "music_on_tick" );
+                    for( const int value : { music.actor.volume, music.actor.fun, music.actor.fun_bonus,
+                                             music.actor.speed_penalty, to_turns<int>( music.actor.description_frequency ) } ) {
+                        hash_part( state, std::to_string( value ) );
+                    }
+                    for( const auto *texts : { &music.player_text, &music.npc_text } ) {
+                        hash_part( state, std::to_string( texts->size() ) );
+                        for( const authored_text &message : *texts ) {
+                            hash_part( state, message );
+                        }
+                    }
+                }
                 hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
                 if( v.tool ) {
@@ -10551,6 +10867,30 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, v.use_message->name );
                     hash_part( state, v.use_message->message );
                 }
+                if( v.cable_link ) {
+                    const auto &link = *v.cable_link;
+                    const link_up_actor &actor = link.actor;
+                    hash_part( state, "link_cable" );
+                    hash_part( state, link.menu_text );
+                    hash_part( state, std::to_string( actor.cable_length ) );
+                    hash_part( state, std::to_string( units::to_milliwatt( actor.charge_rate ) ) );
+                    hash_part( state, std::to_string( actor.move_cost ) );
+                    std::ostringstream efficiency;
+                    efficiency << std::hexfloat << actor.efficiency;
+                    hash_part( state, efficiency.str() );
+                    hash_part( state, link.ammo_scale ? std::to_string( *link.ammo_scale ) : "inherit_ammo_scale" );
+                    for( const link_state target : actor.targets ) {
+                        hash_part( state, "target" );
+                        hash_part( state, io::enum_to_string( target ) );
+                    }
+                    for( const std::string &id : actor.can_extend ) {
+                        hash_part( state, "can_extend" );
+                        hash_part( state, id );
+                    }
+                }
+                if( v.play_instrument ) {
+                    hash_part( state, "play_instrument" );
+                }
                 if( v.healing ) {
                     const heal_actor &heal = *v.healing;
                     hash_part( state, "heal" );
@@ -10574,32 +10914,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
                 for( const auto *entry : { &v.transform_use, &v.delayed_transform_use } ) {
                     if( *entry ) {
-                        const item_transform_action &action = **entry;
-                        hash_part( state, action.minimum_age ? "delayed_transform" : "transform" );
-                        hash_item_transformation( state, action.result );
-                        hash_part( state, action.message );
-                        hash_part( state, action.menu_text );
-                        hash_part( state, std::to_string( action.moves ) );
-                        hash_part( state, std::to_string( action.chance ) );
-                        hash_part( state, std::to_string( action.sound_volume ) );
-                        hash_part( state, std::to_string( action.need_charges ) );
-                        hash_part( state, std::to_string( action.need_fire ) );
-                        hash_part( state, action.ammo_scale ? std::to_string( *action.ammo_scale ) : "inherit_ammo_scale" );
-                        for( const bool required : { action.need_empty, action.need_wielding, action.need_worn,
-                                                      action.set_timer } ) {
-                            hash_part( state, required ? "required" : "optional" );
-                        }
-                        for( const auto *message : { &action.damage_failure_message, &action.need_charges_message,
-                                                     &action.need_fire_message } ) {
-                            hash_part( state, *message ? "specified" : "default" );
-                            if( *message ) {
-                                hash_part( state, **message );
-                            }
-                        }
-                        if( action.minimum_age ) {
-                            hash_part( state, std::to_string( *action.minimum_age ) );
-                            hash_part( state, action.not_ready );
-                        }
+                        hash_item_transform_action( state, **entry );
                     }
                 }
                 if( v.transform_result ) {
@@ -10611,13 +10926,14 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( to_turns<int>( *v.countdown_interval ) ) );
                 }
                 if( v.spell_use ) {
-                    const cast_spell_actor &spell = *v.spell_use;
-                    hash_part( state, "cast_spell" );
-                    hash_part( state, spell.item_spell.str() );
-                    hash_part( state, std::to_string( spell.spell_level ) );
-                    for( const bool option : { spell.no_fail, spell.need_worn, spell.need_wielding, spell.mundane } ) {
-                        hash_part( state, option ? "enabled" : "disabled" );
-                    }
+                    hash_item_spell_action( state, *v.spell_use );
+                }
+                if( const auto *action = std::get_if<std::string>( &v.expiry_action ) ) {
+                    hash_part( state, "native_on_expiry" );
+                    hash_part( state, *action );
+                } else if( const auto *spell = std::get_if<cast_spell_actor>( &v.expiry_action ) ) {
+                    hash_part( state, "spell_on_expiry" );
+                    hash_item_spell_action( state, *spell );
                 }
                 if( !v.assembled_belt.is_empty() ) {
                     hash_part( state, "ammobelt" );

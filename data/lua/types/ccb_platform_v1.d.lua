@@ -696,6 +696,11 @@ local ModDefinition = {}
 ---Create with content.text or content.plural_text; each field declaration determines whether plural text is accepted. Plain strings retain that field's existing behavior.
 ---@class LocalizedText
 
+---@class ItemChargedQualityOptions
+---@field id string Existing native tool quality ID.
+---@field level integer Signed native quality level.
+---@field speed? number Positive native speed multiplier. Defaults to one.
+
 ---@class ItemDefinitionOptions
 ---@field id string Stable item type id.
 ---@field abstract? boolean Register an inheritance template without creating an item that can spawn.
@@ -729,6 +734,7 @@ local ModDefinition = {}
 ---@field remove_techniques? string[] Remove these existing martial techniques after applying replacements.
 ---@field weapon_categories? string[] Replace the item's weapon categories.
 ---@field replace_qualities? boolean Clear inherited tool qualities before applying staged qualities.
+---@field charged_qualities? ItemChargedQualityOptions[] Replace tool qualities that require power. An empty array clears the inherited list.
 ---@field remove_qualities? string[] Remove these existing tool qualities after applying staged qualities and adjustments.
 ---@field replace_pockets? boolean Clear inherited pockets before applying staged pockets.
 ---@field minimum_skills? table<string, integer> Replace native skill requirements by skill ID.
@@ -1188,6 +1194,11 @@ function ItemDefinition:transform_into(result) end
 ---@return ItemDefinition self
 function ItemDefinition:cast_spell(options) end
 
+---Cast a spell through the native expiry action when the active countdown ends.
+---@param options ItemSpellUseOptions
+---@return ItemDefinition self
+function ItemDefinition:cast_spell_on_expiry(options) end
+
 ---Attach the native linkage action that assembles and loads the selected ammunition belt.
 ---@param belt string Resulting belt item id.
 ---@return ItemDefinition self
@@ -1224,7 +1235,7 @@ function ItemDefinition:teach_spells(spells) end
 ---@return ItemDefinition self
 function ItemDefinition:martial_arts_manual() end
 
----Remove inherited native activation actions and staged on_use, transformations, messages, treatment, spell use, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
+---Remove inherited activation actions and reset staged callbacks, transformations, messages, treatment, spell use, cable linking, instrument activation, belt assembly, native_use, reveal_map, deploy_appliance, teach_spells and martial_arts_manual.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_use_actions() end
@@ -1238,6 +1249,21 @@ function ItemDefinition:clear_use_actions() end
 ---@return ItemDefinition self
 function ItemDefinition:message_on_use(options) end
 
+---@class ItemCableLinkOptions
+---@field cable_length? integer Native cable length in tiles. Defaults to -1, which uses the item type's maximum charges.
+---@field charge_milliwatts? integer Native cable power rate in milliwatts.
+---@field efficiency? number Native charging efficiency. Defaults to 0.85.
+---@field move_cost? integer Cost to attach the cable. Defaults to five moves.
+---@field menu_text? string|LocalizedText Label for connecting or managing cables.
+---@field targets? ('no_link'|'needs_reeling'|'ups'|'solarpack'|'vehicle_port'|'vehicle_battery'|'bio_cable'|'vehicle_tow'|'automatic')[] Native endpoint kinds. Defaults to no_link and vehicle_port.
+---@field can_extend? string[] Native cable types or flags accepted as extensions.
+---@field ammo_scale? integer Return this native charge scale when the base item has no value for the cable action.
+
+---Install the native cable action and its endpoint selection.
+---@param options ItemCableLinkOptions
+---@return ItemDefinition self
+function ItemDefinition:link_cable(options) end
+
 ---Append one named Lua callback to the item's native active-processing actions.
 ---The callback has the same item/character/position payload as on_use; character is nil for an uncarried item.
 ---It runs only when native processing ticks the active item, including on the map.
@@ -1246,10 +1272,54 @@ function ItemDefinition:message_on_use(options) end
 ---@return ItemDefinition self
 function ItemDefinition:on_tick(handler_id) end
 
----Remove inherited active-processing actions and any on_tick staged before this call.
----Call on_tick afterwards to install a replacement; activation and consumption actions are independent.
+---Remove inherited and staged active-processing actions. Activation, expiry and consumption actions are independent.
 ---@return ItemDefinition self
 function ItemDefinition:clear_tick_actions() end
+
+---Install a parameterless native action for active item processing.
+---@param action string Registered native action ID.
+---@return ItemDefinition self
+function ItemDefinition:native_on_tick(action) end
+
+---Set a single parameterless native action to run when the active countdown expires.
+---@param action string Registered native action ID.
+---@return ItemDefinition self
+function ItemDefinition:native_on_expiry(action) end
+
+---Use the native transform action during active item processing.
+---@param options ItemUseTransformationOptions Native transform options without an interactive timer or minimum age.
+---@return ItemDefinition self
+function ItemDefinition:transform_on_tick(options) end
+
+---@class ItemTickSoundOptions
+---@field volume? integer Native sound volume, defaults to zero.
+---@field kind? string Native sound category, defaults to alarm.
+---@field message? string|LocalizedText Text published with the sound.
+---@field sound_id? string Audio asset ID, defaults to misc.
+---@field sound_variant? string Audio asset variant, defaults to default.
+
+---Emit a native sound while this item is active.
+---@param options ItemTickSoundOptions
+---@return ItemDefinition self
+function ItemDefinition:sound_on_tick(options) end
+
+---@class ItemTickMusicOptions
+---@field volume integer Native music volume.
+---@field fun integer Base morale effect.
+---@field fun_bonus? integer Morale scaling by perception.
+---@field speed_penalty? integer Speed penalty while playing. Defaults to ten.
+---@field description_interval_turns integer Positive native description interval.
+---@field player_descriptions? (string|LocalizedText)[] Performer messages for the player.
+---@field npc_descriptions? (string|LocalizedText)[] Performer messages for NPCs.
+
+---Play music through native active-item processing.
+---@param options ItemTickMusicOptions
+---@return ItemDefinition self
+function ItemDefinition:music_on_tick(options) end
+
+---Install the native action that starts or stops playing the instrument.
+---@return ItemDefinition self
+function ItemDefinition:play_instrument() end
 
 ---@class ToolDefinitionOptions
 ---@field ammo_types? string[] Native ammunition types accepted by the tool. Omission inherits; an empty array clears them.
