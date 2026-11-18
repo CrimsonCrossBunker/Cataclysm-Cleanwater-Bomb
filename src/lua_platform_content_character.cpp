@@ -348,6 +348,13 @@ struct profession_definition_data {
     bool registered = false;
 };
 
+struct profession_patch {
+    profession_id target;
+    std::optional<authored_text> name_male;
+    std::optional<authored_text> name_female;
+    std::vector<std::string> remove_flags;
+};
+
 struct profession_group_definition_data {
     std::string id;
     std::vector<std::string> professions;
@@ -2107,6 +2114,7 @@ struct character_content_transaction::impl {
     std::shared_ptr < owner_token > token;
 
     std::vector < profession_registration > professions;
+    std::vector<profession_patch> profession_patches;
     std::vector < profession_group_registration > profession_groups;
     std::vector < widget_registration > widgets;
     std::vector<sidebar_extension> sidebar_extensions;
@@ -2240,6 +2248,33 @@ bool character_content_transaction::register_definition( const sol::object &valu
 
 void character_content_transaction::impl::install_profession( sol::table &content )
 {
+    content.set_function( "patch_profession", [this]( const std::string &id, const sol::table & options ) {
+        if( token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        profession_patch patch;
+        patch.target = profession_id( id );
+        const auto read_name = [&options]( const char *key ) -> std::optional<authored_text> {
+            const sol::object name = options.raw_get<sol::object>( key );
+            if( !name.valid() || name.get_type() == sol::type::nil ) {
+                return std::nullopt;
+            }
+            return read_singular_text( name, {}, key );
+        };
+        patch.name_male = read_name( "name_male" );
+        patch.name_female = read_name( "name_female" );
+        if( const auto flags = options.get<sol::optional<sol::table>>( "remove_flags" ) ) {
+            const std::size_t count = require_dense_array( *flags, "profession remove_flags", 0, 4096 );
+            for( std::size_t i = 1; i <= count; ++i ) {
+                const sol::object flag = flags->raw_get<sol::object>( i );
+                if( !flag.is<std::string>() ) {
+                    throw std::runtime_error( "profession remove_flags must contain strings" );
+                }
+                patch.remove_flags.push_back( flag.as<std::string>() );
+            }
+        }
+        profession_patches.push_back( std::move( patch ) );
+    } );
     content.set_function( "Profession", [this]( const sol::table & options ) {
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -4124,6 +4159,17 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             }
             validate_operation( entry.operation, profession_id( definition.id ).is_valid(),
                                 definition.id, "profession" );
+        }
+
+        for( const profession_patch &patch : pimpl_->profession_patches ) {
+            require_valid_id( patch.target.str(), "profession patch target" );
+            if( check_engine_state && profession_ids.count( patch.target.str() ) == 0 &&
+                !patch.target.is_valid() ) {
+                throw std::runtime_error( "unknown profession '" + patch.target.str() + "'" );
+            }
+            for( const std::string &flag : patch.remove_flags ) {
+                require_valid_id( flag, "profession flag" );
+            }
         }
 
         std::set < std::string > profession_group_ids;
@@ -6282,7 +6328,22 @@ void character_content_transaction::impl::apply_profession()
         native.src.emplace_back( id, mod_id( this->owner ) );
         detail::profession_registry().insert( native );
     }
-    if( !this->professions.empty() ) {
+    for( const profession_patch &patch : this->profession_patches ) {
+        const profession &previous = patch.target.obj();
+        this->profession_undo.emplace_back( patch.target, previous );
+        profession native = previous;
+        if( patch.name_male ) {
+            native._name_male = patch.name_male->native();
+        }
+        if( patch.name_female ) {
+            native._name_female = patch.name_female->native();
+        }
+        for( const std::string &flag : patch.remove_flags ) {
+            native.flags.erase( flag );
+        }
+        detail::profession_registry().restore( native );
+    }
+    if( !this->professions.empty() || !this->profession_patches.empty() ) {
         detail::profession_registry().finalize();
     }
 }
@@ -7702,6 +7763,22 @@ void character_content_transaction::append_fingerprint(
                 }
                 hash_part( state, value.subtype );
                 hash_part( state, value.start_handler );
+            }
+            for( const profession_patch &patch : pimpl_->profession_patches ) {
+                hash_part( state, "profession_patch" );
+                hash_part( state, patch.target.str() );
+                if( patch.name_male ) {
+                    hash_part( state, "name_male" );
+                    hash_part( state, *patch.name_male );
+                }
+                if( patch.name_female ) {
+                    hash_part( state, "name_female" );
+                    hash_part( state, *patch.name_female );
+                }
+                for( const std::string &flag : patch.remove_flags ) {
+                    hash_part( state, "remove_flag" );
+                    hash_part( state, flag );
+                }
             }
             break;
         }
