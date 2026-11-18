@@ -211,3 +211,115 @@ content.add_nested_mapgen {
         layout:spawn_monster("mon_zomborg", { 0, 2 }, { 0, 2 }, { repetitions = { 1, 4 } })
     end,
 }
+
+local ground_terrain = {
+    ["."] = { { "t_glassed_sand", 10 }, "t_sandmound" },
+    [","] = { { "t_glassed_sand", 3 }, { "t_grass_dead", 3 }, "t_sandmound", "t_sand" },
+    [";"] = { "t_rock_floor_no_roof", { "t_sand", 5 }, "t_sandmound" },
+    ["|"] = { { "t_rock_floor_no_roof", 10 }, "t_sand" },
+}
+local ground_furniture = {
+    ["."] = { { "f_null", 2000 }, { "f_rubble_rock", 100 } },
+    [","] = { { "f_null", 2000 }, { "f_rubble_rock", 100 }, { "f_boulder_small", 12 }, "f_boulder_medium" },
+    [";"] = { { "f_null", 2000 }, { "f_rubble_rock", 30 }, { "f_boulder_small", 6 }, "f_boulder_medium", "f_boulder_large" },
+    ["|"] = { { "f_null", 2000 }, { "f_rubble_rock", 10 }, "f_wreckage" },
+}
+
+local main_crash = {
+    "        .........       ",
+    "     ...............    ",
+    "   .......,,,,,.......  ",
+    "  .....,,,,,,,,,,.....  ",
+    "  ...,,,,,,,,,,,,,,.... ",
+    " ....,,,;;;;;;;,,,,.... ",
+    " ...,,,;;;;;;;;;,,,,... ",
+    "....,,;;;;;;;;;;,,,,....",
+    "...,,,,;;;||||;;,,,,,...",
+    "...,;,;;|||||;;;;,,,,...",
+    "...,,;;;;||||||;;,,,,...",
+    "...,;,;|||||||;;;,,,,...",
+    "...,,,,;;||||||;,,,,,...",
+    "...,;,,;;|||||;;,,,,,...",
+    "...,,,;;|||||||;;,,,,...",
+    "...,,,,,;;||;;;;,,,,,...",
+    "....,,;,;;;;;;;,,,,,....",
+    " ...,,,,,,;;;;;;;,,,... ",
+    " ....,,,,,;;;;;,,,,.... ",
+    " ....,,,,,,,,,,,,,,.... ",
+    "  .......,,,,,,.......  ",
+    "  ....................  ",
+    "    ................    ",
+    "       ..........       ",
+}
+local scattered_crash = {
+    "          .   .         ",
+    "     ...  ..  ..   .    ",
+    "      ....,, ,,. ...    ",
+    "  ...   .,,,,,,,,.. ..  ",
+    "   ..,.. ,,,,,,,,,,..   ",
+    "    .,,,;;;;;;;,,,,. .  ",
+    "      ,;;;;;;;;;,,,,..  ",
+    "  ..,,;;;;;;;;;;,,,,    ",
+    "...  ,,;;;;|||;;,,,,,...",
+    "   ,;,;;|||||;;;;,,,,.. ",
+    "...,,;;;;||||||;;,,,    ",
+    "   ,;,;|||||||;;;,,,,.. ",
+    "... ,,,;|||||||;,,,,,...",
+    "..., ,,;;|||||;;,,,,,.. ",
+    "   ,,,;;|||||||;;,,,    ",
+    "...   ,,;;||;;;;,,,,,...",
+    "   .,,;,;;;;;;;,,,,,... ",
+    " ...  ,,,,;;;;;;;,,,.   ",
+    "    .,,,,,;;;;;,,,, ..  ",
+    " ....,,,,,,,,,,,,,,  .. ",
+    "  ..  ...,,,,, .. ..    ",
+    "    ..  ...... .. ...   ",
+    "      ...  ..  .   .    ",
+    "      .                 ",
+}
+
+local room_choices = {
+    { "nest_exodii_crash_building_big_1", 30 },
+    { "nest_exodii_crash_building_big_2", 10 },
+    { "nest_exodii_crash_building_small_1", 40 },
+    { "nest_exodii_crash_building_smashed", 20 },
+}
+
+local function crash_site(rows, room_range, encounters)
+    return function(layout)
+        layout:erase_before_terrain()
+        for y, row in ipairs(rows) do
+            for x = 1, #row do
+                local glyph = row:sub(x, x)
+                if ground_terrain[glyph] then
+                    layout:terrain(x - 1, y - 1, ground_terrain[glyph])
+                    layout:furniture(x - 1, y - 1, ground_furniture[glyph])
+                end
+            end
+        end
+        layout:stamp_named(room_choices, room_range, room_range)
+        if encounters then layout:stamp_named(encounters, { 7, 14 }, { 16, 18 }) end
+    end
+end
+
+content.add_update_mapgen {
+    id = "mx_exodii_crash_big_1",
+    build = crash_site(main_crash, { 6, 10 }, { { "nest_exodii_scouts", 5 }, { "nest_exodii_zombies", 20 } }),
+}
+
+content.add_update_mapgen {
+    id = "mx_exodii_crash_big_2",
+    build = crash_site(scattered_crash, { 7, 10 }, { { "nest_exodii_scouts", 5 }, { "nest_exodii_zombies", 20 } }),
+}
+
+content.add_nested_mapgen {
+    id = "mx_exodii_crash_big_1_pat",
+    size = 24,
+    build = crash_site(main_crash, { 6, 10 }, { { "nest_exodii_scouts", 20 }, { "nest_exodii_zombies", 5 } }),
+}
+
+content.add_nested_mapgen {
+    id = "mx_exodii_crash_big_1_chop_shop",
+    size = 24,
+    build = crash_site(main_crash, { 6, 10 }),
+}
