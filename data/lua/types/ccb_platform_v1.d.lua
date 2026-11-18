@@ -15069,6 +15069,16 @@ function CcbSpawnsApi.npc(template, position, options) end
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
 
+---@class CcbNearbyMonstersResult: CcbResult
+---@field value? GameHandle[]
+
+---Return live monsters on the origin's z-level in native tracker order.
+---@param origin TripointCoord Absolute map-square center.
+---@param radius integer Native game distance in 0..1000.
+---@param ids? GameId[] Dense array of at most 256 registered GameId<monster> values. Nil or empty matches all.
+---@return CcbNearbyMonstersResult result
+function CcbMonstersApi.nearby(origin, radius, ids) end
+
 ---@class CcbNearbyMonsterCountOptions
 ---@field radius? integer Native game distance in 0..1000; defaults to 1000.
 ---@field attitude? 'hostile'|'friendly'|'both' Native monster attitude relative to the active player; defaults to hostile.

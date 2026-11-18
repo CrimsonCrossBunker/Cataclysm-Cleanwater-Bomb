@@ -1060,6 +1060,38 @@ bool nearby_monster_id_matches(
     } );
 }
 
+sol::table nearby_monsters(
+    sol::this_state lua, const script_tripoint_coord &origin, const int radius,
+    const sol::optional<sol::table> &requested_ids,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    const std::string api_name = "services.monsters.nearby";
+    const tripoint_abs_ms native_origin = nearby_count_origin( origin, api_name );
+    if( radius < 0 || radius > maximum_creature_query_radius ) {
+        throw std::invalid_argument( api_name + " radius must be within 0..1000" );
+    }
+    const std::vector<std::string> ids = read_nearby_monster_ids(
+            requested_ids, nearby_monster_filter_kind::type, api_name );
+    sol::state_view state( lua );
+    if( g == nullptr ) {
+        return make_game_error_result( state, { "unavailable", "No active game is available" } );
+    }
+    sol::table result = state.create_table();
+    for( monster &candidate : g->all_monsters() ) {
+        const tripoint_abs_ms position = candidate.pos_abs();
+        if( position.z() != native_origin.z() ||
+            !nearby_monster_id_matches( candidate, ids, nearby_monster_filter_kind::type ) ) {
+            continue;
+        }
+        const script_tripoint_coord coordinates = script_tripoint_coord::from_native(
+                    coords::origin::abs, coords::scale::map_square, position.raw() );
+        if( origin.game_distance( coordinates ) <= radius ) {
+            result.add( make_creature_handle( candidate, runtime_generation, world_generation ) );
+        }
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
 sol::table count_nearby_monsters(
     sol::this_state lua, const script_tripoint_coord &origin,
     const sol::optional<sol::table> &requested_ids,
@@ -4649,6 +4681,16 @@ void install_creature_api(
     services["creatures"] = std::move( creatures );
 
     sol::table monsters = lua.create_table();
+    monsters.set_function(
+        "nearby",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const script_tripoint_coord & origin, const int radius,
+    const sol::object & ids ) {
+        require_read();
+        return nearby_monsters( lua_state, origin, radius,
+                                read_optional_table( ids, "services.monsters.nearby ids" ),
+                                current_runtime_generation(), current_world_generation() );
+    } );
     monsters.set_function(
         "seeing_position",
         [current_runtime_generation, current_world_generation, require_read](

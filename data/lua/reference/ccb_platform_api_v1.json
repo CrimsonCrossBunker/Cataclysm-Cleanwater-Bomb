@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 953,
+    "class_count": 954,
     "classes": [
       {
         "fields": [
@@ -8148,12 +8148,12 @@
       {
         "fields": [
           {
-            "line": 15084,
+            "line": 15094,
             "name": "remove_corpse",
             "type": "boolean"
           },
           {
-            "line": 15085,
+            "line": 15095,
             "name": "suppress_message",
             "type": "boolean"
           }
@@ -8495,17 +8495,27 @@
       {
         "fields": [
           {
-            "line": 15074,
+            "line": 15084,
             "name": "attitude",
             "type": "'hostile'|'friendly'|'both'"
           },
           {
-            "line": 15073,
+            "line": 15083,
             "name": "radius",
             "type": "integer"
           }
         ],
         "name": "CcbNearbyMonsterCountOptions"
+      },
+      {
+        "fields": [
+          {
+            "line": 15073,
+            "name": "value",
+            "type": "GameHandle[]"
+          }
+        ],
+        "name": "CcbNearbyMonstersResult"
       },
       {
         "fields": [],
@@ -29005,7 +29015,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1650,
+    "function_count": 1651,
     "functions": [
       {
         "line": "4330",
@@ -30676,25 +30686,31 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "15081",
+        "line": "15091",
         "name": "count_nearby",
         "owner": "CcbMonstersApi",
         "parameters": "origin, ids, options"
       },
       {
-        "line": "15091",
+        "line": "15101",
         "name": "die",
         "owner": "CcbMonstersApi",
         "parameters": "monster, options"
       },
       {
-        "line": "15097",
+        "line": "15080",
+        "name": "nearby",
+        "owner": "CcbMonstersApi",
+        "parameters": "origin, radius, ids"
+      },
+      {
+        "line": "15107",
         "name": "seeing_position",
         "owner": "CcbMonstersApi",
         "parameters": "position, radius"
       },
       {
-        "line": "15102",
+        "line": "15112",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
