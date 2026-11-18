@@ -52,6 +52,12 @@
 #include "units_utility.h"
 #include "value_ptr.h"
 
+static const activity_id ACT_PET_TRANSFER( "ACT_PET_TRANSFER" );
+
+static const damage_type_id damage_bash( "bash" );
+static const damage_type_id damage_cut( "cut" );
+static const damage_type_id damage_stab( "stab" );
+
 namespace pet_inventory_ui
 {
 std::string load_summary( const monster &pet, const Character &who )
@@ -337,9 +343,9 @@ std::string equipment_summary( const item &equipment )
     if( equipment.is_pet_armor() ) {
         return string_format( _( "%.1f %s; bash %.1f cut %.1f stab %.1f" ),
                               convert_weight( equipment.weight() ), weight_units(),
-                              equipment.resist( damage_type_id( "bash" ) ),
-                              equipment.resist( damage_type_id( "cut" ) ),
-                              equipment.resist( damage_type_id( "stab" ) ) );
+                              equipment.resist( damage_bash ),
+                              equipment.resist( damage_cut ),
+                              equipment.resist( damage_stab ) );
     }
     return string_format( _( "Weight: %.1f %s" ), convert_weight( equipment.weight() ),
                           weight_units() );
@@ -617,8 +623,7 @@ ret_val<void> transfer_item( Character &who, monster &pet, const transfer_reques
 
 const activity_id &transfer_activity_actor::get_type() const
 {
-    static const activity_id activity( "ACT_PET_TRANSFER" );
-    return activity;
+    return ACT_PET_TRANSFER;
 }
 
 void transfer_activity_actor::start( player_activity &act, Character & )
@@ -1169,7 +1174,7 @@ void show_transfer( monster &pet )
                         string_format( _( "After transfer: load %.1f / %.1f %s; free %.1f %s" ),
                                        convert_weight( projected ), convert_weight( pet.weight_capacity() ), weight_units(),
                                        convert_weight( pet.weight_capacity() - projected ), weight_units() ) );
-        trim_and_print( layout.controls, point( 0, 1 ), getmaxx( layout.controls ), c_light_gray,
+        trim_and_print( layout.controls, point::south, getmaxx( layout.controls ), c_light_gray,
                         string_format( _( "Cargo: %s / %s %s; selected: %d; filter: %s" ),
                                        format_volume( pet_cargo_volume( all_pet_items ) + volume_delta ),
                                        format_volume( total_capacity ), volume_units_abbr(), selected.size(), filter ) );

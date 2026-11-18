@@ -2111,7 +2111,7 @@ class consume_activity_actor : public activity_actor
 
         consume_activity_actor( item_source source, faction_id owner, bool consequences, bool theft ) :
             server_owned( true ), allow_consequences( consequences ), allow_theft( theft ),
-            owned_source( std::move( source ) ), vehicle_owner( std::move( owner ) ) {}
+            owned_source( std::move( source ) ), vehicle_owner( owner ) {}
 
         explicit consume_activity_actor( const item &consume_item, bool reprompt_consume_menu = false ) :
             consume_item( consume_item ), reprompt_consume_menu( reprompt_consume_menu ) {}

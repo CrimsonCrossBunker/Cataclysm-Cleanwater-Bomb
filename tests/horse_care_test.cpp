@@ -30,8 +30,8 @@
 #include "type_id.h"
 #include "units.h"
 
-static const pet_slot_id pet_slot_storage( "storage" );
 static const pet_slot_id pet_slot_armor( "armor" );
+static const pet_slot_id pet_slot_storage( "storage" );
 
 TEST_CASE( "loaded_backpack_can_be_installed_on_a_horse", "[monster][pet_equipment]" )
 {
@@ -332,7 +332,7 @@ TEST_CASE( "animal_cargo_activity_stops_when_the_animal_is_unavailable",
         horse.friendly = 0;
     }
     SECTION( "another_floor" ) {
-        horse.setpos( rider.pos_abs() + tripoint( 0, 0, -1 ) );
+        horse.setpos( rider.pos_abs() + tripoint::below );
     }
     SECTION( "blocked_by_terrain" ) {
         get_map().ter_set( horse.pos_bub(), ter_id( "t_wall" ) );
@@ -371,7 +371,7 @@ TEST_CASE( "animal_cargo_resume_rechecks_reach_after_partial_completion",
     JsonOut output( saved );
     rider.activity.actor->serialize( output );
     rider.cancel_activity();
-    horse.setpos( rider.pos_abs() + tripoint( 0, 0, -1 ) );
+    horse.setpos( rider.pos_abs() + tripoint::below );
     std::unique_ptr<activity_actor> restored;
     deserialize_wrapper( [&restored]( const JsonValue & value ) {
         JsonValue data = value;

@@ -55,9 +55,14 @@ static const damage_type_id damage_bash( "bash" );
 static const damage_type_id damage_cut( "cut" );
 static const damage_type_id damage_stab( "stab" );
 
+static const efftype_id effect_downed( "downed" );
 static const efftype_id effect_hit_by_player( "hit_by_player" );
 static const efftype_id effect_pet( "pet" );
+static const efftype_id effect_stunned( "stunned" );
 
+static const faction_id faction_your_followers( "your_followers" );
+
+static const itype_id itype_anvil( "anvil" );
 static const itype_id itype_cavalry_sabre_fake( "cavalry_sabre_fake" );
 static const itype_id itype_mc_cavalry_sabre( "mc_cavalry_sabre" );
 static const itype_id itype_megachette_folded( "megachette_folded" );
@@ -441,7 +446,7 @@ TEST_CASE( "wild_charge_is_available_without_a_weapon_but_requires_trotting",
     player.set_movement_mode( move_mode_run );
     CHECK( avatar_action::mounted_charge_available( player, true ) );
     while( horse.get_load_weight() <= horse.weight_capacity() ) {
-        horse.add_item( item( itype_id( "anvil" ) ) );
+        horse.add_item( item( itype_anvil ) );
     }
     CHECK_FALSE( avatar_action::mounted_charge_available( player, true ) );
 }
@@ -499,8 +504,8 @@ TEST_CASE( "wild_charge_respects_contact_defenses_and_blocking",
         }
         CHECK( target.blocks_left == 0 );
         CHECK( target.get_hp() == 500 );
-        CHECK_FALSE( target.has_effect( efftype_id( "downed" ) ) );
-        CHECK_FALSE( target.has_effect( efftype_id( "stunned" ) ) );
+        CHECK_FALSE( target.has_effect( effect_downed ) );
+        CHECK_FALSE( target.has_effect( effect_stunned ) );
     }
 
     SECTION( "lethal_retaliation_stops_the_charge" ) {
@@ -537,7 +542,7 @@ TEST_CASE( "mounted_charge_hit_reports_the_actual_recipient_after_rider_redirect
     const bool allied = GENERATE( false, true );
     CAPTURE( allied );
     if( allied ) {
-        passenger.set_fac( faction_id( "your_followers" ) );
+        passenger.set_fac( faction_your_followers );
         passenger.set_attitude( NPCATT_FOLLOW );
     }
     REQUIRE( passenger.is_player_ally() == allied );
@@ -582,7 +587,7 @@ TEST_CASE( "wild_charge_direct_npc_hit_does_not_repeat_the_attack_notification",
     avatar &player = get_avatar();
     monster &horse = setup_mounted_lance( player );
     npc &target = spawn_npc( ( player.pos_bub() + tripoint( 3, 0, 0 ) ).xy(), "test_talker" );
-    target.set_fac( faction_id( "your_followers" ) );
+    target.set_fac( faction_your_followers );
     target.set_attitude( NPCATT_FOLLOW );
     REQUIRE( target.get_faction() != nullptr );
     faction &target_faction = *target.get_faction();

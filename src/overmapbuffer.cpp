@@ -17,6 +17,7 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 
 #include "basecamp.h"
 #include "avatar.h"
@@ -65,6 +66,9 @@
 #include "worldfactory.h"
 
 enum class ot_match_type : int;
+
+static const oter_str_id oter_deep_rock( "deep_rock" );
+static const oter_str_id oter_open_air( "open_air" );
 
 static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
 static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );
@@ -998,18 +1002,15 @@ static const oter_id *atlas_outlying_terrain( int z )
     if( ( z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT ) || !north_america::elevation_active() ) {
         return nullptr;
     }
-    static const oter_str_id rock( "deep_rock" );
-    static const oter_str_id air( "open_air" );
     // Resolve string IDs again after a data reload. The returned reference has
     // the same lifetime as other overmap terrain lookups on the owning thread.
-    static thread_local oter_id rock_id;
-    static thread_local oter_id air_id;
+    static thread_local std::pair<oter_id, oter_id> terrain_ids;
     if( z < 0 ) {
-        rock_id = rock.id();
-        return &rock_id;
+        terrain_ids.first = oter_deep_rock.id();
+        return &terrain_ids.first;
     }
-    air_id = air.id();
-    return &air_id;
+    terrain_ids.second = oter_open_air.id();
+    return &terrain_ids.second;
 }
 
 om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )
