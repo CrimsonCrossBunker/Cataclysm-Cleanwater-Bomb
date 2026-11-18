@@ -457,3 +457,25 @@ do
     item:flag("WOODEN_WEAPON")
     content.replace(item)
 end
+
+do
+    local item = content.Item {
+        id = "staff_sling",
+        copy_from = "staff_sling",
+        looks_like = "staff_sling",
+        name = ccb.content.plural_text("staff sling", "staff slings"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end
+
+do
+    local item = content.Item {
+        id = "javelin",
+        copy_from = "javelin",
+        looks_like = "javelin",
+        name = ccb.content.plural_text("wooden javelin", "wooden javelins"),
+    }
+    item:flag("WOODEN_WEAPON")
+    content.replace(item)
+end

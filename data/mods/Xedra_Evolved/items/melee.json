@@ -1,27 +1,5 @@
 [
   {
-    "id": "glass_knife",
-    "type": "ITEM",
-    "category": "weapons",
-    "name": { "str": "glasknife", "str_pl": "glasknives" },
-    "description": "This is a knife that seems to be made of glass, but significantly more durable, like some sort of crystal with the strength of metal.",
-    "copy-from": "knife_combat",
-    "volume": "500 ml",
-    "longest_side": "30 cm",
-    "price_postapoc": "12 USD 50 cent",
-    "to_hit": { "grip": "weapon", "length": "hand", "surface": "point", "balance": "good" },
-    "proportional": { "price": 5, "weight": 0.8, "melee_damage": { "stab": 1.1 } },
-    "material": [ "moon_tears", "leather" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "min_skills": [ [ "weapon", 2 ], [ "melee", 1 ] ],
-    "techniques": [ "RAPID" ],
-    "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 1 ], [ "BUTCHER", 19 ] ],
-    "thrown_damage": [ { "damage_type": "stab", "amount": 14 } ],
-    "flags": [ "DURABLE_MELEE", "SHEATH_KNIFE", "NPC_THROWN" ],
-    "weapon_category": [ "KNIVES" ]
-  },
-  {
     "id": "mirror_march_estoc",
     "type": "ITEM",
     "symbol": "/",
@@ -143,28 +121,6 @@
     "material": [ "moon_tears" ],
     "weapon_category": [ "SHORT_SWORDS" ],
     "passive_effects": [ { "id": "ITEM_ENCH_Xedra_Evolved_pooka_gladius_0" } ]
-  },
-  {
-    "type": "ITEM",
-    "id": "salamagman_handaxe",
-    "category": "weapons",
-    "price": "124 USD",
-    "price_postapoc": "10 USD",
-    "name": { "str": "salamagman hand axe" },
-    "symbol": ";",
-    "color": "light_gray",
-    "description": "A one-handed combat axe, the blade is slightly larger than a tomahawk.",
-    "material": [ "tezcatlipocas_blood" ],
-    "volume": "750 ml",
-    "weight": "792 g",
-    "flags": [ "DURABLE_MELEE", "SHEATH_AXE" ],
-    "weapon_category": [ "HAND_AXES" ],
-    "thrown_damage": [
-      { "damage_type": "bash", "amount": 6 },
-      { "damage_type": "cut", "amount": 16 },
-      { "damage_type": "heat", "amount": 8 }
-    ],
-    "melee_damage": { "bash": 10, "cut": 21, "heat": 15 }
   },
   {
     "id": "salamagman_battleaxe",

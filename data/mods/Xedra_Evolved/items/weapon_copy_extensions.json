@@ -167,13 +167,6 @@
   },
   {
     "type": "ITEM",
-    "id": "staff_sling",
-    "copy-from": "staff_sling",
-    "name": { "str": "staff sling" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
     "id": "stick",
     "copy-from": "stick",
     "extend": { "flags": [ "WOODEN_WEAPON" ] }
@@ -214,13 +207,6 @@
     "id": "woodgreatbow",
     "copy-from": "woodgreatbow",
     "name": { "str": "wooden greatbow" },
-    "extend": { "flags": [ "WOODEN_WEAPON" ] }
-  },
-  {
-    "type": "ITEM",
-    "id": "javelin",
-    "copy-from": "javelin",
-    "name": { "str": "wooden javelin" },
     "extend": { "flags": [ "WOODEN_WEAPON" ] }
   },
   {

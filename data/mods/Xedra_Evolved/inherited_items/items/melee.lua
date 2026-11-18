@@ -422,3 +422,63 @@ do
     item:fault_group("handle_long", {  })
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "glass_knife",
+        category = "weapons",
+        name = ccb.content.plural_text("glasknife", "glasknives"),
+        description = ccb.content.text("This is a knife that seems to be made of glass, but significantly more durable, like some sort of crystal with the strength of metal."),
+        copy_from = "knife_combat",
+        looks_like = "knife_combat",
+        volume_ml = 500,
+        longest_side_mm = 300,
+        price_postapoc_cents = 1250,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "light_gray",
+        techniques = { "RAPID" },
+        replace_qualities = true,
+        weapon_categories = { "KNIVES" },
+        minimum_skills = { weapon = 2, melee = 1 },
+    }
+    item:material("moon_tears", 1)
+    item:material("leather", 1)
+    item:quality("CUT", 2)
+    item:quality("CUT_FINE", 1)
+    item:quality("BUTCHER", 19)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("SHEATH_KNIFE")
+    item:flag("NPC_THROWN")
+    item:throwing_damage { { type = "stab", amount = 14 } }
+    item:adjust_measurements { price_cents = { factor = 5 }, mass_milligrams = { factor = 0.8 } }
+    item:adjust_melee_damage { factors = { stab = 1.1 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "salamagman_handaxe",
+        category = "weapons",
+        price_cents = 12400,
+        price_postapoc_cents = 1000,
+        name = ccb.content.plural_text("salamagman hand axe", "salamagman hand axes"),
+        symbol = ";",
+        color = "light_gray",
+        description = ccb.content.text("A one-handed combat axe, the blade is slightly larger than a tomahawk."),
+        volume_ml = 750,
+        mass_milligrams = 792000,
+        weapon_categories = { "HAND_AXES" },
+    }
+    item:material("tezcatlipocas_blood", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("SHEATH_AXE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:melee_damage("cut", 21)
+    item:melee_damage("heat", 15)
+    item:throwing_damage { { type = "bash", amount = 6 }, { type = "cut", amount = 16 }, { type = "heat", amount = 8 } }
+    content.add(item)
+end
