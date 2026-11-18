@@ -29,3 +29,5 @@ require("inherited_items")
 require("effect_types")
 
 require("sauropod_damage_spells")
+
+require("sauropod_control")

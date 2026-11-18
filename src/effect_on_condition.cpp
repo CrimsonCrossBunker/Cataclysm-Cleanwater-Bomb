@@ -239,7 +239,31 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 263> migrated_character_tasks = {{
+const std::array<character_task_migration, 275> migrated_character_tasks = {{
+        { effect_on_condition_id( "eoc_update_moabosaurus" ),
+          "sauropod_update_moabosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_haplocanthosaurus" ),
+          "sauropod_update_haplocanthosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_amargasaurus" ),
+          "sauropod_update_amargasaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_apatosaurus" ),
+          "sauropod_update_apatosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_brontosaurus" ),
+          "sauropod_update_brontosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_diplodocus" ),
+          "sauropod_update_diplodocus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_barosaurus" ),
+          "sauropod_update_barosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_camarasaurus" ),
+          "sauropod_update_camarasaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_brachiosaurus" ),
+          "sauropod_update_brachiosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_astrodon" ),
+          "sauropod_update_astrodon", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_alamosaurus" ),
+          "sauropod_update_alamosaurus", nullptr, true, "DinoMod" },
+        { effect_on_condition_id( "eoc_update_zapatosaurus" ),
+          "sauropod_update_zapatosaurus", nullptr, true, "DinoMod" },
         { effect_on_condition_id( "EOC_unvitrified_return" ),
           "return_from_vitrification_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_PERK_insight" ),
