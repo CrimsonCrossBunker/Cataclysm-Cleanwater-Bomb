@@ -28,6 +28,7 @@
 #include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "lua_platform_content.h"
 #include "magic.h"
 #include "magic_enchantment.h"
@@ -579,7 +580,7 @@ int widget_custom_var::get_var_value( const avatar &ava ) const
     return static_cast<int>( value.evaluate( d ) );
 }
 
-void widget::load( const JsonObject &jo, std::string_view )
+void widget::load( const JsonObject &jo, const std::string_view source )
 {
     optional( jo, was_loaded, "width", _width, 0 );
     optional( jo, was_loaded, "height", _height_max, 1 );
@@ -669,7 +670,57 @@ void widget::load( const JsonObject &jo, std::string_view )
     } else {
         optional( jo, was_loaded, "string", _string );
     }
-    optional( jo, was_loaded, "widgets", _widgets, string_id_reader<::widget> {} );
+    const string_id_reader<::widget> read_children;
+    child_list_edit edit;
+    edit.source = source;
+    edit.replace = jo.has_member( "widgets" );
+    const bool inherits_own_list = was_loaded && jo.get_string( "copy-from", "" ) == id.str();
+    if( !inherits_own_list ) {
+        child_list_edits.clear();
+    }
+    if( inherits_own_list && !edit.replace ) {
+        for( const auto &[member, output] : { std::pair{ "extend", &edit.append },
+                                              std::pair{ "delete", &edit.remove } } ) {
+            if( jo.has_object( member ) ) {
+                JsonObject edits = jo.get_object( member );
+                edits.allow_omitted_members();
+                read_children.insert_values_from( edits, "widgets", *output );
+            }
+        }
+    }
+    optional( jo, was_loaded, "widgets", _widgets, read_children );
+    if( edit.replace || !inherits_own_list ) {
+        edit.replace = true;
+        edit.append = _widgets;
+    }
+    if( edit.replace || !edit.append.empty() || !edit.remove.empty() ) {
+        child_list_edits.push_back( std::move( edit ) );
+    }
+}
+
+void widget::append_sidebar_children( const std::string &source,
+                                      const std::vector<widget_id> &children )
+{
+    child_list_edits.push_back( { source, false, children, {} } );
+    const DynamicDataLoader &loader = DynamicDataLoader::get_instance();
+    std::stable_sort( child_list_edits.begin(), child_list_edits.end(), [&loader](
+    const child_list_edit &a, const child_list_edit &b ) {
+        return loader.source_load_order( a.source ) < loader.source_load_order( b.source );
+    } );
+
+    _widgets.clear();
+    for( const child_list_edit &edit : child_list_edits ) {
+        if( edit.replace ) {
+            _widgets.clear();
+        }
+        _widgets.insert( _widgets.end(), edit.append.begin(), edit.append.end() );
+        for( const widget_id &child : edit.remove ) {
+            const auto found = std::find( _widgets.begin(), _widgets.end(), child );
+            if( found != _widgets.end() ) {
+                _widgets.erase( found );
+            }
+        }
+    }
 }
 
 // Returns the derived label width for this widget/layout

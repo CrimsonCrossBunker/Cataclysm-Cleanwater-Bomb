@@ -2076,6 +2076,11 @@ struct martial_art_definition_handle {
 using profession_registration = catalog_registration < profession_definition_data >;
 using profession_group_registration = catalog_registration < profession_group_definition_data >;
 using widget_registration = catalog_registration < widget_definition_data >;
+
+struct sidebar_extension {
+    widget_id target;
+    std::vector<widget_id> children;
+};
 using enchantment_registration = catalog_registration < enchantment_definition_data >;
 using bionic_registration = catalog_registration < bionic_definition_data >;
 using spell_registration = catalog_registration < spell_definition_data >;
@@ -2104,6 +2109,7 @@ struct character_content_transaction::impl {
     std::vector < profession_registration > professions;
     std::vector < profession_group_registration > profession_groups;
     std::vector < widget_registration > widgets;
+    std::vector<sidebar_extension> sidebar_extensions;
     std::vector < enchantment_registration > enchantments;
     std::vector < bionic_registration > bionics;
     std::vector < spell_registration > spells;
@@ -2409,6 +2415,23 @@ void character_content_transaction::impl::install_profession_group( sol::table &
 
 void character_content_transaction::impl::install_widget( sol::table &content )
 {
+    content.set_function( "extend_sidebar", [this]( const std::string &id, const sol::table & children ) {
+        if( token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        sidebar_extension extension;
+        extension.target = widget_id( id );
+        const std::size_t count = require_dense_array( children, "sidebar children", 1, 4096 );
+        extension.children.reserve( count );
+        for( std::size_t i = 1; i <= count; ++i ) {
+            const sol::object child = children.raw_get<sol::object>( i );
+            if( !child.is<std::string>() ) {
+                throw std::runtime_error( "sidebar children must contain widget IDs" );
+            }
+            extension.children.emplace_back( child.as<std::string>() );
+        }
+        sidebar_extensions.push_back( std::move( extension ) );
+    } );
     content.set_function( "Widget", [this]( const sol::table & options ) {
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -4279,11 +4302,47 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             validate_operation( entry.operation, widget_id( definition.id ).is_valid(),
                                 definition.id, "widget" );
         }
-        if( check_engine_state && !pimpl_->widgets.empty() ) {
+        for( const sidebar_extension &extension : pimpl_->sidebar_extensions ) {
+            require_valid_id( extension.target.str(), "sidebar" );
+            if( check_engine_state && widget_ids.count( extension.target.str() ) == 0 &&
+                !extension.target.is_valid() ) {
+                throw std::runtime_error( "unknown sidebar '" + extension.target.str() + "'" );
+            }
+            for( const widget_id &child : extension.children ) {
+                require_valid_id( child.str(), "child widget" );
+                validate_widget_reference( extension.target.str(), child.str() );
+            }
+        }
+        if( check_engine_state && ( !pimpl_->widgets.empty() || !pimpl_->sidebar_extensions.empty() ) ) {
+            std::map<widget_id, widget> extended_sidebars;
+            for( const sidebar_extension &extension : pimpl_->sidebar_extensions ) {
+                const auto staged = std::find_if( pimpl_->widgets.begin(), pimpl_->widgets.end(),
+                [&extension]( const widget_registration & entry ) {
+                    return entry.definition->id == extension.target.str();
+                } );
+                auto [sidebar, added] = extended_sidebars.try_emplace( extension.target );
+                widget &target = sidebar->second;
+                if( added && staged != pimpl_->widgets.end() ) {
+                    target._style = staged->definition->style;
+                    for( const std::string &child : staged->definition->widgets ) {
+                        target._widgets.emplace_back( child );
+                    }
+                    target.child_list_edits.push_back( { pimpl_->owner, true, target._widgets, {} } );
+                } else if( added ) {
+                    target = extension.target.obj();
+                }
+                if( target._style != "sidebar" ) {
+                    throw std::runtime_error( "widget '" + extension.target.str() + "' is not a sidebar" );
+                }
+                target.append_sidebar_children( pimpl_->owner, extension.children );
+            }
             std::map < std::string, std::vector < std::string>> graph;
             for( const widget &value : widget::get_all() ) {
                 std::vector < std::string > &children = graph[value.getId().str()];
-                for( const widget_id &child : value._widgets ) {
+                const auto extended = extended_sidebars.find( value.getId() );
+                const auto &layout = extended == extended_sidebars.end() ?
+                                     value._widgets : extended->second._widgets;
+                for( const widget_id &child : layout ) {
                     children.push_back( child.str() );
                 }
                 for( const widget_clause &clause : value._clauses ) {
@@ -4299,6 +4358,13 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
                 const widget_definition_data &definition = *entry.definition;
                 std::vector < std::string > &children = graph[definition.id];
                 children = definition.widgets;
+                const auto extended = extended_sidebars.find( widget_id( definition.id ) );
+                if( extended != extended_sidebars.end() ) {
+                    children.clear();
+                    for( const widget_id &child : extended->second._widgets ) {
+                        children.push_back( child.str() );
+                    }
+                }
                 for( const widget_clause_definition_data &clause : definition.clauses ) {
                     children.insert( children.end(), clause.widgets.begin(), clause.widgets.end() );
                 }
@@ -4326,6 +4392,9 @@ bool character_content_transaction::validate( const runtime &owner_runtime,
             };
             for( const widget_registration &entry : pimpl_->widgets ) {
                 visit( entry.definition->id );
+            }
+            for( const sidebar_extension &extension : pimpl_->sidebar_extensions ) {
+                visit( extension.target.str() );
             }
         }
 
@@ -6287,6 +6356,7 @@ void character_content_transaction::impl::apply_widget()
         for( const std::string &child : source.widgets ) {
             native._widgets.emplace_back( child );
         }
+        native.child_list_edits.push_back( { this->owner, true, native._widgets, {} } );
         for( const std::string &flag : source.flags ) {
             native._flags.emplace( flag );
         }
@@ -6349,7 +6419,14 @@ void character_content_transaction::impl::apply_widget()
                               0 : utf8_width( native._label.translated() );
         detail::widget_registry().insert( native );
     }
-    if( !this->widgets.empty() ) {
+    for( const sidebar_extension &extension : this->sidebar_extensions ) {
+        const widget &previous = extension.target.obj();
+        this->widget_undo.emplace_back( extension.target, previous );
+        widget native = previous;
+        native.append_sidebar_children( this->owner, extension.children );
+        detail::widget_registry().restore( native );
+    }
+    if( !this->widgets.empty() || !this->sidebar_extensions.empty() ) {
         detail::widget_registry().finalize();
     }
 }
@@ -7642,6 +7719,14 @@ void character_content_transaction::append_fingerprint(
         }
 
         case character_content_fingerprint_phase::widget: {
+            for( const sidebar_extension &extension : pimpl_->sidebar_extensions ) {
+                hash_part( state, "sidebar_extension" );
+                hash_part( state, extension.target.str() );
+                for( const widget_id &child : extension.children ) {
+                    hash_part( state, "child" );
+                    hash_part( state, child.str() );
+                }
+            }
             for( const widget_registration &entry : pimpl_->widgets ) {
                 hash_part( state, "widget" );
                 hash_part( state, operation_name( entry.operation ) );

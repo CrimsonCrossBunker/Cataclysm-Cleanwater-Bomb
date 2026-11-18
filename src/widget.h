@@ -306,6 +306,16 @@ class widget
             }
         };
 
+        struct child_list_edit {
+            std::string source;
+            bool replace = false;
+            std::vector<widget_id> append;
+            std::vector<widget_id> remove;
+        };
+
+        void append_sidebar_children( const std::string &source, const std::vector<widget_id> &children );
+        std::vector<child_list_edit> child_list_edits;
+
         widget_id id;
         std::vector<std::pair<widget_id, mod_id>> src;
         bool was_loaded = false;
