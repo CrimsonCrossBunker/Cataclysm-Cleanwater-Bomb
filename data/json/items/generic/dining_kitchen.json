@@ -31,19 +31,6 @@
     "melee_damage": { "bash": 3 }
   },
   {
-    "abstract": "base_cookpot",
-    "name": { "str": "generic cook pot", "//~": "NO_I18N" },
-    "description": { "str": "generic item template", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "symbol": ")",
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "price": "45 USD",
-    "price_postapoc": "10 cent",
-    "use_action": [ "HEAT_ALL_ITEMS" ],
-    "qualities": [ [ "COOK", 3 ], [ "BOIL", 2 ], [ "CONTAIN", 1 ], [ "CHEM", 1 ] ],
-    "flags": [ "ALLOWS_REMOTE_USE" ]
-  },
-  {
     "copy-from": "base_ceramic_dish",
     "type": "ITEM",
     "category": "other",
@@ -64,87 +51,5 @@
     "description": "When you need to scoop some soup, this is the utensil for you.",
     "looks_like": "spoon",
     "copy-from": "base_utensil"
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "stock_pot",
-    "name": { "str": "stock pot" },
-    "description": "A large pot with 20 gauge walls and a thick aluminum bottom, used for making soup stocks.  You could fit a whole turkey in there, with a bit of shoving.",
-    "copy-from": "base_cookpot",
-    "material": [ { "type": "steel", "portion": 9 }, { "type": "aluminum", "portion": 1 } ],
-    "color": "light_gray",
-    "weight": "2500 g",
-    "volume": "12700 ml",
-    "longest_side": "25 cm",
-    "price": "137 USD",
-    "pocket_data": [
-      {
-        "max_contains_volume": "12 L",
-        "max_contains_weight": "24 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "melee_damage": { "bash": 8 },
-    "//": "Based on https://www.amazon.com/dp/B08RD3RDYL"
-  },
-  {
-    "id": "pot_canning_clay",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "clay canning pot" },
-    "looks_like": "pot_canning",
-    "description": "A very large 25 liter earthenware pot, primarily meant for canning food via the water bath method, though it can cook normal foods just as well.  Canning foods with it will require a lot of water.  If you're only canning a couple of jars at a time, you'd fill it up with rocks or something to displace the water above the lids.",
-    "weight": "8440 g",
-    "volume": "30 L",
-    "longest_side": "35 cm",
-    "price": "100 USD",
-    "price_postapoc": "3 USD",
-    "material": [ "clay" ],
-    "symbol": ")",
-    "color": "brown",
-    "pocket_data": [
-      {
-        "max_contains_volume": "25 L",
-        "max_contains_weight": "25 kg",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "qualities": [ [ "COOK", 3 ], [ "BOIL", 2 ], [ "CONTAIN", 1 ], [ "CHEM", 1 ] ],
-    "use_action": [ "HEAT_ALL_ITEMS" ],
-    "flags": [ "ALLOWS_REMOTE_USE" ],
-    "melee_damage": { "bash": 9 }
-  },
-  {
-    "type": "ITEM",
-    "category": "tools",
-    "id": "pan",
-    "name": { "str": "cast-iron frying pan" },
-    "description": "A cast-iron pan.  Makes a decent melee weapon, and is used for cooking.",
-    "copy-from": "base_cookpot",
-    "material": [ "iron" ],
-    "color": "dark_gray",
-    "weight": "2427 g",
-    "volume": "2940 ml",
-    "longest_side": "41 cm",
-    "price": "20 USD",
-    "to_hit": { "grip": "solid", "length": "short", "surface": "any", "balance": "clumsy" },
-    "pocket_data": [
-      {
-        "max_contains_volume": "500 ml",
-        "max_contains_weight": "500 g",
-        "watertight": true,
-        "open_container": true,
-        "rigid": true
-      }
-    ],
-    "extend": { "qualities": [ [ "HAMMER", 1 ] ] },
-    "relative": { "qualities": [ [ "COOK", -1 ] ] },
-    "melee_damage": { "bash": 12 },
-    "//": "Based on https://www.amazon.com/dp/B00006JSUA BUT volume calculated as a cylinder - 2 inches height x 10.68 inches diameter"
   }
 ]

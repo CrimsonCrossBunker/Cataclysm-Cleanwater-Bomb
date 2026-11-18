@@ -496,3 +496,126 @@ do
     item:quality("OVEN", 1)
     content.add(item)
 end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "base_cookpot",
+        abstract = true,
+        name = content.plural_text("generic cook pot", "generic cook pots"),
+        description = content.text("generic item template"),
+        symbol = ")",
+        melee_to_hit = -5,
+        price_cents = 4500,
+        price_postapoc_cents = 10,
+        replace_qualities = true,
+    }
+    item:clear_use_actions()
+    item:native_use("HEAT_ALL_ITEMS")
+    item:quality("COOK", 3)
+    item:quality("BOIL", 2)
+    item:quality("CONTAIN", 1)
+    item:quality("CHEM", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    content.add(item)
+end
+
+do
+    -- Based on https://www.amazon.com/dp/B08RD3RDYL
+    local item = content.Item {
+        id = "stock_pot",
+        category = "tools",
+        name = ccb.content.plural_text("stock pot", "stock pots"),
+        description = ccb.content.text("A large pot with 20 gauge walls and a thick aluminum bottom, used for making soup stocks.  You could fit a whole turkey in there, with a bit of shoving."),
+        copy_from = "base_cookpot",
+        color = "light_gray",
+        mass_milligrams = 2500000,
+        volume_ml = 12700,
+        longest_side_mm = 250,
+        price_cents = 13700,
+        replace_pockets = true,
+    }
+    item:material("steel", 9)
+    item:material("aluminum", 1)
+    item:container_pocket {
+        max_volume_ml = 12000,
+        max_weight_milligrams = 24000000,
+        watertight = true,
+        open_container = true,
+        rigid = true,
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pot_canning_clay",
+        name = ccb.content.plural_text("clay canning pot", "clay canning pots"),
+        looks_like = "pot_canning",
+        description = ccb.content.text("A very large 25 liter earthenware pot, primarily meant for canning food via the water bath method, though it can cook normal foods just as well.  Canning foods with it will require a lot of water.  If you're only canning a couple of jars at a time, you'd fill it up with rocks or something to displace the water above the lids."),
+        mass_milligrams = 8440000,
+        volume_ml = 30000,
+        longest_side_mm = 350,
+        price_cents = 10000,
+        price_postapoc_cents = 300,
+        symbol = ")",
+        color = "brown",
+        replace_pockets = true,
+        replace_qualities = true,
+    }
+    item:material("clay", 1)
+    item:container_pocket {
+        max_volume_ml = 25000,
+        max_weight_milligrams = 25000000,
+        watertight = true,
+        open_container = true,
+        rigid = true,
+    }
+    item:quality("COOK", 3)
+    item:quality("BOIL", 2)
+    item:quality("CONTAIN", 1)
+    item:quality("CHEM", 1)
+    item:clear_use_actions()
+    item:native_use("HEAT_ALL_ITEMS")
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 9)
+    item:tool()
+    content.add(item)
+end
+
+do
+    -- Based on https://www.amazon.com/dp/B00006JSUA BUT volume calculated as a cylinder - 2 inches height x 10.68 inches diameter
+    local item = content.Item {
+        id = "pan",
+        category = "tools",
+        name = ccb.content.plural_text("cast-iron frying pan", "cast-iron frying pans"),
+        description = ccb.content.text("A cast-iron pan.  Makes a decent melee weapon, and is used for cooking."),
+        copy_from = "base_cookpot",
+        color = "dark_gray",
+        mass_milligrams = 2427000,
+        volume_ml = 2940,
+        longest_side_mm = 410,
+        price_cents = 2000,
+        melee_to_hit = -2,
+        replace_pockets = true,
+    }
+    item:material("iron", 1)
+    item:container_pocket {
+        max_volume_ml = 500,
+        max_weight_milligrams = 500000,
+        watertight = true,
+        open_container = true,
+        rigid = true,
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 12)
+    item:quality("HAMMER", 1)
+    item:adjust_quality("COOK", -1)
+    content.add(item)
+end
