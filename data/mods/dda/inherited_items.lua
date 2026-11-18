@@ -80,3 +80,4 @@ require("inherited_items.npcs.refugee_center.surface_refugees.npc_boris_borichen
 require("inherited_items.vehicleparts.engineering")
 require("inherited_items.items.tool.air_tanks")
 require("inherited_items.items.tool.fire")
+require("inherited_items.obsoletion_and_migration_0_j.cooking")
