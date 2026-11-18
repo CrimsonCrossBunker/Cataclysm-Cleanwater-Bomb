@@ -755,3 +755,82 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "engineering_engine_kit",
+        name = ccb.content.plural_text("Stirling engine kit", "Stirling engine kits"),
+        description = ccb.content.text("A Stirling engine kit that demonstrates the principles behind the generation of electricity through the use of hot air."),
+        mass_milligrams = 3200000,
+        volume_ml = 1500,
+        price_cents = 20000,
+        price_postapoc_cents = 50,
+        melee_to_hit = -4,
+        symbol = "^",
+        color = "light_green",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("glass", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { charges_per_use = 1, ammo_types = { "conc_alcohol" } }
+    item:magazine_pocket { ammo_capacities = { conc_alcohol = 750 }, watertight = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hydrogen_tank",
+        name = ccb.content.plural_text("hydrogen tank", "hydrogen tanks"),
+        description = ccb.content.text("A tank of compressed hydrogen gas.  If you need to make water from scratch, or lift a Zeppelin, it could come in handy."),
+        category = "other",
+        mass_milligrams = 2268000,
+        volume_ml = 1500,
+        price_cents = 1000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        looks_like = "oxygen_tank",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { hydrogen = 24 }, rigid = true, airtight = true, watertight = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "nitrogen_tank",
+        name = ccb.content.plural_text("nitrogen tank", "nitrogen tanks"),
+        description = ccb.content.text("A tank of compressed nitrogen gas.  Nitrogen is useful for its lack of reactivity.  Don't try to breathe it."),
+        category = "other",
+        mass_milligrams = 2268000,
+        volume_ml = 1500,
+        price_cents = 1000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        looks_like = "oxygen_tank",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 5)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { nitrogen = 24 }, rigid = true, airtight = true, watertight = true }
+    content.add(item)
+end
