@@ -162,3 +162,29 @@ content.add(content.MonsterGroup { id = "GROUP_SI_MIGO" }
 content.add(content.MonsterGroup { id = "GROUP_SI_MIGO_ELITE" }
     :monster("mon_mi_go_myrmidon", 25, 1, 1, 1)
     :monster("mon_mi_go_guard", 75, 1, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_LAB", default_monster = "mon_zombie_scientist" }
+    :monster("mon_zombie_bio_op", 50, 5, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_LAB_SURFACE", default_monster = "mon_zombie_scientist" }
+    :monster("mon_zombie_bio_op", 50, 5, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_LAB_SECURITY", default_monster = "mon_zombie_labsecurity" }
+    :monster("mon_zombie_bio_op", 50, 5, 1, 1))
+
+-- Used in the military bunker
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_MIL_BASE" }
+    :monster("mon_zombie_bio_op", 20, 50, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_MAYBE_MIL" }
+    :monster("mon_zombie_bio_op", 20, 50, 1, 1))
+
+-- Used in the military bunker, LIXA and Hub01 convoy ambush
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_MIL_STRONG" }
+    :monster("mon_zombie_bio_op", 20, 50, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_MIL_EXTRA" }
+    :monster("mon_zombie_bio_op", 4, 1, 1, 1))
+
+content.extend_monster_group(content.MonsterGroup { id = "GROUP_BUNKER" }
+    :monster("mon_zombie_bio_op", 150, 10, 1, 1))
