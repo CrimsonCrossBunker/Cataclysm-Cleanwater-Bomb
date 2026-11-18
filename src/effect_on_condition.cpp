@@ -222,7 +222,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 32> migrated_character_tasks = {{
+const std::array<character_task_migration, 33> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -286,7 +286,9 @@ const std::array<character_task_migration, 32> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_DISSOLVE_VOID_SPIDER_LAIR" ),
           "void_spider_lair_exit_due", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_SCARLET_SEA_RETURN" ),
-          "portal_scarlet_return_due", nullptr, false, "ccb" }
+          "portal_scarlet_return_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_PORTAL_OUBLIETTE_RETURN" ),
+          "mom_oubliette_return_due", nullptr, false, "mindovermatter" }
     }
 };
 
