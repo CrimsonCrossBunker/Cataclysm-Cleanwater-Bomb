@@ -103,157 +103,6 @@
     "byproducts": [ [ "scrap_lycra", 1 ] ]
   },
   {
-    "result": "boy_shorts",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 1 ], [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 2 ] ],
-    "byproducts": [ [ "scrap_cotton", 28 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 60 ] ]
-      }
-    ]
-  },
-  {
-    "result": "xsboy_shorts",
-    "type": "recipe",
-    "copy-from": "boy_shorts",
-    "using": [ [ "tailoring_cotton_patchwork", 1 ] ],
-    "byproducts": [ [ "scrap_cotton", 21 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 45 ] ]
-      }
-    ]
-  },
-  {
-    "result": "xlboy_shorts",
-    "type": "recipe",
-    "copy-from": "boy_shorts",
-    "using": [ [ "tailoring_cotton_patchwork", 3 ] ],
-    "byproducts": [ [ "scrap_cotton", 35 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 15 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 15 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 75 ] ]
-      }
-    ]
-  },
-  {
-    "result": "boxer_briefs",
-    "variant": "boxer_brief_makeshift",
-    "type": "recipe",
-    "copy-from": "boy_shorts"
-  },
-  {
-    "result": "xsboxer_briefs",
-    "type": "recipe",
-    "copy-from": "boy_shorts"
-  },
-  {
-    "result": "xlboxer_briefs",
-    "type": "recipe",
-    "copy-from": "xlboy_shorts"
-  },
-  {
-    "result": "boxer_shorts",
-    "variant": "boxer_shorts_makeshift",
-    "type": "recipe",
-    "copy-from": "boy_shorts"
-  },
-  {
-    "result": "xsboxer_shorts",
-    "type": "recipe",
-    "copy-from": "boy_shorts"
-  },
-  {
-    "result": "xlboxer_shorts",
-    "type": "recipe",
-    "copy-from": "xlboy_shorts"
-  },
-  {
-    "result": "breeches",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "book_learn": [ [ "textbook_tailor", 2 ], [ "tailor_portfolio", 2 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 15 ] ],
-    "byproducts": [ [ "scrap_cotton", 5 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 180 ] ]
-      }
-    ]
-  },
-  {
-    "result": "briefs",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 1 ], [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 1 ] ],
-    "byproducts": [ [ "scrap_cotton", 5 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 60 ] ]
-      }
-    ]
-  },
-  {
     "result": "chaps_leather",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -271,31 +120,6 @@
     "using": [ [ "tailoring_leather_patchwork", 4 ] ],
     "components": [ [ [ "button_plastic", 5 ] ] ],
     "byproducts": [ [ "leather", 6 ], [ "scrap_leather", 1 ] ]
-  },
-  {
-    "result": "hakama",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "book_learn": [ [ "tailor_japanese", 3 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 15 ] ],
-    "byproducts": [ [ "cotton_patchwork", 5 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 90 ] ]
-      }
-    ]
   },
   {
     "result": "hot_pants",
@@ -390,59 +214,6 @@
     "tools": [ [ [ "forge", 120 ] ], [ [ "metalworking_tongs_any", 1, "LIST" ] ] ]
   },
   {
-    "result": "canvas_pants_padded",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "using": [ [ "tailoring_cotton", 15 ] ],
-    "components": [ [ [ "technician_pants_gray", 1 ] ] ],
-    "byproducts": [ [ "scrap_cotton", 5 ], [ "cotton_patchwork", 4 ] ],
-    "steps": [
-      {
-        "name": "Cutting the padding",
-        "time": "20 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the padding to the pants",
-        "time": "20 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 20 ] ]
-      }
-    ]
-  },
-  {
-    "result": "skirt",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "book_learn": [ [ "textbook_tailor", 3 ], [ "tailor_portfolio", 5 ], [ "manual_tailor", 3 ], [ "survival_book", 3 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 7 ], [ "fastener_small", 1 ] ],
-    "byproducts": [ [ "scrap_cotton", 10 ], [ "cotton_patchwork", 2 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 180 ] ]
-      }
-    ]
-  },
-  {
     "result": "skirt_leather",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -456,13 +227,6 @@
     "qualities": [ { "id": "LEATHER_AWL", "level": 1 } ],
     "using": [ [ "fastener_small", 1 ], [ "sewing_standard", 15 ], [ "tailoring_leather_patchwork", 1 ] ],
     "byproducts": [ [ "leather", 1 ] ]
-  },
-  {
-    "result": "skirt_denim",
-    "copy-from": "skirt",
-    "type": "recipe",
-    "using": [ [ "tailoring_denim_patchwork", 4 ], [ "fastener_small", 1 ] ],
-    "byproducts": [ [ "scrap_denim", 8 ] ]
   },
   {
     "result": "kilt_leather",
@@ -480,31 +244,6 @@
     "using": [ [ "tailoring_leather_patchwork", 7 ], [ "strap_small", 1 ], [ "clasps", 1 ] ]
   },
   {
-    "result": "kilt",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 4,
-    "book_learn": [ [ "scots_tailor", 4 ], [ "scots_cookbook", 7 ] ],
-    "using": [ [ "tailoring_felt_patchwork", 20 ], [ "strap_small", 1 ], [ "clasps", 1 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "3 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 180 ] ]
-      }
-    ]
-  },
-  {
     "result": "knee_pads",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -516,73 +255,6 @@
     "book_learn": [ [ "plastics_book", 2 ] ],
     "proficiencies": [ { "proficiency": "prof_plasticworking" }, { "proficiency": "prof_closures" } ],
     "using": [ [ "plastic_molding", 4 ], [ "clasps", 2 ], [ "strap_small", 2 ] ]
-  },
-  {
-    "result": "leg_warmers",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 1,
-    "autolearn": true,
-    "reversible": true,
-    "using": [ [ "tailoring_cotton_patchwork", 2 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 45 ] ]
-      }
-    ]
-  },
-  {
-    "result": "leg_warmers_xs",
-    "type": "recipe",
-    "copy-from": "leg_warmers",
-    "reversible": false,
-    "using": [ [ "tailoring_cotton_patchwork", 1 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 30 ] ]
-      }
-    ]
-  },
-  {
-    "result": "leg_warmers_xl",
-    "type": "recipe",
-    "copy-from": "leg_warmers",
-    "reversible": false,
-    "using": [ [ "tailoring_cotton_patchwork", 3 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 60 ] ]
-      }
-    ]
   },
   {
     "result": "leg_warmers_xlf",
@@ -597,33 +269,6 @@
     "book_learn": [ [ "textbook_tailor", 2 ], [ "manual_tailor", 3 ] ],
     "using": [ [ "tailoring_fur_patchwork", 2 ] ],
     "proficiencies": [ { "proficiency": "prof_leatherworking_basic" }, { "proficiency": "prof_furriery" } ]
-  },
-  {
-    "result": "leggings",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 2 ], [ "manual_tailor", 2 ] ],
-    "using": [ [ "tailoring_lycra_patchwork", 6 ] ],
-    "byproducts": [ [ "lycra_patch", 5 ], [ "scrap_lycra", 9 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_elastics" } ],
-        "using": [ [ "sewing_tool", 60 ] ]
-      }
-    ]
   },
   {
     "result": "legguard_hard",
@@ -992,32 +637,6 @@
     "using": [ [ "cordage_short", 1 ], [ "tailoring_felt_patchwork_simple", 2 ] ]
   },
   {
-    "result": "long_underpants",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 1 ], [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 3 ] ],
-    "byproducts": [ [ "cotton_patchwork", 1 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 45 ] ]
-      }
-    ]
-  },
-  {
     "result": "armor_mercenary_bottom",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -1035,59 +654,6 @@
       { "proficiency": "prof_polymerworking" }
     ],
     "components": [ [ [ "technician_pants_gray", 1 ] ], [ [ "sheet_kevlar_layered", 24 ] ] ]
-  },
-  {
-    "result": "panties",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 1 ], [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 1 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 30 ] ]
-      }
-    ]
-  },
-  {
-    "result": "pants_cargo",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "decomp_learn": 2,
-    "autolearn": true,
-    "book_learn": [ [ "textbook_tailor", 2 ], [ "manual_tailor", 2 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 20 ], [ "fastener_small", 3 ] ],
-    "byproducts": [ [ "cotton_patchwork", 5 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "4 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "4 h",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 240 ] ]
-      }
-    ]
   },
   {
     "type": "recipe",
@@ -1168,88 +734,6 @@
     ]
   },
   {
-    "result": "shorts",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 1,
-    "autolearn": true,
-    "using": [ [ "tailoring_cotton_patchwork", 4 ], [ "fastener_small", 1 ] ],
-    "byproducts": [ [ "cotton_patchwork", 2 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 105 ] ]
-      }
-    ]
-  },
-  {
-    "result": "shorts_cargo",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 10 ], [ "fastener_small", 3 ] ],
-    "byproducts": [ [ "cotton_patchwork", 2 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "2 h 15 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "2 h 15 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_closures" } ],
-        "using": [ [ "sewing_tool", 135 ] ]
-      }
-    ]
-  },
-  {
-    "result": "shorts_cargo",
-    "type": "recipe",
-    "id_suffix": "from_pants",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "autolearn": true,
-    "using": [ [ "sewing_standard", 12 ] ],
-    "byproducts": [ [ "cotton_patchwork", 4 ] ],
-    "components": [ [ [ "pants_cargo", 1 ] ] ],
-    "steps": [
-      {
-        "name": "Sewing the pockets onto the shorts",
-        "time": "30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 30 ] ]
-      }
-    ]
-  },
-  {
-    "result": "shorts_denim",
-    "id_suffix": "from_fabric",
-    "copy-from": "shorts",
-    "type": "recipe",
-    "difficulty": 2,
-    "using": [ [ "tailoring_denim_patchwork", 4 ], [ "fastener_small", 1 ] ],
-    "byproducts": [ [ "denim_patch", 6 ], [ "scrap_denim", 14 ] ]
-  },
-  {
     "result": "shorts_denim",
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
@@ -1289,58 +773,6 @@
     "autolearn": true,
     "using": [ [ "sewing_standard", 6 ] ],
     "components": [ [ [ "stockings", 3 ] ], [ [ "cotton_patchwork", 6 ] ] ]
-  },
-  {
-    "result": "stockings_tent_legs",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 1,
-    "autolearn": true,
-    "using": [ [ "tailoring_cotton_patchwork", 9 ] ],
-    "byproducts": [ [ "cotton_patchwork", 3 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 90 ] ]
-      }
-    ]
-  },
-  {
-    "result": "under_armor_shorts",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "difficulty": 3,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 2 ], [ "manual_tailor", 2 ] ],
-    "using": [ [ "tailoring_lycra_patchwork", 3 ] ],
-    "byproducts": [ [ "scrap_lycra", 2 ] ],
-    "steps": [
-      {
-        "name": "Cutting the pieces",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the pieces together",
-        "time": "1 h 30 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "proficiencies": [ { "proficiency": "prof_elastics" } ],
-        "using": [ [ "sewing_tool", 90 ] ]
-      }
-    ]
   },
   {
     "result": "lc_chainmail_legs",
@@ -3026,33 +2458,6 @@
       [ [ "hotcut_any", 1, "LIST" ] ],
       [ [ "metal_tank", -1 ] ],
       [ [ "water", -120 ], [ "water_clean", -120 ] ]
-    ]
-  },
-  {
-    "result": "gaiter_boot_makeshift",
-    "type": "recipe",
-    "category": "CC_ARMOR",
-    "subcategory": "CSC_ARMOR_LEGS",
-    "skill_used": "tailor",
-    "skills_required": [ [ "survival", 2 ], [ "fabrication", 1 ] ],
-    "difficulty": 2,
-    "autolearn": true,
-    "book_learn": [ [ "mag_tailor", 1 ], [ "manual_tailor", 1 ] ],
-    "using": [ [ "tailoring_cotton_patchwork", 3 ] ],
-    "components": [ [ [ "duct_tape", 150 ] ], [ [ "zipper_long_plastic", 1 ] ] ],
-    "steps": [
-      {
-        "name": "Forming the gaiters",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "qualities": [ { "id": "FABRIC_CUT", "level": 1 } ]
-      },
-      {
-        "name": "Sewing the zippers",
-        "time": "45 m",
-        "activity_level": "LIGHT_EXERCISE",
-        "using": [ [ "sewing_tool", 45 ] ]
-      }
     ]
   }
 ]

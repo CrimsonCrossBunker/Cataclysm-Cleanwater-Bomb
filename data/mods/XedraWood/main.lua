@@ -75,3 +75,5 @@ require("field_emissions")
 require("disassembly")
 
 require("food_recipes")
+
+require("stepped_recipes")

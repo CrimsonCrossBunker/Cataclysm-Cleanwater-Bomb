@@ -27,3 +27,5 @@ require("construction_groups")
 require("disassembly")
 
 require("food_recipes")
+
+require("stepped_recipes")

@@ -91,47 +91,12 @@
   },
   {
     "type": "recipe",
-    "result": "under_armor_shorts",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
     "result": "zentai",
     "obsolete": true
   },
   {
     "type": "recipe",
-    "result": "xs_binder_top",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
-    "result": "xl_binder_top",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
-    "result": "binder_top",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
     "result": "hat_faux_fur",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
-    "result": "coat_faux_fur",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
-    "result": "xs_coat_faux_fur",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
-    "result": "xl_coat_faux_fur",
     "obsolete": true
   },
   {

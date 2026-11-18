@@ -31,11 +31,6 @@
   },
   {
     "type": "recipe",
-    "result": "bat",
-    "obsolete": true
-  },
-  {
-    "type": "recipe",
     "result": "bwirebat",
     "obsolete": true
   },
