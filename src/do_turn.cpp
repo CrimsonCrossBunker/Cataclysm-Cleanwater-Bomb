@@ -357,7 +357,7 @@ void update_avatar_memory( avatar &u )
 void process_npc_sounds( game &owner, avatar &host )
 {
     map &primary = reality_bubble();
-    const auto &session = owner.multiplayer_session();
+    const cata_mp::world_session &session = owner.multiplayer_session();
     const bool regional = session.has_regions();
     for( npc &actor : owner.all_npcs() ) {
         if( !regional && rl_dist( actor.pos_abs(), host.pos_abs() ) >= MAX_VIEW_DISTANCE ) {
@@ -429,7 +429,7 @@ void process_avatar_activity( avatar &u )
     }
 }
 
-static void monmove()
+void monmove()
 {
     CATA_PROFILE_SCOPE();
     g->cleanup_dead();
@@ -1255,7 +1255,7 @@ void game::simulate_turn_suffix()
     m.build_floor_caches();
 
     m.process_falling();
-    auto &session = multiplayer_session();
+    cata_mp::world_session &session = multiplayer_session();
     if( session.has_regions() ) {
         const map_simulation_regions regions = session.simulation_regions( m );
         const auto views = session.active_maps( m );
