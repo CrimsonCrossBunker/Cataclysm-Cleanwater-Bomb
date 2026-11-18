@@ -92,27 +92,6 @@
     "tool_ammo": [ "ampoule" ]
   },
   {
-    "id": "scalpel",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "scalpel" },
-    "description": "A very sharp knife designed for surgical cutting.  Its small, sharp blade allows for precision strikes in the hands of the skilled.",
-    "ascii_picture": "scalpel",
-    "weight": "23 g",
-    "volume": "15 ml",
-    "longest_side": "13 cm",
-    "price": "10 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
-    "material": [ "steel" ],
-    "symbol": ",",
-    "color": "light_gray",
-    "qualities": [ [ "CUT", 2 ], [ "CUT_FINE", 3 ], [ "BUTCHER", 8 ], [ "FABRIC_CUT", 1 ] ],
-    "flags": [ "FRAGILE_MELEE", "ALLOWS_BODY_BLOCK" ],
-    "melee_damage": { "cut": 4 },
-    "weapon_category": [ "SHIVS" ]
-  },
-  {
     "id": "smoxygen_tank",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -152,24 +131,6 @@
     "color": "white",
     "flags": [ "FRAGILE_MELEE" ],
     "melee_damage": { "stab": 1 }
-  },
-  {
-    "id": "thermometer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "thermometer" },
-    "description": "A plastic thermometer that can read the air temperature.",
-    "weight": "10 g",
-    "volume": "25 ml",
-    "price": "1 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "plastic" ],
-    "ascii_picture": "thermometer",
-    "symbol": ";",
-    "color": "red",
-    "use_action": [ "WEATHER_TOOL" ],
-    "flags": [ "THERMOMETER" ]
   },
   {
     "id": "oxygen_tank",
@@ -213,43 +174,5 @@
       "menu_text": "Unwrap badge",
       "type": "transform"
     }
-  },
-  {
-    "id": "scissors_medical",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "medical scissors" },
-    "description": "A pair of medical scissors, typically used by nurses or paramedics to cut bandages or fabric.",
-    "ascii_picture": "scissors",
-    "weight": "50 g",
-    "volume": "95 ml",
-    "longest_side": "14 cm",
-    "price": "7 USD",
-    "price_postapoc": "20 cent",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "point", "balance": "neutral" },
-    "material": [ "steel" ],
-    "symbol": ",",
-    "color": "light_gray",
-    "qualities": [ [ "CUT", 2 ], [ "BUTCHER", 2 ], [ "FABRIC_CUT", 1 ] ],
-    "flags": [ "BELT_CLIP", "SHEATH_KNIFE" ],
-    "weapon_category": [ "SHIVS" ],
-    "melee_damage": { "stab": 4 }
-  },
-  {
-    "id": "dental_tools",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "dental tool set" },
-    "description": "A set of picks, hooks, and scrapers designed for cleaning teeth.",
-    "weight": "160 g",
-    "volume": "370 ml",
-    "longest_side": "20 cm",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel" ],
-    "symbol": "?",
-    "color": "dark_gray",
-    "qualities": [ [ "LOCKPICK", 1 ], [ "LEATHER_AWL", 1 ], [ "PUNCH", 1 ] ],
-    "melee_damage": { "stab": 1 }
   }
 ]
