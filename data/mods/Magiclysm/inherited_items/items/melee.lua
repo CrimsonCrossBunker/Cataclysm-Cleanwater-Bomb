@@ -44,3 +44,66 @@ do
     item:mounted_charge { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "orich_knife_combat",
+        copy_from = "knife_combat",
+        looks_like = "knife_combat",
+        name = ccb.content.plural_text("orichalcum combat knife", "orichalcum combat knives"),
+        description = ccb.content.text("A variant of the combat knife that is made of orichalcum instead of steel.  Sharper and easier to maintain than steel while just as dense, this knife also has a thinner blade, which shaves off some weight."),
+        color = "yellow",
+    }
+    item:material("orichalcum_metal", 1)
+    item:adjust_measurements { price_cents = { factor = 5 }, mass_milligrams = { factor = 0.99 } }
+    item:adjust_melee_damage { factors = { stab = 1.1 } }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "orich_longsword",
+        copy_from = "longsword",
+        looks_like = "longsword",
+        name = ccb.content.plural_text("orichalcum longsword", "orichalcum longswords"),
+        description = ccb.content.text("A variant of the longsword that is made of orichalcum instead of steel.  Sharper and easier to maintain than steel while just as dense, this longsword also has a thinner blade, which shaves off some weight."),
+        color = "yellow",
+    }
+    item:material("orichalcum_metal", 1)
+    item:adjust_measurements { price_cents = { factor = 5 }, mass_milligrams = { factor = 0.99 } }
+    item:adjust_melee_damage { factors = { cut = 1.1 } }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "orich_fire_ax",
+        copy_from = "fire_ax",
+        looks_like = "fire_ax",
+        name = ccb.content.plural_text("orichalcum fire axe", "orichalcum fire axes"),
+        description = ccb.content.text("A fire axe made with orichalcum instead of steel.  This makes it possible to chop through harder materials, and in the very well-funded fire stations is preferred."),
+        color = "yellow",
+    }
+    item:material("orichalcum_metal", 1)
+    item:adjust_measurements { price_cents = { factor = 5 } }
+    item:adjust_melee_damage { factors = { cut = 1.1 } }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "longsword_mithril",
+        copy_from = "longsword",
+        looks_like = "longsword",
+        name = ccb.content.plural_text("longsword", "longswords"),
+        description = ccb.content.text("This is a classic medieval sword, the size being in-between the lighter arming sword and later two-handed swords.  Thanks to the mysterious silvery metal it was forged from, it is stronger than tempered steel while weighing substantially less."),
+        mass_milligrams = 939000,
+    }
+    item:material("mithril_metal", 1)
+    item:adjust_melee_damage { factors = { bash = 0.7, cut = 1.5 } }
+    item:tool()
+    content.add(item)
+end
