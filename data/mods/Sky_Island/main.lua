@@ -4,6 +4,8 @@ require("requirements")
 
 require("materials")
 
+require("item_policies")
+
 require("items")
 
 require("deployable_furniture")
