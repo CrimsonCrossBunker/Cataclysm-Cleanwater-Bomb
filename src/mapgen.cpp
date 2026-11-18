@@ -2127,6 +2127,13 @@ class jmapgen_alternatively : public jmapgen_piece_with_has_vehicle_collision
         // PieceType, they *can not* be of any other type.
         std::vector<PieceType> alternatives;
         jmapgen_alternatively() = default;
+        template<typename Id>
+        explicit jmapgen_alternatively( const std::vector<Id> &ids ) {
+            alternatives.reserve( ids.size() );
+            for( const Id &id : ids ) {
+                alternatives.emplace_back( id );
+            }
+        }
         mapgen_phase phase() const override {
             if( alternatives.empty() ) {
                 return mapgen_phase::default_;
@@ -8082,6 +8089,10 @@ class jmapgen_patch_stamp final : public jmapgen_piece
 
         void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y,
                     const jmapgen_int &z, const std::string &context ) const override {
+            // Native nested placement draws once for the chunk and once for
+            // its variant, even when both lists contain exactly one entry.
+            static_cast<void>( rng_bits() );
+            static_cast<void>( rng_bits() );
             const tripoint_rel_ms offset( x.get(), y.get(), z.get() );
             const mapgendata nested( dat, {}, flags_ );
             apply_mapgen_in_phases( nested, setmap_, placements_, offset, context );
@@ -8119,9 +8130,19 @@ void mapgen_patch::add_terrain( const jmapgen_place &where, const ter_str_id &id
     add_piece( where, make_shared_fast<jmapgen_terrain>( id ) );
 }
 
+void mapgen_patch::add_terrain( const jmapgen_place &where, const std::vector<ter_str_id> &choices )
+{
+    add_piece( where, make_shared_fast<jmapgen_alternatively<jmapgen_terrain>>( choices ) );
+}
+
 void mapgen_patch::add_furniture( const jmapgen_place &where, const furn_str_id &id )
 {
     add_piece( where, make_shared_fast<jmapgen_furniture>( id ) );
+}
+
+void mapgen_patch::add_furniture( const jmapgen_place &where, const std::vector<furn_str_id> &choices )
+{
+    add_piece( where, make_shared_fast<jmapgen_alternatively<jmapgen_furniture>>( choices ) );
 }
 
 void mapgen_patch::add_monster_group( const jmapgen_place &where, const mongroup_id &group,

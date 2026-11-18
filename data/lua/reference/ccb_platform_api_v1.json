@@ -36132,7 +36132,7 @@
         "lua_name": "MapgenPatch",
         "registration": {
           "installer": "shared.install_mapgen_service_api",
-          "line": 706,
+          "line": 740,
           "namespace": "global",
           "path": "src/lua_platform_mapgen.cpp"
         },
@@ -36146,7 +36146,7 @@
         "lua_name": "MapgenUpdateToken",
         "registration": {
           "installer": "shared.install_mapgen_service_api",
-          "line": 679,
+          "line": 713,
           "namespace": "global",
           "path": "src/lua_platform_mapgen.cpp"
         },
@@ -37112,7 +37112,7 @@
         "lua_name": "ScriptMapgenContext",
         "registration": {
           "installer": "shared.install_script_mapgen_context_api",
-          "line": 2052,
+          "line": 2084,
           "namespace": "global",
           "path": "src/lua_platform_mapgen.cpp"
         },

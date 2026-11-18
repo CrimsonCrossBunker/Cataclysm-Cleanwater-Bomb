@@ -8377,12 +8377,12 @@ function MapgenPatch:erase_before_terrain() end
 
 ---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
 ---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
----@param id string Native terrain ID.
+---@param id string|string[] Native terrain ID or an array of equally likely IDs.
 function MapgenPatch:terrain(x, y, id) end
 
 ---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
 ---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
----@param id string Native furniture ID.
+---@param id string|string[] Native furniture ID or an array of equally likely IDs.
 function MapgenPatch:furniture(x, y, id) end
 
 ---@param group string Native monster-group ID. Uses native single-monster mapgen selection and density rules.

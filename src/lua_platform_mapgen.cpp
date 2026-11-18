@@ -23,6 +23,7 @@ extern "C" {
 #include <stdexcept>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "calendar.h"
 #include "clzones.h"
@@ -471,6 +472,39 @@ jmapgen_place patch_at( const sol::object &x, const sol::object &y )
     return where;
 }
 
+template<typename Id>
+Id patch_tile_id( const sol::object &entry )
+{
+    if( entry.get_type() != sol::type::string ) {
+        throw std::invalid_argument( "Mapgen patch tile ids must be strings" );
+    }
+    Id id( entry.as<std::string>() );
+    if( !id.is_null() && !id.is_valid() ) {
+        throw std::invalid_argument( "Mapgen patch references unknown tile id '" + id.str() + "'" );
+    }
+    return id;
+}
+
+template<typename Id, typename Apply>
+void add_patch_tile( const sol::object &entry, const Apply &apply )
+{
+    if( entry.get_type() != sol::type::table ) {
+        apply( patch_tile_id<Id>( entry ) );
+        return;
+    }
+    const sol::table entries = entry.as<sol::table>();
+    std::vector<Id> choices;
+    const std::size_t count = entries.size();
+    if( count == 0 ) {
+        throw std::invalid_argument( "Mapgen patch tile choices must contain at least one id" );
+    }
+    choices.reserve( count );
+    for( std::size_t index = 1; index <= count; ++index ) {
+        choices.emplace_back( patch_tile_id<Id>( entries.raw_get<sol::object>( index ) ) );
+    }
+    apply( choices );
+}
+
 void add_patch_monster_group( mapgen_patch &patch, std::string group,
                               const sol::object &x, const sol::object &y,
                               const sol::optional<sol::table> &options )
@@ -707,20 +741,18 @@ void install_mapgen_service_api(
         "MapgenPatch", sol::no_constructor,
         "erase_before_terrain", &mapgen_patch::erase_before_terrain,
         "terrain", []( mapgen_patch &patch, const sol::object &x, const sol::object &y,
-    const std::string &id ) {
-        const ter_str_id terrain( id );
-        if( !terrain.is_valid() ) {
-            throw std::invalid_argument( "Mapgen patch requires a valid terrain id" );
-        }
-        patch.add_terrain( patch_at( x, y ), terrain );
+    const sol::object &id ) {
+        const jmapgen_place where = patch_at( x, y );
+        add_patch_tile<ter_str_id>( id, [&]( const auto & tile ) {
+            patch.add_terrain( where, tile );
+        } );
     },
     "furniture", []( mapgen_patch &patch, const sol::object &x, const sol::object &y,
-    const std::string &id ) {
-        const furn_str_id furniture( id );
-        if( !furniture.is_valid() ) {
-            throw std::invalid_argument( "Mapgen patch requires a valid furniture id" );
-        }
-        patch.add_furniture( patch_at( x, y ), furniture );
+    const sol::object &id ) {
+        const jmapgen_place where = patch_at( x, y );
+        add_patch_tile<furn_str_id>( id, [&]( const auto & tile ) {
+            patch.add_furniture( where, tile );
+        } );
     },
     "spawn_group", &add_patch_monster_group,
     "spawn_npc", []( mapgen_patch &patch, const std::string &id,

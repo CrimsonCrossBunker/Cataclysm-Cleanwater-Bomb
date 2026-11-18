@@ -42,8 +42,9 @@ function M.reach_extract()
         " ----D---- ",
         "  -     -  ",
     },
-        { ["D"] = "t_door_c", ["-"] = "t_wall_r_glow", ["."] = "t_carpet_red", ["X"] = "t_carpet_red", ["x"] = "t_carpet_red" },
-        { ["X"] = "f_returnportal" })
+        { D = { "t_door_c" }, ["-"] = { "t_wall_r_glow" }, ["."] = { "t_carpet_red" },
+            X = { "t_carpet_red" }, x = { "t_carpet_red" } },
+        { X = { "f_returnportal" }, D = { "f_null" }, ["."] = { "f_null" }, x = { "f_null" } })
 end
 
 function M.treasure()
@@ -54,8 +55,8 @@ function M.treasure()
         " xxx ",
         "  x  ",
     },
-        { ["x"] = "t_carpet_green", ["o"] = "t_carpet_purple" },
-        { ["o"] = "f_warpshardrewardstatue" })
+        { x = { "t_carpet_green" }, o = { "t_carpet_purple" } },
+        { o = "f_warpshardrewardstatue" })
 end
 
 function M.kill_light()

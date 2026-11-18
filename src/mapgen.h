@@ -601,7 +601,9 @@ class mapgen_patch final : private update_mapgen_function_json
         mapgen_patch();
         void erase_before_terrain();
         void add_terrain( const jmapgen_place &where, const ter_str_id &id );
+        void add_terrain( const jmapgen_place &where, const std::vector<ter_str_id> &choices );
         void add_furniture( const jmapgen_place &where, const furn_str_id &id );
+        void add_furniture( const jmapgen_place &where, const std::vector<furn_str_id> &choices );
         void add_monster_group( const jmapgen_place &where, const mongroup_id &group,
                                 const jmapgen_int &pack_size, bool one_or_none,
                                 bool mission_target, const std::optional<translation> &name );
