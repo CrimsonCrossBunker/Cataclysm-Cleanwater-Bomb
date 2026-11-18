@@ -967,13 +967,7 @@
         "need_charges_msg": "The batteries are dead.",
         "type": "transform"
       },
-      { "type": "link_up", "cable_length": 3, "charge_rate": "20 W" },
-      {
-        "type": "effect_on_conditions",
-        "menu_text": "Recover",
-        "description": "You can reset the smartphone to be able to use all its functions.",
-        "effect_on_conditions": [ "EOC_SMARTPHONE_RECOVERY" ]
-      }
+      { "type": "link_up", "cable_length": 3, "charge_rate": "20 W" }
     ],
     "faults": [ { "fault_group": "electronic_general" } ],
     "pocket_data": [
