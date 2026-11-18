@@ -576,14 +576,6 @@
     }
   },
   {
-    "id": "laptop_boris",
-    "copy-from": "laptop",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Ash's laptop computer" },
-    "description": "A small, somewhat worn-out laptop computer.  The flip-top is decorated with various stickers."
-  },
-  {
     "type": "mapgen",
     "update_mapgen_id": "boris_cleanup_garage",
     "object": {
