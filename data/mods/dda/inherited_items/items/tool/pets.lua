@@ -196,3 +196,77 @@ do
     item:tool { charges_per_use = 250, ammo_types = { "battery" }, power_milliwatts = 850000 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "chicken_cage",
+        name = ccb.content.plural_text("chicken cage", "chicken cages"),
+        description = ccb.content.text("A wire container made for transporting chickens, but you can use it to hold any tiny animal.  Use it on a suitable animal to capture, use it on an empty tile to release."),
+        mass_milligrams = 250000,
+        volume_ml = 2500,
+        price_cents = 100,
+        price_postapoc_cents = 100,
+        symbol = "#",
+        color = "light_gray",
+        capture_capacity = "TINY",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("CAPTURE_MONSTER_ACT")
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:melee_damage("cut", 1)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pet_carrier",
+        name = ccb.content.plural_text("pet carrier", "pet carriers"),
+        description = ccb.content.text("A plastic container meant to hold pets for transport.  Use it on a suitable animal to capture, use it on an empty tile to release."),
+        mass_milligrams = 1000000,
+        volume_ml = 5000,
+        price_cents = 1000,
+        price_postapoc_cents = 100,
+        symbol = "#",
+        color = "light_gray",
+        capture_capacity = "SMALL",
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("CAPTURE_MONSTER_ACT")
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:melee_damage("cut", 1)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "terrarium",
+        name = ccb.content.plural_text("glass terrarium", "glass terrariums"),
+        description = ccb.content.text("A glass container meant to hold plants and/or insects.  They come in a variety of sizes."),
+        mass_milligrams = 5000000,
+        volume_ml = 37000,
+        price_cents = 800,
+        price_postapoc_cents = 50,
+        symbol = "#",
+        color = "white_yellow",
+        looks_like = "pet_carrier",
+        capture_capacity = "TINY",
+    }
+    item:material("glass", 1)
+    item:clear_use_actions()
+    item:native_use("CAPTURE_MONSTER_ACT")
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:tool()
+    content.add(item)
+end
