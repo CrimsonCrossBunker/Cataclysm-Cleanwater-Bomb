@@ -182,3 +182,5 @@ require("noetic_detector")
 require("mental_engineering")
 
 require("activity_types")
+
+require("banish_illness")
