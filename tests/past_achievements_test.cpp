@@ -1,5 +1,7 @@
+#include <flexbuffer_json.h>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -14,11 +16,12 @@
 #include "path_info.h"
 #include "type_id.h"
 
+static const achievement_id achievement_achievement_cut_1_tree( "achievement_cut_1_tree" );
 static std::filesystem::path past_records_directory()
 {
     for( int attempt = 0; attempt < 100; ++attempt ) {
         const std::filesystem::path candidate = std::filesystem::temp_directory_path() /
-                                                ( "ccb-past-records-test-" + std::to_string( attempt ) );
+                                                std::filesystem::u8path( "ccb-past-records-test-" + std::to_string( attempt ) );
         if( std::filesystem::create_directory( candidate ) ) {
             return candidate;
         }
@@ -43,22 +46,25 @@ TEST_CASE( "past_records_isolate_corrupt_files", "[past_records][nogame]" )
     PATH_INFO::init_user_dir( directory.generic_u8string() + "/" );
     PATH_INFO::set_standard_filenames();
     clear_past_games();
-    std::filesystem::create_directory( directory / "memorial" );
-    std::ofstream( directory / "memorial/avatar-2026-11-15-12-00-00.json" );
+    std::filesystem::create_directory( directory / std::filesystem::u8path( "memorial" ) );
+    std::ofstream( directory /
+                   std::filesystem::u8path( "memorial/avatar-2026-11-15-12-00-00.json" ) ).close();
     CHECK_FALSE( capture_debugmsg_during( []() {
         CHECK_NOTHROW( get_past_games( false ) );
     } ).empty() );
 
-    const std::filesystem::path achievements = directory / "achievements";
+    const std::filesystem::path achievements = directory / std::filesystem::u8path( "achievements" );
     REQUIRE( std::filesystem::create_directory( achievements ) );
-    std::ofstream( achievements / "a-valid.json" ) <<
+    std::ofstream( achievements / std::filesystem::u8path( "a-valid.json" ) ) <<
             R"({"achievement_version":1,"achievements":["achievement_cut_1_tree"],"avatar_name":"Survivor"})";
-    std::ofstream( achievements / "b-empty.json" );
-    std::ofstream( achievements / "c-partial.json" ) << "{";
-    std::ofstream( achievements / "d-invalid.json" ) <<
+    std::ofstream( achievements / std::filesystem::u8path( "b-empty.json" ) ).close();
+    std::ofstream( achievements / std::filesystem::u8path( "c-partial.json" ) ) << "{";
+    std::ofstream( achievements / std::filesystem::u8path( "d-invalid.json" ) ) <<
             R"({"achievement_version":1,"achievements":["achievement_cut_1_tree"]})";
-    std::ofstream( achievements / "e-version.json" ) << R"({"achievement_version":99})";
-    std::ofstream( achievements / "f-legacy.json" ) << R"({"achievement_version":0})";
+    std::ofstream( achievements / std::filesystem::u8path( "e-version.json" ) ) <<
+            R"({"achievement_version":99})";
+    std::ofstream( achievements / std::filesystem::u8path( "f-legacy.json" ) ) <<
+            R"({"achievement_version":0})";
     past_achievements_info records;
     const std::string errors = capture_debugmsg_during( [&]() {
         CHECK_NOTHROW( records.load() );
@@ -67,13 +73,15 @@ TEST_CASE( "past_records_isolate_corrupt_files", "[past_records][nogame]" )
     CHECK( errors.find( "c-partial.json" ) != std::string::npos );
     CHECK( errors.find( "d-invalid.json" ) != std::string::npos );
     CHECK( errors.find( "e-version.json" ) != std::string::npos );
-    const achievement_id achievement( "achievement_cut_1_tree" );
+    const achievement_id &achievement = achievement_achievement_cut_1_tree;
     CHECK( records.avatars_completed( achievement ) == std::vector<std::string> { "Survivor" } );
     CHECK( capture_debugmsg_during( [&]() {
         records.load();
     } ).empty() );
-    CHECK( std::filesystem::file_size( achievements / "b-empty.json" ) == 0 );
-    CHECK( std::filesystem::file_size( achievements / "c-partial.json" ) == 1 );
+    CHECK( std::filesystem::file_size( achievements / std::filesystem::u8path( "b-empty.json" ) ) ==
+           0 );
+    CHECK( std::filesystem::file_size( achievements / std::filesystem::u8path( "c-partial.json" ) ) ==
+           1 );
 }
 
 TEST_CASE( "json_caches_follow_user_directories", "[past_records][nogame]" )
@@ -91,17 +99,19 @@ TEST_CASE( "json_caches_follow_user_directories", "[past_records][nogame]" )
         PATH_INFO::init_user_dir( root.generic_u8string() + "/" );
         PATH_INFO::set_standard_filenames();
         if( memorial ) {
-            PATH_INFO::set_memorialdir( ( root / "memorial" ).generic_u8string() + "/" );
+            PATH_INFO::set_memorialdir( ( root / std::filesystem::u8path( "memorial" ) ).generic_u8string() +
+                                        "/" );
         }
         const cata_path records = memorial ? PATH_INFO::memorialdir_path() : PATH_INFO::user_dir_path();
         std::filesystem::create_directories( records.get_unrelative_path() );
         const cata_path path = records / ( std::to_string( value ) + ".json" );
         std::ofstream( path.get_unrelative_path() ) << "{\"value\":" << value << "}";
         CHECK( json_loader::from_path( path ).get_object().get_int( "value" ) == value );
-        CHECK( std::filesystem::is_directory( ( records / "cache" ).get_unrelative_path() ) );
+        CHECK( std::filesystem::is_directory( ( records /
+                                                std::filesystem::u8path( "cache" ) ).get_unrelative_path() ) );
     };
-    const std::filesystem::path first = directory / "first";
-    const std::filesystem::path second = directory / "second";
+    const std::filesystem::path first = directory / std::filesystem::u8path( "first" );
+    const std::filesystem::path second = directory / std::filesystem::u8path( "second" );
     read_record( first, 1 );
     read_record( second, 2 );
     REQUIRE( std::filesystem::remove_all( first ) > 0 );
@@ -148,7 +158,7 @@ TEST_CASE( "memorial_achievements_isolate_corrupt_values", "[past_records][nogam
     PATH_INFO::set_standard_filenames();
     clear_past_games();
     const std::string enabled = GENERATE( "invalid", "999999999999999999999999999999" );
-    const std::filesystem::path memorial = directory / "memorial";
+    const std::filesystem::path memorial = directory / std::filesystem::u8path( "memorial" );
     REQUIRE( std::filesystem::create_directory( memorial ) );
     const std::string contents = R"({
         "memorial_version":0,
@@ -168,18 +178,20 @@ TEST_CASE( "memorial_achievements_isolate_corrupt_values", "[past_records][nogam
         "achievements":{"enabled":true,"initial_achievements":[],"achievements_status":{}},
         "scores":{}
     })";
-    std::ofstream( memorial / "avatar-2026-11-15-12-00-00.json" ) << contents;
+    std::ofstream( memorial / std::filesystem::u8path( "avatar-2026-11-15-12-00-00.json" ) ) <<
+            contents;
     std::string missing_version = contents;
     const std::string version_member = "\"memorial_version\":0,";
     missing_version.erase( missing_version.find( version_member ), version_member.size() );
-    std::ofstream( memorial / "avatar-2026-11-15-12-00-01.json" ) << missing_version;
+    std::ofstream( memorial / std::filesystem::u8path( "avatar-2026-11-15-12-00-01.json" ) ) <<
+            missing_version;
     const std::string errors = capture_debugmsg_during( []() {
         CHECK_NOTHROW( get_past_games( false ) );
     } );
     CHECK_FALSE( errors.empty() );
     CHECK( errors.find( "memorial_version" ) != std::string::npos );
     const achievement_completion_info *completed = get_past_games( false ).legacy_achievement(
-                achievement_id( "achievement_cut_1_tree" ) );
+                achievement_achievement_cut_1_tree );
     REQUIRE( completed != nullptr );
     REQUIRE( completed->games_completed.size() == 1 );
     CHECK( completed->games_completed.front()->avatar_name() == "Survivor" );

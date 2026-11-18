@@ -31,7 +31,10 @@
 #include "talker.h"
 #include "type_id.h"
 
+static const event_statistic_id event_statistic_num_avatar_wake_ups( "num_avatar_wake_ups" );
+
 static const limb_score_id limb_score_balance( "balance" );
+
 static const vitamin_id vitamin_vitC( "vitC" );
 
 TEST_CASE( "math_parser_limb_score_optional_type", "[math_parser][eoc]" )
@@ -57,7 +60,6 @@ TEST_CASE( "diag_value_cata_variant_boolean_is_numeric", "[math_parser][nogame]"
     CHECK( false_value.is_dbl() );
     CHECK( false_value.dbl() == 0.0 );
 }
-static const event_statistic_id event_statistic_num_avatar_wake_ups( "num_avatar_wake_ups" );
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity): false positive
 TEST_CASE( "math_parser_parsing", "[math_parser]" )

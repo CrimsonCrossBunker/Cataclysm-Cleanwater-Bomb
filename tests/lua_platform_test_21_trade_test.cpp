@@ -45,7 +45,6 @@ static const itype_id itype_2x4( "2x4" );
 static const itype_id itype_9mm( "9mm" );
 static const itype_id itype_backpack( "backpack" );
 static const itype_id itype_bandages( "bandages" );
-static const itype_id itype_hammer( "hammer" );
 static const itype_id itype_rock( "rock" );
 
 TEST_CASE( "lua_platform_allowance_quote_rejects_nonactive_avatar",

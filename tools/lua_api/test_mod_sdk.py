@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import unquote
 
@@ -308,6 +309,7 @@ class ModSdkTest(unittest.TestCase):
             with (
                 patch.object(mod_sdk.subprocess, "run", side_effect=diagnose),
                 patch.object(mod_sdk, "url2pathname", nturl2path.url2pathname),
+                patch.object(mod_sdk, "os", SimpleNamespace(name="nt")),
             ):
                 self.assertEqual(mod_sdk.check_mod(mod, "luals"), [
                     "C:\\path with spaces\\percent%20.lua:2:3: "

@@ -1,7 +1,7 @@
 #include "vehicle.h" // IWYU pragma: associated
-#include "vehicle_control.h"
-#include "character_action_guard.h"
 
+#include <safe_reference.h>
+#include <vehicle_turning.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -17,6 +17,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -49,6 +50,7 @@
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
+#include "vehicle_control.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -1915,7 +1917,7 @@ void vehicle::precalculate_vehicle_turning( map &here, units::angle new_turn_dir
     turning_wheels_that_are_one_axis = 0;
 
     for( int part_index : wheelcache ) {
-        const auto &wheel = parts[ part_index ];
+        const vehicle_part &wheel = parts[ part_index ];
         bool rails_ahead = true;
         tripoint_rel_ms wheel_point;
         coord_translate( mdir.dir(), this->pivot_point( here ), wheel.mount,

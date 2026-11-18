@@ -1,10 +1,10 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
+#include <character.h>
 #include <character_id.h>
 #include <coordinates.h>
 #include <dialogue_chatbin.h>
-#include "debug.h"
-#include "flexbuffer_json.h"
 #include <game.h>
+#include <item.h>
 #include <json.h>
 #include <lua_platform_bindings_values.h>
 #include <lua_platform_dialogue.h>
@@ -15,6 +15,8 @@
 #include <map_helpers.h>
 #include <mission.h>
 #include <npc_opinion.h>
+#include <player_activity.h>
+#include <player_identity.h>
 #include <point.h>
 #include <talker.h>
 #include <type_id.h>
@@ -28,21 +30,30 @@
 
 #include "avatar.h"
 #include "cata_catch.h"
+#include "cata_scope_helpers.h"
 #include "condition.h"
+#include "debug.h"
 #include "dialogue.h"
+#include "flexbuffer_json.h"
 #include "json_loader.h"
 #include "lua_platform_npc_services.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "npc.h"
-#include "cata_scope_helpers.h"
+#include "npctalk.h"
 #include "player_control.h"
 #include "player_helpers.h"
-#include "npctalk.h"
+
+static const activity_id ACT_TRAIN( "ACT_TRAIN" );
+
+static const itype_id itype_test_rock( "test_rock" );
 
 static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_GENERIC_REWARD" );
 static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
+
 static const npc_template_id npc_template_test_talker( "test_talker" );
+
+static const skill_id skill_driving( "driving" );
 
 TEST_CASE( "lua_platform_mission_tokens_reject_replacement_and_stale_context",
            "[lua][platform][missions]" )
@@ -563,7 +574,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     [runtime]() {
         return runtime;
     },
-    [world_generation]() {
+    []() {
         return world_generation;
     }, []() {} );
     cata::lua_platform::install_npc_api(
@@ -571,7 +582,7 @@ TEST_CASE( "lua_platform_npc_mission_surface_is_explicit",
     [runtime]() {
         return runtime;
     },
-    [world_generation]() {
+    []() {
         return world_generation;
     }, []() {}, []() {}, []() {} );
 
@@ -617,7 +628,7 @@ TEST_CASE( "lua_platform_npc_mission_reward_calls_native_no_selection_path",
     const auto current_runtime = [runtime]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_game_handle_api(
@@ -693,8 +704,8 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
         host.reset_all_missions();
         clear_npcs();
     } );
-    const auto control = g->player_controls().claim(
-                             player_id( std::string( 32, 'a' ) ), remote );
+    const player_control control = g->player_controls().claim(
+                                       player_id( std::string( 32, 'a' ) ), remote );
     REQUIRE( control.get() == &remote );
     REQUIRE( remote.has_native_player_control() );
     mission *remote_mission = mission::reserve_new( mission_TEST_MISSION_GENERIC_REWARD,
@@ -708,7 +719,8 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     provider.op_of_u.owed = 27;
     provider.opinion_of( remote.getID() ).owed = 50000;
 
-    const auto runtime_owner = make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr runtime_owner =
+        make_game_handle_runtime_owner();
     const game_handle_runtime runtime( runtime_owner, 67 );
     constexpr std::size_t world_generation = 24;
     const auto current_runtime = [runtime]() {
@@ -725,9 +737,9 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
         return game_handle::from_creature( who, { kind, who.getID().get_value(), 0, 0, 0, {} },
                                            runtime, world_generation );
     };
-    const game_handle provider_handle = make_handle( provider, "npc" );
-    const game_handle remote_handle = make_handle( remote, "npc" );
-    const game_handle host_handle = make_handle( host, "avatar" );
+    const cata::lua_platform::game_handle provider_handle = make_handle( provider, "npc" );
+    const cata::lua_platform::game_handle remote_handle = make_handle( remote, "npc" );
+    const cata::lua_platform::game_handle host_handle = make_handle( host, "avatar" );
     const sol::table npc_services = services["npcs"];
     const sol::table missions = npc_services["missions"];
     const sol::protected_function assign = missions["assign_selected"];
@@ -742,8 +754,9 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     CHECK_FALSE( invoke( assign( provider_handle, remote_handle ) )["ok"].get<bool>() );
 
     ::dialogue conversation( get_talker_for( remote ), get_talker_for( provider ) );
-    const auto session = cata::lua_platform::dialogue::begin_session(
-                             conversation, runtime, world_generation );
+    const cata::lua_platform::dialogue::dialogue_session_ptr session =
+        cata::lua_platform::dialogue::begin_session(
+            conversation, runtime, world_generation );
     REQUIRE( session );
     const scoped_npc_service_dialogue context( conversation, session );
     conversation.actor( true )->select_mission( remote_mission );
@@ -752,7 +765,7 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     CHECK( remote_mission->get_assigned_player_id() == remote.getID() );
     CHECK( invoke( state( provider_handle ) )["value"].get<sol::table>()
            ["selected"].get<sol::table>()["uid"].get<int>() == remote_mission->get_id() );
-    remote.i_add( item( itype_id( "test_rock" ) ) );
+    remote.i_add( item( itype_test_rock ) );
     CHECK( invoke( complete( provider_handle, remote_handle, "complete" ) )["value"].get<bool>() );
     REQUIRE( invoke( succeed( provider_handle, remote_handle ) )["ok"].get<bool>() );
     const int debt_before = provider.opinion_of( remote.getID() ).owed;
@@ -761,7 +774,7 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     CHECK_FALSE( invoke( claim( provider_handle, remote_handle ) )["ok"].get<bool>() );
     CHECK( provider.opinion_of( remote.getID() ).owed == debt_before + remote_mission->get_value() );
 
-    const skill_id driving( "driving" );
+    const skill_id &driving = skill_driving;
     provider.set_skill_level( driving, 5 );
     remote.set_skill_level( driving, 0 );
     conversation.actor( true )->store_chosen_training( driving, matype_id(), spell_id(),
@@ -769,7 +782,7 @@ TEST_CASE( "lua_npc_services_use_the_owned_dialogue_selection",
     const sol::table training = npc_services["training"];
     const sol::protected_function start_training = training["start_selected"];
     REQUIRE( invoke( start_training( provider_handle, remote_handle, "player" ) )["ok"].get<bool>() );
-    CHECK( remote.activity.id() == activity_id( "ACT_TRAIN" ) );
+    CHECK( remote.activity.id() == ACT_TRAIN );
     CHECK( remote.activity.execution() == activity_execution::authoritative );
     CHECK( provider.opinion_of( remote.getID() ).owed < debt_before + remote_mission->get_value() );
     CHECK_FALSE( host.activity );

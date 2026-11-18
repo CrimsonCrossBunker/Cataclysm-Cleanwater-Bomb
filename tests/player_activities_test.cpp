@@ -48,15 +48,19 @@
 
 static const activity_id ACT_AIM( "ACT_AIM" );
 static const activity_id ACT_BOLTCUTTING( "ACT_BOLTCUTTING" );
+static const activity_id ACT_CHOP_PLANKS( "ACT_CHOP_PLANKS" );
 static const activity_id ACT_CRACKING( "ACT_CRACKING" );
 static const activity_id ACT_HACKSAW( "ACT_HACKSAW" );
 static const activity_id ACT_NULL( "ACT_NULL" );
 static const activity_id ACT_OXYTORCH( "ACT_OXYTORCH" );
 static const activity_id ACT_PRYING( "ACT_PRYING" );
 static const activity_id ACT_SHEARING( "ACT_SHEARING" );
+static const activity_id ACT_WAIT( "ACT_WAIT" );
 
 static const bionic_id bio_ears( "bio_ears" );
 static const bionic_id bio_power_storage( "bio_power_storage" );
+
+static const construction_str_id construction_constr_chop_trunk( "constr_chop_trunk" );
 
 static const efftype_id effect_pet( "pet" );
 static const efftype_id effect_tied( "tied" );
@@ -76,18 +80,18 @@ static const furn_str_id furn_test_f_oxytorch2( "test_f_oxytorch2" );
 static const furn_str_id furn_test_f_oxytorch3( "test_f_oxytorch3" );
 static const furn_str_id furn_test_f_prying1( "test_f_prying1" );
 
-static const ter_str_id ter_t_trunk( "t_trunk" );
-
 static const item_group_id Item_spawn_data_test_edevices_compat( "test_edevices_compat" );
 static const item_group_id Item_spawn_data_test_edevices_incompat( "test_edevices_incompat" );
 static const item_group_id Item_spawn_data_test_edevices_power( "test_edevices_power" );
 static const item_group_id Item_spawn_data_test_edevices_recipes( "test_edevices_recipes" );
 static const item_group_id Item_spawn_data_test_edevices_standard( "test_edevices_standard" );
 
+static const itype_id itype_ax( "ax" );
 static const itype_id itype_book_binder( "book_binder" );
 static const itype_id itype_glass_shard( "glass_shard" );
 static const itype_id itype_memory_card( "memory_card" );
 static const itype_id itype_oxyacetylene( "oxyacetylene" );
+static const itype_id itype_screwdriver( "screwdriver" );
 static const itype_id itype_stethoscope( "stethoscope" );
 static const itype_id itype_tent_kit( "tent_kit" );
 static const itype_id itype_test_2x4( "test_2x4" );
@@ -131,6 +135,8 @@ static const skill_id skill_computer( "computer" );
 static const skill_id skill_traps( "traps" );
 
 static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_trunk( "t_trunk" );
+static const ter_str_id ter_t_underbrush( "t_underbrush" );
 static const ter_str_id ter_t_wall( "t_wall" );
 static const ter_str_id ter_test_t_boltcut1( "test_t_boltcut1" );
 static const ter_str_id ter_test_t_boltcut2( "test_t_boltcut2" );
@@ -143,12 +149,31 @@ static const ter_str_id ter_test_t_prying2( "test_t_prying2" );
 static const ter_str_id ter_test_t_prying3( "test_t_prying3" );
 static const ter_str_id ter_test_t_prying4( "test_t_prying4" );
 
+static const vpart_id vpart_controls( "controls" );
+static const vpart_id vpart_frame( "frame" );
+
+static const vproto_id vehicle_prototype_none( "none" );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 struct bionic;
 
 TEST_CASE( "clear_character_discards_activity_execution_state", "[activity][character]" )
 {
     avatar &who = get_avatar();
-    who.activity = player_activity( activity_id( "ACT_WAIT" ), 100 );
+    who.activity = player_activity( ACT_WAIT, 100 );
     who.activity.set_execution( GENERATE( activity_execution::authoritative,
                                           activity_execution::presentation ) );
     who.activity.values.push_back( 17 );
@@ -647,7 +672,7 @@ TEST_CASE( "chopped_wood_is_not_reserved_as_an_activity_tool", "[activity][chop_
 
     player_activity activity;
     activity.placement = here.get_abs( trunk_pos );
-    player.set_wielded_item( item( itype_id( "ax" ) ) );
+    player.set_wielded_item( item( itype_ax ) );
     const item_location tool = player.get_wielded_item();
     REQUIRE( tool );
     chop_logs_activity_actor actor( 1, tool );
@@ -2054,7 +2079,7 @@ static const std::vector<std::function<player_activity()>> test_activities {
     [] {
         map &here = get_map();
         const tripoint_bub_ms bush = get_avatar().pos_bub() + tripoint::east;
-        here.ter_set( bush, ter_str_id( "t_underbrush" ) );
+        here.ter_set( bush, ter_t_underbrush );
         return player_activity( forage_activity_actor( here.get_abs( bush ) ) );
     },
     [] { return player_activity( gunmod_remove_activity_actor( 1, item_location(), 0 ) ); },
@@ -2065,15 +2090,15 @@ static const std::vector<std::function<player_activity()>> test_activities {
     [] {
         avatar &who = get_avatar();
         map &here = get_map();
-        vehicle *target = here.add_vehicle( vproto_id( "none" ), who.pos_bub(),
+        vehicle *target = here.add_vehicle( vehicle_prototype_none, who.pos_bub(),
                                             units::from_degrees( 0 ), 0,
                                             veh_spawn_status::UNDAMAGED );
         REQUIRE( target );
-        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_id( "controls" ) ) >= 0 );
+        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+        REQUIRE( target->install_part( here, point_rel_ms::zero, vpart_controls ) >= 0 );
         here.add_vehicle_to_cache( target );
         target->is_locked = true;
-        who.i_add( item( itype_id( "screwdriver" ) ) );
+        who.i_add( item( itype_screwdriver ) );
         return player_activity( hotwire_car_activity_actor( 1, who.pos_abs() ) );
     },
     //player_activity( insert_item_activity_actor() ),
@@ -2269,17 +2294,17 @@ TEST_CASE( "trunk_construction_starts_owned_plank_activity", "[activity][constru
     clear_avatar();
     clear_map();
     avatar &who = get_avatar();
-    const auto origin = who.pos_abs();
-    const construction_str_id recipe( "constr_chop_trunk" );
+    const tripoint_abs_ms origin = who.pos_abs();
+    const construction_str_id &recipe = construction_constr_chop_trunk;
     REQUIRE( recipe.is_valid() );
     REQUIRE_FALSE( recipe->post_specials.empty() );
     for( const auto finish : recipe->post_specials ) {
         finish( who.pos_bub( get_map() ) + tripoint::east, who );
     }
-    REQUIRE( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+    REQUIRE( who.activity.id() == ACT_CHOP_PLANKS );
     CHECK( who.activity.placement == origin );
     CHECK( who.activity.moves_left == to_moves<int>( 20_minutes ) );
     who.activity.do_turn( who );
-    CHECK( who.activity.id() == activity_id( "ACT_CHOP_PLANKS" ) );
+    CHECK( who.activity.id() == ACT_CHOP_PLANKS );
     who.cancel_activity();
 }

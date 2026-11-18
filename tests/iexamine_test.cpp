@@ -1,4 +1,5 @@
 #include <functional>
+#include <optional>
 #include <string>
 
 #include "calendar.h"
@@ -13,12 +14,15 @@
 #include "map_helpers.h"
 #include "mapdata.h"
 #include "mill.h"
-#include "point.h"
 #include "plant_climate.h"
 #include "player_helpers.h"
+#include "point.h"
 #include "stomach.h"
 #include "translation.h"
 #include "type_id.h"
+
+static const furn_str_id furn_f_dahlia( "f_dahlia" );
+static const furn_str_id furn_f_flower_marloss( "f_flower_marloss" );
 
 static const itype_id itype_acorns_cooked( "acorns_cooked" );
 static const itype_id itype_dry_rice( "dry_rice" );
@@ -52,8 +56,8 @@ TEST_CASE( "flower_examine_handlers_remain_distinct", "[iexamine]" )
             CHECK( flower.has_examine( candidate ) == ( candidate == expected ) );
         }
     }
-    CHECK_FALSE( furn_str_id( "f_dahlia" )->has_examine( iexamine::flower_poppy ) );
-    CHECK_FALSE( furn_str_id( "f_flower_marloss" )->has_examine( iexamine::flower_dahlia ) );
+    CHECK_FALSE( furn_f_dahlia->has_examine( iexamine::flower_poppy ) );
+    CHECK_FALSE( furn_f_flower_marloss->has_examine( iexamine::flower_dahlia ) );
 }
 
 TEST_CASE( "examine_bush" )

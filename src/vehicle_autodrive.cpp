@@ -1,5 +1,6 @@
 #include "vehicle.h" // IWYU pragma: associated
 
+#include <character_id.h>
 #include <algorithm>
 #include <array>
 #include <cmath>

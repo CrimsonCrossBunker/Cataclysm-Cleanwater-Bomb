@@ -1,7 +1,13 @@
+#include <calendar.h>
+#include <talker.h>
 #include <functional>
+#include <map>
 #include <memory>
+#include <random>
+#include <set>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
@@ -17,21 +23,22 @@
 #include "json.h"
 #include "json_loader.h"
 #include "map.h"
-#include "map_helpers_tests.h"
 #include "map_helpers.h"
+#include "map_helpers_tests.h"
 #include "mission.h"
-#include "monster.h"
 #include "mongroup.h"
-#include "mtype.h"
+#include "monster.h"
 #include "mp_client_conn.h"
+#include "mtype.h"
 #include "npc.h"
 #include "npc_lifetime.h"
 #include "overmap.h"
 #include "overmap_test_helpers.h"
 #include "overmapbuffer.h"
-#include "rng.h"
 #include "player_helpers.h"
 #include "point.h"
+#include "rng.h"
+#include "rng_helpers.h"
 #include "type_id.h"
 
 static const itype_id itype_test_rock( "test_rock" );
@@ -41,9 +48,19 @@ static const mission_type_id mission_TEST_MISSION_GENERIC_REWARD( "TEST_MISSION_
 static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION1( "TEST_MISSION_GOAL_CONDITION1" );
 static const mission_type_id mission_TEST_MISSION_GOAL_CONDITION2( "TEST_MISSION_GOAL_CONDITION2" );
 
+static const mongroup_id GROUP_NEMESIS( "GROUP_NEMESIS" );
+
 static const morale_type morale_feeling_good( "morale_feeling_good" );
 
+static const mtype_id mon_zombie( "mon_zombie" );
+static const mtype_id mon_zombie_nemesis( "mon_zombie_nemesis" );
+
 static const npc_template_id npc_template_test_talker( "test_talker" );
+
+static const oter_str_id oter_road_ns( "road_ns" );
+
+
+
 
 TEST_CASE( "mission_generic_reward_claim_persists_across_copy_and_save",
            "[mission][serialization]" )
@@ -375,13 +392,13 @@ TEST_CASE( "remote_character_missions_round_trip_without_replaying_effects",
     remote.serialize( out );
 
     npc restored;
-    const auto rng_before = rng_get_engine();
+    const std::string rng_before = capture_rng_state();
     restored.deserialize( json_loader::from_string( saved.str() ).get_object() );
     CHECK( restored.getID() == remote.getID() );
     CHECK( restored.get_active_missions() == std::vector<mission *> { task } );
     CHECK( restored.get_active_mission() == task );
     CHECK( restored.get_completed_missions().empty() );
-    CHECK( rng_get_engine() == rng_before );
+    CHECK( capture_rng_state() == rng_before );
     CHECK( host.get_active_missions().empty() );
 
     // Reusing a native object for a different save must clear its old ledger.
@@ -761,7 +778,7 @@ TEST_CASE( "monster_mission_death_snapshot_survives_callback_removal", "[mission
     const restore_on_out_of_scope restore_failure( definition.fail );
     const restore_on_out_of_scope restore_goal( definition.goal );
     definition.goal = MGOAL_FIND_MONSTER;
-    std::unique_ptr<monster> target = std::make_unique<monster>( mtype_id( "mon_zombie" ) );
+    std::unique_ptr<monster> target = std::make_unique<monster>( mon_zombie );
     std::vector<mission> replacements;
     for( int i = 0; i < 2; ++i ) {
         mission *task = mission::reserve_new( definition.id, character_id() );
@@ -782,7 +799,7 @@ TEST_CASE( "monster_mission_death_snapshot_survives_callback_removal", "[mission
             mission::add_existing( replacement );
         }
         if( destroy_target ) {
-            target.reset();
+            target = nullptr;
         }
     };
     mission::on_creature_death( *target );
@@ -848,13 +865,13 @@ TEST_CASE( "nemesis_hordes_persist_and_follow_their_own_quest_owner",
 
     // Guarantee each native movement decision succeeds, so this detects the
     // former first-group-only loop without a probabilistic retry test.
-    mtype &walker = const_cast<mtype &>( mtype_id( "mon_zombie" ).obj() );
+    mtype &walker = const_cast<mtype &>( mon_zombie.obj() );
     const restore_on_out_of_scope restore_speed( walker.speed );
     walker.speed = 201;
     for( auto &entry : overmap_test_helper::groups( *region ) ) {
         mongroup &group = entry.second;
         group.monsters.emplace_back( walker.id );
-        region->ter_set( project_to<coords::omt>( group.rel_pos() ), oter_str_id( "road_ns" ).id() );
+        region->ter_set( project_to<coords::omt>( group.rel_pos() ), oter_road_ns.id() );
     }
     overmap_test_helper::move_nemesis( *region );
     for( const auto &entry : overmap_test_helper::groups( *region ) ) {
@@ -907,11 +924,11 @@ TEST_CASE( "nemesis_materialization_and_death_keep_the_assigned_player", "[missi
     host_task->assign( host );
     remote_task->assign( remote );
     const int remote_id = remote_task->get_id();
-    mongroup group( mongroup_id( "GROUP_NEMESIS" ), tripoint_abs_sm::zero, 0 );
+    mongroup group( GROUP_NEMESIS, tripoint_abs_sm::zero, 0 );
     group.horde = true;
     group.behaviour = mongroup::horde_behaviour::nemesis;
     group.nemesis_mission_id = remote_id;
-    group.monsters.emplace_back( mtype_id( "mon_zombie_nemesis" ) );
+    group.monsters.emplace_back( mon_zombie_nemesis );
     map_meddler::spawn_monsters_submap_group( get_map(), tripoint_rel_sm( 2, 2, 0 ), group, true );
     monster *spawned = nullptr;
     for( monster &candidate : g->all_monsters() ) {
@@ -967,7 +984,7 @@ TEST_CASE( "nemesis_materialization_and_death_keep_the_assigned_player", "[missi
     } else {
         CHECK( remote_task->is_complete( character_id(), remote ) );
         // Only unbound old monsters use the legacy local mission association.
-        monster legacy( mtype_id( "mon_zombie_nemesis" ) );
+        monster legacy( mon_zombie_nemesis );
         mission::on_creature_death( legacy );
         CHECK( host_task->is_complete( character_id(), host ) );
     }
@@ -976,7 +993,7 @@ TEST_CASE( "nemesis_materialization_and_death_keep_the_assigned_player", "[missi
     for( const mongroup *stored : overmap_buffer.groups_at( stored_at ) ) {
         CHECK( stored->nemesis_mission_id != remote_id );
     }
-    group.monsters.emplace_back( mtype_id( "mon_zombie_nemesis" ) );
+    group.monsters.emplace_back( mon_zombie_nemesis );
     map_meddler::spawn_monsters_submap_group( get_map(), tripoint_rel_sm( 2, 2, 0 ), group, true );
     for( const monster &candidate : g->all_monsters() ) {
         CHECK( candidate.mission_ids.count( remote_id ) == 0 );

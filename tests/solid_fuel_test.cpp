@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "cata_imgui.h" // Select TUI before the UI-test guards.
 

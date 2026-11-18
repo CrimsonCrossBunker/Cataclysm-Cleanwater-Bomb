@@ -63,7 +63,7 @@ TEST_CASE( "lua_platform_item_flag_service_matches_native_talker_slot_effects",
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     platform::install_value_type_api( lua, services, []() {} );

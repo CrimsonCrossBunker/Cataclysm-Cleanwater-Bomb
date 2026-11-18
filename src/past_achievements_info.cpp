@@ -1,4 +1,7 @@
+#include <cata_path.h>
+#include <type_id.h>
 #include <exception>
+#include <functional>
 #include <utility>
 #include <vector>
 
@@ -11,8 +14,6 @@
 #include "past_games_info.h"
 #include "path_info.h"
 #include "string_formatter.h"
-
-class cata_path;
 
 void past_achievements_info::clear()
 {

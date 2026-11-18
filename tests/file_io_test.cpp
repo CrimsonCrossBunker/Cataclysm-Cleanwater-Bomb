@@ -1,13 +1,17 @@
+#include <stddef.h>
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <ios>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
-#include <ostream>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
+#include <vector>
 
 #include "cata_catch.h"
 #include "cata_path.h"
@@ -25,7 +29,7 @@ static std::filesystem::path file_io_directory()
 {
     for( int attempt = 0; attempt < 100; ++attempt ) {
         const std::filesystem::path directory = std::filesystem::temp_directory_path() /
-                                                ( "ccb-file-io-test-" + std::to_string( attempt ) );
+                                                std::filesystem::u8path( "ccb-file-io-test-" + std::to_string( attempt ) );
         if( std::filesystem::create_directory( directory ) ) {
             return directory;
         }
@@ -138,7 +142,7 @@ TEST_CASE( "file_writes_commit_only_on_success", "[utility][file_io][nogame]" )
     }
 
     SECTION( "failed_rename_retains_complete_temporary_file" ) {
-        const std::filesystem::path blocked = directory / "blocked";
+        const std::filesystem::path blocked = directory / std::filesystem::u8path( "blocked" );
         REQUIRE( std::filesystem::create_directory( blocked ) );
         {
             ofstream_wrapper output( blocked, std::ios::binary );
@@ -168,7 +172,8 @@ TEST_CASE( "corrupt_json_reads_do_not_default", "[utility][file_io][nogame]" )
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const cata_path path( cata_path::root_path::unknown, directory / "contents.json" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "contents.json" ) );
     const std::string contents = GENERATE( std::string(), std::string( " " ),
                                            std::string( "{" ), std::string( "\0payload", 8 ) );
     write_to_file( path, [&]( std::ostream & output ) {
@@ -185,12 +190,13 @@ TEST_CASE( "json_file_offsets_are_bounded", "[utility][file_io][nogame]" )
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const cata_path path( cata_path::root_path::unknown, directory / "contents.json" );
-    const std::string contents = " \n{\"value\":1}";
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "contents.json" ) );
+    const std::string contents = std::string( 1, ' ' ) + "\n{\"value\":1}";
     write_to_file( path, [&]( std::ostream & output ) {
         output << contents;
     } );
-    flexbuffer_cache cache( directory / "cache", directory );
+    flexbuffer_cache cache( directory / std::filesystem::u8path( "cache" ), directory );
     const bool warm_cache = GENERATE( false, true );
     if( warm_cache ) {
         REQUIRE_NOTHROW( cache.parse_and_cache( path.get_unrelative_path() ) );
@@ -217,7 +223,8 @@ TEST_CASE( "file_reads_preserve_complete_contents", "[utility][file_io][nogame]"
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const cata_path path( cata_path::root_path::unknown, directory / "contents" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "contents" ) );
     const std::string contents = GENERATE( std::string(), std::string( "x" ),
                                            std::string( "\x1f" ), std::string( "complete contents" ),
                                            std::string( "\0payload", 8 ) );
@@ -240,10 +247,10 @@ TEST_CASE( "archive_creation_rejects_unreadable_sources", "[utility][file_io][ar
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const std::filesystem::path folder = directory / "source";
+    const std::filesystem::path folder = directory / std::filesystem::u8path( "source" );
     REQUIRE( std::filesystem::create_directory( folder ) );
-    const std::filesystem::path source = folder / "entry";
-    const std::filesystem::path archive_path = directory / "save.zzip";
+    const std::filesystem::path source = folder / std::filesystem::u8path( "entry" );
+    const std::filesystem::path archive_path = directory / std::filesystem::u8path( "save.zzip" );
     CHECK_FALSE( zzip::create_from_folder_with_files( archive_path, folder, { source }, 0,
                  {} ).has_value() );
     write_to_file( source.u8string(), []( std::ostream & output ) {
@@ -251,7 +258,8 @@ TEST_CASE( "archive_creation_rejects_unreadable_sources", "[utility][file_io][ar
     } );
     auto archive = zzip::create_from_folder_with_files( archive_path, folder, { source }, 0, {} );
     REQUIRE( archive.has_value() );
-    CHECK( read_from_zzip_optional( *archive, "entry", [&]( std::string_view contents ) {
+    CHECK( read_from_zzip_optional( *archive,
+    std::filesystem::u8path( "entry" ), [&]( std::string_view contents ) {
         CHECK( contents == "retained source" );
     } ) );
     CHECK( read_whole_file( source ) == "retained source" );
@@ -264,13 +272,14 @@ TEST_CASE( "archive_dictionary_failures_are_recoverable", "[utility][file_io][ar
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const std::filesystem::path path = directory / "save.zzip";
+    const std::filesystem::path path = directory / std::filesystem::u8path( "save.zzip" );
     const std::string failure = GENERATE( "missing", "empty", "directory" );
-    const std::filesystem::path dictionary = directory / ( "dictionary-" + failure );
+    const std::filesystem::path dictionary = directory / std::filesystem::u8path( "dictionary-" +
+            failure );
     {
         std::optional<zzip> archive = zzip::load( path );
         REQUIRE( archive.has_value() );
-        REQUIRE( archive->add_file( "entry", "original" ) );
+        REQUIRE( archive->add_file( std::filesystem::u8path( "entry" ), "original" ) );
     }
     const auto original = read_whole_file( path );
     REQUIRE( original.has_value() );
@@ -290,14 +299,16 @@ TEST_CASE( "archive_dictionary_failures_are_recoverable", "[utility][file_io][ar
     } );
     std::optional<zzip> archive = zzip::load( path, dictionary );
     REQUIRE( archive.has_value() );
-    REQUIRE( archive->add_file( "entry", "updated" ) );
+    REQUIRE( archive->add_file( std::filesystem::u8path( "entry" ), "updated" ) );
     bool read = false;
-    CHECK( read_from_zzip_optional( *archive, "entry", [&]( std::string_view contents ) {
+    CHECK( read_from_zzip_optional( *archive,
+    std::filesystem::u8path( "entry" ), [&]( std::string_view contents ) {
         read = true;
         CHECK( contents == "updated" );
     } ) );
     CHECK( read );
-    CHECK_FALSE( read_from_zzip_optional( *archive, "missing", [&]( std::string_view ) {
+    CHECK_FALSE( read_from_zzip_optional( *archive,
+    std::filesystem::u8path( "missing" ), [&]( std::string_view ) {
         FAIL( "Missing archive member called its reader" );
     } ) );
 }
@@ -311,26 +322,30 @@ TEST_CASE( "archive_stack_open_failures_are_recoverable", "[utility][file_io][ar
     } );
     const std::string tier = GENERATE( "cold", "warm", "hot" );
     CAPTURE( tier );
-    const std::filesystem::path blocked = directory / "memory" / ( "memory." + tier + ".zzip" );
+    const std::filesystem::path blocked = directory / std::filesystem::u8path( "memory" ) /
+                                          std::filesystem::u8path( "memory." + tier + ".zzip" );
     std::filesystem::create_directories( blocked );
     if( tier != "cold" ) {
-        auto cold = zzip::load( directory / "memory" / "memory.cold.zzip" );
+        auto cold = zzip::load( directory / std::filesystem::u8path( "memory" ) /
+                                std::filesystem::u8path( "memory.cold.zzip" ) );
         REQUIRE( cold.has_value() );
-        REQUIRE( cold->add_file( "entry", "stale contents" ) );
+        REQUIRE( cold->add_file( std::filesystem::u8path( "entry" ), "stale contents" ) );
     }
-    auto stack = zzip_stack::load( directory / "memory" );
+    auto stack = zzip_stack::load( directory / std::filesystem::u8path( "memory" ) );
     REQUIRE( stack != nullptr );
     CHECK_THROWS_AS( stack->get_entries(), std::runtime_error );
     const std::string errors = capture_debugmsg_during( [&]() {
-        CHECK_FALSE( read_from_zzip_optional( stack, "entry", [&]( std::string_view ) {
+        CHECK_FALSE( read_from_zzip_optional( stack,
+        std::filesystem::u8path( "entry" ), [&]( std::string_view ) {
             FAIL( "Unreadable archive called its reader" );
         } ) );
     } );
     CHECK( errors.find( blocked.filename().u8string() ) != std::string::npos );
     REQUIRE( std::filesystem::remove( blocked ) );
-    REQUIRE( stack->add_file( "entry", "contents" ) );
+    REQUIRE( stack->add_file( std::filesystem::u8path( "entry" ), "contents" ) );
     CHECK( stack->get_entries().size() == 1 );
-    CHECK( read_from_zzip_optional( stack, "entry", [&]( std::string_view contents ) {
+    CHECK( read_from_zzip_optional( stack,
+    std::filesystem::u8path( "entry" ), [&]( std::string_view contents ) {
         CHECK( contents == "contents" );
     } ) );
 }
@@ -342,7 +357,8 @@ TEST_CASE( "compressed_file_reads_reject_truncation", "[utility][file_io][nogame
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
-    const cata_path path( cata_path::root_path::unknown, directory / "contents" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "contents" ) );
     const char compressed[] =
         "\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\xff\x4b\xce\xcf\x2d\xc8\x49\x2d\x49\x55"
         "\x48\xce\xcf\x2b\x49\xcd\x2b\x29\x06\x00\x65\x49\xc0\x04\x11\x00\x00\x00";

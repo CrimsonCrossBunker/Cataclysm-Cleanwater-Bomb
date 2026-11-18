@@ -1282,7 +1282,7 @@ TEST_CASE( "lua_platform_inventory_has_items_sum_matches_native_condition",
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
@@ -1399,7 +1399,7 @@ TEST_CASE( "lua_platform_recipe_mutations_match_native_talk_effects",
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
@@ -1664,7 +1664,7 @@ TEST_CASE( "lua_platform_consume_item_sum_matches_native_inventory_mutations",
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );
@@ -1991,7 +1991,7 @@ TEST_CASE( "lua_platform_item_conditions_match_native_alpha_beta_and_item_talker
     const auto current_runtime = [&]() {
         return runtime;
     };
-    const auto current_world = [world_generation]() {
+    const auto current_world = []() {
         return world_generation;
     };
     cata::lua_platform::install_value_type_api( lua, services, []() {} );

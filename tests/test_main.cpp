@@ -3,6 +3,9 @@
     #define CATCH_CONFIG_IMPL_ONLY
 #endif
 #define CATCH_CONFIG_RUNNER
+#include "cata_catch.h" // IWYU pragma: associated
+
+#include <regional_climate.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -24,17 +27,14 @@
     #include <unistd.h>
 #endif
 
-#include "cata_catch.h"
-#include "mod_id_compat.h"
-
 #include "avatar.h"
 #include "cached_options.h"
 #include "calendar.h"
-#include "climate_seasons.h"
 #include "cata_allocator.h"
 #include "cata_assert.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
+#include "climate_seasons.h"
 #include "color.h"
 #include "compatibility.h"
 #include "coordinates.h"
@@ -49,6 +49,7 @@
 #include "mapbuffer.h"
 #include "messages.h"
 #include "mission.h"
+#include "mod_id_compat.h"
 #include "options.h"
 #include "overmap.h"
 #include "overmapbuffer.h"

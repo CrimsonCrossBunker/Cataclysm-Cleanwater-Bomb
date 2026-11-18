@@ -1,5 +1,7 @@
 #include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "basecamp.h"
 #include "cata_catch.h"

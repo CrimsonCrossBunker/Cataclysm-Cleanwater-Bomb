@@ -36,6 +36,20 @@
 #include "units.h"
 #include "vehicle.h"
 
+static const faction_id faction_free_merchants( "free_merchants" );
+static const faction_id faction_your_followers( "your_followers" );
+
+static const itype_id itype_bottle_plastic( "bottle_plastic" );
+static const itype_id itype_gasoline( "gasoline" );
+static const itype_id itype_sw629( "sw629" );
+static const itype_id
+itype_test_multimag_turret_flamethrower( "test_multimag_turret_flamethrower" );
+static const itype_id itype_water_clean( "water_clean" );
+
+static const vpart_id vpart_frame( "frame" );
+static const vpart_id vpart_tank_test( "tank_test" );
+
+static const vproto_id vehicle_prototype_none( "none" );
 namespace
 {
 class liquid_owner_fixture
@@ -67,13 +81,13 @@ TEST_CASE( "liquid_transfer_charges_its_actor_and_refreshes_its_carried_weight",
 {
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+    who.set_wielded_item( item( itype_bottle_plastic ) );
     liquid_dest_opt target;
     target.dest_opt = LD_ITEM;
     target.item_loc = who.get_wielded_item();
-    item water( itype_id( "water_clean" ), calendar::turn, 20 );
-    water.set_owner( faction_id( "your_followers" ) );
-    water.set_old_owner( faction_id( "free_merchants" ) );
+    item water( itype_water_clean, calendar::turn, 20 );
+    water.set_owner( faction_your_followers );
+    water.set_old_owner( faction_free_merchants );
     const int capacity = target.item_loc->get_remaining_capacity_for_liquid( water, true );
     REQUIRE( capacity > 0 );
     water.charges = capacity + 1;
@@ -99,7 +113,7 @@ TEST_CASE( "liquid_transfer_rejects_missing_self_and_non_transfer_destinations",
 {
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
-    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    item water( itype_water_clean, calendar::turn, 2 );
     liquid_dest_opt target;
     SECTION( "missing_container" ) {
         target.dest_opt = LD_ITEM;
@@ -111,7 +125,7 @@ TEST_CASE( "liquid_transfer_rejects_missing_self_and_non_transfer_destinations",
         target.dest_opt = LD_NULL;
     }
     SECTION( "self" ) {
-        who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
+        who.set_wielded_item( item( itype_bottle_plastic ) );
         target.dest_opt = LD_ITEM;
         target.item_loc = who.get_wielded_item();
         REQUIRE( target.item_loc->fill_with( water, 1 ) == 1 );
@@ -132,20 +146,20 @@ TEST_CASE( "liquid_transfer_uses_only_the_selected_vehicle_tank", "[liquid][tran
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
     map &here = get_map();
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), who.pos_bub() + tripoint::east,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, who.pos_bub() + tripoint::east,
                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int first = veh->install_part( here, point_rel_ms::zero, vpart_id( "tank_test" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int first = veh->install_part( here, point_rel_ms::zero, vpart_tank_test );
     REQUIRE( first >= 0 );
-    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
-    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "tank_test" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
+    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_tank_test );
     REQUIRE( second >= 0 );
     veh->refresh();
     liquid_dest_opt target;
     target.dest_opt = LD_VEH;
     target.veh = veh;
-    item water( itype_id( "water_clean" ), calendar::turn, 3 );
+    item water( itype_water_clean, calendar::turn, 3 );
     SECTION( "selected" ) {
         REQUIRE( liquid_handler::transfer_liquid( who, water, target, second ) );
         CHECK( water.charges == 0 );
@@ -164,7 +178,7 @@ TEST_CASE( "liquid_transfer_uses_only_the_selected_vehicle_tank", "[liquid][tran
         CHECK( who.get_moves() == 1500 );
     }
     SECTION( "incompatible_tank_does_not_fall_back_to_empty_tank" ) {
-        REQUIRE( veh->part( second ).ammo_set( itype_id( "gasoline" ), 3 ) == 3 );
+        REQUIRE( veh->part( second ).ammo_set( itype_gasoline, 3 ) == 3 );
         CHECK_FALSE( liquid_handler::transfer_liquid( who, water, target, second ) );
         CHECK( water.charges == 3 );
         CHECK( veh->part( first ).ammo_remaining() == 0 );
@@ -201,7 +215,7 @@ TEST_CASE( "liquid_transfer_ground_and_keg_keep_quantity_on_invalid_targets",
         REQUIRE_FALSE( here.can_put_items_ter_furn( target.pos ) );
         valid = false;
     }
-    item water( itype_id( "water_clean" ), calendar::turn, 4 );
+    item water( itype_water_clean, calendar::turn, 4 );
     CHECK( liquid_handler::transfer_liquid( who, water, target ) == valid );
     CHECK( water.charges == ( valid ? 0 : 4 ) );
     CHECK( who.get_moves() == ( valid ? 1400 : 1500 ) );
@@ -217,7 +231,7 @@ TEST_CASE( "native_unload_updates_the_operating_characters_recoil", "[unload][tr
 {
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
-    item revolver( itype_id( "sw629" ) );
+    item revolver( itype_sw629 );
     revolver.ammo_set( revolver.ammo_default(), 1 );
     who.set_wielded_item( revolver );
     item_location source = who.get_wielded_item();
@@ -235,21 +249,21 @@ TEST_CASE( "integral_unload_settles_only_fuel_actually_transferred",
 {
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
-    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    who.set_wielded_item( item( itype_test_multimag_turret_flamethrower ) );
     item_location gun = who.get_wielded_item();
     REQUIRE( gun->uses_firing_requirements() );
     item_pocket *fuel = gun->pocket_by_id( "fuel" );
     REQUIRE( fuel );
-    item gasoline( itype_id( "gasoline" ), calendar::turn, 20 );
-    gasoline.set_owner( faction_id( "your_followers" ) );
-    gasoline.set_old_owner( faction_id( "free_merchants" ) );
+    item gasoline( itype_gasoline, calendar::turn, 20 );
+    gasoline.set_owner( faction_your_followers );
+    gasoline.set_old_owner( faction_free_merchants );
     REQUIRE( fuel->insert_item( gasoline ).success() );
     gun->set_flag( flag_FILTHY );
 
     liquid_dest_opt destination;
     destination.dest_opt = LD_ITEM;
     item &bottle = get_map().add_item_or_charges( who.pos_bub(),
-                   item( itype_id( "bottle_plastic" ) ) );
+                   item( itype_bottle_plastic ) );
     destination.item_loc = item_location( map_cursor( who.pos_bub() ), &bottle );
     item existing = gasoline;
     existing.charges = 10000;
@@ -315,18 +329,18 @@ TEST_CASE( "integral_unload_keeps_earlier_transfers_when_a_later_stack_is_partia
 {
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
-    who.set_wielded_item( item( itype_id( "test_multimag_turret_flamethrower" ) ) );
+    who.set_wielded_item( item( itype_test_multimag_turret_flamethrower ) );
     item_location gun = who.get_wielded_item();
     item_pocket *fuel = gun->pocket_by_id( "fuel" );
     REQUIRE( fuel );
-    item gasoline( itype_id( "gasoline" ), calendar::turn, 10 );
+    item gasoline( itype_gasoline, calendar::turn, 10 );
     REQUIRE( fuel->insert_item( gasoline, false, false ).success() );
     REQUIRE( fuel->insert_item( gasoline, false, false ).success() );
     REQUIRE( fuel->all_items_top().size() == 2 );
     liquid_dest_opt destination;
     destination.dest_opt = LD_ITEM;
     item &bottle = get_map().add_item_or_charges( who.pos_bub(),
-                   item( itype_id( "bottle_plastic" ) ) );
+                   item( itype_bottle_plastic ) );
     destination.item_loc = item_location( map_cursor( who.pos_bub() ), &bottle );
     item existing = gasoline;
     existing.charges = 10000;
@@ -358,20 +372,20 @@ TEST_CASE( "unload_liquid_destination_uses_vehicle_and_tank_identity",
     liquid_owner_fixture fixture;
     npc &who = fixture.actor();
     map &here = get_map();
-    vehicle *veh = here.add_vehicle( vproto_id( "none" ), who.pos_bub() + tripoint::east,
+    vehicle *veh = here.add_vehicle( vehicle_prototype_none, who.pos_bub() + tripoint::east,
                                      0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( veh );
-    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_id( "frame" ) ) >= 0 );
-    const int first = veh->install_part( here, point_rel_ms::zero, vpart_id( "tank_test" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms::zero, vpart_frame ) >= 0 );
+    const int first = veh->install_part( here, point_rel_ms::zero, vpart_tank_test );
     REQUIRE( first >= 0 );
-    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "frame" ) ) >= 0 );
-    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_id( "tank_test" ) );
+    REQUIRE( veh->install_part( here, point_rel_ms( 1, 0 ), vpart_frame ) >= 0 );
+    const int second = veh->install_part( here, point_rel_ms( 1, 0 ), vpart_tank_test );
     REQUIRE( second >= 0 );
     veh->refresh();
     here.add_vehicle_to_cache( veh );
     REQUIRE( here.veh_at( who.pos_bub() + tripoint::east ) );
-    who.set_wielded_item( item( itype_id( "bottle_plastic" ) ) );
-    item water( itype_id( "water_clean" ), calendar::turn, 2 );
+    who.set_wielded_item( item( itype_bottle_plastic ) );
+    item water( itype_water_clean, calendar::turn, 2 );
     item_location root = who.get_wielded_item();
     REQUIRE( root->fill_with( water, 2 ) == 2 );
     item &source = root->legacy_front();

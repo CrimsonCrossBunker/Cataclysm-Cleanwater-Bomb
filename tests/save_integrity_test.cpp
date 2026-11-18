@@ -1,12 +1,27 @@
+#include <character_attire.h>
+#include <character_id.h>
+#include <coordinates.h>
+#include <flexbuffer_json.h>
+#include <item_location.h>
+#include <overmap_ui.h>
+#include <pimpl.h>
+#include <point.h>
+#include <type_id.h>
+#include <units.h>
+#include <cstddef>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <initializer_list>
 #include <iterator>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <unordered_set>
 #include <vector>
 
 #include "avatar.h"
@@ -22,7 +37,6 @@
 #include "faction.h"
 #include "game.h"
 #include "json.h"
-#include "json_error.h"
 #include "json_loader.h"
 #include "map.h"
 #include "options_helpers.h"
@@ -34,6 +48,8 @@
 #include "worldfactory.h"
 #include "zzip.h"
 
+static const dimension_id dimension_world_abyss( "abyss" );
+static const dimension_id dimension_world_default( "default" );
 namespace
 {
 void reset_save_test_state()
@@ -82,7 +98,7 @@ std::string replace_save_member( const std::string &contents, std::string_view n
         const int start = value.tell();
         value.skip_value();
         std::string token = value.substr( start, value.tell() - start );
-        const size_t last = token.find_last_not_of( " \t\r\n" );
+        const size_t last = token.find_last_not_of( std::string{ ' ', '\t', '\r', '\n' } );
         if( token[last] == ',' ) {
             token.erase( last );
         }
@@ -116,7 +132,7 @@ std::filesystem::path save_integrity_directory()
 {
     for( int attempt = 0; attempt < 100; ++attempt ) {
         const std::filesystem::path directory = std::filesystem::temp_directory_path() /
-                                                ( "ccb-critical-load-test-" + std::to_string( attempt ) );
+                                                std::filesystem::u8path( "ccb-critical-load-test-" + std::to_string( attempt ) );
         if( std::filesystem::create_directory( directory ) ) {
             return directory;
         }
@@ -146,7 +162,7 @@ struct load_probe : event_subscriber {
         }
     }
 };
-}
+} // namespace
 
 TEST_CASE( "new_character_world_loads_retained_state_and_blocks_corruption",
            "[save_integrity][save]" )
@@ -154,7 +170,7 @@ TEST_CASE( "new_character_world_loads_retained_state_and_blocks_corruption",
     restore_on_out_of_scope restore_version( savegame_loading_version );
     const unsigned int previous_seed = g->get_seed();
     const dimension_id previous_dimension = g->get_dimension_prefix();
-    const auto previous_temperature = get_weather().temperature;
+    const units::temperature previous_temperature = get_weather().temperature;
     const overmap_global_state previous_overmap_state = overmap_buffer.global_state;
     REQUIRE( world_generator->active_world != nullptr );
     WORLD *previous_world = world_generator->active_world;
@@ -326,7 +342,7 @@ TEST_CASE( "new_character_world_loads_retained_state_and_blocks_corruption",
     CHECK( savegame_loading_version == savegame_version );
     if( valid ) {
         CHECK( errors.empty() );
-        CHECK( g->get_dimension_prefix() == dimension_id( "default" ) );
+        CHECK( g->get_dimension_prefix() == dimension_world_default );
         CHECK( g->get_seed() == 0xf1234567u );
         CHECK( g->assign_npc_id().get_value() == 2 );
         REQUIRE( g->save() );
@@ -345,10 +361,13 @@ TEST_CASE( "new_character_world_loads_retained_state_and_blocks_corruption",
             CHECK( networks_data.get_array( "networks" ).empty() );
         }
         if( travel ) {
-            const cata_path destination = worldpath / "dimensions" / "abyss";
-            const cata_path artifact = destination / "maps" / "0.0.0" / "0.0.0.map";
+            const cata_path destination = worldpath / std::filesystem::u8path( "dimensions" ) /
+                                          std::filesystem::u8path( "abyss" );
+            const cata_path artifact = destination / std::filesystem::u8path( "maps" ) /
+                                       std::filesystem::u8path( "0.0.0" ) / std::filesystem::u8path( "0.0.0.map" );
             if( kind == "travel-empty" ) {
-                std::filesystem::create_directories( ( destination / "maps" ).get_unrelative_path() );
+                std::filesystem::create_directories( ( destination /
+                                                       std::filesystem::u8path( "maps" ) ).get_unrelative_path() );
             } else if( kind == "travel-missing" ) {
                 std::filesystem::create_directories( artifact.get_unrelative_path().parent_path() );
                 write_to_file( artifact, []( std::ostream & output ) {
@@ -357,11 +376,11 @@ TEST_CASE( "new_character_world_loads_retained_state_and_blocks_corruption",
             }
             const bool first_visit = kind != "travel-missing";
             const std::string travel_errors = capture_debugmsg_during( [&]() {
-                CHECK( g->travel_to_dimension( dimension_id( "abyss" ), {}, {}, std::nullopt ) == first_visit );
+                CHECK( g->travel_to_dimension( dimension_world_abyss, {}, {}, std::nullopt ) == first_visit );
             } );
             if( first_visit ) {
                 CHECK( travel_errors.empty() );
-                CHECK( g->get_dimension_prefix() == dimension_id( "abyss" ) );
+                CHECK( g->get_dimension_prefix() == dimension_world_abyss );
                 REQUIRE( g->save() );
                 CHECK( std::filesystem::exists( ( destination / SAVE_DIMENSION_DATA ).get_unrelative_path() ) );
             } else {
@@ -429,7 +448,7 @@ TEST_CASE( "player_save_failure_preserves_dependent_files", "[save_integrity][sa
     REQUIRE( world != nullptr );
     world->WORLD_OPTIONS = previous_world->WORLD_OPTIONS;
     world_generator->set_active_world( world );
-    select_dimension_for_load( dimension_id( "default" ) );
+    select_dimension_for_load( dimension_world_default );
     overmap_buffer.clear();
     overmap_buffer.init_region_layout();
     g->reset_game_state();
@@ -491,7 +510,7 @@ TEST_CASE( "player_save_failure_preserves_dependent_files", "[save_integrity][sa
     if( travel ) {
         const dimension_id original_dimension = g->get_dimension_prefix();
         const std::string errors = capture_debugmsg_during( [&]() {
-            CHECK_FALSE( g->travel_to_dimension( dimension_id( "abyss" ), {}, {}, std::nullopt ) );
+            CHECK_FALSE( g->travel_to_dimension( dimension_world_abyss, {}, {}, std::nullopt ) );
         } );
         CHECK( errors.find( blocked.get_unrelative_path().filename().u8string() ) != std::string::npos );
         CHECK( g->get_dimension_prefix() == original_dimension );
@@ -552,9 +571,10 @@ TEST_CASE( "player_save_failure_preserves_dependent_files", "[save_integrity][sa
             player.allow_omitted_members();
             CHECK( player.get_string( "name" ) == name );
             if( name == "First successful save" ) {
-                REQUIRE( archive->add_file( "preserved-entry", "unchanged" ) );
+                REQUIRE( archive->add_file( std::filesystem::u8path( "preserved-entry" ), "unchanged" ) );
             } else {
-                CHECK( read_from_zzip_optional( *archive, "preserved-entry", [&]( std::string_view contents ) {
+                CHECK( read_from_zzip_optional( *archive,
+                std::filesystem::u8path( "preserved-entry" ), [&]( std::string_view contents ) {
                     CHECK( contents == "unchanged" );
                 } ) );
             }
@@ -593,7 +613,8 @@ TEST_CASE( "failed_critical_loads_block_saving", "[save_integrity][save]" )
     const std::string contents = GENERATE( std::string( "null" ), std::string( "{" ),
                                            std::string(), std::string( "\0payload", 8 ), std::string( "{}" ),
                                            std::string( "# version 39" ), std::string( "# version 39\n" ) );
-    const cata_path path( cata_path::root_path::unknown, directory / "save.json" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "save.json" ) );
     {
         std::ofstream output( path.get_unrelative_path(), std::ios::binary );
         output.write( contents.data(), contents.size() );
@@ -654,7 +675,8 @@ TEST_CASE( "valid_critical_loads_allow_saving", "[save_integrity][save]" )
     REQUIRE( g->save() );
     const bool master = GENERATE( false, true );
     const bool legacy = GENERATE( false, true );
-    const cata_path path( cata_path::root_path::unknown, directory / "save.json" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "save.json" ) );
     const auto original = read_whole_file( ( master ? PATH_INFO::world_base_save_path() / SAVE_MASTER :
                                            PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA ).get_unrelative_path() );
     REQUIRE( original.has_value() );
@@ -728,7 +750,8 @@ TEST_CASE( "critical_save_schema_rejects_missing_and_invalid_members", "[save_in
                    "player.location", "player.inv", "player.worn", "player.worn.worn"
                  };
     }
-    const cata_path path( cata_path::root_path::unknown, directory / "save.json" );
+    const cata_path path( cata_path::root_path::unknown,
+                          directory / std::filesystem::u8path( "save.json" ) );
     const cata_path source_path = kind == "master" ? PATH_INFO::world_base_save_path() / SAVE_MASTER :
                                   kind == "dimension" ? PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA :
                                   PATH_INFO::player_base_save_path() + SAVE_EXTENSION;
@@ -788,7 +811,6 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
     on_out_of_scope check_version( [previous_version]() {
         CHECK( savegame_loading_version == previous_version );
     } );
-    restore_on_out_of_scope restore_version( savegame_loading_version );
     REQUIRE( world_generator != nullptr );
     REQUIRE( world_generator->active_world != nullptr );
     const std::filesystem::path directory = save_integrity_directory();
@@ -801,7 +823,6 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
     on_out_of_scope cleanup( [&]() {
         world_generator->set_active_world( previous_world );
         PATH_INFO::set_savedir( previous_savedir );
-        savegame_loading_version = previous_version;
         select_dimension_for_load( previous_dimension );
         CHECK( savegame_loading_version == previous_version );
         get_map().load( previous_map_position, false );
@@ -809,6 +830,7 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
         std::error_code error;
         std::filesystem::remove_all( directory, error );
     } );
+    restore_on_out_of_scope restore_version( savegame_loading_version );
     PATH_INFO::set_savedir( directory.generic_u8string() + "/" );
     world_generator->set_active_world( &world );
     const save_t save = save_t::from_save_id( "integrity-survivor" );
@@ -889,7 +911,7 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
         return;
     }
     if( failure == "stale-dimension" || failure == "legacy-dimension-field" ) {
-        const dimension_id unrelated_dimension( "abyss" );
+        const dimension_id &unrelated_dimension = dimension_world_abyss;
         REQUIRE( unrelated_dimension.is_valid() );
         select_dimension_for_load( unrelated_dimension );
         const cata_path unrelated = PATH_INFO::current_dimension_save_path() / SAVE_DIMENSION_DATA;
@@ -914,7 +936,7 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
             CHECK( probe.loaded );
             CHECK( errors.find( unrelated.generic_u8string() ) == std::string::npos );
         }
-        CHECK( g->get_dimension_prefix() == dimension_id( "default" ) );
+        CHECK( g->get_dimension_prefix() == dimension_world_default );
         CHECK( read_whole_file( unrelated.get_unrelative_path() ) == "{" );
         return;
     }
@@ -1043,7 +1065,8 @@ TEST_CASE( "critical_saves_round_trip_and_reject_incomplete_reloads", "[save_int
             write_to_file( character, [&]( std::ostream & output ) {
                 output << contents;
             } );
-            rejected = PATH_INFO::dimensions_save_path() / "abyss" / SAVE_DIMENSION_DATA;
+            rejected = PATH_INFO::dimensions_save_path() / std::filesystem::u8path( "abyss" ) /
+                       SAVE_DIMENSION_DATA;
             CHECK_FALSE( std::filesystem::exists( rejected.get_unrelative_path() ) );
         } else {
             REQUIRE( std::filesystem::remove( dimension.get_unrelative_path() ) );

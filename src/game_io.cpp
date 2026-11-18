@@ -3,6 +3,7 @@
 * See savegame.cpp for game component IO
 */
 
+#include <weather.h>
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -37,7 +38,6 @@
 #include "cata_utility.h"
 #include "cata_variant.h"
 #include "catacharset.h"
-#include "lua_platform_loader.h"
 #include "char_validity_check.h"
 #include "character.h"
 #include "character_id.h"
@@ -62,17 +62,18 @@
 #include "item.h"
 #include "json.h"
 #include "loading_ui.h"
+#include "lua_platform_loader.h"
 #include "magic_enchantment.h"
 #include "map.h"
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
-#include "mp_world_session.h"
 #include "memorial_logger.h"
 #include "messages.h"
 #include "mod_id_compat.h"
 #include "mod_manager.h"
 #include "mp_client_conn.h"
 #include "mp_gamestate.h"
+#include "mp_world_session.h"
 #include "options.h"
 #include "output.h"
 #include "overmapbuffer.h"
@@ -784,7 +785,7 @@ bool game::save_maps()
     }
     try {
         map &primary = reality_bubble();
-        auto &session = multiplayer_session();
+        cata_mp::world_session &session = multiplayer_session();
         std::vector<std::reference_wrapper<const map>> resident{ std::cref( primary ) };
         if( session.has_regions() ) {
             const map_simulation_regions regions = session.simulation_regions( primary );

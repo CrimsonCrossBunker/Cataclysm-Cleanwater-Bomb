@@ -1,14 +1,3 @@
-#include "radio_car_control.h"
-#include "talker.h"
-#include "effect_on_condition.h"
-#include "dialogue.h"
-#include "iuse.h"
-#include "vehicle_heating.h"
-
-#include "item_activation.h"
-#include "remote_vehicle_activity.h"
-#include "tool_activity_target.h"
-
 #include <clone_ptr.h>
 #include <algorithm>
 #include <array>
@@ -43,17 +32,15 @@
 #include "cata_utility.h"
 #include "catacharset.h"
 #include "character.h"
-#include "chopping_activity.h"
 #include "character_action_guard.h"
 #include "character_id.h"
 #include "character_martial_arts.h"
+#include "chopping_activity.h"
 #include "city.h"
 #include "color.h"
 #include "construction.h"
 #include "coordinates.h"
 #include "crafting.h"
-#include "mp_client_conn.h"
-#include "mp_inventory_activity.h"
 #include "crafting_enums.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -61,7 +48,9 @@
 #include "cursesdef.h"
 #include "damage.h"
 #include "debug.h"
+#include "dialogue.h"
 #include "effect.h" // for weed_msg
+#include "effect_on_condition.h"
 #include "enums.h"
 #include "event.h"
 #include "event_bus.h"
@@ -72,10 +61,9 @@
 #include "flat_set.h" // IWYU pragma: keep
 #include "flexbuffer_json.h"
 #include "game.h"
-#include "hacksaw_activity.h"
-#include "vehicle_tool_use.h"
 #include "game_constants.h"
 #include "game_inventory.h"
+#include "hacksaw_activity.h"
 #include "handle_liquid.h"
 #include "iexamine.h"
 #include "input_context.h"
@@ -84,13 +72,15 @@
 #include "inventory.h"
 #include "inventory_ui.h"
 #include "item.h"
+#include "item_activation.h"
 #include "item_contents.h"
 #include "item_location.h"
-#include "item_source.h"
 #include "item_pocket.h"
+#include "item_source.h"
 #include "item_transformation.h"
 #include "iteminfo_query.h"
 #include "itype.h"
+#include "iuse.h"
 #include "iuse_actor.h"
 #include "json.h"
 #include "json_loader.h"
@@ -106,6 +96,8 @@
 #include "messages.h"
 #include "mongroup.h"
 #include "monster.h"
+#include "mp_client_conn.h"
+#include "mp_inventory_activity.h"
 #include "mtype.h"
 #include "music.h"
 #include "mutation.h"
@@ -122,8 +114,10 @@
 #include "point.h"
 #include "popup.h" // For play_game
 #include "proficiency.h"
+#include "radio_car_control.h"
 #include "recipe.h"
 #include "recipe_dictionary.h"
+#include "remote_vehicle_activity.h"
 #include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
@@ -132,9 +126,11 @@
 #include "speech.h"
 #include "stomach.h"
 #include "string_formatter.h"
+#include "talker.h"
 #include "teleport.h"
 #include "temp_crafting_inventory.h"
 #include "text_snippets.h"
+#include "tool_activity_target.h"
 #include "translation.h"
 #include "translations.h"
 #include "trap.h"
@@ -147,14 +143,15 @@
 #include "value_ptr.h"
 #include "veh_interact.h"
 #include "vehicle.h"
-#include "vehicle_selector.h"
 #include "vehicle_control.h"
+#include "vehicle_heating.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
+#include "vehicle_tool_use.h"
 #include "viewer.h"
+#include "visitable.h"
 #include "vitamin.h"
 #include "vpart_position.h"
-#include "vehicle_power_connection.h"
-#include "visitable.h"
 #include "weather.h"
 #include "weather_gen.h"
 #include "weather_type.h"
@@ -3558,7 +3555,7 @@ std::optional<int> iuse::solarpack( Character *p, item *it, const tripoint_bub_m
         p->add_msg_if_player(
             _( "You have no cable charging system to plug it into, so you leave it alone." ) );
         return std::nullopt;
-    } else if( !p->has_active_bionic( rem_bid ) ) {  // when OFF it takes no effect
+    } else if( !p->has_active_bionic( rem_bid ) ) { // when OFF it takes no effect
         p->add_msg_if_player( _( "Activate your cable charging system to take advantage of it." ) );
     }
 
@@ -3605,7 +3602,7 @@ std::optional<int> iuse::solarpack_off( Character *p, item *it, const tripoint_b
         return std::nullopt;
     }
 
-    if( !p->is_worn( *it ) ) {  // folding when not worn
+    if( !p->is_worn( *it ) ) { // folding when not worn
         p->add_msg_if_player( _( "You fold your portable solar array into the pack." ) );
     } else {
         p->add_msg_if_player( _( "You unplug your portable solar array, and fold it into the pack." ) );

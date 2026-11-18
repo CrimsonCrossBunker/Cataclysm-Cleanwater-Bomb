@@ -1,17 +1,20 @@
+#include <player_identity.h>
 #include <algorithm>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "calendar.h"
 #include "coords_fwd.h"
-#include "messages.h"
 #include "message_routing.h"
+#include "messages.h"
 
 class Creature;
 class JsonObject;
 class JsonOut;
+
 namespace debugmode
 {
 enum debug_filter : int;

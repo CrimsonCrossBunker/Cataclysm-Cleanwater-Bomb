@@ -1,6 +1,5 @@
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
 
-#include "debug.h"
 #include <bodypart.h>
 #include <cata_scope_helpers.h>
 #include <character_id.h>
@@ -10,7 +9,6 @@
 #include <dialogue_win.h>
 #include <effect.h>
 #include <enums.h>
-#include "flexbuffer_json.h"
 #include <game.h>
 #include <input_enums.h>
 #include <inventory.h>
@@ -22,6 +20,7 @@
 #include <map_helpers.h>
 #include <monster.h>
 #include <npc.h>
+#include <npc_lifetime.h>
 #include <npc_opinion.h>
 #include <pimpl.h>
 #include <point.h>
@@ -36,6 +35,7 @@
 #include <initializer_list>
 #include <memory>
 #include <optional>
+#include <random>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -48,20 +48,23 @@
 #include "cata_catch.h"
 #include "computer.h"
 #include "condition.h"
+#include "debug.h"
 #include "dialogue.h"
 #include "faction.h"
+#include "flexbuffer_json.h"
 #include "item.h"
 #include "item_location.h"
-#include "math_parser_diag_value.h"
 #include "json_loader.h"
 #include "lua_platform_dialogue.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_support.h"
 #include "map.h"
+#include "math_parser_diag_value.h"
 #include "mission.h"
 #include "mtype.h"
 #include "npctalk.h"
+#include "player_helpers.h"
 #include "talker.h"
 #include "talker_avatar.h"
 #include "talker_furniture.h"
@@ -70,6 +73,7 @@
 #include "talker_vehicle.h"
 #include "translation.h"
 #include "type_id.h"
+#include "rng_helpers.h"
 
 static const efftype_id effect_bleed( "bleed" );
 static const efftype_id effect_pacified( "pacified" );
@@ -274,7 +278,7 @@ TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
         cata::lua_platform::game_handle::from_creature(
             value, { "npc", 1204, 0, 0, 0, {} }, runtime, 8 );
 
-    const auto native_before = g->npc_lifetimes().acquire( value );
+    const npc_lifetime native_before = g->npc_lifetimes().acquire( value );
     value.on_unload();
     CHECK_FALSE( native_before.resolve( g->npc_lifetimes() ) );
     std::optional<cata::lua_platform::game_handle_error> error;
@@ -303,15 +307,16 @@ TEST_CASE( "lua_platform_npc_unload_reload_and_death_fail_closed",
 TEST_CASE( "lua_platform_npc_handles_share_the_native_world_lifetime",
            "[lua][platform][npc][npc_lifetime]" )
 {
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 51 );
     npc value;
     value.normalize();
     value.setID( character_id( 12100 ), true );
-    auto &world = g->npc_lifetimes();
-    const auto native_before = world.acquire( value );
-    const auto lua_before = cata::lua_platform::game_handle::from_creature(
-                                value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
+    npc_lifetime_registry &world = g->npc_lifetimes();
+    const npc_lifetime native_before = world.acquire( value );
+    const cata::lua_platform::game_handle lua_before = cata::lua_platform::game_handle::from_creature(
+                value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
     REQUIRE( native_before.resolve( world ) == &value );
     std::optional<cata::lua_platform::game_handle_error> error;
     REQUIRE( cata::lua_platform::resolve_exact_npc( lua_before, runtime, 9, error ) == &value );
@@ -319,9 +324,9 @@ TEST_CASE( "lua_platform_npc_handles_share_the_native_world_lifetime",
     // Keep the Lua runtime and native object alive, as with an in-place load.
     // World ownership alone must invalidate the earlier incarnation.
     world.reset();
-    const auto native_after = world.acquire( value );
-    const auto lua_after = cata::lua_platform::game_handle::from_creature(
-                               value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
+    const npc_lifetime native_after = world.acquire( value );
+    const cata::lua_platform::game_handle lua_after = cata::lua_platform::game_handle::from_creature(
+                value, { "npc", 12100, 0, 0, 0, {} }, runtime, 9 );
     CHECK_FALSE( native_before.resolve( world ) );
     CHECK_FALSE( cata::lua_platform::resolve_exact_npc( lua_before, runtime, 9, error ) );
     REQUIRE( error );
@@ -1071,16 +1076,19 @@ TEST_CASE( "lua_platform_dialogue_choices_are_owned_by_each_conversation",
                     std::make_unique<talker_topic>() );
     dialogue second( std::make_unique<talker_monster>( &participant ),
                      std::make_unique<talker_topic>() );
-    const auto owner = cata::lua_platform::make_game_handle_runtime_owner();
+    const cata::lua_platform::game_handle_runtime_owner_ptr owner =
+        cata::lua_platform::make_game_handle_runtime_owner();
     const cata::lua_platform::game_handle_runtime runtime( owner, 1 );
     callbacks::begin_session( first, runtime, 1 );
     callbacks::begin_session( second, runtime, 1 );
-    const auto first_session = callbacks::session_for( first, "TALK_DONE", runtime, 1 );
-    const auto second_session = callbacks::session_for( second, "TALK_DONE", runtime, 1 );
+    const cata::lua_platform::dialogue::dialogue_session_ptr first_session = callbacks::session_for(
+                first, "TALK_DONE", runtime, 1 );
+    const cata::lua_platform::dialogue::dialogue_session_ptr second_session = callbacks::session_for(
+                second, "TALK_DONE", runtime, 1 );
     auto first_payload = std::make_shared<int>( 0 );
     const std::weak_ptr<int> released_payload = first_payload;
-    const auto first_id = callbacks::register_response_callback(
-                              callbacks::response_callback_origin::platform,
+    const std::uint64_t first_id = callbacks::register_response_callback(
+                                       callbacks::response_callback_origin::platform,
     [first_payload]( dialogue &, const talk_topic & fallback, bool ) {
         ++*first_payload;
         return fallback;
@@ -1088,14 +1096,14 @@ TEST_CASE( "lua_platform_dialogue_choices_are_owned_by_each_conversation",
     first_payload.reset();
     int second_calls = 0;
     int second_actions = 0;
-    const auto second_id = callbacks::register_response_callback(
-                               callbacks::response_callback_origin::platform,
+    const std::uint64_t second_id = callbacks::register_response_callback(
+                                        callbacks::response_callback_origin::platform,
     [&]( dialogue &, const talk_topic &, bool ) {
         ++second_calls;
         return talk_topic( "SECOND_PLAYER" );
     }, second_session, "TALK_DONE" );
-    const auto second_action = callbacks::register_response_action_callback(
-                                   callbacks::response_callback_origin::platform,
+    const std::uint64_t second_action = callbacks::register_response_action_callback(
+                                            callbacks::response_callback_origin::platform,
     [&]( dialogue &, bool ) {
         ++second_actions;
     }, second_session, "TALK_DONE" );
@@ -1226,13 +1234,13 @@ TEST_CASE( "lua_platform_native_conversation_lifecycle_is_reusable_without_a_men
         ++entries;
         rng( 1, 100 );
         if( remove_provider_on_enter ) {
-            provider.reset();
+            provider = nullptr;
         }
     } );
     owner_lua.set_function( "native_later_enter", [&]() {
         ++later_entries;
     } );
-    const auto setup = owner_lua.safe_script( R"(
+    const sol::protected_function_result setup = owner_lua.safe_script( R"(
         ccb.dialogue.register_topic({
             id = "TALK_CCB_NATIVE_LIFECYCLE",
             dynamic_line = "A shared native conversation.",
@@ -1273,15 +1281,15 @@ TEST_CASE( "lua_platform_native_conversation_lifecycle_is_reusable_without_a_men
         CHECK_FALSE( second.prepare_topic() );
     }
     SECTION( "two_players_enter_choose_and_close_independently" ) {
-        const auto before = rng_get_engine();
+        const std::string before = capture_rng_state();
         REQUIRE( first.prepare_topic() );
-        CHECK( rng_get_engine() != before );
+        CHECK( capture_rng_state() != before );
         CHECK( first.get_value( "entered" ).dbl() == 1 );
-        const auto first_revision = first.response_revision();
-        const auto after_enter = rng_get_engine();
+        const std::uint64_t first_revision = first.response_revision();
+        const std::string after_enter = capture_rng_state();
         REQUIRE( first.prepare_topic() );
         CHECK( first.response_revision() == first_revision );
-        CHECK( rng_get_engine() == after_enter );
+        CHECK( capture_rng_state() == after_enter );
         CHECK( entries == 1 );
         CHECK( later_entries == 1 );
         REQUIRE( second.prepare_topic() );

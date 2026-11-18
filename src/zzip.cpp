@@ -1,15 +1,19 @@
 #include "zzip.h"
 
+#include <flatbuffers/flexbuffers.h>
+#include <zstd/common/mem.h>
+#include <zstd/common/xxhash.h>
+#include <zstd/zstd.h>
+#include <zstd/zstd_errors.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
-#include <exception>
 #include <iosfwd>
-#include <memory>
 #include <limits>
+#include <memory>
 #include <new>
 #include <optional>
 #include <string>
@@ -21,15 +25,8 @@
 #include <utility>
 #include <vector>
 
-#include <flatbuffers/flexbuffers.h>
-
-#include <zstd/zstd.h>
-#include <zstd/zstd_errors.h>
-#include <zstd/common/mem.h>
-#include <zstd/common/xxhash.h>
-
-#include "filesystem.h"
 #include "compute_budget.h"
+#include "filesystem.h"
 #include "flexbuffer_cache.h"
 #include "flexbuffer_json.h"
 #include "mmap_file.h"
@@ -493,7 +490,7 @@ struct alignas( std::max_align_t ) budget_allocation {
 
 void *budget_zstd_allocate( void *opaque, std::size_t size ) noexcept
 {
-    auto &budget = *static_cast<byte_budget *>( opaque );
+    byte_budget &budget = *static_cast<byte_budget *>( opaque );
     if( size > std::numeric_limits<std::size_t>::max() - sizeof( budget_allocation ) ) {
         return nullptr;
     }
@@ -513,7 +510,7 @@ void *budget_zstd_allocate( void *opaque, std::size_t size ) noexcept
 void budget_zstd_free( void *opaque, void *allocation ) noexcept
 {
     if( allocation ) {
-        auto &budget = *static_cast<byte_budget *>( opaque );
+        byte_budget &budget = *static_cast<byte_budget *>( opaque );
         auto *header = static_cast<budget_allocation *>( allocation ) - 1;
         const std::size_t bytes = header->bytes;
         std::free( header );

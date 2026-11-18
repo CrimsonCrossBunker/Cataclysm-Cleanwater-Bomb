@@ -14,6 +14,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 
 #include "cached_options.h"
 #include "cata_path.h"
@@ -24,8 +25,8 @@
 #include "flexbuffer_json.h"
 #include "json.h"
 #include "json_loader.h"
-#include "ofstream_wrapper.h"
 #include "native_file_path.h"
+#include "ofstream_wrapper.h"
 #include "options.h"
 #include "output.h"
 #include "pinyin.h"

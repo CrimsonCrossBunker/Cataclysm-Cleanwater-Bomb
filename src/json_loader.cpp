@@ -13,19 +13,19 @@ namespace
 {
 flexbuffer_cache &base_cache()
 {
-    static flexbuffer_cache cache{ ( PATH_INFO::base_path() / "cache" ).get_unrelative_path(), PATH_INFO::base_path().get_unrelative_path() };
+    static flexbuffer_cache cache{ ( PATH_INFO::base_path() / std::filesystem::u8path( "cache" ) ).get_unrelative_path(), PATH_INFO::base_path().get_unrelative_path() };
     return cache;
 }
 
 flexbuffer_cache &config_cache()
 {
-    static flexbuffer_cache cache{ ( PATH_INFO::config_dir_path() / "cache" ).get_unrelative_path(), PATH_INFO::config_dir_path().get_unrelative_path() };
+    static flexbuffer_cache cache{ ( PATH_INFO::config_dir_path() / std::filesystem::u8path( "cache" ) ).get_unrelative_path(), PATH_INFO::config_dir_path().get_unrelative_path() };
     return cache;
 }
 
 flexbuffer_cache &data_cache()
 {
-    static flexbuffer_cache cache{ ( PATH_INFO::datadir_path() / "cache" ).get_unrelative_path(), PATH_INFO::datadir_path().get_unrelative_path() };
+    static flexbuffer_cache cache{ ( PATH_INFO::datadir_path() / std::filesystem::u8path( "cache" ) ).get_unrelative_path(), PATH_INFO::datadir_path().get_unrelative_path() };
     return cache;
 }
 
@@ -35,7 +35,7 @@ flexbuffer_cache &memorial_cache()
     static std::filesystem::path cached_root;
     static std::unique_ptr<flexbuffer_cache> cache;
     if( !cache || cached_root != root ) {
-        cache = std::make_unique<flexbuffer_cache>( root / "cache", root );
+        cache = std::make_unique<flexbuffer_cache>( root / std::filesystem::u8path( "cache" ), root );
         cached_root = root;
     }
     return *cache;
@@ -47,7 +47,7 @@ flexbuffer_cache &user_cache()
     static std::filesystem::path cached_root;
     static std::unique_ptr<flexbuffer_cache> cache;
     if( !cache || cached_root != root ) {
-        cache = std::make_unique<flexbuffer_cache>( root / "cache", root );
+        cache = std::make_unique<flexbuffer_cache>( root / std::filesystem::u8path( "cache" ), root );
         cached_root = root;
     }
     return *cache;

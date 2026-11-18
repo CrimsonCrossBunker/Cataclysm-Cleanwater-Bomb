@@ -5,7 +5,6 @@
 #include <debug.h>
 #include <dialogue.h>
 #include <enums.h>
-#include "flexbuffer_json.h"
 #include <game.h>
 #include <item.h>
 #include <item_uid.h>
@@ -18,6 +17,7 @@
 #include <lua_platform_world.h>
 #include <lua_platform_world_content.h>
 #include <map.h>
+#include <map_helpers.h>
 #include <mapbuffer.h>
 #include <math_parser_diag_value.h>
 #include <overmap_ui.h>
@@ -47,10 +47,12 @@
 #include "calendar.h"
 #include "cata_catch.h"
 #include "flag.h"
+#include "flexbuffer_json.h"
 #include "global_vars.h"
 #include "lua_platform_sol.h"
 #include "lua_platform_test_map_support.h"
 #include "map_scale_constants.h"
+#include "player_helpers.h"
 
 using cata::lua_platform::test::platform_overmap_travel_fixture;
 #include "lua_platform_test_support.h"

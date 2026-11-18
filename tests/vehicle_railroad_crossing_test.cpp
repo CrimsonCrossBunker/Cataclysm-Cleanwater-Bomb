@@ -1,8 +1,10 @@
+#include <point.h>
+#include <vpart_position.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "avatar.h"
-#include "calendar.h"
 #include "cata_catch.h"
 #include "coordinates.h"
 #include "enums.h"
@@ -17,12 +19,17 @@
 #include "tileray.h"
 #include "type_id.h"
 #include "units.h"
-#include "veh_type.h"
 #include "vehicle.h"
 #include "vpart_range.h"
 
+static const furn_str_id furn_f_bookcase( "f_bookcase" );
+
+static const ter_str_id ter_t_buffer_stop( "t_buffer_stop" );
+static const ter_str_id ter_t_wall( "t_wall" );
+
 static const vproto_id vehicle_prototype_car( "car" );
 static const vproto_id vehicle_prototype_motorized_draisine_2seats( "motorized_draisine_2seats" );
+static const vproto_id vehicle_prototype_test_shopping_cart( "test_shopping_cart" );
 
 TEST_CASE( "road_vehicle_railroad_track_collision", "[vehicle][collision][railroads]" )
 {
@@ -55,7 +62,7 @@ TEST_CASE( "road_vehicle_railroad_track_collision", "[vehicle][collision][railro
     }
 
     SECTION( "furniture_on_track_remains_an_obstacle" ) {
-        here.furn_set( target_position, furn_str_id( "f_bookcase" ) );
+        here.furn_set( target_position, furn_f_bookcase );
         CHECK( veh->part_collision( here, part_index, here.get_abs( target_position ),
                                     true, false ).type != veh_coll_nothing );
     }
@@ -66,7 +73,7 @@ TEST_CASE( "road_vehicle_railroad_track_collision", "[vehicle][collision][railro
     }
 
     SECTION( "buffer_stop_remains_an_obstacle" ) {
-        here.ter_set( target_position, ter_str_id( "t_buffer_stop" ) );
+        here.ter_set( target_position, ter_t_buffer_stop );
         CHECK( veh->part_collision( here, part_index, here.get_abs( target_position ),
                                     true, false ).type != veh_coll_nothing );
     }
@@ -93,7 +100,8 @@ TEST_CASE( "road_vehicle_drives_over_railroad_tracks", "[vehicle][collision][rai
     CHECK( veh->can_use_rails( here ) == on_rails );
     veh->velocity = speed;
     if( !on_rails ) {
-        CHECK( here.vehicle_wheel_traction( *veh ) < here.vehicle_wheel_traction( *veh, true ) );
+        const float traction = here.vehicle_wheel_traction( *veh );
+        CHECK( traction < here.vehicle_wheel_traction( *veh, true ) );
     }
     std::vector<int> original_hp( veh->part_count() );
     std::vector<tripoint_bub_ms> original_positions( veh->part_count() );
@@ -137,9 +145,9 @@ TEST_CASE( "autodrive_crosses_railroad_tracks", "[vehicle][autodrive][railroads]
     const int track_x = start.x() + 5;
     for( int offset_y = 0; offset_y < MAPSIZE_Y; ++offset_y ) {
         const tripoint_bub_ms crossing( track_x, offset_y, 0 );
-        here.ter_set( crossing, obstacle == "buffer_stop" ? ter_str_id( "t_buffer_stop" ) : track );
+        here.ter_set( crossing, obstacle == "buffer_stop" ? ter_t_buffer_stop : track );
         if( obstacle == "furniture" ) {
-            here.furn_set( crossing, furn_str_id( "f_bookcase" ) );
+            here.furn_set( crossing, furn_f_bookcase );
         }
     }
     here.invalidate_map_cache( 0 );
@@ -207,15 +215,15 @@ TEST_CASE( "route_with_grab_crosses_railroad_tracks", "[pathfinding][vehicle][ra
     const tripoint_rel_ms grab_direction = GENERATE( tripoint_rel_ms::south, tripoint_rel_ms::north );
     CAPTURE( track.str(), obstacle, grab_direction );
     for( int offset_x = 0; offset_x < MAPSIZE_X; ++offset_x ) {
-        here.ter_set( tripoint_bub_ms( offset_x, crossing.y(), 0 ), ter_str_id( "t_wall" ) );
+        here.ter_set( tripoint_bub_ms( offset_x, crossing.y(), 0 ), ter_t_wall );
     }
-    here.ter_set( crossing, obstacle == "buffer_stop" ? ter_str_id( "t_buffer_stop" ) : track );
+    here.ter_set( crossing, obstacle == "buffer_stop" ? ter_t_buffer_stop : track );
     if( obstacle == "furniture" ) {
-        here.furn_set( crossing, furn_str_id( "f_bookcase" ) );
+        here.furn_set( crossing, furn_f_bookcase );
     }
     you.setpos( here, start );
     you.clear_destination();
-    vehicle *cart = here.add_vehicle( vproto_id( "test_shopping_cart" ), start + grab_direction,
+    vehicle *cart = here.add_vehicle( vehicle_prototype_test_shopping_cart, start + grab_direction,
                                       0_degrees, 0, veh_spawn_status::UNDAMAGED );
     REQUIRE( cart != nullptr );
     cart->set_owner( you );

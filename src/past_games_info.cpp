@@ -1,6 +1,9 @@
 #include "past_games_info.h"
 
+#include <cata_variant.h>
+#include <type_id.h>
 #include <algorithm>
+#include <exception>
 #include <filesystem>
 #include <map>
 #include <stdexcept>
