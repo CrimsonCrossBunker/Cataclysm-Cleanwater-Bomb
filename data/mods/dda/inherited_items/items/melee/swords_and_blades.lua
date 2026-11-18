@@ -3803,3 +3803,40 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- Highest non-powertool butchering quality.  It's made for skinning and butchering game, which is what you're generally doing.  Based on Buck 103 skinner.
+    local item = content.Item {
+        id = "knife_hunting",
+        category = "weapons",
+        name = ccb.content.plural_text("hunting knife", "hunting knives"),
+        description = ccb.content.text("Commonly used by hunters, this single-edged sheath knife is designed for cutting and skinning game rather than combat."),
+        mass_milligrams = 121000,
+        volume_ml = 100,
+        longest_side_mm = 200,
+        price_cents = 4000,
+        price_postapoc_cents = 750,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "dark_gray",
+        replace_qualities = true,
+        weapon_categories = { "KNIVES" },
+        repair_materials = { "steel" },
+    }
+    item:material("steel", 1)
+    item:material("leather", 1)
+    item:quality("CUT", 2)
+    item:quality("CUT_FINE", 1)
+    item:quality("BUTCHER", 30)
+    item:clear_flags()
+    item:flag("SHEATH_KNIFE")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:flag("CONDUCTIVE")
+    item:flag("DURABLE_MELEE")
+    item:clear_melee_damage()
+    item:melee_damage("cut", 12)
+    item:fault_group("handle_short", {  })
+    item:fault_group("blade_general", { weight_multiplier = 5 })
+    item:tool()
+    content.add(item)
+end
