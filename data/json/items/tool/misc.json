@@ -95,66 +95,6 @@
     }
   },
   {
-    "id": "large_space_heater",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "large space heater" },
-    "description": "A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius, and fills a larger volume of air than the smaller version.",
-    "weight": "12 kg",
-    "volume": "7500 ml",
-    "price": "200 USD",
-    "price_postapoc": "5 USD",
-    "to_hit": { "grip": "bad", "length": "long", "surface": "any", "balance": "clumsy" },
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "brown",
-    "flags": [ "ALLOWS_REMOTE_USE", "WATER_BREAK", "ELECTRONIC" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "use_action": [
-      {
-        "target": "large_space_heater_on",
-        "msg": "You turn on the %s.",
-        "need_charges": 1,
-        "need_charges_msg": "The batteries are dead.",
-        "type": "transform"
-      },
-      { "type": "link_up", "cable_length": 2, "charge_rate": "1 kW" }
-    ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_HEAVY" ],
-        "default_magazine": "heavy_battery_cell"
-      }
-    ],
-    "melee_damage": { "bash": 12 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "large_space_heater_on",
-    "copy-from": "large_space_heater",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "large space heater (on)", "str_pl": "large space heaters (on)" },
-    "description": "A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius, and fills a larger volume of air than the smaller version.",
-    "power_draw": "1 kW",
-    "emits": [ "emit_hot_air2_blast" ],
-    "light": 2,
-    "flags": [ "ALLOWS_REMOTE_USE", "SPAWN_ACTIVE" ],
-    "revert_to": "large_space_heater",
-    "use_action": [
-      {
-        "ammo_scale": 0,
-        "target": "large_space_heater",
-        "msg": "You turn off the %s.",
-        "menu_text": "Turn off",
-        "type": "transform"
-      },
-      { "type": "link_up", "cable_length": 2, "charge_rate": "1 kW" }
-    ]
-  },
-  {
     "id": "permanent_marker",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -209,65 +149,6 @@
       "done_message": "You unroll the mat and lay it on the ground."
     },
     "flags": [ "SINGLE_USE" ]
-  },
-  {
-    "id": "small_space_heater",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "small space heater" },
-    "description": "A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius.",
-    "weight": "6 kg",
-    "volume": "3750 ml",
-    "price": "50 USD",
-    "price_postapoc": "15 USD",
-    "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
-    "material": [ "steel" ],
-    "symbol": ";",
-    "color": "brown",
-    "flags": [ "ALLOWS_REMOTE_USE", "WATER_BREAK" ],
-    "use_action": [
-      {
-        "target": "small_space_heater_on",
-        "msg": "You turn on the %s.",
-        "need_charges": 1,
-        "need_charges_msg": "The batteries are dead.",
-        "type": "transform"
-      },
-      { "type": "link_up", "cable_length": 2, "charge_rate": "500 W" }
-    ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "melee_damage": { "bash": 8 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
-    "id": "small_space_heater_on",
-    "copy-from": "small_space_heater",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "small space heater (on)", "str_pl": "small space heaters (on)" },
-    "description": "A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius.",
-    "power_draw": "500 W",
-    "emits": [ "emit_hot_air2_stream" ],
-    "light": 2,
-    "flags": [ "ALLOWS_REMOTE_USE", "SPAWN_ACTIVE" ],
-    "revert_to": "small_space_heater",
-    "use_action": [
-      {
-        "ammo_scale": 0,
-        "target": "small_space_heater",
-        "msg": "You turn off the %s.",
-        "menu_text": "Turn off",
-        "type": "transform"
-      },
-      { "type": "link_up", "cable_length": 2, "charge_rate": "500 W" }
-    ]
   },
   {
     "id": "spray_can",
@@ -428,37 +309,5 @@
     "to_hit": { "grip": "bad", "length": "hand", "surface": "point", "balance": "neutral" },
     "melee_damage": { "cut": 12 },
     "weapon_category": [ "SHIVS" ]
-  },
-  {
-    "id": "sextoy",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "sex toy" },
-    "description": "A sex toy.",
-    "weight": "500 g",
-    "volume": "500 ml",
-    "longest_side": "20 cm",
-    "price_postapoc": "20 cent",
-    "material": [ "plastic" ],
-    "symbol": "ï",
-    "color": "pink",
-    "use_action": [ "VIBE" ],
-    "variants": [
-      {
-        "id": "dildo",
-        "name": { "str": "dildo", "str_pl": "dildoes" },
-        "description": "You know what this is.  Use it to take a break and unwind."
-      },
-      {
-        "id": "beads",
-        "name": { "str_sp": "anal beads" },
-        "description": "Very inappropriate for prayer.  Use it to take a break and unwind."
-      },
-      {
-        "id": "plug",
-        "name": { "str": "anal plug" },
-        "description": "Will produce sparks but won't start your car.  Use it to take a break and unwind."
-      }
-    ]
   }
 ]

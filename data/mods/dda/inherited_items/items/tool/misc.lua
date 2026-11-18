@@ -830,3 +830,159 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "large_space_heater",
+        name = ccb.content.plural_text("large space heater", "large space heaters"),
+        description = ccb.content.text("A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius, and fills a larger volume of air than the smaller version."),
+        mass_milligrams = 12000000,
+        volume_ml = 7500,
+        price_cents = 20000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "brown",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "large_space_heater_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:link_cable { cable_length = 2, charge_milliwatts = 1000000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 12)
+    item:fault_group("electronic_general", {  })
+    item:tool { ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_HEAVY" },
+        default_magazine = "heavy_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "large_space_heater_on",
+        copy_from = "large_space_heater",
+        looks_like = "large_space_heater",
+        name = ccb.content.plural_text("large space heater (on)", "large space heaters (on)"),
+        description = ccb.content.text("A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius, and fills a larger volume of air than the smaller version."),
+        light = 2,
+        field_emissions = { "emit_hot_air2_blast" },
+    }
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "large_space_heater" },
+        message = ccb.content.text("You turn off the %s."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 2, charge_milliwatts = 1000000 }
+    item:transform_into { target = "large_space_heater" }
+    item:tool { power_milliwatts = 1000000 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "small_space_heater",
+        name = ccb.content.plural_text("small space heater", "small space heaters"),
+        description = ccb.content.text("A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius."),
+        mass_milligrams = 6000000,
+        volume_ml = 3750,
+        price_cents = 5000,
+        price_postapoc_cents = 1500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "brown",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "small_space_heater_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:link_cable { cable_length = 2, charge_milliwatts = 500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:tool { ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_MEDIUM" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "small_space_heater_on",
+        copy_from = "small_space_heater",
+        looks_like = "small_space_heater",
+        name = ccb.content.plural_text("small space heater (on)", "small space heaters (on)"),
+        description = ccb.content.text("A portable electric heater that steadily emits warm air.  Raises temperature about 10 degrees Celsius."),
+        light = 2,
+        field_emissions = { "emit_hot_air2_stream" },
+    }
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("SPAWN_ACTIVE")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "small_space_heater" },
+        message = ccb.content.text("You turn off the %s."),
+        menu_text = ccb.content.text("Turn off"),
+        ammo_scale = 0,
+    }
+    item:link_cable { cable_length = 2, charge_milliwatts = 500000 }
+    item:transform_into { target = "small_space_heater" }
+    item:tool { power_milliwatts = 500000 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "sextoy",
+        name = ccb.content.plural_text("sex toy", "sex toys"),
+        description = ccb.content.text("A sex toy."),
+        mass_milligrams = 500000,
+        volume_ml = 500,
+        longest_side_mm = 200,
+        price_postapoc_cents = 20,
+        symbol = "ï",
+        color = "pink",
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("VIBE")
+    item:variants {
+        { id = "dildo", name = ccb.content.plural_text("dildo", "dildoes"), description = ccb.content.text("You know what this is.  Use it to take a break and unwind.") },
+        { id = "beads", name = ccb.content.plural_text("anal beads", "anal beads"), description = ccb.content.text("Very inappropriate for prayer.  Use it to take a break and unwind.") },
+        { id = "plug", name = ccb.content.plural_text("anal plug", "anal plugs"), description = ccb.content.text("Will produce sparks but won't start your car.  Use it to take a break and unwind.") },
+    }
+    item:tool()
+    content.add(item)
+end
