@@ -24,6 +24,7 @@ extern "C" {
 #include "avatar.h"
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "character_id.h"
 #include "dialogue_helpers.h"
 #include "game.h"
@@ -33,6 +34,7 @@ extern "C" {
 #include "lua_platform_handle.h"
 #include "map_scale_constants.h"
 #include "mission.h"
+#include "mission_dialogue.h"
 #include "npc.h"
 #include "type_id.h"
 
@@ -882,14 +884,16 @@ sol::table has_active_instance(
         requested_id.value() );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
-    avatar *owner = resolve_exact_avatar(
+    Character *owner = resolve_exact_character(
                         owner_handle, runtime_generation,
                         world_generation, error );
     if( owner == nullptr ) {
         return make_game_error_result( state, *error );
     }
     for( mission *entry : owner->get_active_missions() ) {
-        if( entry->mission_id() == requested_type ) {
+        if( mission_dialogue::is_live_mission( entry ) &&
+            entry->get_assigned_player_id() == owner->getID() &&
+            entry->mission_id() == requested_type ) {
             return make_game_value_result(
                        state,
                        sol::make_object( state, true ) );
@@ -1040,11 +1044,17 @@ sol::table assign_instance(
 {
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
-    avatar *owner = resolve_exact_avatar(
+    Character *owner = resolve_exact_character(
                         owner_handle, runtime_generation,
                         world_generation, error );
     if( owner == nullptr ) {
         return make_game_error_result( state, *error );
+    }
+    const character_action_guard owner_guard( *owner );
+    if( !owner_guard ) {
+        return make_game_error_result( state, {
+            "invalid_owner", "The Character cannot accept a mission"
+        } );
     }
     mission *entry = resolve_mission(
                          token, runtime_generation,
@@ -1061,6 +1071,11 @@ sol::table assign_instance(
     }
     const character_id owner_id = owner->getID();
     entry->assign( *owner );
+    if( !owner_guard ) {
+        return make_game_error_result( state, {
+            "invalid_owner", "The Character became unavailable during mission assignment"
+        } );
+    }
     entry = resolve_mission( token, runtime_generation, world_generation, error );
     if( entry == nullptr ) {
         return make_game_error_result( state, *error );

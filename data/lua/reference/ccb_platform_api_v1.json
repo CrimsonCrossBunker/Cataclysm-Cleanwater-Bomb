@@ -39005,7 +39005,7 @@
         "lua_name": "MissionToken",
         "registration": {
           "installer": "shared.install_mission_api",
-          "line": 1619,
+          "line": 1634,
           "namespace": "global",
           "path": "src/lua_platform_missions.cpp"
         },

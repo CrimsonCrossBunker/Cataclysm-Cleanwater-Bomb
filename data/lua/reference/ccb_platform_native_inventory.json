@@ -1041,7 +1041,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_missions.cpp",
-          "line": 1611
+          "line": 1626
         },
         "direct_roots": [
           "MissionToken"
@@ -14739,7 +14739,7 @@
       "registration_name": "MissionToken",
       "registration": {
         "path": "src/lua_platform_missions.cpp",
-        "line": 1619,
+        "line": 1634,
         "installer": "shared.install_mission_api",
         "namespace": "global"
       },
@@ -14781,7 +14781,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1640
+                "line": 1655
               }
             ]
           },
@@ -14798,7 +14798,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1638
+                "line": 1653
               }
             ]
           },
@@ -14815,7 +14815,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1622
+                "line": 1637
               }
             ]
           },
@@ -14830,7 +14830,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1630
+                "line": 1645
               }
             ]
           },
@@ -14883,7 +14883,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1624
+                "line": 1639
               }
             ]
           },
@@ -14900,7 +14900,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1621
+                "line": 1636
               }
             ]
           },
@@ -14917,7 +14917,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_missions.cpp",
-                "line": 1627
+                "line": 1642
               }
             ]
           }

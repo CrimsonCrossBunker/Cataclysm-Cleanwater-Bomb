@@ -11451,7 +11451,7 @@ function CcbMissionsApi.get(token) end
 ---@param owner GameHandle Exact avatar owner; no ambient current mission is selected.
 ---@return CcbResult result `value` is the owner's selected mission snapshot.
 function CcbMissionsApi.selected(owner) end
----@param owner GameHandle Exact avatar owner.
+---@param owner GameHandle Exact live Avatar or NPC owner.
 ---@param id GameId GameId<mission>
 ---@return CcbResult result `value` is boolean.
 function CcbMissionsApi.has_active(owner, id) end
@@ -11468,7 +11468,7 @@ function CcbMissionsApi.reserve(id, npc_id) end
 ---@param npc_id? integer Mission giver id, or nil when there is no giver.
 ---@return CcbResult result `value` is a reserved CcbMissionSnapshot.
 function CcbMissionsApi.reserve_random(origin, position, npc_id) end
----@param owner GameHandle Exact avatar owner.
+---@param owner GameHandle Exact live Avatar or NPC owner.
 ---@param token MissionToken Exact mission-instance token.
 ---@return CcbResult result `value` is a CcbMissionSnapshot.
 function CcbMissionsApi.assign(owner, token) end
