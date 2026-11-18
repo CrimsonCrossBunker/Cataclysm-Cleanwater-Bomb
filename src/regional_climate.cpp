@@ -1,4 +1,3 @@
-#include "north_america_elevation.h"
 #include "regional_climate.h"
 
 #include <algorithm>
@@ -6,13 +5,14 @@
 #include <functional>
 #include <map>
 #include <numeric>
+#include <stddef.h>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "climate_seasons.h"
 #include "flexbuffer_json.h"
 #include "math_defines.h"
+#include "north_america_elevation.h"
 #include "point.h"
 
 namespace regional_climate

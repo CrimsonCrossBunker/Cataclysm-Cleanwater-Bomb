@@ -1,5 +1,4 @@
 #include "weather_gen.h"
-#include "climate_seasons.h"
 
 #include <calendar.h>
 #include <coordinates.h>
@@ -17,6 +16,7 @@
 
 #include "avatar.h"
 #include "cata_utility.h"
+#include "climate_seasons.h"
 #include "debug.h"
 #include "dialogue.h"
 #include "flexbuffer_json.h"
@@ -28,8 +28,10 @@
 #include "math_defines.h"
 #include "north_america.h"
 #include "north_america_elevation.h"
+#include "overmap_ui.h"
 #include "pimpl.h"
 #include "point.h"
+#include "regional_climate.h"
 #include "rng.h"
 #include "simplexnoise.h"
 #include "talker.h"
