@@ -158,6 +158,9 @@ function CcbTimeApi.turn_zero() end
 ---@return TimePoint Native before-time-starts sentinel.
 function CcbTimeApi.before_time_starts() end
 
+---@return TimeDuration Native indefinitely-long duration, matching authored infinite durations.
+function CcbTimeApi.infinite_duration() end
+
 ---@class UnitValue
 ---@field kind string Native unit kind.
 ---@field value number
@@ -443,6 +446,13 @@ function CcbWorldApi.find_location(origin, selector, options) end
 --- Applies the registered native terrain/furniture transform across the radius. Weighted transform outcomes use the native RNG; the Platform call preserves that behavior.
 ---@return CcbResult result `value` is a CcbWorldTransformRadiusResult.
 function CcbWorldApi.transform_radius(position, radius, transform, options) end
+
+---Append a native temporary place-name override; duplicate keys are retained.
+---@param name string Already translated place name.
+---@param duration TimeDuration Native duration; expiry uses the native calendar and one-turn offset.
+---@param key? string Optional native timed-event key; defaults to empty.
+---@return CcbResult result value contains name, when and key.
+function CcbWorldApi.override_place_name(name, duration, key) end
 
 ---@param position TripointCoord Explicit absolute overmap-terrain coordinate.
 ---@param delay TimeDuration Full native signed-int turn range, including zero and negative delays.
@@ -7426,6 +7436,13 @@ function PlatformDialogueContext:roll_trial(kind, difficulty, skill) end
 ---@return string
 function PlatformDialogueContext:expand_text(text, item_id) end
 
+---Translate a line with the live native participants' grammatical genders.
+---Retains native dialogue catalog contexts; does not expand snippets or dialogue tags.
+---@param text string Source text, including empty or embedded-NUL text.
+---@param participants ('speaker'|'interlocutor')[] Participants whose genders affect the translation.
+---@return string
+function PlatformDialogueContext:gendered_text(text, participants) end
+
 ---@return CcbDialogueParticipant|nil
 function PlatformDialogueContext:speaker() end
 
@@ -7488,6 +7505,8 @@ function PlatformDialogueContext:remove(key) end
 ---@field dynamic_line string|fun(context: PlatformDialogueContext): string
 ---@field dynamic_line_translation? CcbPlatformDialogueDeferredTranslation Explicitly defer translation of a static `dynamic_line`; without this field, static lines and callback results stay literal.
 ---@field responses CcbPlatformDialogueResponses
+---@field on_enter? fun(context: PlatformDialogueContext): nil Writable callback run in the native speaker-effect stage after response generation. Store any once-only marker explicitly on the intended actor.
+---@field speaker_effects? (fun(context: PlatformDialogueContext): nil)|(fun(context: PlatformDialogueContext): nil)[] Alternative function or ordered callback array for the same stage; takes precedence over on_enter.
 
 ---@class CcbPlatformDialogueExtensionDescriptor
 ---@field id string Native dialogue topic id to extend.
@@ -11030,6 +11049,24 @@ function CcbInventoryApi.give(character, item_type, quantity, options) end
 ---@param options? CcbInventoryGiveOptions
 ---@return CcbResult
 function CcbInventoryApi.give_group(character, group, options) end
+
+---@class CcbInventoryReceiptOptions
+---@field force_equip? boolean Pass native force-equip intent to i_add_or_drop; defaults to false.
+
+---Deliver native-default items through native i_add_or_drop, including drop fallback.
+---Preserves default ammunition and PRESERVE_SPAWN_LOC; charge-counted items use quantity as their charges.
+---@param character GameHandle Exact live Character.
+---@param item_type GameId GameId<item>.
+---@param quantity integer Native signed-int quantity, including zero and negative values.
+---@param options? CcbInventoryReceiptOptions
+---@return CcbResult result value contains id, attempted_instances and accepted_instances. No giver popup is inferred.
+function CcbInventoryApi.receive_item(character, item_type, quantity, options) end
+
+---@param character GameHandle Exact live Character.
+---@param group GameId GameId<item_group>.
+---@param options? CcbInventoryReceiptOptions
+---@return CcbResult result value contains id, attempted_instances and accepted_instances. Uses native group generation and drop fallback.
+function CcbInventoryApi.receive_group(character, group, options) end
 
 ---Deliver native-default items through Character::i_add_or_drop, including ground drops when inventory cannot accept them.
 ---Charge-counted items receive exactly quantity charges. Other items receive native default ammunition and are attempted quantity times.

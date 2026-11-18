@@ -1402,7 +1402,7 @@
         "callee": "shared.install_enum_value_api",
         "source": {
           "path": "src/lua_platform_bindings_values.cpp",
-          "line": 1371
+          "line": 1375
         },
         "surfaces": [
           "platform_v1"
@@ -1413,7 +1413,7 @@
         "callee": "shared.install_coordinate_value_api",
         "source": {
           "path": "src/lua_platform_bindings_values.cpp",
-          "line": 1372
+          "line": 1376
         },
         "surfaces": [
           "platform_v1"
@@ -18110,6 +18110,23 @@
             ]
           },
           {
+            "id": "gendered_text",
+            "cpp_members": [
+              "gendered_text"
+            ],
+            "cpp_kind": "member",
+            "lua_access": [
+              "PlatformDialogueContext.gendered_text"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_runtime_dialogue.cpp",
+                "line": 863
+              }
+            ]
+          },
+          {
             "id": "generation",
             "cpp_members": [
               "generation"
@@ -18139,7 +18156,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 865
+                "line": 866
               }
             ]
           },
@@ -18156,7 +18173,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 866
+                "line": 867
               }
             ]
           },
@@ -18258,7 +18275,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 864
+                "line": 865
               }
             ]
           },
@@ -18292,7 +18309,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 868
+                "line": 869
               }
             ]
           },
@@ -18360,7 +18377,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 870
+                "line": 871
               }
             ]
           },
@@ -18409,7 +18426,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 869
+                "line": 870
               }
             ]
           },
@@ -18426,7 +18443,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 863
+                "line": 864
               }
             ]
           },
@@ -18443,7 +18460,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_runtime_dialogue.cpp",
-                "line": 867
+                "line": 868
               }
             ]
           },

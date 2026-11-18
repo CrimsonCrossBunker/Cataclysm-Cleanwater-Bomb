@@ -4127,6 +4127,7 @@ sol::table inventory_weapon_state(
 sol::table receive_inventory_items(
     sol::this_state lua, const game_handle &character_handle,
     const script_game_id &type, const std::int64_t quantity, const bool group,
+    const sol::optional<sol::table> &options,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -4134,6 +4135,16 @@ sol::table receive_inventory_items(
                      group ? "services.inventory.receive_group" : "services.inventory.receive_item" );
     if( quantity < std::numeric_limits<int>::min() || quantity > std::numeric_limits<int>::max() ) {
         throw std::invalid_argument( "Item receipt quantity must fit the native signed integer range" );
+    }
+    bool force_equip = false;
+    if( options ) {
+        for( const auto &option : *options ) {
+            if( option.first.get_type() != sol::type::string ||
+                option.first.as<std::string>() != "force_equip" || !option.second.is<bool>() ) {
+                throw std::invalid_argument( "Item receipt options accept only boolean force_equip" );
+            }
+            force_equip = option.second.as<bool>();
+        }
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -4150,7 +4161,7 @@ sol::table receive_inventory_items(
             created.preserve_location( spawn_position );
         }
         ++attempted;
-        if( character->i_add_or_drop( created ) ) {
+        if( character->i_add_or_drop( created, force_equip ) ) {
             ++accepted;
         }
     };
@@ -8098,18 +8109,19 @@ void install_item_api(
         "receive_item",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state, const game_handle & character,
-    const script_game_id & type, const std::int64_t quantity ) {
+            const script_game_id & type, const std::int64_t quantity,
+    const sol::optional<sol::table> &options ) {
         require_item_write();
-        return receive_inventory_items( lua_state, character, type, quantity, false,
+        return receive_inventory_items( lua_state, character, type, quantity, false, options,
                                         current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
         "receive_group",
         [current_runtime_generation, current_world_generation, require_item_write](
             sol::this_state lua_state, const game_handle & character,
-    const script_game_id & group ) {
+            const script_game_id & group, const sol::optional<sol::table> &options ) {
         require_item_write();
-        return receive_inventory_items( lua_state, character, group, 1, true,
+        return receive_inventory_items( lua_state, character, group, 1, true, options,
                                         current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(

@@ -922,6 +922,23 @@ std::string context::expand_text( const std::string &text,
     return result;
 }
 
+std::string context::gendered_text( const std::string &text,
+                                     const std::vector<std::string> &participants ) const
+{
+    const ::dialogue &d = require_state().dialogue_ref();
+    GenderMap genders;
+    for( const std::string &participant : participants ) {
+        if( participant == "speaker" ) {
+            genders["u"] = d.actor( false )->get_grammatical_genders();
+        } else if( participant == "interlocutor" ) {
+            genders["npc"] = d.actor( true )->get_grammatical_genders();
+        } else {
+            throw std::invalid_argument( "dialogue gendered_text participants must be speaker or interlocutor" );
+        }
+    }
+    return gettext_gendered( genders, text );
+}
+
 sol::object context::speaker() const
 {
     state &current = require_state();

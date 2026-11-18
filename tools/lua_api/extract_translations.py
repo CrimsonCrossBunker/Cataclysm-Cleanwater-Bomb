@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass, field
+import itertools
 from pathlib import Path
 import subprocess
 import sys
@@ -269,9 +270,53 @@ def _dialogue_translation_edits(source: str) -> list[tuple[int, int, str]]:
     return edits
 
 
+def _gendered_translation_edits(source: str) -> list[tuple[int, int, str]]:
+    """Extract literal live-dialogue gendered text without evaluating Lua."""
+    if "gendered_text" not in source:
+        return []
+    tokens = _lua_tokens(source)
+    edits = []
+    roles = {"speaker": "u", "interlocutor": "npc"}
+    for index, token in enumerate(tokens):
+        if (
+            token.kind != "identifier" or token.value != "gendered_text" or
+            index == 0 or tokens[index - 1].value != ":" or
+            index + 4 >= len(tokens) or tokens[index + 1].value != "(" or
+            tokens[index + 2].kind != "string" or
+            tokens[index + 3].value != "," or tokens[index + 4].value != "{"
+        ):
+            continue
+        cursor = index + 5
+        subjects = set()
+        while cursor < len(tokens) and tokens[cursor].value != "}":
+            role = tokens[cursor]
+            if role.kind != "string" or role.value[1:-1] not in roles:
+                break
+            subjects.add(roles[role.value[1:-1]])
+            cursor += 1
+            if cursor < len(tokens) and tokens[cursor].value in (",", ";"):
+                cursor += 1
+            elif cursor >= len(tokens) or tokens[cursor].value != "}":
+                break
+        if (
+            cursor + 1 >= len(tokens) or tokens[cursor].value != "}" or
+            tokens[cursor + 1].value != ")"
+        ):
+            continue
+        message = tokens[index + 2]
+        calls = []
+        for genders in itertools.product(("f", "m", "n"), repeat=len(subjects)):
+            context = " ".join(f"{subject}:{gender}" for subject, gender in
+                               zip(sorted(subjects), genders))
+            arguments = message.value + (f', "{context}"' if context else "")
+            calls.append(f"{_DIALOGUE_EXTRACTOR}({arguments})")
+        edits.append((message.start, message.end, " .. ".join(calls)))
+    return edits
+
+
 def _rewrite_dialogue_markers(source: str) -> str | None:
     """Rewrite marked literals as an xgettext-only keyword call."""
-    edits = _dialogue_translation_edits(source)
+    edits = _dialogue_translation_edits(source) + _gendered_translation_edits(source)
     if not edits:
         return None
     rewritten = source

@@ -860,6 +860,7 @@ void detail::install_runtime_dialogue_presentation_api(
         return context.expand_text(
                    text, item_id.value_or( std::string() ) );
     },
+    "gendered_text", &platform_dialogue_context::gendered_text,
     "speaker", &platform_dialogue_context::speaker,
     "interlocutor", &platform_dialogue_context::interlocutor,
     "get", &platform_dialogue_context::get,

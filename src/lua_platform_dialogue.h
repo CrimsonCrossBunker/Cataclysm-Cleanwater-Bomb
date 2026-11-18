@@ -151,6 +151,8 @@ class context
                          const std::string &skill_id = {} ) const;
         std::string expand_text( const std::string &text,
                                  const std::string &item_id = {} ) const;
+        std::string gendered_text( const std::string &text,
+                                   const std::vector<std::string> &participants ) const;
         sol::object speaker() const;
         sol::object interlocutor() const;
         sol::object get( const std::string &key ) const;
