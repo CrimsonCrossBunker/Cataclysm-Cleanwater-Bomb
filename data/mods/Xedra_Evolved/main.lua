@@ -240,3 +240,5 @@ require("active_items")
 require("quest_maps")
 
 require("dream_bezoar")
+
+require("spell_traps")

@@ -101,14 +101,5 @@
       ],
       "flags": [ "NO_UNDERLYING_ROTATE" ]
     }
-  },
-  {
-    "type": "trap",
-    "id": "tr_abyssal_hunger_next_level",
-    "name": "Hole to elsewhere",
-    "color": "blue",
-    "copy-from": "tr_swirling_vortex",
-    "action": "spell",
-    "spell_data": { "id": "abyssal_hunger_next_level" }
   }
 ]
