@@ -1,51 +1,5 @@
 [
   {
-    "//": "Rolls below should be -u_skill('deduction') + rng(-2,8) + rng(-2,8)-.  This is an average of 6 + Deduction per research period.",
-    "id": "ACT_XE_DECIPHERING_HEDGE_TOME",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "deciphering the secrets of the occult",
-    "based_on": "time",
-    "can_resume": false,
-    "auto_needs": true,
-    "do_turn_eoc": "EOC_DECIPHERING_NEW_HEDGE_TOME_TIME_TRACKER",
-    "completion_eoc": "EOC_DECIPHERING_NEW_HEDGE_TOME_PACE_SELF"
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_DECIPHERING_NEW_HEDGE_TOME_TIME_TRACKER",
-    "condition": { "math": [ "u_most_recent_hedge_research_progress <= u_most_recent_hedge_research_difficulty" ] },
-    "effect": [
-      { "math": [ "u_most_recent_hedge_research_time += 1" ] },
-      {
-        "if": { "and": [ { "math": [ "u_val('fine_detail_vision_mod') >= 4" ] }, { "not": { "u_has_flag": "READ_IN_DARKNESS" } } ] },
-        "then": [ "u_cancel_activity", { "u_message": "It's too dark to continue studying the occult.", "type": "bad" } ]
-      }
-    ],
-    "false_effect": [ { "run_eocs": { "u_val": "latest_completion_eoc" } } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_DECIPHERING_NEW_HEDGE_TOME_PACE_SELF",
-    "effect": [
-      { "u_message": "You finish your study session.", "type": "neutral" },
-      { "u_lose_effect": "effect_xe_deciphering_hedge_tome" }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_HEDGE_MAGIC_CANCELLING_ACTIVITY_CANCELS_RESEARCH",
-    "eoc_type": "EVENT",
-    "required_event": "character_finished_activity",
-    "condition": {
-      "and": [
-        { "compare_string": [ "ACT_XE_DECIPHERING_HEDGE_TOME_NEW_POWER", { "context_val": "activity" } ] },
-        { "u_has_effect": "effect_xe_deciphering_hedge_tome" }
-      ]
-    },
-    "effect": [ { "u_lose_effect": "effect_xe_deciphering_hedge_tome" } ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_HEDGE_RESEARCH_FOCUS_DRAIN",
     "condition": { "u_has_effect": "effect_xe_deciphering_hedge_tome" },

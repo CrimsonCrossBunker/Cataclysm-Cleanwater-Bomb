@@ -202,3 +202,5 @@ require("changeling_research")
 require("werewolf_research")
 
 require("vampire_torpor")
+
+require("hedge_tome_activity")
