@@ -805,28 +805,6 @@
     "melee_damage": { "bash": 3 }
   },
   {
-    "id": "teleumbrella-extended",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "telescoping umbrella (extended)", "str_pl": "telescoping umbrellas (extended)" },
-    "description": "A telescoping umbrella currently in its extended form, useful for keeping dry when wielded.  May be collapsed down for easy storage.",
-    "weight": "411 g",
-    "volume": "1500 ml",
-    "longest_side": "101 cm",
-    "price": "120 USD",
-    "price_postapoc": "1 USD",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "point", "balance": "neutral" },
-    "material": [ "plastic", "aluminum" ],
-    "symbol": ",",
-    "ascii_picture": "umbrella",
-    "looks_like": "umbrella",
-    "color": "dark_gray",
-    "techniques": [ "WBLOCK_1" ],
-    "flags": [ "RAIN_PROTECT", "SHEATH_SWORD", "FRAGILE_MELEE" ],
-    "use_action": { "menu_text": "Collapse", "type": "transform", "target": "teleumbrella", "msg": "You collapse your umbrella." },
-    "melee_damage": { "bash": 6, "stab": 4 }
-  },
-  {
     "id": "toilet_travel",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

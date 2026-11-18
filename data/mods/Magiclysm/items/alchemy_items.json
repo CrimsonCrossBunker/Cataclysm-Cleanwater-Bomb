@@ -104,37 +104,6 @@
     "price": "20 USD"
   },
   {
-    "id": "glow_light",
-    "type": "ITEM",
-    "category": "tools",
-    "name": "magical reading light",
-    "description": "Powered by the magic of glow powder and lesser mana potions, this extremely expensive little light will provide just enough light to read by for at least a decade.  Use it to close the cover and hide the light.",
-    "weight": "270 g",
-    "volume": "250 ml",
-    "price": "150 USD",
-    "material": [ "glass" ],
-    "symbol": ",",
-    "color": "light_blue",
-    "use_action": { "target": "glow_light_off", "msg": "You close the lamp's cover.", "menu_text": "Close cover", "type": "transform" },
-    "light": 5,
-    "flags": [ "ALLOWS_REMOTE_USE" ]
-  },
-  {
-    "id": "glow_light_off",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "magical reading light (covered)", "str_pl": "magical reading lights (covered)" },
-    "description": "Powered by the magic of glow powder and lesser mana potions, this extremely expensive little light will provide just enough light to read by for at least a decade.  The cover is closed.  Use it to open the cover and show the light.",
-    "weight": "270 g",
-    "volume": "250 ml",
-    "price": "150 USD",
-    "material": [ "glass" ],
-    "symbol": ",",
-    "color": "light_blue",
-    "use_action": { "target": "glow_light", "msg": "You open the lamp's cover.", "menu_text": "Open cover", "type": "transform" },
-    "flags": [ "ALLOWS_REMOTE_USE" ]
-  },
-  {
     "id": "dragon_essence",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
@@ -267,21 +236,5 @@
     "action": "spell",
     "spell_data": { "id": "alchemist_mine_pull" },
     "drops": [ "alchemist_mine" ]
-  },
-  {
-    "id": "fading_embers_active",
-    "type": "ITEM",
-    "name": { "str_sp": "fading embers" },
-    "description": "The embers of a slain Balrog.  It burns with otherworldly intensity.  Soon, it will fade into nothing.",
-    "volume": "0 ml",
-    "price": "1 USD",
-    "material": [ "concentrated_mana" ],
-    "symbol": "w",
-    "color": "red",
-    "//": "The embers have to be preserved first before they are usable.",
-    "category": "spare_parts",
-    "countdown_interval": "20 minutes",
-    "revert_to": "ash",
-    "flags": [ "ZERO_WEIGHT", "TRADER_AVOID", "SPAWN_ACTIVE" ]
   }
 ]

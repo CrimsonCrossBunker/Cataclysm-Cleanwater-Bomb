@@ -218,3 +218,5 @@ require("hedge_magic_squares")
 require("generic_items")
 
 require("inherited_items")
+
+require("active_items")

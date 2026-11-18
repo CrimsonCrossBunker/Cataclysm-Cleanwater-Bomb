@@ -1,13 +1,5 @@
 [
   {
-    "id": "smokebomb",
-    "type": "ITEM",
-    "name": { "str": "smoke bomb" },
-    "copy-from": "smokebomb",
-    "price": "150 USD",
-    "price_postapoc": "150 USD"
-  },
-  {
     "id": "grenade_emp",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

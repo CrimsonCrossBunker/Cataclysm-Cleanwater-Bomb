@@ -1,23 +1,5 @@
 [
   {
-    "id": "sheet_cotton",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str": "cotton sheet" },
-    "description": "A 12-inch by 24-inch sheet of cotton fabric, suitable for making clothing.  You can use it to stop bleeding, but it is very wasteful.",
-    "weight": "23 g",
-    "volume": "47 ml",
-    "//": "Medium weight cotton fabric with a GSM of 203",
-    "flags": [ "SINGLE_USE" ],
-    "use_action": { "type": "heal", "bandages_power": 2, "bleed": 10, "move_cost": 6000 },
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "cotton" ],
-    "symbol": "=",
-    "color": "dark_gray",
-    "stackable": true
-  },
-  {
     "id": "sheet_kevlar_layered",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

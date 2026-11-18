@@ -82,27 +82,6 @@
     "extend": { "flags": [ "MESSY", "SPAWN_ACTIVE" ] }
   },
   {
-    "type": "ITEM",
-    "id": "megachette_folded",
-    "copy-from": "megachette",
-    "mounted_charge": null,
-    "category": "weapons",
-    "name": { "str": "megachette (folded)", "str_pl": "megachettes (folded)" },
-    "description": "Probably a great weapon, it is folded now.",
-    "volume": "160 ml",
-    "longest_side": "14 cm",
-    "symbol": "/",
-    "use_action": {
-      "menu_text": "Expand",
-      "type": "transform",
-      "target": "megachette",
-      "msg": "With a quiet click, the megachette is unfolded."
-    },
-    "to_hit": { "grip": "weapon", "length": "hand", "surface": "line", "balance": "neutral" },
-    "techniques": [  ],
-    "melee_damage": { "cut": 0, "bash": 3 }
-  },
-  {
     "id": "megachette",
     "copy-from": "broadsword",
     "type": "ITEM",

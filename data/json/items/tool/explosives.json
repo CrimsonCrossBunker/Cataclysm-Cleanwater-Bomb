@@ -368,39 +368,6 @@
     "flags": [ "ACT_IN_FIRE", "DANGEROUS", "SPAWN_ACTIVE" ]
   },
   {
-    "id": "LAW_Packed",
-    "type": "ITEM",
-    "category": "guns",
-    "name": { "str": "packed disposable rocket launcher" },
-    "description": "A packed, disposable light anti-tank rocket launcher.  Once fired, it cannot be reloaded and must be disposed of.  Activate it to pop it out and make it ready to fire.",
-    "variant_type": "gun",
-    "variants": [
-      {
-        "id": "LAW_Packed",
-        "name": { "str": "M72 LAW (packed)", "str_pl": "M72 LAWs (packed)" },
-        "description": "The M72 LAW (Light Anti-armor Weapon) is a one-time use lightweight rocket launcher, meant to take out tanks and other armored vehicles.  Designed to replace the earlier Bazookas, it features a shaped-charge warhead to pierce armor.  Though weaker than the more modern and heavier AT4, it's still in service to this day.  Due to its design, you must unpack it to use it, and it cannot be reloaded.  Activate to unpack."
-      }
-    ],
-    "weight": "2500 g",
-    "volume": "1500 ml",
-    "longest_side": "63 cm",
-    "price": "2 kUSD",
-    "price_postapoc": "40 USD",
-    "material": [ "aluminum" ],
-    "symbol": ")",
-    "color": "green",
-    "use_action": {
-      "target": "LAW",
-      "msg": "You pull the activating lever, readying the LAW to fire.",
-      "target_charges": 1,
-      "target_ammo": "66mm_HEAT",
-      "menu_text": "Unpack",
-      "need_wielding": true,
-      "type": "transform"
-    },
-    "melee_damage": { "bash": 6 }
-  },
-  {
     "id": "mininuke",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],

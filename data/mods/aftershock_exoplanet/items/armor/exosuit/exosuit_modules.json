@@ -550,24 +550,6 @@
     ]
   },
   {
-    "id": "collapsed_boarding_axe",
-    "type": "ITEM",
-    "symbol": "%",
-    "color": "light_gray",
-    "name": "collapsed boarding axe",
-    "description": "This is an exosuit-scale boarding axe, folded into a compact module.  Activate to extend.",
-    "weight": "7500 g",
-    "volume": "1500 ml",
-    "longest_side": "45 cm",
-    "flags": [ "DURABLE_MELEE", "BELT_CLIP", "NONCONDUCTIVE", "EXO_MEDIUM_GADGET" ],
-    "use_action": {
-      "menu_text": "Expand",
-      "type": "transform",
-      "target": "boarding_axe",
-      "msg": "With a snap of your arm, the axe extends."
-    }
-  },
-  {
     "id": "exo_AR_module",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],

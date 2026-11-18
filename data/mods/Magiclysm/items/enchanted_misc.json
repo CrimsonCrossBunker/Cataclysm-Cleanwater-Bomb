@@ -147,41 +147,6 @@
     "extend": { "flags": [ "FIRE", "FLAMING", "TRADER_AVOID", "WATER_EXTINGUISH", "WIND_EXTINGUISH", "SPAWN_ACTIVE" ] }
   },
   {
-    "name": { "str": "endless flask" },
-    "id": "mflask_hip_whiskey",
-    "type": "ITEM",
-    "copy-from": "flask_hip",
-    "price_postapoc": "850 USD",
-    "category": "clothing",
-    "use_action": {
-      "target": "whiskey",
-      "msg": "You open the flask and discover it full of sweet, sweet, whiskey!",
-      "container": "mflask_hip_whiskey",
-      "target_charges": 7,
-      "moves": 50,
-      "type": "transform",
-      "need_empty": true
-    }
-  },
-  {
-    "id": "mteapot",
-    "type": "ITEM",
-    "copy-from": "teapot",
-    "category": "tools",
-    "name": { "str": "endless teapot" },
-    "description": "A small metal teapot.  Teatime wouldn't be complete without one.",
-    "price_postapoc": "2500 USD",
-    "use_action": {
-      "target": "tea_green",
-      "msg": "You check the teapot and discover it full of sweet tea!  Sadly, it's cold.",
-      "container": "mteapot",
-      "target_charges": 2,
-      "moves": 50,
-      "type": "transform",
-      "need_empty": true
-    }
-  },
-  {
     "id": "mtailors_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],

@@ -40,64 +40,12 @@
     "//": "intended fields: emits; countdown_interval; name"
   },
   {
-    "id": "gasbomb",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "//": "Based on the M73A riot grenade",
-    "name": { "str": "tear gas grenade" },
-    "description": "A canister grenade filled with noxious irritant.  Use this item to pull the pin and start the fuse, turning it into an active tear gas grenade.  In five seconds it will begin to expel a highly toxic gas for some time.  This gas damages and slows those who enter it, as well as obscuring vision and scent.",
-    "price": "36 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "gasbomb_primed"
-    }
-  },
-  {
-    "id": "gasbomb_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "tear gas grenade" },
-    "description": "This tear gas grenade has had its pin removed and will shortly be expelling highly noxious gas.",
-    "revert_to": "gasbomb_act"
-  },
-  {
     "id": "gasbomb_act",
     "type": "ITEM",
     "copy-from": "abstract_gas_bomb_active",
     "name": { "str": "tear gas grenade" },
     "description": "This tear gas grenade has had its pin removed and is expelling highly noxious gas.",
     "emits": [ "emit_tear_gas_stream" ]
-  },
-  {
-    "id": "smokebomb",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "//": "Based on AN-M8 grenade",
-    "name": { "str": "smoke grenade" },
-    "description": "A canister grenade filled with a variety of pyrotechnic chemicals.  Use this item to pull the pin and start the fuse, turning it into an active smoke bomb.  Five seconds after you do that, it will begin to expel a thick white smoke.  This smoke will obscure vision and scent, and choke out those who enter it.",
-    "weight": "680 g",
-    "price": "18 USD",
-    "price_postapoc": "1 USD",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "smokebomb_primed"
-    }
-  },
-  {
-    "id": "smokebomb_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "smoke grenade" },
-    "weight": "680 g",
-    "description": "This smoke bomb has had its pin removed and will shortly be expelling thick smoke.",
-    "revert_to": "smokebomb_act"
   },
   {
     "id": "smokebomb_act",
@@ -110,55 +58,11 @@
     "countdown_interval": "100 seconds"
   },
   {
-    "id": "insecticidalbomb",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "name": { "str": "insecticidal gas grenade" },
-    "description": "A canister grenade filled with insecticidal solution.  Use this item to pull the pin and start the fuse, turning it into an active insecticidal grenade.  In five seconds it will begin to expel a volatile gas that is highly toxic to insect life forms.",
-    "price": "18 USD",
-    "price_postapoc": "7 USD 50 cent",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "insecticidalbomb_primed"
-    }
-  },
-  {
-    "id": "insecticidalbomb_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "insecticidal gas grenade" },
-    "revert_to": "insecticidalbomb_act"
-  },
-  {
     "id": "insecticidalbomb_act",
     "copy-from": "abstract_gas_bomb_active",
     "type": "ITEM",
     "name": { "str": "insecticidal gas grenade" },
     "emits": [ "emit_insecticidal_stream" ]
-  },
-  {
-    "id": "insecticidalbomb_makeshift",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "name": { "str": "makeshift insecticidal gas grenade" },
-    "description": "A makeshift canister grenade filled with insecticidal solution.  Use this item to pull the pin and start the fuse, turning it into an active insecticidal grenade.  In five seconds it will begin to expel a volatile gas that is highly toxic to insect life forms.",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "insecticidalbomb_makeshift_primed"
-    }
-  },
-  {
-    "id": "insecticidalbomb_makeshift_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "makeshift insecticidal gas grenade" },
-    "revert_to": "insecticidalbomb_makeshift_act"
   },
   {
     "id": "insecticidalbomb_makeshift_act",
@@ -168,29 +72,6 @@
     "emits": [ "emit_small_insecticidal_stream" ]
   },
   {
-    "id": "fungicidalbomb",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "name": { "str": "fungicidal gas grenade" },
-    "description": "A canister grenade filled with fungicidal solution.  Use this item to pull the pin and start the fuse, turning it into an active fungicidal grenade.  In five seconds it will begin to expel a volatile gas that is highly toxic to fungal life forms.",
-    "price": "18 USD",
-    "price_postapoc": "7 USD 50 cent",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "fungicidalbomb_primed"
-    }
-  },
-  {
-    "id": "fungicidalbomb_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "fungicidal gas grenade" },
-    "revert_to": "fungicidalbomb_act"
-  },
-  {
     "id": "fungicidalbomb_act",
     "type": "ITEM",
     "copy-from": "abstract_gas_bomb_active",
@@ -198,53 +79,11 @@
     "emits": [ "emit_fungicidal_stream" ]
   },
   {
-    "id": "fungicidalbomb_makeshift",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "name": { "str": "makeshift fungicidal gas grenade" },
-    "description": "A makeshift canister grenade filled with fungicidal solution.  Use this item to pull the pin and start the fuse, turning it into an active fungicidal grenade.  In five seconds it will begin to expel a volatile gas that is highly toxic to fungal life forms.",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "fungicidalbomb_makeshift_primed"
-    }
-  },
-  {
-    "id": "fungicidalbomb_makeshift_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "makeshift fungicidal gas grenade" },
-    "revert_to": "fungicidalbomb_makeshift_act"
-  },
-  {
     "id": "fungicidalbomb_makeshift_act",
     "type": "ITEM",
     "copy-from": "abstract_gas_bomb_active",
     "name": { "str": "makeshift fungicidal gas grenade" },
     "emits": [ "emit_small_fungicidal_stream" ]
-  },
-  {
-    "id": "gasbomb_makeshift",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_inactive",
-    "name": { "str": "makeshift toxic gas grenade" },
-    "description": "A makeshift canister grenade filled with household chemicals.  Use this item to pull the pin and start the fuse, turning it into an active toxic gas grenade.  In five seconds it will begin to expel a highly toxic gas for a short time.  This gas poisons those exposed to it, in addition to obscuring vision and scent.",
-    "use_action": {
-      "need_wielding": true,
-      "menu_text": "Pull pin",
-      "msg": "You pull the pin on the %s.",
-      "type": "transform",
-      "target": "gasbomb_makeshift_primed"
-    }
-  },
-  {
-    "id": "gasbomb_makeshift_primed",
-    "type": "ITEM",
-    "copy-from": "abstract_gas_bomb_primed",
-    "name": { "str": "makeshift toxic gas grenade" },
-    "revert_to": "gasbomb_makeshift_act"
   },
   {
     "id": "gasbomb_makeshift_act",
