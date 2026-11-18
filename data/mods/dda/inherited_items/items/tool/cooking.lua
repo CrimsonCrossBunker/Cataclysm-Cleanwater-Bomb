@@ -553,3 +553,350 @@ do
     item:magazine_pocket { ammo_capacities = { conc_alcohol = 500 }, watertight = true, rigid = true }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "coffeemaker",
+        name = ccb.content.plural_text("coffeemaker", "coffeemakers"),
+        description = ccb.content.text("A heating element with a pot and a frame for holding coffee or other powders.  You can use it to make coffee, or other drinks if you so choose."),
+        mass_milligrams = 1000000,
+        volume_ml = 7000,
+        longest_side_mm = 250,
+        price_cents = 2000,
+        price_postapoc_cents = 50,
+        melee_to_hit = -5,
+        symbol = ";",
+        color = "light_gray",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:quality("BOIL", 1)
+    item:quality("HOTPLATE", 1)
+    item:container_pocket { max_volume_ml = 2000, max_weight_milligrams = 2400000, watertight = true, rigid = true }
+    item:clear_use_actions()
+    item:native_use("HEAT_LIQUID_ITEMS")
+    item:link_cable { cable_length = 2, charge_milliwatts = 1000000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 25, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "dehydrator",
+        name = ccb.content.plural_text("food dehydrator", "food dehydrators"),
+        description = ccb.content.text("An electric food dehydrator, invaluable in preserving food.  Can be connected to the electric grid using cord."),
+        mass_milligrams = 2500000,
+        volume_ml = 13000,
+        price_cents = 6000,
+        price_postapoc_cents = 2000,
+        symbol = ";",
+        color = "blue",
+    }
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 600000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:fault_group("electronic_general", {  })
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "food_processor",
+        category = "tools",
+        name = ccb.content.plural_text("food processor", "food processors"),
+        description = ccb.content.text("A kitchen appliance capable of slicing, chopping, shredding, grinding, pureeing, and mixing."),
+        mass_milligrams = 3500000,
+        volume_ml = 20000,
+        longest_side_mm = 400,
+        price_cents = 12000,
+        price_postapoc_cents = 700,
+        melee_to_hit = -4,
+        symbol = "%",
+        color = "white",
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 450000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 10)
+    item:fault_group("electronic_general", {  })
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "hotplate",
+        name = ccb.content.plural_text("hotplate", "hotplates"),
+        description = ccb.content.text("A small heating element on a stand, powered by your electric grid.  It is indispensable for cooking and chemistry.  Try not to burn yourself."),
+        mass_milligrams = 795000,
+        volume_ml = 2000,
+        longest_side_mm = 350,
+        price_cents = 2500,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:link_cable { cable_length = 3, charge_milliwatts = 1000000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 35, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    -- technically this should only work with iron/steel ferromagnetic cookware, as most copper/aluminum and ceramic stuff wouldn't work.  No way to do that easily though.
+    local item = content.Item {
+        id = "hotplate_induction",
+        name = ccb.content.plural_text("induction hotplate", "induction hotplates"),
+        description = ccb.content.text("A high end hotplate that utilizes magnetic induction coils to heat ferrous cookware directly.  It is far more efficient than a standard hotplate."),
+        mass_milligrams = 862000,
+        volume_ml = 2000,
+        longest_side_mm = 350,
+        price_cents = 60000,
+        price_postapoc_cents = 1000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("NO_SALVAGE")
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:link_cable { cable_length = 3, charge_milliwatts = 1500000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 25, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "makeshift_sealer",
+        name = ccb.content.plural_text("makeshift vacuum sealer", "makeshift vacuum sealers"),
+        description = ccb.content.text("A homemade heat sealer unit with an air pump.  It's used for vacuum packing food to preserve it."),
+        mass_milligrams = 2000000,
+        volume_ml = 5000,
+        longest_side_mm = 350,
+        price_cents = 1000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 4, charge_milliwatts = 55000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "oil_press_manual",
+        name = ccb.content.plural_text("manual oil press", "manual oil presses"),
+        description = ccb.content.text("A hand-cranked press for creating vegetable oil.  A hotplate heats the raw material to increase extraction efficiency."),
+        mass_milligrams = 2300000,
+        volume_ml = 1560,
+        longest_side_mm = 200,
+        price_cents = 12000,
+        price_postapoc_cents = 1000,
+        symbol = ";",
+        color = "green",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1000000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 7)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    -- size, weight, pricing, power, etc. was based on https://www.amazon.com/dp/B004UBMRKG
+    local item = content.Item {
+        id = "snow_machine_home",
+        name = ccb.content.plural_text("home snow machine", "home snow machines"),
+        description = ccb.content.text("A snow machine, which freezes water and shreds it into \"snow\", designed to be used from the comfort of your own home!  Useful for making snow cones."),
+        mass_milligrams = 1360000,
+        volume_ml = 12585,
+        longest_side_mm = 300,
+        price_cents = 5000,
+        price_postapoc_cents = 150,
+        melee_to_hit = -5,
+        symbol = ";",
+        color = "white",
+        charged_qualities = { { id = "SNOW_MAKING", level = 1 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:link_cable {
+        cable_length = 3,
+        ammo_scale = 0,
+        charge_milliwatts = 55000,
+        menu_text = ccb.content.text("Plug in / Unplug"),
+    }
+    item:clear_flags()
+    item:flag("NONCONDUCTIVE")
+    item:flag("FRAGILE_MELEE")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 8, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "vac_sealer",
+        name = ccb.content.plural_text("vacuum sealer", "vacuum sealers"),
+        description = ccb.content.text("A portable heat sealer unit with an air pump.  It's used for vacuum packing food to preserve it."),
+        mass_milligrams = 1770000,
+        volume_ml = 4100,
+        longest_side_mm = 350,
+        price_cents = 2500,
+        price_postapoc_cents = 2000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 110000 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    -- based off RO filter. https://www.netsolwater.com/how-much-energy-does-an-ro-system-use.php claims RO uses 0.03KWH for 2 liters of water/day giving ~14kJ per 0.25L unit of water
+    local item = content.Item {
+        id = "water_purifier",
+        name = ccb.content.plural_text("water purifier", "water purifiers"),
+        description = ccb.content.text("A battery-powered device designed to purify drinking water.  Using this item on a container full of water will purify the contents.  It could be useful for water taken from uncertain sources like a river, as it may be non-potable."),
+        mass_milligrams = 1360000,
+        volume_ml = 3000,
+        price_cents = 10000,
+        price_postapoc_cents = 1500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_blue",
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:native_use("WATER_PURIFIER")
+    item:link_cable { cable_length = 2, charge_milliwatts = 30000 }
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 14, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "microwave",
+        symbol = ",",
+        color = "light_gray",
+        name = ccb.content.plural_text("microwave", "microwaves"),
+        description = ccb.content.text("A home microwave, has probably seen its share of baked beans."),
+        price_cents = 1000,
+        price_postapoc_cents = 10,
+        mass_milligrams = 11339000,
+        volume_ml = 9000,
+        replace_qualities = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:link_cable { cable_length = 2, charge_milliwatts = 1800000 }
+    item:quality("COOK", 1)
+    item:quality("OVEN", 1)
+    item:quality("HOTPLATE", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 25, ammo_types = { "battery" } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "toaster",
+        symbol = ",",
+        color = "light_gray",
+        name = ccb.content.plural_text("toaster", "toasters"),
+        description = ccb.content.text("A small two-slice toaster, can be used to toast toast and few other things."),
+        price_cents = 1000,
+        price_postapoc_cents = 10,
+        mass_milligrams = 725000,
+        volume_ml = 750,
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:link_cable { cable_length = 2, charge_milliwatts = 1400000 }
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:tool { ammo_types = { "battery" } }
+    content.add(item)
+end
