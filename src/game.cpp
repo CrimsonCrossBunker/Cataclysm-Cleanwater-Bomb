@@ -3230,6 +3230,7 @@ bool game::is_game_over()
         if( !u.is_dead_state() ) {
             return false;
         }
+        cata::lua_platform::notify_avatar_death( u );
         Messages::deactivate();
         if( get_option<std::string>( "DEATHCAM" ) == "always" ) {
             uquit = QUIT_WATCH;

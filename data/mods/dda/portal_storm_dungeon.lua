@@ -5,6 +5,20 @@ local environment = services.gameplay.environment
 local id = services.types.id
 local M = {}
 
+ccb.runtime.handler("portal_dungeon_final_death", function(payload)
+    if payload.dimension ~= "portal_storm_dungeon_dimension" then return end
+    local message
+    if payload.position.z <= -1 then
+        message = services.translate("You fall, and fall, and fall, through an endless black void devoid of stars.  No light.  No sound.  No sensation of wind.  You try to shout, to scream, but hear nothing.  When you try to grab your own hand, you cannot feel it.  There is only the dark.\n\nPerhaps fortunately, your mind gives way before your body does.")
+    else
+        message = services.translate("Your ultimate fate is hard to sum up in words but suffice to say, the thing that used to be you wishes it had hidden from the storm.")
+    end
+    ccb.presentation.notice(message)
+    services.activities.offer_interruption("")
+    services.messages.add(message, "neutral")
+end)
+ccb.runtime.on("avatar_death", "portal_dungeon_final_death")
+
 local function teleport(character, position)
     return state.checked(services.relocation.teleport_character(character, position)).handle
 end

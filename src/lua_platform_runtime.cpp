@@ -12636,6 +12636,10 @@ std::optional<emission_profile> invoke_emission_profile_handler(
     return std::nullopt;
 }
 
+void notify_avatar_death( const Character & )
+{
+}
+
 bool has_platform_item_use_handler( std::string_view )
 {
     return false;

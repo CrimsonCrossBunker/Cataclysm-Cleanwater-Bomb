@@ -240,6 +240,9 @@ cata::lua_platform::native_hook_result dispatch_runtime_hook(
 
 #endif
 
+/** Notify Lua observers once final avatar death has survived all rescue hooks. */
+void notify_avatar_death( const Character &actor );
+
 /** Return whether a Platform item definition owns a Lua use handler. */
 bool has_platform_item_use_handler( std::string_view item_id );
 

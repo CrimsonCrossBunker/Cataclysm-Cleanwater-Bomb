@@ -7284,11 +7284,18 @@ function CcbPlatformRuntime.character_recurring(effect_handler, interval_handler
 ---@field actors table<string,any> Live generation-bound handles and typed talkers; dead handles remain unusable.
 ---@field participants table<string,PlatformNativeEventParticipant> Copied explicit Creature talkers under speaker/interlocutor; no inferred avatar participant.
 
+---@class PlatformAvatarDeathPayload
+---@field character_id integer Copied native avatar ID.
+---@field position TripointCoord Copied absolute map-square position at final death.
+---@field dimension string Copied dimension ID at final death.
+
 ---Character lifecycle events supply the live actor in `payload.actors.character`.
 ---`character_ready` also sets `payload.new_character` and runs once per native
 ---initialization or load. Early load notifications are delivered at world readiness.
 ---`character_conditions_changed` runs after native trait or bionic changes.
----@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, `character_ready`, `character_conditions_changed`, or `game:<event>`.
+---`avatar_death` receives PlatformAvatarDeathPayload after rescue hooks, before
+---messages are disabled. It runs once before the death camera, with no live actor handle.
+---@param event_name string `world_ready`, `before_save`, `after_save`, `shutdown`, `character_ready`, `character_conditions_changed`, `avatar_death`, or `game:<event>`.
 ---@param handler_id string
 function CcbPlatformRuntime.on(event_name, handler_id) end
 

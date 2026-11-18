@@ -32,10 +32,12 @@
 #include "debug.h"
 #include "filesystem.h"
 #include "flexbuffer_json.h"
+#include "game.h"
 #include "item.h"
 #include "json.h"
 #include "json_loader.h"
 #include "lua_platform_dialogue.h"
+#include "lua_platform_bindings_coords.h"
 #include "lua_platform_character_tasks.h"
 #include "lua_platform_hordes.h"
 #include "lua_platform_overmap.h"
@@ -1683,6 +1685,26 @@ void notify_character_conditions_changed( Character &actor )
         if( !lifetime ) {
             return;
         }
+    }
+}
+
+void notify_avatar_death( const Character &actor )
+{
+    // A final death notification carries values, never a usable dead Creature handle.
+    const int character_id = actor.getID().get_value();
+    const script_tripoint_coord position = script_tripoint_coord::from_native(
+            coords::origin::abs, coords::scale::map_square, actor.pos_abs().raw() );
+    const std::string dimension = g->get_dimension_prefix().str();
+    const std::vector<std::shared_ptr<runtime>> owners = detail::active_runtime_values();
+    for( const std::shared_ptr<runtime> &owner : owners ) {
+        if( !owner || !owner->world_is_ready || owner->subscriptions.count( "avatar_death" ) == 0 ) {
+            continue;
+        }
+        sol::table payload = owner->lua->create_table();
+        payload["character_id"] = character_id;
+        payload["position"] = position;
+        payload["dimension"] = dimension;
+        dispatch_lifecycle( *owner, "avatar_death", payload );
     }
 }
 
