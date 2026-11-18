@@ -65,6 +65,9 @@
 
 enum class ot_match_type : int;
 
+static const oter_str_id oter_deep_rock( "deep_rock" );
+static const oter_str_id oter_open_air( "open_air" );
+
 static const oter_type_str_id oter_type_bridgehead_ground( "bridgehead_ground" );
 static const oter_type_str_id oter_type_bridgehead_ramp( "bridgehead_ramp" );
 
@@ -942,17 +945,15 @@ static const oter_id *atlas_outlying_terrain( int z )
     if( ( z >= -OVERMAP_DEPTH && z <= OVERMAP_HEIGHT ) || !north_america::elevation_active() ) {
         return nullptr;
     }
-    static const oter_str_id rock( "deep_rock" );
-    static const oter_str_id air( "open_air" );
     // Resolve string IDs again after a data reload. The returned reference has
     // the same lifetime as other overmap terrain lookups on the owning thread.
-    static thread_local oter_id rock_id;
-    static thread_local oter_id air_id;
+    static thread_local oter_id rock_id; // NOLINT(cata-static-int_id-constants)
+    static thread_local oter_id air_id; // NOLINT(cata-static-int_id-constants)
     if( z < 0 ) {
-        rock_id = rock.id();
+        rock_id = oter_deep_rock.id();
         return &rock_id;
     }
-    air_id = air.id();
+    air_id = oter_open_air.id();
     return &air_id;
 }
 
