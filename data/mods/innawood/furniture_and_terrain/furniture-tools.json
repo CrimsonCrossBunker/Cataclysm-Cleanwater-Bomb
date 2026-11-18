@@ -66,11 +66,6 @@
     }
   },
   {
-    "type": "construction_group",
-    "id": "build_innawood_bulletin_board",
-    "name": "Build Innawood Bulletin Board"
-  },
-  {
     "type": "construction",
     "id": "constr_innawood_bulletin",
     "group": "build_innawood_bulletin_board",

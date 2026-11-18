@@ -12,16 +12,6 @@
     "activity_level": "NO_EXERCISE"
   },
   {
-    "type": "construction_group",
-    "id": "place_transporter_beacon",
-    "name": "Place Transporter Beacon"
-  },
-  {
-    "type": "construction_group",
-    "id": "place_standing_pyrokinetic_lamp",
-    "name": "Place Standing Matrix Lamp"
-  },
-  {
     "type": "construction",
     "id": "ap_standing_pyrokinetic_lamp",
     "group": "place_standing_pyrokinetic_lamp",
@@ -32,11 +22,6 @@
     "pre_special": "check_empty",
     "post_special": "done_appliance",
     "activity_level": "NO_EXERCISE"
-  },
-  {
-    "type": "construction_group",
-    "id": "place_psi_noetic_resonance_detector",
-    "name": "Place Noetic Resonance Detector"
   },
   {
     "type": "construction",

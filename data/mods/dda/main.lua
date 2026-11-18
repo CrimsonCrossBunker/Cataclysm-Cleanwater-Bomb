@@ -182,3 +182,7 @@ require("highland_incense_content")
 require("highland_incense")
 
 require("scenario_filters")
+
+require("construction_categories")
+require("construction_groups")
+require("vehicle_part_categories")

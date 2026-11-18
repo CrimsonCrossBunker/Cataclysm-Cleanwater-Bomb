@@ -1,30 +1,5 @@
 [
   {
-    "type": "construction_group",
-    "id": "cd_delight_build_fertile_bed",
-    "name": "Build Fertile Planting Bed"
-  },
-  {
-    "type": "construction_group",
-    "id": "cd_delight_build_paddy",
-    "name": "Build Paddy Field"
-  },
-  {
-    "type": "construction_group",
-    "id": "cd_delight_build_trellis",
-    "name": "Build Trellis"
-  },
-  {
-    "type": "construction_group",
-    "id": "tsow_dig_underbrush",
-    "name": "Dig Up Shrub"
-  },
-  {
-    "type": "construction_group",
-    "id": "tsow_plant_underbrush",
-    "name": "Plant Shrub"
-  },
-  {
     "type": "construction",
     "id": "constr_cd_delight_fertile_bed",
     "group": "cd_delight_build_fertile_bed",

@@ -10,10 +10,5 @@
     "pre_special": "check_empty",
     "post_special": "done_appliance",
     "activity_level": "LIGHT_EXERCISE"
-  },
-  {
-    "type": "construction_group",
-    "id": "place_car_battery_assembly",
-    "name": "Place Car Battery Assembly"
   }
 ]

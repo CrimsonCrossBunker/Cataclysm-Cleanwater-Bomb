@@ -146,3 +146,5 @@ require("portal_storm_warning")
 require("chaos_stone")
 
 require("sidebar_extensions")
+
+require("construction_groups")

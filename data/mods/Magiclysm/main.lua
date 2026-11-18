@@ -86,3 +86,5 @@ require("world_enchantments")
 require("item_enchantments")
 
 require("sidebar_extensions")
+
+require("construction_groups")

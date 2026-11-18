@@ -19,3 +19,5 @@ require("lua.requirements")
 require("lua.enchantments")
 
 require("bionic_enchantments")
+
+require("construction_groups")

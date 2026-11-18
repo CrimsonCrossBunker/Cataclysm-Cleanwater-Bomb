@@ -157,11 +157,6 @@
     "activity_level": "LIGHT_EXERCISE"
   },
   {
-    "type": "construction_group",
-    "id": "build_druid_chair",
-    "name": "Place a gnarled chair"
-  },
-  {
     "type": "construction",
     "id": "constr_druid_chair",
     "group": "build_druid_chair",
@@ -172,11 +167,6 @@
     "post_terrain": "f_druid_chair",
     "activity_level": "LIGHT_EXERCISE",
     "required_skills": [ [ "fabrication", 0 ] ]
-  },
-  {
-    "type": "construction_group",
-    "id": "build_weaver",
-    "name": "Put Wildwood Weaver down to build a shelter"
   },
   {
     "type": "construction",
