@@ -109,3 +109,43 @@ do
     group:group("clothing_watch", 5)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "mil_accessories", kind = "distribution" }
+    group:group("gasmask_bag_full", 10)
+    group:item("duffelbag", 15)
+    group:group("large_duffelbags", 5)
+    group:entry { item = "goggles_nv", charges = { 0, 100 }, probability = 1 }
+    group:entry { item = "goggles_ir", charges = { 0, 100 }, probability = 1 }
+    group:entry { item = "military_nvg", charges = { 0, 100 }, probability = 1 }
+    group:entry { item = "advanced_gpnvg", charges = { 0, 100 }, probability = 1 }
+    group:entry { item = "enhanced_nvg", charges = { 0, 100 }, probability = 1 }
+    group:item("optical_cloak", 1)
+    group:entry { item = "holo_cloak", charges = { 0, 1000 }, probability = 1 }
+    group:item("mess_kit", 9)
+    group:item("backpack", 38)
+    group:item("briefcase", 10)
+    group:entry { item = "UPS_OFF", charges = { 0, 1000 }, probability = 8 }
+    group:item("chestguard_hard", 20)
+    group:item("armguard_hard", 20)
+    group:item("legguard_hard", 15)
+    group:item("power_armor_frame", 4)
+    group:item("power_armor_generator", 4)
+    group:item("elbow_pads", 40)
+    group:item("knee_pads", 40)
+    group:item("mask_bal", 5)
+    group:item("e_tool", 10)
+    group:item("grapnel", 3)
+    group:item("glasses_bal", 30)
+    group:item("sheath", 10)
+    group:item("bootsheath", 8)
+    group:item("nylon_holster", 15)
+    group:item("sholster", 10)
+    group:item("shoulder_holster", 1)
+    group:item("bandolier_shotgun", 8)
+    group:item("torso_bandolier_grenade", 8)
+    group:item("chem_hexamine", 3)
+    group:entry { item = "esbit_stove", charges = { 0, 50 }, probability = 6 }
+    group:group("full_survival_kit", 4)
+    content.add(group)
+end

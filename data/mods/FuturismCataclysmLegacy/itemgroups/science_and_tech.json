@@ -1,8 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "science",
-    "copy-from": "science",
-    "extend": { "items": [ { "group": "bionics_common", "prob": 1, "count": [ 0, 1 ] }, [ "solar_panel_v3", 1 ] ] }
-  }
-]

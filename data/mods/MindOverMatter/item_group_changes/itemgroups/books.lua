@@ -54,3 +54,11 @@ do
     group:item("manual_psionics_advan", 2)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "science", kind = "distribution" }
+    group:item("manual_meditation_int", 6, "manual_meditation_int_1")
+    group:item("manual_meditation_int", 3, "manual_meditation_int_3")
+    group:item("manual_psionics_advan", 3)
+    content.extend_item_group(group)
+end

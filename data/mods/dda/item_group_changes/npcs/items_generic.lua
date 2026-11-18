@@ -1325,3 +1325,18 @@ do
     group:entry { item = "pur_tablets", count = { 50, 50 } }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "npc_vest", kind = "distribution" }
+    group:item("null", 40)
+    group:item("vest", 10)
+    group:item("vest_leather", 5)
+    group:item("vest_jean", 5)
+    group:item("vest_jean_mod", 5)
+    group:item("kevlar", 10)
+    group:group("military_ballistic_vest", 5)
+    group:item("waistcoat", 5)
+    group:item("flotation_vest", 10)
+    group:item("chainmail_vest", 5)
+    content.upsert_item_group(group)
+end

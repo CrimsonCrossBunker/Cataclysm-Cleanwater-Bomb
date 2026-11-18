@@ -143,3 +143,15 @@ do
     group:item("modular_deagle")
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "axmc_300", kind = "collection" }
+    group:item("axmc_300")
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "axmc_308", kind = "collection" }
+    group:item("axmc_308")
+    content.upsert_item_group(group)
+end

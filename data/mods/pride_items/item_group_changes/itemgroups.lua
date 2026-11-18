@@ -59,3 +59,15 @@ do
     group:item("pride_flag", 70)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "clutter_bedroom", kind = "distribution" }
+    group:item("pride_flag", 5)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "nightstand", kind = "distribution" }
+    group:item("pride_flag", 5)
+    content.extend_item_group(group)
+end

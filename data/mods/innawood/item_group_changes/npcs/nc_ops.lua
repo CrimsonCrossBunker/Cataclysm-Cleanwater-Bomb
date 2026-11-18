@@ -129,3 +129,15 @@ do
     group:item("seed_tobacco", 15)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_OPS_stabbing", kind = "distribution" }
+    group:item("pointy_stick", 50)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_OPS_smg", kind = "distribution" }
+    group:group("guns_shotgun_improvised", 22)
+    content.upsert_item_group(group)
+end

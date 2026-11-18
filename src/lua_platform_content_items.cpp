@@ -5273,20 +5273,21 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         };
         const auto validate_group_item = [&]( const std::string &id, const std::string &target,
         const std::string_view field, const bool migrate ) {
+            const itype_id item_id( target );
             if( target.empty() || ( target != "null" && declared_item_ids.count( target ) == 0 &&
                                     check_engine_state &&
-                                    !item::type_is_defined( migrate ? item_controller->migrate_id( itype_id( target ) ) :
-                                                            itype_id( target ) ) ) ) {
+                                    !item::type_is_defined( item_id ) &&
+                                    ( !migrate || !item::type_is_defined( item_controller->migrate_id( item_id ) ) ) ) ) {
                 throw std::runtime_error( "item group '" + id + "' references an unknown " +
                                           std::string( field ) + " item '" + target + "'" );
             }
         };
         const auto validate_spawn_reference = [&]( const std::string &id,
-        const item_group_reference &reference, const std::string_view field, const bool migrate = false ) {
+        const item_group_reference &reference, const std::string_view field ) {
             if( reference.group ) {
                 validate_group_reference( id, reference.id );
             } else {
-                validate_group_item( id, reference.id, field, migrate );
+                validate_group_item( id, reference.id, field, true );
             }
         };
         const auto validate_group_entries = [&]( const auto &self, const std::string &id,
@@ -5330,7 +5331,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     validate_group_reference( id, group_entry.id );
                 }
                 for( const item_group_reference &child : group_entry.contents ) {
-                    validate_spawn_reference( id, child, "contents", true );
+                    validate_spawn_reference( id, child, "contents" );
                 }
             }
         };
@@ -6866,10 +6867,6 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 break;
             }
             case items_content_apply_phase::item_groups: {
-                std::set<std::string_view> staged_item_ids;
-                for( const item_registration &item_entry : pimpl_->items ) {
-                    staged_item_ids.insert( item_entry.definition->id );
-                }
                 for( const item_group_registration &entry : pimpl_->item_groups ) {
                     const item_group_id id( entry.definition->id );
                     auto previous = item_controller->m_template_groups.find( id );
@@ -6942,19 +6939,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                             }
                             const Single_item_creator::Type entry_type = source_entry.group ?
                                     Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
-                            std::string entry_id = source_entry.id;
-                            if( !source_entry.group && staged_item_ids.count( entry_id ) == 0 ) {
-                                const itype_id migrated_item = item_controller->migrate_id( itype_id( entry_id ) );
-                                if( !item::type_is_defined( migrated_item ) ) {
-                                    DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
-                                                                  << "' skipped unavailable item '"
-                                                                  << source_entry.id << "'";
-                                    continue;
-                                }
-                                entry_id = migrated_item.str();
-                            }
+                            // The native finalizer applies blacklists and migrations after all Mods
+                            // have loaded. Replacing or skipping here would change the spawn pool.
                             auto native_entry = std::make_unique<Single_item_creator>(
-                                                    entry_id, entry_type,
+                                                    source_entry.id, entry_type,
                                                     static_cast<int>( source_entry.probability ),
                                                     "Lua-first item-group entry " + source.id, source_entry.event );
                             native_entry->active = source_entry.active;

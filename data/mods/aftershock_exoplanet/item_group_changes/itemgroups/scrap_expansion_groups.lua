@@ -37,3 +37,9 @@ do
     group:group("afs_advanced_optics_scrapgroup", 30)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "mut_lab", kind = "distribution" }
+    group:group("afs_advanced_biomaterial_scrapgroup", 20)
+    content.extend_item_group(group)
+end

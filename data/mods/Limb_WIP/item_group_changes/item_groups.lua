@@ -43,3 +43,10 @@ do
     group:item("right_arm_neuroprosthetic", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "map_extra_science_corpse", kind = "collection" }
+    group:item("left_leg_prosthetic", 2)
+    group:item("right_leg_prosthetic", 2)
+    content.extend_item_group(group)
+end

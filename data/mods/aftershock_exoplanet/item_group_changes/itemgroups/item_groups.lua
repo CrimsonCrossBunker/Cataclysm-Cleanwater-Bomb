@@ -196,3 +196,37 @@ do
     group:item("STEED_registry", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bedroom", kind = "distribution" }
+    group:item("afs_atomic_smartphone", 1)
+    group:item("afs_atomic_light", 2)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "consumer_electronics", kind = "distribution" }
+    group:item("afs_atomic_smartphone", 2)
+    group:item("afs_imager", 2)
+    group:item("afs_atomic_light", 4)
+    group:item("STEED_registry", 1)
+    content.extend_item_group(group)
+end
+
+do
+    -- extension of vanilla itemgroup
+    local group = content.ItemGroup { id = "science", kind = "distribution" }
+    group:item("bionic_maintenance_toolkit", 20)
+    group:item("afs_biomaterial_1", 20)
+    group:item("afs_neural_io_1", 20)
+    group:item("afs_material_2", 20)
+    group:item("afs_magnet_1", 20)
+    group:item("afs_energy_storage_1", 20)
+    group:item("afs_circuitry_1", 20)
+    group:item("solar_panel_v3", 1)
+    group:group("afs_advanced_magnet_scrapgroup", 20)
+    group:group("afs_advanced_heat_scrapgroup", 2)
+    group:group("afs_advanced_biomaterial_scrapgroup", 2)
+    group:group("afs_advanced_optics_scrapgroup", 20)
+    content.extend_item_group(group)
+end

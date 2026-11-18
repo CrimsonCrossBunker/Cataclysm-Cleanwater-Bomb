@@ -1,9 +1,0 @@
-[
-  {
-    "id": "SUS_coffee_cupboard",
-    "type": "item_group",
-    "subtype": "collection",
-    "copy-from": "SUS_coffee_cupboard",
-    "extend": { "items": [ [ "atomic_coffeepot", 10 ] ] }
-  }
-]

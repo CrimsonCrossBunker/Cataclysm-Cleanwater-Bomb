@@ -1,8 +1,0 @@
-[
-  {
-    "id": "bedroom",
-    "type": "item_group",
-    "copy-from": "bedroom",
-    "extend": { "items": [ [ "fcl_atomic_smartphone", 1 ], [ "fcl_atomic_lamp", 2 ], [ "fcl_atomic_light", 2 ] ] }
-  }
-]

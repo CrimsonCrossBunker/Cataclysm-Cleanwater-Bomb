@@ -254,3 +254,103 @@ do
     group:group("writing_utensils", 5)
     content.add(group)
 end
+
+do
+    -- tools and equipment you might find on lab benches of nearly any lab.
+    local group = content.ItemGroup { id = "tools_science", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "chemistry_set", probability = 5 },
+            { item = "chemistry_set_basic", probability = 2 },
+        },
+        probability = 10,
+    }
+    group:item("analytical_set_basic", 5)
+    group:item("spectrophotometer", 5)
+    group:item("balance_small", 5)
+    group:item("cuvettes", 5)
+    group:entry { item = "ph_meter", charges = { 0, 100 }, probability = 5 }
+    group:item("voltmeter", 5)
+    group:entry { item = "multimeter", charges = { 0, 100 }, probability = 5 }
+    group:item("melting_point", 5)
+    group:item("vortex", 5)
+    group:item("hotplate_induction", 5)
+    group:entry {
+        distribution = {
+            { item = "jar_glass_sealed", probability = 5 },
+            { item = "jar_3l_glass_sealed", probability = 5 },
+        },
+        probability = 10,
+    }
+    group:item("magnifying_glass", 5)
+    group:item("thermometer", 5)
+    group:entry { item = "geiger_off", charges = { 0, 100 }, probability = 3 }
+    group:item("hygrometer", 3)
+    group:item("barometer", 3)
+    group:entry {
+        distribution = {
+            { item = "camera", charges = { 0, 150 }, probability = 2 },
+            { item = "camera", charges = { 0, 150 }, container = "camera_bag", probability = 1 },
+        },
+        probability = 2,
+    }
+    group:entry { item = "flask_glass", count = { 1, 3 }, probability = 10 }
+    group:entry { item = "bottle_glass", count = { 1, 3 }, probability = 10 }
+    group:item("thermos", 5)
+    group:entry { item = "test_tube", count = { 1, 5 }, probability = 10 }
+    group:entry { item = "glass_tube_small", count = { 1, 10 }, probability = 5 }
+    group:item("funnel", 10)
+    group:item("hose", 5)
+    group:item("steel_grille", 5)
+    group:item("coat_lab", 5)
+    group:item("gloves_medical", 5)
+    group:item("mask_dust", 5)
+    group:entry {
+        distribution = {
+            { item = "mask_filter", charges = { 0, 100 }, probability = 5 },
+            { item = "gasfilter_sm", charges = { 0, 100 }, probability = 5 },
+            { item = "mask_gas_half", charges = { 0, 100 }, probability = 5 },
+        },
+        probability = 10,
+    }
+    group:entry {
+        distribution = {
+            { item = "glasses_safety", probability = 3 },
+            { item = "goggles_chem", probability = 7 },
+        },
+        probability = 10,
+    }
+    group:entry { item = "UPS_OFF", charges = { 0, 1000 }, probability = 3 }
+    group:item("microscope", 5)
+    group:entry { item = "microscope_slide", count = { 0, 20 }, probability = 5 }
+    group:item("microscope_dissecting", 5)
+    group:item("funnel_separation", 3)
+    group:entry { item = "filter_paper_qualitative", charges = { 10, -1 }, probability = 3 }
+    group:entry { item = "filter_paper_quantitative", charges = { 10, -1 }, probability = 3 }
+    group:item("burette", 3)
+    group:item("rotovap", 3)
+    group:item("still_lab", 3)
+    group:item("gelbox", 5)
+    group:item("microcentrifuge", 5)
+    group:item("ketene_lamp", 1)
+    group:item("stopcock", 3)
+    group:item("beaker", 5)
+    group:item("gradcylinder", 5)
+    group:item("petri_dish", 5)
+    group:item("rack_test_tube", 5)
+    group:item("test_tube_micro", 5)
+    group:item("rack_test_tube_micro", 5)
+    group:item("stand_ring", 5)
+    group:item("stand_ring_clamps", 5)
+    group:item("syringe", 4)
+    group:item("xacto", 4)
+    group:group("cotton_ball_bag_used", 4)
+    group:group("papr_kit", 5)
+    group:item("papr_half_mask", 5)
+    group:group("cotton_ball_bag_full", 2)
+    group:group("box_of_batteries_random", 25)
+    group:group("ammo_heavy_batteries_full", 25)
+    group:item("acetylene_machine", 1)
+    group:group("writing_utensils", 5)
+    content.add(group)
+end

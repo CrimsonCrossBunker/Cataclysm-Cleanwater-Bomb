@@ -117,3 +117,18 @@ do
     group:item("warhammer_plus_one", 2)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bugbear_weapon_drops", kind = "distribution" }
+    group:item("survivor_machete", 98)
+    group:item("broadsword_plus_one", 2)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "orc_warrior_weapon_drops", kind = "distribution" }
+    group:item("survivor_machete", 96)
+    group:item("arming_sword_plus_one", 2)
+    group:item("broadsword_plus_one", 2)
+    content.upsert_item_group(group)
+end

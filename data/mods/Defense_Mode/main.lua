@@ -7,3 +7,5 @@ require("portal_storm")
 require("scenario_filters")
 
 require("item_groups")
+
+require("item_group_changes")

@@ -198,3 +198,17 @@ do
     group:entry { item = "arrow_heavy_fire_hardened_fletched", count = { 1, 6 }, charges = { 1, 10 } }
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bugbear_weapon_drops", kind = "distribution" }
+    group:group("survivor_cutting")
+    content.replace(group)
+end
+
+do
+    local group = content.ItemGroup { id = "orc_warrior_weapon_drops", kind = "distribution" }
+    group:item("survivor_machete", 96)
+    group:item("arming_sword_plus_one", 2)
+    group:item("broadsword_plus_one", 2)
+    content.replace(group)
+end

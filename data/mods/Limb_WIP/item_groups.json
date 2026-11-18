@@ -1,13 +1,6 @@
 [
   {
     "type": "item_group",
-    "id": "map_extra_science_corpse",
-    "copy-from": "map_extra_science_corpse",
-    "subtype": "collection",
-    "extend": { "items": [ { "item": "left_leg_prosthetic", "prob": 2 }, { "item": "right_leg_prosthetic", "prob": 2 } ] }
-  },
-  {
-    "type": "item_group",
     "id": "hospital_bed",
     "copy-from": "hospital_bed",
     "extend": { "items": [ [ "left_leg_prosthetic", 40 ], [ "right_leg_prosthetic", 40 ] ] }

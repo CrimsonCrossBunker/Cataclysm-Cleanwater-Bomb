@@ -138,3 +138,21 @@ do
     group:item("robot_controls", 5)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "science", kind = "distribution" }
+    group:item("bio_purifier", 10)
+    group:item("bio_sunglasses", 10)
+    group:item("bio_eye_optic", 10)
+    group:item("bio_climate", 10)
+    group:item("bio_heatsink", 10)
+    group:item("bio_blood_filter", 10)
+    group:item("bio_watch", 10)
+    group:item("bio_leukocyte", 10)
+    group:item("bio_faraday", 10)
+    group:item("bio_remote", 10)
+    group:item("bio_soporific", 5)
+    group:item("bio_surgical_razor", 5)
+    group:item("bio_syringe", 8)
+    content.extend_item_group(group)
+end

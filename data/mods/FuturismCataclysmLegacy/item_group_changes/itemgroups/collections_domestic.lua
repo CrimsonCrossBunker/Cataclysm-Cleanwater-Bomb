@@ -29,3 +29,11 @@ do
     group:item("fcl_atompot", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "bedroom", kind = "distribution" }
+    group:item("fcl_atomic_smartphone", 1)
+    group:item("fcl_atomic_lamp", 2)
+    group:item("fcl_atomic_light", 2)
+    content.extend_item_group(group)
+end

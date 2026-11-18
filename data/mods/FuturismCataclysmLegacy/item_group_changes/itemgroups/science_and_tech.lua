@@ -16,3 +16,10 @@ do
     group:item("bio_probability_travel", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "science", kind = "distribution" }
+    group:entry { group = "bionics_common", count = { 0, 1 }, probability = 1 }
+    group:item("solar_panel_v3", 1)
+    content.extend_item_group(group)
+end

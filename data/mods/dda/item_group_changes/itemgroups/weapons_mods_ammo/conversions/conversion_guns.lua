@@ -296,3 +296,25 @@ do
     }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "axmc_300", kind = "collection" }
+    group:entry {
+        item = "axmc",
+        contents = {
+            { item = "retool_axmc_300win" },
+        },
+    }
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "axmc_308", kind = "collection" }
+    group:entry {
+        item = "axmc",
+        contents = {
+            { item = "retool_axmc_308win" },
+        },
+    }
+    content.upsert_item_group(group)
+end

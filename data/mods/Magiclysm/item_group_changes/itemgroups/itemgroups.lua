@@ -359,3 +359,9 @@ do
     group:group("dragon_books", 4)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "science", kind = "distribution" }
+    group:group("magical_reagents", 18)
+    content.extend_item_group(group)
+end

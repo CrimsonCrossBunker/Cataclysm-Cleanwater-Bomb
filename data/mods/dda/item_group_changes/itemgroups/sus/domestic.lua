@@ -110,3 +110,71 @@ do
     }
     content.add(group)
 end
+
+do
+    -- SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.
+    -- This group is for a cupboard where coffee and tea supplies are kept.
+    local group = content.ItemGroup { id = "SUS_coffee_cupboard", kind = "collection" }
+    group:entry {
+        distribution = {
+            { item = "coffeemaker", probability = 90 },
+        },
+        probability = 75,
+    }
+    group:entry {
+        distribution = {
+            { item = "coffee_raw", probability = 30 },
+            { item = "instant_coffee", count = { 1, 5 }, probability = 40 },
+            { group = "raw_coffee_in_container", probability = 30 },
+        },
+        probability = 80,
+    }
+    group:entry { group = "tea_raw_bag_plastic_33", count = { 1, 10 }, probability = 80 }
+    group:entry { group = "tea_green_raw_bag_plastic_33", count = { 1, 10 }, probability = 40 }
+    group:item("teapot", 70)
+    group:item("kettle", 50)
+    group:entry { group = "sugar_jar_glass_sealed_10_140", sealed = false, probability = 90 }
+    group:entry {
+        distribution = {
+            {
+                item = "milk_powder",
+                count = { 5, 20 },
+                sealed = false,
+                wrapper = "jar_3l_glass_sealed",
+                container = "null",
+                probability = 60,
+            },
+            {
+                item = "cocoa_powder",
+                count = { 5, 20 },
+                sealed = false,
+                wrapper = "jar_3l_glass_sealed",
+                container = "null",
+                probability = 60,
+            },
+            {
+                item = "cocoa_powder_milk",
+                count = { 5, 20 },
+                sealed = false,
+                wrapper = "jar_3l_glass_sealed",
+                container = "null",
+                probability = 60,
+            },
+            { item = "con_milk", count = { 1, 6 }, probability = 10 },
+            { item = "milk_evap", count = { 1, 6 }, probability = 20 },
+            { group = "milk_in_container", probability = 10 },
+        },
+        probability = 30,
+    }
+    group:entry {
+        distribution = {
+            { item = "honey_glassed", count = { 1, -1 }, probability = 20 },
+            { item = "honey_bottled", charges = { 1, -1 }, probability = 80 },
+        },
+        probability = 60,
+    }
+    group:entry { item = "spoon", count = { 1, 6 } }
+    group:entry { item = "ceramic_mug", count = { 1, 6 } }
+    group:group("teabag_box", 60)
+    content.upsert_item_group(group)
+end

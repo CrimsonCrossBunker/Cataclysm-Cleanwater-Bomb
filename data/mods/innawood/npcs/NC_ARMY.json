@@ -1,8 +1,0 @@
-[
-  {
-    "type": "item_group",
-    "id": "NC_ARMY_stabbing",
-    "subtype": "distribution",
-    "entries": [ { "item": "pointy_stick", "prob": 50 } ]
-  }
-]

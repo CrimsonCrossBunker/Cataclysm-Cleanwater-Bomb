@@ -138,26 +138,5 @@
       { "skill": "firstaid", "bonus": 1 },
       { "skill": "mechanics", "bonus": { "rng": [ 2, 8 ] } }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_ARMY_stabbing",
-    "subtype": "distribution",
-    "entries": [
-      { "item": "spear_knife", "prob": 50 },
-      { "item": "spear_steel", "prob": 10 },
-      { "item": "spear_forked", "prob": 10 },
-      { "item": "spear_rebar", "prob": 5 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_OPS_stabbing",
-    "items": [ [ "spear_knife", 50 ], [ "spear_steel", 10 ], [ "spear_forked", 10 ], [ "spear_rebar", 5 ] ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_OPS_smg",
-    "items": [ [ "hk_mp5", 50 ], [ "hk_mp7", 30 ] ]
   }
 ]

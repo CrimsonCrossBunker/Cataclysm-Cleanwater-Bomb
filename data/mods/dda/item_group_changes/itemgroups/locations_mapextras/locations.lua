@@ -1070,3 +1070,317 @@ do
     group:group("pillbox_any_used", 10)
     content.add(group)
 end
+
+do
+    -- For remants of dirty acts in the stripclub.
+    local group = content.ItemGroup { id = "stripclub_dirty", kind = "distribution" }
+    group:item("condom", 80)
+    group:group("sex_accessories_domestic", 60)
+    group:item("panties", 40)
+    group:item("bra", 40)
+    group:item("hot_pants_leather", 30)
+    group:item("mag_porn", 30)
+    group:group("stash_drugs", 20)
+    group:group("bikini", 30)
+    group:entry {
+        collection = {
+            { item = "bikini_top", variant = "maid_bikini_top" },
+            { item = "bikini_bottom", variant = "maid_bikini_bottom" },
+        },
+        probability = 5,
+    }
+    group:item("skirt_leather", 20)
+    group:item("nanoskirt", 20)
+    group:item("mag_dude", 20)
+    group:item("chaps_leather", 10)
+    group:item("novel_romance", 5)
+    group:item("novel_erotic", 10)
+    group:item("bondage_suit", 1)
+    group:item("bondage_mask", 1)
+    group:item("bodysuit_lycra", 1)
+    group:item("leather_cat_ears", 5)
+    group:item("leather_cat_tail", 5)
+    group:item("leather_collar", 5)
+    group:item("rope_30", 5)
+    group:item("tank_top", 5, "tank_top_cheerleader")
+    group:item("cheerleader_top_short", 10)
+    group:item("leotard", 5)
+    group:item("cheerleader_skirt", 5)
+    group:item("cheerleader_skirt_short", 10)
+    group:item("santa_dress", 1)
+    group:item("santa_dress_short", 2)
+    group:item("cheerleader_dress", 10)
+    group:item("ninja_dress_sleeveless", 1)
+    group:item("sinister_dress_short", 1)
+    group:item("priest_collar", 1)
+    group:item("witch_dress_short", 1)
+    group:item("short_dress", 1, "sinister")
+    group:item("short_dress_sleeved", 1, "witch_black")
+    group:item("maid_dress_short", 5)
+    group:item("apron_cotton", 5, "maid_apron")
+    group:item("waist_apron_short", 5, "maid_apron")
+    group:item("apron_leather", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "chem_school", kind = "distribution", with_ammo = 50, with_magazine = 100 }
+    group:item("balance_small", 5)
+    group:entry { item = "ph_meter", charges = { 0, 100 }, probability = 5 }
+    group:item("voltmeter", 5)
+    group:entry { item = "multimeter", charges = { 0, 100 }, probability = 5 }
+    group:item("thermometer", 5)
+    group:item("melting_point", 5)
+    group:item("vortex", 5)
+    group:item("microscope", 5)
+    group:entry { item = "microscope_slide", count = { 0, 20 }, probability = 5 }
+    group:item("microscope_dissecting", 5)
+    group:item("funnel_separation", 3)
+    group:item("burette", 3)
+    group:item("still_lab", 3)
+    group:item("stopcock", 3)
+    group:item("beaker", 5)
+    group:item("gradcylinder", 5)
+    group:item("petri_dish", 5)
+    group:item("rack_test_tube", 5)
+    group:item("pressure_cooker", 5)
+    group:item("stand_ring", 5)
+    group:item("stand_ring_clamps", 5)
+    group:entry { item = "ether", charges = { 100, -1 }, probability = 5 }
+    group:item("pocket_firstaid", 2)
+    group:item("file", 5)
+    group:item("textbook_chemistry", 10)
+    group:item("adv_chemistry", 2)
+    group:entry { item = "water_clean", charges = { 1, -1 }, sealed = false, container = "bottle_plastic", probability = 90 }
+    group:entry { item = "salt_water", charges = { 1, -1 }, probability = 30 }
+    group:group("bleach_jug_part", 10)
+    group:entry { item = "ammonia_liquid", charges = { 6, -1 }, probability = 30 }
+    group:item("chem_washing_soda", 10)
+    group:item("chem_baking_soda", 10)
+    group:item("chem_calcium_chloride", 2)
+    group:group("yeast_bag_plastic", 3)
+    group:group("yogurt_starter_culture_bag_plastic_4", 1)
+    group:group("glue_weak_domestic", 15)
+    group:group("glue_strong_domestic", 15)
+    group:item("bottle_glass", 10)
+    group:item("syringe", 1)
+    group:item("adrenaline_injector", 1)
+    group:group("used_1st_aid", 5)
+    group:item("saline", 1)
+    group:entry { item = "extinguisher", charges = { 100, 100 }, probability = 25 }
+    group:item("hotplate", 15)
+    group:item("funnel", 50)
+    group:item("jar_glass_sealed", 20)
+    group:item("jar_3l_glass_sealed", 15)
+    group:item("apron_plastic", 25)
+    group:item("apron_cotton", 8)
+    group:item("apron_leather", 2)
+    group:group("pur_tablets_bottle_plastic_small_1_50", 15)
+    group:group("lye_powder_bottle_part", 10)
+    group:group("oxy_powder_bottle_part", 12)
+    group:item("chemistry_set", 8)
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 20 }
+    group:entry { item = "eyedrops", count = { 1, 10 }, probability = 15 }
+    group:entry { item = "steroid_eyedrops", count = { 1, 10 }, probability = 3 }
+    group:group("charcoal_bag_part", 10)
+    group:group("magnesiumpowder_small_bag_part", 10)
+    group:entry { item = "tin", charges = { 1, 100 }, probability = 10 }
+    group:entry { item = "chem_hydrogen_peroxide", charges = { 1, -1 }, probability = 10 }
+    group:entry { item = "chem_muriatic_acid", charges = { 1, -1 }, probability = 5 }
+    group:group("chem_sulphur_bottle_plastic_small_100_inf", 10)
+    group:entry { item = "chem_aluminium_powder", charges = { 1, 100 }, probability = 5 }
+    group:group("zincpowder_small_bottle_part", 10)
+    group:entry { item = "chem_zinc_oxide", charges = { 100, -1 }, probability = 5 }
+    group:group("manganesedioxide_small_bottle_part", 10)
+    group:group("saltpeter_canvas_bag_part", 10)
+    group:group("calciumcarbide_small_bottle_part", 10)
+    group:group("calciumcarbonate_small_bottle_part", 10)
+    group:entry { item = "denat_alcohol", charges = { 250, -1 }, probability = 6 }
+    group:entry { item = "methed_alcohol", charges = { 250, -1 }, probability = 4 }
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "office", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:group("soda_in_small_container", 370)
+    group:item("file", 90)
+    group:group("magazines", 130)
+    group:item("survival_book", 1)
+    group:item("fun_survival", 5)
+    group:item("howto_traps", 10)
+    group:item("decoy_anarch", 8)
+    group:item("manual_driving", 5)
+    group:item("recipe_augs", 8)
+    group:group("bottle_otc_painkiller_1_20", 85)
+    group:item("junk_burrito", 25)
+    group:group("tobacco_products", 31)
+    group:group("box_of_contact_lens_any", 15)
+    group:entry { item = "transition_contacts", count = { 6, 6 }, probability = 1 }
+    group:group("clothing_glasses", 80)
+    group:item("briefcase", 40)
+    group:item("purse", 40)
+    group:item("mbag", 20)
+    group:group("box_of_batteries_random", 50)
+    group:item("manual_business", 40)
+    group:item("textbook_business", 12)
+    group:item("textbook_speech", 8)
+    group:item("recipe_caseless", 1)
+    group:entry { item = "lighter", charges = { 0, 100 }, probability = 60 }
+    group:entry { item = "ref_lighter", charges = { 0, 50 }, probability = 5 }
+    group:entry { item = "matches", charges = { 0, 20 }, probability = 60 }
+    group:entry { item = "extinguisher", charges = { 100, 100 }, probability = 20 }
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 40 }
+    group:entry { item = "radio", charges = { 0, 100 }, probability = 20 }
+    group:item("bubblewrap", 50)
+    group:item("instant_coffee", 15)
+    group:group("new_usb_drives", 5)
+    group:entry {
+        item = "usb_drive",
+        contents = {
+            { item = "software_useless" },
+        },
+        probability = 10,
+    }
+    group:entry {
+        item = "usb_drive",
+        contents = {
+            { item = "software_electronics_reference" },
+        },
+        probability = 2,
+    }
+    group:item("umbrella", 5)
+    group:item("teleumbrella", 2)
+    group:group("chewing_gum_used", 10)
+    group:group("chewing_gum_used_caff", 6)
+    group:group("chewing_gum_used_nic", 4)
+    group:item("fan", 10)
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 10 }
+    group:item("pocketwatch", 2)
+    group:item("gold_watch", 2)
+    group:item("sf_watch", 1)
+    group:item("silver_watch", 5)
+    group:item("survnote", 1)
+    group:item("magnifying_glass", 8)
+    group:item("camera_control", 2)
+    group:item("eclipse_glasses", 1)
+    group:group("writing_utensils", 20)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "cubical_office", kind = "distribution" }
+    group:group("soda_in_small_container", 560)
+    group:item("file", 90)
+    group:group("magazines", 365)
+    group:item("glassblowing_book", 1)
+    group:item("trappers_companion", 1)
+    group:item("manual_bashing", 1)
+    group:item("textbook_speech", 6)
+    group:item("survival_book", 4)
+    group:item("fun_survival", 10)
+    group:item("recipe_augs", 1)
+    group:item("decoy_anarch", 10)
+    group:item("manual_driving", 5)
+    group:group("bottle_otc_painkiller_1_20", 85)
+    group:group("maltballs_box_snack_4", 30)
+    group:group("cigar_box_opened", 20)
+    group:group("cigar_box_unopened", 5)
+    group:group("tobacco_products", 151)
+    group:group("box_of_contact_lens_any", 15)
+    group:entry { item = "transition_contacts", count = { 6, 6 }, probability = 1 }
+    group:group("clothing_glasses", 80)
+    group:item("fan", 10)
+    group:item("briefcase", 40)
+    group:item("purse", 40)
+    group:item("mbag", 20)
+    group:group("box_of_batteries_random", 50)
+    group:item("manual_business", 40)
+    group:item("textbook_business", 12)
+    group:item("manual_computer", 20)
+    group:item("howto_computer", 10)
+    group:item("textbook_computer", 8)
+    group:item("computer_science", 8)
+    group:item("howto_computer", 6)
+    group:entry { item = "matches", charges = { 1, 20 }, probability = 60 }
+    group:entry { item = "ref_matches", charges = { 1, 32 }, probability = 60 }
+    group:entry { item = "extinguisher", charges = { 100, 100 }, probability = 20 }
+    group:entry { item = "flashlight", charges = { 0, 300 }, probability = 40 }
+    group:entry { item = "radio", charges = { 0, 100 }, probability = 20 }
+    group:item("bubblewrap", 50)
+    group:group("toy_makerspace_kit", 1)
+    group:group("toy_robot_kit", 1)
+    group:group("toy_engine_kit", 1)
+    group:item("instant_coffee", 15)
+    group:entry {
+        group = "used_usb_drives",
+        contents = {
+            { group = "SUS_efiles_office" },
+        },
+        probability = 15,
+    }
+    group:item("coat_rain", 50)
+    group:item("hood_rain", 10)
+    group:item("poncho", 15)
+    group:item("folding_poncho", 5)
+    group:entry { item = "lighter", charges = { 0, 100 }, probability = 60 }
+    group:entry { item = "ref_lighter", charges = { 0, 50 }, probability = 5 }
+    group:entry { item = "matches", charges = { 0, 20 }, probability = 60 }
+    group:entry { item = "ref_matches", charges = { 0, 32 }, probability = 60 }
+    group:entry { item = "extinguisher", charges = { 100, 100 }, probability = 20 }
+    group:entry { item = "mp3", charges = { 0, 100 }, probability = 6 }
+    group:entry { item = "portable_game", charges = { 0, 100 }, probability = 8 }
+    group:entry { item = "game_watch", charges = { 0, 50 }, probability = 2 }
+    group:item("umbrella", 5)
+    group:item("teleumbrella", 2)
+    group:item("mag_tailor", 5)
+    group:group("chewing_gum_used", 20)
+    group:group("chewing_gum_used_caff", 7)
+    group:group("chewing_gum_used_nic", 5)
+    group:entry { item = "sm_extinguisher", charges = { 10, 10 }, probability = 10 }
+    group:item("pocketwatch", 2)
+    group:item("knitting_needles", 1)
+    group:item("survnote", 1)
+    group:item("eclipse_glasses", 1)
+    group:group("writing_utensils", 20)
+    group:group("pillbox_any_used", 5)
+    content.add(group)
+end
+
+do
+    local group = content.ItemGroup { id = "office_breakroom", kind = "distribution" }
+    group:group("soda_in_small_container", 900)
+    group:group("candy_chocolate", 625)
+    group:item("cookies", 60)
+    group:item("brownie", 60)
+    group:item("aspirin", 40)
+    group:item("ibuprofen", 40)
+    group:item("acetaminophen", 40)
+    group:item("naproxen", 40)
+    group:group("tobacco_products", 150)
+    group:group("cigar_box_opened", 20)
+    group:group("cigar_box_unopened", 5)
+    group:group("chewing_gum_used")
+    group:group("chewing_gum_used_caff", 20)
+    group:group("chewing_gum_used_nic", 20)
+    group:item("instant_coffee", 130)
+    group:item("coffee_syrup", 80)
+    group:item("coffee_raw", 80)
+    group:entry { item = "weed", count = { 1, 5 }, probability = 10 }
+    group:item("joint", 10)
+    group:entry { item = "matches", charges = { 1, 20 }, probability = 50 }
+    group:entry { item = "ref_matches", charges = { 1, 32 }, probability = 50 }
+    group:entry { item = "lighter", charges = { 0, 100 }, probability = 50 }
+    group:group("clothing_glasses", 30)
+    group:group("box_of_contact_lens_any", 30)
+    group:entry { item = "transition_contacts", count = { 6, 6 }, probability = 3 }
+    group:entry { item = "radio", charges = { 0, 100 } }
+    group:group("box_of_batteries_random", 50)
+    group:item("umbrella", 50)
+    group:item("teleumbrella", 20)
+    group:group("magazines", 120)
+    group:group("newspaper_recent")
+    group:item("survnote", 1)
+    group:item("dnd_handbook", 1)
+    group:group("writing_utensils", 10)
+    content.add(group)
+end

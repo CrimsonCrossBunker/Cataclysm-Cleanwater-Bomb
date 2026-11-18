@@ -1,8 +1,0 @@
-[
-  {
-    "id": "science",
-    "type": "item_group",
-    "copy-from": "science",
-    "extend": { "items": [ { "group": "magical_reagents", "prob": 18 } ] }
-  }
-]

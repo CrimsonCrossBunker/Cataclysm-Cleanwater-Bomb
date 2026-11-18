@@ -283,3 +283,9 @@ do
     group:item("zucchini", 3)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "npc_vest", kind = "distribution" }
+    group:item("null", 40)
+    content.upsert_item_group(group)
+end

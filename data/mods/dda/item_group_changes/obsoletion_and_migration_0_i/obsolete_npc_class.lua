@@ -445,3 +445,28 @@ do
     group:item("rucksack", 50)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_ARMY_stabbing", kind = "distribution" }
+    group:item("spear_knife", 50)
+    group:item("spear_steel", 10)
+    group:item("spear_forked", 10)
+    group:item("spear_rebar", 5)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_OPS_stabbing", kind = "distribution" }
+    group:item("spear_knife", 50)
+    group:item("spear_steel", 10)
+    group:item("spear_forked", 10)
+    group:item("spear_rebar", 5)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "NC_OPS_smg", kind = "distribution" }
+    group:item("hk_mp5", 50)
+    group:item("hk_mp7", 30)
+    content.upsert_item_group(group)
+end

@@ -549,3 +549,12 @@ do
     group:group("npc_storage", 80)
     content.replace(group)
 end
+
+do
+    local group = content.ItemGroup { id = "NC_CITY_COP_misc", kind = "distribution", with_ammo = 75, with_magazine = 100 }
+    group:item("tobacco", 2)
+    group:item("weed", 50)
+    group:item("seed_weed", 35)
+    group:item("seed_tobacco", 15)
+    content.upsert_item_group(group)
+end

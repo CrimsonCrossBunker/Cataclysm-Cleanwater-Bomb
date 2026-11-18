@@ -1,29 +1,10 @@
 [
   {
-    "id": "mut_lab",
-    "type": "item_group",
-    "copy-from": "mut_lab",
-    "extend": { "items": [ { "group": "afs_advanced_biomaterial_scrapgroup", "prob": 20 } ] }
-  },
-  {
     "id": "hospital_lab",
     "type": "item_group",
     "copy-from": "hospital_lab",
     "extend": {
       "items": [ { "group": "afs_biomedical_scrapgroup", "prob": 20 }, { "group": "afs_advanced_neural_io_scrapgroup", "prob": 10 } ]
-    }
-  },
-  {
-    "id": "science",
-    "type": "item_group",
-    "copy-from": "science",
-    "extend": {
-      "items": [
-        { "group": "afs_advanced_magnet_scrapgroup", "prob": 20 },
-        { "group": "afs_advanced_heat_scrapgroup", "prob": 2 },
-        { "group": "afs_advanced_biomaterial_scrapgroup", "prob": 2 },
-        { "group": "afs_advanced_optics_scrapgroup", "prob": 20 }
-      ]
     }
   }
 ]

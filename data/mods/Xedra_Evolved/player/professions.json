@@ -1,14 +1,5 @@
 [
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "xedra_mags_troll",
-    "entries": [
-      { "item": "8x40_25_mag", "ammo-item": "8mm_hvp", "charges": 25 },
-      { "item": "8x40_25_mag", "ammo-item": "8mm_hvp", "charges": 25 }
-    ]
-  },
-  {
     "type": "profession",
     "id": "fbi_investigator",
     "name": "FBI Paranormal Investigator",

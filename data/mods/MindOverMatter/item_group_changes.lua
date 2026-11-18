@@ -1,4 +1,5 @@
 require("item_group_changes.itemgroups.books")
 require("item_group_changes.itemgroups.exodii")
 require("item_group_changes.itemgroups.feral_deathdrops")
+require("item_group_changes.itemgroups.matrix_technology_labs")
 require("item_group_changes.itemgroups.zombie_deathdrops")

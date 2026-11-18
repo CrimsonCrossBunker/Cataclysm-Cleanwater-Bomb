@@ -102,3 +102,15 @@ do
     group:item("bio_soporific", 2)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "mut_lab", kind = "distribution" }
+    group:item("kiernans_notes", 1)
+    group:item("iv_mutagen_tyrant", 3)
+    group:item("iv_mutagen_stego", 3)
+    group:item("iv_mutagen_horns", 3)
+    group:item("mutagen_tyrant", 5)
+    group:item("mutagen_stego", 5)
+    group:item("mutagen_horns", 5)
+    content.extend_item_group(group)
+end
