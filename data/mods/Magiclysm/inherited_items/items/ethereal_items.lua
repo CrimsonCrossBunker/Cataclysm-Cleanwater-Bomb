@@ -119,3 +119,53 @@ do
     item:melee_damage("bash", 1)
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "druid_dust",
+        name = ccb.content.plural_text("faintly glowing dust", "faintly glowing dust"),
+        description = ccb.content.text("This handful of fine dust glows with a growing intensity."),
+        mass_milligrams = 1000,
+        volume_ml = 30,
+        price_cents = 0,
+        symbol = "!",
+        color = "white",
+    }
+    item:clear_use_actions()
+    item:native_use("WATER_PURIFIER")
+    item:tool { initial_charges = 15, max_charges = 15 }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "technomancer_welder",
+        name = ccb.content.plural_text("voltaic touch", "voltaic touch"),
+        description = ccb.content.text("Your hands can spark with electricity powerful enough to heat metal to searing temperatures and weld it together.  You can also zap the undead with it."),
+        mass_milligrams = 0,
+        volume_ml = 0,
+        price_cents = 1,
+        price_postapoc_cents = 1,
+        symbol = "$",
+        color = "red",
+        max_worn = 1,
+        replace_qualities = true,
+        melee_to_hit = 0,
+    }
+    item:material("concentrated_mana", 1)
+    item:clear_flags()
+    item:flag("UNBREAKABLE")
+    item:flag("ZERO_WEIGHT")
+    item:flag("ALLOWS_NATURAL_ATTACKS")
+    item:flag("INTEGRATED")
+    item:flag("PADDED")
+    item:flag("PERSONAL")
+    item:flag("SEMITANGIBLE")
+    item:flag("NO_DROP")
+    item:quality("WELD", 2)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:melee_damage("electric", 6)
+    item:tool()
+    content.add(item)
+end
