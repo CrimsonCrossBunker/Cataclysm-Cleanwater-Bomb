@@ -4143,14 +4143,22 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
             std::move( definition ), transaction->token
         };
     } );
-    content.set_function( "extend_item_group", [transaction]( const item_group_definition_handle &
-    handle ) {
+    const auto register_item_group = [transaction]( const item_group_definition_handle &handle,
+    const definition_operation operation ) {
         if( handle.token != transaction->token ) {
             throw std::runtime_error( "cannot register an item group definition owned by another Mod" );
         }
         require_building_handle( handle.token, *handle.definition, "item group" );
         handle.definition->registered = true;
-        transaction->item_groups.push_back( { definition_operation::extend, handle.definition } );
+        transaction->item_groups.push_back( { operation, handle.definition } );
+    };
+    content.set_function( "extend_item_group",
+    [register_item_group]( const item_group_definition_handle & handle ) {
+        register_item_group( handle, definition_operation::extend );
+    } );
+    content.set_function( "upsert_item_group",
+    [register_item_group]( const item_group_definition_handle & handle ) {
+        register_item_group( handle, definition_operation::upsert );
     } );
     content.set_function( "AmmoEffect", [transaction]( const sol::table & options ) {
         if( transaction->token->lifecycle != handle_lifecycle::building ) {

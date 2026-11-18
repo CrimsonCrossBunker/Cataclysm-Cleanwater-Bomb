@@ -7278,6 +7278,8 @@ function CcbPlatformContent.replace(definition) end
 function CcbPlatformContent.edit(definition) end
 ---@param definition ItemGroupDefinition Entry-only patch for an existing group of the same kind; preserves prior entries and rolls back transactionally.
 function CcbPlatformContent.extend_item_group(definition) end
+---@param definition ItemGroupDefinition Complete group definition. Adds it when absent or replaces it at the owning Mod's load position when present.
+function CcbPlatformContent.upsert_item_group(definition) end
 
 ---@param id string Item id staged earlier by this Mod in the current candidate.
 ---@return ItemDefinition
