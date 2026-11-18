@@ -132,3 +132,5 @@ require("item_enchantments")
 require("weather_generators")
 
 require("monster_oubliette")
+
+require("portal_active_effects")
