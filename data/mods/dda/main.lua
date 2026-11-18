@@ -147,6 +147,8 @@ require("labyrinth_return_topics")
 
 require("void_spider_death")
 
+require("void_spider_spells")
+
 require("highland_incense_content")
 
 require("highland_incense")
