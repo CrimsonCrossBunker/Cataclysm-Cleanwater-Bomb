@@ -176,3 +176,92 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "extinguisher",
+        name = ccb.content.plural_text("large fire extinguisher", "large fire extinguishers"),
+        description = ccb.content.text("An emergency fire extinguisher containing five gallons of fire-retardant foam.  Useful for putting out adjacent fires."),
+        mass_milligrams = 7030000,
+        volume_ml = 20000,
+        longest_side_mm = 500,
+        price_cents = 5000,
+        price_postapoc_cents = 100,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "red",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_use_actions()
+    item:native_use("EXTINGUISHER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 16)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { extinguishing_agent = 100 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "sm_extinguisher",
+        name = ccb.content.plural_text("small fire extinguisher", "small fire extinguishers"),
+        description = ccb.content.text("A handheld fire extinguisher containing a liter of highly compressed CO2 gas.  Useful for putting out adjacent fires."),
+        mass_milligrams = 1133000,
+        volume_ml = 2000,
+        longest_side_mm = 400,
+        price_cents = 4000,
+        price_postapoc_cents = 50,
+        melee_to_hit = -2,
+        symbol = ";",
+        color = "red",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_use_actions()
+    item:native_use("EXTINGUISHER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 1, ammo_types = { "extinguishing_agent" } }
+    item:magazine_pocket { ammo_capacities = { extinguishing_agent = 10 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "throw_extinguisher",
+        category = "tools",
+        name = ccb.content.plural_text("throwable fire extinguisher", "throwable fire extinguishers"),
+        description = ccb.content.text("A fire extinguisher in grenade form.  While not as effective as a regular fire extinguisher, you can use it from a farther distance.  It has a plastic plug that can be pulled, but is primarily activated by heat, so just throw it into the flames."),
+        mass_milligrams = 630000,
+        volume_ml = 250,
+        price_cents = 3000,
+        price_postapoc_cents = 50,
+        melee_to_hit = -3,
+        symbol = "*",
+        color = "blue",
+    }
+    item:material("steel", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "throw_extinguisher_act", timer_turns = 3 },
+        need_wielding = true,
+        menu_text = ccb.content.text("Pull plug"),
+        message = ccb.content.text("You pull the plug on the extinguisher grenade."),
+    }
+    item:clear_flags()
+    item:flag("ACT_IN_FIRE")
+    item:flag("BOMB")
+    item:flag("GRENADE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool()
+    content.add(item)
+end
