@@ -2810,7 +2810,7 @@ function MonsterDefinition:fear_trigger(trigger) end
 ---@param trigger 'STALK'|'PLAYER_WEAK'|'PLAYER_CLOSE'|'HOSTILE_SEEN'|'HURT'|'FIRE'|'FRIEND_DIED'|'FRIEND_ATTACKED'|'SOUND'|'PLAYER_NEAR_BABY'|'MATING_SEASON'|'BRIGHT_LIGHT'
 ---@return MonsterDefinition self
 function MonsterDefinition:placate_trigger(trigger) end
----@param handler_id string
+---@param handler_id string Handler receiving a CcbMonsterDefinitionDeathPayload.
 ---@return MonsterDefinition self
 function MonsterDefinition:on_death(handler_id) end
 
@@ -15079,6 +15079,13 @@ local CcbMonstersApi = {}
 ---@return CcbNearbyMonstersResult result
 function CcbMonstersApi.nearby(origin, radius, ids) end
 
+---Cast a native fake spell from a live monster. With no target, use the caster's tile.
+---@param monster GameHandle Exact live Monster.
+---@param spell GameId GameId<spell>.
+---@param options? CcbCharacterCastSpellOptions
+---@return CcbResult
+function CcbMonstersApi.cast_spell(monster, spell, options) end
+
 ---@class CcbNearbyMonsterCountOptions
 ---@field radius? integer Native game distance in 0..1000; defaults to 1000.
 ---@field attitude? 'hostile'|'friendly'|'both' Native monster attitude relative to the active player; defaults to hostile.
@@ -15110,3 +15117,16 @@ function CcbMonstersApi.seeing_position(position, radius) end
 ---@param friendly boolean True sets permanent friendliness (-1); false sets 0.
 ---@return CcbResult result
 function CcbMonstersApi.set_friendly(monster, friendly) end
+
+---@class CcbMonsterDefinitionDeathPayload
+---@field monster_type_id string Native id of the dying monster.
+---@field monster GameHandle Identity of the dying monster. Live-creature services still reject it.
+---@field killer? GameHandle Native killer identity, when supplied.
+---@field position CcbPlatformAbsoluteMapSquarePayload Position of the dying monster.
+---@field killer_position? TripointCoord Killer's absolute map-square position, when supplied.
+---@field get_number fun(key: string): number? Read a number from the dying monster's native variables during this callback. A missing value returns nil.
+
+---Bind an existing monster's Lua death callback without redefining its native stats, attacks, or corpse rules.
+---@param monster_id string Native or same-transaction Monster id.
+---@param handler_id string Named handler receiving a CcbMonsterDefinitionDeathPayload.
+function CcbPlatformContent.bind_monster_death(monster_id, handler_id) end

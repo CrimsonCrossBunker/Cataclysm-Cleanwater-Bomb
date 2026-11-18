@@ -3085,7 +3085,7 @@ sol::table emit_character(
                state, sol::make_object( state, std::move( value ) ) );
 }
 
-struct character_cast_spell_options {
+struct cast_spell_options {
     bool hit_self = false;
     bool targeted = false;
     int min_level = 0;
@@ -3117,14 +3117,13 @@ std::optional<std::string> combat_message_option(
     return result;
 }
 
-character_cast_spell_options read_character_cast_spell_options(
-    const sol::optional<sol::table> &requested )
+cast_spell_options read_cast_spell_options(
+    const sol::optional<sol::table> &requested, const std::string_view api_name )
 {
-    character_cast_spell_options result;
+    cast_spell_options result;
     if( !requested ) {
         return result;
     }
-    constexpr std::string_view api_name = "services.characters.cast_spell";
     reject_unknown_combat_options(
     *requested, api_name, {
         "hit_self", "min_level", "max_level", "message", "npc_message",
@@ -3158,31 +3157,41 @@ character_cast_spell_options read_character_cast_spell_options(
     }
     if( result.targeted && result.target ) {
         throw std::invalid_argument(
-            "services.characters.cast_spell cannot combine target with targeted=true" );
+            std::string( api_name ) + " cannot combine target with targeted=true" );
     }
     if( result.max_level && *result.max_level < result.min_level ) {
         throw std::invalid_argument(
-            "services.characters.cast_spell max_level cannot be below min_level" );
+            std::string( api_name ) + " max_level cannot be below min_level" );
     }
     return result;
 }
 
-sol::table cast_spell_character(
+enum class spell_caster_kind {
+    character,
+    monster
+};
+
+sol::table cast_spell_from_handle(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_spell,
     const sol::optional<sol::table> &requested_options,
     const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation )
+    const std::size_t world_generation,
+    const spell_caster_kind caster_kind )
 {
-    require_id_kind( requested_spell, "spell", "services.characters.cast_spell" );
-    const character_cast_spell_options options =
-        read_character_cast_spell_options( requested_options );
+    const bool is_monster = caster_kind == spell_caster_kind::monster;
+    const std::string api_name = is_monster ? "services.monsters.cast_spell" :
+                                 "services.characters.cast_spell";
+    require_id_kind( requested_spell, "spell", api_name );
+    const cast_spell_options options = read_cast_spell_options( requested_options, api_name );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
-    Character *character = resolve_exact_character(
-                               handle, runtime_generation,
-                               world_generation, error );
-    if( character == nullptr ) {
+    Creature *caster = is_monster ?
+                       static_cast<Creature *>( resolve_exact_monster(
+                               handle, runtime_generation, world_generation, error ) ) :
+                       static_cast<Creature *>( resolve_exact_character(
+                               handle, runtime_generation, world_generation, error ) );
+    if( caster == nullptr ) {
         return make_game_error_result( state, *error );
     }
     fake_spell fake( spell_id( requested_spell.value() ), options.hit_self,
@@ -3196,16 +3205,16 @@ sol::table cast_spell_character(
     }
     if( !fake.is_valid() ) {
         throw std::invalid_argument(
-            "services.characters.cast_spell requires a valid spell id" );
+            api_name + " requires a valid spell id" );
     }
-    spell native_spell = fake.get_spell( *character, 0 );
+    spell native_spell = fake.get_spell( *caster, 0 );
     std::optional<tripoint_bub_ms> target;
     if( options.targeted ) {
-        target = native_spell.select_target( character );
+        target = native_spell.select_target( caster );
     } else {
         target = options.target ?
                  combat_bub_position( *options.target ) :
-                 character->pos_bub( get_map() );
+                 caster->pos_bub( get_map() );
     }
     sol::table value = state.create_table();
     value["spell"] = requested_spell;
@@ -3222,9 +3231,11 @@ sol::table cast_spell_character(
         return make_game_value_result(
                    state, sol::make_object( state, std::move( value ) ) );
     }
-    native_spell.cast_all_effects( *character, *target );
-    character->add_msg_player_or_npc(
-        fake.trigger_message, fake.npc_trigger_message );
+    const safe_reference<Creature> caster_ref = caster->get_safe_reference();
+    native_spell.cast_all_effects( *caster, *target );
+    if( Creature *remaining = caster_ref.get() ) {
+        remaining->add_msg_player_or_npc( fake.trigger_message, fake.npc_trigger_message );
+    }
     value["target"] = script_tripoint_coord::from_native(
                           coords::origin::abs, coords::scale::map_square,
                           get_map().get_abs( *target ).raw() );
@@ -4682,6 +4693,16 @@ void install_creature_api(
 
     sol::table monsters = lua.create_table();
     monsters.set_function(
+        "cast_spell",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & spell, const sol::optional<sol::table> &options ) {
+        require_write();
+        return cast_spell_from_handle(
+                   lua_state, handle, spell, options,
+                   current_runtime_generation(), current_world_generation(), spell_caster_kind::monster );
+    } );
+    monsters.set_function(
         "nearby",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const script_tripoint_coord & origin, const int radius,
@@ -5274,9 +5295,9 @@ void install_creature_api(
             sol::this_state lua_state, const game_handle & handle,
     const script_game_id & spell, const sol::optional<sol::table> &options ) {
         require_write();
-        return cast_spell_character(
+        return cast_spell_from_handle(
                    lua_state, handle, spell, options,
-                   current_runtime_generation(), current_world_generation() );
+                   current_runtime_generation(), current_world_generation(), spell_caster_kind::character );
     } );
     characters.set_function(
         "die",

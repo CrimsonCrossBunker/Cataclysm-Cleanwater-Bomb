@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 954,
+    "class_count": 955,
     "classes": [
       {
         "fields": [
@@ -8148,17 +8148,52 @@
       {
         "fields": [
           {
-            "line": 15094,
+            "line": 15101,
             "name": "remove_corpse",
             "type": "boolean"
           },
           {
-            "line": 15095,
+            "line": 15102,
             "name": "suppress_message",
             "type": "boolean"
           }
         ],
         "name": "CcbMonsterDeathOptions"
+      },
+      {
+        "fields": [
+          {
+            "line": 15127,
+            "name": "get_number",
+            "type": "fun(key:"
+          },
+          {
+            "line": 15124,
+            "name": "killer",
+            "type": "GameHandle"
+          },
+          {
+            "line": 15126,
+            "name": "killer_position",
+            "type": "TripointCoord"
+          },
+          {
+            "line": 15123,
+            "name": "monster",
+            "type": "GameHandle"
+          },
+          {
+            "line": 15122,
+            "name": "monster_type_id",
+            "type": "string"
+          },
+          {
+            "line": 15125,
+            "name": "position",
+            "type": "CcbPlatformAbsoluteMapSquarePayload"
+          }
+        ],
+        "name": "CcbMonsterDefinitionDeathPayload"
       },
       {
         "fields": [
@@ -8495,12 +8530,12 @@
       {
         "fields": [
           {
-            "line": 15084,
+            "line": 15091,
             "name": "attitude",
             "type": "'hostile'|'friendly'|'both'"
           },
           {
-            "line": 15083,
+            "line": 15090,
             "name": "radius",
             "type": "integer"
           }
@@ -29015,7 +29050,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1651,
+    "function_count": 1653,
     "functions": [
       {
         "line": "4330",
@@ -30686,13 +30721,19 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "15091",
+        "line": "15087",
+        "name": "cast_spell",
+        "owner": "CcbMonstersApi",
+        "parameters": "monster, spell, options"
+      },
+      {
+        "line": "15098",
         "name": "count_nearby",
         "owner": "CcbMonstersApi",
         "parameters": "origin, ids, options"
       },
       {
-        "line": "15101",
+        "line": "15108",
         "name": "die",
         "owner": "CcbMonstersApi",
         "parameters": "monster, options"
@@ -30704,13 +30745,13 @@
         "parameters": "origin, radius, ids"
       },
       {
-        "line": "15107",
+        "line": "15114",
         "name": "seeing_position",
         "owner": "CcbMonstersApi",
         "parameters": "position, radius"
       },
       {
-        "line": "15112",
+        "line": "15119",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
@@ -32580,6 +32621,12 @@
         "name": "append_speech_pool",
         "owner": "CcbPlatformContent",
         "parameters": "definition"
+      },
+      {
+        "line": "15132",
+        "name": "bind_monster_death",
+        "owner": "CcbPlatformContent",
+        "parameters": "monster_id, handler_id"
       },
       {
         "line": "7851",
@@ -39003,7 +39050,7 @@
         "lua_name": "AnatomyDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3403,
+          "line": 3404,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39059,7 +39106,7 @@
         "lua_name": "BehaviorDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3296,
+          "line": 3297,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39101,7 +39148,7 @@
         "lua_name": "BodyGraphDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3407,
+          "line": 3408,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39115,7 +39162,7 @@
         "lua_name": "BodyPartDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3370,
+          "line": 3371,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39241,7 +39288,7 @@
         "lua_name": "ConnectGroupDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3469,
+          "line": 3470,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39353,7 +39400,7 @@
         "lua_name": "DiseaseTypeDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3442,
+          "line": 3443,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39381,7 +39428,7 @@
         "lua_name": "EffectTypeDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3304,
+          "line": 3305,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39395,7 +39442,7 @@
         "lua_name": "EmissionDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3458,
+          "line": 3459,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -39549,7 +39596,7 @@
         "lua_name": "FieldTypeDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3345,
+          "line": 3346,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40067,7 +40114,7 @@
         "lua_name": "MonsterAttackDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3330,
+          "line": 3331,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40081,7 +40128,7 @@
         "lua_name": "MonsterDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3412,
+          "line": 3413,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40095,7 +40142,7 @@
         "lua_name": "MonsterFactionDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3462,
+          "line": 3463,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40109,7 +40156,7 @@
         "lua_name": "MonsterFlagDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3446,
+          "line": 3447,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40151,7 +40198,7 @@
         "lua_name": "MoraleTypeDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3438,
+          "line": 3439,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40179,7 +40226,7 @@
         "lua_name": "MutationCategoryDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3472,
+          "line": 3473,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40193,7 +40240,7 @@
         "lua_name": "MutationDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3477,
+          "line": 3478,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40207,7 +40254,7 @@
         "lua_name": "MutationTypeDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3466,
+          "line": 3467,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -40991,7 +41038,7 @@
         "lua_name": "SpeciesDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3449,
+          "line": 3450,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -41061,7 +41108,7 @@
         "lua_name": "SubBodyPartDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3352,
+          "line": 3353,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -41355,7 +41402,7 @@
         "lua_name": "WeakpointSetDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3336,
+          "line": 3337,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -41425,7 +41472,7 @@
         "lua_name": "WoundDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3359,
+          "line": 3360,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },
@@ -41439,7 +41486,7 @@
         "lua_name": "WoundFixDefinition",
         "registration": {
           "installer": "platform_v1.creatures_content_transaction.install_lua_api",
-          "line": 3392,
+          "line": 3393,
           "namespace": "ccb",
           "path": "src/lua_platform_content_creatures.cpp"
         },

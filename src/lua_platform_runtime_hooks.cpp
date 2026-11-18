@@ -3938,6 +3938,24 @@ void invoke_monster_death_handler(
     point["y"] = position.y();
     point["z"] = position.z();
     payload["position"] = std::move( point );
+    if( killer != nullptr ) {
+        payload["killer_position"] = script_tripoint_coord::from_native(
+                                        coords::origin::abs, coords::scale::map_square, killer->pos_abs().raw() );
+    }
+    // Keep reads scoped to this invocation, without making a dead GameHandle live.
+    const std::shared_ptr<safe_reference<Creature>> variable_source =
+        std::make_shared<safe_reference<Creature>>( monster.get_safe_reference() );
+    payload.set_function( "get_number",
+    [source = std::weak_ptr<safe_reference<Creature>>( variable_source )](
+    const std::string &key ) -> std::optional<double> {
+        const std::shared_ptr<safe_reference<Creature>> readable = source.lock();
+        const Creature *dead = readable ? readable->get() : nullptr;
+        if( dead == nullptr ) {
+            throw std::runtime_error( "Monster death variable reads require an active death callback" );
+        }
+        const diag_value *stored = dead->maybe_get_value( key );
+        return stored ? std::optional<double>( stored->dbl() ) : std::nullopt;
+    } );
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( *owner );
     const sol::protected_function_result result = callback( payload );

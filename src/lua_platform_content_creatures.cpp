@@ -3218,6 +3218,7 @@ struct creatures_content_transaction::impl {
     std::vector<anatomy_registration> anatomies;
     std::vector<body_graph_registration> body_graphs;
     std::vector<monster_registration> monsters;
+    std::map<std::string, std::string> monster_death_bindings;
     std::vector<morale_type_registration> morale_types;
     std::vector<disease_type_registration> disease_types;
     std::vector<monster_flag_registration> monster_flags;
@@ -4092,6 +4093,16 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         return handle;
     } );
 
+    content.set_function( "bind_monster_death", [this]( const std::string & id,
+    const std::string & handler ) {
+        if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
+            throw std::runtime_error( "content transaction is no longer building" );
+        }
+        if( !pimpl_->monster_death_bindings.emplace( id, handler ).second ) {
+            throw std::runtime_error( "monster '" + id + "' has more than one death binding" );
+        }
+    } );
+
     const auto edit_catalog = [this]( const std::string & id, auto & registrations,
     const char *kind ) {
         if( pimpl_->token->lifecycle != handle_lifecycle::building ) {
@@ -4370,6 +4381,16 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 return entry.definition->id == id;
             } ) || native_exists( std::string( id ) );
         };
+        for( const auto &[id, handler] : pimpl_->monster_death_bindings ) {
+            require_valid_id( id, "monster" );
+            require_valid_id( handler, "monster death handler" );
+            if( !staged( pimpl_->monsters, id, native_monster ) ) {
+                throw std::runtime_error( "death binding references unknown monster '" + id + "'" );
+            }
+            if( owner_runtime.handlers.count( handler ) == 0 ) {
+                throw std::runtime_error( "monster '" + id + "' references missing death handler" );
+            }
+        }
         const auto item_exists = [&index, check_engine_state]( const std::string & id ) {
             return !id.empty() && ( !check_engine_state ||
                                     ( index.defines_item && index.defines_item( id ) ) ||
@@ -6010,7 +6031,8 @@ void creatures_content_transaction::impl::apply_monster()
     auto &registry = detail::monster_type_registry();
     auto &generator = MonsterGenerator::generator();
     auto &loader = DynamicDataLoader::get_instance();
-    if( !this->monsters.empty() && !loader.is_data_finalized() ) {
+    if( ( !this->monsters.empty() || !this->monster_death_bindings.empty() ) &&
+        !loader.is_data_finalized() ) {
         registry.resolve_deferred();
     }
     const auto find_parent = [&registry]( const std::string & id ) -> const mtype * {
@@ -6221,6 +6243,17 @@ void creatures_content_transaction::impl::apply_monster()
         }
         mtype &inserted = registry.insert( native );
         generator.finalize_lua_first_mtype_if_ready( inserted, loader.is_data_finalized() );
+    }
+    for( const auto &[id, handler] : this->monster_death_bindings ) {
+        const mtype_id native_id( id );
+        if( !registry.is_valid( native_id ) ) {
+            throw std::runtime_error( "death binding references unknown monster '" + id + "'" );
+        }
+        mtype native = registry.obj( native_id );
+        this->monster_undo.emplace_back( native_id, native );
+        native.mdeath_effect.lua_platform_mod = this->owner;
+        native.mdeath_effect.lua_platform_handler = handler;
+        registry.insert( native );
     }
     if( !this->monsters.empty() ) {
         if( !loader.is_data_finalized() ) {
@@ -7598,6 +7631,11 @@ void creatures_content_transaction::append_fingerprint(
             }
         }
     } else if( phase == creatures_content_fingerprint_phase::monster ) {
+        for( const auto &[id, handler] : pimpl_->monster_death_bindings ) {
+            hash_part( state, "monster_death_binding" );
+            hash_part( state, id );
+            hash_part( state, handler );
+        }
         for( const auto &entry : pimpl_->monsters ) {
             hash_part( state, "monster" );
             hash_part( state, operation_name( entry.operation ) );
