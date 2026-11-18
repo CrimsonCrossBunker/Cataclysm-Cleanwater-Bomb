@@ -1,47 +1,5 @@
 [
   {
-    "id": "starterkit_items",
-    "type": "item_group",
-    "//": "What you'll find in your starter kit.",
-    "subtype": "collection",
-    "entries": [
-      { "item": "mbag", "count": 5 },
-      { "item": "pants", "count": 5, "variant": "generic_pants" },
-      { "item": "tshirt", "count": 5, "variant": "generic_tshirt" },
-      { "item": "socks", "count": 5 },
-      { "item": "sneakers", "count": 5 },
-      { "item": "tent_kit", "count": 1 }
-    ]
-  },
-  {
-    "id": "si_trash_heap",
-    "type": "item_group",
-    "//": "What you'll find in your starter kit.",
-    "subtype": "collection",
-    "entries": [
-      { "group": "SUS_trash_floor", "count": [ 55, 70 ] },
-      { "group": "SUS_trash_forest_no_manmade", "count": [ 80, 100 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "random_artifact_pool",
-    "subtype": "distribution",
-    "//": "A random artifact, preferring weak, but sometimes powerful.",
-    "items": [
-      { "group": "ps_artifact_weak", "prob": 80, "count": 1 },
-      { "group": "ps_artifact_medium", "prob": 15, "count": 1 },
-      { "group": "ps_artifact_strong", "prob": 5, "count": 1 }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "warp_mission_goal",
-    "subtype": "distribution",
-    "//": "A range of tokens for the wildcard grab missions.",
-    "items": [ { "item": "warptoken", "prob": 100, "count": [ 1, 6 ] } ]
-  },
-  {
     "type": "ITEM",
     "subtypes": [ "ARMOR" ],
     "id": "warpbag_base",

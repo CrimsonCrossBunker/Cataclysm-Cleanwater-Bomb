@@ -1,12 +1,5 @@
 [
   {
-    "id": "SUS_exodii_storage_lowvalue",
-    "type": "item_group",
-    "copy-from": "SUS_exodii_storage_lowvalue",
-    "subtype": "distribution",
-    "extend": { "entries": [ { "group": "si_exodii_cbms_low_value", "prob": 20 } ] }
-  },
-  {
     "id": "SUS_exodii_storage_medvalue",
     "type": "item_group",
     "copy-from": "SUS_exodii_storage_medvalue",
@@ -75,17 +68,6 @@
         "prob": 30
       },
       { "group": "Zomborg_CBM_harvest_sensors", "prob": 60 }
-    ]
-  },
-  {
-    "id": "si_exodii_cbms_high_value",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "Zomborg_CBM_harvest_stat_enhancements", "prob": 60 },
-      { "group": "Zomborg_CBM_harvest_fancy_defense", "prob": 50 },
-      { "group": "Zomborg_CBM_harvest_expensive_utilities", "prob": 30 },
-      { "group": "Zomborg_CBM_harvest_expensive_combat_systems", "prob": 20 }
     ]
   }
 ]

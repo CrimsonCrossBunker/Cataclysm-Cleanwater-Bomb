@@ -2,6 +2,8 @@ require("flags")
 
 require("requirements")
 
+require("item_groups")
+
 require("effect_enchantments")
 
 require("inline_enchantment_conditions")

@@ -66,18 +66,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "si_exodii_cbm_merchant_wield",
-    "subtype": "collection",
-    "entries": [ { "item": "exodii_plasma_projectile" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "si_exodii_cbm_merchant_carried",
-    "subtype": "collection",
-    "entries": [ { "item": "caotel_plasma_ring" } ]
-  },
-  {
     "type": "shopkeeper_whitelist",
     "id": "si_exodii_cbm_merchant_whitelist",
     "message": "<npcname> jerks their head up and to their right before pointing to a bowl of precious gems.",

@@ -69,18 +69,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "si_triffid_decor_merchant_wield",
-    "subtype": "collection",
-    "entries": [  ]
-  },
-  {
-    "type": "item_group",
-    "id": "si_triffid_decor_merchant_worn",
-    "subtype": "collection",
-    "entries": [  ]
-  },
-  {
     "type": "shopkeeper_whitelist",
     "id": "si_triffid_decor_merchant_whitelist",
     "message": "<npcname>'s fronds wave back and forth vigorously.",
@@ -111,46 +99,6 @@
       { "item": "teddy_bear" },
       { "item": "shark_plushie" }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "SI_TRIFFID_DECOR_MERCHANT_CARPETS",
-    "subtype": "collection",
-    "entries": [
-      { "item": "p_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "y_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "g_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "g_carpet", "prob": 90, "count": [ 5, 12 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "SI_TRIFFID_DECOR_Store",
-    "subtype": "collection",
-    "entries": [
-      { "item": "p_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "y_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "g_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "g_carpet", "prob": 90, "count": [ 5, 12 ] },
-      { "item": "birdbath_token", "prob": 80, "count": [ 1, 2 ] },
-      { "item": "display_case_token", "prob": 80, "count": [ 1, 2 ] },
-      { "item": "planter_token", "prob": 80, "count": [ 1, 2 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "SI_TRIFFID_DECOR_Store_Tier3",
-    "subtype": "collection",
-    "entries": [
-      { "item": "statue_token", "prob": 90, "count": [ 1, 2 ] },
-      { "item": "glass_door_token", "prob": 70, "count": [ 1, 2 ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "SI_TRIFFID_DECOR_Store_Tier4",
-    "subtype": "collection",
-    "entries": [ { "item": "corpse_yugg_jade", "prob": 5, "count": 1 } ]
   },
   {
     "type": "talk_topic",
