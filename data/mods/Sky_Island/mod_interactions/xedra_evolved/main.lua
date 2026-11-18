@@ -20,3 +20,16 @@ content.add(content.Mutation {
 content.replace(content.Blacklist { kind = "scenario", whitelist = true }
     :entry("scenario_warper")
     :entry("scenario_warper_unique_paths"))
+
+for _, profession in ipairs {
+    "paraclesian_sylph",
+    "paraclesian_homullus",
+    "paraclesian_salamander",
+    "paraclesian_undine",
+    "paraclesian_arvore",
+    "paraclesian_ierde",
+} do
+    content.patch_profession(profession, { remove_flags = { "SCEN_ONLY" } })
+end
+
+require("mod_interactions.xedra_evolved.hobbies")
