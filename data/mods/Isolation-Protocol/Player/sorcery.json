@@ -56,40 +56,6 @@
     "max_range": 25
   },
   {
-    "id": "iso_eldritch_stun_blind_deaf",
-    "type": "SPELL",
-    "name": "Inescapable Tesseract of Thought",
-    "description": "Lock the target's mind away from its senses, leaving it incapable of perceiving the outside world in any way.",
-    "valid_targets": [ "hostile" ],
-    "flags": [ "ENERVATION_SPELL", "RANDOM_DAMAGE", "VERBAL", "SOMATIC", "NO_LEGS", "SILENT", "NO_PROJECTILE" ],
-    "spell_class": "iso_eldritch_sorcery",
-    "magic_type": "iso_eldritch_sorcery",
-    "difficulty": 1,
-    "max_level": 30,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_ISO_ELDRITCH_STUN_BLIND_DEAF",
-    "shape": "blast",
-    "min_duration": { "math": [ "(u_spell_level('iso_eldritch_stun_blind_deaf') * 150) + 300" ] },
-    "max_duration": { "math": [ "(u_spell_level('iso_eldritch_stun_blind_deaf') * 375) + 900" ] },
-    "min_range": 4,
-    "range_increment": 0.33,
-    "max_range": 20,
-    "base_energy_cost": 150,
-    "base_casting_time": 125
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ISO_ELDRITCH_STUN_BLIND_DEAF",
-    "effect": [
-      { "math": [ "_buff_duration_lower = ((u_spell_level('iso_eldritch_stun_blind_deaf') * 1.50) + 3.00)" ] },
-      { "math": [ "_buff_duration_upper = ((u_spell_level('iso_eldritch_stun_blind_deaf') * 3.75) + 9.00)" ] },
-      { "math": [ "_buff_duration = rng(_buff_duration_lower, _buff_duration_upper)" ] },
-      { "u_add_effect": "blind", "duration": { "math": [ "_buff_duration" ] } },
-      { "u_add_effect": "deaf", "duration": { "math": [ "_buff_duration" ] } },
-      { "u_add_effect": "stunned", "duration": { "math": [ "_buff_duration" ] } }
-    ]
-  },
-  {
     "id": "iso_eldritch_summon_hindering_darkness",
     "type": "SPELL",
     "name": "The Crawling Tendrils of Utternight",
@@ -259,45 +225,6 @@
     "base_casting_time": 150
   },
   {
-    "id": "iso_eldritch_invisibile_and_intangible",
-    "type": "SPELL",
-    "name": "The Umbral Transfiguration",
-    "description": "Turn yourself into a living shadow, becoming intangible and imperceptible, allowing you slip past enemies with ease.  However, you cannot cast it in areas of bright light.",
-    "valid_targets": [ "self" ],
-    "flags": [ "TRANSFORMATION_SPELL", "VERBAL", "SOMATIC", "NO_LEGS" ],
-    "spell_class": "iso_eldritch_sorcery",
-    "magic_type": "iso_eldritch_sorcery",
-    "caster_condition": { "math": [ "u_val('fine_detail_vision_mod') >= 3" ] },
-    "difficulty": 5,
-    "max_level": 30,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_ISO_ELDRITCH_INVISIBLE_AND_INTANGIBLE",
-    "shape": "blast",
-    "min_duration": { "math": [ "(u_spell_level('iso_eldritch_invisibile_and_intangible') * 911) + 2851" ] },
-    "max_duration": { "math": [ "(u_spell_level('iso_eldritch_invisibile_and_intangible') * 2153) + 8435" ] },
-    "base_energy_cost": { "math": [ "u_effect_intensity('effect_iso_eldritch_invisibile_and_intangible') > -1 ? 0 : 450" ] },
-    "base_casting_time": { "math": [ "u_effect_intensity('effect_iso_eldritch_invisibile_and_intangible') > -1 ? 10 : 500" ] }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_ISO_ELDRITCH_INVISIBLE_AND_INTANGIBLE",
-    "condition": { "not": { "u_has_effect": "effect_iso_eldritch_invisibile_and_intangible" } },
-    "effect": [
-      { "math": [ "_buff_duration_lower = ( (u_spell_level('iso_eldritch_invisibile_and_intangible') * 9.11) + 28.51 )" ] },
-      {
-        "math": [ "_buff_duration_upper = ( (u_spell_level('iso_eldritch_invisibile_and_intangible') * 21.53) + 84.35 )" ]
-      },
-      { "math": [ "_buff_duration = rng(_buff_duration_lower, _buff_duration_upper)" ] },
-      { "u_message": "Duration is <context_val:buff_duration>.", "type": "debug" },
-      {
-        "u_add_effect": "effect_iso_eldritch_invisibile_and_intangible",
-        "duration": { "math": [ "_buff_duration" ] }
-      },
-      { "u_add_effect": "incorporeal", "duration": { "math": [ "_buff_duration" ] } }
-    ],
-    "false_effect": [ { "u_lose_effect": "incorporeal" }, { "u_lose_effect": "effect_iso_eldritch_invisibile_and_intangible" } ]
-  },
-  {
     "id": "iso_eldritch_cure_poison_disease_gas",
     "type": "SPELL",
     "name": "To Walk Amidst the Fens",
@@ -337,23 +264,6 @@
     "aoe_increment": 0.2,
     "base_energy_cost": 100,
     "base_casting_time": 75
-  },
-  {
-    "id": "iso_eldritch_damage_shield",
-    "type": "SPELL",
-    "name": "Impenetrable Coruscating Scales of Vishkan",
-    "description": "Summon the power of an elder wyrm, creating a shell of impenetrable dragon scales around your body.  The scales will withstand a number of blows before the enchant collapse, though their lambent glow will give away your position in the dark.  The enchantment will last several blows before collapsing, and may be canceled at any time.",
-    "valid_targets": [ "self" ],
-    "flags": [ "ENHANCEMENT_SPELL", "VERBAL", "SOMATIC", "NO_LEGS" ],
-    "spell_class": "iso_eldritch_sorcery",
-    "magic_type": "iso_eldritch_sorcery",
-    "difficulty": 6,
-    "max_level": 30,
-    "effect": "effect_on_condition",
-    "effect_str": "EOC_ISO_ELDRITCH_DAMAGE_SHIELD_INITIATE",
-    "shape": "blast",
-    "base_energy_cost": { "math": [ "u_effect_intensity('effect_iso_eldritch_damage_shield') > -1 ? 0 : 500" ] },
-    "base_casting_time": { "math": [ "u_effect_intensity('effect_iso_eldritch_damage_shield') > -1 ? 10 : 350" ] }
   },
   {
     "id": "iso_eldritch_destroy_nether",

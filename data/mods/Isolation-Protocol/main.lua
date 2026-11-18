@@ -16,6 +16,8 @@ require("enchantment_variables")
 
 require("effect_enchantments")
 
+require("sorcery_spells")
+
 require("item_enchantments")
 
 require("sidebar_extensions")
