@@ -7648,9 +7648,9 @@ function CcbPlatformTasks.after(turns, handler_id, payload, payload_version, sco
 
 ---Schedule a saved callback on the Character's own turn. The callback receives
 ---the exact Character and its original absolute due turn.
----A zero-delay callback queued during a turn pass runs on the next pass, including nested queue dispatch.
+---A callback queued during a turn pass for the current or a past turn runs on the next pass, including nested queue dispatch.
 ---@param character GameHandle Exact live Character.
----@param turns integer Non-negative delay in turns, within the game calendar.
+---@param turns integer Signed delay in turns whose absolute due turn fits the game calendar. Past due turns are retained without clamping.
 ---@param handler_id string Registered handler with payload fields `character` and `due_turn`.
 ---@param data? table<string,boolean|number|string|NullValue|TripointCoord|any[]> Copied saved callback data, returned as payload.data. Each value uses the saved-value bridge's 512-node, eight-level array and 8192-byte string bounds. Boolean and integer types, explicit NullValue slots and absolute map-square coordinates are preserved; live handles and functions are rejected.
 function CcbPlatformTasks.after_character_turn(character, turns, handler_id, data) end
