@@ -186,10 +186,5 @@
       { "text": "Thanks for that.", "topic": "TALK_FRIEND_CONVERSATION" },
       { "text": "Thanks for that.  <lets_go>", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "BGSS_Merc_haswhisky",
-    "//": "Defined here because this should be the only time this effect is referenced."
   }
 ]

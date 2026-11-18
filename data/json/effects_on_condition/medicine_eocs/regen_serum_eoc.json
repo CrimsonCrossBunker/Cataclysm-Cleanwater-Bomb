@@ -5,42 +5,5 @@
     "//": "return ratio between calories you spent yesterday and calories you ingested yesterday. if bigger than 1, you consumed more calories than you ingested",
     "num_args": 0,
     "return": "max( get_calories_daily('type':'spent', 'day':1), 1 ) / max( get_calories_daily('type':'ingested', 'day':1), 1 )"
-  },
-  {
-    "type": "effect_type",
-    "id": "regen_serum_main",
-    "name": [ "Injected 48x-\"Locutus\"" ],
-    "desc": [
-      "You just took a shot of some weird stuff.  You feel sleepy, nauseous, and generally weak, but your wounds are closing up at an unnatural pace."
-    ],
-    "apply_message": "Without hesitation, you draw the liquid from the ampule, smack it a bit to release any air, and inject it right into a vein, hoping it won't kill you.",
-    "remove_message": "You feel your rapid regeneration fade away, but you still feel sick.",
-    "rating": "mixed",
-    "flags": [ "MEND_ALL" ],
-    "removes_effects": [ "regen_serum_crash_fatigue" ],
-    "dur_add_perc": 33,
-    "enchantments": [
-      "INLINE_ENCH_regen_serum_main_0"
-    ]
-  },
-  {
-    "type": "effect_type",
-    "id": "regen_serum_crash_cardio",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "apply_message": "",
-    "remove_message": "",
-    "enchantments": [
-      "INLINE_ENCH_regen_serum_crash_cardio_0"
-    ]
-  },
-  {
-    "type": "effect_type",
-    "id": "regen_serum_crash_fatigue",
-    "name": [ "Injected Serum Crash" ],
-    "desc": [ "Your body regeneration is not as fast as before, but you still feel some weakness." ],
-    "apply_message": "",
-    "remove_message": "",
-    "enchantments": [ "INLINE_ENCH_regen_serum_crash_fatigue_0" ]
   }
 ]

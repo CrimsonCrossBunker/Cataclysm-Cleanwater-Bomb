@@ -1,61 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "learning_serum_main",
-    "name": [ "Injected 76x-\"Lore\"" ],
-    "desc": [
-      "You just took a shot of some weird stuff.  You feel sleepy, nauseous, and generally weak, but your wounds are closing up at an unnatural pace."
-    ],
-    "apply_message": "Without hesitation, you draw the liquid from the ampule, smack it a bit to release any air, and inject it right into a vein, hoping it won't kill you.",
-    "remove_message": "Your thoughts slow gradually.",
-    "rating": "mixed",
-    "max_intensity": 100,
-    "int_add_val": 1,
-    "show_intensity": false,
-    "dur_add_perc": 10,
-    "removes_effects": [ "learning_serum_crash" ],
-    "base_mods": {
-      "blood_pressure_tick": [ 100 ],
-      "blood_pressure_chance": [ 5 ],
-      "blood_pressure_min": [ 5 ],
-      "blood_pressure_max_val": [ 1000 ],
-      "heart_rate_tick": [ 200 ],
-      "heart_rate_min": [ 2 ],
-      "heart_rate_chance": [ 5 ],
-      "heart_rate_max_val": [ 150 ]
-    },
-    "scaling_mods": { "heart_rate_min": [ 1 ] },
-    "enchantments": [
-      "INLINE_ENCH_learning_serum_main_0",
-      "INLINE_ENCH_learning_serum_main_1",
-      "INLINE_ENCH_learning_serum_main_2",
-      "INLINE_ENCH_learning_serum_main_3"
-    ],
-    "flags": [ "MYOPIC_IN_LIGHT", "CANNOT_SLEEP" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "learning_serum_crash",
-    "name": [ "Injected Serum Crash" ],
-    "desc": [ "Your enhanced focus has faded away, light seems too bright, and you're pretty tired." ],
-    "apply_message": "",
-    "remove_message": "",
-    "enchantments": [
-      "INLINE_ENCH_learning_serum_crash_0",
-      "INLINE_ENCH_learning_serum_crash_1"
-    ],
-    "flags": [ "MYOPIC_IN_LIGHT" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "learning_serum_light_pain",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "apply_message": "",
-    "remove_message": "",
-    "base_mods": { "pain_min": [ 1 ], "pain_max": [ 3 ], "pain_max_val": [ 25 ], "pain_chance": [ 4 ], "pain_tick": [ 120 ] }
-  },
-  {
     "id": "learning_serum_time_slow_perception_spell",
     "type": "SPELL",
     "name": { "str": "Lore Serum Slow Time", "//~": "NO_I18N" },
@@ -73,15 +17,5 @@
     "id": "EOC_LEARNING_SERUM_SLOW_TIME_EFFECT",
     "condition": { "and": [ { "x_in_y_chance": { "x": 1, "y": 5 } }, { "not": { "u_has_effect": "regen_serum_slow_time" } } ] },
     "effect": [ { "u_add_effect": "regen_serum_slow_time", "duration": [ "3 s", "10 s" ] } ]
-  },
-  {
-    "type": "effect_type",
-    "id": "regen_serum_slow_time",
-    "name": [ "Slowed Time" ],
-    "desc": [ "Everything around you seems to be moving slower." ],
-    "apply_message": "Everything seems to suddenly slow down!",
-    "remove_message": "The world around you speeds up.",
-    "rating": "good",
-    "enchantments": [ "INLINE_ENCH_regen_serum_slow_time_0" ]
   }
 ]

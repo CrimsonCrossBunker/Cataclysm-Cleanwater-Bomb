@@ -195,10 +195,5 @@
     "id": "TALK_GODCO_Arturo_Angry",
     "dynamic_line": "&\"I'd be a lot better if you'd go away, I'm not up for talking right now.\"  Arturo turns back his activities, ignoring you.",
     "responses": [ { "text": "Fine then, <name_b>, I'll see you later.", "topic": "TALK_DONE" } ]
-  },
-  {
-    "type": "effect_type",
-    "id": "Arturo_visions_timer",
-    "//": "Arturo will occaisionall have episodes, this tracks that."
   }
 ]

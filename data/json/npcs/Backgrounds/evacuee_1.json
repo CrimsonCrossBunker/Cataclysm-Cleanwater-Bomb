@@ -24,11 +24,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "BGSS_EVACUEE_1_earlymeeting",
-    "//": "Defined here because this should be the only time this effect is referenced."
-  },
-  {
     "id": "BGSS_EVACUEE_1_STORY2",
     "type": "talk_topic",
     "dynamic_line": {

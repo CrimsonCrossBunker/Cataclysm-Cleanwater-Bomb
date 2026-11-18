@@ -545,15 +545,5 @@
         "switch": true
       }
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "player_BGSS_SAIDNO",
-    "//": "Defined here because this should be the only time this effect is referenced."
-  },
-  {
-    "type": "effect_type",
-    "id": "player_BGSS_SAIDYES",
-    "//": "Defined here because this should be the only time this effect is referenced."
   }
 ]

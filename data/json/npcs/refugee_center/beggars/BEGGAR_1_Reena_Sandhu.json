@@ -1,11 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "beggar_has_eaten",
-    "name": [ "Full" ],
-    "desc": [ "This beggar in the refugee center has had something to eat recently." ]
-  },
-  {
     "type": "npc",
     "id": "refugee_beggar1",
     "//": "Hungry beggar in the refugee center.",

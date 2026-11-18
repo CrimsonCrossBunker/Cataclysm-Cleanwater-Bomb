@@ -118,6 +118,10 @@ require("attribute_scaling")
 require("environment_enchantments")
 require("psionic_base_effects")
 require("native_effects")
+require("dialogue_effects")
+require("legacy_effects")
+require("serum_effects")
+require("world_effects")
 
 require("overlay_enchantments")
 

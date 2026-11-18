@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "godco_confessed",
-    "name": [ "Had a Confessional" ],
-    "apply_message": "You finally got the weight off your chest.",
-    "desc": [ "You decided to take responsibility for your actions." ],
-    "rating": "good"
-  },
-  {
     "type": "talk_topic",
     "id": [ "TALK_GODCO_Greenwood_1", "TALK_GODCO_Greenwood_2", "TALK_GODCO_Greenwood_Firstmeet" ],
     "responses": [

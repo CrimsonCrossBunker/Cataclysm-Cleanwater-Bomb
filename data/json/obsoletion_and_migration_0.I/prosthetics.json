@@ -1,33 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "prosthetic_leg_l_fake_blocker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "max_duration": "1 s"
-  },
-  {
-    "type": "effect_type",
-    "id": "prosthetic_leg_r_fake_blocker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "max_duration": "1 s"
-  },
-  {
-    "type": "effect_type",
-    "id": "prosthetic_arm_l_fake_blocker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "max_duration": "1 s"
-  },
-  {
-    "type": "effect_type",
-    "id": "prosthetic_arm_r_fake_blocker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "max_duration": "1 s"
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_AMPUTEE_RESET",
     "condition": { "not": { "compare_string": [ "yes", { "u_val": "traits_limbs_amputee_reset" } ] } },

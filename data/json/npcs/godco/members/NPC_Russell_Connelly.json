@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "hunt_godco_russell"
-  },
-  {
-    "type": "effect_type",
-    "id": "trade_godco_russell"
-  },
-  {
     "type": "talk_topic",
     "id": [
       "TALK_GODCO_Russell_Joinee",

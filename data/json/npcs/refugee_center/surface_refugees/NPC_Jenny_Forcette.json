@@ -41,11 +41,6 @@
     "mission_offered": "MISSION_REFUGEE_Jenny_GET_MOTOR"
   },
   {
-    "type": "effect_type",
-    "id": "u_met_Jenny_Forcette",
-    "//": "Use this flag to indicate if the player has met this NPC before."
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

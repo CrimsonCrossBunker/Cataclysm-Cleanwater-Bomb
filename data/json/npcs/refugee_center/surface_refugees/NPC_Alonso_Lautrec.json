@@ -38,20 +38,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "Alonso_pants_restored",
-    "//": "Gates Alonso's fine services behind a mission."
-  },
-  {
-    "type": "effect_type",
-    "id": "al_relaxed",
-    "name": [ "Relaxed with Alonso" ],
-    "apply_message": "You spent some pleasant time relaxing with someone.",
-    "miss_messages": [ [ "You feel relaxed.", 1 ] ],
-    "rating": "good",
-    "//": "No morale_mod is currently possible in effects. As soon as it's implemented, it should go here."
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [ "TALK_REFUGEE_Alonso_2", "TALK_REFUGEE_Alonso_Background", "TALK_REFUGEE_Alonso_Situation" ],

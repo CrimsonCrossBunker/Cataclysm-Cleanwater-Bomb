@@ -41,11 +41,6 @@
     "mission_offered": "MISSION_REFUGEE_Draco_GET_GUITAR"
   },
   {
-    "type": "effect_type",
-    "id": "u_sold_to_Draco",
-    "//": "Use this flag to indicate if the player sold weed recently to Draco."
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_REFUGEE_Draco_1",
     "dynamic_line": {

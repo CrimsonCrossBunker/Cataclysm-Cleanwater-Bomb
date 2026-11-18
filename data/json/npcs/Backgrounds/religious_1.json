@@ -27,13 +27,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "player_rude_BGSS_RELIGIOUS_1_FAITH1",
-    "//": "Defined here in the conversation section because this should be the only time this very specific effect is referenced.",
-    "//1": "Religious Offense",
-    "//2": "AI tag used when you offended an NPC with a specific conversation option.  This is a bug if you have it."
-  },
-  {
     "id": "BGSS_RELIGIOUS_1_FAITH1",
     "type": "talk_topic",
     "dynamic_line": "What?  How could you say something like that?  I can't believe you'd look at all this and think it could be anything but the end-times.  The dead are walking, the gates of Hell itself have opened, the Beasts of the Devil walk the Earth, and the Righteous have all be drawn up into the Lord's Kingdom.  What more proof could you possibly ask for?",

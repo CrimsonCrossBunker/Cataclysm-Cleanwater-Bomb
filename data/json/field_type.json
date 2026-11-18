@@ -2358,20 +2358,6 @@
     "looks_like": "fd_bile"
   },
   {
-    "type": "effect_type",
-    "id": "LIXA_decompressed",
-    "name": [ "In Decompressed Space" ],
-    "desc": [ "For an instant, every inch of this infinite space is itself infinite, slowing you drastically." ],
-    "apply_message": "Space unfolds and extends around you!",
-    "rating": "bad",
-    "miss_messages": [ [ "You cannot make any progress in all this vastness.", 4 ] ],
-    "max_intensity": 3,
-    "int_dur_factor": "2 seconds",
-    "base_mods": { "speed_mod": [ -33 ] },
-    "scaling_mods": { "speed_mod": [ -33 ], "hit_mod": [ -1 ], "dodge_mod": [ -1 ] },
-    "show_in_info": true
-  },
-  {
     "id": "fd_LIXA_decompression",
     "type": "field_type",
     "legacy_enum_id": 19,
@@ -2424,18 +2410,6 @@
     "phase": "plasma",
     "display_field": true,
     "looks_like": "fd_fog"
-  },
-  {
-    "type": "effect_type",
-    "id": "LIXA_unfolded_eff",
-    "name": [ "Unfolded" ],
-    "desc": [
-      "There is no longer an inside or outside of you.  It is all one side; flat, infinite, and everything you have ever been.  You wonder if you're having no trouble understanding it because your brain works better spread out like this."
-    ],
-    "max_intensity": 1,
-    "limb_score_mods": [ { "limb_score": "reaction", "modifier": 0.0 } ],
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ],
-    "show_in_info": true
   },
   {
     "id": "fd_meadow_portal",

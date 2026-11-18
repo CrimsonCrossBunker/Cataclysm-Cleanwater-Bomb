@@ -1,11 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "insulted_luo",
-    "name": [ "Insulted" ],
-    "desc": [ "Oh, you went there." ]
-  },
-  {
     "type": "npc",
     "id": "refugee_beggar3",
     "//": "Angry beggar in the refugee center.",

@@ -41,11 +41,6 @@
     "skills": [ { "skill": "firstaid", "bonus": 1 }, { "skill": "speech", "bonus": 3 } ]
   },
   {
-    "type": "effect_type",
-    "id": "u_Elvira_onetime_greeting",
-    "//": "12-hour period for the player to ask follow up questions about Elvira's initial greeting."
-  },
-  {
     "id": "elvira_shop_rates",
     "copy-from": "basic_shop_rates",
     "type": "shopkeeper_consumption_rates",

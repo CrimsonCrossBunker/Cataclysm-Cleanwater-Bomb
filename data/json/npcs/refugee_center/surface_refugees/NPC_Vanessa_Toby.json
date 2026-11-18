@@ -42,14 +42,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "vanessa_haircut_in_progress"
-  },
-  {
-    "type": "effect_type",
-    "id": "vanessa_shave_in_progress"
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

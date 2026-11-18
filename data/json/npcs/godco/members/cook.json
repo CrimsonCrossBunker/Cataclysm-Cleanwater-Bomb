@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_got_meal"
-  },
-  {
     "id": "TALK_GODCO_chef",
     "type": "talk_topic",
     "dynamic_line": {

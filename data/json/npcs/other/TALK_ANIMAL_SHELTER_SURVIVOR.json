@@ -1,9 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "sold_pet"
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR",
     "dynamic_line": {

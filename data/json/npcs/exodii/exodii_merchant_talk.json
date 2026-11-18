@@ -479,16 +479,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "u_exodii_interaction_timer_short",
-    "//": "This prevents you from building trust with the Exodii too quickly by just talking to them constantly, and tells Rubik to use a different greeting because he saw you very recently."
-  },
-  {
-    "type": "effect_type",
-    "id": "u_exodii_interaction_timer_long",
-    "//": "This prevents you from building trust with the Exodii too quickly by just talking to them constantly."
-  },
-  {
     "id": "TALK_EXODII_MERCHANT_New",
     "type": "talk_topic",
     "dynamic_line": {

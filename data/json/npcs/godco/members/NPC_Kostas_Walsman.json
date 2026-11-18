@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "godco_kostas_tea"
-  },
-  {
-    "type": "effect_type",
-    "id": "failed_persuade"
-  },
-  {
     "type": "talk_topic",
     "id": [
       "TALK_GODCO_Kostas_2",

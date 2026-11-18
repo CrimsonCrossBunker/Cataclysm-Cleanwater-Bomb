@@ -48,26 +48,6 @@
     ]
   },
   {
-    "type": "effect_type",
-    "id": "dana_baking_sold",
-    "//": "Applied as a timer to keep Dana from having unlimited bread in stock"
-  },
-  {
-    "type": "effect_type",
-    "id": "dana_sourdough_revival",
-    "//": "Applied as a timer to keep Dana from selling her better bread until it's ready."
-  },
-  {
-    "type": "effect_type",
-    "id": "dana_barter_success",
-    "//": "Applied as a timer to keep Dana's prices low for a day after bartering."
-  },
-  {
-    "type": "effect_type",
-    "id": "dana_barter_fail",
-    "//": "Applied as a timer to keep from attempting bartering again too soon."
-  },
-  {
     "type": "talk_topic",
     "//": "common talk responses",
     "id": [

@@ -18,3 +18,5 @@ require("body_parts")
 require("craft_recipes")
 
 require("item_group_changes")
+
+require("effect_types")

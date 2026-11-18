@@ -1,15 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "u_offered_marloss_meal",
-    "//": "This flag limits feast offers."
-  },
-  {
-    "type": "effect_type",
-    "id": "u_given_berry",
-    "//": "This flag limits given berries to one per 12h."
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_MARLOSS_VOICE",
     "dynamic_line": [

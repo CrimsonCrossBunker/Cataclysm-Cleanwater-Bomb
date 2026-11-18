@@ -1,13 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "godco_darryl_bartered"
-  },
-  {
-    "type": "effect_type",
-    "id": "godco_darryl_mission1"
-  },
-  {
     "type": "talk_topic",
     "id": [
       "TALK_GODCO_Darryl_2",
