@@ -18,28 +18,6 @@
     "melee_damage": { "bash": 1, "cut": 1 }
   },
   {
-    "id": "elec_shears",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str_sp": "electric shears" },
-    "description": "Electric corded shears, used to quickly shear animals.",
-    "weight": "1200 g",
-    "volume": "1200 ml",
-    "price": "24 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "to_hit": { "grip": "solid", "length": "hand", "surface": "any", "balance": "neutral" },
-    "material": [ "plastic", "steel" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "charged_qualities": [ [ "SHEAR", 3 ] ],
-    "flags": [ "WATER_BREAK", "ALLOWS_BODY_BLOCK", "FRAGILE_MELEE" ],
-    "use_action": { "type": "link_up", "cable_length": 5 },
-    "charges_per_use": 250,
-    "power_draw": "850 W",
-    "melee_damage": { "bash": 2 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "horse_tack",
     "type": "ITEM",
     "subtypes": [ "TOOL", "PET_EQUIPMENT" ],

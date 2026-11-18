@@ -168,3 +168,31 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "elec_shears",
+        name = ccb.content.plural_text("electric shears", "electric shears"),
+        description = ccb.content.text("Electric corded shears, used to quickly shear animals."),
+        mass_milligrams = 1200000,
+        volume_ml = 1200,
+        price_cents = 2400,
+        price_postapoc_cents = 250,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "dark_gray",
+        charged_qualities = { { id = "SHEAR", level = 3 } },
+    }
+    item:material("plastic", 1)
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ALLOWS_BODY_BLOCK")
+    item:flag("FRAGILE_MELEE")
+    item:clear_use_actions()
+    item:link_cable { cable_length = 5 }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 250, ammo_types = { "battery" }, power_milliwatts = 850000 }
+    content.add(item)
+end
