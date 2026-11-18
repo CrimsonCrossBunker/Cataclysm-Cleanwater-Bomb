@@ -18,34 +18,6 @@
     "melee_damage": { "bash": 9 }
   },
   {
-    "id": "stone_shell",
-    "type": "ITEM",
-    "symbol": "*",
-    "color": "light_gray",
-    "name": "stone shell",
-    "description": "The broken fragment of an owlbear egg.  With luck it might still contain some of its former power, though if nothing else it's still a bit sharp.",
-    "material": [ "stone" ],
-    "weight": "250 g",
-    "volume": "150 ml",
-    "qualities": [ [ "BUTCHER", -50 ] ],
-    "//": "Potion recipes that require a full owlbear egg could also instead require larger amounts of stone shell.  Since 1 egg gives 3 shells, you could perhaps have 1 egg be equivalent to 5 or more shells when making potions.",
-    "melee_damage": { "bash": 5, "cut": 3 }
-  },
-  {
-    "id": "crystallized_mana_raw",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str": "raw mana crystal" },
-    "description": "A large chunk of crystal, removed from a leyline nexus.  It requires alchemical processing to transform into crystallized mana.",
-    "weight": "10325 g",
-    "volume": "5 L",
-    "price": "50 USD",
-    "price_postapoc": "3 USD 50 cent",
-    "material": [ "crystallized_mana" ],
-    "symbol": "=",
-    "color": "cyan"
-  },
-  {
     "id": "copper_infuser",
     "copy-from": "copper_bracelet",
     "type": "ITEM",
@@ -132,18 +104,6 @@
     "price": "20 USD"
   },
   {
-    "id": "glow_dust",
-    "type": "ITEM",
-    "symbol": "*",
-    "color": "yellow",
-    "name": "glow dust",
-    "description": "The powdered remains of a will-o-wisps's physical form.  It seems to still possess an otherworldly glow.",
-    "price": "38 USD",
-    "material": [ "powder" ],
-    "weight": "5 g",
-    "volume": "250 ml"
-  },
-  {
     "id": "glow_light",
     "type": "ITEM",
     "category": "tools",
@@ -175,30 +135,6 @@
     "flags": [ "ALLOWS_REMOTE_USE" ]
   },
   {
-    "id": "bulette_plate",
-    "type": "ITEM",
-    "symbol": ")",
-    "color": "light_gray",
-    "name": "bulette plate",
-    "description": "The great plates from behind a bulette's head have always been prized for use in shield and armor making.",
-    "price": "480 USD",
-    "material": [ "arcane_skin" ],
-    "weight": "30 kg",
-    "volume": "3 L"
-  },
-  {
-    "id": "bulette_pearl",
-    "type": "ITEM",
-    "symbol": "*",
-    "color": "red",
-    "name": "bulette pearl",
-    "description": "As a bulette burrows through the earth its gills collect minute amounts of precious metals and gems which slowly aggregate into lustrous gemstones prized for their beauty and power.",
-    "price": "100 USD",
-    "material": [ "gemstone" ],
-    "weight": "120 g",
-    "volume": "250 ml"
-  },
-  {
     "id": "dragon_essence",
     "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
@@ -214,22 +150,6 @@
     "charges": 1,
     "phase": "liquid",
     "freezing_point": -73
-  },
-  {
-    "id": "stirge_proboscis",
-    "type": "ITEM",
-    "name": { "str": "stirge proboscis", "str_pl": "stirge proboscises" },
-    "description": "A long sucking apparatus harvested from stirge corpse.  Makes a poor melee weapon.",
-    "volume": "100 ml",
-    "weight": "100 g",
-    "price": "20 USD",
-    "symbol": ",",
-    "color": "red",
-    "to_hit": -1,
-    "material": [ "flesh" ],
-    "weapon_category": [ "SHIVS" ],
-    "flags": [ "SPEAR", "SHEATH_KNIFE" ],
-    "melee_damage": { "stab": 7 }
   },
   {
     "type": "ITEM",
@@ -272,37 +192,6 @@
   },
   {
     "type": "ITEM",
-    "id": "demon_chitin_plate",
-    "category": "spare_parts",
-    "symbol": "/",
-    "color": "red",
-    "name": "demon chitin plate",
-    "price": "152 USD 25 cent",
-    "material": [ "demon_chitin" ],
-    "weight": "1424 g",
-    "volume": "4 L",
-    "to_hit": -4,
-    "description": "A large piece of demon spider exoskeleton, painstakingly cut from the corpse of an adult demon spider.  A plate of this size can be used to create armor plating.",
-    "melee_damage": { "bash": 12 }
-  },
-  {
-    "type": "ITEM",
-    "id": "demon_spider_fang",
-    "name": "demon spider fang",
-    "description": "A fang from a demon spider.  It seems to still drip with poison; you might be able to use this in some alchemical recipe?",
-    "weight": "270 g",
-    "color": "green",
-    "symbol": ",",
-    "material": [ "flesh" ],
-    "volume": "250 ml",
-    "weapon_category": [ "SHIVS" ],
-    "flags": [ "SPEAR", "SHEATH_KNIFE" ],
-    "price": "15 USD",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "point", "balance": "good" },
-    "melee_damage": { "stab": 8 }
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "alumentum",
     "category": "spare_parts",
@@ -318,45 +207,6 @@
     "ammo_type": "alumentum",
     "count": 50,
     "stack_size": 10
-  },
-  {
-    "id": "mana_dust",
-    "type": "ITEM",
-    "symbol": "*",
-    "color": "blue",
-    "name": "mana dust",
-    "description": "Crystallized mana in powdered form.  It faintly pulses with arcane energy.",
-    "material": [ "powder" ],
-    "volume": "100 ml",
-    "flags": [ "ZERO_WEIGHT" ]
-  },
-  {
-    "id": "mana_pearl",
-    "type": "ITEM",
-    "symbol": "*",
-    "color": "blue",
-    "name": "mana pearl",
-    "description": "A gemstone created by alchemy.  You can feel it attract surrounding mana.",
-    "material": [ "gemstone" ],
-    "weight": "120 g",
-    "volume": "60 ml"
-  },
-  {
-    "type": "ITEM",
-    "id": "enchanted_wood",
-    "symbol": "/",
-    "color": "blue",
-    "name": { "str_sp": "enchanted wood" },
-    "description": "Wood that has been infused with mana.",
-    "material": [ "wood" ],
-    "techniques": [ "WBLOCK_1" ],
-    "flags": [ "FIREWOOD" ],
-    "weight": "1500 g",
-    "volume": "2500 ml",
-    "longest_side": "130 cm",
-    "to_hit": 1,
-    "category": "spare_parts",
-    "melee_damage": { "bash": 10 }
   },
   {
     "id": "alchemist_bomb",
@@ -457,54 +307,5 @@
     "countdown_interval": "20 minutes",
     "revert_to": "ash",
     "flags": [ "ZERO_WEIGHT", "TRADER_AVOID", "SPAWN_ACTIVE" ]
-  },
-  {
-    "id": "sealed_fading_embers",
-    "type": "ITEM",
-    "name": { "str_sp": "fading embers (sealed)" },
-    "description": "A small fragment of an otherworldly flame, sealed into a jar for preservation.",
-    "ascii_picture": "jar_glass_sealed",
-    "weight": "277 g",
-    "volume": "690 ml",
-    "longest_side": "127 mm",
-    "price": "1 USD",
-    "material": [ "glass", "concentrated_mana" ],
-    "symbol": ")",
-    "color": "red",
-    "//": "The embers are preserved and can be used to craft a candle.",
-    "category": "spare_parts",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
-    "id": "enchanted_jar",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "0.5 L enchanted glass jar" },
-    "description": "A half-liter glass jar with a metal screw top lid, used for canning.  This one has been enchanted and is ready to preserve some exotic alchemy ingredients.",
-    "ascii_picture": "jar_glass_sealed",
-    "weight": "277 g",
-    "//1": "Copied from jar_glass_sealed.",
-    "volume": "690 ml",
-    "longest_side": "127 mm",
-    "price": "50 USD",
-    "price_postapoc": "5 USD",
-    "material": [ "glass" ],
-    "symbol": ")",
-    "color": "light_cyan",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "transparent": true,
-        "max_contains_volume": "500 ml",
-        "max_contains_weight": "1 kg",
-        "sealed_data": { "spoil_multiplier": 0.0 }
-      }
-    ],
-    "qualities": [ [ "CONTAIN", 1 ], [ "BOIL", 1 ] ],
-    "flags": [ "COLLAPSE_CONTENTS" ],
-    "to_hit": { "grip": "bad", "length": "hand", "surface": "any", "balance": "clumsy" },
-    "melee_damage": { "bash": 2 }
   }
 ]

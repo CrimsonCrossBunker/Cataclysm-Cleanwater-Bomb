@@ -1,22 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "parabolan_felt_patch",
-    "symbol": ",",
-    "color": "dark_gray",
-    "name": { "str": "parabolan felt patch", "str_pl": "parabolan felt patches" },
-    "description": "A smallish patch of iridescent felt; could be disassembled for parabolan wool fiber.",
-    "price": "20 USD",
-    "price_postapoc": "2 USD",
-    "material": [ "parabolan_wool" ],
-    "flags": [ "NO_SALVAGE" ],
-    "weight": "3 g",
-    "volume": "6 ml",
-    "category": "spare_parts",
-    "to_hit": -1
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "AMMO" ],
     "id": "parabolan_yarn",
     "category": "spare_parts",

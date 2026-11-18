@@ -39,22 +39,6 @@
     "melee_damage": { "bash": 8 }
   },
   {
-    "id": "orichalcum_ingot",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": "orichalcum ingot",
-    "description": "An ingot of orichalcum.  About 3cm by 7cm by 12cm in size, ready to be used for various blacksmithing tasks.",
-    "//": "Density the same as steel.",
-    "weight": "2 kg",
-    "volume": "253 ml",
-    "price": "63 USD 99 cent",
-    "to_hit": -3,
-    "material": [ "orichalcum_metal" ],
-    "symbol": "=",
-    "color": "light_green",
-    "melee_damage": { "bash": 6 }
-  },
-  {
     "id": "mithril_lump",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
@@ -72,36 +56,5 @@
     "ammo_type": "components",
     "qualities": [ [ "HAMMER", 1 ] ],
     "melee_damage": { "bash": 12 }
-  },
-  {
-    "id": "mithril_ingot",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": "mithril ingot",
-    "description": "An ingot of mithril.  About 3cm by 7cm by 12cm in size, ready to be used for various blacksmithing tasks.",
-    "//": "density of aluminum",
-    "weight": "683 g",
-    "volume": "253 ml",
-    "price": "63 USD 99 cent",
-    "to_hit": -3,
-    "material": [ "mithril_metal" ],
-    "symbol": "=",
-    "color": "light_blue",
-    "melee_damage": { "bash": 6 }
-  },
-  {
-    "id": "crimsonite_ingot",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": "crimsonite ingot",
-    "description": "An ingot of crimsonite.  About 3cm by 7cm by 12cm in size, ready to be used for various blacksmithing tasks.",
-    "//": "slightly denser than copper",
-    "weight": "2250 g",
-    "volume": "253 ml",
-    "price": "63 USD 99 cent",
-    "material": [ "crimsonite_metal" ],
-    "symbol": "=",
-    "color": "red",
-    "melee_damage": { "bash": 6 }
   }
 ]

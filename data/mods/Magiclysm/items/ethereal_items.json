@@ -62,22 +62,6 @@
     "flags": [ "TRADER_AVOID", "FIRESTARTER" ]
   },
   {
-    "id": "magic_lamp",
-    "type": "ITEM",
-    "category": "tools",
-    "name": "enchanted lamp",
-    "description": "A glowing bit of stone or metal that will light up a small area.",
-    "weight": "15 g",
-    "material": [ "magical_material" ],
-    "volume": "250 ml",
-    "price": "1 cent",
-    "symbol": ",",
-    "color": "light_green",
-    "light": 100,
-    "flags": [ "TRADER_AVOID" ],
-    "melee_damage": { "bash": 8 }
-  },
-  {
     "id": "shield_ice",
     "type": "ITEM",
     "subtypes": [ "ARMOR" ],
@@ -204,39 +188,6 @@
     "category": "weapons",
     "melee_damage": { "cut": 30 },
     "passive_effects": [ { "id": "ITEM_ENCH_Magiclysm_tentacle_whip_0" } ],
-    "weapon_category": [ "WHIPS" ]
-  },
-  {
-    "id": "flarewhip",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_blue",
-    "name": "flarewhip",
-    "description": "A long whip made of blue-hot magical flames.  The heat is horrendous when touching an enemy.",
-    "weight": "60 g",
-    "volume": "1500 ml",
-    "longest_side": "40 cm",
-    "material": [ "concentrated_mana" ],
-    "techniques": [ "PRECISE", "WIDE", "SWEEP" ],
-    "light": 8,
-    "flags": [
-      "REACH_ATTACK",
-      "REACH3",
-      "WHIP",
-      "STURDY",
-      "TRADER_AVOID",
-      "UNBREAKABLE_MELEE",
-      "NO_REPAIR",
-      "NO_SALVAGE",
-      "MAGIC_FOCUS",
-      "FIRESTARTER",
-      "FLAMING",
-      "FIRE",
-      "RELIC_PINK"
-    ],
-    "to_hit": 3,
-    "category": "weapons",
-    "melee_damage": { "cut": 6, "heat": 30 },
     "weapon_category": [ "WHIPS" ]
   },
   {
@@ -610,52 +561,6 @@
     "passive_effects": [ { "id": "ench_aura_feral_plus" } ]
   },
   {
-    "id": "flamesword",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_gray",
-    "looks_like": "sword_wood",
-    "name": { "str": "flaming sword" },
-    "description": "This wooden sword is ablaze!  It seems to be safe-ish to hold, but will burn up soon.",
-    "material": [ "wood" ],
-    "weapon_category": [ "MEDIUM_SWORDS" ],
-    "light": 10,
-    "flags": [
-      "UNBREAKABLE_MELEE",
-      "NONCONDUCTIVE",
-      "NO_REPAIR",
-      "NO_SALVAGE",
-      "MAGIC_FOCUS",
-      "FIRESTARTER",
-      "FIRE",
-      "TRADER_AVOID"
-    ],
-    "techniques": [ "WBLOCK_1", "WIDE", "BRUTAL" ],
-    "weight": "900 g",
-    "volume": "1250 ml",
-    "longest_side": "100 cm",
-    "melee_damage": { "bash": 12, "cut": 2, "heat": 28 }
-  },
-  {
-    "id": "decaying_boneclub",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_gray",
-    "looks_like": "bone",
-    "name": { "str": "decaying boneclub" },
-    "description": "A pulsating club made of bone, stained with an ever-moving blood coating eager to absorb the living.",
-    "material": [ "bone", "flesh" ],
-    "weapon_category": [ "BATONS" ],
-    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "NO_REPAIR", "MAGIC_FOCUS", "BELT_CLIP", "TRADER_AVOID" ],
-    "max_worn": 1,
-    "techniques": [ "WBLOCK_2", "RAPID", "PRECISE" ],
-    "weight": "700 g",
-    "volume": "800 ml",
-    "longest_side": "70 cm",
-    "to_hit": 3,
-    "melee_damage": { "bash": 12, "biological": 8 }
-  },
-  {
     "id": "aura_werewolf",
     "type": "ITEM",
     "subtypes": [ "ARMOR", "ARTIFACT" ],
@@ -761,35 +666,6 @@
       }
     ],
     "passive_effects": [ { "id": "ench_armor_spirit" }, { "id": "ITEM_ENCH_Magiclysm_item_armor_magus_mage_conjured_armor_1" } ]
-  },
-  {
-    "id": "jar_3l_force",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "jar of force", "str_pl": "jars of force" },
-    "looks_like": "jar_glass_sealed",
-    "description": "A three-liter container made out of transparent force.  Can be used to store liquids.",
-    "weight": "1 g",
-    "volume": "3050 ml",
-    "longest_side": "298 mm",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "to_hit": -1,
-    "material": [ "concentrated_mana" ],
-    "symbol": ")",
-    "color": "light_cyan",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "max_contains_volume": "3 L",
-        "max_contains_weight": "6 kg"
-      }
-    ],
-    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS", "TRADER_AVOID" ],
-    "qualities": [ [ "CONTAIN", 1 ], [ "BOIL", 1 ] ],
-    "melee_damage": { "bash": 1, "pure": 3 }
   },
   {
     "id": "longsword_holy",
@@ -1389,139 +1265,6 @@
     "passive_effects": [
       { "id": "ITEM_ENCH_Magiclysm_aura_druid_breathing_water_0" }
     ]
-  },
-  {
-    "id": "item_earthshaper_map_01",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 15,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock"
-      ],
-      "message": "The earth reveals its secrets."
-    }
-  },
-  {
-    "id": "item_earthshaper_map_02",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 20,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock"
-      ],
-      "message": "The earth reveals its secrets."
-    }
-  },
-  {
-    "id": "item_earthshaper_map_03",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 25,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock"
-      ],
-      "message": "The earth reveals its secrets."
-    }
-  },
-  {
-    "id": "item_earthshaper_map_04",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 30,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock"
-      ],
-      "message": "The earth reveals its secrets."
-    }
-  },
-  {
-    "id": "item_earthshaper_map_05",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 35,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock",
-        "tream"
-      ],
-      "message": "The earth reveals its secrets."
-    }
-  },
-  {
-    "id": "item_earthshaper_map_06",
-    "copy-from": "abstractmap",
-    "type": "ITEM",
-    "category": "maps",
-    "name": { "str": "earthshaper map", "//~": "NO_I18N" },
-    "description": { "str": "This is a magical map that, if everything works correctly, you'll never actually see.", "//~": "NO_I18N" },
-    "color": "brown",
-    "use_action": {
-      "type": "reveal_map",
-      "radius": 40,
-      "terrain": [
-        { "om_terrain": "field", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "swamp", "om_terrain_match_type": "TYPE" },
-        { "om_terrain": "forest", "om_terrain_match_type": "PREFIX" },
-        { "om_terrain": "stream", "om_terrain_match_type": "PREFIX" },
-        "solid_earth",
-        "empty_rock"
-      ],
-      "message": "The earth reveals its secrets."
-    }
   },
   {
     "id": "item_druid_disinfectant",

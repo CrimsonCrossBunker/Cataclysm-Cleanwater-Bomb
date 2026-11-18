@@ -28,19 +28,6 @@
     "melee_damage": { "bash": 10, "cut": 35 }
   },
   {
-    "id": "gram",
-    "copy-from": "broadsword",
-    "type": "ITEM",
-    "name": { "str": "Gram" },
-    "description": "Gram, the sword of Sigurd.  It is rumored to be the sword that slayed the legendary dragon, Fafnir.  Once said to have cleaved Regin's anvil in half, the edge is impeccable.",
-    "weight": "1132 g",
-    "material": [ "orichalcum_metal", "steel" ],
-    "techniques": [ "WBLOCK_2", "PRECISE", "DIVIDE", "MOUNTED_CHARGE" ],
-    "volume": "2000 ml",
-    "price": "2 kUSD",
-    "melee_damage": { "bash": 6, "cut": 45 }
-  },
-  {
     "id": "laevateinn",
     "copy-from": "i_staff",
     "type": "ITEM",
