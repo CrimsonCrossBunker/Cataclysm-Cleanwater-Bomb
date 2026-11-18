@@ -1,15 +1,6 @@
 [
   {
     "type": "ITEM",
-    "id": "solar_cell_v3",
-    "name": { "str": "quantum solar cell" },
-    "description": "A small electronic device that can convert solar radiation into electric power.  This one uses exotic photovoltaic materials to reach extremely high efficiency.",
-    "price": "500 USD",
-    "price_postapoc": "10 USD",
-    "copy-from": "solar_cell_v2"
-  },
-  {
-    "type": "ITEM",
     "id": "solar_panel_v3",
     "name": "quantum solar panel",
     "description": "This solar panel is obviously cutting-edge technology and given where you found it, it should probably provide a LOT of power.  It's covered in strange-looking material, and the covering looks rather fragile; reinforcing or modifying it would require unusually careful, advanced work.",

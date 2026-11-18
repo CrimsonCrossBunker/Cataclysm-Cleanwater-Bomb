@@ -1,23 +1,5 @@
 [
   {
-    "type": "ITEM",
-    "id": "broken_fcl_eyebot",
-    "looks_like": "broken_eyebot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken eyebot" },
-    "category": "other",
-    "description": "A broken eyebot.  Much less threatening now that it won't be calling for backup.  Could be gutted for parts.",
-    "price": "10 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "31520 g",
-    "volume": "15 L",
-    "to_hit": -3,
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 6, "cut": 6 }
-  },
-  {
     "id": "fcl_bot_eyebot",
     "looks_like": "broken_eyebot",
     "type": "ITEM",
@@ -44,24 +26,6 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_fcl_copbot",
-    "looks_like": "broken_copbot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken police bot" },
-    "category": "other",
-    "description": "A broken police bot.  Much less threatening now that it's quiet and still.  Could be gutted for parts.",
-    "price": "300 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "140000 g",
-    "volume": "62500 ml",
-    "to_hit": -3,
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 6, "cut": 6 }
   },
   {
     "id": "fcl_bot_copbot",
@@ -92,24 +56,6 @@
     "melee_damage": { "bash": 8 }
   },
   {
-    "type": "ITEM",
-    "id": "broken_fcl_molebot",
-    "looks_like": "broken_molebot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken miner bot" },
-    "category": "other",
-    "description": "A broken miner bot.  Much less threatening now that it's no longer capable of drilling anything.  Could be gutted for parts.",
-    "price": "200 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "170200 g",
-    "volume": "62500 ml",
-    "to_hit": -3,
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 6, "cut": 10 }
-  },
-  {
     "id": "fcl_bot_molebot",
     "looks_like": "broken_molebot",
     "type": "ITEM",
@@ -136,24 +82,6 @@
     },
     "flags": [ "SINGLE_USE" ],
     "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "broken_fcl_riotbot",
-    "looks_like": "broken_riotbot",
-    "symbol": ",",
-    "color": "green",
-    "name": { "str": "broken riot control bot" },
-    "category": "other",
-    "description": "A broken riot control bot.  Much less threatening now that it's out of gas.  Could be gutted for parts.",
-    "price": "300 USD",
-    "price_postapoc": "10 cent",
-    "material": [ "steel", "plastic" ],
-    "weight": "140000 g",
-    "volume": "62500 ml",
-    "to_hit": -3,
-    "flags": [ "TRADER_AVOID", "NO_REPAIR" ],
-    "melee_damage": { "bash": 6, "cut": 6 }
   },
   {
     "id": "fcl_bot_riotbot",

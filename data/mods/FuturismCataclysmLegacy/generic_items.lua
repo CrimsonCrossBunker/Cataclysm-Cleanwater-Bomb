@@ -1,0 +1,6 @@
+require("generic_items.items.containers.containers")
+require("generic_items.items.corpses.inactive_bots")
+require("generic_items.items.melee.fake")
+require("generic_items.items.vehicle.controls")
+require("generic_items.items.vehicle.frames")
+require("generic_items.items.vehicle.solar")
