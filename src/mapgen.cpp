@@ -2256,6 +2256,8 @@ class jmapgen_npc : public jmapgen_piece
         bool target;
         std::vector<trait_id> traits;
         std::string unique_id;
+        jmapgen_npc( const npc_template_id &id, bool mission_target )
+            : npc_class( id ), target( mission_target ) {}
         jmapgen_npc( const JsonObject &jsi, std::string_view/*context*/ ) :
             npc_class( jsi.get_member( "class" ) )
             , target( jsi.get_bool( "target", false ) ) {
@@ -2822,6 +2824,10 @@ class jmapgen_monster : public jmapgen_piece
         bool target;
         bool use_pack_size;
         struct spawn_data data;
+        jmapgen_monster( const mongroup_id &group, const jmapgen_int &pack, bool single,
+                        bool mission_target, const std::optional<translation> &display_name )
+            : ids( 100 ), m_id( group ), chance( 100 ), pack_size( pack ), one_or_none( single ),
+              friendly( false ), name( display_name ), target( mission_target ), use_pack_size( false ) {}
         jmapgen_monster( const JsonObject &jsi, std::string_view/*context*/ ) :
             chance( jsi, "chance", 100, 100 )
             , pack_size( jsi, "pack_size", 1, 1 )
@@ -3172,6 +3178,7 @@ class jmapgen_furniture : public jmapgen_piece_with_has_vehicle_collision
         jmapgen_furniture( const JsonObject &jsi, std::string_view/*context*/ ) :
             jmapgen_furniture( jsi.get_member( "furn" ) ) {}
         explicit jmapgen_furniture( const JsonValue &fid ) : id( fid ) {}
+        explicit jmapgen_furniture( const furn_str_id &fid ) : id( fid.str() ) {}
         mapgen_phase phase() const override {
             return mapgen_phase::furniture;
         }
@@ -3211,6 +3218,7 @@ class jmapgen_terrain : public jmapgen_piece_with_has_vehicle_collision
         jmapgen_terrain( const JsonObject &jsi, std::string_view/*context*/ ) :
             jmapgen_terrain( jsi.get_member( "ter" ) ) {}
         explicit jmapgen_terrain( const JsonValue &tid ) : id( mapgen_value<ter_str_id>( tid ) ) {}
+        explicit jmapgen_terrain( const ter_str_id &tid ) : id( tid ) {}
 
         bool is_nop() const override {
             return id.is_null();
@@ -8053,6 +8061,102 @@ ret_val<void> update_mapgen_function_json::update_map( const mapgendata &md,
 
     return apply_mapgen_in_phases( md_with_params, setmap_points, objects, offset, context_,
                                    verify );
+}
+
+namespace
+{
+class jmapgen_patch_stamp final : public jmapgen_piece
+{
+    public:
+        jmapgen_patch_stamp( jmapgen_objects placements, const enum_bitset<jmapgen_flags> &flags )
+            : placements_( std::move( placements ) ), flags_( flags ) {
+            placements_.finalize();
+        }
+
+        mapgen_phase phase() const override {
+            return mapgen_phase::nested_mapgen;
+        }
+
+        void apply( const mapgendata &dat, const jmapgen_int &x, const jmapgen_int &y,
+                    const jmapgen_int &z, const std::string &context ) const override {
+            const tripoint_rel_ms offset( x.get(), y.get(), z.get() );
+            const mapgendata nested( dat, {}, flags_ );
+            apply_mapgen_in_phases( nested, {}, placements_, offset, context );
+        }
+
+        ret_val<void> has_vehicle_collision( const mapgendata &dat,
+                                             const tripoint_rel_ms &offset ) const override {
+            return placements_.has_vehicle_collision( dat, offset );
+        }
+
+    private:
+        jmapgen_objects placements_;
+        enum_bitset<jmapgen_flags> flags_;
+};
+} // namespace
+
+mapgen_patch::mapgen_patch() : update_mapgen_function_json( JsonObject(), "Lua mapgen patch" )
+{
+}
+
+void mapgen_patch::erase_before_terrain()
+{
+    flags_.set( jmapgen_flags::erase_all_before_placing_terrain );
+}
+
+void mapgen_patch::add_terrain( const jmapgen_place &where, const ter_str_id &id )
+{
+    add_piece( where, make_shared_fast<jmapgen_terrain>( id ) );
+}
+
+void mapgen_patch::add_furniture( const jmapgen_place &where, const furn_str_id &id )
+{
+    add_piece( where, make_shared_fast<jmapgen_furniture>( id ) );
+}
+
+void mapgen_patch::add_monster_group( const jmapgen_place &where, const mongroup_id &group,
+                                      const jmapgen_int &pack_size, bool one_or_none,
+                                      bool mission_target, const std::optional<translation> &name )
+{
+    add_piece( where, make_shared_fast<jmapgen_monster>( group, pack_size, one_or_none,
+               mission_target, name ) );
+}
+
+void mapgen_patch::add_npc( const jmapgen_place &where, const npc_template_id &id,
+                            bool mission_target )
+{
+    add_piece( where, make_shared_fast<jmapgen_npc>( id, mission_target ) );
+}
+
+void mapgen_patch::add_stamp( const jmapgen_place &where, const mapgen_patch &layout )
+{
+    if( layout.objects.empty() ) {
+        throw std::invalid_argument( "Mapgen stamp layout must contain a placement" );
+    }
+    add_piece( where, make_shared_fast<jmapgen_patch_stamp>( layout.objects, layout.flags_ ),
+               layout.extent_ );
+}
+
+void mapgen_patch::add_piece( const jmapgen_place &where,
+                               const shared_ptr_fast<const jmapgen_piece> &piece,
+                               const point &local_extent )
+{
+    const point reach = point( where.x.valmax, where.y.valmax ) + local_extent;
+    if( where.x.val < 0 || where.y.val < 0 || reach.x >= mapgensize.x() ||
+        reach.y >= mapgensize.y() ) {
+        throw std::invalid_argument( "Mapgen patch placement must fit in one OMT" );
+    }
+    objects.add( where, piece );
+    extent_ = point( std::max( extent_.x, reach.x ), std::max( extent_.y, reach.y ) );
+}
+
+ret_val<void> mapgen_patch::run( const tripoint_abs_omt &position, mission *active_mission,
+                                bool cancel_on_collision ) const
+{
+    mapgen_patch prepared( *this );
+    prepared.objects.finalize();
+    return prepared.update_map( position, {}, tripoint_rel_ms::zero, active_mission,
+                                cancel_on_collision );
 }
 
 mapgen_update_func add_mapgen_update_func( const JsonObject &jo, bool &defer )

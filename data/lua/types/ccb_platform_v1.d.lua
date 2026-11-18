@@ -8355,12 +8355,59 @@ function ScriptMapgenContext:fill_groundcover() end
 ---and vehicle state can participate in the transaction.
 ---@field cancel_on_collision? true Omitted or `{}` uses transactional collision cancellation; when supplied, this must be true.
 
+---@alias MapgenPatchRange integer|integer[]
+
+---@class MapgenPatchMonsterOptions
+---@field repetitions? MapgenPatchRange Native repeat count or inclusive range. Defaults to one.
+---@field pack_size? MapgenPatchRange Native pack size or inclusive range. Defaults to one.
+---@field mission_target? boolean Bind spawned creatures to the active mission passed to run_update.
+---@field name? string|LocalizedText Creature name.
+
+---@class MapgenPatch
+local MapgenPatch = {}
+
+---Erase furniture, traps and items on squares where this patch places terrain.
+function MapgenPatch:erase_before_terrain() end
+
+---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
+---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
+---@param id string Native terrain ID.
+function MapgenPatch:terrain(x, y, id) end
+
+---@param x MapgenPatchRange OMT-local x coordinate or inclusive range.
+---@param y MapgenPatchRange OMT-local y coordinate or inclusive range.
+---@param id string Native furniture ID.
+function MapgenPatch:furniture(x, y, id) end
+
+---@param group string Native monster-group ID. Uses native single-monster mapgen selection and density rules.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+---@param options? MapgenPatchMonsterOptions
+function MapgenPatch:spawn_group(group, x, y, options) end
+
+---@param template string Native NPC template ID.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+---@param repetitions? MapgenPatchRange Defaults to one.
+---@param mission_target? boolean Bind the last spawned NPC as the mission target.
+function MapgenPatch:spawn_npc(template, x, y, repetitions, mission_target) end
+
+---Place a snapshot of another patch in the native nested placement phase.
+---@param layout MapgenPatch
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+function MapgenPatch:stamp(layout, x, y) end
+
 ---@class CcbMapgenRunOptions
 ---@field mission? MissionToken Exact active mission used by mission-target mapgen placements.
 ---@field cancel_on_collision? boolean Native collision cancellation, enabled by default.
 
 ---@class CcbMapgenApi
 local CcbMapgenApi = {}
+
+---Create an OMT-local map patch for immediate application after world_ready.
+---@return MapgenPatch
+function CcbMapgenApi.patch() end
 
 ---@param id GameId GameId<update_mapgen> Existing registered update-mapgen definition.
 ---@return CcbResult result `value` is a value-only MapgenUpdateToken.
@@ -8372,13 +8419,13 @@ function CcbMapgenApi.update_token(id) end
 ---@return CcbMapgenTransactionResult result `ok=true` only when `value.state` is `'committed'`; `rejected`, `rolled_back`, and `rollback_failed` are reported in `error`.
 function CcbMapgenApi.apply(target, update, options) end
 
----Run one registered update through the native immediate mapgen path at an explicit OMT.
+---Run one registered update or Lua patch through the native immediate mapgen path at an explicit OMT.
 ---Unlike `apply`, this operation does not use transactional preflight or rollback;
 ---external NPC, vehicle, and zone effects may be published even when the native
 ---runner reports failure. The native result is reported in `value`, while
 ---token/argument errors use the CcbResult error.
 ---@param target OvermapTileToken Exact target absolute OMT token.
----@param update MapgenUpdateToken Exact value-only update-mapgen token.
+---@param update MapgenUpdateToken|MapgenPatch Registered update or Lua-authored map patch.
 ---@param options? CcbMapgenRunOptions Native immediate-update options.
 ---@return CcbResult result `value` is the native runner's success boolean.
 function CcbMapgenApi.run_update(target, update, options) end

@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -590,6 +591,30 @@ class update_mapgen_function_json : public mapgen_function_json_base
             const tripoint_rel_ms &offset, mission *miss, bool verify,
             bool mirror_horizontal, bool mirror_vertical, int rotation,
             bool platform_transaction ) const;
+};
+
+// A typed update assembled by Lua. It uses the same placement phases and
+// smallmap lifecycle as registered updates without a JSON definition.
+class mapgen_patch final : private update_mapgen_function_json
+{
+    public:
+        mapgen_patch();
+        void erase_before_terrain();
+        void add_terrain( const jmapgen_place &where, const ter_str_id &id );
+        void add_furniture( const jmapgen_place &where, const furn_str_id &id );
+        void add_monster_group( const jmapgen_place &where, const mongroup_id &group,
+                                const jmapgen_int &pack_size, bool one_or_none,
+                                bool mission_target, const std::optional<translation> &name );
+        void add_npc( const jmapgen_place &where, const npc_template_id &id, bool mission_target );
+        void add_stamp( const jmapgen_place &where, const mapgen_patch &layout );
+        ret_val<void> run( const tripoint_abs_omt &position, mission *active_mission,
+                           bool cancel_on_collision ) const;
+
+    private:
+        void add_piece( const jmapgen_place &where,
+                        const shared_ptr_fast<const jmapgen_piece> &piece,
+                        const point &local_extent = point::zero );
+        point extent_{ -1, -1 };
 };
 
 class mapgen_function_json_nested : public mapgen_function_json_base

@@ -31,6 +31,7 @@ extern "C" {
 #include "game.h"
 #include "item.h"
 #include "item_group.h"
+#include "lua_platform_content_text.h"
 #include "lua_platform_missions.h"
 #include "lua_platform_overmap.h"
 #include "lua_platform_world.h"
@@ -435,6 +436,75 @@ sol::table apply_mapgen_update(
     return mapgen_transaction_error( state, target, update, report );
 }
 
+int patch_integer( const sol::object &value, int min, int max, std::string_view field )
+{
+    if( !value.is<lua_Integer>() ) {
+        throw std::invalid_argument( "Mapgen patch " + std::string( field ) + " requires an integer" );
+    }
+    const lua_Integer number = value.as<lua_Integer>();
+    if( number < min || number > max ) {
+        throw std::invalid_argument( "Mapgen patch " + std::string( field ) + " is out of range" );
+    }
+    return static_cast<int>( number );
+}
+
+jmapgen_int patch_range( const sol::object &value, int min, int max, std::string_view field )
+{
+    if( value.is<sol::table>() ) {
+        const sol::table range = value.as<sol::table>();
+        const int first = patch_integer( range.raw_get<sol::object>( 1 ), min, max, field );
+        const int last = patch_integer( range.raw_get<sol::object>( 2 ), min, max, field );
+        if( range.size() != 2 || first > last ) {
+            throw std::invalid_argument( "Mapgen patch " + std::string( field ) +
+                                         " requires an ascending pair" );
+        }
+        return jmapgen_int( first, last );
+    }
+    return jmapgen_int( patch_integer( value, min, max, field ) );
+}
+
+jmapgen_place patch_at( const sol::object &x, const sol::object &y )
+{
+    jmapgen_place where;
+    where.x = patch_range( x, 0, script_mapgen_context::map_width - 1, "x" );
+    where.y = patch_range( y, 0, script_mapgen_context::map_height - 1, "y" );
+    return where;
+}
+
+void add_patch_monster_group( mapgen_patch &patch, std::string group,
+                              const sol::object &x, const sol::object &y,
+                              const sol::optional<sol::table> &options )
+{
+    const mongroup_id group_id( std::move( group ) );
+    if( !group_id.is_valid() ) {
+        throw std::invalid_argument( "Mapgen patch requires a valid monster group" );
+    }
+    jmapgen_place where = patch_at( x, y );
+    jmapgen_int pack( 1 );
+    bool one_or_none = true;
+    bool target = false;
+    std::optional<translation> name;
+    if( options ) {
+        constexpr int max_count = std::numeric_limits<std::int16_t>::max();
+        const sol::object repeats = options->raw_get<sol::object>( "repetitions" );
+        const sol::object pack_size = options->raw_get<sol::object>( "pack_size" );
+        if( repeats.valid() ) {
+            where.repeat = patch_range( repeats, 0, max_count, "repetitions" );
+            one_or_none = false;
+        }
+        if( pack_size.valid() ) {
+            pack = patch_range( pack_size, 1, max_count, "pack_size" );
+            one_or_none = false;
+        }
+        target = options->get_or( "mission_target", false );
+        const sol::object label = options->raw_get<sol::object>( "name" );
+        if( label.valid() ) {
+            name = detail::read_singular_text( label, {}, "mapgen monster name" ).native();
+        }
+    }
+    patch.add_monster_group( where, group_id, pack, one_or_none, target, name );
+}
+
 sol::table run_mapgen_update(
     sol::this_state lua,
     const sol::object &requested_target,
@@ -458,18 +528,21 @@ sol::table run_mapgen_update(
                 target, runtime_generation, world_generation ) ) {
         return make_game_error_result( state, *error );
     }
-    if( !requested_update.is<mapgen_update_token>() ) {
+    const mapgen_update_token *update = nullptr;
+    const mapgen_patch *patch = nullptr;
+    if( requested_update.is<mapgen_update_token>() ) {
+        update = &requested_update.as<const mapgen_update_token &>();
+        if( const std::optional<game_handle_error> error =
+                validate_mapgen_update_token( *update, runtime_generation, world_generation ) ) {
+            return make_game_error_result( state, *error );
+        }
+    } else if( requested_update.is<mapgen_patch>() ) {
+        patch = &requested_update.as<const mapgen_patch &>();
+    } else {
         return make_game_error_result( state, {
             "invalid_update",
-            "services.mapgen.run_update requires a MapgenUpdateToken update"
+            "services.mapgen.run_update requires a MapgenUpdateToken or MapgenPatch"
         } );
-    }
-    const mapgen_update_token &update =
-        requested_update.as<const mapgen_update_token &>();
-    if( const std::optional<game_handle_error> error =
-            validate_mapgen_update_token(
-                update, runtime_generation, world_generation ) ) {
-        return make_game_error_result( state, *error );
     }
 
     bool cancel_on_collision = true;
@@ -518,9 +591,10 @@ sol::table run_mapgen_update(
     // preflight or roll back external mapgen side effects; the native EOC path
     // also runs this operation with the runner's default collision policy and
     // without a transaction.
-    const ret_val<void> outcome = run_mapgen_update_func(
-                                      update.native_id(), target.native_position(), {},
-                                      active_mission, cancel_on_collision );
+    const ret_val<void> outcome = patch ?
+                                  patch->run( target.native_position(), active_mission, cancel_on_collision ) :
+                                  run_mapgen_update_func( update->native_id(), target.native_position(), {},
+                                          active_mission, cancel_on_collision );
     set_queued_points();
     reality_bubble().invalidate_map_cache( target.native_position().z() );
     // A native failure can still have changed map state before it returned.
@@ -629,6 +703,49 @@ void install_mapgen_service_api(
     sol::table mapgen = existing_mapgen.is<sol::table>() ?
                         existing_mapgen.as<sol::table>() :
                         lua.create_table();
+    lua.new_usertype<mapgen_patch>(
+        "MapgenPatch", sol::no_constructor,
+        "erase_before_terrain", &mapgen_patch::erase_before_terrain,
+        "terrain", []( mapgen_patch &patch, const sol::object &x, const sol::object &y,
+    const std::string &id ) {
+        const ter_str_id terrain( id );
+        if( !terrain.is_valid() ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid terrain id" );
+        }
+        patch.add_terrain( patch_at( x, y ), terrain );
+    },
+    "furniture", []( mapgen_patch &patch, const sol::object &x, const sol::object &y,
+    const std::string &id ) {
+        const furn_str_id furniture( id );
+        if( !furniture.is_valid() ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid furniture id" );
+        }
+        patch.add_furniture( patch_at( x, y ), furniture );
+    },
+    "spawn_group", &add_patch_monster_group,
+    "spawn_npc", []( mapgen_patch &patch, const std::string &id,
+    const sol::object &x, const sol::object &y,
+    const sol::optional<sol::object> &repetitions, const sol::optional<bool> &mission_target ) {
+        const npc_template_id npc( id );
+        if( !npc.is_valid() ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid NPC template" );
+        }
+        jmapgen_place where = patch_at( x, y );
+        if( repetitions ) {
+            where.repeat = patch_range( *repetitions, 0, std::numeric_limits<std::int16_t>::max(),
+                                         "repetitions" );
+        }
+        patch.add_npc( where, npc, mission_target.value_or( false ) );
+    },
+    "stamp", []( mapgen_patch &patch, const mapgen_patch &layout,
+    const sol::object &x, const sol::object &y ) {
+        patch.add_stamp( patch_at( x, y ), layout );
+    } );
+
+    mapgen.set_function( "patch", [require_read]() {
+        require_read();
+        return mapgen_patch();
+    } );
     mapgen.set_function(
         "update_token",
         [current_runtime_generation, current_world_generation, require_read](

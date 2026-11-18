@@ -564,6 +564,7 @@
         "MapExtraCollectionDefinition",
         "MapExtraDefinition",
         "MapTileToken",
+        "MapgenPatch",
         "MapgenUpdateToken",
         "MartialArtDefinition",
         "MaterialDefinition",
@@ -1063,7 +1064,7 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_mapgen.cpp",
-          "line": 1917
+          "line": 2034
         },
         "direct_roots": [
           "ScriptMapgenContext"
@@ -1075,9 +1076,10 @@
         "namespace": "global",
         "source": {
           "path": "src/lua_platform_mapgen.cpp",
-          "line": 597
+          "line": 671
         },
         "direct_roots": [
+          "MapgenPatch",
           "MapgenUpdateToken"
         ]
       },
@@ -12905,13 +12907,140 @@
       }
     },
     {
+      "id": "MapgenPatch",
+      "cpp_type": "mapgen_patch",
+      "lua_name": "MapgenPatch",
+      "registration_name": "MapgenPatch",
+      "registration": {
+        "path": "src/lua_platform_mapgen.cpp",
+        "line": 706,
+        "installer": "shared.install_mapgen_service_api",
+        "namespace": "global"
+      },
+      "surfaces": [
+        "platform_v1"
+      ],
+      "installations": [
+        {
+          "surface": "platform_v1",
+          "namespace": "global",
+          "installer_chain": [
+            "platform_v1.initialize_state",
+            "platform_v1.install_runtime_api",
+            "shared.install_mapgen_service_api"
+          ]
+        }
+      ],
+      "lifetime": {
+        "policy": "lua-owned-value",
+        "guards": []
+      },
+      "member_disposition": {
+        "scope": "registered Lua members plus explicitly reviewed native adaptations and exclusions",
+        "members": [
+          {
+            "id": "erase_before_terrain",
+            "cpp_members": [
+              "erase_before_terrain"
+            ],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.erase_before_terrain"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 708
+              }
+            ]
+          },
+          {
+            "id": "furniture",
+            "cpp_members": [],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.furniture"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 717
+              }
+            ]
+          },
+          {
+            "id": "spawn_group",
+            "cpp_members": [],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.spawn_group"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 725
+              }
+            ]
+          },
+          {
+            "id": "spawn_npc",
+            "cpp_members": [],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.spawn_npc"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 726
+              }
+            ]
+          },
+          {
+            "id": "stamp",
+            "cpp_members": [],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.stamp"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 740
+              }
+            ]
+          },
+          {
+            "id": "terrain",
+            "cpp_members": [],
+            "cpp_kind": "member",
+            "lua_access": [
+              "MapgenPatch.terrain"
+            ],
+            "disposition": "bound",
+            "evidence": [
+              {
+                "path": "src/lua_platform_mapgen.cpp",
+                "line": 709
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "MapgenUpdateToken",
       "cpp_type": "mapgen_update_token",
       "lua_name": "MapgenUpdateToken",
       "registration_name": "MapgenUpdateToken",
       "registration": {
         "path": "src/lua_platform_mapgen.cpp",
-        "line": 605,
+        "line": 679,
         "installer": "shared.install_mapgen_service_api",
         "namespace": "global"
       },
@@ -12949,7 +13078,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 623
+                "line": 697
               }
             ]
           },
@@ -12966,7 +13095,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 621
+                "line": 695
               }
             ]
           },
@@ -12983,7 +13112,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 607
+                "line": 681
               }
             ]
           },
@@ -12998,7 +13127,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 613
+                "line": 687
               }
             ]
           },
@@ -13015,7 +13144,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 612
+                "line": 686
               }
             ]
           },
@@ -13032,7 +13161,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 608
+                "line": 682
               }
             ]
           },
@@ -13049,7 +13178,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 610
+                "line": 684
               }
             ]
           }
@@ -25127,7 +25256,7 @@
       "registration_name": "ScriptMapgenContext",
       "registration": {
         "path": "src/lua_platform_mapgen.cpp",
-        "line": 1919,
+        "line": 2036,
         "installer": "shared.install_script_mapgen_context_api",
         "namespace": "global"
       },
@@ -25165,7 +25294,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1933
+                "line": 2050
               }
             ]
           },
@@ -25182,7 +25311,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1973
+                "line": 2090
               }
             ]
           },
@@ -25199,7 +25328,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1970
+                "line": 2087
               }
             ]
           },
@@ -25216,7 +25345,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1969
+                "line": 2086
               }
             ]
           },
@@ -25233,7 +25362,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1968
+                "line": 2085
               }
             ]
           },
@@ -25250,7 +25379,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1958
+                "line": 2075
               }
             ]
           },
@@ -25267,7 +25396,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1934
+                "line": 2051
               }
             ]
           },
@@ -25284,7 +25413,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1926
+                "line": 2043
               }
             ]
           },
@@ -25301,7 +25430,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1980
+                "line": 2097
               }
             ]
           },
@@ -25318,7 +25447,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1944
+                "line": 2061
               }
             ]
           },
@@ -25335,7 +25464,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1937
+                "line": 2054
               }
             ]
           },
@@ -25352,7 +25481,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1935
+                "line": 2052
               }
             ]
           },
@@ -25369,7 +25498,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1940
+                "line": 2057
               }
             ]
           },
@@ -25386,7 +25515,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1939
+                "line": 2056
               }
             ]
           },
@@ -25403,7 +25532,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1924
+                "line": 2041
               }
             ]
           },
@@ -25420,7 +25549,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1966
+                "line": 2083
               }
             ]
           },
@@ -25437,7 +25566,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1929
+                "line": 2046
               }
             ]
           },
@@ -25454,7 +25583,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1925
+                "line": 2042
               }
             ]
           },
@@ -25471,7 +25600,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1932
+                "line": 2049
               }
             ]
           },
@@ -25488,7 +25617,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1923
+                "line": 2040
               }
             ]
           },
@@ -25505,7 +25634,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1922
+                "line": 2039
               }
             ]
           },
@@ -25522,7 +25651,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1967
+                "line": 2084
               }
             ]
           },
@@ -25539,7 +25668,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1964
+                "line": 2081
               }
             ]
           },
@@ -25556,7 +25685,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1965
+                "line": 2082
               }
             ]
           },
@@ -25573,7 +25702,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1961
+                "line": 2078
               }
             ]
           },
@@ -25590,7 +25719,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1954
+                "line": 2071
               }
             ]
           },
@@ -25607,7 +25736,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1955
+                "line": 2072
               }
             ]
           },
@@ -25624,7 +25753,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1956
+                "line": 2073
               }
             ]
           },
@@ -25641,7 +25770,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1963
+                "line": 2080
               }
             ]
           },
@@ -25658,7 +25787,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1962
+                "line": 2079
               }
             ]
           },
@@ -25675,7 +25804,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1974
+                "line": 2091
               }
             ]
           },
@@ -25692,7 +25821,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1975
+                "line": 2092
               }
             ]
           },
@@ -25709,7 +25838,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1957
+                "line": 2074
               }
             ]
           },
@@ -25726,7 +25855,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1960
+                "line": 2077
               }
             ]
           },
@@ -25743,7 +25872,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1978
+                "line": 2095
               }
             ]
           },
@@ -25760,7 +25889,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1977
+                "line": 2094
               }
             ]
           },
@@ -25777,7 +25906,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1979
+                "line": 2096
               }
             ]
           },
@@ -25794,7 +25923,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1942
+                "line": 2059
               }
             ]
           },
@@ -25811,7 +25940,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1941
+                "line": 2058
               }
             ]
           },
@@ -25828,7 +25957,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1959
+                "line": 2076
               }
             ]
           },
@@ -25845,7 +25974,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1952
+                "line": 2069
               }
             ]
           },
@@ -25862,7 +25991,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1930
+                "line": 2047
               }
             ]
           },
@@ -25879,7 +26008,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1971
+                "line": 2088
               }
             ]
           },
@@ -25896,7 +26025,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1938
+                "line": 2055
               }
             ]
           },
@@ -25913,7 +26042,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1947
+                "line": 2064
               }
             ]
           },
@@ -25930,7 +26059,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1950
+                "line": 2067
               }
             ]
           },
@@ -25947,7 +26076,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1976
+                "line": 2093
               }
             ]
           },
@@ -25964,7 +26093,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1953
+                "line": 2070
               }
             ]
           },
@@ -25981,7 +26110,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1946
+                "line": 2063
               }
             ]
           },
@@ -25998,7 +26127,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1949
+                "line": 2066
               }
             ]
           },
@@ -26015,7 +26144,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1948
+                "line": 2065
               }
             ]
           },
@@ -26032,7 +26161,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1951
+                "line": 2068
               }
             ]
           },
@@ -26049,7 +26178,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1927
+                "line": 2044
               }
             ]
           },
@@ -26066,7 +26195,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1931
+                "line": 2048
               }
             ]
           },
@@ -26083,7 +26212,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1943
+                "line": 2060
               }
             ]
           },
@@ -26100,7 +26229,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1945
+                "line": 2062
               }
             ]
           },
@@ -26117,7 +26246,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1921
+                "line": 2038
               }
             ]
           },
@@ -26134,7 +26263,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1928
+                "line": 2045
               }
             ]
           },
@@ -26151,7 +26280,7 @@
             "evidence": [
               {
                 "path": "src/lua_platform_mapgen.cpp",
-                "line": 1936
+                "line": 2053
               }
             ]
           }
