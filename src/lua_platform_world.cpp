@@ -4019,6 +4019,14 @@ void install_world_api(
         return world_to_bubble( position );
     } );
     world.set_function(
+        "remove_trap",
+    [require_write]( const script_tripoint_coord & position ) {
+        require_write();
+        static_cast<void>( require_absolute_ms( position, "services.world.remove_trap" ) );
+        const script_tripoint_coord local = world_to_bubble( position );
+        get_map().remove_trap( tripoint_bub_ms( local.to_native() ) );
+    } );
+    world.set_function(
         "bounds",
     [require_read]( sol::this_state lua_state ) {
         require_read();

@@ -370,6 +370,10 @@ function CcbWorldApi.to_absolute(position) end
 ---@return TripointCoord position Reality-bubble position with the same scale.
 function CcbWorldApi.to_bubble(position) end
 
+---Remove the placed trap from the loaded map square through native trap removal.
+---@param position TripointCoord Absolute map-square position.
+function CcbWorldApi.remove_trap(position) end
+
 ---@class CcbWorldSpawnedItem
 ---@field handle GameHandle Generation-bound handle for the spawned map item.
 ---@field uid integer Native item instance uid.
@@ -4081,7 +4085,7 @@ function TrapDefinition:drop(item_id, quantity, charges) end
 ---@field creature? GameHandle Exact triggering creature; absent for item/environment triggers.
 ---@field trigger_kind 'creature'|'item'|'environment'
 
----@param handler_id string Named handler receiving CcbTrapTriggerContext and returning a boolean native action result.
+---@param handler_id string Named handler receiving CcbTrapTriggerContext. Return true to continue with the native action, or false/nil to mark the trigger as handled.
 ---@return TrapDefinition self
 function TrapDefinition:on_trigger(handler_id) end
 
