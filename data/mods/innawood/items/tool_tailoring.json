@@ -112,20 +112,6 @@
     "tool_ammo": [ "thread" ]
   },
   {
-    "id": "sheet_fibercloth",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str": "fibercloth sheet" },
-    "description": "A 12 inch by 24 inch sheet of fabric woven from plant fiber, suitable for making clothing.",
-    "weight": "38 g",
-    "volume": "47 ml",
-    "price": "10 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "fibercloth" ],
-    "symbol": "=",
-    "color": "green"
-  },
-  {
     "id": "fibercloth_patchwork",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
