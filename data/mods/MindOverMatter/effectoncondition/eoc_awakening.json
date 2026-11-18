@@ -1,14 +1,5 @@
 [
   {
-    "id": "ACT_CRYSTAL_AWAKENING_MEDITATION",
-    "type": "activity_type",
-    "activity_level": "LIGHT_EXERCISE",
-    "verb": "meditating",
-    "based_on": "time",
-    "interruptable": false,
-    "interruptable_with_kb": false
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PSI_AWAKENING_BIOKINESIS_FINALIZATION",
     "effect": [
