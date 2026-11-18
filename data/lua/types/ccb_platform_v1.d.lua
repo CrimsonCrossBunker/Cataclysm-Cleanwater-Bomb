@@ -2182,7 +2182,7 @@ function EffectTypeDefinition:monster_death_chance(numerator, denominator) end
 ---@field resisted_base? number Base while resisted; defaults to zero.
 ---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
 
----@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'|'hunger'|'thirst'|'focus'|'sensitivity'|'blood_pressure'|'heart_rate'|'sleep'|'size'
+---@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'|'hunger'|'thirst'|'focus'|'sensitivity'|'blood_pressure'|'heart_rate'|'respiratory_rate'|'sleep'|'size'
 ---@param action 'amount'|'minimum'|'maximum'|'minimum_value'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stats and healing accept amount only. Cough and vomiting accept chance and tick. Value bounds follow the native modifier kind.
 ---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
 ---@return EffectTypeDefinition self

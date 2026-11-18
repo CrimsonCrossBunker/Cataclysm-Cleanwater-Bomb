@@ -1403,7 +1403,7 @@ struct effect_type_definition_handle {
                 { "bash", "BASH" }, { "cut", "CUT" },
                 { "hunger", "HUNGER" }, { "thirst", "THIRST" }, { "focus", "FOCUS" },
                 { "sensitivity", "SENSITIVE" }, { "blood_pressure", "BLOOD_PRESSURE" },
-                { "heart_rate", "HEART_RATE" },
+                { "heart_rate", "HEART_RATE" }, { "respiratory_rate", "RESPIRATORY_RATE" },
                 { "sleep", "SLEEP" }, { "size", "SIZE" },
                 { "healing_head", "HEAL_HEAD" }, { "healing_torso", "HEAL_TORSO" },
                 { "strength", "STR" }, { "dexterity", "DEX" },
@@ -1427,7 +1427,7 @@ struct effect_type_definition_handle {
                                        kind == "sleepiness" || kind == "stimulant" || kind == "perspiration" ||
                                        kind == "hunger" || kind == "thirst" || kind == "focus" ||
                                        kind == "sensitivity" || kind == "blood_pressure" ||
-                                       kind == "heart_rate";
+                                       kind == "heart_rate" || kind == "respiratory_rate";
             const bool timed_chance_only = kind == "cough" || kind == "vomiting";
             if( effect == kinds.end() || found == actions.end() ||
                 ( ( stat || healing ) && action != "amount" ) ||
