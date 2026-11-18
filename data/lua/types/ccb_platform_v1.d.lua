@@ -1776,6 +1776,8 @@ function BodyGraphDefinition:part(symbol, options) end
 ---@field decay? string Existing or same-transaction Harvest id.
 ---@field speed_description? string Existing or same-transaction SpeedDescription id.
 ---@field death_drops? string Existing or same-transaction ItemGroup id.
+---@field death_corpse_type? 'NORMAL'|'SPLATTER'|'BROKEN'|'NO_CORPSE' Native corpse disposition; defaults to NORMAL.
+---@field death_message? string|LocalizedText Death message with the native monster-name `%s` substitution.
 ---@field volume_ml? integer Positive native volume.
 ---@field weight_grams? integer Positive native mass.
 ---@field phase? 'null'|'solid'|'liquid'|'gas'|'plasma'
@@ -1786,6 +1788,7 @@ function BodyGraphDefinition:part(symbol, options) end
 ---@field morale? integer
 ---@field tracking_distance? integer At least three tiles.
 ---@field attack_cost? integer Non-negative move cost.
+---@field grab_strength? integer Native non-negative grab intensity; defaults to one.
 ---@field melee_skill? integer Non-negative melee skill.
 ---@field melee_dice? integer Non-negative bonus bash dice.
 ---@field melee_sides? integer Non-negative sides per bonus die.
@@ -1839,6 +1842,16 @@ function MonsterDefinition:on_attack(handler_id) end
 ---@param set_id string Existing or same-transaction WeakpointSet id.
 ---@return MonsterDefinition self
 function MonsterDefinition:weakpoint_set(set_id) end
+
+---@class MonsterWeakpointFamilyOptions
+---@field id? string Unique family id; defaults to the proficiency id. Reusing an id replaces it at the end of the native family order.
+---@field bonus? number Native finite float modifier when the attacker has the proficiency; omitted uses the proficiency default.
+---@field penalty? number Native finite float modifier when the attacker lacks the proficiency; omitted uses the proficiency default.
+
+---@param proficiency string Existing or same-transaction Proficiency id.
+---@param options? MonsterWeakpointFamilyOptions
+---@return MonsterDefinition self
+function MonsterDefinition:weakpoint_family(proficiency, options) end
 ---@param emission_id string Existing or same-transaction Emission id.
 ---@param interval_turns integer Positive interval.
 ---@return MonsterDefinition self

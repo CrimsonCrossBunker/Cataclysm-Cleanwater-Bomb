@@ -723,6 +723,8 @@ struct monster_definition_data {
     std::string decay;
     std::string speed_description = "DEFAULT";
     std::string death_drops;
+    std::string death_corpse_type = "NORMAL";
+    authored_text death_message;
     std::int64_t volume_ml = 62499;
     std::int64_t weight_grams = 81499;
     std::string phase = "solid";
@@ -733,6 +735,7 @@ struct monster_definition_data {
     std::int64_t morale = 0;
     std::int64_t tracking_distance = 8;
     std::int64_t attack_cost = 100;
+    std::int64_t grab_strength = 1;
     std::int64_t melee_skill = 0;
     std::int64_t melee_dice = 0;
     std::int64_t melee_sides = 0;
@@ -756,6 +759,7 @@ struct monster_definition_data {
     std::vector<monster_attack_reference_definition_data> attacks;
     std::map<std::string, std::string> attack_handlers;
     std::vector<std::string> weakpoint_sets;
+    std::vector<weakpoint_family> weakpoint_families;
     std::map<std::string, std::int64_t> emissions;
     std::map<std::string, std::int64_t> starting_ammo;
     std::set<std::string> tracked_scents;
@@ -2115,6 +2119,40 @@ struct monster_definition_handle {
             return *this;
         }
 
+        monster_definition_handle &weakpoint_family(
+            const std::string &proficiency,
+            const sol::optional<sol::table> &options ) {
+            require_building_handle( token, *definition, "monster" );
+            ::weakpoint_family value;
+            value.id = options ? options->get_or( "id", proficiency ) : proficiency;
+            value.proficiency = proficiency_id( proficiency );
+            if( proficiency.empty() || value.id.empty() ) {
+                throw std::runtime_error( "monster weakpoint family needs an id and proficiency" );
+            }
+            if( options ) {
+                const auto read_modifier = [&options]( const char *key ) -> std::optional<float> {
+                    const sol::optional<double> modifier = options->get<sol::optional<double>>( key );
+                    if( !modifier ) {
+                        return std::nullopt;
+                    }
+                    if( !std::isfinite( *modifier ) ||
+                        std::abs( *modifier ) > std::numeric_limits<float>::max() ) {
+                        throw std::runtime_error( "monster weakpoint family modifier exceeds native range" );
+                    }
+                    return static_cast<float>( *modifier );
+                };
+                value.bonus = read_modifier( "bonus" );
+                value.penalty = read_modifier( "penalty" );
+            }
+            auto &families = definition->weakpoint_families;
+            families.erase( std::remove_if( families.begin(), families.end(),
+            [&value]( const ::weakpoint_family & existing ) {
+                return existing.id == value.id;
+            } ), families.end() );
+            families.push_back( std::move( value ) );
+            return *this;
+        }
+
         monster_definition_handle &emission( const std::string &id,
                                              const std::int64_t interval_turns ) {
             require_building_handle( token, *definition, "monster" );
@@ -3042,6 +3080,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "attack", &monster_definition_handle::attack,
         "on_attack", &monster_definition_handle::on_attack,
         "weakpoint_set", &monster_definition_handle::weakpoint_set,
+        "weakpoint_family", &monster_definition_handle::weakpoint_family,
         "emission", &monster_definition_handle::emission,
         "starting_ammo", &monster_definition_handle::starting_ammo,
         "track_scent", &monster_definition_handle::track_scent,
@@ -3367,6 +3406,9 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->speed_description = options.get_or(
                                             "speed_description", std::string( "DEFAULT" ) );
         definition->death_drops = options.get_or( "death_drops", std::string() );
+        definition->death_corpse_type = options.get_or( "death_corpse_type", std::string( "NORMAL" ) );
+        definition->death_message = read_text_option(
+                                        options, "death_message", {}, "monster death message" );
         definition->volume_ml = options.get_or<std::int64_t>( "volume_ml", 62499 );
         definition->weight_grams = options.get_or<std::int64_t>( "weight_grams", 81499 );
         definition->phase = options.get_or( "phase", std::string( "solid" ) );
@@ -3379,6 +3421,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->tracking_distance = options.get_or<std::int64_t>(
                                             "tracking_distance", 8 );
         definition->attack_cost = options.get_or<std::int64_t>( "attack_cost", 100 );
+        definition->grab_strength = options.get_or<std::int64_t>( "grab_strength", 1 );
         definition->melee_skill = options.get_or<std::int64_t>( "melee_skill", 0 );
         definition->melee_dice = options.get_or<std::int64_t>( "melee_dice", 0 );
         definition->melee_sides = options.get_or<std::int64_t>( "melee_sides", 0 );
@@ -4304,6 +4347,10 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const auto &entry : pimpl_->monsters ) {
             const auto &definition = *entry.definition;
+            if( definition.grab_strength < 0 || !fits_native_int( definition.grab_strength ) ||
+                !io::string_to_enum_optional<mdeath_type>( definition.death_corpse_type ) ) {
+                throw std::runtime_error( "monster '" + definition.id + "' has invalid grab or death options" );
+            }
             if( !std::isfinite( definition.status_chance_multiplier ) ||
                 definition.status_chance_multiplier < 0.0 || !std::isfinite( definition.luminance ) ) {
                 throw std::runtime_error( "monster '" + definition.id + "' has invalid numeric values" );
@@ -4353,6 +4400,13 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 if( !weakpoint_exists( id ) ) {
                     throw std::runtime_error( "monster '" + definition.id +
                                               "' references unknown weakpoint set '" + id + "'" );
+                }
+            }
+            for( const ::weakpoint_family &family : definition.weakpoint_families ) {
+                if( !proficiency_exists( family.proficiency.str() ) ) {
+                    throw std::runtime_error( "monster '" + definition.id +
+                                              "' references unknown weakpoint proficiency '" +
+                                              family.proficiency.str() + "'" );
                 }
             }
             for( const auto &[id, interval] : definition.emissions ) {
@@ -5457,6 +5511,7 @@ void creatures_content_transaction::impl::apply_monster()
         native.morale = static_cast<int>( source.morale );
         native.tracking_distance = static_cast<int>( source.tracking_distance );
         native.attack_cost = static_cast<int>( source.attack_cost );
+        native.grab_strength = static_cast<int>( source.grab_strength );
         native.melee_skill = static_cast<int>( source.melee_skill );
         native.melee_dice = static_cast<int>( source.melee_dice );
         native.melee_sides = static_cast<int>( source.melee_sides );
@@ -5475,6 +5530,9 @@ void creatures_content_transaction::impl::apply_monster()
         native.sp_defense = &mdefense::none;
         native.mdeath_effect.lua_platform_mod = this->owner;
         native.mdeath_effect.lua_platform_handler = source.death_handler;
+        native.mdeath_effect.corpse_type = io::string_to_enum<mdeath_type>( source.death_corpse_type );
+        native.mdeath_effect.death_message = source.death_message.native();
+        native.families.families = source.weakpoint_families;
         native.mat.clear();
         native.mat_portion_total = 0;
         if( source.materials.empty() ) {
@@ -6787,6 +6845,8 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.decay );
             hash_part( state, value.speed_description );
             hash_part( state, value.death_drops );
+            hash_part( state, value.death_corpse_type );
+            hash_part( state, value.death_message );
             hash_part( state, std::to_string( value.volume_ml ) );
             hash_part( state, std::to_string( value.weight_grams ) );
             hash_part( state, value.phase );
@@ -6797,6 +6857,7 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, std::to_string( value.morale ) );
             hash_part( state, std::to_string( value.tracking_distance ) );
             hash_part( state, std::to_string( value.attack_cost ) );
+            hash_part( state, std::to_string( value.grab_strength ) );
             hash_part( state, std::to_string( value.melee_skill ) );
             hash_part( state, std::to_string( value.melee_dice ) );
             hash_part( state, std::to_string( value.melee_sides ) );
@@ -6855,6 +6916,13 @@ void creatures_content_transaction::append_fingerprint(
             for( const std::string &set : value.weakpoint_sets ) {
                 hash_part( state, "weakpoint_set" );
                 hash_part( state, set );
+            }
+            for( const ::weakpoint_family &family : value.weakpoint_families ) {
+                hash_part( state, "weakpoint_family" );
+                hash_part( state, family.id );
+                hash_part( state, family.proficiency.str() );
+                hash_part( state, family.bonus ? std::to_string( *family.bonus ) : "native_bonus" );
+                hash_part( state, family.penalty ? std::to_string( *family.penalty ) : "native_penalty" );
             }
             const auto hash_int_map = [&]( const std::string_view label,
             const std::map<std::string, std::int64_t> &values ) {
