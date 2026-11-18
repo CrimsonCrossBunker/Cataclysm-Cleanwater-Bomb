@@ -178,6 +178,7 @@ require("portal_passive_effects")
 require("nre_recorder")
 
 require("lixa_hallway")
+require("spell_traps")
 
 require("science_items")
 

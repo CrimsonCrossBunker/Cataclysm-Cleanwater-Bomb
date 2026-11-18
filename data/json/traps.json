@@ -786,20 +786,6 @@
     "always_invisible": true
   },
   {
-    "type": "trap",
-    "id": "tr_spider",
-    "name": "trapdoor spiderden",
-    "color": "green",
-    "symbol": "#",
-    "visibility": 99,
-    "avoidance": 99,
-    "difficulty": 99,
-    "trap_radius": 4,
-    "action": "spell",
-    "spell_data": { "id": "summon_trapspider" },
-    "always_invisible": true
-  },
-  {
     "id": "summon_trapspider",
     "type": "SPELL",
     "name": { "str": "Summon Trapdoor Spider", "//~": "NO_I18N" },
