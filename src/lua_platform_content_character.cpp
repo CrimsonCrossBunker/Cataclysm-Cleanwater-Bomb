@@ -68,6 +68,7 @@ extern "C" {
 #include "dialogue_helpers.h"
 #include "enum_conversions.h"
 #include "generic_factory.h"
+#include "init.h"
 #include "item.h"
 #include "item_group.h"
 #include "lua_platform_content.h"
@@ -3055,6 +3056,14 @@ void character_content_transaction::impl::install_bionic( sol::table &content )
 
 void character_content_transaction::impl::install_spell( sol::table &content )
 {
+    content.set_function( "upsert_spell", [this]( const spell_definition_handle & handle ) {
+        if( handle.token != token ) {
+            throw std::runtime_error( "cannot register a spell definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "spell" );
+        handle.definition->registered = true;
+        spells.push_back( { definition_operation::upsert, handle.definition } );
+    } );
     content.set_function( "Spell", [this]( const sol::table & options ) {
         if( this->token->lifecycle != handle_lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
@@ -6862,10 +6871,17 @@ void character_content_transaction::impl::apply_bionic()
 
 void character_content_transaction::impl::apply_spell()
 {
+    const DynamicDataLoader &loader = DynamicDataLoader::get_instance();
     for( const spell_registration &entry : this->spells ) {
         const spell_id id( entry.definition->id );
+        const spell_type *previous = id.is_valid() ? &id.obj() : nullptr;
+        if( entry.operation == definition_operation::upsert && previous && !previous->src.empty() &&
+            loader.source_load_order( previous->src.back().second.str() ) >
+            loader.source_load_order( this->owner ) ) {
+            continue;
+        }
         this->spell_undo.emplace_back(
-            id, id.is_valid() ? std::optional < spell_type > ( id.obj() ) : std::nullopt );
+            id, previous ? std::optional < spell_type > ( *previous ) : std::nullopt );
         const spell_definition_data &source = *entry.definition;
 
         spell_type native;

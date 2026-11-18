@@ -15130,3 +15130,7 @@ function CcbMonstersApi.set_friendly(monster, friendly) end
 ---@param monster_id string Native or same-transaction Monster id.
 ---@param handler_id string Named handler receiving a CcbMonsterDefinitionDeathPayload.
 function CcbPlatformContent.bind_monster_death(monster_id, handler_id) end
+
+---Add a spell or replace a definition from the same or an earlier source in Mod load order.
+---@param definition SpellDefinition
+function CcbPlatformContent.upsert_spell(definition) end

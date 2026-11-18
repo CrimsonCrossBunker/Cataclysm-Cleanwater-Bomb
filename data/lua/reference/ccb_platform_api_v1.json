@@ -29050,7 +29050,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1653,
+    "function_count": 1654,
     "functions": [
       {
         "line": "4330",
@@ -33465,6 +33465,12 @@
       {
         "line": "7895",
         "name": "upsert_json_flag",
+        "owner": "CcbPlatformContent",
+        "parameters": "definition"
+      },
+      {
+        "line": "15136",
+        "name": "upsert_spell",
         "owner": "CcbPlatformContent",
         "parameters": "definition"
       },
@@ -39120,7 +39126,7 @@
         "lua_name": "BionicDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3659,
+          "line": 3668,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -39456,7 +39462,7 @@
         "lua_name": "EnchantmentDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3639,
+          "line": 3648,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -39918,7 +39924,7 @@
         "lua_name": "MagicTypeDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3746,
+          "line": 3755,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40002,7 +40008,7 @@
         "lua_name": "MartialArtDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3738,
+          "line": 3747,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40058,7 +40064,7 @@
         "lua_name": "MissionDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3701,
+          "line": 3710,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40212,7 +40218,7 @@
         "lua_name": "MovementModeDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3756,
+          "line": 3765,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40562,7 +40568,7 @@
         "lua_name": "ProfessionDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3604,
+          "line": 3613,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40576,7 +40582,7 @@
         "lua_name": "ProfessionGroupDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3624,
+          "line": 3633,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40590,7 +40596,7 @@
         "lua_name": "ProfessionItemBonusDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3719,
+          "line": 3728,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -40604,7 +40610,7 @@
         "lua_name": "ProfessionItemSubstitutionDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3715,
+          "line": 3724,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -41080,7 +41086,7 @@
         "lua_name": "SpellDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3683,
+          "line": 3692,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -41122,7 +41128,7 @@
         "lua_name": "TechniqueDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3723,
+          "line": 3732,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
@@ -41458,7 +41464,7 @@
         "lua_name": "WidgetDefinition",
         "registration": {
           "installer": "platform_v1.character_content_transaction.install_lua_api",
-          "line": 3628,
+          "line": 3637,
           "namespace": "ccb",
           "path": "src/lua_platform_content_character.cpp"
         },
