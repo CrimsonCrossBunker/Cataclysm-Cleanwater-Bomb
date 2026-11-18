@@ -576,3 +576,127 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- 1 gallon tank, filled to 80% for safety.  1.3lbs while empty
+    -- https://learnmetrics.com/propane-tank-sizes
+    local item = content.Item {
+        id = "small_propane_tank",
+        category = "tool_magazine",
+        name = ccb.content.plural_text("small propane tank", "small propane tanks"),
+        description = ccb.content.text("A small tank of propane, commonly used for camping stoves and torches."),
+        ascii_picture = "small_propane_tank",
+        mass_milligrams = 591000,
+        volume_ml = 5030,
+        longest_side_mm = 300,
+        price_cents = 2000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("GAS_TANK")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { propane = 3000 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- 5 gallon tank, filled to 80% for safety..  About 15lbs while empty.
+    -- https://learnmetrics.com/propane-tank-sizes
+    local item = content.Item {
+        id = "medium_propane_tank",
+        category = "tool_magazine",
+        name = ccb.content.plural_text("medium propane tank", "medium propane tanks"),
+        description = ccb.content.text("A medium-sized tank of propane, commonly used for barbeques."),
+        ascii_picture = "medium_propane_tank",
+        mass_milligrams = 6720000,
+        volume_ml = 23250,
+        longest_side_mm = 500,
+        price_cents = 2000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("GAS_TANK")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 7)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { propane = 15000 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- 20 gallon tank, filled to 80% for safety.  About 50 lbs while empty.
+    -- https://learnmetrics.com/propane-tank-sizes
+    local item = content.Item {
+        id = "large_propane_tank",
+        category = "tool_magazine",
+        name = ccb.content.plural_text("large propane tank", "large propane tanks"),
+        description = ccb.content.text("A large tank of propane, commonly used for heating."),
+        ascii_picture = "large_propane_tank",
+        mass_milligrams = 22727000,
+        volume_ml = 80000,
+        longest_side_mm = 1170,
+        price_cents = 6000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("GAS_TANK")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 11)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { propane = 60000 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- 100 gallon tank, filled to 80% for safety.  212 lbs while empty
+    -- https://learnmetrics.com/propane-tank-sizes
+    local item = content.Item {
+        id = "xl_propane_tank",
+        category = "tool_magazine",
+        name = ccb.content.plural_text("extra large propane tank", "extra large propane tanks"),
+        description = ccb.content.text("A massive tank of propane, commonly used for heating a home or vehicle."),
+        ascii_picture = "xl_propane_tank",
+        mass_milligrams = 96000000,
+        volume_ml = 390000,
+        longest_side_mm = 1220,
+        price_cents = 6000,
+        price_postapoc_cents = 500,
+        melee_to_hit = -3,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("GAS_TANK")
+    item:flag("NO_SALVAGE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 15)
+    item:tool { charges_per_use = 1 }
+    item:magazine_pocket { ammo_capacities = { propane = 300000 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
