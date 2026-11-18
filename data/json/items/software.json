@@ -9,106 +9,6 @@
     "ememory_size": "1 KB"
   },
   {
-    "id": "software_useless",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "misc software" },
-    "description": "A miscellaneous piece of hobby software.  Probably useless.",
-    "price": "3 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "64 MB"
-  },
-  {
-    "id": "software_hacking",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "hackPRO" },
-    "description": "A piece of hacking software.",
-    "price": "8 USD",
-    "price_postapoc": "50 cent",
-    "ememory_size": "128 MB"
-  },
-  {
-    "id": "software_medical",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "MediSoft" },
-    "description": "A piece of medical software.",
-    "price": "6 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "128 MB"
-  },
-  {
-    "id": "software_math",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "MatheMAX" },
-    "description": "A piece of mathematical software.",
-    "price": "5 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "64 MB"
-  },
-  {
-    "id": "software_blood_data",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "infection data" },
-    "description": "Medical data on zombie blood.",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "16 MB"
-  },
-  {
-    "id": "software_lab_data",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "lab data" },
-    "description": "Research archives from a government laboratory.",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "16 GB"
-  },
-  {
-    "id": "software_encryption_codes",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "encryption codes" },
-    "description": "There are numerous security keys with dates for potential future access to encrypted archived data.",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "1 GB"
-  },
-  {
-    "id": "software_archived_data",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "archive data" },
-    "description": "Extremely compressed research data, observation and experiment statistics.  The only pattern you manage to recognize is an increase in the amount of report closer to the Cataclysm, but also a reduction in the number of facilities still submitting reports.",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "64 GB"
-  },
-  {
-    "id": "train_data",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str_sp": "laboratory shipping records" },
-    "description": "Records of logistical data on subterranean train routes and schedules.",
-    "price": "2 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "64 GB"
-  },
-  {
-    "id": "software_electronics_reference",
-    "copy-from": "abstract_software",
-    "type": "ITEM",
-    "name": { "str": "integrated circuit datasheet archives", "str_pl": "misc software" },
-    "description": "Huge archives of numerous IC circuit datasheets from several major manufacturers.  Probably valuable to the right person, as it would be hard to salvage and reuse these components without them.",
-    "price": "400 USD",
-    "price_postapoc": "0 cent",
-    "ememory_size": "12 GB"
-  },
-  {
     "abstract": "abstract_efile",
     "type": "ITEM",
     "category": "e_files",
@@ -134,16 +34,6 @@
     "extend": { "flags": [ "E_STORABLE_EXCLUSIVE" ] }
   },
   {
-    "abstract": "abstract_efile_copiable",
-    "copy-from": "abstract_efile",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": { "str": "abstract copiable electronic file", "//~": "NO_I18N" },
-    "description": { "str": "abstract copiable electronic file", "//~": "NO_I18N" },
-    "ememory_size": "1 KB",
-    "extend": { "flags": [ "E_COPIABLE" ] }
-  },
-  {
     "abstract": "abstract_efile_exclusive_copiable",
     "copy-from": "abstract_efile",
     "type": "ITEM",
@@ -165,16 +55,6 @@
       "//~": "NO_I18N"
     },
     "variables": { "browsed": "true" }
-  },
-  {
-    "id": "efile_junk",
-    "copy-from": "abstract_efile_exclusive",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": "junk file",
-    "description": "A useless piece of electronic data.",
-    "ememory_size": "1 KB",
-    "//": "insert into e-device to make browsing take longer"
   },
   {
     "id": "efile_lore",
@@ -256,16 +136,5 @@
       "recipes_categories": [ "CSC_CHEM_DRUGS", "CSC_OTHER_MEDICAL" ],
       "recipes_level_min": 3
     }
-  },
-  {
-    "id": "efile_photos",
-    "copy-from": "abstract_efile_exclusive_copiable",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": { "str": "photo gallery", "str_pl": "photo galleries" },
-    "description": "A varied collection of detailed photos.  Any collections of this kind will be added to this one.",
-    "use_action": [ "VIEW_PHOTOS" ],
-    "ememory_size": "4 MB",
-    "extend": { "flags": [ "E_FILE_COLLECTION" ] }
   }
 ]

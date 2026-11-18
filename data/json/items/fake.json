@@ -233,14 +233,6 @@
     "qualities": [ [ "ANVIL", 4 ] ]
   },
   {
-    "id": "fake_milling_item",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "name": { "str_sp": "semi ground grains" },
-    "description": "A paste of half-finished milled grains, not yet flour.",
-    "extend": { "flags": [ "TRADER_AVOID", "FAKE_MILL" ] }
-  },
-  {
     "id": "fake_smoke_plume",
     "copy-from": "fake_item",
     "type": "ITEM",
@@ -571,14 +563,6 @@
     "name": { "str": "concrete mixer" },
     "copy-from": "fake_appliance_tool",
     "charges_per_use": 20
-  },
-  {
-    "id": "debug_item_search",
-    "name": { "str": "debug item search", "//~": "NO_I18N" },
-    "type": "ITEM",
-    "symbol": "?",
-    "description": { "str": "This is a dummy item used by item search.  You should never see it outside of debug.", "//~": "NO_I18N" },
-    "flags": [ "TRADER_AVOID", "ZERO_WEIGHT" ]
   },
   {
     "id": "fake_dynamite_50lbs",
