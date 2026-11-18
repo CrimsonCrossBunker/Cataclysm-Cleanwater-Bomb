@@ -11746,6 +11746,12 @@ function CcbInventoryApi.contains(character, item) end
 ---@return CcbResult result value is a dense array of live item handles.
 function CcbInventoryApi.items_of_type(character, item_type, shuffle) end
 
+---Capture all carried items with the effective native flag, in native traversal order.
+---@param character GameHandle Exact live Character.
+---@param flag GameId GameId<json_flag>.
+---@return CcbResult result value is a dense array of live item handles.
+function CcbInventoryApi.items_with_flag(character, flag) end
+
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
 ---@param count integer Non-negative requested item count, at most 1000000000.

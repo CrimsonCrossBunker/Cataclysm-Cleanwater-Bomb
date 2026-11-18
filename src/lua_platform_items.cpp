@@ -3655,11 +3655,11 @@ sol::table inventory_resources(
                    state, std::move( value ) ) );
 }
 
-sol::table inventory_items_of_type(
-    sol::this_state lua, const game_handle &handle, const script_game_id &type, const bool shuffle,
+template<typename Predicate>
+sol::table inventory_matching_items(
+    sol::this_state lua, const game_handle &handle, const Predicate &matches_item, const bool shuffle,
     const game_handle_runtime &runtime_generation, const std::size_t world_generation )
 {
-    require_id_kind( type, "item", "services.inventory.items_of_type" );
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
     Character *character = resolve_exact_character( handle, runtime_generation, world_generation, error );
@@ -3667,10 +3667,9 @@ sol::table inventory_items_of_type(
         return make_game_error_result( state, *error );
     }
 
-    const itype_id id( type.value() );
     std::vector<item_location> matches = character->all_items_loc();
     matches.erase( std::remove_if( matches.begin(), matches.end(), [&]( const item_location & location ) {
-        return !location || location->typeId() != id;
+        return !location || !matches_item( *location );
     } ), matches.end() );
     if( shuffle && !matches.empty() ) {
         std::shuffle( matches.begin(), matches.end(), rng_get_engine() );
@@ -8044,8 +8043,22 @@ void install_item_api(
         } else {
             require_read();
         }
-        return inventory_items_of_type( lua_state, character, type, shuffled,
-                                        current_runtime_generation(), current_world_generation() );
+        require_id_kind( type, "item", "services.inventory.items_of_type" );
+        const itype_id id( type.value() );
+        return inventory_matching_items( lua_state, character, [&id]( const item & entry ) {
+            return entry.typeId() == id;
+        }, shuffled, current_runtime_generation(), current_world_generation() );
+    } );
+    inventory.set_function(
+        "items_with_flag",
+        [current_runtime_generation, current_world_generation, require_read](
+            sol::this_state lua_state, const game_handle &character, const script_game_id &flag ) {
+        require_read();
+        require_id_kind( flag, "json_flag", "services.inventory.items_with_flag" );
+        const flag_id id( flag.value() );
+        return inventory_matching_items( lua_state, character, [&id]( const item & entry ) {
+            return entry.has_flag( id );
+        }, false, current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
         "has_items",

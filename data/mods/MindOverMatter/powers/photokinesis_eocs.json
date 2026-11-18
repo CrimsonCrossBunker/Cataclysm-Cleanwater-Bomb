@@ -135,45 +135,11 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PHOTOKIN_RADIATION_STERILIZATION_CANCELS_STERILIZING",
-    "eoc_type": "EVENT",
-    "required_event": "character_finished_activity",
-    "condition": {
-      "and": [
-        { "compare_string": [ "ACT_PSI_PHOTOKIN_RADIATION_STERILIZATION", { "context_val": "activity" } ] },
-        { "u_has_effect": "effect_photokin_sterilization" }
-      ]
-    },
-    "effect": [ { "u_lose_effect": "effect_photokin_sterilization" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PHOTOKIN_RADIATION_STERILIZATION_COST",
     "condition": { "u_has_effect": "effect_photokin_sterilization" },
     "effect": [
       { "math": [ "u_calories() -= rand(2) + 1" ] },
       { "run_eocs": "EOC_PHOTOKIN_RADIATION_STERILIZATION_COST", "time_in_future": [ 10, 15 ] }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PHOTOKIN_RADIATION_STERILIZATION_FINALIZE",
-    "condition": { "u_has_effect": "effect_photokin_sterilization" },
-    "effect": [
-      {
-        "u_run_inv_eocs": "all",
-        "search_data": [ { "flags": [ "PHOTOKIN_IRRADIATION_READY" ] } ],
-        "true_eocs": [
-          {
-            "id": "EOC_PHOTOKIN_RADIATION_STERILIZATION_FINALIZE_END",
-            "effect": [
-              { "npc_unset_flag": "PHOTOKIN_IRRADIATION_READY" },
-              { "npc_set_flag": "IRRADIATED" },
-              { "if": { "math": [ "n_item_rot() >= 0" ] }, "then": [ { "math": [ "n_item_rot() *= 0.25" ] } ] }
-            ]
-          }
-        ]
-      }
     ]
   },
   {
