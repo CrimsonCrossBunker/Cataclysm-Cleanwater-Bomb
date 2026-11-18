@@ -2063,6 +2063,7 @@ function MonsterAttackDefinition:on_hit(handler_id) end
 ---@class EffectTypeDefinitionOptions
 ---@field id string Stable native effect-type id.
 ---@field name? string|LocalizedText First intensity name; additional intensities use name().
+---@field speed_name? string|LocalizedText Effect label for speed descriptions.
 ---@field description? string|LocalizedText First intensity description; additional intensities use description().
 ---@field remove_message? string|LocalizedText Player-facing removal message.
 ---@field apply_message? string|LocalizedText Player-facing application message.
@@ -2111,6 +2112,11 @@ function EffectTypeDefinition:apply_message(text, rating) end
 ---@param rating 'neutral'|'good'|'bad'|'mixed'
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:decay_message(text, rating) end
+---Append a weighted reason for a melee miss.
+---@param text string|LocalizedText
+---@param weight integer Nonnegative native weight.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:miss_message(text, weight) end
 ---@param id string
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:flag(id) end
@@ -2126,9 +2132,14 @@ function EffectTypeDefinition:resist_trait(id) end
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:resist_effect(id) end
+---Append an effect to remove during native processing, in authored order.
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:removes_effect(id) end
+---Append an effect to remove when it exists, including when another enabled Mod supplies it.
+---@param id string Native effect id. An absent effect has no removal action.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:removes_optional_effect(id) end
 ---@param id string Existing or same-transaction EffectType id.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:blocks_effect(id) end
@@ -2147,6 +2158,13 @@ function EffectTypeDefinition:enchantment(id) end
 ---@param options EffectDeathChanceOptions Appends the next intensity's chance; higher intensities reuse the last entry.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:death_chance(options) end
+
+---Append a monster-only death chance starting at intensity one. Higher intensities repeat the last entry.
+---A resisted effect or a Character skips the roll. Use a separate effect for general death chances.
+---@param numerator integer Native chance numerator.
+---@param denominator integer Positive native probability denominator.
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:monster_death_chance(numerator, denominator) end
 
 ---@class EffectModifierOptions
 ---@field base? number Value at intensity one; defaults to zero.

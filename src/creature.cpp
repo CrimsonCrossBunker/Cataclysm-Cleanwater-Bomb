@@ -2312,7 +2312,7 @@ void Creature::process_effects()
             }
 
             const bool reduced = resists_effect( e );
-            if( e.kill_roll( reduced ) ) {
+            if( e.kill_roll( reduced, is_monster() ) ) {
                 add_msg_if_player( m_bad, e.get_death_message() );
                 if( is_avatar() ) {
                     std::map<std::string, cata_variant> event_data;

@@ -1718,8 +1718,11 @@ std::vector<effect_dur_mod> effect::get_effect_dur_scaling() const
     return eff_type->effect_dur_scaling;
 }
 
-bool effect::kill_roll( bool reduced ) const
+bool effect::kill_roll( bool reduced, bool is_monster ) const
 {
+    if( eff_type->monster_only_death_roll && !is_monster ) {
+        return false;
+    }
     const std::vector<std::pair<int, int>> &chances = reduced ? eff_type->red_kill_chance :
                                         eff_type->kill_chance;
     if( chances.empty() ) {

@@ -248,6 +248,7 @@ class effect_type
 
         translation death_msg;
         std::optional<event_type> death_event;
+        bool monster_only_death_roll = false;
 
         std::unordered_map<std::string, std::unordered_map<uint32_t, modifier_value_arr>> mod_data;
         std::vector<vitamin_rate_effect> vitamin_data;
@@ -422,7 +423,7 @@ class effect
 
         std::vector<effect_dur_mod> get_effect_dur_scaling() const;
 
-        bool kill_roll( bool reduced ) const;
+        bool kill_roll( bool reduced, bool is_monster = false ) const;
         std::string get_death_message() const;
         event_type death_event() const;
 

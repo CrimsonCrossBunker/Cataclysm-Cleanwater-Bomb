@@ -389,8 +389,13 @@ struct effect_type_definition_data {
         double resisted_base = 0.0;
         double resisted_per_intensity = 0.0;
     };
+    struct removal_data {
+        std::string id;
+        bool optional;
+    };
     std::string id;
     std::vector<authored_text> names;
+    authored_text speed_name;
     std::vector<authored_text> descriptions;
     std::vector<authored_text> reduced_descriptions;
     authored_text remove_message;
@@ -399,10 +404,12 @@ struct effect_type_definition_data {
     std::string rating = "neutral";
     std::vector<std::pair<authored_text, game_message_type>> apply_messages;
     std::vector<std::pair<authored_text, game_message_type>> decay_messages;
+    std::vector<std::pair<authored_text, int>> miss_messages;
     std::string death_event;
     bool harmful_cough = false;
     std::vector<std::pair<int, int>> death_chances;
     std::vector<std::pair<int, int>> resisted_death_chances;
+    bool monster_only_death_roll = false;
     std::vector<vitamin_rate_effect> vitamin_modifiers;
     std::vector<limb_score_effect> limb_score_modifiers;
     std::map<std::pair<std::string, mod_action>, modifier_data> modifiers;
@@ -428,7 +435,7 @@ struct effect_type_definition_data {
     std::set<std::string> immune_bodypart_flags;
     std::set<std::string> resist_traits;
     std::set<std::string> resist_effects;
-    std::set<std::string> removes_effects;
+    std::vector<removal_data> removes_effects;
     std::set<std::string> blocks_effects;
     std::vector<std::string> enchantments;
     bool registered = false;
@@ -1289,6 +1296,16 @@ struct effect_type_definition_handle {
                                          "effect decay message" );
         }
 
+        effect_type_definition_handle &miss_message( const sol::object &text, std::int64_t weight ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( weight < 0 || weight > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument( "effect miss message weight must be a nonnegative native integer" );
+            }
+            definition->miss_messages.emplace_back( read_singular_text( text, {}, "effect miss message" ),
+                                                    static_cast<int>( weight ) );
+            return *this;
+        }
+
         effect_type_definition_handle &flag( const std::string &id ) {
             return insert_id( definition->flags, id, "effect flag" );
         }
@@ -1312,7 +1329,11 @@ struct effect_type_definition_handle {
         }
 
         effect_type_definition_handle &removes_effect( const std::string &id ) {
-            return insert_id( definition->removes_effects, id, "removed effect" );
+            return append_removal( id, false );
+        }
+
+        effect_type_definition_handle &removes_optional_effect( const std::string &id ) {
+            return append_removal( id, true );
         }
 
         effect_type_definition_handle &blocks_effect( const std::string &id ) {
@@ -1330,20 +1351,26 @@ struct effect_type_definition_handle {
 
         effect_type_definition_handle &death_chance( const sol::table &options ) {
             require_building_handle( token, *definition, "effect type" );
-            const auto read_chance = [&]( const char *top, const char *bottom ) {
-                const std::int64_t numerator = options.get<std::int64_t>( top );
-                const std::int64_t denominator = options.get<std::int64_t>( bottom );
-                if( numerator < std::numeric_limits<int>::min() ||
-                    numerator > std::numeric_limits<int>::max() || denominator <= 0 ||
-                    denominator > std::numeric_limits<int>::max() ) {
-                    throw std::runtime_error( "effect death chance requires a native numerator and positive denominator" );
-                }
-                return std::make_pair( static_cast<int>( numerator ), static_cast<int>( denominator ) );
-            };
-            const auto normal = read_chance( "numerator", "denominator" );
-            const auto resisted = read_chance( "resisted_numerator", "resisted_denominator" );
+            if( definition->monster_only_death_roll ) {
+                throw std::invalid_argument( "cannot mix general and monster-only effect death chances" );
+            }
+            const auto normal = checked_death_chance( options.get<std::int64_t>( "numerator" ),
+                                options.get<std::int64_t>( "denominator" ) );
+            const auto resisted = checked_death_chance( options.get<std::int64_t>( "resisted_numerator" ),
+                                  options.get<std::int64_t>( "resisted_denominator" ) );
             definition->death_chances.push_back( normal );
             definition->resisted_death_chances.push_back( resisted );
+            return *this;
+        }
+
+        effect_type_definition_handle &monster_death_chance( std::int64_t numerator,
+                std::int64_t denominator ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( !definition->resisted_death_chances.empty() ) {
+                throw std::invalid_argument( "cannot mix general and monster-only effect death chances" );
+            }
+            definition->death_chances.push_back( checked_death_chance( numerator, denominator ) );
+            definition->monster_only_death_roll = true;
             return *this;
         }
 
@@ -1487,6 +1514,25 @@ struct effect_type_definition_handle {
         }
 
     private:
+        static std::pair<int, int> checked_death_chance( std::int64_t numerator,
+                std::int64_t denominator ) {
+            if( numerator < std::numeric_limits<int>::min() ||
+                numerator > std::numeric_limits<int>::max() || denominator <= 0 ||
+                denominator > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument( "effect death chance requires a native numerator and positive denominator" );
+            }
+            return { static_cast<int>( numerator ), static_cast<int>( denominator ) };
+        }
+
+        effect_type_definition_handle &append_removal( const std::string &id, bool optional ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( id.empty() ) {
+                throw std::invalid_argument( "removed effect id cannot be empty" );
+            }
+            definition->removes_effects.push_back( { id, optional } );
+            return *this;
+        }
+
         effect_type_definition_handle &append_rated_message(
             std::vector<std::pair<authored_text, game_message_type>> &target, const sol::object &text,
             std::string_view rating_name, const std::string &label ) {
@@ -3223,14 +3269,17 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "reduced_description", &effect_type_definition_handle::reduced_description,
         "apply_message", &effect_type_definition_handle::apply_message,
         "decay_message", &effect_type_definition_handle::decay_message,
+        "miss_message", &effect_type_definition_handle::miss_message,
         "flag", &effect_type_definition_handle::flag,
         "immune_character_flag", &effect_type_definition_handle::immune_character_flag,
         "immune_bodypart_flag", &effect_type_definition_handle::immune_bodypart_flag,
         "resist_trait", &effect_type_definition_handle::resist_trait,
         "resist_effect", &effect_type_definition_handle::resist_effect,
         "removes_effect", &effect_type_definition_handle::removes_effect,
+        "removes_optional_effect", &effect_type_definition_handle::removes_optional_effect,
         "blocks_effect", &effect_type_definition_handle::blocks_effect,
         "death_chance", &effect_type_definition_handle::death_chance,
+        "monster_death_chance", &effect_type_definition_handle::monster_death_chance,
         "modifier", &effect_type_definition_handle::modifier,
         "vitamin", &effect_type_definition_handle::vitamin,
         "limb_score", &effect_type_definition_handle::limb_score,
@@ -3447,6 +3496,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
     content.set_function( "EffectType", [this]( const sol::table & options ) {
         auto definition = std::make_shared<effect_type_definition_data>();
         definition->id = options.get_or( "id", std::string() );
+        definition->speed_name = read_text_option( options, "speed_name", {}, "effect speed name" );
         if( authored_text value = read_text_option( options, "name", {}, "effect name" );
             options.get<sol::object>( "name" ).get_type() != sol::type::nil ) {
             definition->names.push_back( std::move( value ) );
@@ -4405,7 +4455,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                     throw std::runtime_error( "effect type '" + definition.id + "' requires a character death event" );
                 }
             }
-            if( !definition.death_chances.empty() && definition.death_event.empty() ) {
+            if( !definition.death_chances.empty() && !definition.monster_only_death_roll &&
+                definition.death_event.empty() ) {
                 throw std::runtime_error( "effect type '" + definition.id +
                                           "' requires a death event for death chances" );
             }
@@ -4429,8 +4480,8 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown resistance effect '" + id + "'" );
                 }
             }
-            for( const std::string &id : definition.removes_effects ) {
-                if( !effect_exists( id ) ) {
+            for( const auto &[id, optional] : definition.removes_effects ) {
+                if( !optional && !effect_exists( id ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
                                               "' references unknown removed effect '" + id + "'" );
                 }
@@ -5164,6 +5215,9 @@ void creatures_content_transaction::impl::apply_effect_type()
         if( native.name.empty() ) {
             native.name.emplace_back();
         }
+        if( !source.speed_name.empty() ) {
+            native.speed_mod_name = source.speed_name.native();
+        }
         for( const authored_text &value : source.descriptions ) {
             native.desc.push_back( value.native() );
         }
@@ -5190,6 +5244,9 @@ void creatures_content_transaction::impl::apply_effect_type()
         for( const auto &[text, rating] : source.decay_messages ) {
             native.decay_msgs.emplace_back( text.native(), rating );
         }
+        for( const auto &[text, weight] : source.miss_messages ) {
+            native.miss_msgs.emplace_back( text.native(), weight );
+        }
         native.death_msg = source.death_message.empty() ? to_translation( "You died." ) :
                            source.death_message.native();
         if( !source.death_event.empty() ) {
@@ -5197,6 +5254,7 @@ void creatures_content_transaction::impl::apply_effect_type()
         }
         native.kill_chance = source.death_chances;
         native.red_kill_chance = source.resisted_death_chances;
+        native.monster_only_death_roll = source.monster_only_death_roll;
         native.vitamin_data = source.vitamin_modifiers;
         native.limb_score_data = source.limb_score_modifiers;
         native.harmful_cough = source.harmful_cough;
@@ -5241,8 +5299,8 @@ void creatures_content_transaction::impl::apply_effect_type()
         for( const std::string &id : source.resist_effects ) {
             native.resist_effects.emplace_back( id );
         }
-        for( const std::string &id : source.removes_effects ) {
-            native.removes_effects.emplace_back( id );
+        for( const auto &removal : source.removes_effects ) {
+            native.removes_effects.emplace_back( removal.id );
         }
         for( const std::string &id : source.blocks_effects ) {
             native.blocks_effects.emplace_back( id );
@@ -7103,6 +7161,10 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, "name" );
                 hash_part( state, text );
             }
+            if( !value.speed_name.empty() ) {
+                hash_part( state, "speed_name" );
+                hash_part( state, value.speed_name );
+            }
             for( const authored_text &text : value.descriptions ) {
                 hash_part( state, "description" );
                 hash_part( state, text );
@@ -7125,13 +7187,23 @@ void creatures_content_transaction::append_fingerprint(
                 hash_part( state, text );
                 hash_part( state, std::to_string( static_cast<int>( rating ) ) );
             }
+            for( const auto &[text, weight] : value.miss_messages ) {
+                hash_part( state, "miss_message" );
+                hash_part( state, text );
+                hash_part( state, std::to_string( weight ) );
+            }
             hash_part( state, value.death_event );
             hash_part( state, value.harmful_cough ? "harmful_cough" : "harmless_cough" );
+            if( value.monster_only_death_roll ) {
+                hash_part( state, "monster_death_roll" );
+            }
             for( std::size_t index = 0; index < value.death_chances.size(); ++index ) {
                 hash_part( state, std::to_string( value.death_chances[index].first ) );
                 hash_part( state, std::to_string( value.death_chances[index].second ) );
-                hash_part( state, std::to_string( value.resisted_death_chances[index].first ) );
-                hash_part( state, std::to_string( value.resisted_death_chances[index].second ) );
+                if( !value.monster_only_death_roll ) {
+                    hash_part( state, std::to_string( value.resisted_death_chances[index].first ) );
+                    hash_part( state, std::to_string( value.resisted_death_chances[index].second ) );
+                }
             }
             for( const auto &[key, modifier] : value.modifiers ) {
                 hash_part( state, key.first );
@@ -7204,7 +7276,10 @@ void creatures_content_transaction::append_fingerprint(
             hash_ids( "immune_bodypart_flag", value.immune_bodypart_flags );
             hash_ids( "resist_trait", value.resist_traits );
             hash_ids( "resist_effect", value.resist_effects );
-            hash_ids( "removes_effect", value.removes_effects );
+            for( const auto &[id, optional] : value.removes_effects ) {
+                hash_part( state, optional ? "removes_optional_effect" : "removes_effect" );
+                hash_part( state, id );
+            }
             hash_ids( "blocks_effect", value.blocks_effects );
             hash_ids( "enchantment", value.enchantments );
         }
