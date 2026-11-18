@@ -2342,6 +2342,7 @@ sol::table spawn_item(
     const script_tripoint_coord &position,
     const script_game_id &requested,
     const std::int64_t quantity,
+    const bool allow_overflow,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -2393,7 +2394,7 @@ sol::table spawn_item(
         }
         item_location added =
             here.add_item_or_charges_ret_loc(
-                local, std::move( created ), false );
+                local, std::move( created ), allow_overflow );
         if( !added ) {
             break;
         }
@@ -2402,7 +2403,7 @@ sol::table spawn_item(
                           quantity : 1;
         sol::table value = state.create_table();
         value["handle"] = make_map_item_handle(
-                              *added, absolute,
+                              *added, added.pos_abs(),
                               runtime_generation,
                               world_generation );
         value["uid"] = added->uid().get_value();
@@ -4221,10 +4222,11 @@ void install_world_api(
             sol::this_state lua_state,
             const script_tripoint_coord & position,
             const script_game_id & id,
-    const std::int64_t quantity ) {
+            const std::int64_t quantity,
+    const sol::optional<bool> &allow_overflow ) {
         require_write();
         return spawn_item(
-                   lua_state, position, id, quantity,
+                   lua_state, position, id, quantity, allow_overflow.value_or( false ),
                    current_runtime_generation(),
                    current_world_generation() );
     } );
