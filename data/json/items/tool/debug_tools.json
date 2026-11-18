@@ -1,19 +1,5 @@
 [
   {
-    "id": "debug_lux_meter",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "debug lux meter", "//~": "NO_I18N" },
-    "description": { "str": "This debug tool will tell you about light.", "//~": "NO_I18N" },
-    "weight": "1 g",
-    "volume": "1 ml",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "light_gray",
-    "use_action": [ "DBG_LUX_METER" ]
-  },
-  {
     "id": "debug_item_damager",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
