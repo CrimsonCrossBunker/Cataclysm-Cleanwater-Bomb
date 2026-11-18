@@ -40,11 +40,5 @@
     "base_energy_cost": 0,
     "energy_source": "STAMINA",
     "spell_class": "NONE"
-  },
-  {
-    "id": "a_waystone",
-    "type": "item_group",
-    "subtype": "collection",
-    "items": [ [ "waystone", 100 ] ]
   }
 ]

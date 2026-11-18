@@ -41,3 +41,5 @@ require("armor_recipes")
 require("craft_recipes")
 
 require("practice_recipes")
+
+require("item_groups")

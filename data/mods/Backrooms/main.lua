@@ -11,3 +11,5 @@ require("portal_storm_cycle")
 require("scenario_filters")
 
 require("overmap_locations")
+
+require("item_groups")

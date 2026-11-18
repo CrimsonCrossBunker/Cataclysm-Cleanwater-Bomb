@@ -99,12 +99,6 @@
   },
   {
     "type": "item_group",
-    "id": "backrooms_strange_object_group",
-    "subtype": "distribution",
-    "items": [ [ "backrooms_strange_object", 100 ] ]
-  },
-  {
-    "type": "item_group",
     "id": "backrooms_artifacts",
     "subtype": "distribution",
     "entries": [

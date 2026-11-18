@@ -13,3 +13,5 @@ require("retired_recipes")
 require("crafting_recipes")
 
 require("weapon_recipes")
+
+require("item_groups")

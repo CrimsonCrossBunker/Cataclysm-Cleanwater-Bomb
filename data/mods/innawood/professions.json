@@ -12,18 +12,6 @@
     "entries": [ { "item": "bolt_simple_wood", "charges": 20 } ]
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_arbalist",
-    "entries": [ { "item": "bolt_simple_wood", "charges": 60 } ]
-  },
-  {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "bag_javelin_hunter",
-    "entries": [ { "item": "javelin", "count": 5 } ]
-  },
-  {
     "type": "profession",
     "id": "goat_man",
     "name": { "male": "Goat Man", "female": "Goat Lady" },
