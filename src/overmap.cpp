@@ -22,6 +22,7 @@
 #include <cmath>
 #include <exception>
 #include <filesystem>
+#include <initializer_list>
 #include <optional>
 #include <set>
 #include <sstream>

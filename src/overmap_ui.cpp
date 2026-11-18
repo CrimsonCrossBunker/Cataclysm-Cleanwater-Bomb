@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -37,6 +38,7 @@
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
+#include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"
@@ -56,18 +58,17 @@
 #include "mapdata.h"
 #include "mapgen_parameter.h"
 #include "mapgendata.h"
-#include "messages.h"
 #include "mission.h"
 #include "mongroup.h"
 #include "mp_gamestate.h"
 #include "mtype.h"
+#include "north_america.h"
+#include "north_america_elevation.h"
+#include "north_america_transport.h"
 #include "npc.h"
 #include "omdata.h"
 #include "options.h"
 #include "output.h"
-#include "north_america.h"
-#include "north_america_elevation.h"
-#include "north_america_transport.h"
 #include "overmap.h"
 #include "overmap_debug.h"
 #include "overmap_types.h"
