@@ -185,41 +185,6 @@
     "tool_ammo": "battery"
   },
   {
-    "id": "xedra_inventor_time_pierce_tool",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Time Piercing Device" },
-    "description": "A small remote with a sharp spike at the end.  You can activate this device while poking it into a zone of frozen time in order to unfreeze the area you're touching.",
-    "looks_like": "spike",
-    "weight": "300 g",
-    "volume": "400 ml",
-    "longest_side": "30 cm",
-    "material": [ "aluminum", "mc_steel" ],
-    "symbol": ";",
-    "color": "white",
-    "flags": [ "ELECTRONIC", "INVENTOR_CRAFTED", "TRADER_AVOID" ],
-    "faults": [ { "fault_group": "electronic_general" } ],
-    "charges_per_use": 150,
-    "use_action": {
-      "type": "cast_spell",
-      "spell_id": "xedra_inventor_time_pierce",
-      "no_fail": true,
-      "level": 1,
-      "need_wielding": true,
-      "mundane": true
-    },
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE_WELL",
-        "rigid": true,
-        "flag_restriction": [ "BATTERY_LIGHT", "BATTERY_MEDIUM" ],
-        "default_magazine": "medium_battery_cell"
-      }
-    ],
-    "melee_damage": { "stab": 10 },
-    "tool_ammo": [ "battery" ]
-  },
-  {
     "id": "inventor_gaming_rig",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],
@@ -244,16 +209,5 @@
     "faults": [ { "fault_group": "electronic_general" } ],
     "passive_effects": [ { "id": "ench_inventor_gaming_rig" } ],
     "tool_ammo": "battery"
-  },
-  {
-    "id": "inventor_gaming_rig_on",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "inventor_gaming_rig",
-    "name": { "str": "Oneiromantic gaming rig (on)", "str_pl": "Oneiromantic gaming rigs (on)" },
-    "power_draw": "3 W",
-    "revert_to": "inventor_gaming_rig",
-    "extend": { "flags": [ "SPAWN_ACTIVE" ] },
-    "use_action": [ { "ammo_scale": 0, "target": "inventor_gaming_rig", "msg": "The gaming rig powers down.", "type": "transform" } ]
   }
 ]

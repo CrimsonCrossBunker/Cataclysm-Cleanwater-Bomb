@@ -67,3 +67,63 @@ do
     item:tool { ammo_types = { "battery" } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "xedra_inventor_time_pierce_tool",
+        name = ccb.content.plural_text("Time Piercing Device", "Time Piercing Devices"),
+        description = ccb.content.text("A small remote with a sharp spike at the end.  You can activate this device while poking it into a zone of frozen time in order to unfreeze the area you're touching."),
+        looks_like = "spike",
+        mass_milligrams = 300000,
+        volume_ml = 400,
+        longest_side_mm = 300,
+        symbol = ";",
+        color = "white",
+        replace_pockets = true,
+    }
+    item:material("aluminum", 1)
+    item:material("mc_steel", 1)
+    item:clear_flags()
+    item:flag("ELECTRONIC")
+    item:flag("INVENTOR_CRAFTED")
+    item:flag("TRADER_AVOID")
+    item:clear_use_actions()
+    item:cast_spell {
+        spell = "xedra_inventor_time_pierce",
+        no_fail = true,
+        level = 1,
+        need_wielding = true,
+        mundane = true,
+    }
+    item:clear_melee_damage()
+    item:melee_damage("stab", 10)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 150, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_LIGHT", "BATTERY_MEDIUM" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "inventor_gaming_rig_on",
+        copy_from = "inventor_gaming_rig",
+        looks_like = "inventor_gaming_rig",
+        name = ccb.content.plural_text("Oneiromantic gaming rig (on)", "Oneiromantic gaming rigs (on)"),
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "inventor_gaming_rig" },
+        message = ccb.content.text("The gaming rig powers down."),
+        ammo_scale = 0,
+    }
+    item:flag("SPAWN_ACTIVE")
+    item:transform_into { target = "inventor_gaming_rig" }
+    item:tool { power_milliwatts = 3000 }
+    content.add(item)
+end
