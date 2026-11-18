@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 864,
+    "class_count": 865,
     "classes": [
       {
         "fields": [
@@ -7508,17 +7508,72 @@
       {
         "fields": [
           {
-            "line": 13504,
+            "line": 13524,
             "name": "remove_corpse",
             "type": "boolean"
           },
           {
-            "line": 13505,
+            "line": 13525,
             "name": "suppress_message",
             "type": "boolean"
           }
         ],
         "name": "CcbMonsterDeathOptions"
+      },
+      {
+        "fields": [
+          {
+            "line": 13501,
+            "name": "count",
+            "type": "integer"
+          },
+          {
+            "line": 13508,
+            "name": "friendly",
+            "type": "boolean"
+          },
+          {
+            "line": 13502,
+            "name": "hallucinations",
+            "type": "integer"
+          },
+          {
+            "line": 13506,
+            "name": "indoor_only",
+            "type": "boolean"
+          },
+          {
+            "line": 13510,
+            "name": "lifespan",
+            "type": "TimeDuration|{minimum:TimeDuration,maximum:TimeDuration}"
+          },
+          {
+            "line": 13504,
+            "name": "max_radius",
+            "type": "integer"
+          },
+          {
+            "line": 13503,
+            "name": "min_radius",
+            "type": "integer"
+          },
+          {
+            "line": 13507,
+            "name": "open_air_allowed",
+            "type": "boolean"
+          },
+          {
+            "line": 13505,
+            "name": "outdoor_only",
+            "type": "boolean"
+          },
+          {
+            "line": 13509,
+            "name": "temporary_drop_items",
+            "type": "boolean"
+          }
+        ],
+        "name": "CcbMonsterPopulationOptions"
       },
       {
         "fields": [],
@@ -25603,7 +25658,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1498,
+    "function_count": 1499,
     "functions": [
       {
         "line": "3367",
@@ -27202,19 +27257,19 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "13511",
+        "line": "13531",
         "name": "die",
         "owner": "CcbMonstersApi",
         "parameters": "monster, options"
       },
       {
-        "line": "13517",
+        "line": "13537",
         "name": "seeing_position",
         "owner": "CcbMonstersApi",
         "parameters": "position, radius"
       },
       {
-        "line": "13522",
+        "line": "13542",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
@@ -30788,6 +30843,12 @@
         "name": "monster",
         "owner": "CcbSpawnsApi",
         "parameters": "monster_type, position, radius, upgrade"
+      },
+      {
+        "line": "13518",
+        "name": "population",
+        "owner": "CcbSpawnsApi",
+        "parameters": "monster_type, position, options"
       },
       {
         "line": "9135",

@@ -58,6 +58,7 @@ extern "C" {
 #include "npc.h"
 #include "path_info.h"
 #include "point.h"
+#include "rng.h"
 #include "submap.h"
 #include "teleport.h"
 #include "type_id.h"
@@ -373,7 +374,8 @@ struct monster_spawn_options {
 };
 
 monster_spawn_options read_monster_spawn_options(
-    const sol::optional<sol::table> &requested )
+    const sol::optional<sol::table> &requested,
+    const std::string &api_name = "services.spawns.monster_configured" )
 {
     monster_spawn_options result;
     if( !requested ) {
@@ -382,20 +384,21 @@ monster_spawn_options read_monster_spawn_options(
     for( const auto &entry : *requested ) {
         if( entry.first.get_type() != sol::type::string ) {
             throw std::invalid_argument(
-                "services.spawns.monster_configured option keys must be strings" );
+                api_name + " option keys must be strings" );
         }
         const std::string key = entry.first.as<std::string>();
         const sol::object value = entry.second;
         if( key == "min_radius" || key == "max_radius" ) {
             if( !value.is<lua_Integer>() ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured radii must be integers" );
+                    api_name + " radii must be integers" );
             }
-            const int radius = value.as<int>();
-            if( radius < 0 || radius > maximum_monster_spawn_radius ) {
+            const lua_Integer requested_radius = value.as<lua_Integer>();
+            if( requested_radius < 0 || requested_radius > maximum_monster_spawn_radius ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured radii must be within 0..60" );
+                    api_name + " radii must be within 0..60" );
             }
+            const int radius = static_cast<int>( requested_radius );
             if( key == "min_radius" ) {
                 result.min_radius = radius;
             } else {
@@ -408,7 +411,7 @@ monster_spawn_options read_monster_spawn_options(
                    key == "temporary_drop_items" || key == "upgrade" ) {
             if( !value.is<bool>() ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured boolean options must be booleans" );
+                    api_name + " boolean options must be booleans" );
             }
             const bool enabled = value.as<bool>();
             if( key == "outdoor_only" ) {
@@ -433,48 +436,174 @@ monster_spawn_options read_monster_spawn_options(
         } else if( key == "lifespan" ) {
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured lifespan must be a TimeDuration" );
+                    api_name + " lifespan must be a TimeDuration" );
             }
             const time_duration lifespan =
                 value.as<script_time_duration>().to_native();
             if( lifespan <= 0_turns ||
                 lifespan > maximum_hallucination_lifespan ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured lifespan must be within 1 turn..10000 days" );
+                    api_name + " lifespan must be within 1 turn..10000 days" );
             }
             result.lifespan = lifespan;
         } else if( key == "summoner" ) {
             if( !value.is<game_handle>() ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured summoner must be a GameHandle" );
+                    api_name + " summoner must be a GameHandle" );
             }
             result.summoner = value.as<game_handle>();
         } else if( key == "name" ) {
             if( !value.is<std::string>() ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured name must be a string" );
+                    api_name + " name must be a string" );
             }
             result.unique_name = value.as<std::string>();
             if( result.unique_name.size() >
                 maximum_monster_unique_name_bytes ) {
                 throw std::invalid_argument(
-                    "services.spawns.monster_configured name exceeds 256 bytes" );
+                    api_name + " name exceeds 256 bytes" );
             }
         } else {
             throw std::invalid_argument(
-                "services.spawns.monster_configured received unknown option '" +
+                api_name + " received unknown option '" +
                 key + "'" );
         }
     }
     if( result.min_radius > result.max_radius ) {
         throw std::invalid_argument(
-            "services.spawns.monster_configured min_radius cannot exceed max_radius" );
+            api_name + " min_radius cannot exceed max_radius" );
     }
     if( result.indoor_only && result.outdoor_only ) {
         throw std::invalid_argument(
-            "services.spawns.monster_configured cannot require both indoor and outdoor tiles" );
+            api_name + " cannot require both indoor and outdoor tiles" );
     }
     return result;
+}
+
+sol::table spawn_monster_population(
+    sol::this_state lua, const script_game_id &requested_type,
+    const script_tripoint_coord &requested_position, const sol::optional<sol::table> &requested )
+{
+    constexpr std::string_view api_name = "services.spawns.population";
+    require_game_id( requested_type, "monster", api_name );
+    sol::state_view state( lua );
+    sol::table placement = state.create_table();
+    placement["min_radius"] = 1;
+    placement["max_radius"] = 10;
+    int real_count = 1;
+    int hallucination_count = 0;
+    time_duration minimum_lifespan = 0_turns;
+    time_duration maximum_lifespan = 0_turns;
+    bool ranged_lifespan = false;
+    if( requested ) {
+        for( const auto &entry : *requested ) {
+            if( entry.first.get_type() != sol::type::string ) {
+                throw std::invalid_argument( "services.spawns.population option keys must be strings" );
+            }
+            const std::string key = entry.first.as<std::string>();
+            const sol::object value = entry.second;
+            if( key == "count" || key == "hallucinations" ) {
+                if( !value.is<lua_Integer>() || value.as<lua_Integer>() < 0 ||
+                    value.as<lua_Integer>() > std::numeric_limits<int>::max() ) {
+                    throw std::invalid_argument( "services.spawns.population counts must be nonnegative native integers" );
+                }
+                ( key == "count" ? real_count : hallucination_count ) = value.as<int>();
+            } else if( key == "lifespan" ) {
+                if( value.is<script_time_duration>() ) {
+                    minimum_lifespan = value.as<script_time_duration>().to_native();
+                } else if( value.get_type() == sol::type::table ) {
+                    const sol::table range = value.as<sol::table>();
+                    for( const auto &endpoint : range ) {
+                        if( endpoint.first.get_type() != sol::type::string ||
+                            ( endpoint.first.as<std::string>() != "minimum" &&
+                              endpoint.first.as<std::string>() != "maximum" ) ) {
+                            throw std::invalid_argument( "services.spawns.population lifespan range accepts only minimum and maximum" );
+                        }
+                    }
+                    const sol::object minimum = range.raw_get<sol::object>( "minimum" );
+                    const sol::object maximum = range.raw_get<sol::object>( "maximum" );
+                    if( !minimum.is<script_time_duration>() || !maximum.is<script_time_duration>() ) {
+                        throw std::invalid_argument( "services.spawns.population lifespan range requires TimeDuration endpoints" );
+                    }
+                    minimum_lifespan = minimum.as<script_time_duration>().to_native();
+                    maximum_lifespan = maximum.as<script_time_duration>().to_native();
+                    ranged_lifespan = true;
+                } else {
+                    throw std::invalid_argument( "services.spawns.population lifespan must be a TimeDuration or range" );
+                }
+            } else if( key == "min_radius" || key == "max_radius" || key == "outdoor_only" ||
+                       key == "indoor_only" || key == "open_air_allowed" || key == "friendly" ||
+                       key == "temporary_drop_items" ) {
+                placement[key] = value;
+            } else {
+                throw std::invalid_argument( "services.spawns.population received unknown option '" + key + "'" );
+            }
+        }
+    }
+    const monster_spawn_options options = read_monster_spawn_options(
+            sol::optional<sol::table>( placement ), std::string( api_name ) );
+    if( minimum_lifespan < 0_turns || minimum_lifespan > maximum_hallucination_lifespan ||
+        ( ranged_lifespan && ( maximum_lifespan < minimum_lifespan ||
+                              maximum_lifespan > maximum_hallucination_lifespan ) ) ) {
+        throw std::invalid_argument( "services.spawns.population lifespan must be within 0 turns..10000 days with ordered endpoints" );
+    }
+    map &here = require_active_map( api_name );
+    const tripoint_bub_ms target = require_loaded_position( here, requested_position, api_name );
+    // Preserve native prototype initialization before placement or lifespan draws.
+    monster prototype;
+    prototype = monster( mtype_id( requested_type.value() ) );
+    const auto lifespan = [&]() -> std::optional<time_duration> {
+        const time_duration duration = ranged_lifespan ? time_duration::from_turns(
+                                          rng( to_turns<int>( minimum_lifespan ), to_turns<int>( maximum_lifespan ) ) ) :
+                                      minimum_lifespan;
+        return duration == 0_turns ? std::nullopt : std::optional<time_duration>( duration );
+    };
+    std::int64_t spawned = 0;
+    std::int64_t visible = 0;
+    for( int index = 0; index < hallucination_count; ++index ) {
+        tripoint_bub_ms point;
+        if( g->find_nearby_spawn_point( target, prototype.type->id, options.min_radius,
+                                       options.max_radius, point, options.outdoor_only,
+                                       options.indoor_only, options.open_air_allowed ) &&
+            g->spawn_hallucination( point, prototype.type->id, lifespan() ) ) {
+            if( Creature *critter = get_creature_tracker().creature_at( point ) ) {
+                if( options.friendly ) {
+                    critter->as_monster()->friendly = -1;
+                }
+                ++spawned;
+                if( get_avatar().sees( here, *critter ) ) {
+                    ++visible;
+                }
+            }
+        }
+    }
+    for( int index = 0; index < real_count; ++index ) {
+        tripoint_bub_ms point;
+        if( !g->find_nearby_spawn_point( target, prototype.type->id, options.min_radius,
+                                        options.max_radius, point, options.outdoor_only,
+                                       options.indoor_only, options.open_air_allowed ) ) {
+            continue;
+        }
+        if( monster *critter = g->place_critter_at( prototype.type->id, point ) ) {
+            if( options.friendly ) {
+                critter->friendly = -1;
+            }
+            ++spawned;
+            if( get_avatar().sees( here, *critter ) ) {
+                ++visible;
+            }
+            const std::optional<time_duration> duration = lifespan();
+            if( duration && *duration > 0_turns ) {
+                critter->set_summon_time( *duration );
+                critter->no_extra_death_drops = !options.temporary_drop_items;
+                critter->no_corpse_quiet = !options.temporary_drop_items;
+            }
+        }
+    }
+    sol::table result = state.create_table();
+    result["spawned"] = spawned;
+    result["visible"] = visible;
+    return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
 }
 
 sol::table spawn_configured_monster(
@@ -2779,6 +2908,14 @@ void install_game_world_service_api(
                    lua, monster_type, position, radius, upgrade.value_or( true ),
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    spawns.set_function(
+        "population",
+        [require_write, has_active_callback]( sol::this_state lua, const script_game_id & type,
+    const script_tripoint_coord & position, const sol::optional<sol::table> &options ) {
+        require_write();
+        require_active_callback( has_active_callback, "services.spawns.population" );
+        return spawn_monster_population( lua, type, position, options );
     } );
     spawns.set_function(
         "monster_configured",

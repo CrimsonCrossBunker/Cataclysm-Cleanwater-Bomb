@@ -13497,6 +13497,26 @@ local CcbSpawnsApi = {}
 ---@return CcbResult result Value contains handle, monster, position and hallucination; blocked when no position exists.
 function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 
+---@class CcbMonsterPopulationOptions
+---@field count? integer Real-monster attempts, 0..2147483647; defaults to one.
+---@field hallucinations? integer Hallucination attempts, 0..2147483647; defaults to zero. These run before real-monster attempts.
+---@field min_radius? integer Native placement radius, 0..60; defaults to one.
+---@field max_radius? integer Native placement radius, 0..60; defaults to ten and cannot be below min_radius.
+---@field outdoor_only? boolean Restrict native placement to outdoor tiles.
+---@field indoor_only? boolean Restrict native placement to indoor tiles; mutually exclusive with outdoor_only.
+---@field open_air_allowed? boolean Permit native open-air placement.
+---@field friendly? boolean Set permanent friendliness on successful spawns.
+---@field temporary_drop_items? boolean Allow temporary real monsters to leave native items/corpses; defaults to false.
+---@field lifespan? TimeDuration|{minimum:TimeDuration,maximum:TimeDuration} A constant or inclusive native integer range within 0 turns..10000 days. A range draws after each accepted placement, before hallucination creation or after real-monster creation; equal endpoints still draw. Zero uses the native non-temporary/default-hallucination policy. Positive real-monster lifetimes set native summon time and drop policy.
+
+---Place a population through native randomized nearby-position searches. The native Monster prototype is prepared before the attempts; no additional upgrade pass runs.
+---Counts/visibility follow the native loaded creature tracker, including hallucination tracking behavior. Blocked attempts are not errors and do not draw a lifespan.
+---@param monster_type GameId GameId<monster>.
+---@param position TripointCoord Loaded absolute map-square center.
+---@param options? CcbMonsterPopulationOptions
+---@return CcbResult result value contains native tracked spawned and visible counts.
+function CcbSpawnsApi.population(monster_type, position, options) end
+
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
 
