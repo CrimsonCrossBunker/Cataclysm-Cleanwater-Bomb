@@ -827,6 +827,8 @@ void detail::install_runtime_dialogue_presentation_api(
         &platform_dialogue_context::fail_selected_mission,
         "end_interlocutor_conversation",
         &platform_dialogue_context::end_interlocutor_conversation,
+        "start_trade", &platform_dialogue_context::start_trade,
+        "set_speaker_variable_string", &platform_dialogue_context::set_speaker_variable_string,
         "grant_item_to_speaker",
         &platform_dialogue_context::grant_item_to_speaker,
         "purchase_pet", &platform_dialogue_context::purchase_pet,

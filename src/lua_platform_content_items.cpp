@@ -195,6 +195,8 @@ struct item_definition_data {
         std::int64_t intelligence = 0;
         std::int64_t read_time_turns = 0;
         std::int64_t fun = 0;
+        std::int64_t chapters = 0;
+        bool scannable = false;
     };
     std::string id;
     std::string copy_from;
@@ -929,6 +931,8 @@ struct item_definition_handle {
         value.intelligence = options.get_or<std::int64_t>( "intelligence", 0 );
         value.read_time_turns = options.get_or<std::int64_t>( "read_time_turns", 0 );
         value.fun = options.get_or<std::int64_t>( "fun", 0 );
+        value.chapters = options.get_or<std::int64_t>( "chapters", 0 );
+        value.scannable = options.get_or( "scannable", false );
         definition->book = std::move( value );
         return *this;
     }
@@ -4754,9 +4758,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
             }
             if( definition.book ) {
                 const item_definition_data::book_data &book = *definition.book;
-                if( book.skill.empty() ||
-                    ( skill_ids.count( book.skill ) == 0 &&
-                      !skill_id( book.skill ).is_valid() ) ||
+                if( ( !book.skill.empty() && book.skill != skill_id::NULL_ID().str() &&
+                      skill_ids.count( book.skill ) == 0 && !skill_id( book.skill ).is_valid() ) ||
                     book.required_level < 0 || book.required_level > MAX_SKILL ||
                     book.maximum_level < book.required_level ||
                     book.maximum_level > MAX_SKILL || book.intelligence < 0 ||
@@ -4764,7 +4767,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     book.read_time_turns <= 0 ||
                     book.read_time_turns > std::numeric_limits<int>::max() ||
                     book.fun < std::numeric_limits<int>::min() ||
-                    book.fun > std::numeric_limits<int>::max() ) {
+                    book.fun > std::numeric_limits<int>::max() ||
+                    book.chapters < 0 || book.chapters > std::numeric_limits<int>::max() ) {
                     throw std::runtime_error( "item '" + definition.id +
                                               "' has invalid book values" );
                 }
@@ -6157,13 +6161,16 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->comestible.reset();
                         native->book = cata::make_value<islot_book>();
                         native->book->was_loaded = true;
-                        native->book->skill = skill_id( source.skill );
+                        native->book->skill = source.skill.empty() ? skill_id::NULL_ID() :
+                                               skill_id( source.skill );
                         native->book->req = static_cast<int>( source.required_level );
                         native->book->level = static_cast<int>( source.maximum_level );
                         native->book->intel = static_cast<int>( source.intelligence );
                         native->book->time = time_duration::from_turns(
                                                  static_cast<int>( source.read_time_turns ) );
                         native->book->fun = static_cast<int>( source.fun );
+                        native->book->chapters = static_cast<int>( source.chapters );
+                        native->book->is_scannable = source.scannable;
                     }
                     for( const auto &[damage, amount] : definition.melee_damage ) {
                         native->melee.damage_map[damage_type_id( damage )] = static_cast<float>( amount );
@@ -7566,6 +7573,8 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, std::to_string( book.intelligence ) );
                     hash_part( state, std::to_string( book.read_time_turns ) );
                     hash_part( state, std::to_string( book.fun ) );
+                    hash_part( state, std::to_string( book.chapters ) );
+                    hash_part( state, book.scannable ? "scannable" : "unscannable" );
                 }
                 for( const auto &m : v.materials ) {
                     hash_part( state, m.id );

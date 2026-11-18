@@ -30,6 +30,8 @@
 
 #include "character.h"
 #include "creature.h"
+#include "event.h"
+#include "event_bus.h"
 #include "item.h"
 #include "lua_platform_creatures.h"
 #include "lua_platform_state.h"
@@ -688,6 +690,20 @@ void context::end_interlocutor_conversation() const
     npc *const provider = interlocutor->get_npc();
     if( provider != nullptr ) {
         talk_function::end_conversation( *provider );
+    }
+}
+
+void context::start_trade() const
+{
+    talk_function::start_trade_for_dialogue( require_action_write_state().dialogue_ref() );
+}
+
+void context::set_speaker_variable_string( const std::string &key, const std::string &value ) const
+{
+    ::dialogue &d = require_action_write_state().dialogue_ref();
+    if( d.has_alpha ) {
+        d.actor( false )->set_value( key, value );
+        get_event_bus().send<event_type::u_var_changed>( key, value );
     }
 }
 

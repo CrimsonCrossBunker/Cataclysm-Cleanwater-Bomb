@@ -2889,7 +2889,7 @@ struct shopkeeper_blacklist_definition_data {
     std::string kind;  // "blacklist" | "whitelist" | "consumption"
     std::string id;
     std::vector<shopkeeper_entry_definition_data> entries;
-    std::string message;
+    detail::authored_text message;
     std::string predicate;
     std::int64_t default_rate = 0;
     bool registered = false;
@@ -4855,7 +4855,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         auto definition = std::make_shared<shopkeeper_blacklist_definition_data>();
         definition->kind = kind;
         definition->id = options.get_or( "id", std::string() );
-        definition->message = options.get_or( "message", std::string() );
+        definition->message = detail::read_singular_text( options["message"], {}, "shopkeeper message" );
         definition->predicate = options.get_or( "predicate", std::string() );
         definition->default_rate = options.get_or<std::int64_t>( "default_rate", 0 );
         return shopkeeper_definition_handle{
@@ -9172,7 +9172,7 @@ bool content_transaction::apply( std::string &error )
                 shopkeeper_whitelist native;
                 native.id = shopkeeper_whitelist_id( source.id );
                 if( !source.message.empty() ) {
-                    native.message = no_translation( source.message );
+                    native.message = source.message.native();
                 }
                 native.lua_mod_id = pimpl_->owner;
                 native.lua_predicate = source.predicate;

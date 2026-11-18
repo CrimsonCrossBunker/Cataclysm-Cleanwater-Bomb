@@ -1915,7 +1915,11 @@ void world_content_transaction::impl::install_faction_api( sol::table &content )
         }
         auto value = std::make_shared<faction_data>();
         value->id = options.get_or( "id", std::string() );
-        value->name = options.get_or( "name", value->id );
+        const authored_text name = read_authored_text( options, "name", { value->id, std::nullopt } );
+        if( name.translated && name.translated->context ) {
+            throw std::invalid_argument( "faction names use the native context-free translation" );
+        }
+        value->name = name.raw;
         value->description = read_authored_text( options, "description" );
         value->likes = options.get_or( "likes", 0 );
         value->respects = options.get_or( "respects", 0 );

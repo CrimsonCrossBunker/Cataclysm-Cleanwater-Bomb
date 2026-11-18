@@ -786,12 +786,14 @@ function ItemDefinition:comestible(options) end
 function ItemDefinition:vitamin(vitamin_id, amount) end
 
 ---@class BookDefinitionOptions
----@field skill string Existing or same-transaction skill id.
+---@field skill? string Existing or same-transaction skill id. Omit for a book with no skill training.
 ---@field required_level integer Minimum skill needed to understand the book.
 ---@field maximum_level integer Maximum skill level trained by the book.
 ---@field intelligence integer Minimum intelligence needed to read it.
 ---@field read_time_turns integer Positive time per chapter.
 ---@field fun integer Reading enjoyment.
+---@field chapters? integer Number of chapters; defaults to zero.
+---@field scannable? boolean Whether the book supports scanning; defaults to false.
 
 ---@param options BookDefinitionOptions
 ---@return ItemDefinition self
@@ -3577,7 +3579,7 @@ function TraitGroupDefinition:group(group_id, weight) end
 
 ---@class ShopkeeperDefinitionOptions
 ---@field id string Stable shopkeeper rule id.
----@field message? string Override message shown when entries match.
+---@field message? string|LocalizedText Override message shown when entries match.
 ---@field default_rate? integer Default consumption rate.
 ---@field predicate? string Named boolean handler for a dynamic whitelist; receives a detached ShopkeeperWhitelistPayload.
 
@@ -5128,7 +5130,7 @@ function ItemUseContext:message(text, type) end
 
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
----@field name? string Player-facing name; defaults to id.
+---@field name? string|LocalizedText Player-facing name; defaults to id. The native faction display uses context-free translation.
 ---@field description? string|LocalizedText Player-facing description; plural text is rejected.
 ---@field likes? integer Initial player like score.
 ---@field respects? integer Initial player respect score.
@@ -5156,6 +5158,9 @@ local FactionDefinition = {}
 ---@field rng? integer[] Two-element inclusive random interval.
 ---@field dice? integer[] Two-element dice count and sides.
 ---@field add? integer Constant added to the selected distribution.
+---@field one_in? integer Yield one with the given positive denominator, otherwise zero.
+---@field sum? (number|NpcDistribution)[] Sum the ordered child rolls.
+---@field mul? (number|NpcDistribution)[] Multiply the ordered child rolls.
 
 ---@class NpcShopGroupOptions
 ---@field id string Existing item-group id.
@@ -5187,12 +5192,13 @@ local FactionDefinition = {}
 ---@field weapon? string Existing starting weapon item-group id.
 ---@field traits? string Existing or same-transaction trait-group id.
 ---@field consumption_rates? string Existing shopkeeper-consumption-rates id.
+---@field whitelist? string Existing or same-transaction shopkeeper whitelist id.
 ---@field strength? NpcDistribution
 ---@field dexterity? NpcDistribution
 ---@field intelligence? NpcDistribution
 ---@field perception? NpcDistribution
----@field skills? table<string, NpcDistribution> Base skill distributions keyed by skill id.
----@field bonus_skills? table<string, NpcDistribution> Bonus skill distributions keyed by skill id.
+---@field skills? table<string, number|NpcDistribution> Base skill distributions keyed by skill id.
+---@field bonus_skills? table<string, number|NpcDistribution> Bonus skill distributions keyed by skill id.
 ---@field shop_groups? NpcShopGroupOptions[]
 ---@field price_rules? NpcPriceRuleOptions[]
 
@@ -5213,6 +5219,7 @@ local NpcClassDefinition = {}
 ---@field chat? string Initial dialogue topic id.
 ---@field stole_item_chat? string Stolen-item dialogue topic id.
 ---@field snippets? table<string, string|LocalizedText> Snippet slot ids mapped to singular player-facing text.
+---@field personality? {aggression: integer, bravery: integer, collector: integer, altruism: integer} Generated personality overrides.
 ---@field age? integer Fixed generated age.
 ---@field height? integer Fixed generated height in centimeters.
 ---@field on_death? string Platform handler invoked when the NPC dies.
@@ -6852,7 +6859,7 @@ function CcbPlatformContent.RegionSettingsCity(options) end
 ---@return ForestBiomeMapgenDefinition
 function CcbPlatformContent.ForestBiomeMapgen(options) end
 
----@alias PlatformContentDefinition FurnitureDefinition|MissionDefinition|MonsterAdjustmentDefinition|FactionDefinition|NpcClassDefinition|NpcDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition|ScenarioDefinition|WeatherGeneratorDefinition
+---@alias PlatformContentDefinition FurnitureDefinition|MissionDefinition|MonsterAdjustmentDefinition|FactionDefinition|NpcClassDefinition|NpcDefinition|ShopkeeperDefinition|TraitGroupDefinition|OvermapTerrainDefinition|OvermapSpecialDefinition|VehiclePartDefinition|VehicleDefinition|ItemDefinition|RecipeDefinition|NestedRecipeCategoryDefinition|ToolQualityDefinition|SkillDisplayDefinition|SkillDefinition|VitaminDefinition|JsonFlagDefinition|DamageTypeDefinition|MaterialDefinition|AmmunitionTypeDefinition|ItemCategoryDefinition|RecipeCategoryDefinition|ProficiencyCategoryDefinition|ProficiencyDefinition|WeaponCategoryDefinition|RequirementDefinition|RecipeGroupDefinition|ScentTypeDefinition|SpeedDescriptionDefinition|HarvestDropTypeDefinition|HarvestDefinition|BehaviorDefinition|MonsterAttackDefinition|EffectTypeDefinition|WeakpointSetDefinition|FieldTypeDefinition|ItemGroupDefinition|SubBodyPartDefinition|WoundDefinition|BodyPartDefinition|WoundFixDefinition|AnatomyDefinition|BodyGraphDefinition|MonsterDefinition|MoraleTypeDefinition|DiseaseTypeDefinition|MonsterFlagDefinition|SpeciesDefinition|EmissionDefinition|MonsterFactionDefinition|MutationTypeDefinition|ConnectGroupDefinition|MutationCategoryDefinition|ConstructionDefinition|ConstructionCategoryDefinition|ConstructionGroupDefinition|VehiclePartLocationDefinition|MoodFaceDefinition|DamageInfoOrderDefinition|VehiclePartCategoryDefinition|NamedColorDefinition|RotatableSymbolDefinition|AsciiArtDefinition|LimbScoreDefinition|HitRangeDefinition|BashDamageProfileDefinition|ClothingModDefinition|OvermapLandUseCodeDefinition|OvermapVisionDefinition|OvermapLocationDefinition|ProfessionGroupDefinition|MapExtraCollectionDefinition|VehicleGroupDefinition|FaultGroupDefinition|ExplosionLightDefinition|AmmoEffectDefinition|AddictionTypeDefinition|CharacterModifierDefinition|StartLocationDefinition|ClimbingAidDefinition|WeatherTypeDefinition|ScoreDefinition|OverlayOrderDefinition|ZoneTypeDefinition|SpeechPoolDefinition|EndScreenDefinition|ActivityTypeDefinition|HelpTopicDefinition|SnippetCategoryDefinition|PlaylistDefinition|AttackVectorDefinition|MagicTypeDefinition|MovementModeDefinition|RegionSettingsRavineDefinition|RegionSettingsLakeDefinition|RegionSettingsOceanDefinition|RegionSettingsForestDefinition|RegionSettingsRiverDefinition|RegionSettingsForestMapgenDefinition|RegionSettingsMapExtrasDefinition|RegionSettingsTerrainFurnitureDefinition|RegionSettingsForestTrailDefinition|RegionSettingsHighwayDefinition|RegionSettingsDefinition|OptionSliderDefinition|DimensionRegionLayoutDefinition|DimensionDefinition|OmtPlaceholderDefinition|RegionTerrainFurnitureDefinition|ForestBiomeComponentDefinition|CityDefinition|FactionMissionDefinition|RegionSettingsCityDefinition|ForestBiomeMapgenDefinition|ScenarioDefinition|WeatherGeneratorDefinition
 
 ---@param definition PlatformContentDefinition
 function CcbPlatformContent.add(definition) end
@@ -7515,6 +7522,14 @@ function PlatformDialogueContext:fail_selected_mission() end
 ---available during a writable `on_action` callback; non-NPC interlocutors
 ---keep the native no-op behavior.
 function PlatformDialogueContext:end_interlocutor_conversation() end
+
+---Open the native trade window or queue it for the remote player. Only available during a writable response action.
+function PlatformDialogueContext:start_trade() end
+
+---Write the live speaker's native string variable and emit the native variable-changed event. Only available during a writable response action.
+---@param key string Native key, with no added prefix.
+---@param value string Saved native value.
+function PlatformDialogueContext:set_speaker_variable_string(key, value) end
 
 ---Grant one native-default item to the current native dialogue alpha.
 ---Only available in a writable `on_action` callback. Preserves native

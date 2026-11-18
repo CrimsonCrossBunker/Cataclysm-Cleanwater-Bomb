@@ -137,6 +137,8 @@ class context
         void succeed_selected_mission() const;
         void fail_selected_mission() const;
         void end_interlocutor_conversation() const;
+        void start_trade() const;
+        void set_speaker_variable_string( const std::string &key, const std::string &value ) const;
         void grant_item_to_speaker( const script_game_id &item_type ) const;
         bool purchase_pet( const script_game_id &monster_type,
                            const sol::optional<sol::table> &options ) const;

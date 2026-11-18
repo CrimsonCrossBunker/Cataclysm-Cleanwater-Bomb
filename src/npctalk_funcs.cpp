@@ -867,6 +867,17 @@ void talk_function::start_trade( npc &p )
     npc_trading::trade( p.get_trade_delegate(), 0, _( "Trade" ) );
 }
 
+void talk_function::start_trade_for_dialogue( dialogue &d )
+{
+    Character *player = mission_dialogue::resolve_dialogue_character( d );
+    npc *provider = mission_dialogue::resolve_dialogue_npc( d );
+    if( player == &get_avatar() && provider ) {
+        start_trade( *provider );
+    } else if( player && provider && player->has_native_player_control() ) {
+        d.request_remote_trade( { _( "Trade" ), true } );
+    }
+}
+
 void talk_function::sort_loot( npc &p )
 {
     p.assign_activity( zone_sort_activity_actor() );

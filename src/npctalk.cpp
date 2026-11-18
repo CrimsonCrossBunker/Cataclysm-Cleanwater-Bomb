@@ -9412,15 +9412,8 @@ void talk_effect_t::set_effect( talkfunction_ptr ptr )
         return;
     }
     if( ptr == &talk_function::start_trade ) {
-        set_effect_consequence( talk_effect_fun_t( []( dialogue & d ) {
-            Character *player = mission_dialogue::resolve_dialogue_character( d );
-            npc *provider = mission_dialogue::resolve_dialogue_npc( d );
-            if( player == &get_avatar() && provider ) {
-                talk_function::start_trade( *provider );
-            } else if( player && provider && player->has_native_player_control() ) {
-                d.request_remote_trade( { _( "Trade" ), true } );
-            }
-        } ), dialogue_consequence::none );
+        set_effect_consequence( talk_effect_fun_t( talk_function::start_trade_for_dialogue ),
+                                dialogue_consequence::none );
         return;
     }
     const auto set_character_npc_effect =
