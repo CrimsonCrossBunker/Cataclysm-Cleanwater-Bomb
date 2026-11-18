@@ -84,6 +84,7 @@ extern "C" {
 #include "math_parser_diag_value.h"
 #include "output.h"
 #include "requirements.h"
+#include "rng.h"
 #include "string_formatter.h"
 #include "talker.h"
 #include "talker_character.h"
@@ -1982,6 +1983,33 @@ sol::table mutable_item_state(
     return result;
 }
 
+sol::table modify_item_battery_charges(
+    sol::this_state lua, const game_handle &handle, const std::int64_t delta,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    if( delta < std::numeric_limits<int>::min() || delta > std::numeric_limits<int>::max() ) {
+        throw std::invalid_argument(
+            "services.items.modify_battery_charges delta must fit a native integer" );
+    }
+    sol::state_view state( lua );
+    const native_handle_result<item> resolved = handle.resolve_item( runtime_generation,
+            world_generation );
+    if( !resolved ) {
+        return make_game_error_result( state, *resolved.error );
+    }
+    static const itype_id battery( "battery" );
+    static const ammotype battery_ammo( "battery" );
+    item &entry = *resolved.value;
+    const int before = entry.ammo_remaining();
+    const auto amount = std::clamp<std::int64_t>( before + delta, 0,
+                        entry.ammo_capacity( battery_ammo ) );
+    entry.ammo_set( battery, static_cast<int>( amount ) );
+    sol::table value = state.create_table();
+    value["before"] = before;
+    value["after"] = entry.ammo_remaining();
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
+}
+
 sol::table update_item(
     sol::this_state lua, const game_handle &handle,
     const sol::table &requested,
@@ -3625,6 +3653,43 @@ sol::table inventory_resources(
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );
+}
+
+sol::table inventory_items_of_type(
+    sol::this_state lua, const game_handle &handle, const script_game_id &type, const bool shuffle,
+    const game_handle_runtime &runtime_generation, const std::size_t world_generation )
+{
+    require_id_kind( type, "item", "services.inventory.items_of_type" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation, error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+
+    const itype_id id( type.value() );
+    std::vector<item_location> matches = character->all_items_loc();
+    matches.erase( std::remove_if( matches.begin(), matches.end(), [&]( const item_location & location ) {
+        return !location || location->typeId() != id;
+    } ), matches.end() );
+    if( shuffle && !matches.empty() ) {
+        std::shuffle( matches.begin(), matches.end(), rng_get_engine() );
+    }
+
+    const tripoint_abs_ms position = character->pos_abs();
+    sol::table value = state.create_table();
+    for( std::size_t i = 0; i < matches.size(); ++i ) {
+        item &entry = *matches[i];
+        game_handle_locator locator;
+        locator.scope = "character_carried";
+        locator.stable_id = entry.uid().get_value();
+        locator.x = position.x();
+        locator.y = position.y();
+        locator.z = position.z();
+        value[i + 1] = game_handle::from_item( entry, std::move( locator ), runtime_generation,
+                                              world_generation );
+    }
+    return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
 
 sol::table inventory_has_items(
@@ -7619,6 +7684,14 @@ void install_item_api(
                    current_world_generation() );
     } );
     items.set_function(
+        "modify_battery_charges",
+        [current_runtime_generation, current_world_generation, require_item_write](
+            sol::this_state lua_state, const game_handle &handle, const std::int64_t delta ) {
+        require_item_write();
+        return modify_item_battery_charges( lua_state, handle, delta, current_runtime_generation(),
+                                            current_world_generation() );
+    } );
+    items.set_function(
         "melee_damage",
         [current_runtime_generation, current_world_generation, require_read](
             sol::this_state lua_state, const game_handle & handle,
@@ -7959,6 +8032,20 @@ void install_item_api(
         }
         return make_game_value_result( state,
                                        sol::make_object( state, character->has_item( *entry.value ) ) );
+    } );
+    inventory.set_function(
+        "items_of_type",
+        [current_runtime_generation, current_world_generation, require_read, require_item_write](
+            sol::this_state lua_state, const game_handle &character, const script_game_id &type,
+    const sol::optional<bool> &shuffle ) {
+        const bool shuffled = shuffle.value_or( false );
+        if( shuffled ) {
+            require_item_write();
+        } else {
+            require_read();
+        }
+        return inventory_items_of_type( lua_state, character, type, shuffled,
+                                        current_runtime_generation(), current_world_generation() );
     } );
     inventory.set_function(
         "has_items",

@@ -11587,6 +11587,12 @@ function CcbItemsApi.possible_from_group(group, options) end
 ---@param updates CcbItemUpdateOptions
 ---@return CcbResult
 function CcbItemsApi.update(handle, updates) end
+
+---Change battery ammunition on an exact item, clamped between zero and its native battery capacity.
+---@param handle GameHandle Exact live item.
+---@param delta integer Signed native integer change.
+---@return CcbResult result value contains before and after charge counts.
+function CcbItemsApi.modify_battery_charges(handle, delta) end
 ---@param handle GameHandle Exact live item handle.
 ---@param damage_type? GameId GameId<damage_type>
 ---@return CcbResult
@@ -11731,6 +11737,13 @@ function CcbInventoryApi.resources(character, item_type, quantity) end
 ---@param item GameHandle Exact live Item; stale identities return the normal handle error.
 ---@return CcbResult result value is the native Character::has_item result.
 function CcbInventoryApi.contains(character, item) end
+
+---Capture all exact matches in native carried-item order, including wielded, worn and nested items.
+---@param character GameHandle Exact live Character.
+---@param item_type GameId GameId<item>.
+---@param shuffle? boolean Shuffle the matches with the native shared game RNG inside a writable callback.
+---@return CcbResult result value is a dense array of live item handles.
+function CcbInventoryApi.items_of_type(character, item_type, shuffle) end
 
 ---@param character GameHandle Exact live Character handle.
 ---@param item_type GameId Valid GameId<item> queried with native u_has_items/npc_has_items count and charge rules.
