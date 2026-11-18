@@ -222,3 +222,10 @@ do
     group:entry { group = "hospital_medical_items", count = { 5, 10 }, probability = 50 }
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "fcl_SUS_heavy_rail_rifle", kind = "collection" }
+    group:item("fcl_heavy_rail_rifle")
+    group:entry { group = "UPS_power", charges = { 1000, 1000 } }
+    content.add(group)
+end
