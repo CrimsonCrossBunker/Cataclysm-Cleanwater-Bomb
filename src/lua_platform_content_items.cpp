@@ -417,6 +417,11 @@ struct item_action_definition_data {
     bool registered = false;
 };
 
+struct item_group_contents_entry {
+    std::string id;
+    bool group;
+};
+
 struct item_group_entry_definition_data {
     std::string id;
     bool group = false;
@@ -429,6 +434,11 @@ struct item_group_entry_definition_data {
     std::int64_t charges_max = -1;
     std::optional<std::string> container = std::nullopt;
     std::optional<std::string> wrapper = std::nullopt;
+    std::optional<Item_group::Type> subgroup = std::nullopt;
+    std::vector<item_group_entry_definition_data> children = {};
+    std::optional<std::pair<int, int>> damage = std::nullopt;
+    std::optional<std::pair<int, int>> dirt = std::nullopt;
+    std::vector<item_group_contents_entry> contents = {};
 };
 
 struct item_group_definition_data {
@@ -1984,16 +1994,71 @@ struct item_group_definition_handle {
         }
 
         item_group_definition_handle &entry( const sol::table &options ) {
+            require_building_handle( token, *definition, "item group" );
+            std::vector<const void *> ancestors;
+            definition->entries.push_back( read_entry( options, ancestors ) );
+            return *this;
+        }
+
+        std::string id() const {
+            require_readable_handle( token, *definition, "item group" );
+            return definition->id;
+        }
+
+    private:
+        static std::optional<std::pair<int, int>> read_modifier_range( const sol::table &options,
+                const char *field, int minimum, int maximum ) {
+            const sol::optional<sol::table> range = options.get<sol::optional<sol::table>>( field );
+            if( !range ) {
+                return std::nullopt;
+            }
+            require_dense_array( *range, field, 2, 2 );
+            const auto first = range->raw_get<std::int64_t>( 1 );
+            const auto last = range->raw_get<std::int64_t>( 2 );
+            if( first < minimum || first > last || last > maximum ) {
+                throw std::invalid_argument( std::string( "Invalid item-group " ) + field + " range" );
+            }
+            return std::pair<int, int>( static_cast<int>( first ), static_cast<int>( last ) );
+        }
+
+        static item_group_entry_definition_data read_entry( const sol::table &options,
+                std::vector<const void *> &ancestors ) {
+            item_group_entry_definition_data value;
+            value.probability = options.get_or<std::int64_t>( "probability", 100 );
             const std::string item = options.get_or( "item", std::string() );
             const std::string group_id = options.get_or( "group", std::string() );
-            if( item.empty() == group_id.empty() ) {
+            const sol::optional<sol::table> collection =
+                options.get<sol::optional<sol::table>>( "collection" );
+            const sol::optional<sol::table> distribution =
+                options.get<sol::optional<sol::table>>( "distribution" );
+            if( static_cast<int>( !item.empty() ) + static_cast<int>( !group_id.empty() ) +
+                static_cast<int>( static_cast<bool>( collection ) ) +
+                static_cast<int>( static_cast<bool>( distribution ) ) != 1 ) {
                 throw std::runtime_error(
-                    "item-group entry requires exactly one of item or group" );
+                    "item-group entry requires exactly one of item, group, collection or distribution" );
             }
-            item_group_entry_definition_data value;
+            if( collection || distribution ) {
+                lua_State *const state = options.lua_state();
+                const int top = lua_gettop( state );
+                options.push();
+                const void *identity = lua_topointer( state, -1 );
+                lua_settop( state, top );
+                if( std::find( ancestors.begin(), ancestors.end(), identity ) != ancestors.end() ) {
+                    throw std::invalid_argument( "Item-group child entries must not contain table cycles" );
+                }
+                ancestors.push_back( identity );
+                value.subgroup = collection ? Item_group::G_COLLECTION : Item_group::G_DISTRIBUTION;
+                const sol::table &entries = collection ? *collection : *distribution;
+                const std::size_t count = require_dense_array( entries, "item-group child entries", 0 );
+                value.children.reserve( count );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    value.children.push_back( read_entry( entries.raw_get<sol::table>( i ), ancestors ) );
+                }
+                ancestors.pop_back();
+                return value;
+            }
             value.id = item.empty() ? group_id : item;
             value.group = item.empty();
-            value.probability = options.get_or<std::int64_t>( "probability", 100 );
             value.variant = options.get_or( "variant", std::string() );
             if( const auto container = options.get<sol::optional<std::string>>( "container" ) ) {
                 value.container = *container;
@@ -2014,6 +2079,27 @@ struct item_group_definition_handle {
                 value.charges_min = charges->raw_get<std::int64_t>( 1 );
                 value.charges_max = charges->raw_get<std::int64_t>( 2 );
             }
+            value.damage = read_modifier_range( options, "damage",
+                                                std::numeric_limits<int>::min() / itype::damage_scale,
+                                                std::numeric_limits<int>::max() / itype::damage_scale );
+            value.dirt = read_modifier_range( options, "dirt",
+                                              std::numeric_limits<int>::min(), std::numeric_limits<int>::max() );
+            if( const sol::optional<sol::table> contents =
+                    options.get<sol::optional<sol::table>>( "contents" ) ) {
+                const std::size_t count = require_dense_array( *contents, "item-group contents", 0 );
+                value.contents.reserve( count );
+                for( std::size_t i = 1; i <= count; ++i ) {
+                    const sol::table child = contents->raw_get<sol::table>( i );
+                    const std::string child_item = child.get_or( "item", std::string() );
+                    const std::string child_group = child.get_or( "group", std::string() );
+                    if( child_item.empty() == child_group.empty() ) {
+                        throw std::invalid_argument( "Item-group contents require exactly one of item or group" );
+                    }
+                    value.contents.push_back( {
+                        child_item.empty() ? child_group : child_item, child_item.empty()
+                    } );
+                }
+            }
             if( value.probability <= 0 || value.count_min < 0 ||
                 value.count_max < value.count_min ||
                 value.count_max > std::numeric_limits<int>::max() ||
@@ -2023,17 +2109,9 @@ struct item_group_definition_handle {
                 throw std::runtime_error(
                     "item-group entry has invalid probability, count, or charges" );
             }
-            require_building_handle( token, *definition, "item group" );
-            definition->entries.push_back( std::move( value ) );
-            return *this;
+            return value;
         }
 
-        std::string id() const {
-            require_readable_handle( token, *definition, "item group" );
-            return definition->id;
-        }
-
-    private:
         item_group_definition_handle &add_entry( const std::string &id, const bool group,
                 const std::int64_t probability, const std::string &variant ) {
             require_building_handle( token, *definition, "item group" );
@@ -4302,20 +4380,37 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 }
             }
         }
-        for( const item_group_registration &entry : pimpl_->item_groups ) {
-            const item_group_definition_data &definition = *entry.definition;
-            for( const item_group_entry_definition_data &group_entry : definition.entries ) {
-                const bool probability_valid = definition.kind == "collection" ?
-                                               group_entry.probability > 0 && group_entry.probability <= 100 :
-                                               group_entry.probability > 0 && native_int( group_entry.probability );
-                if( group_entry.id.empty() || !probability_valid || group_entry.variant.size() > 256 ||
+        const auto validate_group_reference = [&]( const std::string &id, const std::string &target ) {
+            if( target == id || ( item_group_ids.count( target ) == 0 && check_engine_state &&
+                                  !item_group::group_is_defined( item_group_id( target ) ) ) ) {
+                throw std::runtime_error( "item group '" + id +
+                                          "' references unknown or recursive group '" + target + "'" );
+            }
+            if( item_group_ids.count( target ) != 0 ) {
+                item_group_children[id].push_back( target );
+            }
+        };
+        const auto validate_group_entries = [&]( const auto &self, const std::string &id,
+        const std::vector<item_group_entry_definition_data> &entries, bool collection ) -> void {
+            for( const item_group_entry_definition_data &group_entry : entries ) {
+                const bool probability_valid = group_entry.probability > 0 &&
+                                               native_int( group_entry.probability ) &&
+                                               ( !collection || group_entry.probability <= 100 );
+                if( !probability_valid ) {
+                    throw std::runtime_error( "item group '" + id + "' has an invalid probability" );
+                }
+                if( group_entry.subgroup ) {
+                    self( self, id, group_entry.children, *group_entry.subgroup == Item_group::G_COLLECTION );
+                    continue;
+                }
+                if( group_entry.id.empty() || group_entry.variant.size() > 256 ||
                     group_entry.variant.find( '\0' ) != std::string::npos || group_entry.count_min < 0 ||
                     group_entry.count_max < group_entry.count_min || !native_int( group_entry.count_max ) ||
                     group_entry.charges_min < -1 || group_entry.charges_max < group_entry.charges_min ||
                     !native_int( group_entry.charges_max ) ||
                     ( group_entry.group && ( !group_entry.variant.empty() ||
                                              group_entry.charges_min != -1 || group_entry.charges_max != -1 ) ) ) {
-                    throw std::runtime_error( "item group '" + definition.id + "' contains an invalid entry" );
+                    throw std::runtime_error( "item group '" + id + "' contains an invalid entry" );
                 }
                 for( const auto &container : {
                          group_entry.container, group_entry.wrapper
@@ -4323,21 +4418,27 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     if( container && ( container->empty() ||
                                        ( *container != "null" && declared_item_ids.count( *container ) == 0 &&
                                          check_engine_state && !item::type_is_defined( itype_id( *container ) ) ) ) ) {
-                        throw std::runtime_error( "item group '" + definition.id + "' references an unknown container" );
+                        throw std::runtime_error( "item group '" + id + "' references an unknown container" );
                     }
                 }
                 if( group_entry.group ) {
-                    if( group_entry.id == definition.id ||
-                        ( item_group_ids.count( group_entry.id ) == 0 && check_engine_state &&
-                          !item_group::group_is_defined( item_group_id( group_entry.id ) ) ) ) {
-                        throw std::runtime_error( "item group '" + definition.id +
-                                                  "' references unknown or recursive group '" + group_entry.id + "'" );
-                    }
-                    if( item_group_ids.count( group_entry.id ) != 0 ) {
-                        item_group_children[definition.id].push_back( group_entry.id );
+                    validate_group_reference( id, group_entry.id );
+                }
+                for( const item_group_contents_entry &child : group_entry.contents ) {
+                    if( child.group ) {
+                        validate_group_reference( id, child.id );
+                    } else if( check_engine_state && declared_item_ids.count( child.id ) == 0 &&
+                               !item::type_is_defined( item_controller->migrate_id( itype_id( child.id ) ) ) ) {
+                        throw std::runtime_error( "item group '" + id +
+                                                  "' references an unknown contents item '" + child.id + "'" );
                     }
                 }
             }
+        };
+        for( const auto &registration : pimpl_->item_groups ) {
+            const auto &definition = *registration.definition;
+            validate_group_entries( validate_group_entries, definition.id, definition.entries,
+                                    definition.kind == "collection" );
         }
         std::set<std::string> visiting_item_groups;
         std::set<std::string> visited_item_groups;
@@ -5647,55 +5748,102 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                                           "Lua-first item group " + source.id );
                         native = replacement.get();
                     }
-                    for( const item_group_entry_definition_data &source_entry : source.entries ) {
-                        const Single_item_creator::Type entry_type = source_entry.group ?
-                                Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
-                        std::string entry_id = source_entry.id;
-                        if( !source_entry.group ) {
-                            const bool declared_in_transaction = std::any_of(
-                                    pimpl_->items.begin(), pimpl_->items.end(),
-                            [&source_entry]( const item_registration & item_entry ) {
-                                return item_entry.definition->id == source_entry.id;
-                            } );
-                            if( !declared_in_transaction ) {
-                                const itype_id migrated_item = item_controller->migrate_id(
-                                                                   itype_id( source_entry.id ) );
-                                if( !item::type_is_defined( migrated_item ) ) {
-                                    DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
-                                                                  << "' skipped unavailable item '"
-                                                                  << source_entry.id << "'";
-                                    continue;
+                    const auto load_contents = []( const std::vector<item_group_contents_entry> &contents,
+                    const Item_group &parent ) -> std::unique_ptr<Item_spawn_data> {
+                        const std::string context = "contents of " + parent.context();
+                        if( contents.size() == 1 ) {
+                            const auto &child = contents.front();
+                            auto result = std::make_unique<Single_item_creator>(
+                                              child.id, child.group ? Single_item_creator::S_ITEM_GROUP :
+                                              Single_item_creator::S_ITEM, 100, context );
+                            result->inherit_ammo_mag_chances( parent.with_ammo, parent.with_magazine );
+                            return result;
+                        }
+                        auto result = std::make_unique<Item_group>( Item_group::G_COLLECTION, 100,
+                                      parent.with_ammo, parent.with_magazine, context );
+                        for( const item_group_contents_entry &child : contents ) {
+                            if( child.group ) {
+                                result->add_group_entry( item_group_id( child.id ), 100 );
+                            } else {
+                                result->add_item_entry( itype_id( child.id ), 100 );
+                            }
+                        }
+                        return result;
+                    };
+                    const auto append_entries = [&]( const auto &self, Item_group &parent,
+                    const std::vector<item_group_entry_definition_data> &entries ) -> void {
+                        for( const item_group_entry_definition_data &source_entry : entries ) {
+                            if( source_entry.subgroup ) {
+                                auto subgroup = std::make_unique<Item_group>(
+                                                    *source_entry.subgroup, static_cast<int>( source_entry.probability ),
+                                                    parent.with_ammo, parent.with_magazine, parent.context() );
+                                self( self, *subgroup, source_entry.children );
+                                parent.add_entry( std::move( subgroup ) );
+                                continue;
+                            }
+                            const Single_item_creator::Type entry_type = source_entry.group ?
+                                    Single_item_creator::S_ITEM_GROUP : Single_item_creator::S_ITEM;
+                            std::string entry_id = source_entry.id;
+                            if( !source_entry.group ) {
+                                const bool declared_in_transaction = std::any_of(
+                                        pimpl_->items.begin(), pimpl_->items.end(),
+                                [&source_entry]( const item_registration & item_entry ) {
+                                    return item_entry.definition->id == source_entry.id;
+                                } );
+                                if( !declared_in_transaction ) {
+                                    const itype_id migrated_item = item_controller->migrate_id(
+                                                                       itype_id( source_entry.id ) );
+                                    if( !item::type_is_defined( migrated_item ) ) {
+                                        DebugLog( D_WARNING, D_MAIN ) << "Lua-first item group '" << source.id
+                                                                      << "' skipped unavailable item '"
+                                                                      << source_entry.id << "'";
+                                        continue;
+                                    }
+                                    entry_id = migrated_item.str();
                                 }
-                                entry_id = migrated_item.str();
                             }
-                        }
-                        auto native_entry = std::make_unique<Single_item_creator>(
-                                                entry_id, entry_type,
-                                                static_cast<int>( source_entry.probability ),
-                                                "Lua-first item-group entry " + source.id );
-                        if( source_entry.count_specified || !source_entry.variant.empty() ||
-                            source_entry.charges_min != -1 || source_entry.container ) {
-                            native_entry->modifier.emplace();
-                            native_entry->modifier->count = {
-                                static_cast<int>( source_entry.count_min ),
-                                static_cast<int>( source_entry.count_max )
-                            };
-                            native_entry->modifier->variant = source_entry.variant;
-                            native_entry->modifier->charges = {
-                                static_cast<int>( source_entry.charges_min ),
-                                static_cast<int>( source_entry.charges_max )
-                            };
-                            if( source_entry.container ) {
-                                native_entry->modifier->container = std::make_unique<Single_item_creator>(
-                                                                        *source_entry.container, Single_item_creator::S_ITEM, 100,
-                                                                        "Lua-first item-group container " + source.id );
+                            auto native_entry = std::make_unique<Single_item_creator>(
+                                                    entry_id, entry_type,
+                                                    static_cast<int>( source_entry.probability ),
+                                                    "Lua-first item-group entry " + source.id );
+                            if( source_entry.count_specified || !source_entry.variant.empty() ||
+                                source_entry.charges_min != -1 || source_entry.container ||
+                                source_entry.damage || source_entry.dirt || !source_entry.contents.empty() ) {
+                                native_entry->modifier.emplace();
+                                native_entry->modifier->count = {
+                                    static_cast<int>( source_entry.count_min ),
+                                    static_cast<int>( source_entry.count_max )
+                                };
+                                native_entry->modifier->variant = source_entry.variant;
+                                native_entry->modifier->charges = {
+                                    static_cast<int>( source_entry.charges_min ),
+                                    static_cast<int>( source_entry.charges_max )
+                                };
+                                if( source_entry.damage ) {
+                                    native_entry->modifier->damage = {
+                                        source_entry.damage->first * itype::damage_scale,
+                                        source_entry.damage->second * itype::damage_scale
+                                    };
+                                }
+                                if( source_entry.dirt ) {
+                                    native_entry->modifier->dirt = *source_entry.dirt;
+                                }
+                                if( !source_entry.contents.empty() ) {
+                                    native_entry->modifier->contents = load_contents( source_entry.contents, parent );
+                                }
+                                if( source_entry.container ) {
+                                    native_entry->modifier->container = std::make_unique<Single_item_creator>(
+                                                                            *source_entry.container, Single_item_creator::S_ITEM, 100,
+                                                                            "Lua-first item-group container " + source.id );
+                                }
                             }
+                            if( source_entry.wrapper ) {
+                                native_entry->container_item = itype_id( *source_entry.wrapper );
+                            }
+                            parent.add_entry( std::move( native_entry ) );
                         }
-                        if( source_entry.wrapper ) {
-                            native_entry->container_item = itype_id( *source_entry.wrapper );
-                        }
-                        native->add_entry( std::move( native_entry ) );
-                    }
+                    };
+                    append_entries( append_entries, *native, source.entries );
                     if( replacement ) {
                         item_controller->m_template_groups[id] = std::move( replacement );
                     }
@@ -7143,20 +7291,24 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 }
             }
             break;
-        case items_content_fingerprint_phase::item_groups:
-            for( const auto &entry : pimpl_->item_groups ) {
-                const auto &v = *entry.definition;
-                hash_part( state, "item_group" );
-                hash_part( state, operation_name( entry.operation ) );
-                hash_part( state, v.id );
-                hash_part( state, v.kind );
-                hash_part( state, std::to_string( v.with_ammo ) );
-                hash_part( state, std::to_string( v.with_magazine ) );
-                for( const auto &e : v.entries ) {
+        case items_content_fingerprint_phase::item_groups: {
+            const auto hash_entries = [&state]( const auto &self,
+            const std::vector<item_group_entry_definition_data> &entries ) -> void {
+                for( const auto &e : entries ) {
+                    if( e.subgroup ) {
+                        hash_part( state, *e.subgroup == Item_group::G_COLLECTION ? "collection" : "distribution" );
+                        hash_part( state, std::to_string( e.probability ) );
+                        hash_part( state, std::to_string( e.children.size() ) );
+                        self( self, e.children );
+                        continue;
+                    }
                     hash_part( state, e.group ? "group" : "item" );
                     hash_part( state, e.id );
                     hash_part( state, std::to_string( e.probability ) );
                     hash_part( state, e.variant );
+                    if( e.count_specified && e.count_min == 1 && e.count_max == 1 ) {
+                        hash_part( state, "explicit_single_count" );
+                    }
                     hash_part( state, std::to_string( e.count_min ) );
                     hash_part( state, std::to_string( e.count_max ) );
                     hash_part( state, std::to_string( e.charges_min ) );
@@ -7165,9 +7317,38 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, e.container.value_or( "" ) );
                     hash_part( state, e.wrapper ? "wrapper" : "no_wrapper" );
                     hash_part( state, e.wrapper.value_or( "" ) );
+                    if( e.damage ) {
+                        hash_part( state, "damage" );
+                        hash_part( state, std::to_string( e.damage->first ) );
+                        hash_part( state, std::to_string( e.damage->second ) );
+                    }
+                    if( e.dirt ) {
+                        hash_part( state, "dirt" );
+                        hash_part( state, std::to_string( e.dirt->first ) );
+                        hash_part( state, std::to_string( e.dirt->second ) );
+                    }
+                    if( !e.contents.empty() ) {
+                        hash_part( state, "contents" );
+                        hash_part( state, std::to_string( e.contents.size() ) );
+                        for( const auto &child : e.contents ) {
+                            hash_part( state, child.group ? "group" : "item" );
+                            hash_part( state, child.id );
+                        }
+                    }
                 }
+            };
+            for( const auto &entry : pimpl_->item_groups ) {
+                const auto &v = *entry.definition;
+                hash_part( state, "item_group" );
+                hash_part( state, operation_name( entry.operation ) );
+                hash_part( state, v.id );
+                hash_part( state, v.kind );
+                hash_part( state, std::to_string( v.with_ammo ) );
+                hash_part( state, std::to_string( v.with_magazine ) );
+                hash_entries( hash_entries, v.entries );
             }
             break;
+        }
         case items_content_fingerprint_phase::requirements:
             for( const auto &entry : pimpl_->requirements ) {
                 const auto &v = *entry.definition;
