@@ -68,14 +68,6 @@
     "blood_analysis_description": "Bacterial Infection"
   },
   {
-    "type": "effect_type",
-    "id": "took_antihistamine",
-    "name": [ "Took Antihistamine Drugs" ],
-    "desc": [ "You have taken an antihistamine drug recently." ],
-    "rating": "good",
-    "blood_analysis_description": "Antihistamines"
-  },
-  {
     "id": "slippery_terrain",
     "type": "effect_type",
     "max_duration": "1 s",

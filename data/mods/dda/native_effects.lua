@@ -5276,3 +5276,438 @@ content.add(content.EffectType {
     name = ccb.content.text("RAGE"),
     description = ccb.content.text("Uncontrollably raging.  You cannot flee from hostiles."),
 })
+
+content.upsert_effect_type(content.EffectType {
+    id = "no_power_tank_treads",
+    name = ccb.content.text("Low Power (Bionic Treads)"),
+    description = ccb.content.text("You're low on power.  Your bionic treads are operating in emergency mode and have limited function."),
+    rating = "bad",
+    maximum_duration_turns = 30,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("speed", "amount", { base = -10 })
+    :limb_score("block", { multiplier = 0.0 })
+    :limb_score("swim", { multiplier = 0.01 })
+    :limb_score("move_speed", { multiplier = 0.1 }))
+
+content.add(content.EffectType {
+    id = "onfire",
+    apply_memorial_log = "Caught on fire.",
+    remove_memorial_log = "Put out the fire.",
+    name = ccb.content.text("On Fire"),
+    description = ccb.content.text("Loss of health - Entire Body\nYour clothing and other equipment may be consumed by the flames."),
+    apply_message = ccb.content.text("You're on fire!  Wait in place to attempt to put out the fire."),
+    rating = "bad",
+    maximum_intensity = 3,
+    intensity_duration_turns = 5,
+    maximum_duration_turns = 50,
+    show_in_info = true,
+})
+
+content.upsert_effect_type(content.EffectType {
+    id = "blind",
+    name = ccb.content.text("Blind"),
+    description = ccb.content.text("Range of Sight: 0.  You cannot see anything."),
+    apply_message = ccb.content.text("You're blinded!"),
+    remove_message = ccb.content.text("Your sight returns!"),
+    rating = "bad",
+    show_in_info = true,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :flag("BLIND")
+    :removes_effect("glare")
+    :removes_effect("snow_glare")
+    :removes_effect("darkness")
+    :limb_score("vision", { multiplier = 0.0 })
+    :limb_score("night_vis", { multiplier = 0.0 })
+    :limb_score("reaction", { multiplier = 0.2 }))
+
+content.upsert_effect_type(content.EffectType {
+    id = "mutagen_troglobite",
+    name = ccb.content.text("Troglobite Mutation"),
+    description = ccb.content.text("You consumed troglobite primer."),
+    blood_analysis_description = ccb.content.text("Troglobite Primer Contamination"),
+    maximum_intensity = 3,
+    rating = "bad",
+}
+    :name(ccb.content.text("Troglobite Transformation"))
+    :name(ccb.content.text("Troglobite Metamorphosis"))
+    :description(ccb.content.text("Down in the dark corners of the new world.  That's where you belong."))
+    :description(ccb.content.text("Deep and dark, your bones ache and twist."))
+    :resist_trait("THRESH_TROGLOBITE")
+    :modifier("hurt", "minimum", { base = 2 })
+    :modifier("hurt", "maximum", { base = 3 })
+    :modifier("hurt", "chance_numerator", { base = -22, per_intensity = 21 })
+    :modifier("hurt", "tick", { base = 150 })
+    :modifier("pain", "minimum", { base = 1 })
+    :modifier("pain", "maximum", { base = 2 })
+    :modifier("pain", "chance_numerator", { base = 100, per_intensity = -30 })
+    :modifier("pain", "tick", { base = 75 })
+    :modifier("strength", "amount", { per_intensity = 2 })
+    :modifier("perception", "amount", { per_intensity = -2.5 })
+    :modifier("dexterity", "amount", { per_intensity = 1 }))
+
+content.add(content.EffectType {
+    id = "smoke_eyes",
+    name = ccb.content.text("Little Eye Irritation"),
+    description = ccb.content.text("Your eyes are mildly irritated."),
+    maximum_duration_turns = 180,
+    maximum_intensity = 4,
+    intensity_decay_tick = 40,
+    show_in_info = true,
+}
+    :name(ccb.content.text("Minor Eye Irritation"))
+    :name(ccb.content.text("Huge Eye Irritation"))
+    :name(ccb.content.text("Bad Eye Irritation"))
+    :description(ccb.content.text("Your eyes are watering."))
+    :description(ccb.content.text("Your eyes sting badly and tears stream from them continuously."))
+    :description(ccb.content.text("You can barely see anything due to your massive eye irritation and the flood of tears streaming from them."))
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :resist_effect("steroid_eye")
+    :resist_optional_effect("PAINRESIST")
+    :modifier("perception", "amount", { base = -1, per_intensity = -1 })
+    :modifier("pain", "amount", { base = 2, per_intensity = 2, resisted_per_intensity = 1 })
+    :miss_message(ccb.content.text("Your eyes sting and tear from the irritation."), 1)
+    :apply_message(ccb.content.text("Your eyes are mildly irritated."), "bad")
+    :apply_message(ccb.content.text("Your eyes are watering."), "bad")
+    :apply_message(ccb.content.text("Your eyes sting badly and tears stream from them continuously."), "bad")
+    :apply_message(ccb.content.text("You can barely see anything due to your massive eye irritation and the flood of tears streaming from them."), "bad")
+    :limb_score("vision", { multiplier = 0.8, resisted_multiplier = 1.0, per_intensity = -0.2, resisted_per_intensity = -0.15 })
+    :limb_score("night_vis", { multiplier = 0.8, resisted_multiplier = 1.0, per_intensity = -0.2, resisted_per_intensity = -0.15 }))
+
+-- Applying this to monsters will make them invisible unless they are adjacent to the player.
+content.upsert_effect_type(content.EffectType {
+    id = "invisibility",
+    name = ccb.content.text("Invisible"),
+    description = ccb.content.text("You are invisible."),
+}
+    :flag("INVISIBLE"))
+
+content.add(content.EffectType {
+    id = "bite",
+    apply_memorial_log = "Received a deep bite wound.",
+    remove_memorial_log = "Recovered from a bite wound.",
+    name = ccb.content.text("Bite"),
+    description = ccb.content.text("You have a nasty bite wound."),
+    apply_message = ccb.content.text("The bite wound feels really deep…"),
+    main_parts_only = true,
+    rating = "bad",
+    intensity_duration_turns = 1800,
+    maximum_intensity = 2,
+}
+    :name(ccb.content.text("Painful Bite"))
+    :immune_bodypart_flag("BIONIC_LIMB")
+    :resist_trait("INFRESIST")
+    :modifier("dexterity", "amount", { per_intensity = -1 })
+    :modifier("pain", "chance_denominator", { per_intensity = 200 })
+    :modifier("pain", "chance_numerator", { per_intensity = 2, resisted_per_intensity = 1 })
+    :modifier("pain", "minimum", { per_intensity = 1 })
+    :modifier("pain", "maximum_value", { per_intensity = 10, resisted_per_intensity = 5 }))
+
+-- Stamina regen stops completely at int 3, but no stamina loss from then on
+content.add(content.EffectType {
+    id = "infected",
+    apply_memorial_log = "Contracted an infection.",
+    remove_memorial_log = "Recovered from an infection… this time.",
+    name = ccb.content.text("Infected"),
+    description = ccb.content.text("You have an infected wound."),
+    apply_message = ccb.content.text("Your wound feels infected."),
+    blood_analysis_description = ccb.content.text("Bacterial Infection"),
+    main_parts_only = true,
+    rating = "bad",
+    intensity_duration_turns = 28800,
+    maximum_intensity = 3,
+}
+    :name(ccb.content.text("Badly Infected"))
+    :name(ccb.content.text("Pus Filled"))
+    :resist_trait("INFRESIST")
+    :modifier("strength", "amount", { base = -2, per_intensity = -1, resisted_per_intensity = -0.5 })
+    :modifier("dexterity", "amount", { base = -3, per_intensity = -1, resisted_per_intensity = -0.5 })
+    :modifier("intelligence", "amount", { base = -2, per_intensity = -3, resisted_per_intensity = -1 })
+    :modifier("vomiting", "chance_numerator", { base = 900, per_intensity = -400, resisted_base = 1200 })
+    :modifier("vomiting", "tick", { base = 180 })
+    :modifier("thirst", "minimum", { base = 2 })
+    :modifier("thirst", "chance_numerator", { base = 10, resisted_base = 100 })
+    :modifier("thirst", "tick", { base = 30 })
+    :modifier("speed", "amount", { base = -10, per_intensity = -10, resisted_per_intensity = -5 })
+    :modifier("stamina", "minimum", { base = -8, per_intensity = -6, resisted_base = -4, resisted_per_intensity = -4 })
+    :modifier("stamina", "maximum", { base = -50, per_intensity = 15, resisted_base = -20, resisted_per_intensity = 4 })
+    :modifier("stamina", "chance_numerator", { base = 3, per_intensity = -1, resisted_base = 10, resisted_per_intensity = -2.5 })
+    :modifier("sleepiness", "minimum", { base = 2 })
+    :modifier("sleepiness", "maximum", { base = 10, resisted_base = 5 })
+    :modifier("sleepiness", "chance_numerator", { base = 110, per_intensity = -50 })
+    :modifier("sleepiness", "maximum_value", { base = 700, resisted_base = 250 })
+    :modifier("healing", "amount", { base = 0.01, resisted_base = 1 })
+    :modifier("sleepiness", "tick", { per_intensity = 0.5 }))
+
+content.add(content.EffectType {
+    id = "fungus",
+    speed_name = ccb.content.text("Itchy skin"),
+    apply_memorial_log = "Contracted a fungal infection.",
+    remove_memorial_log = "Cured the fungal infection.",
+    remove_message = ccb.content.text("The itching in your skin fades away."),
+    blood_analysis_description = ccb.content.text("Fungal Infection"),
+    rating = "bad",
+    maximum_intensity = 3,
+    intensity_duration_turns = 21600,
+    maximum_duration_turns = 64800,
+}
+    :resist_effect("antifungal")
+    :resist_trait("POISRESIST")
+    :modifier("speed", "amount", { base = -10 })
+    :modifier("strength", "amount", { base = -1 })
+    :modifier("dexterity", "amount", { base = -1 })
+    :miss_message(ccb.content.text("You feel sick inside."), 1))
+
+content.upsert_effect_type(content.EffectType {
+    id = "visuals",
+    name = ccb.content.text("Hallucinating"),
+    description = ccb.content.text("You can't trust everything that you see."),
+    blood_analysis_description = ccb.content.text("Hallucinations"),
+    rating = "bad",
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("intelligence", "amount", { base = -2 })
+    :modifier("dexterity", "amount", { base = -1 })
+    :modifier("perception", "amount", { base = -4 })
+    :limb_score("reaction", { multiplier = 0.8, per_intensity = -0.2 })
+    :limb_score("block", { multiplier = 0.8, per_intensity = -0.2 }))
+
+-- intensity 1 - one of two lungs is collapsed; intensity 2 - both lungs are collapsed
+content.add(content.EffectType {
+    id = "lung_collapse",
+    name = ccb.content.text("Lung Collapse"),
+    description = ccb.content.text("You have difficulties breathing!"),
+    rating = "bad",
+    maximum_intensity = 2,
+    show_in_info = true,
+}
+    :enchantment("INLINE_ENCH_lung_collapse_0")
+    :modifier("hurt", "amount", { base = 1 })
+    :modifier("hurt", "tick", { base = 4 })
+    :death_chance({ numerator = 0, denominator = 1 })
+    :death_chance({ numerator = 1, denominator = 120 }))
+
+content.upsert_effect_type(content.EffectType {
+    id = "hallu",
+    blood_analysis_description = ccb.content.text("Hallucinations"),
+    maximum_duration_turns = 21600,
+}
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :limb_score("reaction", { multiplier = 0.8, per_intensity = -0.2 })
+    :limb_score("block", { multiplier = 0.8, per_intensity = -0.2 }))
+
+content.add(content.EffectType {
+    id = "pre_common_cold",
+    apply_memorial_log = "Started getting sick.",
+    name = ccb.content.text("Getting Sick"),
+    description = ccb.content.text("You are coming down with some kind of sickness.  It's too early to tell how bad it's going to be, but it might be a good idea to find a safe place to rest."),
+    apply_message = ccb.content.text("You feel a sickness coming on…"),
+    rating = "bad",
+}
+    :immune_character_flag("NO_DISEASE")
+    :resist_effect("took_flumed")
+    :enchantment("INLINE_ENCH_pre_common_cold_0")
+    :modifier("thirst", "tick", { base = 3600 })
+    :modifier("thirst", "minimum", { base = 1 })
+    :modifier("strength", "amount", { base = -1 })
+    :modifier("cough", "chance_numerator", { base = 600 }))
+
+-- For player, indistinguishable from pre_cold, but separate here to allow for separate resistances from flu shot/antibodies.
+content.add(content.EffectType {
+    id = "pre_flu",
+    apply_memorial_log = "Started getting sick.",
+    name = ccb.content.text("Getting Sick"),
+    description = ccb.content.text("You are coming down with some kind of sickness.  It's too early to tell how bad it's going to be, but it might be a good idea to find a safe place to rest."),
+    apply_message = ccb.content.text("You feel a sickness coming on…"),
+    rating = "bad",
+}
+    :immune_character_flag("NO_DISEASE")
+    :resist_effect("took_flumed")
+    :enchantment("INLINE_ENCH_pre_flu_0")
+    :modifier("thirst", "tick", { base = 3600 })
+    :modifier("thirst", "minimum", { base = 1 })
+    :modifier("strength", "amount", { base = -1 })
+    :modifier("cough", "chance_numerator", { base = 600 }))
+
+content.add(content.EffectType {
+    id = "common_cold",
+    apply_memorial_log = "Caught a cold.",
+    remove_memorial_log = "Got over the cold.",
+    name = ccb.content.text("Common Cold"),
+    description = ccb.content.text("You have contracted the 'Common Cold'.  Symptoms can be alleviated by medication (cough syrup)."),
+    apply_message = ccb.content.text("You feel a cold coming on…"),
+    blood_analysis_description = ccb.content.text("Viral Infection"),
+    rating = "bad",
+}
+    :immune_character_flag("NO_DISEASE")
+    :resist_effect("took_flumed")
+    :enchantment("INLINE_ENCH_common_cold_0")
+    :modifier("thirst", "tick", { base = 1800 })
+    :modifier("thirst", "minimum", { base = 1 })
+    :modifier("strength", "amount", { base = -3, resisted_base = -1 })
+    :modifier("dexterity", "amount", { base = -1 })
+    :modifier("perception", "amount", { base = -1 })
+    :modifier("intelligence", "amount", { base = -2, resisted_base = -1 })
+    :modifier("cough", "chance_numerator", { base = 300 })
+    :miss_message(ccb.content.text("You're too stuffed up to fight effectively."), 1))
+
+content.add(content.EffectType {
+    id = "flu",
+    apply_memorial_log = "Caught the flu.",
+    remove_memorial_log = "Got over the flu.",
+    name = ccb.content.text("Influenza"),
+    description = ccb.content.text("You have contracted flu, or more technically speaking, the 'Influenza'.  Symptoms can be alleviated by medication (cough syrup)."),
+    apply_message = ccb.content.text("You feel a flu coming on…"),
+    blood_analysis_description = ccb.content.text("Viral Infection"),
+    rating = "bad",
+}
+    :immune_character_flag("NO_DISEASE")
+    :resist_effect("took_flumed")
+    :enchantment("INLINE_ENCH_flu_0")
+    :modifier("thirst", "tick", { base = 1800 })
+    :modifier("thirst", "minimum", { base = 1 })
+    :modifier("strength", "amount", { base = -4, resisted_base = -2 })
+    :modifier("dexterity", "amount", { base = -2 })
+    :modifier("perception", "amount", { base = -1 })
+    :modifier("intelligence", "amount", { base = -2, resisted_base = -1 })
+    :modifier("pain", "maximum_value", { base = 15 })
+    :modifier("pain", "minimum", { base = 1 })
+    :modifier("cough", "chance_numerator", { base = 300 })
+    :modifier("vomiting", "chance_numerator", { base = 3600, resisted_base = 7200 })
+    :miss_message(ccb.content.text("You're too stuffed up to fight effectively."), 1))
+
+content.add(content.EffectType {
+    id = "took_antihistamine",
+    name = ccb.content.text("Took Antihistamine Drugs"),
+    description = ccb.content.text("You have taken an antihistamine drug recently."),
+    blood_analysis_description = ccb.content.text("Antihistamines"),
+    rating = "good",
+})
+
+content.add(content.EffectType {
+    id = "drunk",
+    death_message = ccb.content.text("Your breathing grows weaker and weaker, and then you are gone."),
+    name = ccb.content.text("Buzzed"),
+    description = ccb.content.text("You had some alcohol.  You feel warm inside."),
+    apply_message = ccb.content.text("You feel lightheaded."),
+    blood_analysis_description = ccb.content.text("Alcohol"),
+    maximum_intensity = 5,
+}
+    :name(ccb.content.text("Tipsy"))
+    :name(ccb.content.text("Drunk"))
+    :name(ccb.content.text("Wasted"))
+    :name(ccb.content.text("Dead Drunk"))
+    :description(ccb.content.text("You had some alcohol.  Party on!"))
+    :description(ccb.content.text("You had lots of alcohol.  Now you're feeling it."))
+    :description(ccb.content.text("You had too much alcohol.  It's the end of the world, what do you care?"))
+    :description(ccb.content.text("You had so much alcohol that you're probably not going to remember this."))
+    :flag("EFFECT_LIMB_SCORE_MOD")
+    :modifier("vomiting", "chance_numerator", { base = -20, per_intensity = 17 })
+    :modifier("vomiting", "chance_denominator", { base = 1000 })
+    :modifier("vomiting", "tick", { base = 180, per_intensity = -30 })
+    :modifier("sleep", "tick", { base = 45 })
+    :modifier("sleep", "chance_numerator", { base = -1003, per_intensity = 501 })
+    :modifier("sleep", "minimum", { base = 15000 })
+    :modifier("sleep", "maximum", { base = 21000 })
+    :modifier("painkiller", "amount", { base = 1 })
+    :modifier("painkiller", "maximum_value", { base = 1, per_intensity = 5 })
+    :modifier("painkiller", "minimum", { base = 1 })
+    :modifier("painkiller", "tick", { base = 45, per_intensity = -5 })
+    :modifier("thirst", "minimum", { base = 1 })
+    :modifier("thirst", "maximum", { base = 2 })
+    :modifier("thirst", "tick", { base = 1000, per_intensity = -100 })
+    :modifier("sensitivity", "amount", { base = -1, per_intensity = -1 })
+    :modifier("sensitivity", "chance_numerator", { base = 300 })
+    :modifier("sensitivity", "minimum_value", { base = 70, per_intensity = -5 })
+    :modifier("strength", "amount", { base = 0.5, per_intensity = 0.5 })
+    :modifier("speed", "amount", { per_intensity = -2 })
+    :modifier("perception", "amount", { per_intensity = -0.5 })
+    :modifier("dexterity", "amount", { per_intensity = -0.5 })
+    :modifier("intelligence", "amount", { per_intensity = -0.75 })
+    :miss_message(ccb.content.text("You feel woozy."), 1)
+    :limb_score("manip", { multiplier = 0.9, per_intensity = -0.1 })
+    :limb_score("block", { multiplier = 1.0, per_intensity = -0.05 })
+    :limb_score("vision", { multiplier = 1.0, per_intensity = -0.05 })
+    :limb_score("reaction", { multiplier = 0.9, per_intensity = -0.2 })
+    :limb_score("move_speed", { multiplier = 1.0, per_intensity = -0.02 })
+    :limb_score("balance", { multiplier = 0.9, per_intensity = -0.2 })
+    :limb_score("footing", { multiplier = 1.0, per_intensity = -0.15 })
+    :limb_score("swim", { multiplier = 1.0, per_intensity = -0.2 })
+    :death_chance({ numerator = -1, denominator = 1 })
+    :death_chance({ numerator = -1, denominator = 1 })
+    :death_chance({ numerator = -1, denominator = 1 })
+    :death_chance({ numerator = -1, denominator = 1 })
+    :death_chance({ numerator = 1, denominator = 25000 }))
+
+content.add(content.EffectType {
+    id = "rat_bite_fever",
+    name = ccb.content.text("Puckered Scratches"),
+    apply_message = ccb.content.text("Your skin starts burning around some of your scratches.  Some aspirin might relieve the effects."),
+    remove_message = ccb.content.text("The fever breaks."),
+    blood_analysis_description = ccb.content.text("Streptobacillus moniliformis Infection"),
+    rating = "bad",
+}
+    :immune_bodypart_flag("BIONIC_LIMB")
+    :immune_bodypart_flag("NON_FLESH_LIMB")
+    :resist_optional_effect("aspirin")
+    :modifier("stamina", "minimum", { base = -50 })
+    :modifier("stamina", "maximum", { base = -100 })
+    :modifier("stamina", "chance_numerator", { base = 300 })
+    :modifier("intelligence", "amount", { base = -1 })
+    :modifier("sleepiness", "minimum", { base = 5 })
+    :modifier("sleepiness", "maximum", { base = 10 })
+    :modifier("sleepiness", "chance_numerator", { base = 500 }))
+
+-- Internal bleeding
+content.add(content.EffectType {
+    id = "mutation_internal_damage",
+    apply_memorial_log = "Had a mutation botched due to their installed bionics.",
+    name = ccb.content.text("Botched Mutation"),
+    description = ccb.content.text("Your changing body did not cope well with your bionics."),
+    maximum_intensity = 3,
+    intensity_decay_tick = 25200,
+    intensity_decay_removes = true,
+    show_intensity = false,
+    main_parts_only = true,
+}
+    :name(ccb.content.text("Botched Mutation"))
+    :name(ccb.content.text("Destroyed Bionic"))
+    :modifier("pain", "minimum", { base = 1, per_intensity = 1 })
+    :modifier("pain", "maximum", { base = 2, per_intensity = 4 })
+    :modifier("pain", "chance_numerator", { base = 24, per_intensity = -8 })
+    :modifier("pain", "tick", { base = 36, per_intensity = -15 })
+    :modifier("hurt", "maximum", { base = 1 })
+    :modifier("hurt", "chance_numerator", { base = 24, per_intensity = -8 })
+    :modifier("hurt", "tick", { base = 40, per_intensity = 40 })
+    :vitamin("redcells", {
+        rates = { { minimum = -2, maximum = -5 }, { minimum = -2, maximum = -5 }, { minimum = -4, maximum = -8 } },
+        tick_turns = { 30, 30, 15 },
+    })
+    :vitamin("blood", {
+        rates = { { minimum = -2, maximum = -5 }, { minimum = -2, maximum = -5 }, { minimum = -4, maximum = -8 } },
+        tick_turns = { 30, 30, 15 },
+    })
+    :apply_message(ccb.content.text("Your twisting flesh strains against the bionics invading your body."), "bad")
+    :apply_message(ccb.content.text("Your twisting flesh strains against the bionics invading your body."), "bad")
+    :apply_message(ccb.content.text("Your twisting flesh strains against the bionics invading your body."), "bad"))
+
+-- Hidden effect, tracks how long you've been in the portal storm dungeon
+content.add(content.EffectType {
+    id = "effect_portal_storm_dungeon_time_tracker",
+    name = "",
+    description = "",
+    intensity_decay_step = 1,
+    intensity_decay_tick = 120,
+})
+
+content.add(content.EffectType {
+    id = "star_vampire_blood_drink_feral",
+    name = ccb.content.text("Exsanguination"),
+    description = ccb.content.text("The monster is drinking your blood, you vile feral!"),
+    rating = "bad",
+    maximum_intensity = 1,
+    show_in_info = true,
+}
+    :resist_trait("BLEED_IMMUNE")
+    :death_chance({ numerator = 1, denominator = 20 }))

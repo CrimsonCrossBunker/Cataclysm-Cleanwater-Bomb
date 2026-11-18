@@ -72,20 +72,5 @@
       "venom_pain",
       "venom_weaken"
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "no_power_tank_treads",
-    "name": [ "Low Power (Tank Treads)" ],
-    "desc": [ "You're low on power.  Your tank treads are operating in emergency mode and have limited function." ],
-    "rating": "bad",
-    "max_duration": "30 s",
-    "base_mods": { "speed_mod": [ -10 ] },
-    "limb_score_mods": [
-      { "limb_score": "block", "modifier": 0.9 },
-      { "limb_score": "swim", "modifier": 0.2 },
-      { "limb_score": "move_speed", "modifier": 0.2 }
-    ],
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
   }
 ]

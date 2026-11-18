@@ -1,4 +1,5 @@
 require("region_settings")
+require("base_effect_overrides")
 
 require("snippets")
 

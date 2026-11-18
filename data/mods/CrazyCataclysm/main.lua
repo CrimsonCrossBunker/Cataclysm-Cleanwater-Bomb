@@ -1,6 +1,8 @@
 local ccb = require("ccb")
 local content = ccb.content
 
+require("base_effect_overrides")
+
 local definition = content.Blacklist {
     kind = "monster",
     whitelist = true,

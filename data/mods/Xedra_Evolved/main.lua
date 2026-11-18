@@ -116,6 +116,7 @@ require("martial_enchantments")
 
 require("effect_enchantments")
 require("effects.telepathic_ignorance")
+require("base_effect_overrides")
 
 require("mutation_enchantments")
 

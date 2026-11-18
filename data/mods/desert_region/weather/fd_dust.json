@@ -116,18 +116,6 @@
   },
   {
     "type": "effect_type",
-    "id": "blind",
-    "name": [ "Blind" ],
-    "desc": [ "Range of Sight: 0.  You cannot see anything." ],
-    "removes_effects": [ "glare", "snow_glare", "darkness", "dust_storm_blind" ],
-    "apply_message": "You're blinded!",
-    "remove_message": "Your sight returns!",
-    "rating": "bad",
-    "show_in_info": true,
-    "flags": [ "BLIND" ]
-  },
-  {
-    "type": "effect_type",
     "id": "dust_storm_blind",
     "name": [ "Dust" ],
     "desc": [ "Range of Sight: 0.  You cannot see anything." ],

@@ -254,16 +254,6 @@
   },
   {
     "type": "effect_type",
-    "id": "visuals",
-    "name": [ "Hallucinating" ],
-    "desc": [ "You can't trust everything that you see." ],
-    "rating": "bad",
-    "resist_effects": [ "relative_physics" ],
-    "base_mods": { "int_mod": [ -2 ], "dex_mod": [ -1 ], "per_mod": [ -4 ] },
-    "blood_analysis_description": "Hallucinations"
-  },
-  {
-    "type": "effect_type",
     "id": "effect_monster_shadow_damage_reduction",
     "name": [ "Shadow Damage Reduction" ],
     "desc": [ "You are flatter and less real in ways that makes you less susceptible to damage." ],
@@ -307,18 +297,6 @@
     ],
     "max_intensity": 5,
     "rating": "good"
-  },
-  {
-    "type": "effect_type",
-    "id": "hallu",
-    "max_duration": "6 h",
-    "limb_score_mods": [
-      { "limb_score": "reaction", "modifier": 0.8, "scaling": -0.2 },
-      { "limb_score": "block", "modifier": 0.8, "scaling": -0.2 }
-    ],
-    "resist_effects": [ "relative_physics" ],
-    "blood_analysis_description": "Hallucinations",
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
   },
   {
     "type": "effect_type",
