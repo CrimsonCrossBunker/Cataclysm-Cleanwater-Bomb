@@ -6280,6 +6280,13 @@ function CcbPlatformContent.extend_overmap_special_flags(id, flags) end
 ---@param options NestedMapgenOptions
 function CcbPlatformContent.add_nested_mapgen(options) end
 
+---@class UpdateMapgenOptions
+---@field id string Native update mapgen ID. An existing ID receives another update in registration order.
+---@field build fun(layout: MapgenPatch) Populates a one-OMT update during content loading.
+
+---@param options UpdateMapgenOptions
+function CcbPlatformContent.add_update_mapgen(options) end
+
 ---@param options VehiclePartDefinitionOptions
 ---@return VehiclePartDefinition
 function CcbPlatformContent.VehiclePart(options) end

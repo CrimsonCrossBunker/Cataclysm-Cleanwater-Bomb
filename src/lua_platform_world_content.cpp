@@ -1759,9 +1759,9 @@ void set_npc_snippet( dialogue_chatbin_snippets &snippets,
 } // namespace
 
 struct world_content_transaction::impl {
-    struct nested_mapgen_definition {
+    struct staged_mapgen_definition {
         std::string id;
-        int size;
+        std::optional<int> nested_size;
         int weight;
         sol::protected_function build;
     };
@@ -1784,7 +1784,7 @@ struct world_content_transaction::impl {
     void apply_overmap_terrain();
     void install_overmap_special_api( sol::table &content ) const;
     void apply_overmap_special();
-    void apply_nested_mapgens();
+    void apply_mapgens();
     void install_vehicle_part_api( sol::table &content ) const;
     void apply_vehicle_part( std::string &error );
     void install_vehicle_api( sol::table &content ) const;
@@ -1806,9 +1806,10 @@ struct world_content_transaction::impl {
     std::vector<registration<overmap_terrain_data>> overmap_terrains;
     std::vector<registration<overmap_special_data>> overmap_specials;
     std::map<std::string, std::set<std::string>> overmap_special_flag_additions;
-    std::vector<nested_mapgen_definition> nested_mapgen_definitions;
+    std::vector<staged_mapgen_definition> mapgen_definitions;
     std::vector<std::pair<nested_mapgen_id, std::shared_ptr<mapgen_function_json_nested>>>
     nested_mapgen_undo;
+    std::vector<std::pair<update_mapgen_id, const update_mapgen_function_json *>> update_mapgen_undo;
     std::vector<registration<vehicle_part_data>> vehicle_parts;
     std::vector<registration<vehicle_data>> vehicles;
 
@@ -1871,23 +1872,36 @@ void world_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
     pimpl_->install_overmap_special_api( content );
     pimpl_->install_vehicle_part_api( content );
     pimpl_->install_vehicle_api( content );
-    content.set_function( "add_nested_mapgen", [this]( const sol::table & options ) {
+    const auto stage_mapgen = [this]( const sol::table &options, bool nested ) {
         if( pimpl_->handle_token->state != lifecycle::building ) {
             throw std::runtime_error( "content transaction is no longer building" );
         }
-        require_known_table_keys( options, { "id", "size", "weight", "build" }, "nested mapgen" );
-        const std::string id = options.get_or( "id", std::string() );
-        const int size = options.get_or( "size", 0 );
-        const int weight = options.get_or( "weight", 1000 );
-        const sol::object build = options.raw_get<sol::object>( "build" );
-        if( id.empty() || id == "null" || size < 1 || size > SEEX * 2 || weight < 1 ||
-            build.get_type() != sol::type::function ) {
-            throw std::invalid_argument(
-                "add_nested_mapgen requires an id, square size, positive weight and build function" );
+        if( nested ) {
+            require_known_table_keys( options, { "id", "size", "weight", "build" }, "nested mapgen" );
+        } else {
+            require_known_table_keys( options, { "id", "build" }, "update mapgen" );
         }
-        pimpl_->nested_mapgen_definitions.push_back( {
-            id, size, weight, build.as<sol::protected_function>()
-        } );
+        const std::string id = options.get_or( "id", std::string() );
+        const sol::object build = options.raw_get<sol::object>( "build" );
+        if( id.empty() || id == "null" || build.get_type() != sol::type::function ) {
+            throw std::invalid_argument( "Mapgen registration requires an id and build function" );
+        }
+        std::optional<int> size;
+        int weight = 1000;
+        if( nested ) {
+            size = options.get_or( "size", 0 );
+            weight = options.get_or( "weight", 1000 );
+            if( *size < 1 || *size > SEEX * 2 || weight < 1 ) {
+                throw std::invalid_argument( "Nested mapgen requires a square size and positive weight" );
+            }
+        }
+        pimpl_->mapgen_definitions.push_back( { id, size, weight, build.as<sol::protected_function>() } );
+    };
+    content.set_function( "add_nested_mapgen", [stage_mapgen]( const sol::table & options ) {
+        stage_mapgen( options, true );
+    } );
+    content.set_function( "add_update_mapgen", [stage_mapgen]( const sol::table & options ) {
+        stage_mapgen( options, false );
     } );
     static_cast<void>( lua );
 }
@@ -3576,7 +3590,7 @@ bool world_content_transaction::apply( std::string &error )
         pimpl_->apply_overmap_special();
         pimpl_->apply_vehicle_part( error );
         pimpl_->apply_vehicle();
-        pimpl_->apply_nested_mapgens();
+        pimpl_->apply_mapgens();
         pimpl_->handle_token->state = lifecycle::building;
         pimpl_->applied = true;
         error.clear();
@@ -4069,27 +4083,35 @@ void world_content_transaction::impl::apply_overmap_special()
     }
 }
 
-void world_content_transaction::impl::apply_nested_mapgens()
+void world_content_transaction::impl::apply_mapgens()
 {
-    for( const nested_mapgen_definition &definition : nested_mapgen_definitions ) {
-        const nested_mapgen_id id( definition.id );
-        const auto existing = nested_mapgens.find( id );
-        if( existing != nested_mapgens.end() &&
-            existing->second.funcs().get_weight() > std::numeric_limits<int>::max() - definition.weight ) {
-            throw std::runtime_error( "total nested mapgen weight exceeds the native range for '" +
-                                      definition.id + "'" );
-        }
+    for( const staged_mapgen_definition &definition : mapgen_definitions ) {
+        const std::string context = ( definition.nested_size ? "Lua nested mapgen " :
+                                      "Lua update mapgen " ) + definition.id;
         sol::state_view lua( definition.build.lua_state() );
         const sol::object layout = sol::make_object( lua, mapgen_patch() );
         const sol::protected_function_result result = definition.build( layout );
         if( !result.valid() ) {
             const sol::error build_error = result;
-            throw std::runtime_error( "nested mapgen '" + definition.id + "': " + build_error.what() );
+            throw std::runtime_error( context + ": " + build_error.what() );
         }
-        const auto prepared = layout.as<const mapgen_patch &>().freeze_nested(
-                                  definition.size, "Lua nested mapgen " + definition.id );
-        nested_mapgen_undo.emplace_back( id, prepared );
-        nested_mapgens[id].add( prepared, definition.weight );
+        const mapgen_patch &patch = layout.as<const mapgen_patch &>();
+        if( definition.nested_size ) {
+            const nested_mapgen_id id( definition.id );
+            const auto existing = nested_mapgens.find( id );
+            if( existing != nested_mapgens.end() &&
+                existing->second.funcs().get_weight() > std::numeric_limits<int>::max() - definition.weight ) {
+                throw std::runtime_error( context + " exceeds the native total weight range" );
+            }
+            const auto prepared = patch.freeze_nested( *definition.nested_size, context );
+            nested_mapgen_undo.emplace_back( id, prepared );
+            nested_mapgens[id].add( prepared, definition.weight );
+        } else {
+            const update_mapgen_id id( definition.id );
+            auto prepared = patch.freeze_update( context );
+            update_mapgen_undo.emplace_back( id, prepared.get() );
+            update_mapgens[id].add( std::move( prepared ) );
+        }
     }
 }
 
@@ -4791,6 +4813,16 @@ void world_content_transaction::rollback()
         }
     }
     pimpl_->nested_mapgen_undo.clear();
+    for( const auto &[id, entry] : pimpl_->update_mapgen_undo ) {
+        const auto found = update_mapgens.find( id );
+        if( found != update_mapgens.end() ) {
+            found->second.remove( entry );
+            if( found->second.funcs().empty() ) {
+                update_mapgens.erase( found );
+            }
+        }
+    }
+    pimpl_->update_mapgen_undo.clear();
     for( auto it = pimpl_->overmap_terrain_undo.rbegin();
          it != pimpl_->overmap_terrain_undo.rend(); ++it ) {
         std::vector<oter_id> generated = it->generated;
@@ -4855,6 +4887,7 @@ void world_content_transaction::commit()
     pimpl_->overmap_terrain_undo.clear();
     pimpl_->overmap_special_undo.clear();
     pimpl_->nested_mapgen_undo.clear();
+    pimpl_->update_mapgen_undo.clear();
     pimpl_->vehicle_part_undo.clear();
     pimpl_->vehicle_undo.clear();
     pimpl_->vehicle_self_group_undo.clear();
@@ -4886,11 +4919,13 @@ void world_content_transaction::append_fingerprint( std::uint64_t &state ) const
         hash_part( state, id );
         hash_strings( state, flags );
     }
-    for( const impl::nested_mapgen_definition &definition : pimpl_->nested_mapgen_definitions ) {
-        hash_part( state, "nested_mapgen" );
+    for( const impl::staged_mapgen_definition &definition : pimpl_->mapgen_definitions ) {
+        hash_part( state, definition.nested_size ? "nested_mapgen" : "update_mapgen" );
         hash_part( state, definition.id );
-        hash_number( state, definition.size );
-        hash_number( state, definition.weight );
+        if( definition.nested_size ) {
+            hash_number( state, *definition.nested_size );
+            hash_number( state, definition.weight );
+        }
     }
     hash_registrations( state, "vehicle_part", pimpl_->vehicle_parts );
     hash_registrations( state, "vehicle", pimpl_->vehicles );

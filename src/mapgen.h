@@ -625,6 +625,7 @@ class mapgen_patch final : private update_mapgen_function_json
         void add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance );
         std::shared_ptr<mapgen_function_json_nested> freeze_nested( int size,
                 const std::string &context ) const;
+        std::unique_ptr<update_mapgen_function_json> freeze_update( const std::string &context ) const;
         ret_val<void> run( const tripoint_abs_omt &position, mission *active_mission,
                            bool cancel_on_collision ) const;
 
@@ -680,6 +681,7 @@ class update_mapgen
             return funcs_;
         }
         void add( std::unique_ptr<update_mapgen_function_json> &&p );
+        void remove( const update_mapgen_function_json *p );
     private:
         std::vector<std::unique_ptr<update_mapgen_function_json>> funcs_;
 };

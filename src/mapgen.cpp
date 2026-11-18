@@ -5289,6 +5289,17 @@ void update_mapgen::add( std::unique_ptr<update_mapgen_function_json> &&p )
     funcs_.push_back( std::move( p ) );
 }
 
+void update_mapgen::remove( const update_mapgen_function_json *p )
+{
+    const auto found = std::find_if( funcs_.begin(), funcs_.end(),
+    [p]( const auto &entry ) {
+        return entry.get() == p;
+    } );
+    if( found != funcs_.end() ) {
+        funcs_.erase( found );
+    }
+}
+
 void jmapgen_objects::finalize()
 {
     std::stable_sort( objects.begin(), objects.end(), compare_phases );
@@ -8319,6 +8330,17 @@ mapgen_function_json_nested::mapgen_function_json_nested(
     setmap_points = std::move( setmap );
     std::stable_sort( setmap_points.begin(), setmap_points.end(), compare_phases );
     is_ready = true;
+}
+
+std::unique_ptr<update_mapgen_function_json> mapgen_patch::freeze_update(
+    const std::string &context ) const
+{
+    auto prepared = std::make_unique<mapgen_patch>( *this );
+    prepared->context_ = context;
+    prepared->objects.finalize();
+    std::stable_sort( prepared->setmap_points.begin(), prepared->setmap_points.end(), compare_phases );
+    prepared->is_ready = true;
+    return std::unique_ptr<update_mapgen_function_json>( prepared.release() );
 }
 
 ret_val<void> mapgen_patch::run( const tripoint_abs_omt &position, mission *active_mission,
