@@ -28,14 +28,6 @@
     "variants": [  ]
   },
   {
-    "id": "altered_scissors",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "scissors",
-    "name": { "str_sp": "antique scissors" },
-    "description": "A pair of ornately decorated steel scissors.  The handle is decorated with vicious-looking birds."
-  },
-  {
     "id": "altered_necklace",
     "copy-from": "silver_necklace",
     "type": "ITEM",
