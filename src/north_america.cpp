@@ -1,20 +1,29 @@
 #include "north_america.h"
 
-#include "north_america_elevation.h"
-
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
+#include <functional>
+#include <initializer_list>
+#include <memory>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 
+#include "cata_path.h"
 #include "cata_utility.h"
 #include "city.h"
+#include "coordinates.h"
 #include "flexbuffer_json.h"
 #include "game.h"
+#include "map_scale_constants.h"
 #include "mongroup.h"
 #include "mp_client_conn.h"
+#include "north_america_elevation.h"
 #include "options.h"
 #include "path_info.h"
+#include "regional_climate.h"
+#include "type_id.h"
 #include "worldfactory.h"
 
 namespace north_america
