@@ -692,9 +692,10 @@ local ModDefinition = {}
 ---@field symbol? string Map symbol; defaults to `?`.
 ---@field color? string Native color id.
 ---@field category? string Native item-category id.
----@field looks_like? string Existing item id used for presentation.
+---@field looks_like? string Tileset key used for presentation fallback; need not identify a registered item.
 ---@field default_container? string Default package item id; `null` explicitly disables inherited packaging.
 ---@field mass_grams? integer Non-negative mass in grams.
+---@field mass_milligrams? integer Non-negative native signed-64-bit mass in milligrams; cannot be combined with mass_grams in one constructor.
 ---@field volume_ml? integer Non-negative volume in milliliters.
 ---@field longest_side_mm? integer Longest side in millimeters. Omit to inherit; -1 derives length from volume.
 ---@field price_cents? integer Non-negative pre-Cataclysm price in cents.
@@ -708,6 +709,10 @@ local ItemDefinition = {}
 ---@param grams integer
 ---@return ItemDefinition self
 function ItemDefinition:mass_grams(grams) end
+
+---@param milligrams integer Non-negative native signed-64-bit mass. Replaces any previously staged gram mass.
+---@return ItemDefinition self
+function ItemDefinition:mass_milligrams(milligrams) end
 
 ---@param milliliters integer
 ---@return ItemDefinition self

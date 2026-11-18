@@ -204,6 +204,7 @@ struct item_definition_data {
     std::optional<localized_text> translated_description;
     std::string symbol = "?";
     std::int64_t mass_grams = 0;
+    std::optional<std::int64_t> mass_milligrams;
     std::int64_t volume_ml = 0;
     std::optional<units::length> longest_side;
     std::int64_t price_cents = 0;
@@ -754,6 +755,18 @@ struct item_definition_handle {
             throw std::runtime_error( "item mass is outside the native range" );
         }
         definition->mass_grams = grams;
+        definition->mass_milligrams.reset();
+        definition->has_mass = true;
+        return *this;
+    }
+
+    item_definition_handle &mass_milligrams( std::int64_t milligrams ) {
+        require_building_handle( token, *definition, "item" );
+        if( milligrams < 0 ) {
+            throw std::invalid_argument( "item mass cannot be negative" );
+        }
+        definition->mass_grams = 0;
+        definition->mass_milligrams = milligrams;
         definition->has_mass = true;
         return *this;
     }
@@ -2640,6 +2653,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "ItemDefinition", sol::no_constructor,
         "id", sol::property( &item_definition_handle::id ),
         "mass_grams", &item_definition_handle::mass,
+        "mass_milligrams", &item_definition_handle::mass_milligrams,
         "volume_ml", &item_definition_handle::volume,
         "price_cents", &item_definition_handle::price,
         "price_postapoc_cents", &item_definition_handle::price_postapoc,
@@ -3025,6 +3039,13 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         if( const sol::optional<std::int64_t> mass =
                 options.get<sol::optional<std::int64_t>>( "mass_grams" ) ) {
             definition->mass_grams = *mass;
+            definition->has_mass = true;
+        }
+        if( const auto mass = options.get<sol::optional<std::int64_t>>( "mass_milligrams" ) ) {
+            if( definition->has_mass || *mass < 0 ) {
+                throw std::invalid_argument( "item mass_milligrams must be non-negative and excludes mass_grams" );
+            }
+            definition->mass_milligrams = *mass;
             definition->has_mass = true;
         }
         if( const sol::optional<std::int64_t> volume =
@@ -4575,12 +4596,6 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "item '" + definition.id +
                                           "' references unknown category '" + definition.category + "'" );
             }
-            if( definition.has_looks_like && check_engine_state &&
-                !item::type_is_defined( itype_id( definition.looks_like ) ) &&
-                declared_item_ids.count( definition.looks_like ) == 0 ) {
-                throw std::runtime_error( "item '" + definition.id +
-                                          "' references unknown looks_like item '" + definition.looks_like + "'" );
-            }
             if( definition.comestible ) {
                 const item_definition_data::comestible_data &food = *definition.comestible;
                 if( ( food.type != "FOOD" && food.type != "DRINK" && food.type != "MED" ) ||
@@ -5792,7 +5807,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->sym = definition.symbol;
                     }
                     if( definition.has_mass ) {
-                        native->weight = units::from_gram<std::int64_t>( definition.mass_grams );
+                        native->weight = definition.mass_milligrams ?
+                                         units::from_milligram<std::int64_t>( *definition.mass_milligrams ) :
+                                         units::from_gram<std::int64_t>( definition.mass_grams );
                     }
                     if( definition.has_volume ) {
                         native->volume = units::from_milliliter<std::int64_t>( definition.volume_ml );
@@ -5813,6 +5830,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->category_force = item_category_id( definition.category );
                     }
                     if( definition.has_looks_like ) {
+                        // Tileset fallback keys can name sprites without registered item types.
                         native->looks_like = itype_id( definition.looks_like );
                     }
                     if( definition.default_container ) {
@@ -7244,6 +7262,10 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_text( v.translated_description );
                 hash_part( state, v.symbol );
                 hash_part( state, std::to_string( v.mass_grams ) );
+                if( v.mass_milligrams ) {
+                    hash_part( state, "mass_milligrams" );
+                    hash_part( state, std::to_string( *v.mass_milligrams ) );
+                }
                 hash_part( state, std::to_string( v.volume_ml ) );
                 hash_part( state, v.longest_side ? std::to_string( units::to_millimeter( *v.longest_side ) ) :
                            "inherit_length" );

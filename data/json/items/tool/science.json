@@ -316,21 +316,6 @@
     "qualities": [ [ "EXTRACT", 1 ] ]
   },
   {
-    "id": "catalytic_cracking_reactor",
-    "type": "ITEM",
-    "name": { "str": "disassembled catalytic cracking reactor" },
-    "description": "A makeshift extraction system, or as makeshift as you can consider something that was purpose-built in a laboratory by a group of experts.  Meticulously disassembled.  You can reassemble and plug it into your own power grid to use it.",
-    "category": "tools",
-    "symbol": "Y",
-    "color": "light_cyan",
-    "looks_like": "f_catalytic_cracking_reactor",
-    "weight": "500 kg",
-    "volume": "500 L",
-    "price": "200 USD",
-    "price_postapoc": "5 USD",
-    "material": [ "steel" ]
-  },
-  {
     "id": "filter_paper_qualitative",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -637,25 +622,6 @@
     "flags": [ "HYGROMETER" ]
   },
   {
-    "id": "mobile_weather_station",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "//": "Based on several examples, including the ecoTech Mini Met mobile weather station & aem weather backpack",
-    "name": { "str": "mobile weather station" },
-    "description": "A large yellow case filled with equipment to measure atmospheric conditions.  It is outfitted with a carrying handle, a telescoping stand, and a rechargeable battery pack.  Its small display can show the current weather.  It can also make long-term recordings, but these data are useless without specialized software to interpret them.",
-    "weight": "5000 g",
-    "volume": "89400 ml",
-    "longest_side": "60 cm",
-    "price": "400 USD",
-    "price_postapoc": "50 cent",
-    "material": [ "plastic", "aluminum" ],
-    "symbol": "[",
-    "looks_like": "briefcase",
-    "color": "yellow",
-    "flags": [ "WATERPROOF", "ELECTRONIC", "NO_UNLOAD", "NO_RELOAD", "RECHARGE" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1000 } } ]
-  },
-  {
     "id": "mws_weather_sensor_array",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -934,21 +900,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "cuvettes",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "set of spectrometry cuvettes", "str_pl": "sets of spectrometry cuvettes" },
-    "description": "A small box filled with precisely-calibrated square plastic tubes for laboratory spectrometer use.",
-    "weight": "70 g",
-    "volume": "250 ml",
-    "price": "12 USD",
-    "price_postapoc": "2 USD 50 cent",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "light_gray"
-  },
-  {
     "id": "ph_meter",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -1172,22 +1123,6 @@
     "symbol": "V",
     "color": "light_blue",
     "qualities": [ [ "SEPARATE", 1 ] ]
-  },
-  {
-    "id": "burette",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "burette" },
-    "description": "A tall glass column with a stopcock at the end.  If you're serious about chemistry, you probably have a tattoo of one of these somewhere.",
-    "weight": "300 g",
-    "volume": "1 L",
-    "price": "10 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "glass", "plastic" ],
-    "looks_like": "glass_tube_small",
-    "symbol": "|",
-    "color": "light_blue"
   },
   {
     "id": "rotovap",
@@ -1570,32 +1505,5 @@
     "color": "light_red",
     "use_action": [ "WEATHER_TOOL" ],
     "flags": [ "THERMOMETER" ]
-  },
-  {
-    "id": "microscope_slide",
-    "type": "ITEM",
-    "name": { "str": "microscope slide" },
-    "//": "Includes the glass cover.",
-    "description": "A tiny, thin rectangle of glass, used to observe samples through microscopes.",
-    "material": [ "glass" ],
-    "weight": "4125 mg",
-    "volume": "2 ml",
-    "price_postapoc": "0 USD",
-    "symbol": "-",
-    "color": "light_cyan"
-  },
-  {
-    "id": "microscope_slide_water_murky",
-    "copy-from": "microscope_slide",
-    "type": "ITEM",
-    "name": { "str": "microscope slide of murky water", "str_pl": "microscope slides of murky water" },
-    "description": "A microscope slide with a sample of murky water."
-  },
-  {
-    "id": "microscope_slide_soil",
-    "copy-from": "microscope_slide",
-    "type": "ITEM",
-    "name": { "str": "microscope slide of soil", "str_pl": "microscope slides of soil" },
-    "description": "A microscope slide with a sample of soil."
   }
 ]

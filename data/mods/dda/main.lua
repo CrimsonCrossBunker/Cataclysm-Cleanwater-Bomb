@@ -163,6 +163,8 @@ require("portal_passive_effects")
 
 require("nre_recorder")
 
+require("science_items")
+
 require("portal_storm_dungeon")
 
 require("portal_storm_dialogue")
