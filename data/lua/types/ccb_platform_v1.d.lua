@@ -12150,7 +12150,7 @@ function CcbInventoryApi.give_group(character, group, options) end
 ---@param item_type GameId GameId<item>.
 ---@param quantity integer Native signed-int quantity, including zero and negative values.
 ---@param options? CcbInventoryReceiptOptions
----@return CcbResult result value contains id, attempted_instances and accepted_instances. No giver popup is inferred.
+---@return CcbResult result value contains id, name, attempted_instances and accepted_instances. Name is the native display text of the prepared item or container.
 function CcbInventoryApi.receive_item(character, item_type, quantity, options) end
 
 ---@param character GameHandle Exact live Character.
@@ -12165,7 +12165,7 @@ function CcbInventoryApi.receive_group(character, group, options) end
 ---@param character GameHandle Exact live Character.
 ---@param item_type GameId GameId<item>.
 ---@param quantity integer Native signed-int quantity; nonpositive instance counts perform no attempts, while charge counts retain the native value.
----@return CcbResult result value contains attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
+---@return CcbResult result value contains id, name, attempted_instances and accepted_instances; accepted deliveries may be carried or dropped.
 function CcbInventoryApi.receive_item(character, item_type, quantity) end
 
 ---Generate the complete native item group and deliver each top-level item through Character::i_add_or_drop.

@@ -4228,6 +4228,7 @@ sol::table receive_inventory_items(
     }
     std::size_t attempted = 0;
     std::size_t accepted = 0;
+    std::optional<std::string> received_name;
     const tripoint_abs_ms spawn_position = character->pos_abs();
     const auto preserve_spawn_location = [&]( item &created ) {
         if( created.has_flag( flag_PRESERVE_SPAWN_LOC ) ) {
@@ -4260,9 +4261,11 @@ sol::table receive_inventory_items(
             created.charges = static_cast<int>( quantity );
             container.put_in( created, pocket_type::CONTAINER );
             deliver( container, false );
+            received_name = container.tname();
         } else if( created.count_by_charges() ) {
             created.charges = static_cast<int>( quantity );
             deliver( created );
+            received_name = created.tname();
         } else {
             for( int index = 0; index < quantity; ++index ) {
                 if( !created.ammo_default().is_null() ) {
@@ -4270,6 +4273,7 @@ sol::table receive_inventory_items(
                 }
                 deliver( created );
             }
+            received_name = created.tname();
         }
     }
     character->invalidate_crafting_inventory();
@@ -4277,6 +4281,9 @@ sol::table receive_inventory_items(
     value["id"] = type;
     value["attempted_instances"] = attempted;
     value["accepted_instances"] = accepted;
+    if( received_name ) {
+        value["name"] = *received_name;
+    }
     return make_game_value_result( state, sol::make_object( state, std::move( value ) ) );
 }
 
