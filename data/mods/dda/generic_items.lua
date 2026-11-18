@@ -1,2 +1,4 @@
 require("generic_items.items.ammo.nail")
 require("generic_items.items.ammo.weldgas")
+require("generic_items.items.appliances.appliances_generators")
+require("generic_items.items.appliances.appliances_refrigeration")
