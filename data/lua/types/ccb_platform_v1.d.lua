@@ -942,8 +942,8 @@ function ItemDefinition:on_consume(handler_id, label) end
 ---@field name? string|LocalizedText Display name. Required when the recipe has no item output.
 ---@field description? string|LocalizedText Recipe description.
 ---@field flags? string[] Native recipe flags.
----@field category? string Native crafting category id.
----@field subcategory? string Native crafting subcategory id.
+---@field category? string Native crafting category id. Can be absent for disassembly recipes.
+---@field subcategory? string Native crafting subcategory id. Can be absent for disassembly recipes.
 ---@field skill? string Primary skill id.
 ---@field difficulty? integer Difficulty from zero through the native maximum skill level.
 ---@field duration_moves? integer Non-negative base duration in moves.

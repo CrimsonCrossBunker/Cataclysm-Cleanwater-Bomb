@@ -3319,9 +3319,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
                 definition->flags.insert( flag );
             }
         }
-        definition->category = options.get_or( "category", std::string( "CC_OTHER" ) );
+        definition->uncraft = options.get_or( "uncraft", false );
+        definition->category = options.get_or(
+                                   "category", std::string( definition->uncraft ? "" : "CC_OTHER" ) );
         definition->subcategory = options.get_or(
-                                      "subcategory", std::string( "CSC_OTHER_OTHER" ) );
+                                      "subcategory", std::string( definition->uncraft ? "" : "CSC_OTHER_OTHER" ) );
         definition->skill = options.get_or( "skill", std::string() );
         definition->difficulty = options.get_or<std::int64_t>( "difficulty", 0 );
         definition->time_moves = options.get_or<std::int64_t>( "duration_moves", 100 );
@@ -3329,7 +3331,6 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         definition->autolearn = options.get_or( "autolearn", true );
         definition->reversible = options.get_or( "reversible", false );
         definition->practice = options.get_or( "practice", false );
-        definition->uncraft = options.get_or( "uncraft", false );
         definition->activity_level = options.get_or( "activity_level", 1.0 );
         definition->result_handler = options.get_or(
                                          "on_complete",
@@ -5051,7 +5052,8 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' has invalid result, duration, difficulty, or activity" );
             }
-            if( crafting_category_ids.count( definition.category ) == 0 &&
+            if( ( !definition.uncraft || !definition.category.empty() ) &&
+                crafting_category_ids.count( definition.category ) == 0 &&
                 !crafting_category_id( definition.category ).is_valid() ) {
                 throw std::runtime_error( "recipe '" + definition.id +
                                           "' references unknown category '" + definition.category + "'" );
@@ -6516,7 +6518,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     native.result_mult = static_cast<int>( entry.definition->result_multiplier );
                     native.time = entry.definition->time_moves;
-                    native.category = crafting_category_id( entry.definition->category );
+                    if( !entry.definition->category.empty() ) {
+                        native.category = crafting_category_id( entry.definition->category );
+                    }
                     native.subcategory = entry.definition->subcategory;
                     native.autolearn = entry.definition->autolearn;
                     native.reversible = entry.definition->reversible;
