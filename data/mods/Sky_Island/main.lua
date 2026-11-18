@@ -18,6 +18,10 @@ require("effect_enchantments")
 
 require("inline_enchantment_conditions")
 
+require("effects")
+
+require("mutations")
+
 require("weather_generators")
 
 require("portal_storm_cycle")
