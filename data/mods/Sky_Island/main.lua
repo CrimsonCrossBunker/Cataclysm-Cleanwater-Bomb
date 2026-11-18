@@ -2,6 +2,10 @@ require("flags")
 
 require("requirements")
 
+require("items")
+
+require("upgrade_items")
+
 require("item_groups")
 
 require("npc_merchants.definitions")
@@ -39,10 +43,6 @@ require("island_defenses")
 require("dimension_returns")
 
 require("recipes")
-
-if require("ccb").content.is_mod_active("magiclysm") then
-    require("recipes_magiclysm")
-end
 
 require("island_overmap")
 

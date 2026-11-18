@@ -1,6 +1,6 @@
 local ccb = require("ccb")
 local content = ccb.content
-local warped_recipe = require("recipes")
+local warped_recipe = require("warped_recipe")
 
 do
     local recipe = warped_recipe {

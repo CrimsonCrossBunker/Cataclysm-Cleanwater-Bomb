@@ -71,30 +71,6 @@
     "light_color": [ 149, 36, 20 ]
   },
   {
-    "id": "fakeitem_statue",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "nearby warp obelisk" },
-    "description": { "str": "This is a crafting_pseudo_item if you have it something is wrong.", "//~": "NO_I18N" },
-    "weight": "70000 g",
-    "volume": "100 L",
-    "material": [ "stone" ],
-    "symbol": "X",
-    "color": "red"
-  },
-  {
-    "id": "fakeitem_infinitree1",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "nearby infinity tree" },
-    "description": { "str": "This is a crafting_pseudo_item if you have it something is wrong.", "//~": "NO_I18N" },
-    "weight": "70000 g",
-    "volume": "100 L",
-    "material": [ "wood" ],
-    "symbol": "T",
-    "color": "red"
-  },
-  {
     "type": "furniture",
     "id": "f_infinitree1",
     "name": "infinity tree",
@@ -111,18 +87,6 @@
     "crafting_pseudo_item": "fakeitem_infinitree1"
   },
   {
-    "id": "fakeitem_infinitystone",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "nearby infinity stone" },
-    "description": { "str": "This is a crafting_pseudo_item if you have it something is wrong.", "//~": "NO_I18N" },
-    "weight": "70000 g",
-    "volume": "100 L",
-    "material": [ "wood" ],
-    "symbol": "T",
-    "color": "red"
-  },
-  {
     "type": "furniture",
     "id": "f_infinitystone",
     "name": "infinity stone",
@@ -137,18 +101,6 @@
     "coverage": 80,
     "required_str": 1,
     "crafting_pseudo_item": "fakeitem_infinitystone"
-  },
-  {
-    "id": "fakeitem_infinityore",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "nearby infinity ore" },
-    "description": { "str": "This is a crafting_pseudo_item if you have it something is wrong.", "//~": "NO_I18N" },
-    "weight": "70000 g",
-    "volume": "100 L",
-    "material": [ "wood" ],
-    "symbol": "T",
-    "color": "red"
   },
   {
     "type": "furniture",

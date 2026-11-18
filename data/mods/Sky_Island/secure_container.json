@@ -1,30 +1,5 @@
 [
   {
-    "id": "secure_container_1",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Alpha Secure Container" },
-    "description": "The most secure storage possible, even if it is tiny.  This metaphysical container is unique in that it is the only storage that will keep its contents on death.  Everything else will still be lost.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "material": [ "stone" ],
-    "symbol": "[",
-    "looks_like": "ragpouch",
-    "color": "yellow",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "AURA", "NO_SALVAGE", "TARDIS", "ZERO_WEIGHT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "500 ml",
-        "max_contains_weight": "100 kg",
-        "max_item_length": "2000 cm",
-        "watertight": true,
-        "moves": 10,
-        "volume_encumber_modifier": 0
-      }
-    ]
-  },
-  {
     "type": "mutation",
     "id": "mut_secure_container_1",
     "name": { "str": "Security Alpha" },
@@ -34,31 +9,6 @@
     "player_display": true,
     "purifiable": false,
     "integrated_armor": [ "secure_container_1" ]
-  },
-  {
-    "id": "secure_container_2",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Beta Secure Container" },
-    "description": "A small secure storage.  This metaphysical container is unique in that it is the only storage that will keep its contents on death.  Everything else will still be lost.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "material": [ "stone" ],
-    "symbol": "[",
-    "looks_like": "ragpouch",
-    "color": "yellow",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "AURA", "NO_SALVAGE", "TARDIS", "ZERO_WEIGHT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "750 ml",
-        "max_contains_weight": "100 kg",
-        "max_item_length": "2000 cm",
-        "watertight": true,
-        "moves": 10,
-        "volume_encumber_modifier": 0
-      }
-    ]
   },
   {
     "type": "mutation",
@@ -72,31 +22,6 @@
     "integrated_armor": [ "secure_container_2" ]
   },
   {
-    "id": "secure_container_3",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Gamma Secure Container" },
-    "description": "A medium-sized secure storage.  This metaphysical container is unique in that it is the only storage that will keep its contents on death.  Everything else will still be lost.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "material": [ "stone" ],
-    "symbol": "[",
-    "looks_like": "ragpouch",
-    "color": "yellow",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "AURA", "NO_SALVAGE", "TARDIS", "ZERO_WEIGHT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "1000 ml",
-        "max_contains_weight": "100 kg",
-        "max_item_length": "2000 cm",
-        "watertight": true,
-        "moves": 10,
-        "volume_encumber_modifier": 0
-      }
-    ]
-  },
-  {
     "type": "mutation",
     "id": "mut_secure_container_3",
     "name": { "str": "Security Gamma" },
@@ -108,31 +33,6 @@
     "integrated_armor": [ "secure_container_3" ]
   },
   {
-    "id": "secure_container_4",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Epsilon Secure Container" },
-    "description": "A large secure storage.  This metaphysical container is unique in that it is the only storage that will keep its contents on death.  Everything else will still be lost.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "material": [ "stone" ],
-    "symbol": "[",
-    "looks_like": "ragpouch",
-    "color": "yellow",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "AURA", "NO_SALVAGE", "TARDIS", "ZERO_WEIGHT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "1500 ml",
-        "max_contains_weight": "100 kg",
-        "max_item_length": "2000 cm",
-        "watertight": true,
-        "moves": 10,
-        "volume_encumber_modifier": 0
-      }
-    ]
-  },
-  {
     "type": "mutation",
     "id": "mut_secure_container_4",
     "name": { "str": "Security Epsilon" },
@@ -142,31 +42,6 @@
     "player_display": true,
     "purifiable": false,
     "integrated_armor": [ "secure_container_4" ]
-  },
-  {
-    "id": "secure_container_5",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Kappa Secure Container" },
-    "description": "The perfect secure storage.  This metaphysical container is unique in that it is the only storage that will keep its contents on death.  Everything else will still be lost.",
-    "weight": "0 g",
-    "volume": "0 L",
-    "material": [ "stone" ],
-    "symbol": "[",
-    "looks_like": "ragpouch",
-    "color": "yellow",
-    "flags": [ "INTEGRATED", "UNBREAKABLE", "AURA", "NO_SALVAGE", "TARDIS", "ZERO_WEIGHT" ],
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "max_contains_volume": "2000 ml",
-        "max_contains_weight": "100 kg",
-        "max_item_length": "2000 cm",
-        "watertight": true,
-        "moves": 10,
-        "volume_encumber_modifier": 0
-      }
-    ]
   },
   {
     "type": "mutation",

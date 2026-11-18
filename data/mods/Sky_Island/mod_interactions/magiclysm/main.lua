@@ -1,3 +1,7 @@
+require("mod_interactions.magiclysm.items")
+
+require("recipes_magiclysm")
+
 local content = require("ccb").content
 
 content.add(content.ConstructionGroup {

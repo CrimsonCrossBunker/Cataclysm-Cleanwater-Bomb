@@ -2,15 +2,7 @@ local ccb = require("ccb")
 local content = ccb.content
 require("crafting_actions")
 
-local function warped_recipe(options)
-    options.category = "CC_WARP"
-    options.skill = "survival"
-    options.activity_level = 1.0
-    options.reversible = false
-    if options.autolearn == nil then options.autolearn = false end
-    if options.flags == nil then options.flags = { "BLIND_EASY" } end
-    return content.Recipe(options)
-end
+local warped_recipe = require("warped_recipe")
 
 do
     local category = content.RecipeCategory { id = "CC_WARP" }
@@ -2767,5 +2759,3 @@ do
     recipe:component_any { { id = "warptoken_material", count = 250 } }
     content.upsert(recipe)
 end
-
-return warped_recipe
