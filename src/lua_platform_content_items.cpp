@@ -92,7 +92,6 @@ namespace cata::lua_platform
 
 using detail::authored_text;
 using detail::localized_text;
-using detail::make_localized_text;
 using detail::read_singular_text;
 
 namespace
@@ -2792,15 +2791,7 @@ items_content_transaction::~items_content_transaction() = default;
 void items_content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         sol::table &content )
 {
-    ccb.new_usertype<localized_text>( "LocalizedText", sol::no_constructor );
-    content.set_function( "text", []( const std::string & text,
-    const sol::optional<std::string> &context ) {
-        return make_localized_text( text, std::nullopt, context );
-    } );
-    content.set_function( "plural_text", []( const std::string & singular, const std::string & plural,
-    const sol::optional<std::string> &context ) {
-        return make_localized_text( singular, plural, context );
-    } );
+    detail::install_content_text( content );
     ccb.new_usertype<tool_quality_definition_handle>(
         "ToolQualityDefinition", sol::no_constructor,
         "id", sol::property( &tool_quality_definition_handle::id ),

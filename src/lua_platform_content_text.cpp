@@ -5,6 +5,18 @@
 namespace cata::lua_platform::detail
 {
 
+void install_content_text( sol::table &content )
+{
+    content.set_function( "text", []( const std::string & text,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( text, std::nullopt, context );
+    } );
+    content.set_function( "plural_text", []( const std::string & singular, const std::string & plural,
+    const sol::optional<std::string> &context ) {
+        return make_localized_text( singular, plural, context );
+    } );
+}
+
 authored_text read_singular_text( const sol::object &value, const std::string &fallback,
                                   const std::string &field )
 {

@@ -41,6 +41,7 @@ extern "C" {
     #pragma GCC diagnostic pop
 #endif
 
+#include "lua_platform_content_text.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_runtime_internal.h"
 #include "lua_platform_sol.h"
@@ -281,15 +282,41 @@ sol::table write_world_options( sol::state_view lua, const mod_world_options &op
     return result;
 }
 
+void set_mod_text( const sol::object &value, const char *key, std::string &raw,
+                   std::optional<translation> &localized, bool &was_set )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return;
+    }
+    const detail::authored_text text = detail::read_singular_text( value, {}, key );
+    raw = text.raw;
+    localized = text.translated ? std::optional<translation>( text.native() ) : std::nullopt;
+    was_set = true;
+}
+
+std::optional<std::vector<std::string>> read_metadata_array( const sol::table &values,
+        const char *key )
+{
+    const sol::object value = values.raw_get<sol::object>( key );
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() != sol::type::table ) {
+        throw std::runtime_error( std::string( "ModDefinition " ) + key + " must be a dense array" );
+    }
+    return bounded_string_array( value.as<sol::table>(), key );
+}
+
 mod_definition make_mod_definition( const sol::table &values )
 {
     mod_definition result;
     set_optional_field( values, "id", result.id, result.id_set );
-    set_optional_field( values, "name", result.name, result.name_set );
+    set_mod_text( values.raw_get<sol::object>( "name" ), "ModDefinition name",
+                  result.name, result.localized_name, result.name_set );
     set_optional_field( values, "version", result.version, result.version_set );
     set_optional_field( values, "entry", result.entry, result.entry_set );
-    set_optional_field( values, "description", result.description,
-                        result.description_set );
+    set_mod_text( values.raw_get<sol::object>( "description" ), "ModDefinition description",
+                  result.description, result.localized_description, result.description_set );
     set_optional_field( values, "category", result.category, result.category_set );
     set_optional_field( values, "core", result.core, result.core_set );
     const sol::object world_options = values.raw_get<sol::object>( "world_options" );
@@ -307,31 +334,29 @@ mod_definition make_mod_definition( const sol::table &values )
         result.interaction_world_options =
             read_interaction_world_options( interactions.as<sol::table>() );
     }
-    const sol::object dependencies = values.raw_get<sol::object>( "dependencies" );
-    if( dependencies.valid() && dependencies.get_type() != sol::type::nil ) {
-        if( dependencies.get_type() != sol::type::table ) {
-            throw std::runtime_error(
-                "ModDefinition dependencies must be a dense array" );
-        }
-        result.dependencies = bounded_string_array(
-                                  dependencies.as<sol::table>(), "dependencies" );
+    if( auto dependencies = read_metadata_array( values, "dependencies" ) ) {
+        result.dependencies = std::move( *dependencies );
         result.dependencies_set = true;
     }
-    const sol::object authors = values.raw_get<sol::object>( "authors" );
-    if( authors.valid() && authors.get_type() != sol::type::nil ) {
-        if( authors.get_type() != sol::type::table ) {
-            throw std::runtime_error(
-                "ModDefinition authors must be a dense array" );
-        }
-        result.authors = bounded_string_array(
-                             authors.as<sol::table>(), "authors" );
+    if( auto authors = read_metadata_array( values, "authors" ) ) {
+        result.authors = std::move( *authors );
         result.authors_set = true;
+    }
+    result.conflicts = read_metadata_array( values, "conflicts" );
+    result.maintainers = read_metadata_array( values, "maintainers" );
+    result.loading_images = read_metadata_array( values, "loading_images" );
+    if( const auto disabled = values.get<sol::optional<bool>>( "disable_other_loading_screens" ) ) {
+        result.disable_other_loading_screens = *disabled;
+    }
+    if( const auto obsolete = values.get<sol::optional<bool>>( "obsolete" ) ) {
+        result.obsolete = *obsolete;
     }
     return result;
 }
 
 void install_mod_definition( sol::table &ccb )
 {
+    ccb.new_usertype<detail::localized_text>( "LocalizedText", sol::no_constructor );
     ccb.new_usertype<mod_definition>(
         "_ModDefinitionNative", sol::no_constructor,
         "id", sol::property(
@@ -346,9 +371,9 @@ void install_mod_definition( sol::table &ccb )
     []( const mod_definition & definition ) {
         return definition.name;
     },
-    []( mod_definition & definition, std::string value ) {
-        definition.name = std::move( value );
-        definition.name_set = true;
+    []( mod_definition & definition, const sol::object & value ) {
+        set_mod_text( value, "ModDefinition name", definition.name, definition.localized_name,
+                      definition.name_set );
     } ),
     "version", sol::property(
     []( const mod_definition & definition ) {
@@ -386,9 +411,9 @@ void install_mod_definition( sol::table &ccb )
     []( const mod_definition & definition ) {
         return definition.description;
     },
-    []( mod_definition & definition, std::string value ) {
-        definition.description = std::move( value );
-        definition.description_set = true;
+    []( mod_definition & definition, const sol::object & value ) {
+        set_mod_text( value, "ModDefinition description", definition.description,
+                      definition.localized_description, definition.description_set );
     } ),
     "category", sol::property(
     []( const mod_definition & definition ) {
@@ -405,6 +430,41 @@ void install_mod_definition( sol::table &ccb )
     []( mod_definition & definition, bool value ) {
         definition.core = value;
         definition.core_set = true;
+    } ),
+    "conflicts", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.conflicts.value_or( std::vector<std::string>() );
+    },
+    []( mod_definition & definition, const sol::table & value ) {
+        definition.conflicts = bounded_string_array( value, "conflicts" );
+    } ),
+    "maintainers", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.maintainers.value_or( std::vector<std::string>() );
+    },
+    []( mod_definition & definition, const sol::table & value ) {
+        definition.maintainers = bounded_string_array( value, "maintainers" );
+    } ),
+    "loading_images", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.loading_images.value_or( std::vector<std::string>() );
+    },
+    []( mod_definition & definition, const sol::table & value ) {
+        definition.loading_images = bounded_string_array( value, "loading_images" );
+    } ),
+    "disable_other_loading_screens", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.disable_other_loading_screens.value_or( false );
+    },
+    []( mod_definition & definition, bool value ) {
+        definition.disable_other_loading_screens = value;
+    } ),
+    "obsolete", sol::property(
+    []( const mod_definition & definition ) {
+        return definition.obsolete.value_or( false );
+    },
+    []( mod_definition & definition, bool value ) {
+        definition.obsolete = value;
     } ),
     "world_options", sol::property(
     []( const mod_definition & definition, sol::this_state state ) {
@@ -511,6 +571,10 @@ void initialize_state( sol::state &lua, const fs::path &requested_root,
         content.set_function( "is_mod_active", [selected_mod_ids]( const std::string &id ) {
             return selected_mod_ids->count( id ) != 0;
         } );
+    } else {
+        sol::table content = lua.create_table();
+        detail::install_content_text( content );
+        ccb["content"] = content;
     }
 
     sol::table package = lua["package"];

@@ -54,6 +54,8 @@ struct authored_text {
     }
 };
 
+void install_content_text( sol::table &content );
+
 authored_text read_singular_text( const sol::object &value, const std::string &fallback,
                                   const std::string &field );
 

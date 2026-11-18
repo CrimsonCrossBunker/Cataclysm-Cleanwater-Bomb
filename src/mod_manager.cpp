@@ -537,6 +537,80 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
         }
     }
 
+    std::vector<mod_id> conflicts;
+    std::set<mod_id> unique_conflicts;
+    if( definition.conflicts ) {
+        for( const std::string &conflict : *definition.conflicts ) {
+            if( conflict.empty() || conflict.size() > 256 ||
+                conflict.find( '#' ) != std::string::npos || conflict.find( '\0' ) != std::string::npos ||
+                conflict == ident_string || !unique_conflicts.emplace( conflict ).second ) {
+                record_rejection( "invalid or duplicate conflict id '" + conflict + "'" );
+                return;
+            }
+            conflicts.emplace_back( conflict );
+        }
+    }
+
+    std::set<std::string> maintainers;
+    if( definition.maintainers ) {
+        for( const std::string &maintainer : *definition.maintainers ) {
+            if( maintainer.empty() || maintainer.size() > 256 ||
+                maintainer.find( '\0' ) != std::string::npos ||
+                !maintainers.insert( maintainer ).second ) {
+                record_rejection( "invalid or duplicate Mod maintainer '" + maintainer + "'" );
+                return;
+            }
+        }
+    }
+
+    std::set<std::string> loading_images;
+    if( definition.loading_images ) {
+        for( const std::string &image : *definition.loading_images ) {
+            if( image.empty() || image.size() > 256 || image.find_first_of( "/\\" ) != std::string::npos ||
+                image.find( '\0' ) != std::string::npos || !loading_images.insert( image ).second ) {
+                record_rejection( "invalid or duplicate Mod loading image filename '" + image + "'" );
+                return;
+            }
+        }
+    }
+
+    const auto apply_metadata = [&]( MOD_INFORMATION & mod ) {
+        if( definition.name_set ) {
+            mod.name_ = definition.localized_name.value_or( no_translation( definition.name ) );
+        }
+        if( definition.description_set ) {
+            mod.description = definition.localized_description.value_or( no_translation(
+                                  definition.description ) );
+        }
+        if( definition.version_set ) {
+            mod.version = definition.version;
+        }
+        if( definition.authors_set ) {
+            mod.authors = std::move( authors );
+        }
+        if( definition.dependencies_set ) {
+            mod.dependencies = std::move( dependencies );
+        }
+        if( definition.conflicts ) {
+            mod.conflicts = std::move( conflicts );
+        }
+        if( definition.maintainers ) {
+            mod.maintainers = std::move( maintainers );
+        }
+        if( definition.loading_images ) {
+            mod.loading_images = std::move( loading_images );
+        }
+        if( definition.disable_other_loading_screens ) {
+            mod.disable_other_loading_screens = *definition.disable_other_loading_screens;
+        }
+        if( definition.core_set ) {
+            mod.core = definition.core;
+        }
+        if( definition.obsolete ) {
+            mod.obsolete = *definition.obsolete;
+        }
+    };
+
     std::optional<std::pair<int, translation>> category;
     if( definition.category_set ) {
         const auto found = std::find_if(
@@ -597,26 +671,9 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
                               "' conflicts with legacy id '" + hybrid.ident.str() + "'" );
             return;
         }
-        if( definition.name_set ) {
-            hybrid.name_ = no_translation( definition.name );
-        }
-        if( definition.version_set ) {
-            hybrid.version = definition.version;
-        }
-        if( definition.dependencies_set ) {
-            hybrid.dependencies = std::move( dependencies );
-        }
-        if( definition.authors_set ) {
-            hybrid.authors = std::move( authors );
-        }
-        if( definition.description_set ) {
-            hybrid.description = no_translation( definition.description );
-        }
+        apply_metadata( hybrid );
         if( category ) {
             hybrid.category = *category;
-        }
-        if( definition.core_set ) {
-            hybrid.core = definition.core;
         }
         hybrid.lua_platform_entry = std::move( entry );
         hybrid.lua_world_options = std::move( definition.world_options );
@@ -634,17 +691,12 @@ void mod_manager::load_lua_platform_mod( const cata_path &root )
 
     MOD_INFORMATION mod;
     mod.ident = ident;
-    mod.name_ = no_translation( definition.name_set ? definition.name : ident_string );
+    mod.name_ = no_translation( ident_string );
     const size_t default_category = get_mod_list_categories().size() - 1;
     mod.category = category.value_or( std::make_pair(
                                           static_cast<int>( default_category ),
                                           get_mod_list_categories()[default_category].second ) );
-    mod.version = definition.version_set ? definition.version : std::string();
-    mod.dependencies = std::move( dependencies );
-    mod.authors = std::move( authors );
-    mod.description = definition.description_set ?
-                      no_translation( definition.description ) : translation();
-    mod.core = definition.core_set && definition.core;
+    apply_metadata( mod );
     mod.path = root;
     mod.mod_root_path = root;
     mod.lua_platform_entry = std::move( entry );

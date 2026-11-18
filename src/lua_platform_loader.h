@@ -4,12 +4,14 @@
 
 #include <filesystem>
 #include <functional>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "mod_world_option.h"
+#include "translation.h"
 
 namespace cata
 {
@@ -39,7 +41,14 @@ struct mod_definition {
     std::vector<std::string> dependencies;
     std::vector<std::string> authors;
     std::string description;
+    std::optional<translation> localized_name;
+    std::optional<translation> localized_description;
     std::string category;
+    std::optional<std::vector<std::string>> conflicts;
+    std::optional<std::vector<std::string>> maintainers;
+    std::optional<std::vector<std::string>> loading_images;
+    std::optional<bool> disable_other_loading_screens;
+    std::optional<bool> obsolete;
     mod_world_options world_options;
     mod_interaction_world_options interaction_world_options;
     bool core = false;
