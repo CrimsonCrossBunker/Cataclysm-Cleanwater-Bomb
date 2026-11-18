@@ -859,35 +859,6 @@
     "count": 100
   },
   {
-    "id": "technomancer_summoned_radio",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "aetherspeaker (speaking)", "str_pl": "aetherspeakers (speaking)" },
-    "description": "A magically-summoned aetherspeaker, capable of communicating long-distance with other aetherspeakers or conventional radios.  With a command word, it may instead scan for radio signals.",
-    "weight": "295 g",
-    "volume": "125 ml",
-    "to_hit": -1,
-    "material": [ "concentrated_mana" ],
-    "symbol": ";",
-    "color": "cyan",
-    "flags": [ "TWO_WAY_RADIO", "TRADER_AVOID", "NO_DROP" ],
-    "max_worn": 1,
-    "use_action": [ { "type": "transform", "target": "technomancer_summoned_radio_on", "menu_text": "Turn to scanning mode" } ],
-    "melee_damage": { "bash": 4 }
-  },
-  {
-    "id": "technomancer_summoned_radio_on",
-    "copy-from": "technomancer_summoned_radio",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "aetherspeaker (scanning)", "str_pl": "aetherspeakers (scanning)" },
-    "description": "An aetherspeaker tuned to listen for radio signals from the surrounding area.  With a command word, it may change frequency or switch to communicating with other aetherspeakers or radios.",
-    "use_action": [ "RADIO_ON", { "type": "transform", "target": "technomancer_summoned_radio", "menu_text": "Turn to speaking mode" } ],
-    "tick_action": [ "RADIO_TICK" ],
-    "max_worn": 1,
-    "flags": [ "TRADER_AVOID", "NO_DROP" ]
-  },
-  {
     "id": "technomancer_summoned_ups",
     "type": "ITEM",
     "subtypes": [ "MAGAZINE", "ARTIFACT" ],

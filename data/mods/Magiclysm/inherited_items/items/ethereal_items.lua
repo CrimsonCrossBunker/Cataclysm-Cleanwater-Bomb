@@ -352,3 +352,55 @@ do
     item:heal { disinfectant_power = 3, bite = 0.9, move_cost = 1 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "technomancer_summoned_radio",
+        name = ccb.content.plural_text("aetherspeaker (speaking)", "aetherspeakers (speaking)"),
+        description = ccb.content.text("A magically-summoned aetherspeaker, capable of communicating long-distance with other aetherspeakers or conventional radios.  With a command word, it may instead scan for radio signals."),
+        mass_milligrams = 295000,
+        volume_ml = 125,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "cyan",
+        max_worn = 1,
+    }
+    item:material("concentrated_mana", 1)
+    item:clear_flags()
+    item:flag("TWO_WAY_RADIO")
+    item:flag("TRADER_AVOID")
+    item:flag("NO_DROP")
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "technomancer_summoned_radio_on" },
+        menu_text = ccb.content.text("Turn to scanning mode"),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "technomancer_summoned_radio_on",
+        copy_from = "technomancer_summoned_radio",
+        looks_like = "technomancer_summoned_radio",
+        name = ccb.content.plural_text("aetherspeaker (scanning)", "aetherspeakers (scanning)"),
+        description = ccb.content.text("An aetherspeaker tuned to listen for radio signals from the surrounding area.  With a command word, it may change frequency or switch to communicating with other aetherspeakers or radios."),
+        max_worn = 1,
+    }
+    item:clear_use_actions()
+    item:native_use("RADIO_ON")
+    item:transform_on_use {
+        result = { target = "technomancer_summoned_radio" },
+        menu_text = ccb.content.text("Turn to speaking mode"),
+    }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("NO_DROP")
+    item:tool()
+    item:clear_tick_actions()
+    item:native_on_tick("RADIO_TICK")
+    content.add(item)
+end
