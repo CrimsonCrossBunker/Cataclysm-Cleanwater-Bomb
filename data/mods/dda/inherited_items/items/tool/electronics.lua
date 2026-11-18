@@ -193,3 +193,99 @@ do
     item:tool { ammo_types = { "methanol_fuelcell" } }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "usb_drive_older",
+        copy_from = "usb_drive",
+        looks_like = "usb_drive",
+        name = ccb.content.plural_text("older USB drive", "older USB drives"),
+        description = ccb.content.text("A USB thumb drive.  Maybe a decade out of date, but still useful for holding electronic data."),
+        replace_pockets = true,
+    }
+    item:tool()
+    item:file_storage_pocket {
+        max_volume_ml = 1,
+        max_weight_milligrams = 1000,
+        rigid = true,
+        weight_multiplier = 0.0,
+        memory_kb = 32000000,
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "memory_card",
+        copy_from = "abstract_memory_card",
+        name = ccb.content.plural_text("memory card", "memory cards"),
+        description = ccb.content.text("A memory card, can be used to store data."),
+        symbol = ",",
+        color = "white",
+        price_cents = 1000,
+        price_postapoc_cents = 10,
+        replace_pockets = true,
+    }
+    item:tool()
+    item:file_storage_pocket {
+        max_volume_ml = 1,
+        max_weight_milligrams = 1000,
+        rigid = true,
+        weight_multiplier = 0.0,
+        memory_kb = 64000000,
+    }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "memory_card_older",
+        copy_from = "memory_card",
+        looks_like = "memory_card",
+        name = ccb.content.plural_text("older memory card", "older memory cards"),
+        description = ccb.content.text("A memory card.  Maybe a decade out of date, but can still be used to store data."),
+        replace_pockets = true,
+    }
+    item:tool()
+    item:file_storage_pocket {
+        max_volume_ml = 1,
+        max_weight_milligrams = 1000,
+        rigid = true,
+        weight_multiplier = 0.0,
+        memory_kb = 16000000,
+    }
+    content.add(item)
+end
+
+do
+    -- Battery only, intentionally. Meant for field expeditions to other dimensions where grid power is unavailable. Too advanced for the player to make grid-useable.
+    local item = content.Item {
+        id = "resonance_measurement_device",
+        name = ccb.content.plural_text("Otherworldly measuring device", "Otherworldly measuring devices"),
+        description = ccb.content.text("This strange contraption appears to be little more than a laminated box built around a battery, a poorly backlit screen, and a wound spool of cloth netting.  The letters \"X E D R A\" are emblazoned on the side.  To operate the device, unfurl the netting and place it around the object to analyze.  Despite not appearing to do anything, it consumes an enormous amount of electricity and provides a brief numerical readout."),
+        mass_milligrams = 600000,
+        volume_ml = 900,
+        price_cents = 150000000,
+        price_postapoc_cents = 1500,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:material("cotton", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:native_use("MEASURE_RESONANCE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool { charges_per_use = 2400, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_items = { "heavy_atomic_battery_cell" },
+    }
+    content.add(item)
+end
