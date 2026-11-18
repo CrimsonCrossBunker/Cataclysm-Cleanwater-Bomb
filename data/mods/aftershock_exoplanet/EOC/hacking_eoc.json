@@ -1,19 +1,5 @@
 [
   {
-    "id": "ACT_afs_hack",
-    "type": "activity_type",
-    "activity_level": "NO_EXERCISE",
-    "verb": "hacking",
-    "based_on": "time",
-    "can_resume": false,
-    "completion_eoc": "EOC_finish_afs_hack"
-  },
-  {
-    "id": "EOC_finish_afs_hack",
-    "type": "effect_on_condition",
-    "effect": [ { "u_add_effect": "afs_hack_done", "duration": "3 seconds" }, { "turn_cost": "1 s" } ]
-  },
-  {
     "type": "jmath_function",
     "id": "afs_hack_skill",
     "num_args": 1,
