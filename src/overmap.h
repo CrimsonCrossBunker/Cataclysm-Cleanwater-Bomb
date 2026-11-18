@@ -35,6 +35,7 @@
 #include "hash_utils.h"
 #include "horde_map.h"
 #include "map_scale_constants.h"
+#include "mapgen_post_process.h"
 #include "mapgendata.h"
 #include "mdarray.h"
 #include "memory_fast.h"
@@ -58,7 +59,6 @@ class monster;
 class npc;
 class overmap_connection;
 struct horde_entity;
-struct pp_resolved_generator;
 struct map_data_summary;
 struct region_settings;
 namespace north_america
