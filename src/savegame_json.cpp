@@ -5494,7 +5494,7 @@ void Creature::load( const JsonObject &jsin )
     // potentially migrate some values
     for( std::pair<std::string, std::string> migration : get_globals().migrations ) {
         if( values.count( migration.first ) != 0 ) {
-            auto extracted = values.extract( migration.first );
+            global_variables::impl_t::node_type extracted = values.extract( migration.first );
             extracted.key() = migration.second;
             values.insert( std::move( extracted ) );
         }

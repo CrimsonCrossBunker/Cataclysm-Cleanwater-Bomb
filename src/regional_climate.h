@@ -29,13 +29,14 @@ struct monthly_normal {
 
 struct normals {
     std::array<monthly_normal, 12> months;
+    std::optional<double> reference_elevation_m;
 
     double annual_precipitation_mm() const;
 };
 
 // WGS84 latitude/longitude in degrees. East and north are positive.
 // This coarse lookup is intended for Canada, Mexico, and the United States.
-std::optional<normals> at( coordinates location );
+std::optional<normals> at( coordinates location, bool with_elevation = false );
 std::optional<coordinates> station_location( const std::string &id );
 // Local geodetic offsets from the starting station. One map square is one metre.
 coordinates offset_metres( coordinates origin, double east, double north );

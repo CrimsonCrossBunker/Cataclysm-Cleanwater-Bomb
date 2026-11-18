@@ -354,20 +354,20 @@ TEST_CASE( "zzip_corruption_recovery", "[.][zzip]" )
             } );
 
             for( int i = layout.size() - 1; i > 0; --i ) {
-                auto& [name, offset, len] = layout[i];
-                CAPTURE( name );
+                const zzip::entry_layout &file_layout = layout[i];
+                CAPTURE( file_layout.path );
 
                 std::unordered_map<std::filesystem::path, bool, std_fs_path_hash> remaining_files;
                 for( int j = 0; j < i; ++j ) {
                     remaining_files.emplace( layout[j].path, false );
                 }
 
-                for( size_t truncated_len : std::array{ len - 1, len / 2, static_cast<size_t>( 1 ) } ) {
+                for( size_t truncated_len : std::array{ file_layout.len - 1, file_layout.len / 2, static_cast<size_t>( 1 ) } ) {
                     z.reset();
 
                     // Truncate each file one byte off the end, in the middle, and one byte from the start
 
-                    mem_file->resize_file( offset + truncated_len );
+                    mem_file->resize_file( file_layout.offset + truncated_len );
 
                     z = zzip::load( mem_file );
                     REQUIRE( z.has_value() );
@@ -406,19 +406,19 @@ TEST_CASE( "zzip_corruption_recovery", "[.][zzip]" )
             } );
 
             for( int i = layout.size() - 1; i > 0; --i ) {
-                auto& [name, offset, len] = layout[i];
-                CAPTURE( name );
+                const zzip::entry_layout &file_layout = layout[i];
+                CAPTURE( file_layout.path );
 
                 std::unordered_map<std::filesystem::path, bool, std_fs_path_hash> remaining_new_files;
                 for( int j = 0; j < i; ++j ) {
                     remaining_new_files.emplace( layout[j].path, false );
                 }
 
-                size_t truncated_len = len / 2;
+                size_t truncated_len = file_layout.len / 2;
 
                 z.reset();
                 // Truncate each overwritten file, verify when we reload we get the older copy.
-                mem_file->resize_file( offset + truncated_len );
+                mem_file->resize_file( file_layout.offset + truncated_len );
 
                 z = zzip::load( mem_file );
                 REQUIRE( z.has_value() );

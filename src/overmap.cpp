@@ -103,7 +103,6 @@ static const oter_str_id oter_subway_end_north( "subway_end_north" );
 static const oter_str_id oter_subway_isolated( "subway_isolated" );
 static const oter_str_id oter_underground_sub_station( "underground_sub_station" );
 
-static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_bridge( "bridge" );
 static const oter_type_str_id oter_type_microlab_sub_connector( "microlab_sub_connector" );
 static const oter_type_str_id oter_type_railroad_bridge( "railroad_bridge" );
@@ -639,6 +638,9 @@ bool overmap::has_note( const tripoint_om_omt &p ) const
 
 bool overmap::is_marked_dangerous( const tripoint_om_omt &p ) const
 {
+    if( !inbounds( p ) ) {
+        return false;
+    }
     for( const om_note &i : layer[p.z() + OVERMAP_DEPTH].notes ) {
         if( !i.dangerous ) {
             continue;
@@ -707,6 +709,9 @@ void overmap::add_note( const tripoint_om_omt &p, std::string message )
 
 void overmap::mark_note_dangerous( const tripoint_om_omt &p, int radius, bool is_dangerous )
 {
+    if( !inbounds( p ) ) {
+        return;
+    }
     for( om_note &i : layer[p.z() + OVERMAP_DEPTH].notes ) {
         if( p.xy() == i.p ) {
             i.dangerous = is_dangerous;
@@ -738,6 +743,9 @@ void overmap::delete_note( const tripoint_om_omt &p )
 std::vector<point_abs_omt> overmap::find_notes( const int z, const std::string &text )
 {
     std::vector<point_abs_omt> note_locations;
+    if( !inbounds( tripoint_om_omt( 0, 0, z ) ) ) {
+        return note_locations;
+    }
     map_layer &this_layer = layer[z + OVERMAP_DEPTH];
     for( const om_note &note : this_layer.notes ) {
         if( match_include_exclude( note.text, text ) ) {
@@ -804,6 +812,9 @@ void overmap::add_extra( const tripoint_om_omt &p, const map_extra_id &id )
 
 void overmap::add_extra_note( const tripoint_om_omt &p, bool force_add )
 {
+    if( !inbounds( p ) ) {
+        return;
+    }
     // overmap::add_extra_note is called from overmap::set_seen - to add notes for already generated,
     // but as yet unseen, tiles.
     const std::vector<om_map_extra> &layer_extras = layer[p.z() + OVERMAP_DEPTH].extras;
@@ -861,6 +872,9 @@ void overmap::delete_extra( const tripoint_om_omt &p )
 std::vector<point_abs_omt> overmap::find_extras( const int z, const std::string &text )
 {
     std::vector<point_abs_omt> extra_locations;
+    if( !inbounds( tripoint_om_omt( 0, 0, z ) ) ) {
+        return extra_locations;
+    }
     map_layer &this_layer = layer[z + OVERMAP_DEPTH];
     for( const om_map_extra &extra : this_layer.extras ) {
         const std::string extra_text = extra.id.c_str();
@@ -906,6 +920,9 @@ bool overmap::passable( const tripoint_om_ms &p )
     point_om_omt omt_origin;
     tripoint_omt_ms index;
     std::tie( omt_origin, index ) = project_remain<coords::omt>( p );
+    if( !inbounds( tripoint_om_omt( omt_origin, p.z() ) ) ) {
+        return false;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[index.z() +
             OVERMAP_DEPTH].map_cache[omt_origin];
     if( !ptr ) {
@@ -921,6 +938,9 @@ bool overmap::passable( const tripoint_om_ms &p )
 
 std::shared_ptr<map_data_summary> overmap::get_omt_summary( const tripoint_om_omt &p )
 {
+    if( !inbounds( p ) ) {
+        return nullptr;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[p.z() +
             OVERMAP_DEPTH].map_cache[p.xy()];
     if( !ptr ) {
@@ -936,6 +956,9 @@ void overmap::set_passable( const tripoint_om_ms &p, bool new_passable )
     point_om_omt omt_origin;
     tripoint_omt_ms index;
     std::tie( omt_origin, index ) = project_remain<coords::omt>( p );
+    if( !inbounds( tripoint_om_omt( omt_origin, p.z() ) ) ) {
+        return;
+    }
     std::shared_ptr<map_data_summary> &ptr = layer[index.z() +
             OVERMAP_DEPTH].map_cache[omt_origin];
     if( !ptr ) {
@@ -957,7 +980,7 @@ void overmap::set_passable( const tripoint_abs_omt &p,
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     layer[omt_coord.z() + OVERMAP_DEPTH].map_cache[omt_coord.xy()] = std::move( new_passable );
@@ -969,7 +992,7 @@ void overmap::set_passable( const tripoint_abs_omt &p,
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     std::shared_ptr<map_data_summary> &ptr = layer[omt_coord.z() +
@@ -986,7 +1009,7 @@ void overmap::set_passable( const tripoint_abs_omt &p, const std::bitset<24 * 24
     point_abs_om overmap_coord;
     tripoint_om_omt omt_coord;
     std::tie( overmap_coord, omt_coord ) = project_remain<coords::om>( p );
-    if( overmap_coord != loc ) {
+    if( overmap_coord != loc || !inbounds( omt_coord ) ) {
         return;
     }
     std::shared_ptr<map_data_summary> &ptr = layer[omt_coord.z() +
@@ -1073,7 +1096,13 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
 
     const bool atlas = north_america::active();
     std::vector<north_america::terrain> atlas_water;
+    const bool atlas_transport = settings->place_roads || settings->overmap_highway;
     if( atlas && !place_north_american_water( atlas_water ) ) {
+        // A single crossing can span multiple overmaps with no dry tiles.
+        if( atlas_transport ) {
+            place_atlas_roads( north_america::road_network( global_base_point(), OMAPX, OMAPY, false ),
+                               atlas_water );
+        }
         return;
     }
     std::vector<Highway_path> highway_paths;
@@ -1110,7 +1139,7 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         highway_paths = place_highways( neighbor_overmaps );
     }
     const std::vector<north_america::road_cell> atlas_streets = atlas &&
-            ( settings->place_roads || settings->city_spec ) ?
+            ( atlas_transport || settings->city_spec ) ?
             north_america::road_network( global_base_point(), OMAPX, OMAPY ) :
             std::vector<north_america::road_cell> {};
     if( !atlas_streets.empty() ) {
@@ -1303,6 +1332,11 @@ bool overmap::generate_over( const int z )
                 }
 
                 if( oter_ground->get_type_id() == oter_type_bridge ) {
+                    if( north_america::active() &&
+                        ( ter( p )->get_type_id() == oter_type_str_id( "bridge_road" ) ||
+                          ter( p )->get_type_id() == oter_type_str_id( "atlas_raised_bridge_deck" ) ) ) {
+                        continue;
+                    }
                     ter_set( p, oter_id( "bridge_road" + oter_get_rotation_string( oter_ground ) ) );
                     bridge_points.push_back( p.xy() );
                     tripoint_om_omt support_point = p + tripoint::below;
@@ -2381,8 +2415,16 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
     auto &out = connections_out[connection];
     const bool generate_city_streets = settings->city_spec &&
                                        settings->get_settings_city().city_size > 0;
+    static const oter_type_str_id raised_deck( "bridge_road" );
+    static const oter_type_str_id curved_deck( "atlas_raised_bridge_deck" );
+    static const oter_type_str_id bridgehead( "bridgehead_ground" );
+    static const oter_type_str_id ramp( "bridgehead_ramp" );
+    const auto atlas_water_at = [&]( const tripoint_om_omt & p ) {
+        const int index = ( p.y() + 1 ) * ( OMAPX + 2 ) + p.x() + 1;
+        return coast[index] != north_america::terrain::land;
+    };
     const auto can_build_street = [&]( const tripoint_om_omt & p ) {
-        return !ter( p )->is_water() && connection->pick_subtype_for( ter( p ) );
+        return !atlas_water_at( p ) && connection->pick_subtype_for( ter( p ) );
     };
     for( int y = 0; y < OMAPY; ++y ) {
         for( int x = 0; x < OMAPX; ++x ) {
@@ -2391,11 +2433,43 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 continue;
             }
             const tripoint_om_omt p( x, y, 0 );
-            const oter_id previous = ter( p );
-            std::size_t links = settings->place_roads ? tile.mapped_connections : 0;
-            if( previous->is_water() && links ) {
-                ter_set( p, oter_type_atlas_road_bridge->get_linear( links ) );
-            } else if( can_build_street( p ) ) {
+            const bool mapped = settings->place_roads ||
+                                ( settings->overmap_highway && tile.lanes >= 4 );
+            std::size_t links = mapped ? tile.mapped_connections : 0;
+            if( atlas_water_at( p ) && links ) {
+                const bool ns = links == om_lines::set_segment(
+                                    om_lines::set_segment( 0, om_direction::type::north ), om_direction::type::south );
+                const bool ew = links == om_lines::set_segment(
+                                    om_lines::set_segment( 0, om_direction::type::east ), om_direction::type::west );
+                const auto axis = om_lines::has_segment( links, om_direction::type::north ) ||
+                                  om_lines::has_segment( links, om_direction::type::south ) ?
+                                  om_direction::type::north : om_direction::type::east;
+                const oter_id support = oter_type_bridge->get_rotated( axis );
+                ter_set( p, support );
+                for( tripoint_om_omt below = p + tripoint::below;
+                     inbounds( below ) && ter( below )->is_water(); below += tripoint::below ) {
+                    ter_set( below, support );
+                }
+                ter_set( p + tripoint::above, ns || ew ? raised_deck->get_rotated( axis ) :
+                         curved_deck->get_linear( links ) );
+            } else if( links || can_build_street( p ) ) {
+                std::optional<om_direction::type> bridge_direction;
+                for( const auto direction : om_direction::all ) {
+                    if( om_lines::has_segment( links, direction ) &&
+                        atlas_water_at( p + om_direction::displace( direction ) ) ) {
+                        bridge_direction = direction;
+                        break;
+                    }
+                }
+                if( bridge_direction ) {
+                    const auto facing = om_direction::opposite( *bridge_direction );
+                    const bool connects_to_road = !atlas_water_at( p + om_direction::displace( facing ) );
+                    if( connects_to_road ) {
+                        ter_set( p, bridgehead->get_rotated( facing ) );
+                        ter_set( p + tripoint::above, ramp->get_rotated( facing ) );
+                        continue;
+                    }
+                }
                 for( const auto direction : om_direction::all ) {
                     if( !generate_city_streets || !om_lines::has_segment( tile.connections, direction ) ||
                         om_lines::has_segment( links, direction ) ||
@@ -2407,8 +2481,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                     if( inbounds( next ) ) {
                         land = can_build_street( next );
                     } else {
-                        const int index = ( next.y() + 1 ) * ( OMAPX + 2 ) + next.x() + 1;
-                        land = coast[index] == north_america::terrain::land;
+                        land = !atlas_water_at( next );
                     }
                     if( land ) {
                         links = om_lines::set_segment( links, direction );
@@ -2431,51 +2504,65 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
         }
     }
 
-    if( !generate_city_streets || north_america::urban_districts_in( pos() ).empty() ) {
-        return;
-    }
-    // The road tile keeps its original connections. Reserve extra width on
-    // the east or south for stretches with at least two clear shoulder tiles.
-    enum class flank_plan { none, north_south, east_west, conflict };
-    std::vector<flank_plan> flanks( OMAPX * OMAPY );
-    const auto at = [&]( const point_om_omt & p ) -> flank_plan & {
-        return flanks[p.y() * OMAPX + p.x()];
-    };
     const oter_id road_ns( "road_ns" );
     const oter_id road_ew( "road_ew" );
-    for( int y = 1; y < OMAPY - 1; ++y ) {
-        for( int x = 1; x < OMAPX - 1; ++x ) {
-            const auto &tile = network[y * OMAPX + x];
-            if( tile.street != north_america::urban_road::arterial || tile.lanes > 4 ) {
-                continue;
+    for( const bool north_south : {
+             true, false
+         } ) {
+        const int length = north_south ? OMAPY : OMAPX;
+        const int columns = north_south ? OMAPX : OMAPY;
+        const auto at = [north_south]( int across, int along ) {
+            return north_south ? tripoint_om_omt( across, along, 0 ) :
+                   tripoint_om_omt( along, across, 0 );
+        };
+        const oter_id flank = north_america::avenue_flank( north_south );
+        const oter_id &spine = north_south ? road_ns : road_ew;
+        const auto width_at = [&]( int across, int along ) {
+            const tripoint_om_omt p = at( across, along );
+            if( ter( p ) != spine ) {
+                return 1;
             }
-            const tripoint_om_omt spine( x, y, 0 );
-            const oter_id existing = ter( spine );
-            if( existing != road_ns && existing != road_ew ) {
-                continue;
+            const auto &tile = network[p.y() * OMAPX + p.x()];
+            const int width = tile.lanes >= 6 ? static_cast<int>( tile.lanes / 2 ) :
+                              generate_city_streets && tile.street == north_america::urban_road::arterial ? 2 : 1;
+            const int first = -( width - 1 ) / 2;
+            for( int offset = first; offset < first + width; ++offset ) {
+                if( offset == 0 ) {
+                    continue;
+                }
+                const tripoint_om_omt side = at( across + offset, along );
+                if( !inbounds( side ) || network[side.y() * OMAPX + side.x()].connections ||
+                    north_america::is_avenue_flank( ter( side ) ) || !can_build_street( side ) ||
+                    ( width == 2 && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
+                    return 1;
+                }
             }
-            const bool north_south = existing == road_ns;
-            const tripoint_om_omt side = spine + ( north_south ? point::east : point::south );
-            if( inbounds( side, 1 ) && !network[side.y() * OMAPX + side.x()].connections &&
-                can_build_street( side ) && north_america::in_urban_footprint( origin + side.xy().raw() ) ) {
-                flank_plan &planned = at( side.xy() );
-                // If both orientations want this space, keep the intersection clear.
-                planned = planned != flank_plan::none ? flank_plan::conflict :
-                          north_south ? flank_plan::north_south : flank_plan::east_west;
-            }
-        }
-    }
-    for( int y = 1; y < OMAPY - 1; ++y ) {
-        for( int x = 1; x < OMAPX - 1; ++x ) {
-            const point_om_omt p( x, y );
-            const flank_plan flank = at( p );
-            if( flank == flank_plan::none || flank == flank_plan::conflict ) {
-                continue;
-            }
-            const bool north_south = flank == flank_plan::north_south;
-            const point step = north_south ? point::south : point::east;
-            if( at( p + step ) == flank || at( p - step ) == flank ) {
-                ter_set( tripoint_om_omt( p, 0 ), north_america::avenue_flank( north_south ) );
+            return width;
+        };
+        // Stay single-width through bends, junctions and obstacles. Require a
+        // straight run long enough for a taper at both ends.
+        for( int across = 0; across < columns; ++across ) {
+            for( int begin = 0; begin < length; ) {
+                const int width = width_at( across, begin );
+                if( width == 1 ) {
+                    ++begin;
+                    continue;
+                }
+                int end = begin + 1;
+                while( end < length && width_at( across, end ) == width ) {
+                    ++end;
+                }
+                if( end - begin >= north_america::min_wide_road_run ) {
+                    const int first = -( width - 1 ) / 2;
+                    for( int along = begin; along < end; ++along ) {
+                        for( int offset = first; offset < first + width; ++offset ) {
+                            if( offset != 0 ) {
+                                ter_set( at( across + offset, along ), flank );
+                            }
+                        }
+                    }
+                }
+                begin = end;
             }
         }
     }
@@ -3397,7 +3484,7 @@ static bool allows_atlas_military_base( const overmap_special &special )
 }
 
 bool overmap::can_place_special( const overmap_special &special, const tripoint_om_omt &p,
-                                 om_direction::type dir, const bool must_be_unexplored ) const
+                                 om_direction::type dir, const bool must_be_unexplored, int margin ) const
 {
     cata_assert( dir != om_direction::type::invalid );
 
@@ -3454,7 +3541,7 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
     [&]( const overmap_special_locations & elem ) {
         const tripoint_om_omt rp = p + om_direction::rotate( elem.p, dir );
 
-        if( !inbounds( rp, 1 ) ) {
+        if( !inbounds( rp, margin ) ) {
             return false;
         }
 
@@ -3478,11 +3565,11 @@ bool overmap::can_place_special( const overmap_special &special, const tripoint_
 // checks around the selected point to see if the special can be placed there
 std::vector<tripoint_om_omt> overmap::place_special(
     const overmap_special &special, const tripoint_om_omt &p, om_direction::type dir,
-    const city &cit, const bool must_be_unexplored, const bool force )
+    const city &cit, const bool must_be_unexplored, const bool force, int margin )
 {
     cata_assert( dir != om_direction::type::invalid );
     if( !force ) {
-        cata_assert( can_place_special( special, p, dir, must_be_unexplored ) );
+        cata_assert( can_place_special( special, p, dir, must_be_unexplored, margin ) );
     }
 
     if( special.has_flag( "GLOBALLY_UNIQUE" ) && !allows_atlas_military_base( special ) ) {

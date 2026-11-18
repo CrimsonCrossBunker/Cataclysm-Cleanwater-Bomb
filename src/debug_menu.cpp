@@ -108,6 +108,7 @@
 #include "monster.h"
 #include "mtype.h"
 #include "mutation.h"
+#include "north_america_elevation.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "npc_opinion.h"
@@ -1873,6 +1874,31 @@ static void teleport_short()
     add_msg( _( "You teleport to point %s." ), new_pos.to_string() );
 }
 
+bool debug_menu::teleport_to_overmap( tripoint_abs_omt where )
+{
+    if( north_america::elevation_active() ) {
+        const float selected = north_america::altitude_at( where );
+        number_input_popup<float> altitude( 42, selected, _( "Destination elevation (m)" ) );
+        altitude.set_step_size( 4.0f, 40.0f );
+        altitude.set_description( string_format(
+                                      _( "Ground elevation: %.1f m. Travel uses the nearest 4 m level." ),
+                                      north_america::altitude_at( tripoint_abs_omt( where.xy(), 0 ) ) ) );
+        const float metres = altitude.query();
+        if( altitude.cancelled() ) {
+            return false;
+        }
+        const auto destination = north_america::overmap_at_altitude( where.xy(), metres );
+        if( !destination ) {
+            popup( _( "Choose an elevation between -16384 m and 16384 m." ) );
+            return false;
+        }
+        where = *destination;
+    }
+    g->place_player_overmap( where, true, true );
+    add_msg( _( "You teleport to submap %s." ), display::overmap_position_text( where ) );
+    return true;
+}
+
 static void teleport_long()
 {
     const tripoint_abs_omt where( ui::omap::choose_point( _( "Choose a teleport destination." ),
@@ -1880,8 +1906,7 @@ static void teleport_long()
     if( where.is_invalid() ) {
         return;
     }
-    g->place_player_overmap( where );
-    add_msg( _( "You teleport to submap %s." ), where.to_string() );
+    debug_menu::teleport_to_overmap( where );
 }
 
 static void teleport_overmap( bool specific_coordinates = false )
@@ -1906,7 +1931,9 @@ static void teleport_overmap( bool specific_coordinates = false )
         const tripoint offset = tripoint( OMAPX * dir_->x(), OMAPY * dir_->y(), dir_->z() );
         where = player_character.pos_abs_omt() + offset;
     }
-    if( !!where ) {
+    if( specific_coordinates && where && north_america::elevation_active() ) {
+        debug_menu::teleport_to_overmap( *where );
+    } else if( !!where ) {
         g->place_player_overmap( *where );
 
         const tripoint_abs_om new_pos =
@@ -1928,7 +1955,11 @@ static void teleport_city()
     if( c.has_value() ) {
         const tripoint_abs_omt where = tripoint_abs_omt(
                                            project_to<coords::omt>( c->pos_om ) + c->pos.raw(), 0 );
-        g->place_player_overmap( where );
+        if( north_america::elevation_active() ) {
+            debug_menu::teleport_to_overmap( where );
+        } else {
+            g->place_player_overmap( where );
+        }
     }
 }
 

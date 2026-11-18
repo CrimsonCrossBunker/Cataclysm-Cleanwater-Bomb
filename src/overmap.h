@@ -974,11 +974,11 @@ class overmap
                                           const cata::flat_set<string_id<overmap_location>> &locations );
 
         bool can_place_special( const overmap_special &special, const tripoint_om_omt &p,
-                                om_direction::type dir, bool must_be_unexplored ) const;
+                                om_direction::type dir, bool must_be_unexplored, int margin = 1 ) const;
 
         std::vector<tripoint_om_omt> place_special(
             const overmap_special &special, const tripoint_om_omt &p, om_direction::type dir,
-            const city &cit, bool must_be_unexplored, bool force );
+            const city &cit, bool must_be_unexplored, bool force, int margin = 1 );
 
         // DEBUG ONLY!
         void debug_force_add_group( const mongroup &group );

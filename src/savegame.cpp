@@ -2041,7 +2041,7 @@ void global_variables::unserialize( const JsonObject &jo )
     // potentially migrate some variable names
     for( std::pair < std::string, std::string > migration : migrations ) {
         if( global_values.count( migration.first ) != 0 ) {
-            auto extracted = global_values.extract( migration.first );
+            impl_t::node_type extracted = global_values.extract( migration.first );
             extracted.key() = migration.second;
             global_values.insert( std::move( extracted ) );
         }

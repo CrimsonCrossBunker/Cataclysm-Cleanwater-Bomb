@@ -744,7 +744,7 @@ bool can_butcher_at( map &here, const tripoint_bub_ms &p )
 
 bool can_move_vertical_at( const map &here, const tripoint_bub_ms &p, int movez )
 {
-    if( p.z() + movez < -OVERMAP_DEPTH || p.z() + movez > OVERMAP_HEIGHT ) {
+    if( !here.inbounds_z( p.z() + movez ) ) {
         return false;
     }
     if( const optional_vpart_position vp = here.veh_at( p );

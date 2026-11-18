@@ -1594,7 +1594,7 @@ bool vehicle::check_heli_descend( map &here, Character &p ) const
     for( const tripoint_abs_ms &pt : get_points( true ) ) {
         const tripoint_bub_ms pos = here.get_bub( pt );
         tripoint_bub_ms below( pos + tripoint::below );
-        if( pt.z() < -OVERMAP_DEPTH || !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, pos ) ) {
+        if( pt.z() < here.min_z() || !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, pos ) ) {
             p.add_msg_if_player( _( "You are already landed!" ) );
             return false;
         }
@@ -1627,7 +1627,7 @@ bool vehicle::check_heli_ascend( map &here, Character &p ) const
         p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }
-    if( sm_pos.z() + 1 >= OVERMAP_HEIGHT ) {
+    if( sm_pos.z() + 1 >= here.max_z() ) {
         return false; // don't allow trying to ascend to max zlevel
     }
     creature_tracker &creatures = get_creature_tracker();
@@ -2276,7 +2276,7 @@ bool vehicle::level_vehicle( map &here )
         }
         const tripoint_bub_ms part_pos = bub_part_pos( here, prt );
         if( no_support.find( part_pos.z() ) == no_support.end() ) {
-            no_support[part_pos.z()] = part_pos.z() > -OVERMAP_DEPTH;
+            no_support[part_pos.z()] = part_pos.z() > here.min_z();
         }
         if( no_support[part_pos.z()] ) {
             no_support[part_pos.z()] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
@@ -2295,7 +2295,7 @@ bool vehicle::level_vehicle( map &here )
     bool center_drop = false;
     bool adjust_level = false;
     if( no_support.size() > 1 ) {
-        for( int zlevel = -OVERMAP_DEPTH; zlevel <= OVERMAP_DEPTH; zlevel++ ) {
+        for( int zlevel = here.min_z(); zlevel <= here.max_z(); zlevel++ ) {
             if( no_support.find( zlevel ) == no_support.end() || !no_support[zlevel] ) {
                 continue;
             }
@@ -2335,7 +2335,7 @@ void vehicle::check_falling_or_floating()
 
     auto has_support = [&here]( const tripoint_bub_ms & position, const bool water_supports ) {
         // if we're at the bottom of the z-levels, we're supported
-        if( position.z() == -OVERMAP_DEPTH ) {
+        if( position.z() == here.min_z() ) {
             return true;
         }
         // water counts as support if we're swimming and checking to see if we're falling, but

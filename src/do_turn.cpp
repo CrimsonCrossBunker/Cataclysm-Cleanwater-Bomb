@@ -883,7 +883,7 @@ bool game::do_turn()
             get_weather().temperature_cache.clear();
             get_weather().update_weather();
             reset_light_level();
-            for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; ++z ) {
+            for( int z = get_map().min_z(); z <= get_map().max_z(); ++z ) {
                 get_map().set_lightmap_cache_dirty( z );
             }
             const bool sleeping = u.has_effect( effect_sleep );
@@ -1041,7 +1041,7 @@ void game::simulate_turn_prefix()
     weather.update_weather();
 
     reset_light_level();
-    for( int z = -OVERMAP_DEPTH; z <= OVERMAP_HEIGHT; z++ ) {
+    for( int z = m.min_z(); z <= m.max_z(); z++ ) {
         m.set_lightmap_cache_dirty( z );
     }
 
