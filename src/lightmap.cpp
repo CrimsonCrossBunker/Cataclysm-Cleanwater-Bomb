@@ -41,6 +41,7 @@
 #include "mp_client_conn.h"
 #include "mtype.h"
 #include "npc.h"
+#include "options.h"
 #include "profiling.h"
 #include "point.h"
 #include "string_formatter.h"
