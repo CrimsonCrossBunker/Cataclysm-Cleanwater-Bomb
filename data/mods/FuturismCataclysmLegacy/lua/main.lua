@@ -1,3 +1,5 @@
+require("lua.item_migrations")
+
 require("region_settings")
 
 require("lua.itemuse_triggers.fcl_cureall")

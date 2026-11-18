@@ -1,3 +1,5 @@
+require("item_migrations")
+
 local ccb = require("ccb")
 local content = ccb.content
 
