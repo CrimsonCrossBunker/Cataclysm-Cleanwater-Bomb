@@ -29,3 +29,5 @@ require("craft_recipes")
 require("item_groups")
 
 require("generic_items")
+
+require("inherited_items")
