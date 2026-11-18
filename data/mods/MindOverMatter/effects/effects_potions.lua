@@ -335,3 +335,22 @@ content.add(content.EffectType {
     :modifier("stamina", "amount", { base = -2500 })
     :modifier("stamina", "minimum", { base = -250 })
     :modifier("stamina", "chance_numerator", { base = 30 }))
+
+content.add(content.EffectType {
+    id = "effect_teleport_potion_comedown",
+    name = ccb.content.text("Blue Elixir Aftereffects"),
+    description = ccb.content.text("You're suffering the aftereffects of drinking the concentrated matrix crystal concoction."),
+    apply_message = "",
+    remove_message = ccb.content.text("The concoction's aftereffects finally wear off."),
+    rating = "bad",
+    maximum_duration_turns = 198000,
+    maximum_intensity = 1,
+}
+    :removes_optional_effect("DIMENSIONAL_ANCHOR")
+    :enchantment("enchant_teleport_potion_comedown")
+    :modifier("speed", "amount", { base = -15 })
+    :modifier("pain", "chance_denominator", { base = 200 })
+    :modifier("pain", "chance_numerator", { base = 20 })
+    :modifier("pain", "minimum", { base = 1 })
+    :modifier("pain", "maximum_value", { base = 10 })
+    :modifier("pain", "tick", { base = 200 }))

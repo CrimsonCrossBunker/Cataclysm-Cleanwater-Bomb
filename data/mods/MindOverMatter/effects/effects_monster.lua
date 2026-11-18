@@ -529,3 +529,46 @@ content.add(content.EffectType {
     :modifier("cut", "amount", { base = 1.5 })
     :modifier("dodge", "amount", { base = 1.5 })
     :modifier("hit", "amount", { base = 1.5 }))
+
+content.upsert_effect_type(content.EffectType {
+    id = "nemesis_buff",
+    name = "SWOLE",
+    description = "If you see this description it is a bug.",
+    maximum_duration_turns = 1000,
+    rating = "bad",
+    show_intensity = false,
+}
+    :enchantment("ench_nemesis_buff"))
+
+content.add(content.EffectType {
+    id = "effect_electrokin_revive_debuff",
+    name = ccb.content.text("Revivified"),
+    description = "Causes the target to eventually die.  It's a bug if you have it.",
+    maximum_intensity = 12,
+    intensity_decay_step = 1,
+    intensity_decay_tick = 60,
+    show_in_info = true,
+}
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :name(ccb.content.text("Revivified"))
+    :monster_death_chance(1, 200000)
+    :monster_death_chance(1, 100000)
+    :monster_death_chance(1, 50000)
+    :monster_death_chance(1, 10000)
+    :monster_death_chance(1, 5000)
+    :monster_death_chance(1, 1000)
+    :monster_death_chance(1, 500)
+    :monster_death_chance(1, 100)
+    :monster_death_chance(1, 50)
+    :monster_death_chance(1, 20)
+    :monster_death_chance(1, 5)
+    :monster_death_chance(1, 1))

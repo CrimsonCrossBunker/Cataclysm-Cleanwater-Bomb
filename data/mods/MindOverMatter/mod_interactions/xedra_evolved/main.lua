@@ -54,3 +54,11 @@ end
 -- enchantments.json
 ccb.content.add(ccb.content.Enchantment { id = "ench_bio_psi_range_increaser", has = "WORN", condition = "ACTIVE" }
     :effect("effect_ench_bio_psi_range_increaser", 1))
+
+-- Hidden effect, used to indicate whether a bionic is active
+ccb.content.add(ccb.content.EffectType {
+    id = "effect_ench_bio_psi_range_increaser",
+    name = "",
+    description = "",
+    rating = "good",
+})

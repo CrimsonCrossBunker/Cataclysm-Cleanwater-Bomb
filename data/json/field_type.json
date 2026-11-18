@@ -2359,20 +2359,6 @@
   },
   {
     "type": "effect_type",
-    "id": "LIXA_illuminated",
-    "name": [ "illuminated" ],
-    "desc": [ "You're covered in congealed light!" ],
-    "apply_message": "The sticky globs of light cover you, and begin to burn!",
-    "rating": "bad",
-    "max_duration": "6 seconds",
-    "max_intensity": 3,
-    "int_dur_factor": "2 seconds",
-    "base_mods": { "hurt_min": [ 1 ], "hurt_chance": [ 3 ] },
-    "scaling_mods": { "hurt_min": [ 1 ] },
-    "show_in_info": true
-  },
-  {
-    "type": "effect_type",
     "id": "LIXA_decompressed",
     "name": [ "In Decompressed Space" ],
     "desc": [ "For an instant, every inch of this infinite space is itself infinite, slowing you drastically." ],

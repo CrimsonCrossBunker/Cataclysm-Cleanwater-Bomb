@@ -18,3 +18,12 @@ content.add(item_enchantment {
     id = "ITEM_ENCH_MindOverMatter_thought_shield_plus_item_0", has = "WORN", condition = "ALWAYS",
 }
     :effect("effect_item_mind_protection", 1))
+
+-- Hidden effect, used as an item buff
+ccb.content.add(ccb.content.EffectType {
+    id = "effect_item_mind_protection",
+    name = "",
+    description = "",
+    rating = "good",
+}
+    :flag("TEEPSHIELD"))

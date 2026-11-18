@@ -54,3 +54,19 @@ content.upsert_enchantment(content.Enchantment {
     native_modifier_order = true,
 }
     :value("MOTION_ALARM", { add = 10 }))
+
+ccb.content.add(ccb.content.EffectType {
+    id = "effect_perk_in_the_zone",
+    name = ccb.content.text("In the Zone"),
+    description = ccb.content.text("You are one with the Nether and the Nether is with you.  The stamina cost of channeling your next power is reduced by 25%."),
+    apply_message = "",
+    rating = "good",
+    maximum_duration_turns = 5,
+})
+
+-- We'll see if this is the problem
+ccb.content.add(ccb.content.EffectType {
+    id = "effect_perk_in_the_zone_rate_limiter",
+    name = "",
+    description = "",
+})

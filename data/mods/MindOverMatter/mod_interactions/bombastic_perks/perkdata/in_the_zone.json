@@ -1,23 +1,5 @@
 [
   {
-    "type": "effect_type",
-    "id": "effect_perk_in_the_zone",
-    "name": [ "In the Zone" ],
-    "desc": [
-      "You are one with the Nether and the Nether is with you.  The stamina cost of channeling your next power is reduced by 25%."
-    ],
-    "apply_message": "",
-    "rating": "good",
-    "max_duration": "5 s"
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_perk_in_the_zone_rate_limiter",
-    "//": "We'll see if this is the problem",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_PERK_IN_THE_ZONE_ADD_EFFECT_TRIGGER",
     "eoc_type": "EVENT",

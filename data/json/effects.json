@@ -576,18 +576,6 @@
     ]
   },
   {
-    "id": "nemesis_buff",
-    "type": "effect_type",
-    "max_duration": "1000 s",
-    "name": [ { "str": "SWOLE", "//~": "NO_I18N" } ],
-    "desc": [ { "str": "If you see this description it is a bug.", "//~": "NO_I18N" } ],
-    "rating": "bad",
-    "show_intensity": false,
-    "enchantments": [
-      "INLINE_ENCH_nemesis_buff_0"
-    ]
-  },
-  {
     "type": "effect_type",
     "id": "grown_of_fuse",
     "name": [ { "str": "Grown of Fusion", "//~": "NO_I18N" } ],
@@ -2964,37 +2952,6 @@
   },
   {
     "type": "effect_type",
-    "id": "taint",
-    "name": [ "Touched Mind", "Touched Mind", "Tainted Mind", "Badly Tainted Mind" ],
-    "miss_messages": [ [ "Your sense of reality warps!", 3 ] ],
-    "speed_name": "Tainted",
-    "desc": [
-      "You are disoriented as strange visions flash through your mind.",
-      "You are overwhelmed by the disturbing imagery and concepts you're flooded with.",
-      "You can't comprehend the things around you…",
-      "You don't know what is and isn't real anymore…"
-    ],
-    "rating": "bad",
-    "max_intensity": 4,
-    "max_duration": "2 h",
-    "int_add_val": 1,
-    "int_dur_factor": "5 m",
-    "base_mods": { "speed_mod": [ -20 ], "str_mod": [ 0 ], "dex_mod": [ -1 ], "per_mod": [ -2 ], "vomit_chance": [ 20 ] },
-    "scaling_mods": { "speed_mod": [ -10 ], "int_mod": [ -2 ], "str_mod": [ -1 ], "dex_mod": [ -1 ], "per_mod": [ -2 ] },
-    "limb_score_mods": [
-      { "limb_score": "reaction", "modifier": 0.8, "scaling": -0.2 },
-      { "limb_score": "block", "modifier": 0.8, "scaling": -0.2 },
-      { "limb_score": "vision", "modifier": 0.9, "scaling": -0.1 },
-      { "limb_score": "night_vis", "modifier": 0.9, "scaling": -0.1 }
-    ],
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "tindrift"
-  },
-  {
-    "type": "effect_type",
     "id": "visuals",
     "name": [ "Hallucinating" ],
     "desc": [ "You can't trust everything that you see." ],
@@ -3618,10 +3575,6 @@
   },
   {
     "type": "effect_type",
-    "id": "attention"
-  },
-  {
-    "type": "effect_type",
     "id": "jetinjector",
     "name": [ "RX12 Healing Comedown", "RX12 Healing Rush" ],
     "desc": [ "You feel completely drained.", "You feel the rush of stimulants in your body!" ],
@@ -3827,10 +3780,6 @@
     },
     "blood_analysis_description": "Nicotine",
     "immune_flags": [ "INHALED_TOXIN_IMMUNE" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "teleglow"
   },
   {
     "type": "effect_type",
