@@ -9853,6 +9853,23 @@ function CcbSpellsApi.set_experience(character, spell, experience) end
 ---@return CcbResult result `value` contains the forgotten snapshot and whether the spell is still known. Unknown spells return not_known.
 function CcbSpellsApi.forget(character, spell) end
 
+---Count matching entries in the native spellbook, including known level-zero spells.
+---@param character GameHandle Exact live Character.
+---@param school? GameId GameId<mutation> of the spell school. Omit to count all schools.
+---@return CcbResult result value is the number of matching known spells.
+function CcbSpellsApi.count(character, school) end
+
+---Read the native current and maximum mana.
+---@param character GameHandle Exact live Character.
+---@return CcbResult result value includes current and maximum as integers.
+function CcbSpellsApi.mana(character) end
+
+---Set native mana directly, preserving signed and over-maximum mana values.
+---@param character GameHandle Exact live Character.
+---@param amount integer Native signed-int mana value.
+---@return CcbResult result value contains before and after mana snapshots.
+function CcbSpellsApi.set_mana_raw(character, amount) end
+
 ---@class CcbRelocationMoveOptions
 ---@field strict? true Strict mode; when supplied it must be `true`. This is the only accepted option; force and fallback policies are unsupported.
 
@@ -13900,6 +13917,7 @@ local CcbPlatformGameplayApi = {}
 
 ---@class CcbCharacterSensesSnapshot
 ---@field can_see boolean Native Character visibility state: not blind and either awake or flagged SEESLEEP.
+---@field fine_detail_vision_legacy integer Native fine-detail vision modifier rounded up for activity visibility checks.
 
 ---@class CcbCharacterMovementSnapshot
 ---@field driving boolean Native absolute-position vehicle query converted to the Character's map square; true only when that vehicle is moving and the Character controls it.

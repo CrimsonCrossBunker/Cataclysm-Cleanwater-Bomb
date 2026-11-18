@@ -16,6 +16,7 @@ extern "C" {
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -1492,19 +1493,27 @@ sol::table get_mana(
                sol::make_object( state, std::move( value ) ) );
 }
 
+enum class mana_mutation : std::uint8_t {
+    set, modify, set_raw
+};
+
 sol::table change_mana(
     sol::this_state lua, const game_handle &handle,
-    const int amount, const bool relative,
+    const std::int64_t amount, const mana_mutation mutation,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
-    const std::string api_name = relative ?
-                                 "services.spells.modify_mana" :
-                                 "services.spells.set_mana";
-    if( amount < ( relative ? -maximum_mana_value : 0 ) ||
-        amount > maximum_mana_value ) {
-        throw std::invalid_argument(
-            api_name + " amount is outside its limit" );
+    if( mutation == mana_mutation::set_raw ) {
+        if( amount < std::numeric_limits<int>::min() || amount > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument(
+                "services.spells.set_mana_raw requires a native signed-int amount" );
+        }
+    } else {
+        const bool relative = mutation == mana_mutation::modify;
+        if( amount < ( relative ? -maximum_mana_value : 0 ) || amount > maximum_mana_value ) {
+            const char *const api_name = relative ? "services.spells.modify_mana" : "services.spells.set_mana";
+            throw std::invalid_argument( std::string( api_name ) + " amount is outside its limit" );
+        }
     }
     sol::state_view state( lua );
     std::optional<game_handle_error> error;
@@ -1517,12 +1526,17 @@ sol::table change_mana(
     known_magic &magic = *character->magic;
     sol::table before = mana_snapshot(
                             state, *character );
-    if( relative ) {
-        magic.mod_mana( *character, amount );
-    } else {
-        magic.set_mana(
-            std::clamp(
-                amount, 0, magic.max_mana( *character ) ) );
+    const int native_amount = static_cast<int>( amount );
+    switch( mutation ) {
+        case mana_mutation::set:
+            magic.set_mana( std::clamp( native_amount, 0, magic.max_mana( *character ) ) );
+            break;
+        case mana_mutation::modify:
+            magic.mod_mana( *character, native_amount );
+            break;
+        case mana_mutation::set_raw:
+            magic.set_mana( native_amount );
+            break;
     }
     sol::table value = state.create_table();
     value["before"] = std::move( before );
@@ -1982,7 +1996,18 @@ void install_magic_api(
     const int amount ) {
         require_write();
         return change_mana(
-                   lua_state, handle, amount, false,
+                   lua_state, handle, amount, mana_mutation::set,
+                   current_runtime_generation(),
+                   current_world_generation() );
+    } );
+    spells.set_function(
+        "set_mana_raw",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const std::int64_t amount ) {
+        require_write();
+        return change_mana(
+                   lua_state, handle, amount, mana_mutation::set_raw,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
@@ -1993,7 +2018,7 @@ void install_magic_api(
     const int amount ) {
         require_write();
         return change_mana(
-                   lua_state, handle, amount, true,
+                   lua_state, handle, amount, mana_mutation::modify,
                    current_runtime_generation(),
                    current_world_generation() );
     } );
