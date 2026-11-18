@@ -4,6 +4,8 @@ require("requirements")
 
 require("items")
 
+require("deployable_furniture")
+
 require("upgrade_items")
 
 require("item_groups")
