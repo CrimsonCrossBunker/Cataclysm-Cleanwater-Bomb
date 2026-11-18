@@ -67,38 +67,6 @@
     ]
   },
   {
-    "id": "rapier_dreamdross",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "dreamdross rapier" },
-    "description": "This is a thin ephemeral sword with an ornate hand guard.  It looks like the preferred weapon of gentlemen and swashbucklers.  Light and quick, it makes any battle a stylish one.",
-    "weight": "500 g",
-    "volume": "1500 ml",
-    "longest_side": "100 cm",
-    "price": "980 USD",
-    "price_postapoc": "25 USD",
-    "to_hit": { "grip": "weapon", "length": "long", "surface": "line", "balance": "good" },
-    "material": [ "dreamstuff" ],
-    "symbol": "/",
-    "color": "light_gray",
-    "looks_like": "rapier",
-    "techniques": [ "RAPID", "WBLOCK_2", "PRECISE" ],
-    "qualities": [ [ "CUT", 1 ], [ "BUTCHER", 9 ] ],
-    "flags": [
-      "UNBREAKABLE_MELEE",
-      "NONCONDUCTIVE",
-      "NO_REPAIR",
-      "NO_SALVAGE",
-      "MAGIC_FOCUS",
-      "TRADER_AVOID",
-      "SHEATH_SWORD",
-      "RELIC_PINK"
-    ],
-    "weapon_category": [ "FENCING_WEAPONRY" ],
-    "category": "weapons",
-    "melee_damage": { "bash": 2, "stab": 31, "cold": 10 }
-  },
-  {
     "id": "dagger_dreamdross",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARTIFACT" ],
@@ -327,42 +295,5 @@
       { "id": "ITEM_ENCH_Xedra_Evolved_item_ierde_iron_armor_0" },
       { "id": "ITEM_ENCH_Xedra_Evolved_item_ierde_iron_armor_1" }
     ]
-  },
-  {
-    "id": "changeling_summer_sunglasses",
-    "copy-from": "fake_item",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "Under the Noonday Sun" },
-    "description": { "str": "You are protected from extremely bright lights." },
-    "qualities": [ [ "GLARE", 1 ] ],
-    "extend": { "flags": [ "SEMITANGIBLE", "INTEGRATED", "FLASH_PROTECTION", "SUN_GLASSES" ] }
-  },
-  {
-    "id": "vampire_blood_ball",
-    "type": "ITEM",
-    "category": "container",
-    "name": { "str": "blood-storing sphere" },
-    "looks_like": "jar_glass_sealed",
-    "description": "A magical transparent sphere.  You can use it to store any type of blood, at least until the sphere vanishes.",
-    "weight": "1 g",
-    "volume": "3050 ml",
-    "longest_side": "298 mm",
-    "price": "0 cent",
-    "price_postapoc": "0 cent",
-    "material": [ "blood" ],
-    "symbol": "O",
-    "color": "red",
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "rigid": true,
-        "watertight": true,
-        "max_contains_volume": "3 L",
-        "max_contains_weight": "20 kg",
-        "material_restriction": [ "blood", "hblood", "vampire_blood" ]
-      }
-    ],
-    "flags": [ "UNBREAKABLE_MELEE", "NONCONDUCTIVE", "NO_REPAIR", "NO_SALVAGE", "MAGIC_FOCUS", "TRADER_AVOID" ]
   }
 ]
