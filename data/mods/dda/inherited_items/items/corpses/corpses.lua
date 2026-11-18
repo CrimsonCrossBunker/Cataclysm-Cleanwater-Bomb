@@ -201,3 +201,34 @@ do
     item:material("hflesh", 1)
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "corpse_void_mummified",
+        symbol = "%",
+        color = "white",
+        name = ccb.content.plural_text("mummified corpse", "mummified corpses"),
+        description = ccb.content.text("Waxen skin drapes the remnants of an unknowable death."),
+        looks_like = "corpse_generic_human",
+        category = "corpses",
+        price_cents = 0,
+        volume_ml = 30000,
+        mass_milligrams = 32000000,
+        replace_pockets = true,
+    }
+    item:material("hflesh", 1)
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("TARDIS")
+    item:container_pocket {
+        max_volume_ml = 1650000,
+        max_weight_milligrams = 4000000000,
+        moves = 100,
+        max_item_volume_ml = 500000,
+        max_item_length_mm = 60000,
+        rigid = false,
+        transparent = true,
+        forbidden = true,
+    }
+    content.add(item)
+end
