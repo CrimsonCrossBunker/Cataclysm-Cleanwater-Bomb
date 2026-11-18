@@ -99,6 +99,16 @@ require("artifact_spells")
 require("tool_qualities")
 
 require("vitamins")
+require("effects.effects_artifact")
+require("effects.effects_items")
+require("effects.effects_monster")
+require("effects.effects_nether_attunement")
+require("effects.effects_npc")
+require("effects.effects_other")
+require("effects.effects_penalty")
+require("effects.effects_potions")
+require("effects.effects_psionic")
+require("effects.effects_scenario")
 
 require("snippets")
 

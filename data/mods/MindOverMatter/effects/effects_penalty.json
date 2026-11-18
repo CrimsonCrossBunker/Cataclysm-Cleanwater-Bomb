@@ -1,70 +1,6 @@
 [
   {
     "type": "effect_type",
-    "id": "psionic_awakened",
-    "name": [ "Awakened" ],
-    "desc": [ "Your exposure to the portal storm has awakened latent psionic powers in you." ],
-    "rating": "neutral",
-    "max_duration": "24 hours"
-  },
-  {
-    "type": "effect_type",
-    "id": "psionic_overload",
-    "name": [
-      "Headache",
-      "Headache",
-      "Headache",
-      "Bad Headache",
-      "Bad Headache",
-      "Splitting Headache",
-      "Splitting Headache",
-      "Excruciating Headache",
-      "Excruciating Headache",
-      "Pure Agony"
-    ],
-    "desc": [
-      "Your head is pounding and you feel unwell.",
-      "Your head is pounding and you feel unwell.",
-      "Your head is pounding and you feel unwell.",
-      "Your head throbs and it's hard to see straight.",
-      "Your head throbs and it's hard to see straight.",
-      "You can barely think through the pain in your head.",
-      "You can barely think through the pain in your head.",
-      "Your skull feels like it's going to explode.",
-      "Your skull feels like it's going to explode.",
-      "The agony is the only thing in the world that matters."
-    ],
-    "rating": "bad",
-    "int_add_val": 1,
-    "max_intensity": 10,
-    "max_duration": "24 hours",
-    "base_mods": {
-      "per_mod": [ -1 ],
-      "pain_chance": [ 100 ],
-      "pain_min": [ 1 ],
-      "pain_max": [ 1 ],
-      "pain_max_val": [ 20 ],
-      "pain_tick": [ 200 ],
-      "vomit_chance": [ 100 ],
-      "vomit_tick": [ 200 ],
-      "hurt_chance": [ 300 ],
-      "hurt_amount": [ 0 ],
-      "hurt_tick": [ 200 ]
-    },
-    "scaling_mods": {
-      "per_mod": [ -0.8 ],
-      "int_mod": [ -0.6 ],
-      "pain_min": [ 0 ],
-      "pain_max": [ 0 ],
-      "pain_max_val": [ 5 ],
-      "vomit_chance": [ -2 ],
-      "hurt_chance": [ -5 ],
-      "hurt_amount": [ 2, 1 ],
-      "hurt_tick": [ -15 ]
-    }
-  },
-  {
-    "type": "effect_type",
     "id": "psi_stunned",
     "//": "Separate ID to allow telepaths and telepathy-immune monsters to defend against it.",
     "name": [ "Stunned" ],
@@ -75,72 +11,6 @@
     "limb_score_mods": [ { "limb_score": "balance", "modifier": 0.2 }, { "limb_score": "reaction", "modifier": 0.0 } ],
     "immune_flags": [ "TEEPSHIELD", "TEEP_IMMUNE" ],
     "flags": [ "DISABLE_FLIGHT", "EFFECT_LIMB_SCORE_MOD", "NO_SPELLCASTING", "NO_PSIONICS" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_psi_null",
-    "name": [
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified",
-      "Nullified"
-    ],
-    "desc": [
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers.",
-      "You can't use your powers."
-    ],
-    "apply_message": "You feel a dull pain behind your eyes and a terrible sense of loss.",
-    "remove_message": "You have a sudden sense of regaining something you had lost.",
-    "rating": "bad",
-    "max_duration": "1 minutes",
-    "show_intensity": false,
-    "max_intensity": 10,
-    "int_decay_step": -2,
-    "int_add_val": 2,
-    "int_decay_tick": 1,
-    "int_decay_remove": true,
-    "flags": [ "NO_PSIONICS" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_psi_null_unbound",
-    "//": "Same as above but without automatically removing itself",
-    "name": [ "Nullified" ],
-    "desc": [ "You can't use your powers." ],
-    "apply_message": "You feel a dull pain behind your eyes and a terrible sense of loss.",
-    "remove_message": "You have a sudden sense of regaining something you had lost.",
-    "rating": "bad",
-    "flags": [ "NO_PSIONICS" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_psi_turn_off_powers",
-    "//": "This exists to trigger EoCs or as a rider on other psi effects",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "flags": [ "NO_PSIONICS" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_psi_dimensionally_anchored",
-    "//": "This exists to trigger EoCs or as a rider on other psi effects",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "flags": [ "NO_PSIONICS" ]
   },
   {
     "type": "effect_type",
@@ -269,15 +139,6 @@
   },
   {
     "type": "effect_type",
-    "id": "effect_psi_too_much_pain_cant_channel",
-    "name": [ "Can't Concentrate" ],
-    "desc": [ "You can't use your powers." ],
-    "apply_message": "You're in so much pain you can't concentrate to use your powers!",
-    "rating": "bad",
-    "flags": [ "NO_PSIONICS" ]
-  },
-  {
-    "type": "effect_type",
     "id": "effect_biokin_overload",
     "name": [ "Weakened" ],
     "desc": [ "Your muscles and coordination are impaired." ],
@@ -346,16 +207,6 @@
   },
   {
     "type": "effect_type",
-    "id": "effect_photokin_lumination_overload",
-    "name": [ "Illuminated" ],
-    "desc": [ "Your skin is glowing brightly." ],
-    "apply_message": "",
-    "remove_message": "The glow from your skin fades.",
-    "rating": "bad",
-    "enchantments": [ "INLINE_ENCH_effect_photokin_lumination_overload_0" ]
-  },
-  {
-    "type": "effect_type",
     "id": "effect_photokin_myopia_overload",
     "name": [ "Blurred Sight" ],
     "desc": [ "Objects in the distance aren't where they seem to be." ],
@@ -402,43 +253,6 @@
   },
   {
     "type": "effect_type",
-    "id": "effect_pyrokin_fever_burning",
-    "name": [ "Burning" ],
-    "desc": [ "The air around you is overheating!" ],
-    "enchantments": [ "enchant_pyrokin_fever" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_portal_storm_teleport",
-    "name": [ "Dimensionally Unstable" ],
-    "desc": [ "You feel like you're barely part of the world." ],
-    "//": "Duplicate so teleporters can get teleported during portal storms.",
-    "apply_message": "",
-    "remove_message": "With a jolt, you feel more solid again.",
-    "rating": "bad",
-    "enchantments": [ "enchant_riftwalker_teleport" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_teleporter_overload",
-    "name": [ "Warped Space" ],
-    "desc": [ "Nothing is quite where it seems to be." ],
-    "apply_message": "Your vision doesn't agree with where things seem to actually be",
-    "remove_message": "Distances resolve themselves again.",
-    "rating": "bad",
-    "enchantments": [ "INLINE_ENCH_effect_teleporter_overload_0" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_psi_teleport_lock",
-    "name": [ "Teleport Lock" ],
-    "desc": [ "You're not going anywhere." ],
-    "rating": "bad",
-    "max_duration": "24 hours",
-    "flags": [ "TELEPORT_LOCK" ]
-  },
-  {
-    "type": "effect_type",
     "id": "effect_telekin_overload",
     "name": [ "Oppressive Weight" ],
     "desc": [ "Everything feels so much heavier." ],
@@ -479,27 +293,5 @@
     "base_mods": { "stamina_amount": [ -1000 ] },
     "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.8 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "severe_hay_fever",
-    "name": [ "Severe Hay Fever" ],
-    "desc": [ "Your eyes are burning and your nose is gushing mucus." ],
-    "rating": "bad",
-    "resist_effects": [ "took_flumed" ],
-    "show_in_info": true,
-    "removes_effects": [ "hay_fever" ],
-    "base_mods": { "per_mod": [ -4 ], "int_mod": [ -3 ], "stamina_min": [ -75 ], "stamina_max": [ -225 ], "stamina_chance": [ 200 ] }
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_mom_dimensionally_anchored_eventually_cancel_concentration",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "rating": "bad",
-    "max_intensity": 100,
-    "int_add_val": 1,
-    "int_decay_step": 1,
-    "int_decay_tick": 1
   }
 ]

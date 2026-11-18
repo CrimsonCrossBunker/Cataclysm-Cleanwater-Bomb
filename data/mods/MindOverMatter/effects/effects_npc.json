@@ -4,19 +4,5 @@
     "id": "asked_to_vitakinetic_heal",
     "name": [ { "str": "Asked to heal", "//~": "NO_I18N" } ],
     "desc": [ { "str": "You were asked if you wanted your illness healed and you said no.", "//~": "NO_I18N" } ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_electrokinetic_speed_boost_npc",
-    "name": [ "Neuro-Accelerated" ],
-    "desc": [ "Your nervous system is enhanced." ],
-    "apply_message": "",
-    "remove_message": "Your reactions return to baseline.",
-    "rating": "good",
-    "max_duration": "10 minutes",
-    "removes_effects": [ "effect_electrokinetic_pain_immune" ],
-    "enchantments": [
-      "INLINE_ENCH_effect_electrokinetic_speed_boost_npc_0"
-    ]
   }
 ]

@@ -45,35 +45,6 @@
   },
   {
     "type": "effect_type",
-    "id": "psi_nether_attention",
-    "name": [ "Observed" ],
-    "desc": [ "You have the strong impression that someone, or something, is watching you." ],
-    "remove_message": "The endless feeling of being watched finally fades away.",
-    "rating": "bad",
-    "show_intensity": false,
-    "max_intensity": 10,
-    "max_duration": "21 days",
-    "int_dur_factor": "3 days"
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_raiser",
-    "name": [ "Nether Conduit" ],
-    "desc": [ "Your skin prickles." ],
-    "remove_message": "The tingling sensation finally vanishes.",
-    "vitamins": [ { "vitamin": "vitamin_psionic_drain", "rate": [ [ 1, 2 ] ], "tick": [ "5 m" ] } ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_attenuation",
-    "name": [ "Nether Attenuation" ],
-    "desc": [ "You have to work extra hard to draw enough energy to use your powers." ],
-    "remove_message": "Your difficulty in drawing on the Nether fades.",
-    "rating": "bad",
-    "enchantments": [ "INLINE_ENCH_effect_nether_attunement_attenuation_0" ]
-  },
-  {
-    "type": "effect_type",
     "id": "effect_nether_attunement_clair_blurred_sight",
     "name": [ "Blurred Sight" ],
     "desc": [ "Your vision is blurry." ],
@@ -81,37 +52,6 @@
     "rating": "bad",
     "limb_score_mods": [ { "limb_score": "night_vis", "modifier": 0.1 }, { "limb_score": "vision", "modifier": 0.2 } ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD", "HYPEROPIC", "MYOPIC_SUPERNATURAL" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_extra_kcal",
-    "name": [ "Gnawing Hunger" ],
-    "desc": [ "Whenever you use your powers, your stomach rumbles." ],
-    "remove_message": "Your stomach finally calms down.",
-    "rating": "bad"
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_feedback",
-    "name": [ "Feedback" ],
-    "desc": [ "You feel a persistent itching that will not go away." ],
-    "rating": "bad"
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_electrokinetic_power_drain",
-    "name": [ "Power Void" ],
-    "desc": [ "Is it cold in here?" ],
-    "rating": "bad",
-    "remove_message": "The unearthly chill fades away."
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_biokinetic_inversion",
-    "name": [ "Metabolic Inversion" ],
-    "desc": [ "You're getting pretty hungry and thirsty." ],
-    "rating": "bad",
-    "remove_message": "Your gnawing hunger finally fades away."
   },
   {
     "type": "effect_type",
@@ -141,56 +81,5 @@
       { "limb_score": "lift", "modifier": 0.8 }
     ],
     "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_teleport_mishap_tindrift_warning",
-    "name": [ "Hunted" ],
-    "desc": [
-      "You feel the sensation of watching eyes and see prowling forms out of the corners of your vision.  Using further teleportation powers would be very unwise."
-    ],
-    "rating": "bad",
-    "remove_message": "The prowling forms finally fade away."
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_in_the_nether_warning_timer",
-    "//": "Hidden effect, used as a tracker",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_nether_attunement_pyrokinetic_fog",
-    "//": "Hidden effect, used as a tracker",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "apply_message": "A roiling fog coalesces out of the surrounding air.",
-    "remove_message": "The roiling fog surrounding you dissipates.",
-    "rating": "bad",
-    "enchantments": [ "INLINE_ENCH_effect_nether_attunement_pyrokinetic_fog_0" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_observed_rate_limiter",
-    "//": "Hidden effect, used as a tracker",
-    "name": [ "" ],
-    "desc": [ "" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_mom_incense_nether_attunement_minor",
-    "//": "Hidden effect, part of an enchantment",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "vitamins": [ { "vitamin": "vitamin_psionic_drain", "rate": [ [ 1, 5 ] ], "tick": [ "30 s" ] } ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_mom_incense_nether_attunement_major",
-    "//": "Hidden effect, part of an enchantment",
-    "name": [ "" ],
-    "desc": [ "" ],
-    "vitamins": [ { "vitamin": "vitamin_psionic_drain", "rate": [ [ 3, 6 ] ], "tick": [ "5 s" ] } ]
   }
 ]
