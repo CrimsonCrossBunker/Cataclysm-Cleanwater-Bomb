@@ -763,6 +763,29 @@ void install_mapgen_service_api(
         } );
     },
     "spawn_group", &add_patch_monster_group,
+    "spawn_monster", []( mapgen_patch &patch, const std::string &id, const sol::object &x,
+    const sol::object &y, const sol::optional<sol::table> &options ) {
+        const mtype_id monster( id );
+        if( !monster.is_valid() || monster.is_null() ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid monster type" );
+        }
+        jmapgen_place where = patch_at( x, y );
+        jmapgen_int chance( 100 );
+        bool one_or_none = true;
+        if( options ) {
+            const sol::object repeats = options->raw_get<sol::object>( "repetitions" );
+            const sol::object odds = options->raw_get<sol::object>( "chance" );
+            if( repeats.valid() ) {
+                where.repeat = patch_range( repeats, 0, std::numeric_limits<std::int16_t>::max(),
+                                             "repetitions" );
+                one_or_none = false;
+            }
+            if( odds.valid() ) {
+                chance = patch_range( odds, 1, 100, "monster spawn chance" );
+            }
+        }
+        patch.add_monster( where, monster, chance, one_or_none );
+    },
     "spawn_npc", []( mapgen_patch &patch, const std::string &id,
     const sol::object &x, const sol::object &y, const sol::optional<sol::table> &options ) {
         const npc_template_id npc( id );

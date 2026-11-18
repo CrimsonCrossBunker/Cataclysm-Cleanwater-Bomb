@@ -611,6 +611,8 @@ class mapgen_patch final : private update_mapgen_function_json
         void add_monster_group( const jmapgen_place &where, const mongroup_id &group,
                                 const jmapgen_int &pack_size, bool one_or_none,
                                 bool mission_target, const std::optional<translation> &name );
+        void add_monster( const jmapgen_place &where, const mtype_id &monster,
+                          const jmapgen_int &chance, bool one_or_none );
         void add_npc( const jmapgen_place &where, const npc_template_id &id, bool mission_target,
                       const std::string &unique_id );
         void remove_npc( const npc_template_id &id, const std::string &unique_id );

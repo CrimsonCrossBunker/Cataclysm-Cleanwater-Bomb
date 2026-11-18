@@ -2838,6 +2838,11 @@ class jmapgen_monster : public jmapgen_piece
                         bool mission_target, const std::optional<translation> &display_name )
             : ids( 100 ), m_id( group ), chance( 100 ), pack_size( pack ), one_or_none( single ),
               friendly( false ), name( display_name ), target( mission_target ), use_pack_size( false ) {}
+        jmapgen_monster( const mtype_id &monster, const jmapgen_int &odds, bool single )
+            : jmapgen_monster( mongroup_id::NULL_ID(), jmapgen_int( 1 ), single, false, std::nullopt ) {
+            ids.add( mapgen_value<mtype_id>( monster ), 100 );
+            chance = odds;
+        }
         jmapgen_monster( const JsonObject &jsi, std::string_view/*context*/ ) :
             chance( jsi, "chance", 100, 100 )
             , pack_size( jsi, "pack_size", 1, 1 )
@@ -8187,6 +8192,12 @@ void mapgen_patch::add_monster_group( const jmapgen_place &where, const mongroup
 {
     add_piece( where, make_shared_fast<jmapgen_monster>( group, pack_size, one_or_none,
                mission_target, name ) );
+}
+
+void mapgen_patch::add_monster( const jmapgen_place &where, const mtype_id &monster,
+                                const jmapgen_int &chance, bool one_or_none )
+{
+    add_piece( where, make_shared_fast<jmapgen_monster>( monster, chance, one_or_none ) );
 }
 
 void mapgen_patch::add_npc( const jmapgen_place &where, const npc_template_id &id,

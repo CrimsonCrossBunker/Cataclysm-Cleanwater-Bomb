@@ -8417,6 +8417,16 @@ function MapgenPatch:furniture(x, y, id) end
 ---@param options? MapgenPatchMonsterOptions
 function MapgenPatch:spawn_group(group, x, y, options) end
 
+---@class MapgenPatchMonsterSpawnOptions
+---@field chance? MapgenPatchRange Native spawn chance from 1 to 100, before spawn-density scaling.
+---@field repetitions? MapgenPatchRange Native placement count. Omitting it caps the placement at one monster.
+
+---@param monster string Native monster type ID.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+---@param options? MapgenPatchMonsterSpawnOptions
+function MapgenPatch:spawn_monster(monster, x, y, options) end
+
 ---@param template string Native NPC template ID.
 ---@param x MapgenPatchRange
 ---@param y MapgenPatchRange
