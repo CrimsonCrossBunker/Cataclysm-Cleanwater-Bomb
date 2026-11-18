@@ -295,6 +295,37 @@ std::vector<mod_id> mod_manager::all_mods() const
     return result;
 }
 
+void mod_manager::write_catalog( JsonOut &out ) const
+{
+    out.start_array();
+    const auto &categories = get_mod_list_categories();
+    for( const auto &[id, mod] : mod_map ) {
+        out.start_object();
+        out.member( "id", id.str() );
+        out.member( "path", mod.path.get_unrelative_path().generic_u8string() );
+        const int category = mod.category.first;
+        out.member( "category", category < 0 ? std::string() :
+                    categories[static_cast<std::size_t>( category )].first );
+        out.member( "dependencies", mod.dependencies );
+        out.member( "conflicts", mod.conflicts );
+        out.member( "obsolete", mod.obsolete );
+        std::set<mod_id> interactions;
+        const cata_path interaction_root = mod.path / "mod_interactions";
+        if( dir_exist( interaction_root.get_unrelative_path() ) ) {
+            for( const cata_path &folder : get_directories( interaction_root, false ) ) {
+                interactions.insert( canonical_mod_id( mod_id(
+                                         folder.get_relative_path().filename().u8string() ) ) );
+            }
+        }
+        out.member( "interactions", interactions );
+        if( !mod.lua_platform_error.empty() ) {
+            out.member( "lua_error", mod.lua_platform_error );
+        }
+        out.end_object();
+    }
+    out.end_array();
+}
+
 dependency_tree &mod_manager::get_tree()
 {
     return *tree;

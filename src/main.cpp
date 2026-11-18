@@ -43,6 +43,7 @@
 #include "calendar.h"
 #include "cata_allocator.h"
 #include "cata_path.h"
+#include "cata_utility.h"
 #include "lua_platform_loader.h"
 #if defined(__ANDROID__)
     #include "android_hud.h"
@@ -71,6 +72,7 @@
 #include "main_menu.h"
 #include "mapsharing.h"
 #include "memory_fast.h"
+#include "mod_manager.h"
 #include "options.h"
 #include "ordered_static_globals.h"
 #include "output.h"
@@ -320,6 +322,7 @@ struct cli_opts {
     bool verifyexit = false;
     bool noverify = false;
     bool check_mods = false;
+    std::string mod_catalog;
     std::vector<std::string> opts;
     std::string world;
     bool disable_ascii_art = false;
@@ -379,6 +382,17 @@ cli_opts parse_commandline( int argc, const char **argv )
                         result.opts.emplace_back( params[ i ] );
                     }
                     return 0;
+                }
+            },
+            {
+                "--mod-catalog", "<path>",
+                "Writes discovered JSON and Lua Mod metadata to a file and exits",
+                section_default,
+                1,
+                [&result]( int, const char **params ) -> int {
+                    result.mod_catalog = params[0];
+                    test_mode = true;
+                    return 1;
                 }
             },
             {
@@ -1195,8 +1209,8 @@ int main( int argc, const char *argv[] )
 #if defined(HEADLESS)
     // This backend has no interactive input device. Reject unsupported launches
     // before opening a menu or creating an empty recording that cannot finish.
-    if( cli.replay_play.empty() && !cli.verifyexit && !cli.check_mods ) {
-        std::cerr << "HEADLESS requires --replay-play, --jsonverify or --check-mods\n";
+    if( cli.replay_play.empty() && !cli.verifyexit && !cli.check_mods && cli.mod_catalog.empty() ) {
+        std::cerr << "HEADLESS requires --replay-play, --jsonverify, --check-mods or --mod-catalog\n";
         return EXIT_FAILURE;
     }
 #endif
@@ -1204,6 +1218,20 @@ int main( int argc, const char *argv[] )
     validate_directories();
     initialize_debugging();
     initialize_locale();
+    if( !cli.mod_catalog.empty() ) {
+        try {
+            const mod_manager catalog;
+            write_to_file( cli.mod_catalog, [&catalog]( std::ostream & output ) {
+                JsonOut json( output );
+                catalog.write_catalog( json );
+                output << '\n';
+            } );
+        } catch( const std::exception &err ) {
+            std::cerr << err.what() << '\n';
+            return EXIT_FAILURE;
+        }
+        return debug_has_error_been_observed() ? EXIT_FAILURE : EXIT_SUCCESS;
+    }
     log_sdl_versions();
 
     if( !initialize_interface( cli ) ) {

@@ -5,9 +5,12 @@
 # all in-repo mods, in as few lines as possible.  Each line must contain only
 # mods which are mutually compatible.
 
-import glob
+import argparse
 import json
 import os
+from pathlib import Path
+import subprocess
+import tempfile
 
 mods_this_time = []
 mods_lists = []
@@ -60,39 +63,56 @@ all_mod_conflicts = {}
 total_conversions = set()
 obsolete_mods = set()
 
-for info in glob.glob('data/mods/*/modinfo.json'):
-    mod_info = json.load(open(info, encoding='utf-8'))
-    for e in mod_info:
-        if (e["type"] == "MOD_INFO"):
-            ident = e["id"]
-            if ("obsolete" in e and e["obsolete"]):
-                obsolete_mods.add(ident)
-                continue
-            all_mod_dependencies[ident] = e.get("dependencies", [])
-            all_mod_conflicts[ident] = e.get("conflicts", [])
-            if e["category"] == "total_conversion":
-                total_conversions.add(ident)
 
-for r, d, f in os.walk('data/mods'):
-    if 'mod_interactions' not in d:
+def read_mod_catalog():
+    parser = argparse.ArgumentParser(description="List compatible sets of bundled Mods")
+    parser.add_argument("--game", type=Path, help="path to a built CCB game binary")
+    args = parser.parse_args()
+    game = args.game
+    if game is None:
+        game = next((path for path in map(Path, ("cataclysm", "cataclysm-tiles"))
+                     if path.is_file() and os.access(path, os.X_OK)), None)
+    if game is None:
+        parser.error("no CCB binary found, pass its path with --game")
+    try:
+        with tempfile.TemporaryDirectory(prefix="ccb-mod-catalog-") as temp:
+            profile = Path(temp)
+            output = profile / "mods.json"
+            config = profile / "config"
+            config.mkdir()
+            subprocess.run([
+                str(game.resolve()),
+                "--datadir", str(Path("data").resolve()),
+                "--userdir", str(profile),
+                "--configdir", str(config),
+                "--mod-catalog", str(output),
+            ], check=True, stdout=subprocess.DEVNULL)
+            return json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        parser.exit(1, f"Cannot read the CCB Mod catalog: {error}\n")
+
+
+catalog = read_mod_catalog()
+for mod in catalog:
+    ident = mod["id"]
+    if mod["obsolete"]:
+        obsolete_mods.add(ident)
         continue
-    if 'modinfo.json' not in f:
-        continue
-    ident = ""
-    info_path = os.path.join(r, 'modinfo.json')
-    mod_info = json.load(open(info_path, encoding='utf-8'))
-    for e in mod_info:
-        if (e["type"] == "MOD_INFO" and
-                ("obsolete" not in e or not e["obsolete"])):
-            ident = e["id"]
-    if ident == "":
+    if "lua_error" in mod:
+        raise RuntimeError(f'{ident}: {mod["lua_error"]}')
+    all_mod_dependencies[ident] = mod["dependencies"]
+    all_mod_conflicts[ident] = mod["conflicts"]
+    if mod["category"] == "total_conversion":
+        total_conversions.add(ident)
+
+for mod in catalog:
+    ident = mod["id"]
+    if ident in obsolete_mods or not mod["interactions"]:
         continue
     add_mods([ident])
-    for mod in os.scandir(os.path.join(r, 'mod_interactions')):
-        ident = os.path.basename(mod.path)
-        if ident in obsolete_mods:
-            continue
-        add_mods([os.path.basename(mod.path)])
+    for companion in mod["interactions"]:
+        if companion not in obsolete_mods:
+            add_mods([companion])
     mods_lists.append(','.join(mods_this_time))
     mods_this_time.clear()
 
@@ -103,7 +123,7 @@ for ml in mods_lists:
     mods_remaining -= set(ml.split(','))
 
 while mods_remaining:
-    for mod in mods_remaining:
+    for mod in sorted(mods_remaining):
         if mod not in mods_this_time:
             add_mods([mod])
     if not mods_remaining & set(mods_this_time):

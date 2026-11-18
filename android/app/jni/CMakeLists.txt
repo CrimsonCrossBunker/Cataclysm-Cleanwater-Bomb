@@ -47,8 +47,10 @@ file(GLOB CATA_SOURCES CONFIGURE_DEPENDS ${CATA_REPO_ROOT}/src/*.cpp
      ${CATA_REPO_ROOT}/src/cata_allocator_c.c)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-file(GLOB_RECURSE BUILTIN_MODINFO CONFIGURE_DEPENDS
-     ${CATA_REPO_ROOT}/data/mods/**/modinfo.json)
+file(GLOB_RECURSE BUILTIN_MOD_SOURCES CONFIGURE_DEPENDS
+     ${CATA_REPO_ROOT}/data/mods/**/modinfo.json
+     ${CATA_REPO_ROOT}/data/mods/*/main.lua
+     ${CATA_REPO_ROOT}/data/mods/*/mod.lua)
 set(BUILTIN_MODS_HEADER ${CMAKE_CURRENT_BINARY_DIR}/builtin_mods_generated.h)
 execute_process(
   COMMAND ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
@@ -64,7 +66,7 @@ add_custom_command(
   COMMAND ${Python3_EXECUTABLE} ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py
           --source ${CATA_REPO_ROOT}/data/mods
           --output ${BUILTIN_MODS_HEADER}
-  DEPENDS ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py ${BUILTIN_MODINFO}
+  DEPENDS ${CATA_REPO_ROOT}/tools/generate_builtin_mods.py ${BUILTIN_MOD_SOURCES}
   WORKING_DIRECTORY ${CATA_REPO_ROOT}
   VERBATIM)
 add_custom_target(builtin_mod_manifest DEPENDS ${BUILTIN_MODS_HEADER})

@@ -31,14 +31,16 @@ then
 	echo "Test failure with dda"
 	exit
 fi
-for mod_set in `./build-scripts/get_all_mods.py`
+mod_sets=$(./build-scripts/get_all_mods.py "$@")
+while IFS= read -r mod_set
 do
+    [ -n "$mod_set" ] || continue
 	printf "Running %s\n", "$mod_set"
 	if ! $test_exe --mods="$mod_set" 'force_load_game'
 	then
 		printf "Test failure with mods '%s'\n" "$mod_set"
 		exit
 	fi
-done
+done <<< "$mod_sets"
 
 echo "All mod configurations good"

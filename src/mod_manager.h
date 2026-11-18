@@ -22,6 +22,7 @@
 #include "type_id.h"
 
 class JsonObject;
+class JsonOut;
 class dependency_tree;
 class mod_manager;
 struct WORLD;
@@ -149,6 +150,7 @@ class mod_manager
         void refresh_mod_list();
 
         std::vector<mod_id> all_mods() const;
+        void write_catalog( JsonOut &out ) const;
 
         /**
          * Returns the dependency tree for the loaded mods.
