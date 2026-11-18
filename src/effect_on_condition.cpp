@@ -238,7 +238,7 @@ character_task_migration matrix_crystal_migration( const char *id, const char *c
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 252> migrated_character_tasks = {{
+const std::array<character_task_migration, 254> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_unvitrified_return" ),
           "return_from_vitrification_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_FOCUS_DRAIN" ),
@@ -385,6 +385,10 @@ const std::array<character_task_migration, 252> migrated_character_tasks = {{
           "portal_awakening_medium_due", "portal_awakening_medium", true, "mindovermatter" },
         { effect_on_condition_id( "EOC_PORTAL_STORM_PSION_AWAKENING_CLOSE" ),
           "portal_awakening_close_due", "portal_awakening_close", true, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_SCEN_HEART_OF_FIRE_INITIATE" ),
+          "heart_of_fire_start_due", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_MOM_SCEN_HEART_OF_FIRE_RECURRING" ),
+          "heart_of_fire_pressure_due", nullptr, false, "mindovermatter" },
         matrix_crystal_migration( "EOC_BIOKIN_CRYSTAL_DRAINING", "matrix_crystal_biokinesis" ),
         matrix_crystal_migration( "EOC_CLAIR_CRYSTAL_DRAINING", "matrix_crystal_clairsentience" ),
         matrix_crystal_migration( "EOC_ELECTRO_CRYSTAL_DRAINING", "matrix_crystal_electrokinesis" ),

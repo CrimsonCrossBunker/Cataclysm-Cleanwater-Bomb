@@ -92,6 +92,8 @@ require("ammo_effects")
 require("mutation_artifact")
 require("artifact_effects")
 require("matrix_awakening")
+require("heart_of_fire")
+require("scenarios")
 require("artifact_spells")
 
 require("tool_qualities")
