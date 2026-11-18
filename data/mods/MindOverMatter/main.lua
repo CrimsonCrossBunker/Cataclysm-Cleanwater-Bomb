@@ -161,4 +161,6 @@ require("practice_recipes")
 
 require("photokinesis_food_recipes")
 
+require("psychic_concentration")
+
 require("psychic_contemplation_activity")
