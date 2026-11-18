@@ -385,8 +385,10 @@ void install_activity_api(
             sol::this_state lua,
             const game_handle & handle,
             const script_game_id & id,
-    const script_time_duration & duration ) {
+    const script_time_duration & duration,
+    const sol::optional<sol::table> & options ) {
         require_write();
+        const bool allow_auto_needs = options && options->get_or( "allow_auto_needs", false );
         if( id.kind() != "activity" || !id.is_valid() ) {
             throw std::invalid_argument(
                 "services.activities.assign_timed requires a valid GameId<activity>" );
@@ -438,7 +440,7 @@ void install_activity_api(
                 "services.activities.assign_timed requires a time-based activity"
             } );
         }
-        if( definition.multi_activity() || definition.valid_auto_needs() ) {
+        if( definition.multi_activity() || ( definition.valid_auto_needs() && !allow_auto_needs ) ) {
             return make_game_error_result( state, {
                 "specialized_activity",
                 "services.activities.assign_timed cannot construct a managed activity workflow"

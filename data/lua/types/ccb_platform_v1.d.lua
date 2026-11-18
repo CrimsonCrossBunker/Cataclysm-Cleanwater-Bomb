@@ -13099,14 +13099,17 @@ local CcbPlatformActivitiesApi = {}
 ---@return CcbResult result `value` is a CcbPlatformCharacterActivitySnapshot.
 function CcbPlatformActivitiesApi.snapshot(character) end
 
+---@class CcbTimedActivityOptions
+---@field allow_auto_needs? boolean Permit an activity whose definition enables native automatic needs.
+
 ---Assign a plain time-based activity through native Character assignment rules.
----Native actors/handlers, EOC policies, multi-activity workflows, automatic-needs
----activities, and speed/neither budgets require dedicated Lua-native services.
+---Native actors/handlers, EOC policies, multi-activity workflows, and speed/neither budgets require dedicated services.
 ---@param character GameHandle Character handle.
 ---@param id GameId GameId<activity>
 ---@param duration TimeDuration Positive duration whose move budget fits the native integer range.
+---@param options? CcbTimedActivityOptions Authorizes automatic-needs handling when the activity opts into it.
 ---@return CcbResult result `value` is a CcbPlatformActivityMutation.
-function CcbPlatformActivitiesApi.assign_timed(character, id, duration) end
+function CcbPlatformActivitiesApi.assign_timed(character, id, duration, options) end
 
 ---Cancel the current activity through native cleanup, backlog, and resumption rules.
 ---@param character GameHandle Character handle.
