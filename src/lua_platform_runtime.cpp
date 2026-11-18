@@ -296,17 +296,20 @@ struct scenario_definition_data {
     std::optional<std::int64_t> points;
     std::optional<bool> blacklist;
     std::optional<bool> extra_professions;
+    std::optional<bool> hobbies_whitelist;
     std::optional<bool> reveal_locale;
     std::optional<bool> hard_requirement;
     std::optional<std::int64_t> distance_initial_visibility;
     std::vector<std::string> locations;
     std::vector<std::string> professions;
+    std::vector<std::string> hobbies;
     std::vector<std::string> allowed_traits;
     std::vector<std::string> forced_traits;
     std::vector<std::string> forbidden_traits;
     std::vector<std::string> flags;
     bool has_locations = false;
     bool has_professions = false;
+    bool has_hobbies = false;
     bool has_allowed_traits = false;
     bool has_forced_traits = false;
     bool has_forbidden_traits = false;
@@ -4093,6 +4096,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         definition->points = read_integer( "points" );
         definition->blacklist = read_boolean( "blacklist" );
         definition->extra_professions = read_boolean( "extra_professions" );
+        definition->hobbies_whitelist = read_boolean( "whitelist_hobbies" );
         definition->reveal_locale = read_boolean( "reveal_locale" );
         definition->hard_requirement = read_boolean( "hard_requirement" );
         definition->distance_initial_visibility = read_integer( "distance_initial_visibility" );
@@ -4104,6 +4108,7 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         read_ids( "locations", definition->locations, definition->has_locations );
         read_ids( "professions", definition->professions, definition->has_professions );
+        read_ids( "hobbies", definition->hobbies, definition->has_hobbies );
         read_ids( "allowed_traits", definition->allowed_traits, definition->has_allowed_traits );
         read_ids( "forced_traits", definition->forced_traits, definition->has_forced_traits );
         read_ids( "forbidden_traits", definition->forbidden_traits, definition->has_forbidden_traits );
@@ -7603,6 +7608,13 @@ bool content_transaction::validate( const runtime &owner_runtime,
                                               "' references unknown profession '" + profession + "'" );
                 }
             }
+            for( const std::string &hobby : definition.hobbies ) {
+                const profession_id hobby_id( hobby );
+                if( !hobby_id.is_valid() || !hobby_id->is_hobby() ) {
+                    throw std::runtime_error( "scenario '" + definition.id +
+                                              "' references an unavailable hobby '" + hobby + "'" );
+                }
+            }
             for( const std::string &trait : definition.allowed_traits ) {
                 if( !trait_id( trait ).is_valid() ) {
                     throw std::runtime_error( "scenario '" + definition.id +
@@ -9607,6 +9619,7 @@ bool content_transaction::apply( std::string &error )
             assign( native._point_cost, source.points );
             assign( native.blacklist, source.blacklist );
             assign( native.extra_professions, source.extra_professions );
+            assign( native.hobbies_whitelist, source.hobbies_whitelist );
             assign( native.reveal_locale, source.reveal_locale );
             assign( native.hard_requirement, source.hard_requirement );
             assign( native.distance_initial_visibility, source.distance_initial_visibility );
@@ -9625,6 +9638,12 @@ bool content_transaction::apply( std::string &error )
             }
             for( const std::string &profession : source.professions ) {
                 native.professions.push_back( profession_id( profession ) );
+            }
+            if( source.has_hobbies ) {
+                native.hobby_exclusion.clear();
+                for( const std::string &hobby : source.hobbies ) {
+                    native.hobby_exclusion.emplace( hobby );
+                }
             }
             if( source.has_allowed_traits ) {
                 native._allowed_traits.clear();
@@ -11806,6 +11825,16 @@ std::string content_transaction::fingerprint() const
         for( const std::string &profession : value.professions ) {
             hash_part( state, "profession" );
             hash_part( state, profession );
+        }
+        if( value.hobbies_whitelist ) {
+            hash_part( state, *value.hobbies_whitelist ? "hobby_whitelist" : "hobby_blacklist" );
+        }
+        if( value.has_hobbies ) {
+            hash_part( state, "set_hobbies" );
+            for( const std::string &hobby : value.hobbies ) {
+                hash_part( state, "hobby" );
+                hash_part( state, hobby );
+            }
         }
         hash_part( state, value.has_allowed_traits ? "set_allowed_traits" : "inherit_allowed_traits" );
         for( const std::string &trait : value.allowed_traits ) {

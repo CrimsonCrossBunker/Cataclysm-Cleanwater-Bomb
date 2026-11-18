@@ -1796,6 +1796,7 @@ local ItemActionDefinition = {}
 ---@field points? integer Character-creation point cost; defaults to 0.
 ---@field blacklist? boolean Professions are a blacklist instead of a whitelist.
 ---@field extra_professions? boolean Professions add to the default set.
+---@field whitelist_hobbies? boolean Use the hobby list as a whitelist. False excludes the listed hobbies. Omitted values inherit or default to true.
 ---@field reveal_locale? boolean Whether the start locale is revealed; defaults to true.
 ---@field hard_requirement? boolean Whether the unlock requirement applies with metaprogression disabled.
 ---@field distance_initial_visibility? integer Initial overmap visibility distance.
@@ -1804,6 +1805,7 @@ local ItemActionDefinition = {}
 ---@field on_start? string Registered character-start handler; empty string removes an inherited handler.
 ---@field locations? string[] Starting-location ids. Arrays replace inherited lists, including an explicit empty array; a scenario must retain at least one location.
 ---@field professions? string[] Profession ids replacing the inherited list.
+---@field hobbies? string[] Hobby ids replacing the inherited list. An explicit empty array clears the list.
 ---@field allowed_traits? string[] Selectable trait ids replacing the inherited set.
 ---@field forced_traits? string[] Forced trait ids replacing the inherited set.
 ---@field forbidden_traits? string[] Forbidden trait ids replacing the inherited set.
@@ -14658,6 +14660,7 @@ local CcbPlatformGameplayApi = {}
 ---@field dead boolean
 ---@field hp integer
 ---@field hp_max integer
+---@field perceived_pain integer Native perceived pain after applicable pain relief.
 
 ---@class CcbCreaturesApi
 local CcbCreaturesApi = {}
