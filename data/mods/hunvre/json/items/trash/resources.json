@@ -1,19 +1,5 @@
 [
   {
-    "id": "contaminated_dirt",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str_sp": "contaminated dirt" },
-    "description": "Brownish biological matter mixed with toxic contaminants, generally a byproduct of cleaning processes, it's meant to be further processed and its components separated to be of any use.",
-    "color": "brown",
-    "symbol": "=",
-    "price_postapoc": "0 cent",
-    "volume": "5 L",
-    "weight": "6250 g",
-    "material": [ "soil", "plastic" ],
-    "display_type": "BY_VOLUME"
-  },
-  {
     "id": "nurdle",
     "type": "ITEM",
     "category": "spare_parts",

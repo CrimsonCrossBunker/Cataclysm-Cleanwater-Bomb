@@ -28,3 +28,5 @@ require("scenario_filters")
 require("overmap_locations")
 
 require("item_groups")
+
+require("generic_items")
