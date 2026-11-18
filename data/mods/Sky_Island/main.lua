@@ -42,6 +42,10 @@ require("island_generation")
 
 require("island_start")
 
+if require("ccb").content.is_mod_active("xedra_evolved") then
+    require("mod_interactions.xedra_evolved.character_start")
+end
+
 require("island_legacy_load")
 
 require("island_heart")
