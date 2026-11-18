@@ -193,3 +193,21 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "dream_drainer_catalyst",
+        name = ccb.content.plural_text("dream-drainer catalyst", "dream-drainer catalyst"),
+        color = "light_blue",
+        volume_ml = 250,
+        mass_milligrams = 10000,
+        symbol = "@",
+        description = ccb.content.text("A small ball of dreams, Fae blood and illicit substances from Under the Hill.  Your book claims it will transform any mosquito ingesting it in a dream-eating nightmare."),
+    }
+    item:clear_use_actions()
+    item:cast_spell { spell = "dream_drainer_maker", no_fail = true, level = 1 }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:tool()
+    content.add(item)
+end
