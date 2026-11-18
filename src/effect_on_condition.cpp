@@ -221,17 +221,24 @@ struct character_task_migration {
     const char *timer_key;
     bool global = false;
     const char *mod = "xedra_evolved";
-    const char *spell = nullptr;
+    const char *payload_key = nullptr;
+    const char *payload_value = nullptr;
 };
 
 character_task_migration psychic_learning_migration( const char *id, const char *spell )
 {
     return { effect_on_condition_id( id ), "psychic_contemplation_learn", nullptr,
-             false, "mindovermatter", spell };
+             false, "mindovermatter", "spell", spell };
+}
+
+character_task_migration matrix_crystal_migration( const char *id, const char *crystal )
+{
+    return { effect_on_condition_id( id ), "drain_matrix_crystal", nullptr,
+             false, "mindovermatter", "crystal", crystal };
 }
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 239> migrated_character_tasks = {{
+const std::array<character_task_migration, 252> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_unvitrified_return" ),
           "return_from_vitrification_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_HEDGE_RESEARCH_FOCUS_DRAIN" ),
@@ -372,6 +379,22 @@ const std::array<character_task_migration, 239> migrated_character_tasks = {{
           "portal_scarlet_return_due", nullptr, false, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_OUBLIETTE_RETURN" ),
           "mom_oubliette_return_due", nullptr, false, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PORTAL_STORM_PSION_AWAKENING_DISTANT" ),
+          "portal_awakening_distant_due", "portal_awakening_distant", true, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PORTAL_STORM_PSION_AWAKENING_MEDIUM" ),
+          "portal_awakening_medium_due", "portal_awakening_medium", true, "mindovermatter" },
+        { effect_on_condition_id( "EOC_PORTAL_STORM_PSION_AWAKENING_CLOSE" ),
+          "portal_awakening_close_due", "portal_awakening_close", true, "mindovermatter" },
+        matrix_crystal_migration( "EOC_BIOKIN_CRYSTAL_DRAINING", "matrix_crystal_biokinesis" ),
+        matrix_crystal_migration( "EOC_CLAIR_CRYSTAL_DRAINING", "matrix_crystal_clairsentience" ),
+        matrix_crystal_migration( "EOC_ELECTRO_CRYSTAL_DRAINING", "matrix_crystal_electrokinesis" ),
+        matrix_crystal_migration( "EOC_PHOTOKIN_CRYSTAL_DRAINING", "matrix_crystal_photokinesis" ),
+        matrix_crystal_migration( "EOC_PYROKIN_CRYSTAL_DRAINING", "matrix_crystal_pyrokinesis" ),
+        matrix_crystal_migration( "EOC_TELEKIN_CRYSTAL_DRAINING", "matrix_crystal_telekinesis" ),
+        matrix_crystal_migration( "EOC_TELEPATH_CRYSTAL_DRAINING", "matrix_crystal_telepathy" ),
+        matrix_crystal_migration( "EOC_TELEPORT_CRYSTAL_DRAINING", "matrix_crystal_teleportation" ),
+        matrix_crystal_migration( "EOC_VITAKIN_CRYSTAL_DRAINING", "matrix_crystal_vitakinesis" ),
+        matrix_crystal_migration( "EOC_CORUSCATING_CRYSTAL_DRAINING", "matrix_crystal_coruscating" ),
         { effect_on_condition_id( "EOC_PORTAL_EFFECTS_ACTIVE" ),
           "portal_active_effects_due", nullptr, true, "ccb" },
         { effect_on_condition_id( "EOC_PORTAL_HIGHLANDS_RETURN" ),
@@ -660,9 +683,9 @@ void cata::lua_platform::ensure_avatar_turn_task( time_point due, std::string_vi
 
 static void process_new_eocs( queued_eocs &eoc_queue,
                               std::vector<effect_on_condition_id> &eoc_vector,
-                              std::map<effect_on_condition_id, bool> &new_eocs, Character *actor )
+                              std::map<effect_on_condition_id, bool> &new_eocs,
+                              [[maybe_unused]] Character &actor, bool global_queue )
 {
-    const bool global_queue = actor == nullptr;
     queued_eocs temp_queued_eocs;
     while( !eoc_queue.empty() ) {
         const queued_eoc &entry = eoc_queue.top();
@@ -697,19 +720,20 @@ static void process_new_eocs( queued_eocs &eoc_queue,
                     task_data.emplace( "item_id", diag_value( serialized.str() ) );
                 }
             }
-            if( migration->spell ) {
+            if( migration->payload_key ) {
                 std::ostringstream serialized;
                 JsonOut json( serialized );
                 json.start_object();
-                cata::lua_platform::detail::write_persistent_value( json, std::string( migration->spell ) );
+                cata::lua_platform::detail::write_persistent_value(
+                    json, std::string( migration->payload_value ) );
                 json.end_object();
-                task_data.emplace( "spell", diag_value( serialized.str() ) );
+                task_data.emplace( migration->payload_key, diag_value( serialized.str() ) );
             }
             temp_queued_eocs.push( character_task_record( entry.time, migration->mod,
                                    migration->handler, task_data ) );
-            if( actor && migration->timer_key ) {
+            if( migration->timer_key ) {
                 cata::lua_platform::assign_persistent_value(
-                    actor->lua_character_state.for_mod( migration->mod ), migration->timer_key,
+                    actor.lua_character_state.for_mod( migration->mod ), migration->timer_key,
                     std::string( "scheduled" ) );
             }
             eoc_queue.pop();
@@ -727,14 +751,12 @@ static void process_new_eocs( queued_eocs &eoc_queue,
     for( auto eoc = eoc_vector.begin();
          eoc != eoc_vector.end(); ) {
 #if defined(CATA_ENABLE_LUA_PLATFORM) && CATA_ENABLE_LUA_PLATFORM
-        if( actor ) {
-            if( const character_task_migration *migration = find_migrated_task( *eoc, false );
-                migration && migration->timer_key ) {
-                auto &state = actor->lua_character_state.for_mod( migration->mod );
-                if( state.count( migration->timer_key ) == 0 ) {
-                    cata::lua_platform::assign_persistent_value(
-                        state, migration->timer_key, std::string( "dormant" ) );
-                }
+        if( const character_task_migration *migration = find_migrated_task( *eoc, global_queue );
+            migration && migration->timer_key ) {
+            auto &state = actor.lua_character_state.for_mod( migration->mod );
+            if( state.count( migration->timer_key ) == 0 ) {
+                cata::lua_platform::assign_persistent_value(
+                    state, migration->timer_key, std::string( "dormant" ) );
             }
         }
 #endif
@@ -758,10 +780,10 @@ void effect_on_conditions::load_existing_character( Character &you )
         }
     }
     process_new_eocs( you.queued_effect_on_conditions, you.inactive_effect_on_condition_vector,
-                      new_eocs, &you );
+                      new_eocs, you, false );
     if( is_avatar ) {
         process_new_eocs( g->queued_global_effect_on_conditions,
-                          g->inactive_global_effect_on_condition_vector, new_eocs, nullptr );
+                          g->inactive_global_effect_on_condition_vector, new_eocs, you, true );
     }
 
     for( const std::pair<const effect_on_condition_id, bool> &eoc_pair : new_eocs ) {

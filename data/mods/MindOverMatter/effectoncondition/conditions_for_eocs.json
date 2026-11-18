@@ -195,12 +195,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_CONDITION_AWAKENING_X_IN_Y_CHANCE",
-    "condition": { "x_in_y_chance": { "x": { "math": [ "u_awakening_reducer" ] }, "y": 100 } },
-    "effect": [  ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_STORM_CONDITION_FLAG_PORTAL_PROOF",
     "condition": {
       "and": [
