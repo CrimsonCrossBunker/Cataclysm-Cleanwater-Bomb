@@ -128,18 +128,6 @@
     "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "GRENADE" ]
   },
   {
-    "id": "afs_electroshock_grenade_1_act",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "afs_electroshock_grenade_1",
-    "looks_like": "grenade_emp_act",
-    "name": "armed electroshock grenade",
-    "description": "This electroshock grenade is currently creating a dangerous electric field.",
-    "emits": [ "emit_shock_cloud" ],
-    "revert_to": "afs_material_1",
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
     "id": "grenade_cryo",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -249,16 +237,6 @@
       "type": "transform"
     },
     "flags": [ "RADIO_MODABLE", "RADIO_INVOKE_PROC", "BOMB", "NPC_ACTIVATE" ]
-  },
-  {
-    "id": "afs_oxygen_bomb_act",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "pipebomb_act",
-    "looks_like": "pipebomb_act",
-    "name": "active oxygen bomb",
-    "price": "0 USD",
-    "description": "This bomb's fuse is lit, and it will explode any second now.  Throw it immediately!"
   },
   {
     "id": "afs_reactor_unstable",
