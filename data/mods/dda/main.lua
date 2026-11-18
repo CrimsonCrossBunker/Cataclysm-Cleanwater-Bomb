@@ -464,3 +464,7 @@ require("generic_items")
 require("inherited_items")
 
 require("active_items")
+
+require("contact_lenses")
+
+require("fidget_spinner")

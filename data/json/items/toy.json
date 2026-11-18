@@ -336,26 +336,6 @@
     ]
   },
   {
-    "type": "ITEM",
-    "id": "fidget_spinner",
-    "name": { "str": "fidget spinner" },
-    "description": "A fidget spinner.  An artifact from when the times were simpler.",
-    "category": "other",
-    "material": [ "plastic", "steel" ],
-    "weight": "75 g",
-    "volume": "185 ml",
-    "longest_side": "10 cm",
-    "use_action": {
-      "type": "effect_on_conditions",
-      "menu_text": "Spin",
-      "effect_on_conditions": [ { "id": "EOC_spinner_spinning", "effect": { "u_message": "You spin your fidget spinner." } } ]
-    },
-    "price": "5 USD",
-    "price_postapoc": "5 cent",
-    "symbol": "/",
-    "color": "green"
-  },
-  {
     "id": "imperfect_doll_complete",
     "type": "ITEM",
     "name": { "str": "imperfect doll" },
