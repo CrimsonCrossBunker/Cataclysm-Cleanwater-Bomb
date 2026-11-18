@@ -478,3 +478,5 @@ require("map_item_actions")
 require("readable_files")
 
 require("tarot_cards")
+
+require("dimension_orbs")
