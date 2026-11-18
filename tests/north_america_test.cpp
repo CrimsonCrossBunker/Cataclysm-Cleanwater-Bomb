@@ -36,6 +36,19 @@ static const itype_id itype_boots_western( "boots_western" );
 static const mtype_id mon_zombie_swat( "mon_zombie_swat" );
 static const mtype_id mon_zombie_swat_ca( "mon_zombie_swat_ca" );
 
+static const ter_str_id ter_t_atlas_soil_heavy_clay( "t_atlas_soil_heavy_clay" );
+static const ter_str_id ter_t_atlas_soil_loam( "t_atlas_soil_loam" );
+static const ter_str_id ter_t_atlas_soil_prairie( "t_atlas_soil_prairie" );
+static const ter_str_id ter_t_atlas_soil_prairie_dead_grass( "t_atlas_soil_prairie_dead_grass" );
+static const ter_str_id ter_t_atlas_soil_prairie_grass( "t_atlas_soil_prairie_grass" );
+static const ter_str_id ter_t_atlas_soil_prairie_long_grass( "t_atlas_soil_prairie_long_grass" );
+static const ter_str_id ter_t_atlas_soil_prairie_tilled( "t_atlas_soil_prairie_tilled" );
+static const ter_str_id ter_t_atlas_soil_sandy_loam( "t_atlas_soil_sandy_loam" );
+static const ter_str_id ter_t_dirt( "t_dirt" );
+static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
+static const ter_str_id ter_t_grass_dead( "t_grass_dead" );
+static const ter_str_id ter_t_grass_long( "t_grass_long" );
+
 static void check_regional_item_group( const item_group_id &base, const item_group_id &expected )
 {
     const item_group_id *const regional = north_america::regional_item_group( base );
@@ -77,46 +90,49 @@ TEST_CASE( "north_america_sets_local_civic_flags_and_supplies", "[north_america]
 
 TEST_CASE( "prairie_soil_keeps_its_terrain_through_planting", "[north_america][farming]" )
 {
-    const ter_str_id prairie( "t_atlas_soil_prairie" );
-    const ter_str_id prairie_tilled( "t_atlas_soil_prairie_tilled" );
-    const ter_str_id dirt( "t_dirt" );
-    const ter_str_id dirtmound( "t_dirtmound" );
 
-    CHECK( north_america::mapped_soil_at( point_abs_ms( -2341315, -1609560 ) ) == prairie );
-    CHECK( north_america::mapped_soil_at( point_abs_ms( -2015172, -1184597 ) ) == prairie );
-    CHECK( north_america::mapped_soil_at( point_abs_ms( -2660946, -1974662 ) ) == prairie );
-    REQUIRE( prairie.is_valid() );
-    REQUIRE( prairie_tilled.is_valid() );
-    CHECK( prairie->has_flag( ter_furn_flag::TFLAG_DIGGABLE ) );
-    CHECK( prairie->has_flag( ter_furn_flag::TFLAG_PLOWABLE ) );
-    CHECK( prairie_tilled->has_flag( ter_furn_flag::TFLAG_PLANTABLE ) );
-    CHECK( north_america::canonical_soil( prairie.id() ) == dirt );
-    CHECK( north_america::canonical_soil( prairie_tilled.id() ) == dirtmound );
-    CHECK( north_america::tilled_soil( prairie.id() ) == prairie_tilled );
-    CHECK( north_america::planted_soil( prairie_tilled.id() ) == prairie );
-    CHECK( north_america::tilled_soil( dirt.id() ) == dirtmound );
-    CHECK( north_america::planted_soil( dirtmound.id() ) == dirt );
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2341315,
+                                          -1609560 ) ) == ter_t_atlas_soil_prairie );
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2015172,
+                                          -1184597 ) ) == ter_t_atlas_soil_prairie );
+    CHECK( north_america::mapped_soil_at( point_abs_ms( -2660946,
+                                          -1974662 ) ) == ter_t_atlas_soil_prairie );
+    REQUIRE( ter_t_atlas_soil_prairie.is_valid() );
+    REQUIRE( ter_t_atlas_soil_prairie_tilled.is_valid() );
+    CHECK( ter_t_atlas_soil_prairie->has_flag( ter_furn_flag::TFLAG_DIGGABLE ) );
+    CHECK( ter_t_atlas_soil_prairie->has_flag( ter_furn_flag::TFLAG_PLOWABLE ) );
+    CHECK( ter_t_atlas_soil_prairie_tilled->has_flag( ter_furn_flag::TFLAG_PLANTABLE ) );
+    CHECK( north_america::canonical_soil( ter_t_atlas_soil_prairie.id() ) == ter_t_dirt );
+    CHECK( north_america::canonical_soil( ter_t_atlas_soil_prairie_tilled.id() ) == ter_t_dirtmound );
+    CHECK( north_america::tilled_soil( ter_t_atlas_soil_prairie.id() ) ==
+           ter_t_atlas_soil_prairie_tilled );
+    CHECK( north_america::planted_soil( ter_t_atlas_soil_prairie_tilled.id() ) ==
+           ter_t_atlas_soil_prairie );
+    CHECK( north_america::tilled_soil( ter_t_dirt.id() ) == ter_t_dirtmound );
+    CHECK( north_america::planted_soil( ter_t_dirtmound.id() ) == ter_t_dirt );
 
-    const ter_str_id long_grass( "t_atlas_soil_prairie_long_grass" );
-    REQUIRE( long_grass.is_valid() );
-    CHECK( north_america::canonical_soil( long_grass.id() ) == ter_str_id( "t_grass_long" ) );
-    CHECK( long_grass->has_flag( ter_furn_flag::TFLAG_SMALL_HIDE ) );
-    CHECK( long_grass->transforms_into == ter_str_id( "t_atlas_soil_prairie_grass" ) );
-    CHECK( north_america::tilled_soil( long_grass.id() ) == prairie_tilled );
-    CHECK( north_america::preserve_soil( long_grass.id(), ter_str_id( "t_grass_dead" ).id() ) ==
-           ter_str_id( "t_atlas_soil_prairie_dead_grass" ) );
+    REQUIRE( ter_t_atlas_soil_prairie_long_grass.is_valid() );
+    CHECK( north_america::canonical_soil( ter_t_atlas_soil_prairie_long_grass.id() ) ==
+           ter_t_grass_long );
+    CHECK( ter_t_atlas_soil_prairie_long_grass->has_flag( ter_furn_flag::TFLAG_SMALL_HIDE ) );
+    CHECK( ter_t_atlas_soil_prairie_long_grass->transforms_into == ter_t_atlas_soil_prairie_grass );
+    CHECK( north_america::tilled_soil( ter_t_atlas_soil_prairie_long_grass.id() ) ==
+           ter_t_atlas_soil_prairie_tilled );
+    CHECK( north_america::preserve_soil( ter_t_atlas_soil_prairie_long_grass.id(),
+                                         ter_t_grass_dead.id() ) ==
+           ter_t_atlas_soil_prairie_dead_grass );
 }
 
 TEST_CASE( "atlas_soils_affect_the_crop_root_zone_after_tilling", "[north_america][farming]" )
 {
-    const ter_str_id loam( "t_atlas_soil_loam" );
-    const ter_str_id sand( "t_atlas_soil_sandy_loam" );
-    const ter_str_id clay( "t_atlas_soil_heavy_clay" );
-    const ter_str_id prairie( "t_atlas_soil_prairie" );
-    const auto baseline = north_america::crop_soil_at( loam.id() );
-    const auto loose = north_america::crop_soil_at( north_america::tilled_soil( sand.id() ) );
-    const auto dense = north_america::crop_soil_at( clay.id() );
-    const auto black_soil = north_america::crop_soil_at( prairie.id() );
+    const north_america::crop_soil_properties baseline = north_america::crop_soil_at(
+                ter_t_atlas_soil_loam.id() );
+    const north_america::crop_soil_properties loose = north_america::crop_soil_at(
+                north_america::tilled_soil( ter_t_atlas_soil_sandy_loam.id() ) );
+    const north_america::crop_soil_properties dense = north_america::crop_soil_at(
+                ter_t_atlas_soil_heavy_clay.id() );
+    const north_america::crop_soil_properties black_soil = north_america::crop_soil_at(
+                ter_t_atlas_soil_prairie.id() );
 
     CHECK( loose.water_capacity < baseline.water_capacity );
     CHECK( loose.drainage > dense.drainage );
@@ -124,9 +140,10 @@ TEST_CASE( "atlas_soils_affect_the_crop_root_zone_after_tilling", "[north_americ
     CHECK( black_soil.water_capacity > baseline.water_capacity );
     CHECK( black_soil.root_growth > dense.root_growth );
 
-    const ter_id planted = north_america::planted_soil( north_america::tilled_soil( prairie.id() ) );
+    const ter_id planted = north_america::planted_soil( north_america::tilled_soil(
+                               ter_t_atlas_soil_prairie.id() ) );
     CHECK( north_america::crop_soil_at( planted ).water_capacity == black_soil.water_capacity );
-    CHECK( north_america::crop_soil_at( ter_str_id( "t_dirt" ).id() ).root_growth ==
+    CHECK( north_america::crop_soil_at( ter_t_dirt.id() ).root_growth ==
            baseline.root_growth );
 }
 
