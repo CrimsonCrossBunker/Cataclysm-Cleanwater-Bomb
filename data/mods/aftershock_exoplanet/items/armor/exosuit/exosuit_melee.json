@@ -29,28 +29,6 @@
     "melee_damage": { "bash": 30, "cut": 45 }
   },
   {
-    "id": "scrap_axe",
-    "type": "ITEM",
-    "symbol": "/",
-    "color": "light_gray",
-    "name": "makeshift boarding axe",
-    "ascii_picture": "halberd",
-    "description": "This is an oversized axe made from scraps of salvaged metal.  While not as versatile or durable as the boarding axe, it still packs a punch.",
-    "weight": "9250 g",
-    "price": "60 USD",
-    "price_postapoc": "60 USD",
-    "volume": "2750 ml",
-    "longest_side": "120 cm",
-    "techniques": [ "WBLOCK_1", "BRUTAL", "SWEEP" ],
-    "qualities": [ [ "AXE", 2 ], [ "BUTCHER", -30 ] ],
-    "to_hit": { "grip": "solid", "length": "long", "surface": "line", "balance": "uneven" },
-    "material": [ "budget_steel", "rubber" ],
-    "weapon_category": [ "HOOKING_WEAPONRY", "GREAT_AXES" ],
-    "flags": [ "NONCONDUCTIVE", "SHEATH_AXE", "BELT_CLIP" ],
-    "category": "weapons",
-    "melee_damage": { "bash": 30, "cut": 35 }
-  },
-  {
     "id": "heavy_drill",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],

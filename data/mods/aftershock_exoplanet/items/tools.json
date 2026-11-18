@@ -447,19 +447,6 @@
     "melee_damage": { "bash": 6, "cut": 80 }
   },
   {
-    "type": "ITEM",
-    "id": "afs_oxygen_candle",
-    "symbol": "*",
-    "color": "light_gray",
-    "name": { "str": "oxygen candle" },
-    "description": "An ignitable device that produces oxygen through an exothermic chemical reaction.  Often stocked as the last backup in case of total life support failure.  You could activate it, but that would just waste it.",
-    "material": [ "steel" ],
-    "weight": "840 g",
-    "volume": "500 ml",
-    "to_hit": -1,
-    "melee_damage": { "bash": 5 }
-  },
-  {
     "id": "UPS_OFF",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
@@ -820,24 +807,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "diamond_press",
-    "type": "ITEM",
-    "category": "tools",
-    "name": { "str": "folded diamond press", "str_pl": "folded diamond presses" },
-    "description": "Matrioshka Fabritechnics this device that can create pressures beyond those that create diamonds.  Once deployed it can be used to craft ultratech marvels that require substances of singular qualities.",
-    "weight": "8464 g",
-    "volume": "11356 ml",
-    "price": "50 USD",
-    "price_postapoc": "450 USD",
-    "looks_like": "kiln",
-    "symbol": "u",
-    "color": "light_green",
-    "use_action": { "type": "deploy_furn", "furn_type": "f_diamond_press" },
-    "material": [ "superalloy" ],
-    "flags": [ "DURABLE_MELEE" ],
-    "melee_damage": { "bash": 5 }
-  },
-  {
     "id": "pseudo_diamond_press",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -950,43 +919,6 @@
     "use_action": { "type": "deploy_appliance", "base": "afs_battery_charger" },
     "flags": [ "NO_SALVAGE", "NO_UNLOAD", "NO_RELOAD" ],
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 100 } } ]
-  },
-  {
-    "type": "ITEM",
-    "id": "afs_survival_heater",
-    "name": { "str": "portable survival heater" },
-    "description": "When deployed and powered this device can warm a small room enough to doff your EVA gear.",
-    "looks_like": "large_space_heater",
-    "weight": "1224 g",
-    "to_hit": { "grip": "none", "length": "hand", "surface": "any", "balance": "uneven" },
-    "use_action": { "type": "deploy_appliance", "base": "afs_survival_heater" },
-    "color": "red",
-    "symbol": ";",
-    "material": [ "steel" ],
-    "volume": "9464 ml",
-    "category": "veh_parts",
-    "price": "1000 USD",
-    "price_postapoc": "1000 USD",
-    "melee_damage": { "bash": 8 }
-  },
-  {
-    "type": "ITEM",
-    "id": "afs_tripod_light",
-    "name": { "str": "portable survival lamp" },
-    "description": "A small folded metal tripod that can be deployed to illuminate an area around itself.",
-    "looks_like": "f_floor_lamp",
-    "weight": "825 g",
-    "to_hit": { "grip": "solid", "length": "long", "surface": "any", "balance": "uneven" },
-    "material": [ "plastic", "steel" ],
-    "volume": "871 ml",
-    "longest_side": "43 cm",
-    "symbol": "L",
-    "use_action": { "type": "deploy_appliance", "base": "afs_tripod_light" },
-    "color": "white",
-    "category": "veh_parts",
-    "price": "20 USD",
-    "price_postapoc": "20 USD",
-    "melee_damage": { "bash": 5 }
   },
   {
     "id": "afs_survival_battery",
