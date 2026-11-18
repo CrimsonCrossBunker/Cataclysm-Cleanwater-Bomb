@@ -328,31 +328,6 @@
     "tool_ammo": [ "butane" ]
   },
   {
-    "id": "tinderbox",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "ember carrier" },
-    "description": "A small container for holding tinder, with holes punched in it to provide a controlled airflow.  It can nurture a smoldering ember for a long time, to start fires without modern tools.",
-    "weight": "40 g",
-    "volume": "263 ml",
-    "price": "10 USD",
-    "price_postapoc": "1 USD",
-    "material": [ "steel" ],
-    "symbol": ",",
-    "color": "light_gray",
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "tinder": 50 } } ],
-    "use_action": {
-      "target": "tinderbox_on",
-      "menu_text": { "str": "Light", "ctxt": "verb" },
-      "msg": "You light the tinder.",
-      "need_fire": 1,
-      "need_charges": 1,
-      "need_charges_msg": "The ember carrier is out of tinder.",
-      "type": "transform"
-    },
-    "tool_ammo": [ "tinder" ]
-  },
-  {
     "id": "tinderbox_on",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
