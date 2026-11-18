@@ -63,6 +63,8 @@ require("position_techniques")
 require("combat_techniques")
 require("nested_recipes")
 
+require("exodii_crash_mapgen")
+
 require("morale_types")
 
 require("flags")

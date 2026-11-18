@@ -40,6 +40,8 @@ require("island_overmap")
 
 require("island_generation")
 
+require("exodii_crash_mapgen")
+
 require("island_start")
 
 if require("ccb").content.is_mod_active("xedra_evolved") then
