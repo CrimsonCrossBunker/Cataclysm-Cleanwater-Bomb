@@ -133,12 +133,6 @@
     }
   },
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_geas_knight",
-    "entries": [ { "item": "iso_bolt_blackwood_bodkin", "charges": 16 } ]
-  },
-  {
     "type": "profession",
     "id": "iso_geas_knight",
     "name": "Geas Knight",

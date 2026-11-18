@@ -89,3 +89,5 @@ require("practice_recipes")
 require("hedge_research")
 
 require("anima_meditation")
+
+require("item_groups")

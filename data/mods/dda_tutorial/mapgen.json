@@ -123,11 +123,6 @@
   },
   {
     "type": "item_group",
-    "id": "fully_loaded_medium_battery",
-    "items": [ { "item": "medium_battery_cell", "prob": 100, "charges": 56 } ]
-  },
-  {
-    "type": "item_group",
     "id": "paint_tutorial",
     "subtype": "collection",
     "items": [

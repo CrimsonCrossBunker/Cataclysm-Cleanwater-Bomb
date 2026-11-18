@@ -158,3 +158,5 @@ require("weather_generators")
 require("overmap_locations")
 
 require("food_recipes")
+
+require("item_groups")

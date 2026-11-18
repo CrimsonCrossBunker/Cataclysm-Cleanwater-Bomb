@@ -19,3 +19,5 @@ require("disassembly")
 require("retired_recipes")
 
 require("craft_recipes")
+
+require("item_groups")

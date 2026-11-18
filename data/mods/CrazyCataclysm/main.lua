@@ -26,3 +26,5 @@ require("food_recipes")
 require("weapon_recipes")
 
 require("craft_recipes")
+
+require("item_groups")

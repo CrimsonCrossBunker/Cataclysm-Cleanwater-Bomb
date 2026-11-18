@@ -26,3 +26,5 @@ require("weather_types")
 require("scenario_filters")
 
 require("overmap_locations")
+
+require("item_groups")

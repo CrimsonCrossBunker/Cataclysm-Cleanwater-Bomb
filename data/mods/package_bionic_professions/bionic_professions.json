@@ -1,11 +1,5 @@
 [
   {
-    "type": "item_group",
-    "subtype": "collection",
-    "id": "quiver_bionic_prepper",
-    "entries": [ { "item": "bolt_steel", "charges": 20 } ]
-  },
-  {
     "type": "profession",
     "id": "bionic_athlete",
     "name": "Bionic Athlete",

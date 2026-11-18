@@ -25,3 +25,5 @@ require("scenario_filters")
 require("overmap_locations")
 
 require("craft_recipes")
+
+require("item_groups")
