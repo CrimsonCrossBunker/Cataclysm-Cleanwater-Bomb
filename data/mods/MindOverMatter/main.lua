@@ -201,6 +201,7 @@ require("mental_engineering")
 require("activity_types")
 
 require("banish_illness")
+require("monster_buff_spells")
 
 require("shadow_urge")
 
