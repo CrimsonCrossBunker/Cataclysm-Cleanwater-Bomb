@@ -36,12 +36,12 @@ content.add(item({
 }, { "glass" }))
 for _, options in ipairs {
     {
-        id = "microscope_slide_water_murky", copy_from = "microscope_slide",
+        id = "microscope_slide_water_murky", copy_from = "microscope_slide", looks_like = "microscope_slide",
         name = content.plural_text("microscope slide of murky water", "microscope slides of murky water"),
         description = content.text("A microscope slide with a sample of murky water."),
     },
     {
-        id = "microscope_slide_soil", copy_from = "microscope_slide",
+        id = "microscope_slide_soil", copy_from = "microscope_slide", looks_like = "microscope_slide",
         name = content.plural_text("microscope slide of soil", "microscope slides of soil"),
         description = content.text("A microscope slide with a sample of soil."),
     },

@@ -15,18 +15,21 @@ for _, options in ipairs {
     },
     {
         id = "medium_printout_portal_storm_data", copy_from = "small_printout_portal_storm_data",
+        looks_like = "small_printout_portal_storm_data",
         name = ccb.content.text("NRE printout"),
         description = ccb.content.text("A long sequence of overlapping numbers plotted in thermal paper, at times so densely-packed that they disappear into thick blots of oxide-colored ink.  The blots and numbers are arranged in a strangely pleasing pattern."),
         mass_grams = 3, volume_ml = 8,
     },
     {
         id = "large_printout_portal_storm_data", copy_from = "small_printout_portal_storm_data",
+        looks_like = "small_printout_portal_storm_data",
         name = ccb.content.text("long NRE printout"),
         description = ccb.content.text("A very, very long sequence of overlapping numbers plotted in thermal paper.  It is almost 15 feet long."),
         mass_grams = 10, volume_ml = 50,
     },
     {
         id = "nre_anomaly_printout_data", copy_from = "small_printout_portal_storm_data",
+        looks_like = "small_printout_portal_storm_data",
         name = ccb.content.text("NRE anomaly printout"),
         description = ccb.content.text("A long sequence of overlapping numbers plotted in thermal paper, at times so densely-packed that they disappear into thick blots of oxide-colored ink.  The printed values increased along rhythmical waves, but the number 5 is always skipped."),
         mass_grams = 10, volume_ml = 50,
