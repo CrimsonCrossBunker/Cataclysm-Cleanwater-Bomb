@@ -141,7 +141,7 @@ std::optional<prepared_tool> prepare_tool( Character &who, const repair_tool_sou
             }
         } else {
             result.fuel = target->tool_ammo_available( here, type ).first;
-            if( target->is_locked && !result.fuel.is_null() &&
+            if( target->is_locked && !result.fuel.is_null() && result.fuel->ammo &&
                 result.fuel->ammo->type == ammo_battery ) {
                 return std::nullopt;
             }

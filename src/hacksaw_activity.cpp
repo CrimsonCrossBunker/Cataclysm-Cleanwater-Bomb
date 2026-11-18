@@ -50,7 +50,7 @@ bool query_hacksaw_work( Character &who, const item &tool, const tripoint_abs_ms
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const item_location source = mounted ? item_location::nowhere :
-                                 item_location( who, const_cast<item *>( &tool ) );
+                                 locate_cutting_tool( who, const_cast<item &>( tool ) );
     auto proposed = proposed_work( who, source, target, mounted, tool );
     if( !proposed ) {
         return false;
@@ -72,19 +72,31 @@ bool query_hacksaw_work( Character &who, const item &tool, const tripoint_abs_ms
     const time_duration duration = time_duration::from_turns( remaining * weariness / who.get_speed() );
     query += "\n" + std::string( _( "Time to complete: " ) ) +
              colorize( to_string( duration, true ), c_light_gray );
-    if( tool.uses_firing_requirements() ) {
-        const int per_turn = std::max( 1, static_cast<int>( who.get_speed() * weariness ) );
-        const int first = std::min( remaining, std::max( 1,
-                                    static_cast<int>( who.get_moves() * weariness ) ) );
-        const int rest = std::max( 0, remaining - first );
-        const int turns = 1 + ( rest + per_turn - 1 ) / per_turn;
-        query += "\n" + string_format( _( "This will require: %s." ),
-                                       tool.format_consumption_requirements( "HACKSAW", gun_mode_id( "DEFAULT" ), turns ) );
-    } else if( tool.ammo_required() ) {
-        const int charges = tool.ammo_required() * remaining / 100;
-        query += "\n" + ( tool.ammo_current()->ammo->type == ammotype( "battery" ) ?
-                          string_format( _( "This will require %d kJ." ), charges ) :
-                          string_format( _( "This will require %d %s." ), charges, tool.ammo_current()->nname( charges ) ) );
+    const auto scale = tool.type->ammo_scale.find( "HACKSAW" );
+    const int scale_factor = scale == tool.type->ammo_scale.end() ? 1 : scale->second;
+    if( scale_factor > 0 ) {
+        if( tool.uses_firing_requirements() ) {
+            const int per_turn = std::max( 1, static_cast<int>( who.get_speed() * weariness ) );
+            const int first = std::min( remaining, std::max( 1,
+                static_cast<int>( who.get_moves() * weariness ) ) );
+            const int rest = std::max( 0, remaining - first );
+            const int turns = 1 + ( rest + per_turn - 1 ) / per_turn;
+            const std::string req = tool.format_consumption_requirements( "HACKSAW", gun_mode_id( "DEFAULT" ),
+                turns );
+            if( !req.empty() ) {
+                query += "\n" + string_format( _( "This will require: %s." ), req );
+            }
+        } else if( tool.ammo_required() ) {
+            const int charges = tool.ammo_required() * scale_factor * remaining / 100;
+            if( charges > 0 ) {
+                const itype_id ammo_id = tool.ammo_current();
+                if( !ammo_id.is_null() && ammo_id->ammo ) {
+                    query += "\n" + ( ammo_id->ammo->type == ammotype( "battery" ) ?
+                                      string_format( _( "This will require %d kJ." ), charges ) :
+                                      string_format( _( "This will require %d %s." ), charges, ammo_id->nname( charges ) ) );
+                }
+            }
+        }
     }
     if( !who.query_yn( query ) ) {
         who.add_msg_if_player( m_info, _( "You decide not to cut up this metal." ) );
