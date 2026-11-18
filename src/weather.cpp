@@ -34,7 +34,6 @@
 #include "lua_platform_hooks.h"
 #include "map.h"
 #include "map_iterator.h"
-#include "map_scale_constants.h"
 #include "map_simulation_regions.h"
 #include "mapdata.h"
 #include "math_defines.h"
