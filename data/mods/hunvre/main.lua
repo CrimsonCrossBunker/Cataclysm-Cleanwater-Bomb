@@ -30,3 +30,5 @@ require("overmap_locations")
 require("item_groups")
 
 require("generic_items")
+
+require("inherited_items")
