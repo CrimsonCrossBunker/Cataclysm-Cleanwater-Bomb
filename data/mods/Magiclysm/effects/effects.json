@@ -61,50 +61,6 @@
   },
   {
     "type": "effect_type",
-    "id": "effect_iron_allergy_wearing_iron",
-    "name": [ "Touching Iron" ],
-    "desc": [ "You are in contact with iron.  It will cause you pain and discomfort until removed." ],
-    "rating": "bad",
-    "apply_message": "As the iron touches you, your skin begins to burn.",
-    "remove_message": "The burning from the iron finally fades.",
-    "base_mods": {
-      "pain_amount": [ 5 ],
-      "pain_min": [ 1 ],
-      "pain_max": [ 3 ],
-      "pain_chance": [ 3 ],
-      "pain_max_val": [ 100 ],
-      "pain_tick": [ 120 ]
-    },
-    "limb_score_mods": [
-      { "limb_score": "balance", "modifier": 0.9 },
-      { "limb_score": "breathing", "modifier": 0.85 },
-      { "limb_score": "lift", "modifier": 0.9 },
-      { "limb_score": "grip", "modifier": 0.9 },
-      { "limb_score": "reaction", "modifier": 0.9 }
-    ],
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_iron_allergy_wearing_steel",
-    "name": [ "Touching Steel" ],
-    "desc": [ "You are in contact with steel.  It will cause you pain and discomfort until removed." ],
-    "rating": "bad",
-    "apply_message": "As the steel touches you, your skin begins to itch.",
-    "remove_message": "The itching from the steel finally fades.",
-    "base_mods": {
-      "pain_amount": [ 2 ],
-      "pain_min": [ 1 ],
-      "pain_max": [ 3 ],
-      "pain_chance": [ 6 ],
-      "pain_max_val": [ 50 ],
-      "pain_tick": [ 120 ]
-    },
-    "limb_score_mods": [ { "limb_score": "breathing", "modifier": 0.95 } ],
-    "flags": [ "EFFECT_LIMB_SCORE_MOD" ]
-  },
-  {
-    "type": "effect_type",
     "id": "enchant_windrun",
     "name": [ "Windrunning" ],
     "desc": [ "You are bolstered and pushed along by the power of the wind." ],
@@ -325,18 +281,6 @@
     "int_add_val": 1,
     "base_mods": { "speed_mod": [ -20 ] },
     "scaling_mods": { "speed_mod": [ -10 ] }
-  },
-  {
-    "type": "effect_type",
-    "id": "haste",
-    "name": [ "Hasted" ],
-    "desc": [ "Your speed is boosted enormously." ],
-    "apply_message": "Your speed is boosted to superhuman levels!",
-    "remove_message": "You return to your normal speed.",
-    "rating": "good",
-    "max_duration": 480,
-    "removes_effects": [ "magic_slowed" ],
-    "enchantments": [ "INLINE_ENCH_haste_0" ]
   },
   {
     "type": "effect_type",
@@ -619,18 +563,6 @@
     "int_add_val": 1,
     "max_duration": "6 s",
     "base_mods": { "speed_mod": [ -25 ] }
-  },
-  {
-    "type": "effect_type",
-    "id": "natures_commune",
-    "name": [ "Nature's Commune" ],
-    "desc": [ "You can feel Mother Nature welcoming you, revitalizing your body and calming the natural fauna around you." ],
-    "apply_message": "A warm embrace surrounds you, like that of a mother with her child.",
-    "remove_message": "Your communion with Mother Nature fades.",
-    "rating": "good",
-    "max_duration": 14400,
-    "base_mods": { "health_min": [ 1 ], "health_chance": [ 40 ], "h_mod_min": [ 1 ], "h_mod_chance": [ 80 ], "health_tick": [ 30 ] },
-    "flags": [ "ANIMALEMPATH" ]
   },
   {
     "type": "effect_type",
@@ -1456,18 +1388,6 @@
     "apply_message": "Your body tingles.",
     "rating": "bad",
     "flags": [ "TELEPORT_LOCK" ]
-  },
-  {
-    "type": "effect_type",
-    "id": "effect_flame_immunity",
-    "name": [ "Flame Immunity" ],
-    "desc": [ "You are immune to heat and fire." ],
-    "rating": "good",
-    "show_in_info": true,
-    "blocks_effects": [ "blisters" ],
-    "removes_effects": [ "onfire" ],
-    "enchantments": [ "INLINE_ENCH_effect_flame_immunity_0" ],
-    "flags": [ "HEAT_IMMUME" ]
   },
   {
     "type": "effect_type",

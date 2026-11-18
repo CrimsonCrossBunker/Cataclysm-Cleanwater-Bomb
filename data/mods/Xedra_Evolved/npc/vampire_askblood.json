@@ -124,12 +124,5 @@
       { "text": "(Ask them about something else)", "topic": "TALK_FRIEND" },
       { "text": "(Go do something else)", "topic": "TALK_DONE" }
     ]
-  },
-  {
-    "type": "effect_type",
-    "id": "feed_from_recently",
-    "name": [ "Gave you blood" ],
-    "desc": [ "This person won't accept to let you drink more of their blood for a while." ],
-    "max_duration": "100 d"
   }
 ]

@@ -179,17 +179,6 @@
     "message": ""
   },
   {
-    "id": "xe_str",
-    "type": "effect_type",
-    "name": [ "Enormous power" ],
-    "desc": [ "Your muscles scream with force." ],
-    "apply_message": "Unleash the power.",
-    "remove_message": "The power fades away.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [ "INLINE_ENCH_xe_str_0" ]
-  },
-  {
     "id": "XAEA_int",
     "type": "SPELL",
     "name": { "str": "Artifact Intelligence Boost", "//~": "NO_I18N" },
@@ -205,17 +194,6 @@
     "message": ""
   },
   {
-    "id": "xe_int",
-    "type": "effect_type",
-    "name": [ "The Knowledge" ],
-    "desc": [ "You know for sure - right now you are the smartest human on this side of the planet." ],
-    "apply_message": "With some effort you can outsmart reality.",
-    "remove_message": "You feel yourself much less smarter than before.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [ "INLINE_ENCH_xe_int_0" ]
-  },
-  {
     "id": "XAEA_electric_sight",
     "type": "SPELL",
     "name": { "str": "Artifact Electric Sight", "//~": "NO_I18N" },
@@ -229,17 +207,6 @@
     "max_duration": 60480000,
     "sound_description": "",
     "message": ""
-  },
-  {
-    "id": "xe_sight_elec",
-    "type": "effect_type",
-    "name": [ "Sparks" ],
-    "desc": [ "You feel sparks dancing in your eyes." ],
-    "apply_message": "Tiny electrical joints jump in your cornea.",
-    "remove_message": "The sparks in your eyes are finally gone.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [ "ELECTRIC_VISION" ]
   },
   {
     "id": "XAEA_incorporeal",
@@ -335,17 +302,6 @@
     "message": ""
   },
   {
-    "id": "xaea_electric_emit",
-    "type": "effect_type",
-    "name": [ "Shocker" ],
-    "desc": [ "Your body emits enough energy to power some small city." ],
-    "apply_message": "Shocking clouds fly everywhere!",
-    "remove_message": "Electric clouds are gone.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [ "INLINE_ENCH_xaea_electric_emit_0" ]
-  },
-  {
     "id": "XAEA_mod_moves",
     "type": "SPELL",
     "name": { "str": "Artifact Add Moves", "//~": "NO_I18N" },
@@ -374,18 +330,5 @@
     "max_duration": 720000,
     "sound_description": "",
     "message": ""
-  },
-  {
-    "id": "xe_motion_vision",
-    "type": "effect_type",
-    "name": [ "Extra Senses" ],
-    "desc": [ "Somehow you can feel any motion around with your spine." ],
-    "apply_message": "You feel unusual sensation in your spine.",
-    "remove_message": "The sensation in your spine is gone.",
-    "rating": "good",
-    "show_intensity": false,
-    "enchantments": [
-      "INLINE_ENCH_xe_motion_vision_0"
-    ]
   }
 ]

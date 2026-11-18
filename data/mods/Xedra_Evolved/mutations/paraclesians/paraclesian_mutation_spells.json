@@ -165,12 +165,6 @@
     "effect_str": "effect_wants_to_talk"
   },
   {
-    "type": "effect_type",
-    "id": "effect_wants_to_talk",
-    "name": [ "Seeming to want to talk to you" ],
-    "desc": [ "This person wants to talk with you." ]
-  },
-  {
     "id": "paraclesian_translocate",
     "type": "SPELL",
     "name": { "str": "Paraclesian Translocation", "//~": "NO_I18N" },

@@ -19,3 +19,11 @@ do
     }
     ccb.content.add(category)
 end
+
+ccb.content.upsert_effect_type(ccb.content.EffectType {
+    id = "effect_hedge_protect_the_mind",
+    name = ccb.content.text("Ordered Mind"),
+    description = ccb.content.text("Your mind is set in order, walled and guarded."),
+    rating = "good",
+}
+    :flag("TEEPSHIELD"))

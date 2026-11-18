@@ -1155,19 +1155,6 @@
     "false_effect": [ { "u_message": "Entering torpor outdoors would only result in you dying from the sun's rays.", "type": "bad" } ]
   },
   {
-    "type": "effect_type",
-    "id": "effect_vampire_torpor",
-    "name": [ "Torpor" ],
-    "desc": [ "Thanks to your torpor you are healing and recovering quickly" ],
-    "rating": "good",
-    "vitamins": [ { "vitamin": "human_blood_vitamin", "rate": [ [ 1, 1 ] ], "tick": [ "8 m" ] } ],
-    "flags": [ "DEAF", "BLIND" ],
-    "enchantments": [
-      "INLINE_ENCH_effect_vampire_torpor_0",
-      "INLINE_ENCH_effect_vampire_torpor_1"
-    ]
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_VAMPIRE_BAT_FORM_activated",
     "condition": { "not": { "u_has_trait": "VAMPIRE_BAT_FORM_TRAITS" } },

@@ -215,11 +215,6 @@
     "effect_str": "about_to_kill_best_friend"
   },
   {
-    "type": "effect_type",
-    "id": "about_to_kill_best_friend",
-    "max_duration": "5 s"
-  },
-  {
     "id": "mission_best_friend_bookhunt1",
     "type": "mission_definition",
     "name": { "str": "Help me find my favorite book.  Apocalypse Now" },
