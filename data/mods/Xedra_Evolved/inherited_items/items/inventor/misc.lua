@@ -127,3 +127,48 @@ do
     item:tool { power_milliwatts = 3000 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "heater_tool",
+        name = ccb.content.plural_text("\"Heater\"", "\"Heaters\""),
+        description = ccb.content.text("An extremely small and light tool that creates and transfers the heat in an extremely effective way.  You think it would be interesting to develop it further."),
+        mass_milligrams = 358000,
+        volume_ml = 790,
+        longest_side_mm = 250,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:flag("ELECTRONIC")
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("INVENTOR_CRAFTED")
+    item:quality("COOK", 2)
+    item:quality("BOIL", 2)
+    item:clear_use_actions()
+    item:native_use("HOTPLATE")
+    item:native_use("HEAT_FOOD")
+    item:link_cable {
+        cable_length = 10,
+        ammo_scale = 0,
+        charge_milliwatts = 100000,
+        menu_text = ccb.content.text("Plug in / Unplug"),
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 20, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 200000000,
+        max_weight_milligrams = 2000000000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_LIGHT", "BATTERY_MEDIUM", "BATTERY_HEAVY" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
