@@ -795,6 +795,10 @@ function ItemDefinition:book(options) end
 ---@return ItemDefinition self
 function ItemDefinition:on_use(handler_id, label, description) end
 
+---Ensure the item has a native armor slot. Missing armor receives native defaults with no covered body parts; inherited armor data remains intact.
+---@return ItemDefinition self
+function ItemDefinition:armor() end
+
 ---Remove inherited native activation actions and any on_use staged before this call.
 ---Call on_use afterwards to install a replacement action. Consumption hooks are independent.
 ---@return ItemDefinition self
@@ -13586,6 +13590,17 @@ function CcbSpawnsApi.npc(template, position, options) end
 
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
+
+---@class CcbNearbyMonsterCountOptions
+---@field radius? integer Native game distance in 0..1000; defaults to 1000.
+---@field attitude? 'hostile'|'friendly'|'both' Native monster attitude relative to the active player; defaults to hostile.
+
+---Count the complete native creature selection without pagination. Nil/empty IDs match every monster type.
+---@param origin TripointCoord Absolute map-square center.
+---@param ids? GameId[] Dense array of at most 256 registered GameId<monster> values.
+---@param options? CcbNearbyMonsterCountOptions
+---@return CcbResult result value is the native selected count.
+function CcbMonstersApi.count_nearby(origin, ids, options) end
 
 ---@class CcbMonsterDeathOptions
 ---@field remove_corpse? boolean Native death_drops policy; true disables native death drops. Omission preserves the Monster's existing policy.

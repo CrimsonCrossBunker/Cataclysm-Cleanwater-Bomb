@@ -210,6 +210,7 @@ struct item_definition_data {
     bool clear_use_actions = false;
     bool clear_tick_actions = false;
     bool has_tool = false;
+    bool has_armor = false;
     std::vector<std::string> passive_enchantments;
     std::string use_handler;
     std::string tick_handler;
@@ -884,6 +885,12 @@ struct item_definition_handle {
     item_definition_handle &tool() {
         require_building_handle( token, *definition, "item" );
         definition->has_tool = true;
+        return *this;
+    }
+
+    item_definition_handle &armor() {
+        require_building_handle( token, *definition, "item" );
+        definition->has_armor = true;
         return *this;
     }
 
@@ -2549,6 +2556,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "vitamin", &item_definition_handle::vitamin,
         "book", &item_definition_handle::book,
         "tool", &item_definition_handle::tool,
+        "armor", &item_definition_handle::armor,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
         "on_use", &item_definition_handle::on_use,
@@ -5691,6 +5699,10 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->tool = cata::make_value<islot_tool>();
                         native->tool->was_loaded = true;
                     }
+                    if( definition.has_armor && !native->armor ) {
+                        native->armor = cata::make_value<islot_armor>();
+                        native->armor->was_loaded = true;
+                    }
                     for( const std::string &name : definition.passive_enchantments ) {
                         const enchantment_id id( name );
                         if( !id.is_valid() ) {
@@ -7038,6 +7050,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.clear_tick_actions ? "clear_tick_actions" : "inherit_tick_actions" );
                 hash_part( state, v.tick_handler );
                 hash_part( state, v.has_tool ? "tool" : "inherit_tool" );
+                hash_part( state, v.has_armor ? "armor" : "inherit_armor" );
                 for( const std::string &enchantment : v.passive_enchantments ) {
                     hash_part( state, "passive_enchantment" );
                     hash_part( state, enchantment );
