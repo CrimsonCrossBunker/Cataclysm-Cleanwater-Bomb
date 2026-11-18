@@ -274,6 +274,7 @@ static const ter_str_id ter_t_gas_pump_smashed( "t_gas_pump_smashed" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_reb_cage( "t_reb_cage" );
+static const ter_str_id ter_t_rock( "t_rock" );
 static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 static const ter_str_id ter_t_rootcellar( "t_rootcellar" );
 static const ter_str_id ter_t_stump( "t_stump" );
@@ -10111,8 +10112,8 @@ point map::sees_cache_key( const tripoint_bub_ms &from, const tripoint_bub_ms &t
 
     // A little gross, just pack the values into an integer.
     return point(
-               min.x() << 20 | min.y() << 10 | ( layer_for_z( min.z() ) ),
-               max.x() << 20 | max.y() << 10 | ( layer_for_z( max.z() ) )
+               min.x() << 20 | min.y() << 10 | layer_for_z( min.z() ),
+               max.x() << 20 | max.y() << 10 | layer_for_z( max.z() )
            );
 }
 
@@ -11235,9 +11236,7 @@ void map::loadn( const point_bub_sm &grid, bool update_vehicles,
         set_floor_cache_dirty( z );
         set_pathfinding_cache_dirty( z );
         if( ( z < -OVERMAP_DEPTH || z > OVERMAP_HEIGHT ) && !MAPBUFFER.submap_exists( pos ) ) {
-            static const ter_str_id rock( "t_rock" );
-            static const ter_str_id air( "t_open_air" );
-            MAPBUFFER.generate_uniform( pos, z < 0 ? rock : air );
+            MAPBUFFER.generate_uniform( pos, z < 0 ? ter_t_rock : ter_t_open_air );
         }
         submap *const tmpsub = MAPBUFFER.lookup_submap( pos );
         const size_t index = get_nonant( tripoint_rel_sm( grid.x(), grid.y(), z ) );
