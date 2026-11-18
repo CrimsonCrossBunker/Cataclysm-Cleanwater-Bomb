@@ -1,13 +1,14 @@
 local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
+local island_map = require("island_map")
 local island = require("island_memory")
 local install_upgrade = require("upgrade_mission")
 local id = services.types.id
 local M = {}
 
 local function update_at(location, update)
-    island.update(state.point(location), update)
+    island_map.update(state.point(location), update)
 end
 
 local function room(location, update)
@@ -18,40 +19,40 @@ end
 
 function M.base1(character)
     island.remember(character)
-    update_at("OM_island_center", "mx_skyisland_surface_entrance")
-    update_at("OM_island_subcenter", "mx_skyisland_base1")
+    update_at("OM_island_center", "surface_entrance")
+    update_at("OM_island_subcenter", "base1")
 end
 
 function M.bigroom1()
-    update_at("OM_island_subcenter", "mx_skyisland_a1")
-    update_at("OM_island_center", "mx_skyisland_skylight")
+    update_at("OM_island_subcenter", "a1")
+    update_at("OM_island_center", "skylight")
 end
 
-M.bigroom2 = room("OM_island_subcenter", "mx_skyisland_a2")
-M.bigroom3 = room("OM_island_subcenter", "mx_skyisland_a3")
-M.bigroom4 = room("OM_island_subcenter", "mx_skyisland_a4")
+M.bigroom2 = room("OM_island_subcenter", "a2")
+M.bigroom3 = room("OM_island_subcenter", "a3")
+M.bigroom4 = room("OM_island_subcenter", "a4")
 
-M.westroom1 = room("OM_island_subw", "mx_skyisland_w1")
-M.westroom2 = room("OM_island_subw", "mx_skyisland_w2")
-M.westroom3 = room("OM_island_subw", "mx_skyisland_w3")
-M.westroom4 = room("OM_island_subw", "mx_skyisland_w4")
-M.west_side_rooms = room("OM_island_subw", "mx_skyisland_w_sides")
+M.westroom1 = room("OM_island_subw", "w1")
+M.westroom2 = room("OM_island_subw", "w2")
+M.westroom3 = room("OM_island_subw", "w3")
+M.westroom4 = room("OM_island_subw", "w4")
+M.west_side_rooms = room("OM_island_subw", "w_sides")
 
-M.eastroom1 = room("OM_island_sube", "mx_skyisland_e1")
-M.eastroom2 = room("OM_island_sube", "mx_skyisland_e2")
-M.eastroom3 = room("OM_island_sube", "mx_skyisland_e3")
-M.eastroom4 = room("OM_island_sube", "mx_skyisland_e4")
-M.east_side_rooms = room("OM_island_sube", "mx_skyisland_e_sides")
+M.eastroom1 = room("OM_island_sube", "e1")
+M.eastroom2 = room("OM_island_sube", "e2")
+M.eastroom3 = room("OM_island_sube", "e3")
+M.eastroom4 = room("OM_island_sube", "e4")
+M.east_side_rooms = room("OM_island_sube", "e_sides")
 
-M.northroom1 = room("OM_island_subn", "mx_skyisland_n1")
-M.northroom2 = room("OM_island_subn", "mx_skyisland_n2")
-M.northroom3 = room("OM_island_subn", "mx_skyisland_n3")
-M.northroom4 = room("OM_island_subn", "mx_skyisland_n4")
-M.north_side_rooms = room("OM_island_subn", "mx_skyisland_n_sides")
+M.northroom1 = room("OM_island_subn", "n1")
+M.northroom2 = room("OM_island_subn", "n2")
+M.northroom3 = room("OM_island_subn", "n3")
+M.northroom4 = room("OM_island_subn", "n4")
+M.north_side_rooms = room("OM_island_subn", "n_sides")
 
-M.centralskylight2 = room("OM_island_center", "mx_skyisland_skylight2")
-M.centralskylight3 = room("OM_island_center", "mx_skyisland_skylight3")
-M.centralskylight4 = room("OM_island_center", "mx_skyisland_skylight4")
+M.centralskylight2 = room("OM_island_center", "skylight2")
+M.centralskylight3 = room("OM_island_center", "skylight3")
+M.centralskylight4 = room("OM_island_center", "skylight4")
 
 function M.climatecontrol(character)
     state.add_trait(character, "mut_skyisland_temperature_adaptation")
@@ -59,16 +60,18 @@ end
 
 function M.greenhouse1(character)
     island.remember(character)
-    update_at("OM_island_subcenter", "mx_skyisland_base2")
-    update_at("OM_island_subs", "mx_skyisland_s1")
+    update_at("OM_island_subcenter", "base2")
+    update_at("OM_island_subs", "s1")
 end
 
-M.greenhouse2 = room("OM_island_subs", "mx_skyisland_s2")
-M.greenhouse3 = room("OM_island_subs", "mx_skyisland_s3")
-M.greenhouse4 = room("OM_island_subs", "mx_skyisland_s4")
-M.greenhouse_skylight1 = room("OM_island_s", "mx_skyisland_greenhouse_skylight1")
-M.greenhouse_skylight2 = room("OM_island_s", "mx_skyisland_greenhouse_skylight2")
-M.merchant_stall = room("OM_island_n", "mx_skyisland_merchant_stall")
+M.greenhouse2 = room("OM_island_subs", "s2")
+M.greenhouse3 = room("OM_island_subs", "s3")
+M.greenhouse4 = room("OM_island_subs", "s4")
+M.greenhouse_skylight1 = room("OM_island_s", "greenhouse_skylight1")
+M.greenhouse_skylight2 = room("OM_island_s", "greenhouse_skylight2")
+function M.merchant_stall()
+    island.update(state.point("OM_island_n"), "mx_skyisland_merchant_stall")
+end
 
 local function finish_stall(character)
     state.checked(services.recipes.learn(character, id("recipe", "item_merchant_attractor")))

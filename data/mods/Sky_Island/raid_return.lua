@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
+local island_map = require("island_map")
 local challenge = require("raid_challenge")
 local merchant_map = require("merchant_map")
 local id = services.types.id
@@ -34,12 +35,6 @@ local raid_missions = {
     "MISSION_BONUS_ASSASSIN3",
     "MISSION_BONUS_ASSASSIN4",
 }
-
-local function update_map(position, name)
-    local target = state.checked(services.overmap.tile_token(position:project_to("omt")))
-    local update = state.checked(services.mapgen.update_token(id("update_mapgen", name)))
-    state.checked(services.mapgen.run_update(target, update))
-end
 
 function M.clear_missions(character)
     for _, name in ipairs(raid_missions) do
@@ -138,7 +133,7 @@ function M.home(character)
         state.add_effect(npc, "effect_sky_island_momentary_flight", 1)
     end
     state.add_effect(character, "effect_sky_island_momentary_flight", 1)
-    update_map(state.point("OM_HQ_origin"), "raid_return_platform")
+    island_map.update(state.point("OM_HQ_origin"), "raid_return_platform")
     return_room_items(character)
     state.teleport_followers(character, "OM_HQ_origin_npc")
     state.teleport(character, state.point("OM_HQ_origin"), ccb.services.translate("You arrive on the island."),

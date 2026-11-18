@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
+local island_map = require("island_map")
 local difficulty = require("raid_services")
 local island = require("island_memory")
 local id = services.types.id
@@ -33,7 +34,7 @@ ccb.runtime.handler("sky_island_legacy_load", function()
             "OM_island_subs",
             "OM_island_subse",
         } do
-            island.update(state.point(key), "mx_skyisland_solidstoneoverride")
+            island_map.update(state.point(key), "solid_stone")
         end
         state.set("versionupdate", 1)
         state.set("missiondistancemax", 30)
