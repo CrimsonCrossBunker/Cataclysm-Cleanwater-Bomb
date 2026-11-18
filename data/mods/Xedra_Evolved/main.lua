@@ -222,3 +222,5 @@ require("inherited_items")
 require("active_items")
 
 require("quest_maps")
+
+require("dream_bezoar")
