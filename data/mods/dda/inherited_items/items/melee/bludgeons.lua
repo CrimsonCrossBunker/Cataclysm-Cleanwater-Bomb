@@ -2390,3 +2390,75 @@ do
     item:tool { power_milliwatts = 15000 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "exodii_prybar",
+        name = ccb.content.plural_text("breacher", "breachers"),
+        description = ccb.content.text("Some sort of large prybar of a make and manufacturer you've never seen before.  On the heavier end is a set of thick, crabclaw like shears connected to a hydraulic piston, capable of cutting or prying through metal with great force.  The Exodii use these for general purpose breaching and scrapping heavy machines, and it's been retrofitted to run on their bionic power."),
+        price_postapoc_cents = 4500,
+        color = "dark_gray",
+        symbol = "/",
+        mass_milligrams = 4875000,
+        longest_side_mm = 910,
+        volume_ml = 780,
+        looks_like = "halligan",
+        techniques = { "WBLOCK_1", "BRUTAL", "SWEEP" },
+        replace_qualities = true,
+        melee_to_hit = -1,
+        repair_materials = { "hc_steel" },
+        charged_qualities = { { id = "PRY", level = 6 }, { id = "SAW_M", level = 8 } },
+    }
+    item:material("hc_steel", 1)
+    item:material("ceramic", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("USES_BIONIC_POWER")
+    item:quality("HAMMER", 2)
+    item:quality("DIG", 1)
+    item:quality("PRY", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 48)
+    item:melee_damage("stab", 6)
+    item:clear_use_actions()
+    item:native_use("CROWBAR")
+    item:fault_group("steel_pipe_short", { weight_multiplier = 0.2 })
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 1, power_milliwatts = 600000 }
+    content.add(item)
+end
+
+do
+    -- This should have some unique faults that circular saws and other saws should also have too.
+    local item = content.Item {
+        id = "exodii_digger",
+        name = ccb.content.plural_text("sapper", "sappers"),
+        description = ccb.content.text("A metal pole saw covered in faded orange paint and warning labels written in an unknown language.  The circular blade at the end is over an inch thick, its deeply dished grooves suggesting its purpose as a digging implement rather than a cutter.  The Exodii use these to chew through reinforced walls like concrete or solid steel, and it's been retrofitted to run on their bionic power."),
+        price_postapoc_cents = 5000,
+        color = "yellow",
+        symbol = "/",
+        mass_milligrams = 6880000,
+        looks_like = "circsaw_off",
+        longest_side_mm = 1160,
+        volume_ml = 2000,
+        techniques = { "WBLOCK_1", "BRUTAL", "SWEEP" },
+        melee_to_hit = -1,
+        repair_materials = { "lc_steel" },
+        charged_qualities = { { id = "DIG", level = 6 }, { id = "AXE", level = 3 } },
+    }
+    item:material("ch_steel", 1)
+    item:material("ceramic", 1)
+    item:clear_flags()
+    item:flag("DURABLE_MELEE")
+    item:flag("DIG_TOOL")
+    item:flag("MULTI_DRILL")
+    item:flag("USES_BIONIC_POWER")
+    item:clear_use_actions()
+    item:native_use("JACKHAMMER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 42)
+    item:melee_damage("cut", 16)
+    item:fault_group("electronic_general", {  })
+    item:tool { charges_per_use = 800, power_milliwatts = 1200000 }
+    content.add(item)
+end
