@@ -89,3 +89,20 @@ do
     group:group("weak_antibiotic_bottle_plastic_pill_prescription_1_5", 30)
     content.upsert_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "virology_lab_fridge", kind = "distribution" }
+    group:item("blood", 300)
+    group:item("vacutainer")
+    group:item("jar_glass_sealed", 30)
+    group:item("jar_3l_glass_sealed", 15)
+    group:item("hygrometer", 3)
+    group:item("chem_nitric_acid", 15)
+    group:item("denat_alcohol", 60)
+    group:item("methed_alcohol", 40)
+    group:item("thermometer", 50)
+    group:item("pressure_cooker", 15)
+    group:item("flu_shot", 50)
+    group:item("disinfectant", 35)
+    content.upsert_item_group(group)
+end

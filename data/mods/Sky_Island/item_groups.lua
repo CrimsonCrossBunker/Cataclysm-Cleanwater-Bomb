@@ -266,10 +266,6 @@ do
     group:group("pocket_cigar", 15)
     group:group("misc_smoking_legal", 30)
     group:item("dog_tag", 40)
-    -- No Hope supplies the same drop table for the shared monster.
-    if content.is_mod_active("no_hope") then
-        content.replace(group)
-    else
-        content.add(group)
-    end
+    -- No Hope authors the same drop table. Either Mod can load first.
+    content.upsert_item_group(group)
 end

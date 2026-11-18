@@ -1,8 +1,0 @@
-[
-  {
-    "id": "virology_lab_fridge",
-    "type": "item_group",
-    "copy-from": "virology_lab_fridge",
-    "extend": { "items": [ [ "flu_shot_fun", 50 ] ] }
-  }
-]

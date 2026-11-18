@@ -50,3 +50,21 @@ do
     group:item("right_leg_prosthetic", 2)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "hospital_lab", kind = "distribution" }
+    group:item("left_leg_prosthetic", 5)
+    group:item("right_leg_prosthetic", 5)
+    group:item("left_arm_prosthetic", 5)
+    group:item("right_arm_prosthetic", 5)
+    group:item("left_arm_neuroprosthetic", 2)
+    group:item("right_arm_neuroprosthetic", 2)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "hospital_bed", kind = "distribution" }
+    group:item("left_leg_prosthetic", 40)
+    group:item("right_leg_prosthetic", 40)
+    content.extend_item_group(group)
+end

@@ -43,3 +43,10 @@ do
     group:group("afs_advanced_biomaterial_scrapgroup", 20)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "hospital_lab", kind = "distribution" }
+    group:group("afs_biomedical_scrapgroup", 20)
+    group:group("afs_advanced_neural_io_scrapgroup", 10)
+    content.extend_item_group(group)
+end

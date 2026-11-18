@@ -1384,3 +1384,109 @@ do
     group:group("writing_utensils", 10)
     content.add(group)
 end
+
+do
+    local group = content.ItemGroup { id = "hospital_lab", kind = "distribution" }
+    group:item("blood", 20)
+    group:item("iodine", 5)
+    group:item("prussian_blue", 5)
+    group:group("bleach_jug_part", 20)
+    group:entry { item = "bandages", count = { 1, 3 }, probability = 30 }
+    group:group("adhesive_bandages_box_used", 30)
+    group:group("cotton_ball_bag_used", 50)
+    group:group("cotton_ball_bag_full", 20)
+    group:item("syringe", 8)
+    group:item("adrenaline_injector", 5)
+    group:item("canister_empty", 5)
+    group:item("coat_lab", 20)
+    group:item("gloves_medical", 70)
+    group:item("mask_dust", 65)
+    group:item("glasses_safety", 40)
+    group:item("vacutainer", 10)
+    group:entry {
+        group = "used_usb_drives",
+        contents = {
+            { group = "efiles_medical" },
+        },
+        probability = 5,
+    }
+    group:item("recipe_elfa", 1)
+    group:item("recipe_medicalmut", 2)
+    group:item("disinfectant", 35)
+    group:item("medical_gauze", 10)
+    group:group("medical_tape_roll_part", 45)
+    group:item("wrapped_rad_badge", 15)
+    group:item("jar_glass_sealed", 20)
+    group:item("fan", 5)
+    group:item("cleansuit", 10)
+    group:item("pouch_autoclave", 15)
+    group:group("oxy_powder_bottle_part", 5)
+    group:item("hazmat_suit", 5)
+    group:item("fungicide", 10)
+    group:group("insecticide_bag_plastic", 5)
+    group:entry { item = "oxygen_tank", charges = { 0, 24 }, probability = 40 }
+    group:item("autoclave", 20)
+    group:entry { item = "smoxygen_tank", charges = { 0, 12 }, probability = 10 }
+    group:item("antifungal", 5)
+    group:item("antiparasitic", 10)
+    group:item("survnote", 1)
+    group:item("diazepam", 10)
+    group:item("stethoscope", 35)
+    group:item("jar_3l_glass_sealed", 15)
+    group:item("magnifying_glass", 5)
+    group:entry { item = "chem_hydrogen_peroxide", charges = { 1, -1 }, probability = 5 }
+    group:item("strong_antibiotic", 1)
+    group:item("antibiotics", 5)
+    group:item("weak_antibiotic", 15)
+    group:item("crutches", 5)
+    content.upsert_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "hospital_bed", kind = "distribution" }
+    group:item("corpse", 10)
+    group:item("bag_body_bag", 10)
+    group:group("kids_books", 40)
+    group:item("stethoscope", 20)
+    group:item("novel_pulp", 16)
+    group:group("newspaper_recent", 15)
+    group:group("book_mag_gen", 99)
+    group:item("mag_porn", 5)
+    group:item("hairpin", 5)
+    group:item("purse", 30)
+    group:entry { item = "mp3", charges = { 0, 100 }, probability = 8 }
+    group:entry { item = "portable_game", charges = { 0, 100 }, probability = 10 }
+    group:entry { item = "game_watch", charges = { 0, 100 }, probability = 2 }
+    group:group("civilian_laptops", 5)
+    group:item("fish_bowl", 1)
+    group:group("box_of_contact_lens_any", 15)
+    group:entry { item = "transition_contacts", count = { 6, 6 }, probability = 1 }
+    group:group("clothing_glasses", 40)
+    group:entry { item = "shavingkit", charges = { 0, 10 }, probability = 20 }
+    group:entry { item = "elec_hairtrimmer", charges = { 0, 50 }, probability = 10 }
+    group:item("tailor_portfolio", 3)
+    group:item("house_coat", 20)
+    group:item("gloves_medical", 50)
+    group:entry { item = "disinfectant", charges = { 1, 10 }, probability = 35 }
+    group:group("bottle_otc_painkiller_1_20", 40)
+    group:item("flu_shot", 2)
+    group:item("blanket", 50)
+    group:item("down_blanket", 10)
+    group:item("pillow", 50)
+    group:item("down_pillow", 15)
+    group:item("teddy_bear", 2)
+    group:entry { item = "smoxygen_tank", charges = { 0, 12 }, probability = 10 }
+    group:item("antiparasitic", 3)
+    group:group("diazepam_bottle_plastic_pill_prescription_1_10", 3)
+    group:item("recipe_augs", 3)
+    group:group("religious_books", 54)
+    group:item("recipe_medicalmut", 1)
+    group:item("survnote", 1)
+    group:item("badge_doctor", 1)
+    group:item("lanyard", 1)
+    group:item("tourist_table", 1)
+    group:item("thermos", 10)
+    group:item("crutches", 5)
+    group:group("pillbox_any_used", 20)
+    content.upsert_item_group(group)
+end

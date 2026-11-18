@@ -49,3 +49,15 @@ do
     group:item("fcl_atomic_light", 1)
     content.extend_item_group(group)
 end
+
+do
+    local group = content.ItemGroup { id = "hospital_lab", kind = "distribution" }
+    group:group("bionics_common", 2)
+    content.extend_item_group(group)
+end
+
+do
+    local group = content.ItemGroup { id = "hospital_bed", kind = "distribution" }
+    group:item("fcl_atomic_light", 1)
+    content.extend_item_group(group)
+end
