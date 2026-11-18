@@ -29,3 +29,5 @@ require("book_items")
 require("generic_items")
 
 require("inherited_items")
+
+require("effect_types")
