@@ -37,3 +37,5 @@ if require("ccb").content.is_mod_active("magiclysm") then
 end
 
 require("island_start")
+
+require("island_legacy_load")
