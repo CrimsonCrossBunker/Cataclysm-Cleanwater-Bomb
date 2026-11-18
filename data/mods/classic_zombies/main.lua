@@ -1,3 +1,5 @@
+require("item_blacklists")
+
 require("region_settings")
 
 local ccb = require("ccb")
