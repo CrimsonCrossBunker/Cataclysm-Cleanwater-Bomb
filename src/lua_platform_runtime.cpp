@@ -164,7 +164,8 @@ enum class definition_operation : int {
     add,
     replace,
     edit,
-    extend
+    extend,
+    upsert
 };
 
 enum class handle_lifecycle : int {
@@ -443,7 +444,7 @@ class lua_platform_examine_actor final : public iexamine_actor
 
 struct construction_category_definition_data {
     std::string id;
-    std::string name;
+    detail::authored_text name;
     bool registered = false;
 };
 
@@ -489,8 +490,8 @@ struct damage_info_order_definition_data {
 
 struct vehicle_part_category_definition_data {
     std::string id;
-    std::string name;
-    std::string short_name;
+    detail::authored_text name;
+    detail::authored_text short_name;
     std::int64_t priority = 0;
     bool registered = false;
 };
@@ -3314,6 +3315,8 @@ std::string operation_name( definition_operation operation )
             return "edit";
         case definition_operation::extend:
             return "extend";
+        case definition_operation::upsert:
+            return "upsert";
     }
     return "unknown";
 }
@@ -4189,7 +4192,8 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<construction_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
+        definition->name = detail::read_singular_text( options["name"], definition->id,
+                           "ConstructionCategory.name" );
         return construction_category_definition_handle{
             std::move( definition ), transaction->token
         };
@@ -4248,8 +4252,10 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<vehicle_part_category_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", definition->id );
-        definition->short_name = options.get_or( "short_name", definition->name );
+        definition->name = detail::read_singular_text( options["name"], definition->id,
+                           "VehiclePartCategory.name" );
+        definition->short_name = detail::read_singular_text_or( options["short_name"],
+                                 definition->name, "VehiclePartCategory.short_name" );
         definition->priority = options.get_or<std::int64_t>( "priority", 0 );
         return vehicle_part_category_definition_handle{
             std::move( definition ), transaction->token
@@ -5474,6 +5480,11 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
     [transaction, register_catalog]( const monster_group_definition_handle & handle ) {
         register_catalog( handle, transaction->monster_groups, definition_operation::extend,
                           "monster group" );
+    } );
+    content.set_function( "upsert_construction_group",
+    [transaction, register_catalog]( const construction_group_definition_handle & handle ) {
+        register_catalog( handle, transaction->construction_groups, definition_operation::upsert,
+                          "construction group" );
     } );
     content.set_function( "add", [register_definition]( const sol::object & value ) {
         register_definition( value, definition_operation::add );
@@ -7704,13 +7715,14 @@ bool content_transaction::validate( const runtime &owner_runtime,
             }
             for( const overmap_connection_subtype_definition_data &subtype :
                  definition.subtypes ) {
-                if( !string_id<oter_type_t>( subtype.terrain ).is_valid() ) {
+                if( check_engine_state && !string_id<oter_type_t>( subtype.terrain ).is_valid() ) {
                     throw std::runtime_error( "overmap connection '" + definition.id +
                                               "' references unknown terrain '" +
                                               subtype.terrain + "'" );
                 }
                 for( const std::string &location : subtype.locations ) {
-                    if( !string_id<overmap_location>( location ).is_valid() ) {
+                    if( check_engine_state && overmap_location_ids.count( location ) == 0 &&
+                        !string_id<overmap_location>( location ).is_valid() ) {
                         throw std::runtime_error( "overmap connection '" + definition.id +
                                                   "' references unknown location '" +
                                                   location + "'" );
@@ -8147,7 +8159,7 @@ bool content_transaction::apply( std::string &error )
             native.id = id;
             native.src.emplace_back( id, mod_id( pimpl_->owner ) );
             native.was_loaded = true;
-            native._name = no_translation( entry.definition->name );
+            native._name = entry.definition->name.native();
             detail::construction_category_registry().insert( native );
         }
 
@@ -8187,8 +8199,8 @@ bool content_transaction::apply( std::string &error )
                 id, previous ? std::optional<vpart_category>( *previous ) : std::nullopt );
             vpart_category native;
             native.id_ = id;
-            native.name_ = no_translation( entry.definition->name );
-            native.short_name_ = no_translation( entry.definition->short_name );
+            native.name_ = entry.definition->name.native();
+            native.short_name_ = entry.definition->short_name.native();
             native.priority_ = static_cast<int>( entry.definition->priority );
             detail::vehicle_part_category_registry_set( native );
         }

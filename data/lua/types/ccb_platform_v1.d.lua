@@ -2183,7 +2183,7 @@ local MutationCategoryDefinition = {}
 
 ---@class ConstructionCategoryDefinitionOptions
 ---@field id string Stable construction-category id.
----@field name? string Player-facing category name; defaults to id.
+---@field name? string|LocalizedText Player-facing category name; defaults to id.
 
 ---@class ConstructionCategoryDefinition
 ---@field id string
@@ -2237,8 +2237,8 @@ function DamageInfoOrderDefinition:section(section, order, show_type) end
 
 ---@class VehiclePartCategoryDefinitionOptions
 ---@field id string Stable vehicle-part category id.
----@field name? string Player-facing category name; defaults to id.
----@field short_name? string Compact player-facing label; defaults to name.
+---@field name? string|LocalizedText Player-facing category name; defaults to id.
+---@field short_name? string|LocalizedText Compact player-facing label; defaults to name.
 ---@field priority? integer UI tab order.
 
 ---@class VehiclePartCategoryDefinition
@@ -6694,6 +6694,10 @@ function CcbPlatformContent.ConstructionCategory(options) end
 ---@param options ConstructionGroupDefinitionOptions
 ---@return ConstructionGroupDefinition
 function CcbPlatformContent.ConstructionGroup(options) end
+
+---Register a construction group shared by optional Mods at this Mod's load position.
+---@param definition ConstructionGroupDefinition
+function CcbPlatformContent.upsert_construction_group(definition) end
 
 ---@param options VehiclePartLocationDefinitionOptions
 ---@return VehiclePartLocationDefinition
