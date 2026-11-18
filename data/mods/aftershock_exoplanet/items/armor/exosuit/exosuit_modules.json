@@ -238,21 +238,6 @@
     }
   },
   {
-    "id": "exo_lense_module",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exosuit multi-lens zoom module" },
-    "description": "A series of strangely shaped hexagonal lenses that flutter about inside your helmet.  As the lenses shift things around you stay perfectly in focus no matter your eyesight or distance.  It can be mounted to an exosuit helmet.",
-    "weight": "500 g",
-    "volume": "250 ml",
-    "price": "10 kUSD",
-    "material": [ "lvl4ballisticglass", "qt_steel" ],
-    "symbol": "(",
-    "color": "yellow",
-    "flags": [ "CANT_WEAR", "FIX_NEARSIGHT", "FIX_FARSIGHT", "ZOOM", "EXO_HELMET_GADGET" ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
     "id": "exo_flashlight",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR" ],
