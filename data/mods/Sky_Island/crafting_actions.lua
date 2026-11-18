@@ -1,6 +1,7 @@
 local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
+local island_map = require("island_map")
 local id = services.types.id
 local environment = services.gameplay.environment
 
@@ -57,9 +58,7 @@ local function create_pond()
     local position = services.overmap.find_target(origin, "sky_island_core", {
         offset = services.coords.tripoint_rel_omt(location[2], location[3], 0),
     })
-    local target = state.checked(services.overmap.tile_token(position))
-    local update = state.checked(services.mapgen.update_token(id("update_mapgen", "mx_skyisland_pond")))
-    state.checked(services.mapgen.run_update(target, update))
+    island_map.pond(position)
 end
 
 ccb.runtime.handler("sky_craft_warped_pond", function(payload)

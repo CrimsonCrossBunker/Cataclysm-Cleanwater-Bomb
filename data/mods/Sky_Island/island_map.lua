@@ -999,11 +999,144 @@ local layouts = {
     },
 }
 
-function M.update(position, name)
-    local layout = assert(layouts[name], "Unknown island map layout " .. name)
-    local patch = services.mapgen.patch()
-    patch:keep_orientation()
-    patch:preserve_tile_contents()
+local merchant_stall = {
+    rows = {
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "        ||||||||        ",
+        "        |Bt...T|        ",
+        "        |B....h|        ",
+        "        ||||+|||        ",
+        "        |Th...T|        ",
+        "        |......|        ",
+        "        |cccccc|        ",
+        "        |CCCCCC|        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+    },
+    terrain = {
+        ["."] = "t_floor",
+        ["C"] = "t_traderwall",
+        ["c"] = "t_floor",
+        ["g"] = "t_floor",
+        ["h"] = "t_floor",
+        ["|"] = "t_traderwall_stone",
+        ["+"] = "t_door_c",
+        ["T"] = "t_floor",
+        ["t"] = "t_floor",
+        ["B"] = "t_floor",
+    },
+    furniture = {
+        ["h"] = "f_chair",
+        ["T"] = "f_table",
+        ["B"] = "f_bed",
+        ["t"] = "f_coffee_table",
+        ["c"] = "f_counter",
+    },
+}
+
+local stall_roof = {
+    rows = {
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "        ||||||||        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+    },
+    terrain = {
+        ["|"] = "t_trader_thatch_roof",
+    },
+}
+
+local pond = {
+    rows = {
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "        ]]]**]]]]?      ",
+        "       ?]]*****]]]?     ",
+        "       ]***[******]     ",
+        "      ]]***[[[[****]    ",
+        "     ]]***[[[[*****]    ",
+        "     ?**[[~~~~[****]    ",
+        "    ?]**[[~~~~[****]    ",
+        "    ]]***[~~~~[***]]    ",
+        "    ]]***[~~~~[[]]]     ",
+        "    ]]****[[[[**]???    ",
+        "    ?]]***[[***]]???    ",
+        "     ]]]]*****]]? ?     ",
+        "       ??]]****]        ",
+        "           **           ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+        "                        ",
+    },
+    terrain = {
+        ["*"] = "t_water_sh",
+        ["?"] = {
+            "t_water_sh", "t_water_sh", "t_water_sh", "t_dirt", "t_dirt", "t_dirt",
+            "t_dirt", "t_dirt", "t_grass", "t_grass", "t_grass", "t_grass",
+            "t_grass", "t_grass", "t_shrub", "t_shrub", "t_tree", "t_tree",
+        },
+        ["["] = { "t_water_dp", "t_water_dp", "t_water_sh", "t_water_sh", "t_water_sh" },
+        ["]"] = {
+            "t_water_sh", "t_water_sh", "t_water_sh", "t_water_sh", "t_water_sh", "t_water_sh",
+            "t_water_sh", "t_water_sh", "t_dirt", "t_grass",
+        },
+        ["~"] = "t_water_dp",
+    },
+    furniture = {
+        ["~"] = "f_clear",
+        ["*"] = "f_clear",
+        ["["] = "f_clear",
+        ["]"] = "f_clear",
+    },
+}
+
+local pond_furniture = {
+    "f_region_water_plant", "f_region_water_plant", "f_region_water_plant", "f_region_water_plant", "f_region_water_plant",
+    "f_region_water_plant", "f_region_water_plant", "f_region_water_plant", "f_region_water_plant", "f_region_water_plant",
+    "f_boulder_small", "f_boulder_medium", "f_boulder_large", "f_rubble_rock",
+}
+
+local function place_tiles(patch, layout)
+    local terrain = layout.terrain or {}
+    local furniture = layout.furniture or {}
     for y, row in ipairs(layout.rows) do
         for x = 1, #row do
             local tile = row:sub(x, x)
@@ -1011,13 +1144,56 @@ function M.update(position, name)
                 if bunker_terrain[tile] then patch:terrain(x - 1, y - 1, bunker_terrain[tile]) end
                 if bunker_furniture[tile] then patch:furniture(x - 1, y - 1, bunker_furniture[tile]) end
             end
-            if layout.terrain and layout.terrain[tile] then
-                patch:terrain(x - 1, y - 1, layout.terrain[tile])
+            if terrain[tile] then patch:terrain(x - 1, y - 1, terrain[tile]) end
+            if furniture[tile] then patch:furniture(x - 1, y - 1, furniture[tile]) end
+        end
+    end
+end
+
+local function apply_patch(omt, patch)
+    local target = state.checked(services.overmap.tile_token(omt))
+    state.checked(services.mapgen.run_update(target, patch))
+end
+
+function M.update(position, name)
+    local patch = services.mapgen.patch()
+    patch:keep_orientation()
+    patch:preserve_tile_contents()
+    place_tiles(patch, assert(layouts[name], "Unknown island map layout " .. name))
+    apply_patch(position:project_to("omt"), patch)
+end
+
+function M.merchant_stall(position)
+    local roof = services.mapgen.patch()
+    roof:keep_orientation()
+    roof:erase_before_terrain()
+    place_tiles(roof, stall_roof)
+
+    local patch = services.mapgen.patch()
+    patch:keep_orientation()
+    patch:erase_before_terrain()
+    place_tiles(patch, merchant_stall)
+    patch:stamp(roof, 0, 0, { z = 1 })
+    patch:set_faction_owner("sky_island_traders", { 8, 15 }, { 5, 12 })
+    apply_patch(position:project_to("omt"), patch)
+end
+
+function M.pond(omt)
+    local patch = services.mapgen.patch()
+    patch:erase_before_terrain()
+    place_tiles(patch, pond)
+
+    local water_feature = services.mapgen.patch()
+    water_feature:erase_before_terrain()
+    water_feature:furniture(0, 0, pond_furniture)
+    for y, row in ipairs(pond.rows) do
+        for x = 1, #row do
+            if pond.furniture[row:sub(x, x)] then
+                patch:stamp(water_feature, x - 1, y - 1, { chance = 8 })
             end
         end
     end
-    local target = state.checked(services.overmap.tile_token(position:project_to("omt")))
-    state.checked(services.mapgen.run_update(target, patch))
+    apply_patch(omt, patch)
 end
 
 return M

@@ -1,7 +1,6 @@
 local ccb = require("ccb")
 local services = ccb.services
 local state = require("raid_state")
-local id = services.types.id
 local M = {}
 
 local locations = {
@@ -38,12 +37,6 @@ function M.remember(character)
         local found = services.world.find_location(target:project_to("ms"))
         if found.found then state.set(location[1], found.position) end
     end
-end
-
-function M.update(position, name)
-    local target = state.checked(services.overmap.tile_token(position:project_to("omt")))
-    local update = state.checked(services.mapgen.update_token(id("update_mapgen", name)))
-    state.checked(services.mapgen.run_update(target, update))
 end
 
 return M

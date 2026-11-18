@@ -70,7 +70,7 @@ M.greenhouse4 = room("OM_island_subs", "s4")
 M.greenhouse_skylight1 = room("OM_island_s", "greenhouse_skylight1")
 M.greenhouse_skylight2 = room("OM_island_s", "greenhouse_skylight2")
 function M.merchant_stall()
-    island.update(state.point("OM_island_n"), "mx_skyisland_merchant_stall")
+    island_map.merchant_stall(state.point("OM_island_n"))
 end
 
 local function finish_stall(character)
