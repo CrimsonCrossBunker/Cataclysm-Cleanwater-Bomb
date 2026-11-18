@@ -616,6 +616,9 @@ class mapgen_patch final : private update_mapgen_function_json
         void remove_npc( const npc_template_id &id, const std::string &unique_id );
         void clear_items( const point &first, const point &last );
         void set_faction_owner( const jmapgen_place &where, const faction_id &owner );
+        void add_item_group( const jmapgen_place &where, const item_group_id &group,
+                             const jmapgen_int &chance );
+        void add_named_stamp( const jmapgen_place &where, const nested_mapgen_id &id );
         void add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance );
         std::shared_ptr<mapgen_function_json_nested> freeze_nested( int size,
                 const std::string &context ) const;

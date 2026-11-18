@@ -472,6 +472,12 @@ jmapgen_place patch_at( const sol::object &x, const sol::object &y )
     return where;
 }
 
+jmapgen_int patch_stamp_height( const sol::object &value )
+{
+    constexpr int z_span = OVERMAP_DEPTH + OVERMAP_HEIGHT;
+    return jmapgen_int( patch_integer( value, -z_span, z_span, "stamp z" ) );
+}
+
 template<typename Id>
 Id patch_tile_id( const sol::object &entry )
 {
@@ -795,6 +801,39 @@ void install_mapgen_service_api(
         }
         patch.set_faction_owner( patch_at( x, y ), owner );
     },
+    "place_item_group", []( mapgen_patch &patch, const std::string &id, const sol::object &x,
+    const sol::object &y, const sol::optional<sol::table> &options ) {
+        const item_group_id group( id );
+        if( !item_group::group_is_defined( group ) ) {
+            throw std::invalid_argument( "Mapgen patch requires a valid item group" );
+        }
+        jmapgen_place where = patch_at( x, y );
+        jmapgen_int chance( 100 );
+        if( options ) {
+            const sol::object repetitions = options->raw_get<sol::object>( "repetitions" );
+            const sol::object selected_chance = options->raw_get<sol::object>( "chance" );
+            if( repetitions.valid() ) {
+                where.repeat = patch_range( repetitions, 0, std::numeric_limits<std::int16_t>::max(),
+                                             "repetitions" );
+            }
+            if( selected_chance.valid() ) {
+                chance = patch_range( selected_chance, 1, 100, "item group chance" );
+            }
+        }
+        patch.add_item_group( where, group, chance );
+    },
+    "stamp_named", []( mapgen_patch &patch, const std::string &id, const sol::object &x,
+    const sol::object &y, const sol::optional<sol::object> &z ) {
+        const nested_mapgen_id layout( id );
+        if( !layout.is_valid() || layout.is_null() ) {
+            throw std::invalid_argument( "Mapgen patch requires a registered nested layout" );
+        }
+        jmapgen_place where = patch_at( x, y );
+        if( z ) {
+            where.z = patch_stamp_height( *z );
+        }
+        patch.add_named_stamp( where, layout );
+    },
     "stamp", []( mapgen_patch &patch, const mapgen_patch &layout, const sol::object &x,
     const sol::object &y, const sol::optional<sol::table> &options ) {
         jmapgen_place where = patch_at( x, y );
@@ -803,8 +842,7 @@ void install_mapgen_service_api(
             const sol::object z = options->raw_get<sol::object>( "z" );
             const sol::object selected_chance = options->raw_get<sol::object>( "chance" );
             if( z.valid() ) {
-                constexpr int z_span = OVERMAP_DEPTH + OVERMAP_HEIGHT;
-                where.z = jmapgen_int( patch_integer( z, -z_span, z_span, "stamp z" ) );
+                where.z = patch_stamp_height( z );
             }
             if( selected_chance.valid() ) {
                 chance = patch_integer( selected_chance, 1, 100, "stamp chance" );

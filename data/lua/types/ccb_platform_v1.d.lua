@@ -8441,6 +8441,24 @@ function MapgenPatch:clear_items(x1, y1, x2, y2) end
 ---@param y MapgenPatchRange
 function MapgenPatch:set_faction_owner(faction, x, y) end
 
+---@class MapgenPatchItemGroupOptions
+---@field chance? MapgenPatchRange Native item-group placement chance, from 1 to 100. Defaults to 100.
+---@field repetitions? MapgenPatchRange Placement repetitions. Defaults to one.
+
+---Sample a native item group within this inclusive local rectangle.
+---@param group string Native item group ID.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+---@param options? MapgenPatchItemGroupOptions
+function MapgenPatch:place_item_group(group, x, y, options) end
+
+---Place a previously registered nested mapgen using its native variant weights.
+---@param id string Native nested mapgen ID.
+---@param x MapgenPatchRange
+---@param y MapgenPatchRange
+---@param z? integer Z-level offset. Defaults to zero.
+function MapgenPatch:stamp_named(id, x, y, z) end
+
 ---@class MapgenPatchStampOptions
 ---@field z? integer Z-level offset. Defaults to zero.
 ---@field chance? integer Placement chance from 1 to 100 percent. Defaults to 100.

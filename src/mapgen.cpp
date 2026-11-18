@@ -2673,6 +2673,8 @@ class jmapgen_item_group : public jmapgen_piece
                 faction = jsi.get_string( "faction" );
             }
         }
+        jmapgen_item_group( const item_group_id &group, const jmapgen_int &placement_chance )
+            : group_id( group ), chance( placement_chance ) {}
         void check( const std::string &context, const mapgen_parameters &,
                     const jmapgen_int &/*x*/, const jmapgen_int &/*y*/, const jmapgen_int &/*z*/ ) const override {
             if( !group_id.is_valid() ) {
@@ -3853,6 +3855,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 std::unordered_map<direction, cata::flat_set<std::pair<std::string, ot_match_type>>> neighbors;
             public:
+                neighbor_oter_check() = default;
                 explicit neighbor_oter_check( const JsonObject &jsi ) {
                     for( direction dir : all_enum_values<direction>() ) {
                         std::string location = io::enum_to_string( dir );
@@ -3910,6 +3913,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 std::unordered_map<cube_direction, cata::flat_set<std::string>> neighbors;
             public:
+                neighbor_join_check() = default;
                 explicit neighbor_join_check( const JsonObject &jsi ) {
                     for( cube_direction dir : all_enum_values<cube_direction>() ) {
                         cata::flat_set<std::string> dir_neighbors =
@@ -3949,6 +3953,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 std::unordered_map<direction, cata::flat_set<oter_flags>> neighbors;
             public:
+                neighbor_flag_check() = default;
                 explicit neighbor_flag_check( const JsonObject &jsi ) {
                     for( direction dir : all_enum_values<direction>() ) {
                         cata::flat_set<oter_flags> dir_neighbors;
@@ -3986,6 +3991,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 std::unordered_map<direction, cata::flat_set<oter_flags>> neighbors;
             public:
+                neighbor_flag_any_check() = default;
                 explicit neighbor_flag_any_check( const JsonObject &jsi ) {
                     for( direction dir : all_enum_values<direction>() ) {
                         cata::flat_set<oter_flags> dir_neighbors;
@@ -4019,6 +4025,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 cata::flat_set<std::pair<std::string, ot_match_type>> allowed_predecessors;
             public:
+                predecessor_oter_check() = default;
                 explicit predecessor_oter_check( const JsonArray &jarr ) {
                     for( const JsonValue entry : jarr ) {
                         std::pair<std::string, ot_match_type> allowed_predecessor;
@@ -4052,6 +4059,7 @@ class jmapgen_nested : public jmapgen_piece
             private:
                 std::unordered_set<int> required_z;
             public:
+                correct_z_level_check() = default;
                 explicit correct_z_level_check( const JsonArray &jarr ) {
                     for( const JsonValue entry : jarr ) {
                         required_z.emplace( entry.get_int() );
@@ -4071,6 +4079,10 @@ class jmapgen_nested : public jmapgen_piece
         neighbor_flag_any_check neighbor_flags_any;
         predecessor_oter_check predecessors;
         correct_z_level_check correct_z_level;
+        explicit jmapgen_nested( const nested_mapgen_id &id ) {
+            entries.add( mapgen_value<nested_mapgen_id>( id ), dbl_or_var( 100 ) );
+            entries.precalc();
+        }
         jmapgen_nested( const JsonObject &jsi, std::string_view/*context*/ )
             : neighbor_oters( jsi.get_object( "neighbors" ) )
             , neighbor_joins( jsi.get_object( "joins" ) )
@@ -8203,6 +8215,24 @@ void mapgen_patch::clear_items( const point &first, const point &last )
 void mapgen_patch::set_faction_owner( const jmapgen_place &where, const faction_id &owner )
 {
     add_piece( where, make_shared_fast<jmapgen_faction>( owner ) );
+}
+
+void mapgen_patch::add_item_group( const jmapgen_place &where, const item_group_id &group,
+                                   const jmapgen_int &chance )
+{
+    add_piece( where, make_shared_fast<jmapgen_item_group>( group, chance ) );
+}
+
+void mapgen_patch::add_named_stamp( const jmapgen_place &where, const nested_mapgen_id &id )
+{
+    const int low = std::min( min_z_offset_, where.z.val );
+    const int high = std::max( max_z_offset_, where.z.valmax );
+    if( high - low > OVERMAP_DEPTH + OVERMAP_HEIGHT ) {
+        throw std::invalid_argument( "Mapgen stamp spans more levels than the world contains" );
+    }
+    add_piece( where, make_shared_fast<jmapgen_nested>( id ) );
+    min_z_offset_ = low;
+    max_z_offset_ = high;
 }
 
 void mapgen_patch::add_stamp( const jmapgen_place &where, const mapgen_patch &layout, int chance )
