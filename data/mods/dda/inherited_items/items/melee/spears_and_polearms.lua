@@ -1535,3 +1535,42 @@ do
     item:clear_mounted_charge()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "makeshift_scythe_war",
+        category = "weapons",
+        name = ccb.content.plural_text("makeshift war scythe", "makeshift war scythes"),
+        description = ccb.content.text("This farming tool has been modified into an improvised weapon by rotating its blade 90 degrees, transforming it into a deadly giant blade on the end of a stick.  It's quite fragile, however."),
+        mass_milligrams = 3013000,
+        volume_ml = 3250,
+        longest_side_mm = 1800,
+        price_cents = 16000,
+        price_postapoc_cents = 50,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "light_gray",
+        techniques = { "WIDE", "BRUTAL", "MOUNTED_CHARGE" },
+        replace_qualities = true,
+        weapon_categories = { "HOOKING_WEAPONRY", "POLEARMS" },
+    }
+    item:material("steel", 1)
+    item:material("wood", 1)
+    item:quality("CUT", 1)
+    item:quality("BUTCHER", -22)
+    item:clear_flags()
+    item:flag("FRAGILE_MELEE")
+    item:flag("NONCONDUCTIVE")
+    item:flag("POLEARM")
+    item:flag("SHEATH_SPEAR")
+    item:flag("REACH_ATTACK")
+    item:flag("ALWAYS_TWOHAND")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 16)
+    item:melee_damage("cut", 40)
+    item:mounted_charge { max_steps = 15, damage_type = "cut", multiplier_per_step = 0.08, max_multiplier = 1.3 }
+    item:fault_group("handle_long", { weight_multiplier = 2 })
+    item:fault_group("spearhead", {  })
+    item:tool()
+    content.add(item)
+end
