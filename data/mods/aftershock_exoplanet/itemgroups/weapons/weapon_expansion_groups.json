@@ -77,11 +77,6 @@
   },
   {
     "type": "item_group",
-    "id": "afs_UICASTA30",
-    "items": [ [ "afs_UICASTA30", 40 ] ]
-  },
-  {
-    "type": "item_group",
     "id": "ammo_pistol_milspec",
     "subtype": "distribution",
     "copy-from": "ammo_pistol_milspec",

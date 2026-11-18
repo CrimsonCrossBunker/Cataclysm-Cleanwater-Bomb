@@ -107,3 +107,5 @@ require("camp_recipes")
 require("esper_contemplation")
 
 require("hacking_activity")
+
+require("item_groups")

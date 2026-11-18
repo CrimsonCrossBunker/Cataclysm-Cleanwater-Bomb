@@ -27,60 +27,6 @@
     "extend": { "items": [ [ "afs_bio_linguistic_coprocessor", 8 ], [ "afs_bio_beavy_batteries", 20 ], [ "bio_shield_weak", 25 ] ] }
   },
   {
-    "id": "bionics_reaver",
-    "type": "item_group",
-    "items": [
-      [ "bio_microgen", 3 ],
-      [ "bio_power_storage", 10 ],
-      [ "bio_batteries", 10 ],
-      [ "bio_metabolics", 10 ],
-      [ "bio_ethanol", 10 ],
-      [ "bio_ups", 10 ],
-      [ "bio_torsionratchet", 10 ],
-      [ "bio_ears", 10 ],
-      [ "bio_sunglasses", 10 ],
-      [ "bio_eye_optic", 10 ],
-      [ "bio_eye_enhancer", 10 ],
-      [ "bio_dex_enhancer", 10 ],
-      [ "bio_str_enhancer", 10 ],
-      [ "bio_night_vision", 10 ],
-      [ "bio_infrared", 10 ],
-      [ "bio_recycler", 10 ],
-      [ "bio_digestion", 10 ],
-      [ "bio_evap", 10 ],
-      [ "bio_water_extractor", 10 ],
-      [ "bio_carbon", 10 ],
-      [ "bio_targeting", 10 ],
-      [ "bio_ground_sonar", 10 ],
-      [ "bio_face_mask", 10 ],
-      [ "bio_scent_mask", 10 ],
-      [ "bio_cloak", 10 ],
-      [ "bio_synaptic_regen", 12 ],
-      [ "afs_bio_deck", 10 ],
-      [ "bio_lockpick", 10 ],
-      [ "bio_blood_anal", 10 ],
-      [ "bio_geiger", 10 ],
-      [ "bio_radscrubber", 10 ],
-      [ "bio_laser", 10 ],
-      [ "bio_emp", 10 ],
-      [ "bio_flashbang", 10 ],
-      [ "bio_blade", 2 ],
-      [ "bio_speed", 2 ],
-      [ "bio_adrenaline", 10 ],
-      [ "bio_watch", 10 ],
-      [ "bio_meteorologist", 10 ],
-      [ "bio_cable", 10 ],
-      [ "bio_weight", 10 ],
-      [ "bio_jointservo", 10 ],
-      [ "bio_shotgun", 10 ],
-      [ "bio_recoil", 10 ],
-      [ "bio_shield_weak", 10 ],
-      [ "afs_bio_chemical_enhancement_rig", 10 ],
-      [ "bio_shield_weak", 10 ],
-      [ "afs_bio_skullgun", 10 ]
-    ]
-  },
-  {
     "id": "bionics_mil",
     "type": "item_group",
     "copy-from": "bionics_mil",
@@ -185,21 +131,6 @@
         [ "afs_bio_skullgun", 2 ]
       ]
     }
-  },
-  {
-    "id": "afs_bionics_power",
-    "type": "item_group",
-    "items": [ [ "bio_power_storage_mkII", 2 ], [ "bio_power_storage", 24 ], [ "bio_betavoltaic", 5 ], [ "bio_microgen", 5 ] ]
-  },
-  {
-    "id": "afs_bionic_toolkit",
-    "type": "item_group",
-    "items": [ [ "afs_complete_bionic_toolkit", 1 ], [ "bionic_maintenance_toolkit", 14 ] ]
-  },
-  {
-    "id": "bionics_subs",
-    "type": "item_group",
-    "items": [ [ "afs_bio_missiles", 10 ], [ "afs_bio_dopamine_stimulators", 15 ] ]
   },
   {
     "id": "CBM_SUBS",

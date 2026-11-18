@@ -49,24 +49,5 @@
     "mission": "SHOPKEEP",
     "chat": "TALK_SALVOR_FABRICATOR",
     "faction": "UICA"
-  },
-  {
-    "type": "item_group",
-    "id": "NC_SALVOR_FABRICATOR_worn",
-    "subtype": "collection",
-    "ammo": 100,
-    "magazine": 100,
-    "items": [
-      { "item": "afs_frontier_cryo" },
-      { "item": "afs_frontier_cryomask" },
-      { "item": "afs_wrist_computer" },
-      { "item": "spacer_cap" },
-      { "item": "carbide_cuirass" },
-      { "item": "afs_herc_rig" },
-      { "item": "boots_combat" },
-      { "item": "gloves_tactical" },
-      { "item": "spacer_jumpsuit" },
-      { "item": "holster" }
-    ]
   }
 ]

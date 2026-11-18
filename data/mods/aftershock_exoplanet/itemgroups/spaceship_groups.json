@@ -23,12 +23,5 @@
       { "item": "afs_7.50mm_rp", "charges": 18 },
       { "item": "afs_landfall_kit_2_instructions" }
     ]
-  },
-  {
-    "type": "item_group",
-    "id": "afs_escapepod_ration_bag_plastic_4",
-    "subtype": "collection",
-    "container-item": "bag_plastic",
-    "entries": [ { "item": "afs_escapepod_ration", "container-item": "null", "count": 4 } ]
   }
 ]

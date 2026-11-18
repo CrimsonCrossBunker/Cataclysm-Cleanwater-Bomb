@@ -35,23 +35,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "afs_augustmoon_outfitter",
-    "ammo": 100,
-    "magazine": 100,
-    "subtype": "collection",
-    "items": [
-      { "group": "afs_wintersuit_generic_advanced", "count": [ 1, 3 ] },
-      { "group": "afs_frontier_cryo_g_full_augustmoon", "count": 1 },
-      { "group": "afs_basic_armor", "count": [ 0, 3 ] },
-      { "group": "afs_colonist_outfit", "count": [ 1, 3 ] },
-      { "group": "afs_civilian_hazard_outfit", "count": [ 1, 3 ], "prob": 60 },
-      { "group": "afs_pals_pieces", "count": [ 6, 12 ] },
-      { "group": "afs_augustmoon_outfitter_bags", "count": [ 10, 28 ] },
-      { "group": "augustmoon_shop_money" }
-    ]
-  },
-  {
     "id": "afs_frontier_cryo_g_full_augustmoon",
     "type": "item_group",
     "//": "The bare minimum matching suit to vist Salus. Prevents having to restart because Port Augustmoon is mising a part like the mask.",
@@ -59,49 +42,6 @@
     "entries": [
       { "item": "afs_frontier_cryo", "custom-flags": [ "FIT" ] },
       { "item": "afs_frontier_cryomask", "custom-flags": [ "FIT" ] }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "AUGUSTMOON_OUTFITTER_worn",
-    "subtype": "collection",
-    "items": [
-      { "item": "legpouch_large" },
-      { "item": "afs_jumpsuit_military" },
-      { "item": "afs_company_jacket" },
-      { "item": "boots_combat" },
-      { "item": "under_armor" },
-      { "item": "under_armor_shorts" }
-    ]
-  },
-  {
-    "id": "afs_augustmoon_outfitter_bags",
-    "type": "item_group",
-    "subtype": "distribution",
-    "ammo": 100,
-    "magazine": 100,
-    "items": [
-      [ "afs_herc_rig", 20 ],
-      [ "afs_ilbe", 20 ],
-      [ "molle_pack", 20 ],
-      [ "backpack", 20 ],
-      [ "runner_bag", 20 ],
-      [ "frame_pack", 20 ],
-      [ "nylon_scabbard", 1 ],
-      [ "dry_bag", 20 ]
-    ]
-  },
-  {
-    "id": "afs_augustmoon_outfitter_military",
-    "type": "item_group",
-    "subtype": "distribution",
-    "ammo": 100,
-    "magazine": 100,
-    "items": [
-      { "group": "afs_armor_military_infantry_g", "prob": 85 },
-      { "item": "afs_backpack_rockets", "prob": 10 },
-      { "item": "afs_backpack_shieldgen", "prob": 5 },
-      { "item": "afs_combat_cryo", "count": [ 1, 2 ], "prob": 60 }
     ]
   },
   {

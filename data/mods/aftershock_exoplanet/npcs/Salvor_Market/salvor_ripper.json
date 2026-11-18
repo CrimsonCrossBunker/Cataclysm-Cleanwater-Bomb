@@ -51,14 +51,6 @@
   },
   {
     "type": "item_group",
-    "id": "NC_SALVOR_RIPPER_worn",
-    "subtype": "collection",
-    "ammo": 100,
-    "magazine": 100,
-    "items": [ { "item": "afs_cryopod_bodyglove" }, { "item": "afs_wrist_computer" }, { "item": "spacer_cap" } ]
-  },
-  {
-    "type": "item_group",
     "id": "afs_salvor_ripper_software",
     "subtype": "collection",
     "items": [

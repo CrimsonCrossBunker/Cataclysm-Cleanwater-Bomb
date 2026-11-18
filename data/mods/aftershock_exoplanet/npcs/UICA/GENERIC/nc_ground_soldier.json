@@ -24,22 +24,6 @@
   },
   {
     "type": "item_group",
-    "id": "NC_UICA_GROUND_SOLDIER_worn",
-    "subtype": "collection",
-    "ammo": 100,
-    "magazine": 100,
-    "items": [
-      { "item": "tac_fullhelmet_uicas" },
-      { "item": "afs_military_vest" },
-      { "item": "afs_combat_cryo" },
-      { "item": "afs_ammo_satchel" },
-      { "item": "afs_jumpsuit_military" },
-      { "item": "afs_military_cloak" },
-      { "item": "holster" }
-    ]
-  },
-  {
-    "type": "item_group",
     "id": "NC_UICA_GROUND_SOLDIER_carry",
     "subtype": "collection",
     "items": [

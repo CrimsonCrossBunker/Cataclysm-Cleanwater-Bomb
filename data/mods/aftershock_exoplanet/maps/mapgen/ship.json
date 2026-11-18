@@ -6,18 +6,6 @@
     "object": { "fill_ter": "t_open_air", "place_nested": [ { "chunks": [ "your_ship" ], "x": 0, "y": 0 } ] }
   },
   {
-    "type": "item_group",
-    "id": "afs_your_ship_display_case",
-    "subtype": "collection",
-    "entries": [ { "item": "afs_thi_deed" }, { "item": "afs_old_ship_medal" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "afs_your_ship_safe",
-    "subtype": "collection",
-    "entries": [ { "item": "afs_ship_ids" }, { "item": "gold_small", "count": 10 } ]
-  },
-  {
     "type": "mapgen",
     "nested_mapgen_id": "your_ship",
     "object": {

@@ -32,26 +32,6 @@
     ]
   },
   {
-    "type": "item_group",
-    "id": "NC_AUGUSTMOON_DOCTOR_worn",
-    "subtype": "collection",
-    "items": [ { "item": "boots" }, { "item": "boxer_briefs" }, { "item": "spacer_jumpsuit" }, { "item": "afs_company_jacket" } ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_AUGUSTMOON_DOCTOR_stock",
-    "subtype": "collection",
-    "entries": [
-      { "item": "afs_medigel", "prob": 100, "count": [ 4, 10 ] },
-      { "item": "afs_stimpack", "prob": 100, "count": [ 3, 10 ] },
-      { "item": "afs_painkiller", "prob": 100, "count": [ 3, 10 ] },
-      { "group": "medical_tape_roll_part" },
-      { "group": "quikclot_bag_plastic_5", "count": [ 4, 8 ] },
-      { "group": "drugs_analgesic", "prob": 100, "count": [ 2, 4 ] },
-      { "group": "augustmoon_shop_money" }
-    ]
-  },
-  {
     "type": "talk_topic",
     "id": "TALK_MERCURIAL_DOCTOR",
     "dynamic_line": {

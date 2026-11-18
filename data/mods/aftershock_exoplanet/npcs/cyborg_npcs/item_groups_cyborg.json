@@ -1,34 +1,5 @@
 [
   {
-    "type": "item_group",
-    "id": "NC_GANGER_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "sneakers" },
-      { "item": "tank_top" },
-      { "item": "pants_army" },
-      { "item": "vest_leather_mod" },
-      { "item": "dump_pouch" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_GANGER_carried",
-    "items": [ [ "ear_plugs", 100 ], { "group": "NC_GANGER_misc", "count": [ 3, 6 ] } ]
-  },
-  {
-    "id": "NC_GANGER_melee",
-    "type": "item_group",
-    "items": [ [ "knife_combat", 50 ], [ "knife_trench", 30 ], [ "hammer_sledge", 20 ] ]
-  },
-  {
-    "id": "NC_GANGER_wield",
-    "type": "item_group",
-    "items": [ { "group": "NC_GANGER_melee", "prob": 100 }, { "group": "guns_ganger", "prob": 100 } ]
-  },
-  {
     "id": "NC_GANGER_misc",
     "type": "item_group",
     "ammo": 75,
@@ -157,39 +128,6 @@
       [ "omnicamera", 2 ],
       [ "l-stick", 1 ],
       [ "reading_light", 6 ]
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_CYBERNINJA_worn",
-    "subtype": "collection",
-    "entries": [
-      { "item": "briefs" },
-      { "item": "socks" },
-      { "item": "sneakers" },
-      { "item": "tank_top" },
-      { "item": "pants_army" },
-      { "item": "jacket_army" },
-      { "item": "molle_pack" }
-    ]
-  },
-  {
-    "type": "item_group",
-    "id": "NC_CYBERNINJA_carried",
-    "items": [ [ "ear_plugs", 100 ], { "group": "NC_CYBERNINJA_misc", "count": [ 3, 6 ] } ]
-  },
-  {
-    "id": "NC_CYBERNINJA_melee",
-    "type": "item_group",
-    "items": [ [ "knife_combat", 50 ], [ "knife_trench", 30 ], [ "knife_rm42", 20 ] ]
-  },
-  {
-    "id": "NC_CYBERNINJA_wield",
-    "type": "item_group",
-    "items": [
-      { "group": "NC_CYBERNINJA_melee", "prob": 100 },
-      { "group": "guns_smg_milspec", "prob": 40 },
-      { "group": "guns_rifle_milspec", "prob": 30 }
     ]
   },
   {

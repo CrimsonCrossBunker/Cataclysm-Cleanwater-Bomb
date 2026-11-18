@@ -1,20 +1,5 @@
 [
   {
-    "id": "afs_formless_ruins_random_loot",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [
-      { "group": "afs_machinery_maintenance_scrapgroup", "prob": 50 },
-      { "group": "afs_basic_material_scrapgroup", "prob": 20 }
-    ]
-  },
-  {
-    "id": "afs_formless_ruins_random_suit",
-    "type": "item_group",
-    "subtype": "distribution",
-    "entries": [ { "group": "afs_wintersuit_civilian_advanced", "prob": 50 } ]
-  },
-  {
     "type": "mapgen",
     "om_terrain": [ "afs_formless_ruins_dynamic" ],
     "weight": 500,
