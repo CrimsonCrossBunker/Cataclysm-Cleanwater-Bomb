@@ -31,3 +31,5 @@ require("effect_types")
 require("sauropod_damage_spells")
 
 require("sauropod_control")
+
+require("sauropod_death")

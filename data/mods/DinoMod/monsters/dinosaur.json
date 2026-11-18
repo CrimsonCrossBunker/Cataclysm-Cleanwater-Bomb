@@ -3113,8 +3113,7 @@
     "special_attacks": [ { "id": "stomp_DinoMod", "cooldown": 10, "damage_max_instance": [ { "damage_type": "bash", "amount": 12 } ] } ],
     "death_function": {
       "corpse_type": "BROKEN",
-      "message": "The sauropod stumbles as one of its legs is badly hurt and collapses.",
-      "eoc": "EOC_SAUROPOD_HURT"
+      "message": "The sauropod stumbles as one of its legs is badly hurt and collapses."
     },
     "weakpoint_sets": [ "wps_sauropod_leg" ],
     "extend": { "flags": [ "DESTROYS" ] }
