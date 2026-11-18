@@ -54,6 +54,7 @@ extern "C" {
 #include "crafting_gui.h"
 #include "creature.h"
 #include "debug.h"
+#include "effect.h"
 #include "flag.h"
 #include "generic_factory.h"
 #include "item.h"
@@ -63,6 +64,7 @@ extern "C" {
 #include "item_group.h"
 #include "itype.h"
 #include "iuse.h"
+#include "iuse_actor.h"
 #include "lua_platform_content.h"
 #include "martialarts.h"
 #include "material.h"
@@ -170,6 +172,26 @@ struct item_definition_data {
         std::set<std::string> sub_parts;
         std::int64_t encumbrance = 0;
         std::int64_t coverage = 0;
+        std::set<std::string> materials;
+        double material_thickness = 0.0;
+        std::int64_t environmental_protection = 0;
+    };
+    struct healing_data {
+        std::int64_t move_cost = 0;
+        double limb_power = 0.0;
+        std::optional<double> head_power;
+        std::optional<double> torso_power;
+    };
+    struct activation_effect_data {
+        std::string id;
+        std::int64_t duration_turns = 0;
+        std::int64_t intensity = 0;
+        bool permanent = false;
+    };
+    struct activation_data {
+        authored_text message;
+        std::int64_t move_cost = 100;
+        std::vector<activation_effect_data> effects;
     };
     struct ammunition_data {
         std::string type;
@@ -238,10 +260,15 @@ struct item_definition_data {
     bool has_armor = false;
     std::optional<tool_data> tool;
     std::vector<magazine_well_data> magazine_wells;
+    std::vector<pocket_data> container_pockets;
     std::optional<armor_data> armor;
     std::vector<armor_portion_definition> armor_portions;
     std::map<std::string, std::int64_t> ammo_pocket;
     std::vector<std::string> passive_enchantments;
+    std::string deploy_furniture;
+    std::string capture_size;
+    std::optional<healing_data> healing;
+    std::optional<activation_data> activation;
     std::string use_handler;
     std::string tick_handler;
     authored_text use_label;
@@ -1006,8 +1033,110 @@ struct item_definition_handle {
         }
         value.encumbrance = options.get_or<std::int64_t>( "encumbrance", 0 );
         value.coverage = options.get_or<std::int64_t>( "coverage", 0 );
+        value.material_thickness = options.get_or( "material_thickness", 0.0 );
+        value.environmental_protection = options.get_or<std::int64_t>( "environmental_protection", 0 );
+        if( const auto materials = options.get<sol::optional<sol::table>>( "materials" ) ) {
+            const std::size_t material_count = require_dense_array( *materials, "armor materials", 0 );
+            for( std::size_t index = 1; index <= material_count; ++index ) {
+                value.materials.insert( materials->get<std::string>( index ) );
+            }
+        }
         definition->armor_portions.push_back( std::move( value ) );
         definition->has_armor = true;
+        return *this;
+    }
+
+    item_definition_handle &container_pocket( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        const std::int64_t volume = options.get<std::int64_t>( "max_volume_ml" );
+        const std::int64_t mass = options.get<std::int64_t>( "max_weight_milligrams" );
+        const auto length = options.get<std::optional<std::int64_t>>( "max_item_length_mm" );
+        const std::int64_t moves = options.get_or<std::int64_t>( "moves", 100 );
+        const double weight_multiplier = options.get_or( "weight_multiplier", 1.0 );
+        const double encumbrance_multiplier = options.get_or( "volume_encumber_modifier", 1.0 );
+        const auto nonnegative_int = []( const std::int64_t value ) {
+            return value >= 0 && value <= std::numeric_limits<int>::max();
+        };
+        const auto nonnegative_float = []( const double value ) {
+            return std::isfinite( value ) && value >= 0.0 && value <= std::numeric_limits<float>::max();
+        };
+        if( !nonnegative_int( volume ) || mass < 0 || ( length && !nonnegative_int( *length ) ) ||
+            !nonnegative_int( moves ) || !nonnegative_float( weight_multiplier ) ||
+            !nonnegative_float( encumbrance_multiplier ) ) {
+            throw std::invalid_argument( "item container pocket has an invalid capacity, cost or multiplier" );
+        }
+        pocket_data pocket;
+        pocket.was_loaded = true;
+        pocket.raw_volume_capacity = units::from_milliliter( static_cast<int>( volume ) );
+        pocket.max_contains_weight = units::from_milligram( mass );
+        pocket.max_item_length = length ? units::from_millimeter( static_cast<int>( *length ) ) :
+                                 units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+        pocket.moves = static_cast<int>( moves );
+        pocket.weight_multiplier = static_cast<float>( weight_multiplier );
+        pocket.volume_encumber_modifier = static_cast<float>( encumbrance_multiplier );
+        pocket.watertight = options.get_or( "watertight", false );
+        pocket.rigid = options.get_or( "rigid", false );
+        pocket.holster = options.get_or( "holster", false );
+        if( const auto restriction = options.get<sol::optional<sol::table>>( "allowed_items" ) ) {
+            const std::size_t count = require_dense_array( *restriction, "container pocket allowed items", 1 );
+            for( std::size_t index = 1; index <= count; ++index ) {
+                const itype_id id( restriction->get<std::string>( index ) );
+                pocket.item_id_restriction.insert( id );
+                if( index == 1 ) {
+                    pocket.default_magazine = id;
+                }
+            }
+        }
+        definition->container_pockets.push_back( std::move( pocket ) );
+        return *this;
+    }
+
+    item_definition_handle &deploy_furniture( const std::string &id ) {
+        require_building_handle( token, *definition, "item" );
+        if( id.empty() ) {
+            throw std::invalid_argument( "item deployment requires a furniture id" );
+        }
+        definition->deploy_furniture = id;
+        return *this;
+    }
+
+    item_definition_handle &capture_creature( const std::string &size ) {
+        require_building_handle( token, *definition, "item" );
+        if( Creature::size_map.count( size ) == 0 ) {
+            throw std::invalid_argument( "item capture requires a native creature size" );
+        }
+        definition->capture_size = size;
+        return *this;
+    }
+
+    item_definition_handle &heal( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::healing_data value;
+        value.move_cost = options.get<std::int64_t>( "move_cost" );
+        value.limb_power = options.get_or( "limb_power", 0.0 );
+        value.head_power = options.get<std::optional<double>>( "head_power" );
+        value.torso_power = options.get<std::optional<double>>( "torso_power" );
+        definition->healing = std::move( value );
+        return *this;
+    }
+
+    item_definition_handle &activate_effects( const sol::table &options ) {
+        require_building_handle( token, *definition, "item" );
+        item_definition_data::activation_data value;
+        value.message = read_singular_text( options["message"], {}, "item activation message" );
+        value.move_cost = options.get_or<std::int64_t>( "move_cost", 100 );
+        const sol::table effects = options.get<sol::table>( "effects" );
+        const std::size_t count = require_dense_array( effects, "item activation effects", 1 );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table effect = effects.get<sol::table>( index );
+            value.effects.push_back( {
+                effect.get<std::string>( "id" ),
+                effect.get_or<std::int64_t>( "duration_turns", 0 ),
+                effect.get_or<std::int64_t>( "intensity", 0 ),
+                effect.get_or( "permanent", false )
+            } );
+        }
+        definition->activation = std::move( value );
         return *this;
     }
 
@@ -2755,6 +2884,11 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "magazine_well", &item_definition_handle::magazine_well,
         "armor", &item_definition_handle::armor,
         "armor_portion", &item_definition_handle::armor_portion,
+        "container_pocket", &item_definition_handle::container_pocket,
+        "deploy_furniture", &item_definition_handle::deploy_furniture,
+        "capture_creature", &item_definition_handle::capture_creature,
+        "heal", &item_definition_handle::heal,
+        "activate_effects", &item_definition_handle::activate_effects,
         "ammo_pocket", &item_definition_handle::ammo_pocket,
         "passive_enchantment", &item_definition_handle::passive_enchantment,
         "clear_use_actions", &item_definition_handle::clear_use_actions,
@@ -4695,8 +4829,20 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                   ( definition.armor->max_worn && !native_int( *definition.armor->max_worn ) ) ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has invalid armor values" );
             }
+            for( const pocket_data &pocket : definition.container_pockets ) {
+                for( const itype_id &item_id : pocket.item_id_restriction ) {
+                    if( item_id.is_null() || item_id.str().empty() ||
+                        ( check_engine_state && declared_item_ids.count( item_id.str() ) == 0 &&
+                          !item::type_is_defined( item_id ) ) ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' has an unknown container pocket item '" + item_id.str() + "'" );
+                    }
+                }
+            }
             for( const auto &portion : definition.armor_portions ) {
-                if( !native_int( portion.encumbrance ) || !native_int( portion.coverage ) ) {
+                if( !native_int( portion.encumbrance ) || !native_int( portion.coverage ) ||
+                    !finite_native_float( portion.material_thickness ) || portion.material_thickness < 0.0 ||
+                    !native_int( portion.environmental_protection ) ) {
                     throw std::runtime_error( "item '" + definition.id + "' has invalid armor portion values" );
                 }
                 for( const std::string &part : portion.covers ) {
@@ -4707,6 +4853,40 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                 for( const std::string &part : portion.sub_parts ) {
                     if( part.empty() || ( check_engine_state && !sub_bodypart_str_id( part ).is_valid() ) ) {
                         throw std::runtime_error( "item '" + definition.id + "' references unknown body subpart '" + part + "'" );
+                    }
+                }
+                for( const std::string &material : portion.materials ) {
+                    if( material_ids.count( material ) == 0 && !material_id( material ).is_valid() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' references unknown armor material '" + material + "'" );
+                    }
+                }
+            }
+            if( !definition.deploy_furniture.empty() && check_engine_state &&
+                !( context.defines_furniture && context.defines_furniture( definition.deploy_furniture ) ) &&
+                !furn_str_id( definition.deploy_furniture ).is_valid() ) {
+                throw std::runtime_error( "item '" + definition.id + "' deploys unknown furniture '" +
+                                          definition.deploy_furniture + "'" );
+            }
+            if( definition.healing ) {
+                const auto &heal = *definition.healing;
+                const double head = heal.head_power.value_or( 0.8 * heal.limb_power );
+                const double torso = heal.torso_power.value_or( 1.5 * heal.limb_power );
+                if( heal.move_cost < 0 || !native_int( heal.move_cost ) ||
+                    !finite_native_float( heal.limb_power ) || !finite_native_float( head ) ||
+                    !finite_native_float( torso ) || ( heal.limb_power == 0.0 && head == 0.0 && torso == 0.0 ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has invalid healing values" );
+                }
+            }
+            if( definition.activation ) {
+                const auto &activation = *definition.activation;
+                if( activation.move_cost < 0 || !native_int( activation.move_cost ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' has an invalid activation cost" );
+                }
+                for( const auto &effect : activation.effects ) {
+                    if( effect.id.empty() || effect.duration_turns < 0 || !native_int( effect.duration_turns ) ||
+                        effect.intensity < 0 || !native_int( effect.intensity ) ) {
+                        throw std::runtime_error( "item '" + definition.id + "' has invalid activation effect values" );
                     }
                 }
             }
@@ -6065,6 +6245,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         }
                         native->pockets.push_back( std::move( pocket ) );
                     }
+                    native->pockets.insert( native->pockets.end(), definition.container_pockets.begin(),
+                                            definition.container_pockets.end() );
                     if( definition.has_armor && !native->armor ) {
                         native->armor = cata::make_value<islot_armor>();
                         native->armor->was_loaded = true;
@@ -6090,6 +6272,11 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         data.coverage = static_cast<int>( portion.coverage );
                         data.cover_melee = data.coverage;
                         data.cover_ranged = data.coverage;
+                        data.avg_thickness = static_cast<float>( portion.material_thickness );
+                        data.env_resist = static_cast<int>( portion.environmental_protection );
+                        for( const std::string &material : portion.materials ) {
+                            data.materials.emplace_back( material_id( material ), 100, 0.0f );
+                        }
                         native->armor->sub_data.push_back( std::move( data ) );
                     }
                     if( !definition.ammo_pocket.empty() ) {
@@ -6203,6 +6390,49 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     }
                     if( definition.clear_use_actions ) {
                         native->use_methods.clear();
+                    }
+                    if( !definition.deploy_furniture.empty() ) {
+                        auto actor = std::make_unique<deploy_furn_actor>();
+                        actor->furn_type = furn_str_id( definition.deploy_furniture );
+                        native->use_methods.insert_or_assign( "deploy_furn", use_function( std::move( actor ) ) );
+                    }
+                    if( !definition.capture_size.empty() ) {
+                        native->properties["creature_size_capacity"] = definition.capture_size;
+                        native->use_methods.insert_or_assign( "CAPTURE_MONSTER_ACT",
+                                Item_factory::usage_from_string( "CAPTURE_MONSTER_ACT" ) );
+                    }
+                    if( definition.healing ) {
+                        const auto &source = *definition.healing;
+                        auto actor = std::make_unique<heal_actor>();
+                        actor->move_cost = static_cast<int>( source.move_cost );
+                        actor->limb_power = static_cast<float>( source.limb_power );
+                        actor->head_power = static_cast<float>( source.head_power.value_or( 0.8f * actor->limb_power ) );
+                        actor->torso_power = static_cast<float>( source.torso_power.value_or( 1.5f * actor->limb_power ) );
+                        actor->limb_scaling = 0.25f * actor->limb_power;
+                        const double scaling_ratio = actor->limb_power < 0.0001f ? 0.0 :
+                                                     static_cast<double>( actor->limb_scaling / actor->limb_power );
+                        actor->head_scaling = static_cast<float>( scaling_ratio * actor->head_power );
+                        actor->torso_scaling = static_cast<float>( scaling_ratio * actor->torso_power );
+                        native->use_methods.insert_or_assign( "heal", use_function( std::move( actor ) ) );
+                    }
+                    if( definition.activation ) {
+                        const auto &source = *definition.activation;
+                        auto actor = std::make_unique<consume_drug_iuse>();
+                        actor->activation_message = source.message.native();
+                        actor->moves = static_cast<int>( source.move_cost );
+                        for( const auto &effect : source.effects ) {
+                            const efftype_id effect_id( effect.id );
+                            if( !effect_id.is_valid() ) {
+                                throw std::runtime_error( "item '" + definition.id +
+                                                          "' activates unknown effect '" + effect.id + "'" );
+                            }
+                            iuse::effect_data native_effect( effect_id,
+                                    time_duration::from_turns( static_cast<int>( effect.duration_turns ) ),
+                                    bodypart_str_id::NULL_ID().id(), effect.permanent );
+                            native_effect.intensity = static_cast<int>( effect.intensity );
+                            actor->effects.push_back( std::move( native_effect ) );
+                        }
+                        native->use_methods.insert_or_assign( "consume_drug", use_function( std::move( actor ) ) );
                     }
                     if( !definition.use_handler.empty() ) {
                         const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
@@ -7504,6 +7734,23 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, flag );
                     }
                 }
+                for( const pocket_data &pocket : v.container_pockets ) {
+                    hash_part( state, "container_pocket" );
+                    hash_part( state, std::to_string( units::to_milliliter( pocket.raw_volume_capacity ) ) );
+                    hash_part( state, std::to_string( units::to_milligram( pocket.max_contains_weight ) ) );
+                    hash_part( state, std::to_string( units::to_millimeter( pocket.max_item_length ) ) );
+                    hash_part( state, std::to_string( pocket.moves ) );
+                    hash_part( state, std::to_string( pocket.weight_multiplier ) );
+                    hash_part( state, std::to_string( pocket.volume_encumber_modifier ) );
+                    hash_part( state, pocket.watertight ? "watertight" : "porous" );
+                    hash_part( state, pocket.rigid ? "rigid" : "flexible" );
+                    hash_part( state, pocket.holster ? "holster" : "multi_item" );
+                    hash_part( state, pocket.default_magazine.str() );
+                    for( const itype_id &item_id : pocket.item_id_restriction ) {
+                        hash_part( state, "allowed_item" );
+                        hash_part( state, item_id.str() );
+                    }
+                }
                 hash_part( state, v.has_armor ? "armor" : "inherit_armor" );
                 if( v.armor ) {
                     hash_part( state, v.armor->warmth ? std::to_string( *v.armor->warmth ) : "inherit_warmth" );
@@ -7513,6 +7760,12 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     hash_part( state, "armor_portion" );
                     hash_part( state, std::to_string( portion.encumbrance ) );
                     hash_part( state, std::to_string( portion.coverage ) );
+                    hash_part( state, std::to_string( portion.material_thickness ) );
+                    hash_part( state, std::to_string( portion.environmental_protection ) );
+                    for( const std::string &material : portion.materials ) {
+                        hash_part( state, "armor_material" );
+                        hash_part( state, material );
+                    }
                     for( const std::string &part : portion.covers ) {
                         hash_part( state, "body_part" );
                         hash_part( state, part );
@@ -7530,6 +7783,26 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 for( const std::string &enchantment : v.passive_enchantments ) {
                     hash_part( state, "passive_enchantment" );
                     hash_part( state, enchantment );
+                }
+                hash_part( state, v.deploy_furniture );
+                hash_part( state, v.capture_size );
+                if( v.healing ) {
+                    hash_part( state, "heal" );
+                    hash_part( state, std::to_string( v.healing->move_cost ) );
+                    hash_part( state, std::to_string( v.healing->limb_power ) );
+                    hash_part( state, v.healing->head_power ? std::to_string( *v.healing->head_power ) : "default" );
+                    hash_part( state, v.healing->torso_power ? std::to_string( *v.healing->torso_power ) : "default" );
+                }
+                if( v.activation ) {
+                    hash_part( state, "activate_effects" );
+                    hash_part( state, v.activation->message );
+                    hash_part( state, std::to_string( v.activation->move_cost ) );
+                    for( const auto &effect : v.activation->effects ) {
+                        hash_part( state, effect.id );
+                        hash_part( state, std::to_string( effect.duration_turns ) );
+                        hash_part( state, std::to_string( effect.intensity ) );
+                        hash_part( state, effect.permanent ? "permanent" : "temporary" );
+                    }
                 }
                 hash_part( state, v.use_handler );
                 hash_part( state, v.use_label.raw );

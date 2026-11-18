@@ -819,11 +819,68 @@ function ItemDefinition:armor(options) end
 ---@field sub_parts? string[] Explicit covered sub-body-part IDs. Omission retains native body-part expansion during finalization.
 ---@field encumbrance? integer Native signed-int encumbrance; defaults to zero.
 ---@field coverage? integer Native signed-int coverage; also supplies melee and ranged coverage. Vitals coverage retains the native zero default.
+---@field materials? string[] Native material IDs at full material coverage.
+---@field material_thickness? number Native average material thickness; defaults to zero.
+---@field environmental_protection? integer Native environmental protection; defaults to zero.
 
 ---Append one native armor portion, ensuring an armor slot exists. Native finalization derives layers, sub-part aggregation and material properties.
 ---@param options ArmorPortionDefinitionOptions
 ---@return ItemDefinition self
 function ItemDefinition:armor_portion(options) end
+
+---@class ItemContainerPocketOptions
+---@field max_volume_ml integer Native container capacity in milliliters.
+---@field max_weight_milligrams integer Native container capacity in milligrams.
+---@field max_item_length_mm? integer Longest accepted item; defaults to the native volume-derived length.
+---@field moves? integer Item retrieval cost; defaults to 100 moves.
+---@field rigid? boolean Contents do not expand the item's volume; defaults to false.
+---@field watertight? boolean The pocket can contain liquids; defaults to false.
+---@field holster? boolean The pocket holds at most one item; defaults to false.
+---@field weight_multiplier? number Contents weight multiplier; defaults to one.
+---@field volume_encumber_modifier? number Encumbrance multiplier due to contents; defaults to one.
+---@field allowed_items? string[] When supplied, only these item IDs are accepted.
+
+---Append an ordinary native storage pocket. Existing pockets keep their order.
+---@param options ItemContainerPocketOptions
+---@return ItemDefinition self
+function ItemDefinition:container_pocket(options) end
+
+---Install the native furniture deployment action, including its target choice and placement checks.
+---@param furniture_id string Native furniture id.
+---@return ItemDefinition self
+function ItemDefinition:deploy_furniture(furniture_id) end
+
+---Install the native capture and release action with a maximum creature size.
+---@param max_size 'TINY'|'SMALL'|'MEDIUM'|'LARGE'|'HUGE'
+---@return ItemDefinition self
+function ItemDefinition:capture_creature(max_size) end
+
+---@class ItemHealingOptions
+---@field move_cost integer Native cost to apply the treatment.
+---@field limb_power? number Base healing for limbs; defaults to zero.
+---@field head_power? number Base healing for the head; defaults to 80 percent of limb power.
+---@field torso_power? number Base healing for the torso; defaults to 150 percent of limb power.
+
+---Install native first aid targeting, skill scaling and item consumption for an instant healing item.
+---@param options ItemHealingOptions
+---@return ItemDefinition self
+function ItemDefinition:heal(options) end
+
+---@class ItemActivationEffectOptions
+---@field id string Native effect type id.
+---@field duration_turns? integer Effect duration in turns; defaults to zero.
+---@field intensity? integer Native effect intensity; defaults to zero.
+---@field permanent? boolean Whether the effect is permanent.
+
+---@class ItemActivationEffectsOptions
+---@field message? string|LocalizedText Message displayed after activation.
+---@field move_cost? integer Cost in moves; defaults to 100.
+---@field effects ItemActivationEffectOptions[] Ordered native effects applied to the activator.
+
+---Activate an item through the native drug action, including tolerance modifiers and charge consumption.
+---@param options ItemActivationEffectsOptions
+---@return ItemDefinition self
+function ItemDefinition:activate_effects(options) end
 
 ---Accumulate an ammunition type and positive native signed-int capacity into one appended rigid ammunition-storage pocket. This leaves the item's native magazine subtype unchanged.
 ---@param ammo_type string Existing or same-transaction ammunition-type ID.
