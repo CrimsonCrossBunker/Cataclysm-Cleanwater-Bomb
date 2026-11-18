@@ -4391,7 +4391,10 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     services["sound"] = std::move( platform_sound );
     cata::lua_platform::install_game_world_service_api(
         services, runtime_generation, world_generation, require_read, require_write,
-        require_write, has_callback );
+        require_write, has_callback, [weak]() {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        return owner && owner->avatar_death_callback;
+    } );
     cata::lua_platform::install_variable_api( services, runtime_generation, world_generation,
             require_read, require_write, has_callback );
     ccb["services"] = std::move( services );

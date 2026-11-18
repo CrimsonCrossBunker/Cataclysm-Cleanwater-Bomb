@@ -9951,6 +9951,31 @@ function CcbRelocationApi.teleport_character(character, position, options) end
 ---@return CcbAvatarTeleportResult result Uses native `teleport_to_point` with safe=true, no teleglow, and no internal messages. It may load/recenter the active map; requires an active Platform write callback.
 function CcbRelocationApi.teleport_avatar(avatar, position, options) end
 
+---@class CcbCreatureTeleportValue
+---@field accepted boolean Native teleport result.
+---@field changed boolean Whether the operation was accepted or changed position or boarding.
+---@field scope 'avatar'|'npc'|'monster'|'creature'
+---@field handle GameHandle Exact Creature handle after the attempt.
+---@field position TripointCoord Current absolute map-square position after the attempt.
+---@field overmap_terrain TripointCoord Absolute overmap terrain derived from the new position.
+
+---@class CcbCreatureTeleportResult: CcbResult
+---@field value? CcbCreatureTeleportValue
+---@field error? CcbPlatformResultError
+
+---Use the native teleport policy for a live Creature, including monsters.
+---@param creature GameHandle Exact live Creature handle.
+---@param position TripointCoord Absolute map-square destination.
+---@param options? CcbAvatarTeleportOptions
+---@return CcbCreatureTeleportResult result
+function CcbRelocationApi.teleport_creature(creature, position, options) end
+
+---Move the deceased avatar during the final avatar_death callback before native death camera and corpse placement. Does not grant a live handle or change death state.
+---@param position TripointCoord Absolute map-square destination.
+---@param options? CcbAvatarTeleportOptions
+---@return boolean accepted Native teleport result.
+function CcbRelocationApi.teleport_deceased_avatar(position, options) end
+
 ---@class CcbItemRelocationValue
 ---@field accepted boolean Whether the destination accepted the copied item.
 ---@field changed boolean Whether the source was moved or removed.
@@ -14274,7 +14299,7 @@ local CcbSpawnsApi = {}
 function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 
 ---@class CcbMonsterPopulationOptions
----@field count? integer Real-monster attempts, 0..2147483647; defaults to one.
+---@field count? integer|fun():integer Real-monster attempts, 0..2147483647; defaults to one. A synchronous provider runs once after native prototype construction, before placement, and is never retained.
 ---@field hallucinations? integer Hallucination attempts, 0..2147483647; defaults to zero. These run before real-monster attempts.
 ---@field min_radius? integer Native placement radius, 0..60; defaults to one.
 ---@field max_radius? integer Native placement radius, 0..60; defaults to ten and cannot be below min_radius.

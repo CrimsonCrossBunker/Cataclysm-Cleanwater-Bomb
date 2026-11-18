@@ -491,7 +491,15 @@ sol::table spawn_monster_population(
     placement["min_radius"] = 1;
     placement["max_radius"] = 10;
     int real_count = 1;
+    sol::protected_function count_provider;
     int hallucination_count = 0;
+    const auto read_count = []( const sol::object &value ) {
+        if( !value.is<lua_Integer>() || value.as<lua_Integer>() < 0 ||
+            value.as<lua_Integer>() > std::numeric_limits<int>::max() ) {
+            throw std::invalid_argument( "services.spawns.population counts must be nonnegative native integers" );
+        }
+        return value.as<int>();
+    };
     time_duration minimum_lifespan = 0_turns;
     time_duration maximum_lifespan = 0_turns;
     bool ranged_lifespan = false;
@@ -502,12 +510,14 @@ sol::table spawn_monster_population(
             }
             const std::string key = entry.first.as<std::string>();
             const sol::object value = entry.second;
-            if( key == "count" || key == "hallucinations" ) {
-                if( !value.is<lua_Integer>() || value.as<lua_Integer>() < 0 ||
-                    value.as<lua_Integer>() > std::numeric_limits<int>::max() ) {
-                    throw std::invalid_argument( "services.spawns.population counts must be nonnegative native integers" );
+            if( key == "count" ) {
+                if( value.get_type() == sol::type::function ) {
+                    count_provider = value.as<sol::protected_function>();
+                } else {
+                    real_count = read_count( value );
                 }
-                ( key == "count" ? real_count : hallucination_count ) = value.as<int>();
+            } else if( key == "hallucinations" ) {
+                hallucination_count = read_count( value );
             } else if( key == "lifespan" ) {
                 if( value.is<script_time_duration>() ) {
                     minimum_lifespan = value.as<script_time_duration>().to_native();
@@ -547,11 +557,24 @@ sol::table spawn_monster_population(
                               maximum_lifespan > maximum_hallucination_lifespan ) ) ) {
         throw std::invalid_argument( "services.spawns.population lifespan must be within 0 turns..10000 days with ordered endpoints" );
     }
-    map &here = require_active_map( api_name );
-    const tripoint_bub_ms target = require_loaded_position( here, requested_position, api_name );
-    // Preserve native prototype initialization before placement or lifespan draws.
+    map *here = &require_active_map( api_name );
+    tripoint_bub_ms target = require_loaded_position( *here, requested_position, api_name );
+    // Native construction can roll special attack cooldowns before the population count.
     monster prototype;
     prototype = monster( mtype_id( requested_type.value() ) );
+    if( count_provider.valid() ) {
+        const sol::protected_function_result result = count_provider();
+        if( !result.valid() ) {
+            const sol::error error = result;
+            throw std::runtime_error( std::string( api_name ) + " count provider failed: " + error.what() );
+        }
+        if( result.return_count() == 0 ) {
+            throw std::invalid_argument( "services.spawns.population count provider must return an integer" );
+        }
+        real_count = read_count( result.get<sol::object>() );
+        here = &require_active_map( api_name );
+        target = require_loaded_position( *here, requested_position, api_name );
+    }
     const auto lifespan = [&]() -> std::optional<time_duration> {
         const time_duration duration = ranged_lifespan ? time_duration::from_turns(
                                           rng( to_turns<int>( minimum_lifespan ), to_turns<int>( maximum_lifespan ) ) ) :
@@ -571,7 +594,7 @@ sol::table spawn_monster_population(
                     critter->as_monster()->friendly = -1;
                 }
                 ++spawned;
-                if( get_avatar().sees( here, *critter ) ) {
+                if( get_avatar().sees( *here, *critter ) ) {
                     ++visible;
                 }
             }
@@ -589,7 +612,7 @@ sol::table spawn_monster_population(
                 critter->friendly = -1;
             }
             ++spawned;
-            if( get_avatar().sees( here, *critter ) ) {
+            if( get_avatar().sees( *here, *critter ) ) {
                 ++visible;
             }
             const std::optional<time_duration> duration = lifespan();
@@ -2008,51 +2031,15 @@ sol::table travel_avatar_to_omt(
     return result;
 }
 
-sol::table teleport_character_to_position(
-    sol::this_state lua, const game_handle &handle,
-    const script_tripoint_coord &requested_position,
-    const sol::optional<sol::table> &requested_options,
-    const game_handle_runtime &runtime_generation,
-    const std::size_t world_generation, const bool avatar_only )
+struct creature_teleport_outcome {
+    bool accepted;
+    bool changed;
+};
+
+creature_teleport_outcome perform_creature_teleport(
+    Creature &creature, const tripoint_abs_ms &destination, const character_teleport_options &options,
+    const std::string_view api_name )
 {
-    const std::string_view api_name = avatar_only ? "services.relocation.teleport_avatar" :
-                                      "services.relocation.teleport_character";
-    const std::string supported = std::string( api_name ) + ( avatar_only ?
-                                  " supports only an exact Avatar handle" : " supports only an exact Avatar or NPC handle" );
-    sol::state_view state( lua );
-    const character_teleport_options options =
-        read_character_teleport_options( requested_options, api_name );
-    const tripoint_abs_ms destination = require_absolute_ms(
-                                            requested_position, api_name );
-
-    if( handle.kind() != game_handle_kind::creature ||
-        ( handle.subtype_name() != "avatar" &&
-          ( avatar_only || handle.subtype_name() != "npc" ) ) ) {
-        return make_game_error_result( state, {
-            "unsupported",
-            supported
-        } );
-    }
-
-    std::optional<game_handle_error> error;
-    Character *value = avatar_only ?
-                       resolve_exact_avatar( handle, runtime_generation, world_generation, error ) :
-                       resolve_exact_character( handle, runtime_generation, world_generation, error );
-    if( value == nullptr ) {
-        if( error && ( error->code == "wrong_subtype" ||
-                       error->code == "wrong_kind" ) ) {
-            return make_game_error_result( state, {
-                "unsupported",
-                supported
-            } );
-        }
-        return make_game_error_result( state, error.value_or( game_handle_error{
-            "invalid_handle",
-            std::string( api_name ) + ( avatar_only ? " could not resolve the Avatar handle" :
-                                       " could not resolve the Character handle" )
-        } ) );
-    }
-
     map &here = require_active_map( api_name );
     const std::optional<tripoint_bub_ms> target_local =
         map_bubble_position_if_representable( here, destination );
@@ -2064,26 +2051,99 @@ sol::table teleport_character_to_position(
     if( !here.inbounds( *target_local ) ) {
         require_avatar_overmap_load_range( destination, api_name );
     }
-    const tripoint_abs_ms before = value->pos_abs();
-    const bool was_in_vehicle = value->in_vehicle;
-    const bool accepted = teleport::teleport_to_point(
-                              *value, *target_local, true,
-                              false, false, options.force, options.force_safe );
-    const tripoint_abs_ms after = value->pos_abs();
-    if( accepted ) {
-        translate_relocated_linked_items( *value, after - before );
+    const auto reference = creature.get_safe_reference();
+    const Character *character = creature.as_character();
+    const tripoint_abs_ms before = creature.pos_abs();
+    const bool was_in_vehicle = character && character->in_vehicle;
+    const bool accepted = teleport::teleport_to_point( creature, *target_local, true, false, false,
+                          options.force, options.force_safe );
+    Creature *moved = reference.get();
+    if( !moved ) {
+        bump_map_mutation_epoch();
+        return { accepted, true };
     }
-
+    const tripoint_abs_ms after = moved->pos_abs();
+    Character *moved_character = moved->as_character();
+    if( accepted && moved_character ) {
+        translate_relocated_linked_items( *moved_character, after - before );
+    }
     const bool changed = accepted || before != after ||
-                         ( was_in_vehicle && !value->in_vehicle );
+                         ( was_in_vehicle && moved_character && !moved_character->in_vehicle );
     if( changed ) {
         bump_map_mutation_epoch();
     }
+    return { accepted, changed };
+}
 
+enum class creature_teleport_scope : int {
+    avatar,
+    character,
+    creature
+};
+
+sol::table teleport_creature_to_position(
+    sol::this_state lua, const game_handle &handle,
+    const script_tripoint_coord &requested_position,
+    const sol::optional<sol::table> &requested_options,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation, const creature_teleport_scope scope )
+{
+    const bool avatar_only = scope == creature_teleport_scope::avatar;
+    const bool any_creature = scope == creature_teleport_scope::creature;
+    const std::string_view api_name = avatar_only ? "services.relocation.teleport_avatar" :
+                                      any_creature ? "services.relocation.teleport_creature" :
+                                      "services.relocation.teleport_character";
+    const std::string supported = std::string( api_name ) + ( avatar_only ?
+                                  " supports only an exact Avatar handle" : any_creature ?
+                                  " supports only an exact Creature handle" :
+                                  " supports only an exact Avatar or NPC handle" );
+    sol::state_view state( lua );
+    const character_teleport_options options =
+        read_character_teleport_options( requested_options, api_name );
+    const tripoint_abs_ms destination = require_absolute_ms(
+                                            requested_position, api_name );
+
+    if( handle.kind() != game_handle_kind::creature ||
+        ( !any_creature && handle.subtype_name() != "avatar" &&
+          ( avatar_only || handle.subtype_name() != "npc" ) ) ) {
+        return make_game_error_result( state, {
+            "unsupported",
+            supported
+        } );
+    }
+
+    std::optional<game_handle_error> error;
+    Creature *value = resolve_exact_creature( handle, runtime_generation, world_generation, error );
+    if( value == nullptr ) {
+        if( error && ( error->code == "wrong_subtype" ||
+                       error->code == "wrong_kind" ) ) {
+            return make_game_error_result( state, {
+                "unsupported",
+                supported
+            } );
+        }
+        return make_game_error_result( state, error.value_or( game_handle_error{
+            "invalid_handle",
+            std::string( api_name ) + ( avatar_only ? " could not resolve the Avatar handle" :
+                                       any_creature ? " could not resolve the Creature handle" :
+                                       " could not resolve the Character handle" )
+        } ) );
+    }
+
+    const auto reference = value->get_safe_reference();
+    const creature_teleport_outcome outcome = perform_creature_teleport( *value, destination, options,
+            api_name );
+    value = reference.get();
+    if( !value ) {
+        return make_game_error_result( state, {
+            "destroyed", std::string( api_name ) + " target was destroyed by a synchronous callback"
+        } );
+    }
+    const tripoint_abs_ms after = value->pos_abs();
     sol::table result = state.create_table();
-    result["accepted"] = accepted;
-    result["changed"] = changed;
-    result["scope"] = value->is_avatar() ? "avatar" : "npc";
+    result["accepted"] = outcome.accepted;
+    result["changed"] = outcome.changed;
+    result["scope"] = creature_scope( *value );
     result["handle"] = make_creature_handle(
                            *value, runtime_generation, world_generation );
     result["position"] = absolute_position( *value );
@@ -2860,10 +2920,10 @@ void install_relocation_move_api(
         require_dangerous_relocation();
         require_active_callback(
             has_active_callback, "services.relocation.teleport_avatar" );
-        return teleport_character_to_position(
+        return teleport_creature_to_position(
                    lua, handle, position, options,
                    current_runtime_generation(),
-                   current_world_generation(), true );
+                   current_world_generation(), creature_teleport_scope::avatar );
     } );
     relocation.set_function(
         "teleport_character",
@@ -2876,10 +2936,24 @@ void install_relocation_move_api(
         require_dangerous_relocation();
         require_active_callback(
             has_active_callback, "services.relocation.teleport_character" );
-        return teleport_character_to_position(
+        return teleport_creature_to_position(
                    lua, handle, position, options,
                    current_runtime_generation(),
-                   current_world_generation(), false );
+                   current_world_generation(), creature_teleport_scope::character );
+    } );
+    relocation.set_function(
+        "teleport_creature",
+        [current_runtime_generation, current_world_generation,
+         require_write, require_dangerous_relocation, has_active_callback](
+            sol::this_state lua, const game_handle & handle,
+            const script_tripoint_coord & position,
+    const sol::optional<sol::table> &options ) {
+        require_write();
+        require_dangerous_relocation();
+        require_active_callback( has_active_callback, "services.relocation.teleport_creature" );
+        return teleport_creature_to_position(
+                   lua, handle, position, options, current_runtime_generation(),
+                   current_world_generation(), creature_teleport_scope::creature );
     } );
     relocation.set_function(
         "move",
@@ -2906,7 +2980,8 @@ void install_game_world_service_api(
     const std::function<void()> &require_read,
     const std::function<void()> &require_write,
     const std::function<void()> &require_dangerous_relocation,
-    const std::function<bool()> &has_active_callback )
+    const std::function<bool()> &has_active_callback,
+    const std::function<bool()> &has_avatar_death_callback )
 {
     sol::state_view state( services.lua_state() );
 
@@ -3157,6 +3232,20 @@ void install_game_world_service_api(
     install_relocation_move_api(
         relocation, current_runtime_generation, current_world_generation,
         require_write, require_dangerous_relocation, has_active_callback );
+    relocation.set_function(
+        "teleport_deceased_avatar",
+        [authorize_relocation, require_write, has_avatar_death_callback](
+            const script_tripoint_coord & position, const sol::optional<sol::table> &requested ) {
+        constexpr std::string_view api_name = "services.relocation.teleport_deceased_avatar";
+        require_write();
+        authorize_relocation( api_name );
+        if( !has_avatar_death_callback() || !get_avatar().is_dead_state() ) {
+            throw std::runtime_error( "services.relocation.teleport_deceased_avatar requires avatar_death" );
+        }
+        const character_teleport_options options = read_character_teleport_options( requested, api_name );
+        return perform_creature_teleport( get_avatar(), require_absolute_ms( position, api_name ),
+                                          options, api_name ).accepted;
+    } );
     services["relocation"] = std::move( relocation );
 }
 

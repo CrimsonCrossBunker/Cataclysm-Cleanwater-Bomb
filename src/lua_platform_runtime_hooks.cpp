@@ -24,6 +24,7 @@
 #include "avatar.h"
 #include "bodypart.h"
 #include "calendar.h"
+#include "cata_scope_helpers.h"
 #include "cata_variant.h"
 #include "character.h"
 #include "character_action_guard.h"
@@ -393,6 +394,8 @@ static void dispatch_event_handler( runtime &owner, const std::string &name,
     }
     sol::protected_function callback = handler->second.callback;
     callback_scope scope( owner );
+    restore_on_out_of_scope restore_avatar_death( owner.avatar_death_callback );
+    owner.avatar_death_callback = name == "avatar_death";
     if( payload.is<sol::table>() ) {
         const sol::optional<sol::table> actors = payload.as<sol::table>()["actors"];
         if( actors ) {

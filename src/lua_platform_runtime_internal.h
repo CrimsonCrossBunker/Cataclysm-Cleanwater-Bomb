@@ -204,6 +204,7 @@ class runtime : public std::enable_shared_from_this<runtime>
         bool task_migration_active = false;
         std::mt19937_64 random_engine;
         int callback_depth = 0;
+        bool avatar_death_callback = false;
         bool native_enchantment_random = false;
         bool world_is_ready = false;
 };
