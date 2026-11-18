@@ -22,14 +22,6 @@
     "effect": [ { "u_add_effect": "mysterious_stranger_cooldown", "duration": "2 days" } ]
   },
   {
-    "type": "effect_type",
-    "id": "mysterious_stranger_cooldown",
-    "name": [ "Mysterious Stranger's Break" ],
-    "apply_message": "The stranger will be back…",
-    "desc": [ "The stranger will be back…" ],
-    "rating": "bad"
-  },
-  {
     "type": "npc",
     "id": "mysterious_stranger",
     "name_unique": "Mysterious Stranger",
