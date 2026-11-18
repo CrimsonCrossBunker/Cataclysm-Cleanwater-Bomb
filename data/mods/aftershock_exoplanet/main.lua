@@ -95,3 +95,5 @@ require("food_recipes")
 require("stepped_recipes")
 
 require("retired_recipes")
+
+require("weapon_recipes")

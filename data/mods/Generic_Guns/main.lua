@@ -11,3 +11,5 @@ require("disassembly")
 require("retired_recipes")
 
 require("crafting_recipes")
+
+require("weapon_recipes")

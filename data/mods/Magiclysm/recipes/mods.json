@@ -2,21 +2,6 @@
   {
     "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
-    "result": "magic_suppressor",
-    "category": "CC_WEAPON",
-    "subcategory": "CSC_WEAPON_MODS",
-    "skill_used": "mechanics",
-    "skills_required": [ [ "spellcraft", 4 ], [ "gun", 4 ] ],
-    "difficulty": 4,
-    "time": "2 m 36 s",
-    "book_learn": [ [ "techno_basic", 4 ] ],
-    "qualities": [ { "id": "SAW_M_FINE", "level": 1 } ],
-    "tools": [ [ [ "rune_technomancer", -1 ], [ "rune_technomancer_weapon", -1 ], [ "rune_technomancer_weapon_adept", -1 ] ] ],
-    "components": [ [ [ "filter_liquid", 1 ], [ "muffler", 1 ] ], [ [ "pipe", 1 ] ], [ [ "scrap", 2 ] ], [ [ "glow_dust", 1 ] ] ]
-  },
-  {
-    "type": "recipe",
-    "activity_level": "LIGHT_EXERCISE",
     "result": "mana_dot_sight",
     "category": "CC_ENCHANTED",
     "subcategory": "CSC_ENCHANTED_MODS",

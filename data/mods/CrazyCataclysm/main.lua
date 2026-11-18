@@ -22,3 +22,5 @@ require("snippets")
 require("disassembly")
 
 require("food_recipes")
+
+require("weapon_recipes")

@@ -23,3 +23,5 @@ require("bionic_enchantments")
 require("construction_groups")
 
 require("lua.disassembly")
+
+require("lua.weapon_recipes")

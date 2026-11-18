@@ -33,3 +33,5 @@ require("stepped_recipes")
 require("retired_recipes")
 
 require("crafting_recipes")
+
+require("weapon_recipes")
