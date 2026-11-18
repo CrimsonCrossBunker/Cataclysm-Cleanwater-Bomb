@@ -142,24 +142,6 @@
     "melee_damage": { "bash": 10 }
   },
   {
-    "id": "telepad",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "teleport pad" },
-    "description": "A kit for a teleporter trap, consisting of a teleporter and a solar cell that is triggered when stepped upon.",
-    "weight": "2 kg",
-    "volume": "1 L",
-    "price": "7 kUSD",
-    "price_postapoc": "10 USD",
-    "to_hit": { "grip": "bad", "length": "short", "surface": "any", "balance": "clumsy" },
-    "material": [ "plastic", "aluminum" ],
-    "symbol": ";",
-    "color": "dark_gray",
-    "use_action": { "type": "place_trap", "trap": "tr_telepad", "moves": 350, "practice": 10, "done_message": "You place the telepad." },
-    "flags": [ "SINGLE_USE" ],
-    "melee_damage": { "bash": 2 }
-  },
-  {
     "id": "microscope",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],

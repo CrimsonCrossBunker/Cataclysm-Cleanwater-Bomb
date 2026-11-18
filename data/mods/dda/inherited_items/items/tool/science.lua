@@ -1302,3 +1302,33 @@ do
     item:tool { ammo_types = {} }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "telepad",
+        name = ccb.content.plural_text("teleport pad", "teleport pads"),
+        description = ccb.content.text("A kit for a teleporter trap, consisting of a teleporter and a solar cell that is triggered when stepped upon."),
+        mass_milligrams = 2000000,
+        volume_ml = 1000,
+        price_cents = 700000,
+        price_postapoc_cents = 1000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "dark_gray",
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_use_actions()
+    item:place_trap {
+        trap = "tr_telepad",
+        moves = 350,
+        practice = 10,
+        message = ccb.content.text("You place the telepad."),
+    }
+    item:clear_flags()
+    item:flag("SINGLE_USE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 2)
+    item:tool()
+    content.add(item)
+end
