@@ -722,6 +722,8 @@ struct item_definition_data {
     std::vector<std::string> learned_spells;
     bool martial_arts_manual = false;
     std::string use_handler;
+    std::string use_action_id;
+    std::optional<int> use_ammo_scale;
     std::string tick_handler;
     authored_text use_label;
     std::optional<authored_text> use_description;
@@ -2417,6 +2419,8 @@ struct item_definition_handle {
         definition->learned_spells.clear();
         definition->martial_arts_manual = false;
         definition->use_handler.clear();
+        definition->use_action_id.clear();
+        definition->use_ammo_scale.reset();
         definition->use_label = {};
         definition->use_description.reset();
         return *this;
@@ -2424,7 +2428,8 @@ struct item_definition_handle {
 
     item_definition_handle &on_use( const std::string &handler,
                                     const sol::optional<sol::object> &label,
-                                    const sol::optional<sol::object> &description ) {
+                                    const sol::optional<sol::object> &description,
+                                    const sol::optional<sol::table> &options ) {
         require_building_handle( token, *definition, "item" );
         if( handler.empty() ) {
             throw std::runtime_error( "item use handler id cannot be empty" );
@@ -2436,7 +2441,21 @@ struct item_definition_handle {
         if( description ) {
             parsed_description = read_singular_text( *description, "", "item use description" );
         }
+        std::string action_id;
+        std::optional<int> ammo_scale;
+        if( options ) {
+            if( const auto id = options->get<sol::optional<std::string>>( "id" ) ) {
+                if( id->empty() || id->size() > 128 ||
+                    id->find_first_not_of( "abcdefghijklmnopqrstuvwxyz0123456789_:" ) != std::string::npos ) {
+                    throw std::invalid_argument( "invalid Lua item use action id" );
+                }
+                action_id = *id;
+            }
+            ammo_scale = read_nonnegative_item_int( *options, "ammo_scale" );
+        }
         definition->use_handler = handler;
+        definition->use_action_id = std::move( action_id );
+        definition->use_ammo_scale = ammo_scale;
         definition->use_label = std::move( parsed_label );
         definition->use_description = std::move( parsed_description );
         return *this;
@@ -9119,13 +9138,21 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->use_methods.insert_or_assign( "consume_drug", use_function( std::move( actor ) ) );
                     }
                     if( !definition.use_handler.empty() ) {
-                        const std::string action_id = "lua_platform:" + pimpl_->owner + ":" +
-                                                      definition.use_handler;
-                        native->use_methods.emplace(
+                        const std::string action_id = definition.use_action_id.empty() ?
+                                                      "lua_platform:" + pimpl_->owner + ":" + definition.use_handler :
+                                                      definition.use_action_id;
+                        const bool inserted = native->use_methods.emplace(
                             action_id,
                             use_function( std::make_unique<lua_platform_iuse_actor>(
                                               pimpl_->owner, definition.use_handler, definition.use_label,
-                                              definition.use_description ) ) );
+                                              definition.use_description ) ) ).second;
+                        if( !inserted && ( !definition.use_action_id.empty() || definition.use_ammo_scale ) ) {
+                            throw std::runtime_error( "item '" + definition.id +
+                                                      "' already has use action '" + action_id + "'" );
+                        }
+                        if( definition.use_ammo_scale ) {
+                            native->ammo_scale.insert_or_assign( action_id, *definition.use_ammo_scale );
+                        }
                     }
                     if( definition.clear_tick_actions ) {
                         native->tick_action.clear();
@@ -11179,6 +11206,14 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                     }
                 }
                 hash_part( state, v.use_handler );
+                if( !v.use_action_id.empty() ) {
+                    hash_part( state, "use_action_id" );
+                    hash_part( state, v.use_action_id );
+                }
+                if( v.use_ammo_scale ) {
+                    hash_part( state, "use_ammo_scale" );
+                    hash_part( state, std::to_string( *v.use_ammo_scale ) );
+                }
                 hash_part( state, v.use_label.raw );
                 hash_text( v.use_label.translated );
                 hash_part( state, v.use_description ? "use_description" : "no_use_description" );

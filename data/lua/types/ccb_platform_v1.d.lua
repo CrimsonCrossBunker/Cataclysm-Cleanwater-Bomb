@@ -999,11 +999,16 @@ function ItemDefinition:vitamin(vitamin_id, amount) end
 ---@return ItemDefinition self
 function ItemDefinition:book(options) end
 
+---@class ItemUseActionOptions
+---@field id? string Explicit native action ID in this item's use menu. Defaults to the generated Mod and handler ID.
+---@field ammo_scale? integer Non-negative multiplier for the engine's pre-activation ammo check.
+
 ---@param handler_id string
 ---@param label? string|LocalizedText Action menu label; content.text stays dynamically translated, plain strings remain literal, and omission defaults to handler_id.
 ---@param description? string|LocalizedText Action description shown in item info.
+---@param options? ItemUseActionOptions
 ---@return ItemDefinition self
-function ItemDefinition:on_use(handler_id, label, description) end
+function ItemDefinition:on_use(handler_id, label, description, options) end
 
 ---@class ArmorDefinitionOptions
 ---@field warmth? integer Native signed-int warmth. Omission inherits; new armor defaults to zero.
@@ -5934,6 +5939,7 @@ function WeaponCategoryDefinition:proficiency(proficiency_id) end
 ---@field item GameHandle Runtime-owner- and generation-safe handle for this exact used item instance (beta), retaining its native location hint.
 ---@field position TripointCoord Reality-bubble map-square (`bub`/`ms`) position of use.
 ---@field item_position TripointCoord Current absolute map-square position of the exact item.
+---@field damage_level integer The used item's native discrete damage level.
 ---@field charges integer
 local ItemUseContext = {}
 
@@ -5947,6 +5953,11 @@ function ItemUseContext:message(text, type) end
 ---@param text string Native text to expand.
 ---@return string
 function ItemUseContext:expand_text(text) end
+
+---Convert the exact used item with its callback carrier and invalidate its prior item handles.
+---@param target GameId GameId<item>
+---@param active? boolean Defaults to false. Temperature-tracked items remain active.
+function ItemUseContext:transform(target, active) end
 
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
@@ -7052,9 +7063,9 @@ function CcbPlatformSoundApi.play_from_outdoors(id, variant, volume) end
 ---@param id string Native sound-effect id, 1..128 bytes.
 ---@param variant string Native variant id, 1..128 bytes.
 ---@param volume? integer Playback volume, 0..128; omission uses 80.
----The audio-only random direction uses this Platform runtime's RNG and does not preserve the native RNG sequence.
+---@param native_direction? boolean Draw the playback direction from the shared native RNG when true. Defaults to the Mod's RNG.
 ---@return boolean Whether playback passed the player's hearing gate; this does not confirm backend audio output.
-function CcbPlatformSoundApi.play_if_audible(id, variant, volume) end
+function CcbPlatformSoundApi.play_if_audible(id, variant, volume, native_direction) end
 ---@param position TripointCoord Loaded absolute map-square position.
 ---@param volume integer Native gameplay sound volume, 0..1000.
 ---@param category CcbPlatformSoundCategory Native gameplay sound category.

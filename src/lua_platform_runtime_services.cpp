@@ -437,6 +437,21 @@ struct use_context_data {
         return require_item().charges;
     }
 
+    int damage_level() const {
+        return require_item().damage_level();
+    }
+
+    void transform( const cata::lua_platform::script_game_id &target,
+                    const sol::optional<bool> &active_state ) const {
+        item &used_item = require_item();
+        if( target.kind() != "item" || !target.is_valid() ) {
+            throw std::invalid_argument( "ItemUseContext:transform requires a valid GameId<item>" );
+        }
+        cata::lua_platform::retire_item_handle_identity( used_item );
+        used_item.convert( itype_id( target.value() ), used_item_location.carrier() );
+        used_item.active = active_state.value_or( false ) || used_item.has_temperature();
+    }
+
     void set_charges( std::int64_t value ) const {
         item &used_item = require_item();
         if( value < 0 || value > std::numeric_limits<int>::max() ) {
@@ -2192,12 +2207,14 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         "ItemUseContext", sol::no_constructor,
         "message", &use_context_data::message,
         "expand_text", &use_context_data::expand_text,
+        "transform", &use_context_data::transform,
         "player_name", sol::property( &use_context_data::player_name ),
         "item_id", sol::property( &use_context_data::item_id ),
         "character", sol::property( &use_context_data::character_handle ),
         "item", sol::property( &use_context_data::item_handle ),
         "position", sol::property( &use_context_data::use_position ),
         "item_position", sol::property( &use_context_data::item_position ),
+        "damage_level", sol::property( &use_context_data::damage_level ),
         "charges", sol::property( &use_context_data::charges,
                                   &use_context_data::set_charges ) );
     ccb.new_usertype<computer_access_context>(
@@ -4377,7 +4394,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     const auto play_audible_sound = [weak, require_write](
                                         std::string_view id, std::string_view variant,
                                         const sol::optional<int> &requested_volume,
-    const bool from_outdoors ) {
+    const bool from_outdoors, const bool native_direction ) {
         require_write();
         if( id.empty() || id.size() > 128 || id.find( '\0' ) != std::string::npos ||
             variant.empty() || variant.size() > 128 ||
@@ -4418,22 +4435,26 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                 }
             }
         }
-        std::uniform_real_distribution<double> direction( 0.0, 360.0 );
-        sfx::play_variant_sound(
-            id, variant, volume,
-            units::from_degrees( direction( owner->random_engine ) ) );
+        if( native_direction ) {
+            sfx::play_variant_sound( id, variant, volume, random_direction() );
+        } else {
+            std::uniform_real_distribution<double> direction( 0.0, 360.0 );
+            sfx::play_variant_sound(
+                id, variant, volume,
+                units::from_degrees( direction( owner->random_engine ) ) );
+        }
         return true;
     };
     sol::table platform_sound = services["sound"];
     platform_sound.set_function( "play_if_audible", [play_audible_sound](
                                      std::string_view id, std::string_view variant,
-    const sol::optional<int> &volume ) {
-        return play_audible_sound( id, variant, volume, false );
+    const sol::optional<int> &volume, const sol::optional<bool> &native_direction ) {
+        return play_audible_sound( id, variant, volume, false, native_direction.value_or( false ) );
     } );
     platform_sound.set_function( "play_from_outdoors", [play_audible_sound](
                                      std::string_view id, std::string_view variant,
     const sol::optional<int> &volume ) {
-        return play_audible_sound( id, variant, volume, true );
+        return play_audible_sound( id, variant, volume, true, false );
     } );
     services["sound"] = std::move( platform_sound );
     cata::lua_platform::install_game_world_service_api(
