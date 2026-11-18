@@ -397,6 +397,8 @@ static const ter_str_id ter_t_elevator( "t_elevator" );
 static const ter_str_id ter_t_lava( "t_lava" );
 static const ter_str_id ter_t_manhole( "t_manhole" );
 static const ter_str_id ter_t_manhole_cover( "t_manhole_cover" );
+static const ter_str_id ter_t_rock( "t_rock" );
+static const ter_str_id ter_t_rock_floor( "t_rock_floor" );
 
 static const trait_id trait_BADKNEES( "BADKNEES" );
 static const trait_id trait_CENOBITE( "CENOBITE" );
@@ -9721,8 +9723,8 @@ void game::place_player_overmap( const tripoint_abs_omt &om_dest, bool move_play
     weather.set_nextweather( calendar::turn );
     if( move_player ) {
         if( debug_landing && atlas && om_dest.z() < -OVERMAP_DEPTH &&
-            here.ter( player_pos ) == ter_str_id( "t_rock" ).id() ) {
-            here.ter_set( player_pos, ter_str_id( "t_rock_floor" ).id() );
+            here.ter( player_pos ) == ter_t_rock.id() ) {
+            here.ter_set( player_pos, ter_t_rock_floor.id() );
         }
         place_player( player_pos );
     }
