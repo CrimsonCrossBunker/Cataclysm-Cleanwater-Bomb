@@ -28,6 +28,7 @@ extern "C" {
 
 #include "calendar.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "enum_conversions.h"
 #include "lua_platform_bindings_coords.h"
 #include "lua_platform_bindings_values.h"
@@ -1023,6 +1024,40 @@ std::optional<trait_id> optional_spell_school(
     return trait_id( requested->value() );
 }
 
+sol::table adjust_school_levels(
+    sol::this_state lua, const game_handle &handle,
+    const script_game_id &requested_school, int amount,
+    const game_handle_runtime &runtime_generation,
+    const std::size_t world_generation )
+{
+    require_spell_school_id( requested_school, "services.spells.adjust_school_levels" );
+    sol::state_view state( lua );
+    std::optional<game_handle_error> error;
+    Character *character = resolve_exact_character( handle, runtime_generation, world_generation,
+                           error );
+    if( character == nullptr ) {
+        return make_game_error_result( state, *error );
+    }
+    const trait_id school( requested_school.value() );
+    const character_action_guard lifetime( *character );
+    known_magic &magic = *character->magic;
+    int adjusted = 0;
+    for( const spell_id &id : magic.spells() ) {
+        if( !lifetime ) {
+            break;
+        }
+        if( id->spell_class == school ) {
+            const int current = magic.knows_spell( id ) ? magic.get_spell( id ).get_effective_level() : -1;
+            const std::int64_t target = static_cast<std::int64_t>( current ) + amount;
+            const int level = static_cast<int>( std::clamp<std::int64_t>( target,
+                                                std::numeric_limits<int>::min(), std::numeric_limits<int>::max() ) );
+            magic.set_spell_level( id, level, character );
+            ++adjusted;
+        }
+    }
+    return make_game_value_result( state, sol::make_object( state, adjusted ) );
+}
+
 sol::table spell_count(
     sol::this_state lua, const game_handle &handle,
     const sol::optional<script_game_id> &requested_school,
@@ -1869,6 +1904,15 @@ void install_magic_api(
                    spell_adjustment::gain_levels,
                    current_runtime_generation(),
                    current_world_generation() );
+    } );
+    spells.set_function(
+        "adjust_school_levels",
+        [current_runtime_generation, current_world_generation, require_write](
+            sol::this_state lua_state, const game_handle & handle,
+    const script_game_id & school, const int amount ) {
+        require_write();
+        return adjust_school_levels( lua_state, handle, school, amount, current_runtime_generation(),
+                                     current_world_generation() );
     } );
     spells.set_function(
         "count",

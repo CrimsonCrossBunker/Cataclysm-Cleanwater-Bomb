@@ -10383,6 +10383,14 @@ function CcbSpellsApi.difficulty(character, spell, baseline) end
 ---@return CcbResult result value contains before and after snapshots, each absent when the spell is not known at that point.
 function CcbSpellsApi.set_level(character, spell, level) end
 
+---Set each known spell of the school to its current effective level plus the signed amount.
+---Native limits still apply. A negative resulting level forgets the spell.
+---@param character GameHandle Exact live Character.
+---@param school GameId GameId<mutation> of the spell school.
+---@param amount integer Signed native integer offset.
+---@return CcbResult result value is the number of spells whose native setter was invoked.
+function CcbSpellsApi.adjust_school_levels(character, school, amount) end
+
 ---Set the experience of a known spell through native rules; unknown spells return not_known.
 ---@param character GameHandle Exact live Character handle.
 ---@param spell GameId GameId<spell>.
