@@ -1021,13 +1021,7 @@ function ItemDefinition:armor(options) end
 ---@return ItemDefinition self
 function ItemDefinition:armor_portion(options) end
 
----@class ItemContainerPocketOptions
----@field max_volume_ml integer Native container capacity in milliliters.
----@field max_weight_milligrams integer Native container capacity in milligrams.
----@field max_item_length_mm? integer Longest accepted item; defaults to the native volume-derived length.
----@field min_item_length_mm? integer Shortest accepted item.
----@field max_item_volume_ml? integer Maximum volume of an individual item.
----@field min_item_volume_ml? integer Minimum volume of an individual item.
+---@class ItemPocketOptions
 ---@field magazine_well_ml? integer Contents volume that does not enlarge an expanding pocket.
 ---@field moves? integer Item retrieval cost; defaults to 100 moves.
 ---@field rigid? boolean Contents do not expand the item's volume; defaults to false.
@@ -1041,18 +1035,45 @@ function ItemDefinition:armor_portion(options) end
 ---@field description? string|LocalizedText Pocket description displayed to the player.
 ---@field weight_multiplier? number Contents weight multiplier; defaults to one.
 ---@field volume_multiplier? number Contents volume multiplier; defaults to one.
----@field volume_encumber_modifier? number Encumbrance multiplier due to contents; defaults to one.
 ---@field spoil_multiplier? number Contents spoilage multiplier; defaults to one.
 ---@field insulation? number Contents insulation multiplier; defaults to one.
 ---@field sealed_spoil_multiplier? number Makes the pocket sealable and sets the sealed spoilage multiplier.
----@field allowed_items? string[] When supplied, only these item IDs are accepted.
+---@field allowed_items? string[] When supplied, accepts these item IDs and uses the first as the default magazine.
 ---@field allowed_flags? string[] When supplied, accepts items with any listed flag.
 ---@field allowed_materials? string[] Accepts items with any listed base material, alongside the item and flag restrictions.
+---@field default_magazine? string Item ID for native default magazine spawning when allowed_items is omitted.
+
+---@class ItemSizedPocketOptions : ItemPocketOptions
+---@field max_volume_ml? integer Native capacity in milliliters. Required by container_pocket.
+---@field max_weight_milligrams? integer Native capacity in milligrams. Required by container_pocket.
+---@field max_item_length_mm? integer Longest accepted item; defaults to the native volume-derived length.
+---@field min_item_length_mm? integer Shortest accepted item.
+---@field max_item_volume_ml? integer Maximum volume of an individual item.
+---@field min_item_volume_ml? integer Minimum volume of an individual item.
+---@field volume_encumber_modifier? number Encumbrance multiplier due to contents; defaults to one.
+
+---@class ItemContainerPocketOptions : ItemSizedPocketOptions
 
 ---Append an ordinary native storage pocket. Existing pockets keep their order.
 ---@param options ItemContainerPocketOptions
 ---@return ItemDefinition self
 function ItemDefinition:container_pocket(options) end
+
+---@class ItemMagazinePocketOptions : ItemPocketOptions
+---@field ammo_capacities table<string, integer> Positive native capacities by ammunition type.
+
+---Append a native ammunition magazine pocket in call order.
+---@param options ItemMagazinePocketOptions
+---@return ItemDefinition self
+function ItemDefinition:magazine_pocket(options) end
+
+---@class ItemFileStoragePocketOptions : ItemSizedPocketOptions
+---@field memory_kb integer Nonnegative electronic file capacity in kilobytes.
+
+---Append a native electronic file storage pocket in call order.
+---@param options ItemFileStoragePocketOptions
+---@return ItemDefinition self
+function ItemDefinition:file_storage_pocket(options) end
 
 ---Install the native furniture deployment action, including its target choice and placement checks.
 ---@param furniture_id string Native furniture id.
@@ -1132,6 +1153,15 @@ function ItemDefinition:heal(options) end
 ---@field need_empty? boolean Require empty pockets for activation.
 ---@field need_wielding? boolean Require the item to be wielded.
 ---@field need_worn? boolean Require the item to be worn.
+---@field need_fire? integer Fire charges consumed before the item transforms.
+---@field need_charges? integer Minimum remaining charges to allow activation.
+---@field ammo_scale? integer Charge usage returned by the native action for tools, if the base item has no value for this action.
+---@field chance? integer Activation chance in percent. Defaults to 100.
+---@field sound_volume? integer Native sound volume when a transformation message is played.
+---@field set_timer? boolean Ask the player for the countdown instead of specifying result.timer_turns.
+---@field damage_failure_message? string|LocalizedText Message when damage prevents activation.
+---@field need_charges_message? string|LocalizedText Message when the item lacks the required charges.
+---@field need_fire_message? string|LocalizedText Message when the character lacks a source of fire.
 ---@field minimum_age_turns? integer Install the delayed action variant with this minimum age.
 ---@field not_ready_message? string|LocalizedText Required with a minimum age.
 
@@ -1237,10 +1267,8 @@ function ItemDefinition:clear_tick_actions() end
 ---@return ItemDefinition self
 function ItemDefinition:tool(options) end
 
----@class MagazineWellDefinitionOptions
----@field rigid? boolean Whether the pocket keeps its shape; defaults to false.
----@field flags? string[] Restrict magazines to those carrying at least one of these flags. Omission or an empty array leaves the pocket unrestricted.
----@field default_magazine? string Existing or same-transaction item ID inserted by native default magazine spawning.
+---@class MagazineWellDefinitionOptions : ItemSizedPocketOptions
+---@field flags? string[] Alternative to allowed_flags for magazine wells.
 
 ---Append one native magazine-well pocket. Existing pockets remain in their original order.
 ---@param options MagazineWellDefinitionOptions

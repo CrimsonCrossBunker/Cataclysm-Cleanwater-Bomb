@@ -362,8 +362,17 @@ struct item_transform_action {
     authored_text message;
     authored_text menu_text;
     authored_text not_ready;
+    std::optional<authored_text> damage_failure_message;
+    std::optional<authored_text> need_charges_message;
+    std::optional<authored_text> need_fire_message;
     std::optional<int> minimum_age;
+    std::optional<int> ammo_scale;
     int moves = 0;
+    int chance = 100;
+    int sound_volume = 0;
+    int need_charges = 0;
+    int need_fire = 0;
+    bool set_timer = false;
     bool need_empty = false;
     bool need_wielding = false;
     bool need_worn = false;
@@ -387,9 +396,18 @@ std::unique_ptr<iuse_transform> make_item_transform_actor( const item_transform_
     actor->need_empty = action.need_empty;
     actor->need_wielding = action.need_wielding;
     actor->need_worn = action.need_worn;
-    actor->damage_failure_msg = to_translation( "Activation of your damaged %s fails." );
-    actor->need_charges_msg = to_translation( "The %s is empty!" );
-    actor->need_fire_msg = to_translation( "You need a source of fire!" );
+    actor->chance = action.chance;
+    actor->sound_volume = action.sound_volume;
+    actor->need_charges = action.need_charges;
+    actor->need_fire = action.need_fire;
+    actor->set_timer = action.set_timer;
+    actor->damage_failure_msg = action.damage_failure_message ?
+                                action.damage_failure_message->native() :
+                                to_translation( "Activation of your damaged %s fails." );
+    actor->need_charges_msg = action.need_charges_message ? action.need_charges_message->native() :
+                              to_translation( "The %s is empty!" );
+    actor->need_fire_msg = action.need_fire_message ? action.need_fire_message->native() :
+                           to_translation( "You need a source of fire!" );
     return actor;
 }
 
@@ -418,18 +436,13 @@ struct item_definition_data {
             { "turns_per_charge", &tool_data::turns_per_charge, &islot_tool::turns_per_charge },
         };
     };
-    struct container_pocket_data {
+    struct authored_pocket {
         pocket_data native;
         authored_text description;
     };
     struct use_message_data {
         authored_text message;
         authored_text name;
-    };
-    struct magazine_well_data {
-        bool rigid = false;
-        std::optional<std::string> default_magazine;
-        std::set<std::string> flags;
     };
     struct armor_data {
         std::optional<std::int64_t> warmth;
@@ -593,8 +606,7 @@ struct item_definition_data {
     bool has_tool = false;
     bool has_armor = false;
     std::optional<tool_data> tool;
-    std::vector<magazine_well_data> magazine_wells;
-    std::vector<container_pocket_data> container_pockets;
+    std::vector<authored_pocket> pockets;
     bool replace_pockets = false;
     std::optional<armor_data> armor;
     std::vector<armor_portion_definition> armor_portions;
@@ -1751,20 +1763,7 @@ struct item_definition_handle {
     }
 
     item_definition_handle &magazine_well( const sol::table &options ) {
-        require_building_handle( token, *definition, "item" );
-        item_definition_data::magazine_well_data value;
-        value.rigid = options.get_or( "rigid", false );
-        if( const auto magazine = options.get<sol::optional<std::string>>( "default_magazine" ) ) {
-            value.default_magazine = *magazine;
-        }
-        if( const auto flags = options.get<sol::optional<sol::table>>( "flags" ) ) {
-            const std::size_t count = require_dense_array( *flags, "magazine well flags", 0 );
-            for( std::size_t index = 1; index <= count; ++index ) {
-                value.flags.insert( flags->get<std::string>( index ) );
-            }
-        }
-        definition->magazine_wells.push_back( std::move( value ) );
-        return *this;
+        return stage_pocket( options, pocket_type::MAGAZINE_WELL );
     }
 
     item_definition_handle &armor( const sol::optional<sol::table> &options ) {
@@ -1813,9 +1812,30 @@ struct item_definition_handle {
     }
 
     item_definition_handle &container_pocket( const sol::table &options ) {
+        return stage_pocket( options, pocket_type::CONTAINER );
+    }
+
+    item_definition_handle &magazine_pocket( const sol::table &options ) {
+        return stage_pocket( options, pocket_type::MAGAZINE );
+    }
+
+    item_definition_handle &file_storage_pocket( const sol::table &options ) {
+        return stage_pocket( options, pocket_type::E_FILE_STORAGE );
+    }
+
+    item_definition_handle &stage_pocket( const sol::table &options, pocket_type kind ) {
         require_building_handle( token, *definition, "item" );
-        const std::int64_t volume = options.get<std::int64_t>( "max_volume_ml" );
-        const std::int64_t mass = options.get<std::int64_t>( "max_weight_milligrams" );
+        pocket_data pocket;
+        pocket.type = kind;
+        pocket.was_loaded = true;
+        const std::int64_t volume = kind == pocket_type::CONTAINER ?
+                                    options.get<std::int64_t>( "max_volume_ml" ) :
+                                    options.get_or<std::int64_t>( "max_volume_ml",
+                                            units::to_milliliter( pocket.raw_volume_capacity ) );
+        const std::int64_t mass = kind == pocket_type::CONTAINER ?
+                                  options.get<std::int64_t>( "max_weight_milligrams" ) :
+                                  options.get_or<std::int64_t>( "max_weight_milligrams",
+                                          units::to_milligram( pocket.max_contains_weight ) );
         const auto length = options.get<std::optional<std::int64_t>>( "max_item_length_mm" );
         const std::int64_t moves = options.get_or<std::int64_t>( "moves", 100 );
         const double weight_multiplier = options.get_or( "weight_multiplier", 1.0 );
@@ -1835,32 +1855,55 @@ struct item_definition_handle {
             !nonnegative_float( encumbrance_multiplier ) || !nonnegative_float( spoil_multiplier ) ||
             !nonnegative_float( volume_multiplier ) || !nonnegative_float( insulation ) ||
             ( sealed_spoil && !nonnegative_float( *sealed_spoil ) ) ) {
-            throw std::invalid_argument( "item container pocket has an invalid capacity, cost or multiplier" );
+            throw std::invalid_argument( "item pocket has an invalid capacity, cost or multiplier" );
         }
         const auto size_option = [&options, &nonnegative_int]( const char *field ) -> std::optional<int> {
             if( const auto size = options.get<sol::optional<std::int64_t>>( field ) ) {
                 if( !nonnegative_int( *size ) ) {
-                    throw std::invalid_argument( std::string( "invalid item container pocket " ) + field );
+                    throw std::invalid_argument( std::string( "invalid item pocket " ) + field );
                 }
                 return static_cast<int>( *size );
             }
             return std::nullopt;
         };
-        pocket_data pocket;
-        pocket.was_loaded = true;
-        pocket.raw_volume_capacity = units::from_milliliter( static_cast<int>( volume ) );
-        pocket.max_contains_weight = units::from_milligram( mass );
-        pocket.max_item_length = length ? units::from_millimeter( static_cast<int>( *length ) ) :
-                                 units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
-        if( const auto item_volume = size_option( "max_item_volume_ml" ) ) {
-            pocket.max_item_volume = units::from_milliliter( *item_volume );
+        if( kind == pocket_type::MAGAZINE ) {
+            const sol::table capacities = options.get<sol::table>( "ammo_capacities" );
+            for( const auto &entry : capacities ) {
+                if( entry.first.get_type() != sol::type::string || !entry.second.is<lua_Integer>() ) {
+                    throw std::invalid_argument( "magazine pocket needs ammunition IDs and integer capacities" );
+                }
+                const int capacity = item_option_int( entry.second.as<std::int64_t>(),
+                                                      "magazine pocket capacity" );
+                if( capacity <= 0 ) {
+                    throw std::invalid_argument( "magazine pocket capacity must be positive" );
+                }
+                pocket.ammo_restriction.emplace( ammotype( entry.first.as<std::string>() ), capacity );
+            }
+            if( pocket.ammo_restriction.empty() ) {
+                throw std::invalid_argument( "magazine pocket needs at least one ammunition type" );
+            }
+        } else {
+            pocket.raw_volume_capacity = units::from_milliliter( static_cast<int>( volume ) );
+            pocket.max_contains_weight = units::from_milligram( mass );
+            pocket.max_item_length = length ? units::from_millimeter( static_cast<int>( *length ) ) :
+                                     units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
+            if( const auto item_volume = size_option( "max_item_volume_ml" ) ) {
+                pocket.max_item_volume = units::from_milliliter( *item_volume );
+            }
+            pocket.min_item_volume = units::from_milliliter( size_option( "min_item_volume_ml" ).value_or( 0 ) );
+            pocket.min_item_length = units::from_millimeter( size_option( "min_item_length_mm" ).value_or( 0 ) );
+            pocket.volume_encumber_modifier = static_cast<float>( encumbrance_multiplier );
         }
-        pocket.min_item_volume = units::from_milliliter( size_option( "min_item_volume_ml" ).value_or( 0 ) );
-        pocket.min_item_length = units::from_millimeter( size_option( "min_item_length_mm" ).value_or( 0 ) );
+        if( kind == pocket_type::E_FILE_STORAGE ) {
+            const std::int64_t memory = options.get<std::int64_t>( "memory_kb" );
+            if( memory < 0 ) {
+                throw std::invalid_argument( "file storage capacity must be nonnegative" );
+            }
+            pocket.ememory_max = units::from_kilobytes( memory );
+        }
         pocket.magazine_well = units::from_milliliter( size_option( "magazine_well_ml" ).value_or( 0 ) );
         pocket.moves = static_cast<int>( moves );
         pocket.weight_multiplier = static_cast<float>( weight_multiplier );
-        pocket.volume_encumber_modifier = static_cast<float>( encumbrance_multiplier );
         pocket.spoil_multiplier = static_cast<float>( spoil_multiplier );
         pocket.volume_multiplier = static_cast<float>( volume_multiplier );
         pocket.insulation = static_cast<float>( insulation );
@@ -1878,22 +1921,32 @@ struct item_definition_handle {
         pocket.holster = options.get_or( "holster", false );
         pocket.forbidden = options.get_or( "forbidden", false );
         const authored_text description = read_text_option( options, "description", {},
-                                          "container pocket description" );
+                                          "item pocket description" );
         pocket.description = description.native();
         if( const auto materials = options.get<sol::optional<sol::table>>( "allowed_materials" ) ) {
-            const std::size_t count = require_dense_array( *materials, "container pocket allowed materials", 0 );
+            const std::size_t count = require_dense_array( *materials, "item pocket allowed materials", 0 );
             for( std::size_t index = 1; index <= count; ++index ) {
                 pocket.material_restriction.insert( material_id( materials->raw_get<std::string>( index ) ) );
             }
         }
-        if( const auto flags = options.get<sol::optional<sol::table>>( "allowed_flags" ) ) {
-            const std::size_t count = require_dense_array( *flags, "container pocket allowed flags", 0 );
+        auto flags = options.get<sol::optional<sol::table>>( "allowed_flags" );
+        if( !flags && kind == pocket_type::MAGAZINE_WELL ) {
+            flags = options.get<sol::optional<sol::table>>( "flags" );
+        }
+        if( flags ) {
+            const std::size_t count = require_dense_array( *flags, "item pocket allowed flags", 0 );
             for( std::size_t index = 1; index <= count; ++index ) {
                 pocket.add_flag_restriction( flag_id( flags->raw_get<std::string>( index ) ) );
             }
         }
+        if( const auto magazine = options.get<sol::optional<std::string>>( "default_magazine" ) ) {
+            if( magazine->empty() ) {
+                throw std::invalid_argument( "item pocket default magazine ID is empty" );
+            }
+            pocket.default_magazine = itype_id( *magazine );
+        }
         if( const auto restriction = options.get<sol::optional<sol::table>>( "allowed_items" ) ) {
-            const std::size_t count = require_dense_array( *restriction, "container pocket allowed items", 1 );
+            const std::size_t count = require_dense_array( *restriction, "item pocket allowed items", 1 );
             for( std::size_t index = 1; index <= count; ++index ) {
                 const itype_id id( restriction->get<std::string>( index ) );
                 pocket.item_id_restriction.insert( id );
@@ -1902,7 +1955,7 @@ struct item_definition_handle {
                 }
             }
         }
-        definition->container_pockets.push_back( { std::move( pocket ), description } );
+        definition->pockets.push_back( { std::move( pocket ), description } );
         return *this;
     }
 
@@ -2027,6 +2080,26 @@ struct item_definition_handle {
         }
         action.no_fail = options.get_or( "no_fail", false );
         action.need_worn = options.get_or( "need_worn", false );
+        action.chance = read_nonnegative_item_int( options, "chance" ).value_or( 100 );
+        action.sound_volume = item_option_int( options.get_or<std::int64_t>( "sound_volume", 0 ),
+                                               "item transform sound volume" );
+        action.need_charges = read_nonnegative_item_int( options, "need_charges" ).value_or( 0 );
+        action.need_fire = read_nonnegative_item_int( options, "need_fire" ).value_or( 0 );
+        action.ammo_scale = read_nonnegative_item_int( options, "ammo_scale" );
+        action.set_timer = options.get_or( "set_timer", false );
+        if( action.chance > 100 || ( action.set_timer && action.result.target_timer != 0_seconds ) ) {
+            throw std::invalid_argument( "item transform chance or timer is invalid" );
+        }
+        const auto read_message = [&options]( const char *field ) -> std::optional<authored_text> {
+            const sol::object value = options[field];
+            if( value.valid() && value.get_type() != sol::type::nil ) {
+                return read_singular_text( value, {}, field );
+            }
+            return std::nullopt;
+        };
+        action.damage_failure_message = read_message( "damage_failure_message" );
+        action.need_charges_message = read_message( "need_charges_message" );
+        action.need_fire_message = read_message( "need_fire_message" );
         action.need_wielding = options.get_or( "need_wielding", false );
         action.mundane = options.get_or( "mundane", false );
         definition->spell_use.emplace( std::move( action ) );
@@ -4326,6 +4399,8 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "armor", &item_definition_handle::armor,
         "armor_portion", &item_definition_handle::armor_portion,
         "container_pocket", &item_definition_handle::container_pocket,
+        "magazine_pocket", &item_definition_handle::magazine_pocket,
+        "file_storage_pocket", &item_definition_handle::file_storage_pocket,
         "deploy_furniture", &item_definition_handle::deploy_furniture,
         "deploy_appliance", &item_definition_handle::deploy_appliance,
         "reveal_map", &item_definition_handle::reveal_map,
@@ -6574,18 +6649,6 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                     }
                 }
             }
-            for( const auto &well : definition.magazine_wells ) {
-                if( well.default_magazine && ( well.default_magazine->empty() ||
-                    ( check_engine_state && declared_item_ids.count( *well.default_magazine ) == 0 &&
-                      !item::type_is_defined( itype_id( *well.default_magazine ) ) ) ) ) {
-                    throw std::runtime_error( "item '" + definition.id + "' references an unknown default magazine" );
-                }
-                for( const std::string &flag : well.flags ) {
-                    if( flag.empty() || ( check_engine_state && json_flag_ids.count( flag ) == 0 && !flag_id( flag ).is_valid() ) ) {
-                        throw std::runtime_error( "item '" + definition.id + "' references unknown magazine well flag '" + flag + "'" );
-                    }
-                }
-            }
             for( const auto &[ammo, capacity] : definition.magazine_ammo ) {
                 if( ammo.empty() || capacity <= 0 || !native_int( capacity ) ||
                     ( ammunition_type_ids.count( ammo ) == 0 && !ammotype( ammo ).is_valid() ) ) {
@@ -6602,8 +6665,20 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                   ( definition.armor->max_worn && !native_int( *definition.armor->max_worn ) ) ) ) {
                 throw std::runtime_error( "item '" + definition.id + "' has invalid armor values" );
             }
-            for( const auto &container : definition.container_pockets ) {
-                const pocket_data &pocket = container.native;
+            for( const auto &authored : definition.pockets ) {
+                const pocket_data &pocket = authored.native;
+                for( const auto &[ammo, capacity] : pocket.ammo_restriction ) {
+                    if( ammunition_type_ids.count( ammo.str() ) == 0 && !ammo.is_valid() ) {
+                        throw std::runtime_error( "item '" + definition.id +
+                                                  "' references unknown pocket ammo '" + ammo.str() + "'" );
+                    }
+                }
+                if( check_engine_state && !pocket.default_magazine.is_null() &&
+                    !pocket.default_magazine.is_empty() &&
+                    declared_item_ids.count( pocket.default_magazine.str() ) == 0 &&
+                    !item::type_is_defined( pocket.default_magazine ) ) {
+                    throw std::runtime_error( "item '" + definition.id + "' references an unknown default magazine" );
+                }
                 for( const material_id &material : pocket.material_restriction ) {
                     if( material_ids.count( material.str() ) == 0 && !material.is_valid() ) {
                         throw std::runtime_error( "item '" + definition.id +
@@ -8391,22 +8466,8 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                     if( definition.replace_pockets ) {
                         native->pockets.clear();
                     }
-                    for( const auto &well : definition.magazine_wells ) {
-                        pocket_data pocket;
-                        pocket.type = pocket_type::MAGAZINE_WELL;
-                        pocket.rigid = well.rigid;
-                        pocket.was_loaded = true;
-                        pocket.max_item_length = units::default_length_from_volume( pocket.raw_volume_capacity ) * M_SQRT2;
-                        if( well.default_magazine ) {
-                            pocket.default_magazine = itype_id( *well.default_magazine );
-                        }
-                        for( const std::string &flag : well.flags ) {
-                            pocket.add_flag_restriction( flag_id( flag ) );
-                        }
-                        native->pockets.push_back( std::move( pocket ) );
-                    }
-                    for( const auto &container : definition.container_pockets ) {
-                        native->pockets.push_back( container.native );
+                    for( const auto &pocket : definition.pockets ) {
+                        native->pockets.push_back( pocket.native );
                     }
                     if( definition.has_armor && !native->armor ) {
                         native->armor = cata::make_value<islot_armor>();
@@ -8594,6 +8655,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         if( *action ) {
                             auto actor = make_item_transform_actor( **action );
                             const std::string type = actor->type;
+                            if( ( *action )->ammo_scale ) {
+                                native->ammo_scale.emplace( type, *( *action )->ammo_scale );
+                            }
                             native->use_methods.insert_or_assign( type, use_function( std::move( actor ) ) );
                         }
                     }
@@ -10400,17 +10464,15 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         }
                     }
                 }
-                for( const auto &well : v.magazine_wells ) {
-                    hash_part( state, "magazine_well" );
-                    hash_part( state, well.rigid ? "rigid" : "flexible" );
-                    hash_part( state, well.default_magazine.value_or( "null" ) );
-                    for( const std::string &flag : well.flags ) {
-                        hash_part( state, flag );
+                for( const auto &authored : v.pockets ) {
+                    const pocket_data &pocket = authored.native;
+                    hash_part( state, io::enum_to_string( pocket.type ) );
+                    hash_part( state, std::to_string( pocket.ememory_max / 1_KB ) );
+                    for( const auto &[ammo, capacity] : pocket.ammo_restriction ) {
+                        hash_part( state, "pocket_ammo" );
+                        hash_part( state, ammo.str() );
+                        hash_part( state, std::to_string( capacity ) );
                     }
-                }
-                for( const auto &container : v.container_pockets ) {
-                    const pocket_data &pocket = container.native;
-                    hash_part( state, "container_pocket" );
                     hash_part( state, std::to_string( units::to_milliliter( pocket.raw_volume_capacity ) ) );
                     hash_part( state, std::to_string( units::to_milligram( pocket.max_contains_weight ) ) );
                     hash_part( state, std::to_string( units::to_millimeter( pocket.max_item_length ) ) );
@@ -10435,7 +10497,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, option ? "yes" : "no" );
                     }
                     hash_part( state, pocket.default_magazine.str() );
-                    hash_part( state, container.description );
+                    hash_part( state, authored.description );
                     for( const material_id &material : pocket.material_restriction ) {
                         hash_part( state, "allowed_material" );
                         hash_part( state, material.str() );
@@ -10518,8 +10580,21 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, action.message );
                         hash_part( state, action.menu_text );
                         hash_part( state, std::to_string( action.moves ) );
-                        for( const bool required : { action.need_empty, action.need_wielding, action.need_worn } ) {
+                        hash_part( state, std::to_string( action.chance ) );
+                        hash_part( state, std::to_string( action.sound_volume ) );
+                        hash_part( state, std::to_string( action.need_charges ) );
+                        hash_part( state, std::to_string( action.need_fire ) );
+                        hash_part( state, action.ammo_scale ? std::to_string( *action.ammo_scale ) : "inherit_ammo_scale" );
+                        for( const bool required : { action.need_empty, action.need_wielding, action.need_worn,
+                                                      action.set_timer } ) {
                             hash_part( state, required ? "required" : "optional" );
+                        }
+                        for( const auto *message : { &action.damage_failure_message, &action.need_charges_message,
+                                                     &action.need_fire_message } ) {
+                            hash_part( state, *message ? "specified" : "default" );
+                            if( *message ) {
+                                hash_part( state, **message );
+                            }
                         }
                         if( action.minimum_age ) {
                             hash_part( state, std::to_string( *action.minimum_age ) );
