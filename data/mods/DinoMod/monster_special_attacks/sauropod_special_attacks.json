@@ -616,19 +616,6 @@
     "false_effect": [ { "math": [ "updating_alamosaurus = 0" ] } ]
   },
   {
-    "type": "SPELL",
-    "id": "sauropod_hurt_self",
-    "name": { "str": "Wretch Hurt Self", "//~": "NO_I18N" },
-    "description": { "str": "Hurts yourself.", "//~": "NO_I18N" },
-    "flags": [ "RANDOM_DAMAGE", "NO_PROJECTILE", "NO_EXPLOSION_SFX" ],
-    "min_damage": 1200,
-    "max_damage": 1500,
-    "damage_type": "pure",
-    "valid_targets": [ "hostile", "ally", "self", "ground" ],
-    "shape": "blast",
-    "effect": "attack"
-  },
-  {
     "id": "eoc_sauropod",
     "type": "effect_on_condition",
     "effect": [

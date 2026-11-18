@@ -14,19 +14,6 @@
     "effect_str": "EOC_ZAPATOSAURUS_CONTROL"
   },
   {
-    "type": "SPELL",
-    "id": "zauropod_hurt_self",
-    "name": { "str": "Wretch Hurt Self", "//~": "NO_I18N" },
-    "description": { "str": "Hurts yourself.", "//~": "NO_I18N" },
-    "flags": [ "RANDOM_DAMAGE", "NO_PROJECTILE", "NO_EXPLOSION_SFX" ],
-    "min_damage": 1200,
-    "max_damage": 1500,
-    "damage_type": "pure",
-    "valid_targets": [ "hostile", "ally", "self", "ground" ],
-    "shape": "blast",
-    "effect": "attack"
-  },
-  {
     "type": "effect_on_condition",
     "id": "EOC_ZAPATOSAURUS_CONTROL",
     "effect": [
