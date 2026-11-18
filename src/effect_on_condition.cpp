@@ -12,6 +12,7 @@
 #include <memory>
 #include <ostream>
 #include <queue>
+#include <sstream>
 #include <unordered_map>
 
 #include "avatar.h"
@@ -30,6 +31,7 @@
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "generic_factory.h"
+#include "json.h"
 #include "lua_platform_runtime.h"
 #include "lua_platform_character_tasks.h"
 #include "lua_platform_state.h"
@@ -222,7 +224,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 34> migrated_character_tasks = {{
+const std::array<character_task_migration, 41> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -290,7 +292,21 @@ const std::array<character_task_migration, 34> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_PORTAL_OUBLIETTE_RETURN" ),
           "mom_oubliette_return_due", nullptr, false, "mindovermatter" },
         { effect_on_condition_id( "EOC_PORTAL_EFFECTS_ACTIVE" ),
-          "portal_active_effects_due", nullptr, true, "ccb" }
+          "portal_active_effects_due", nullptr, true, "ccb" },
+        { effect_on_condition_id( "EOC_PORTAL_HIGHLANDS_RETURN" ),
+          "portal_highlands_return_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_PORTAL_RADIOSPHERE_RETURN" ),
+          "portal_radiosphere_return_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_PORTAL_CABINS_RETURN" ),
+          "portal_cabins_return_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_PORTAL_STRING_DIMENSION_RETURN" ),
+          "portal_string_dimension_return_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_REVERBERATION_ENTER" ),
+          "portal_reverberation_enter_due", nullptr, false, "ccb" },
+        { effect_on_condition_id( "EOC_CABIN_DAY_CYCLE_OR_KILL_CYCLE" ),
+          "portal_cabin_light_due", nullptr, true, "ccb" },
+        { effect_on_condition_id( "EOC_YRAX_WARP_IN" ),
+          "portal_yrax_visit_due", nullptr, false, "ccb" }
     }
 };
 
@@ -394,8 +410,22 @@ static void process_new_eocs( queued_eocs &eoc_queue,
             continue;
         }
         if( const character_task_migration *migration = find_migrated_task( entry.eoc, global_queue ) ) {
+            global_variables::impl_t task_data;
+            if( entry.eoc == effect_on_condition_id( "EOC_YRAX_WARP_IN" ) ) {
+                // A later failed location search retains this delayed visit's previous target.
+                const auto target = entry.context.find( "tar" );
+                if( target != entry.context.end() ) {
+                    std::ostringstream serialized;
+                    JsonOut json( serialized );
+                    json.start_object();
+                    cata::lua_platform::detail::write_persistent_value( json,
+                            cata::lua_platform::script_persistent_tripoint{ target->second.tripoint().raw() } );
+                    json.end_object();
+                    task_data.emplace( "target", diag_value( serialized.str() ) );
+                }
+            }
             temp_queued_eocs.push( character_task_record( entry.time, migration->mod,
-                                   migration->handler ) );
+                                   migration->handler, task_data ) );
             if( actor && migration->timer_key ) {
                 cata::lua_platform::assign_persistent_value(
                     actor->lua_character_state.for_mod( migration->mod ), migration->timer_key,

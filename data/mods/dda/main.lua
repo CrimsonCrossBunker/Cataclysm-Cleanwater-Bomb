@@ -149,6 +149,8 @@ require("void_spider_death")
 
 require("void_spider_spells")
 
+require("yrax_science_spells")
+
 require("anomalous_mp3")
 
 require("string_dimension_hypercube")
