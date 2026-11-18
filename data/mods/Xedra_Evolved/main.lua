@@ -64,6 +64,7 @@ require("vampire_weakness_messages")
 require("vampire_weakness_reshuffle")
 require("anathema_sunlight")
 require("anathema_progression")
+require("anathema_encounters")
 require("vampire_infection")
 require("vampire_ascension")
 if content.is_mod_active("skyisland") then

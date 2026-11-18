@@ -224,7 +224,7 @@ struct character_task_migration {
 };
 
 // These IDs are read from saves. The authored callbacks use their Lua names.
-const std::array<character_task_migration, 56> migrated_character_tasks = {{
+const std::array<character_task_migration, 58> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_VAMPIRE_DRINK_FROM_HUMAN_IN_COMBAT" ),
           "finish_combat_blood_feeding", nullptr },
         { effect_on_condition_id( "EOC_INVENTOR_RECIPE_GAIN" ),
@@ -336,7 +336,11 @@ const std::array<character_task_migration, 56> migrated_character_tasks = {{
         { effect_on_condition_id( "EOC_MAGICLYSM_GAME_START_HUMANS_ARE_HUMAN" ),
           "magiclysm_human_build_due", "magiclysm_human_build_timer", false, "magiclysm" },
         { effect_on_condition_id( "EOC_XE_MAGICLYSM_GAME_START_CHRONOMANCERS_ARE_HUMAN" ),
-          "magiclysm_chronomancer_build_due", "magiclysm_chronomancer_build_timer", false, "magiclysm" }
+          "magiclysm_chronomancer_build_due", "magiclysm_chronomancer_build_timer", false, "magiclysm" },
+        { effect_on_condition_id( "EOC_SPAWN_ANATHEMA" ),
+          "anathema_encounter_due", nullptr, true },
+        { effect_on_condition_id( "EOC_ANATHEMA_SPAWN_MESSAGE" ),
+          "anathema_encounter_message", nullptr }
     }
 };
 

@@ -8,11 +8,5 @@
     "valid": false,
     "purifiable": false,
     "player_display": false
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_CONDITION_IS_NOT_ON_SKY_ISLAND",
-    "condition": { "u_has_trait": "awayfromhome" },
-    "effect": [  ]
   }
 ]
