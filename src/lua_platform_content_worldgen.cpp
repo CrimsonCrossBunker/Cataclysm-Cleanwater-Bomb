@@ -1131,41 +1131,69 @@ struct region_settings_highway_definition_handle {
     }
 };
 
+template<typename Target, typename Source>
+void assign_region_setting( Target &destination, const std::optional<Source> &value )
+{
+    if( value ) {
+        destination = static_cast<Target>( *value );
+    }
+}
+
 struct region_settings_definition_data {
     std::string id;
+    std::string extends;
     std::vector<std::string> default_oter;
     std::vector<std::pair<std::string, std::int64_t>> default_groundcover;
     bool default_groundcover_set = false;
     std::string cities;
     std::string forest_composition;
-    std::string forest_trails;
+    std::optional<std::string> forest_trails;
     std::string weather;
-    std::string forests;
-    std::string rivers;
-    std::string lakes;
-    std::string ocean;
-    std::string highways;
-    std::string ravines;
+    std::optional<std::string> forests;
+    std::optional<std::string> rivers;
+    std::optional<std::string> lakes;
+    std::optional<std::string> ocean;
+    std::optional<std::string> highways;
+    std::optional<std::string> ravines;
     std::string map_extras;
     std::string terrain_furniture;
     std::vector<std::string> feature_blacklist;
     std::vector<std::string> feature_whitelist;
+    bool replace_blacklist = false;
+    bool replace_whitelist = false;
+    bool replace_connections = false;
     std::string trail_connection;
     std::string sewer_connection;
     std::string subway_connection;
     std::string rail_connection;
     std::string intra_city_road_connection;
     std::string inter_city_road_connection;
-    bool place_swamps = true;
-    bool place_roads = true;
-    bool place_railroads = false;
-    bool place_railroads_before_roads = false;
-    bool place_specials = true;
-    bool neighbor_connections = true;
-    double max_urbanity = 8.0;
-    std::array<float, 4> urbanity_increase = { 0.0f, 0.0f, 0.0f, 0.0f };
+    std::optional<bool> place_swamps;
+    std::optional<bool> place_roads;
+    std::optional<bool> place_railroads;
+    std::optional<bool> place_railroads_before_roads;
+    std::optional<bool> place_specials;
+    std::optional<bool> neighbor_connections;
+    std::optional<double> max_urbanity;
+    std::optional<double> npc_spawn_time;
+    std::optional<std::array<float, 4>> urbanity_increase;
     bool registered = false;
 };
+
+std::optional<std::string> read_region_profile_id( const sol::object &value, const char *field )
+{
+    if( !value.valid() || value.get_type() == sol::type::nil ) {
+        return std::nullopt;
+    }
+    if( value.get_type() == sol::type::boolean && !value.as<bool>() ) {
+        return std::string();
+    }
+    if( value.get_type() != sol::type::string || value.as<std::string>().empty() ) {
+        throw std::runtime_error( std::string( "region settings " ) + field +
+                                  " must be a non-empty id or false" );
+    }
+    return value.as<std::string>();
+}
 
 struct region_settings_definition_handle {
     std::shared_ptr<region_settings_definition_data> definition;
@@ -1241,14 +1269,7 @@ struct region_settings_definition_handle {
 
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( cities )
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( forest_composition )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( forest_trails )
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( weather )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( forests )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( rivers )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( lakes )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( ocean )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( highways )
-    CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( ravines )
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( map_extras )
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( terrain_furniture )
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( trail_connection )
@@ -1259,6 +1280,23 @@ struct region_settings_definition_handle {
     CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER( inter_city_road_connection )
 
 #undef CCB_WORLDGEN_REGION_SETTINGS_STRING_SETTER
+
+#define CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( name ) \
+    region_settings_definition_handle &name( const sol::object &value ) { \
+        require_building_handle( token, *definition, "region settings" ); \
+        definition->name = read_region_profile_id( value, #name ); \
+        return *this; \
+    }
+
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( forest_trails )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( forests )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( rivers )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( lakes )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( ocean )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( highways )
+    CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER( ravines )
+
+#undef CCB_WORLDGEN_REGION_SETTINGS_PROFILE_SETTER
 
 #define CCB_WORLDGEN_REGION_SETTINGS_BOOL_SETTER( name ) \
     region_settings_definition_handle &name( const bool value ) { \
@@ -1289,6 +1327,7 @@ struct region_settings_definition_handle {
         require_building_handle( token, *definition, "region settings" );
         const std::size_t count = require_dense_array(
                                       values, "region settings urbanity_increase", 4, 4 );
+        std::array<float, 4> increases;
         for( std::size_t index = 1; index <= count; ++index ) {
             const double value = values.get<double>( index );
             if( !std::isfinite( value ) ||
@@ -1297,8 +1336,9 @@ struct region_settings_definition_handle {
                 throw std::runtime_error(
                     "region settings urbanity increase must contain finite native floats" );
             }
-            definition->urbanity_increase[index - 1] = static_cast<float>( value );
+            increases[index - 1] = static_cast<float>( value );
         }
+        definition->urbanity_increase = increases;
         return *this;
     }
 
@@ -1876,18 +1916,21 @@ struct faction_mission_definition_handle {
 
 struct region_settings_city_definition_data {
     std::string id;
-    bool is_megacity = false;
-    std::int64_t city_size = 8;
-    bool city_size_set = false;
-    std::int64_t city_spacing = 4;
-    std::int64_t shop_radius = 30;
-    std::int64_t shop_sigma = 20;
-    std::int64_t park_radius = 30;
-    std::int64_t park_sigma = 70;
-    std::string name_snippet = "<city_name>";
+    std::string extends;
+    std::optional<bool> is_megacity;
+    std::optional<std::int64_t> city_size;
+    std::optional<std::int64_t> city_spacing;
+    std::optional<std::int64_t> shop_radius;
+    std::optional<std::int64_t> shop_sigma;
+    std::optional<std::int64_t> park_radius;
+    std::optional<std::int64_t> park_sigma;
+    std::optional<std::string> name_snippet;
     std::vector<std::pair<std::string, std::int64_t>> houses;
+    bool replace_houses = false;
     std::vector<std::pair<std::string, std::int64_t>> shops;
+    bool replace_shops = false;
     std::vector<std::pair<std::string, std::int64_t>> parks;
+    bool replace_parks = false;
     bool registered = false;
 };
 
@@ -1907,7 +1950,6 @@ struct region_settings_city_definition_handle {
             throw std::runtime_error( "region_settings_city city_size must be between 0 and 16" );
         }
         definition->city_size = value;
-        definition->city_size_set = true;
         return *this;
     }
 
@@ -1980,6 +2022,7 @@ struct region_settings_city_definition_handle {
     region_settings_city_definition_handle &houses( const sol::table &table ) {
         require_building_handle( token, *definition, "region_settings_city" );
         definition->houses.clear();
+        definition->replace_houses = true;
         parse_weighted_table_entries( table, "region_settings_city houses", definition->houses );
         return *this;
     }
@@ -2002,6 +2045,7 @@ struct region_settings_city_definition_handle {
     region_settings_city_definition_handle &shops( const sol::table &table ) {
         require_building_handle( token, *definition, "region_settings_city" );
         definition->shops.clear();
+        definition->replace_shops = true;
         parse_weighted_table_entries( table, "region_settings_city shops", definition->shops );
         return *this;
     }
@@ -2024,6 +2068,7 @@ struct region_settings_city_definition_handle {
     region_settings_city_definition_handle &parks( const sol::table &table ) {
         require_building_handle( token, *definition, "region_settings_city" );
         definition->parks.clear();
+        definition->replace_parks = true;
         parse_weighted_table_entries( table, "region_settings_city parks", definition->parks );
         return *this;
     }
@@ -2970,29 +3015,29 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         }
         auto definition = std::make_shared<region_settings_definition_data>();
         definition->id = options.get_or( "id", std::string() );
+        definition->extends = options.get_or( "extends", std::string() );
         definition->cities = options.get_or( "cities", std::string() );
         definition->forest_composition = options.get_or(
                                              "forest_composition", std::string() );
-        definition->forest_trails = options.get_or( "forest_trails", std::string() );
+        definition->forest_trails = read_region_profile_id( options["forest_trails"], "forest_trails" );
         definition->weather = options.get_or( "weather", std::string() );
-        definition->forests = options.get_or( "forests", std::string() );
-        definition->rivers = options.get_or( "rivers", std::string() );
-        definition->lakes = options.get_or( "lakes", std::string() );
-        definition->ocean = options.get_or( "ocean", std::string() );
-        definition->highways = options.get_or( "highways", std::string() );
-        definition->ravines = options.get_or( "ravines", std::string() );
+        definition->forests = read_region_profile_id( options["forests"], "forests" );
+        definition->rivers = read_region_profile_id( options["rivers"], "rivers" );
+        definition->lakes = read_region_profile_id( options["lakes"], "lakes" );
+        definition->ocean = read_region_profile_id( options["ocean"], "ocean" );
+        definition->highways = read_region_profile_id( options["highways"], "highways" );
+        definition->ravines = read_region_profile_id( options["ravines"], "ravines" );
         definition->map_extras = options.get_or( "map_extras", std::string() );
         definition->terrain_furniture = options.get_or(
                                             "terrain_furniture", std::string() );
-        definition->place_swamps = options.get_or( "place_swamps", true );
-        definition->place_roads = options.get_or( "place_roads", true );
-        definition->place_railroads = options.get_or( "place_railroads", false );
-        definition->place_railroads_before_roads = options.get_or(
-                    "place_railroads_before_roads", false );
-        definition->place_specials = options.get_or( "place_specials", true );
-        definition->neighbor_connections = options.get_or(
-                                               "neighbor_connections", true );
-        definition->max_urbanity = options.get_or( "max_urbanity", 8.0 );
+        definition->place_swamps = options.get<std::optional<bool>>( "place_swamps" );
+        definition->place_roads = options.get<std::optional<bool>>( "place_roads" );
+        definition->place_railroads = options.get<std::optional<bool>>( "place_railroads" );
+        definition->place_railroads_before_roads = options.get<std::optional<bool>>( "place_railroads_before_roads" );
+        definition->place_specials = options.get<std::optional<bool>>( "place_specials" );
+        definition->neighbor_connections = options.get<std::optional<bool>>( "neighbor_connections" );
+        definition->max_urbanity = options.get<std::optional<double>>( "max_urbanity" );
+        definition->npc_spawn_time = options.get<std::optional<double>>( "npc_spawn_time" );
 
         region_settings_definition_handle handle{ definition, transaction->token };
         if( const sol::optional<sol::table> default_oter =
@@ -3009,30 +3054,41 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         }
         if( const sol::optional<sol::table> features =
                 options.get<sol::optional<sol::table>>( "feature_flag_settings" ) ) {
-            const auto read_flags = [&features]( const char *member,
+            const auto read_flags = []( const sol::table &values,
             std::vector<std::string> &destination ) {
-                if( const sol::optional<sol::table> values =
-                        features->get<sol::optional<sol::table>>( member ) ) {
-                    const std::size_t count = require_dense_array(
-                                                  *values, "region settings feature flags", 0, 1024 );
-                    for( std::size_t index = 1; index <= count; ++index ) {
-                        const std::string flag = values->get<std::string>( index );
-                        if( flag.empty() ) {
-                            throw std::runtime_error(
-                                "region settings feature flags must be non-empty" );
-                        }
-                        if( std::find( destination.begin(), destination.end(), flag ) ==
-                            destination.end() ) {
-                            destination.push_back( flag );
-                        }
+                const std::size_t count = require_dense_array(
+                                              values, "region settings feature flags", 0, 1024 );
+                for( std::size_t index = 1; index <= count; ++index ) {
+                    const std::string flag = values.get<std::string>( index );
+                    if( flag.empty() ) {
+                        throw std::runtime_error(
+                            "region settings feature flags must be non-empty" );
+                    }
+                    if( std::find( destination.begin(), destination.end(), flag ) ==
+                        destination.end() ) {
+                        destination.push_back( flag );
                     }
                 }
             };
-            read_flags( "blacklist", definition->feature_blacklist );
-            read_flags( "whitelist", definition->feature_whitelist );
+            const auto read_list = [&]( const char *member, const char *added,
+                                        std::vector<std::string> &destination ) {
+                if( const auto values = features->get<sol::optional<sol::table>>( member ) ) {
+                    read_flags( *values, destination );
+                    return true;
+                }
+                if( const auto values = features->get<sol::optional<sol::table>>( added ) ) {
+                    read_flags( *values, destination );
+                }
+                return false;
+            };
+            definition->replace_blacklist = read_list( "blacklist", "add_blacklist",
+                                            definition->feature_blacklist );
+            definition->replace_whitelist = read_list( "whitelist", "add_whitelist",
+                                            definition->feature_whitelist );
         }
         if( const sol::optional<sol::table> connections =
                 options.get<sol::optional<sol::table>>( "connections" ) ) {
+            definition->replace_connections = true;
             definition->trail_connection = connections->get_or(
                                                "trail_connection", std::string() );
             definition->sewer_connection = connections->get_or(
@@ -3211,29 +3267,29 @@ void worldgen_content_transaction::install_lua_api( sol::state &lua, sol::table 
         }
         auto definition = std::make_shared<region_settings_city_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->is_megacity = options.get_or( "is_megacity", false );
-        if( options["city_size"].valid() ) {
-            definition->city_size = options.get<std::int64_t>( "city_size" );
-            definition->city_size_set = true;
-        }
-        definition->city_spacing = options.get_or<std::int64_t>( "city_spacing", 4 );
-        definition->shop_radius = options.get_or<std::int64_t>( "shop_radius", 30 );
-        definition->shop_sigma = options.get_or<std::int64_t>( "shop_sigma", 20 );
-        definition->park_radius = options.get_or<std::int64_t>( "park_radius", 30 );
-        definition->park_sigma = options.get_or<std::int64_t>( "park_sigma", 70 );
-        definition->name_snippet = options.get_or( "name_snippet", std::string( "<city_name>" ) );
-        if( const sol::optional<sol::table> houses_tbl =
-                options.get<sol::optional<sol::table>>( "houses" ) ) {
-            parse_weighted_table_entries( *houses_tbl, "region_settings_city houses", definition->houses );
-        }
-        if( const sol::optional<sol::table> shops_tbl =
-                options.get<sol::optional<sol::table>>( "shops" ) ) {
-            parse_weighted_table_entries( *shops_tbl, "region_settings_city shops", definition->shops );
-        }
-        if( const sol::optional<sol::table> parks_tbl =
-                options.get<sol::optional<sol::table>>( "parks" ) ) {
-            parse_weighted_table_entries( *parks_tbl, "region_settings_city parks", definition->parks );
-        }
+        definition->extends = options.get_or( "extends", std::string() );
+        definition->is_megacity = options.get<std::optional<bool>>( "is_megacity" );
+        definition->city_size = options.get<std::optional<std::int64_t>>( "city_size" );
+        definition->city_spacing = options.get<std::optional<std::int64_t>>( "city_spacing" );
+        definition->shop_radius = options.get<std::optional<std::int64_t>>( "shop_radius" );
+        definition->shop_sigma = options.get<std::optional<std::int64_t>>( "shop_sigma" );
+        definition->park_radius = options.get<std::optional<std::int64_t>>( "park_radius" );
+        definition->park_sigma = options.get<std::optional<std::int64_t>>( "park_sigma" );
+        definition->name_snippet = options.get<std::optional<std::string>>( "name_snippet" );
+        const auto read_bin = [&options]( const char *member, const char *added,
+                                          auto & destination ) {
+            if( const auto values = options.get<sol::optional<sol::table>>( member ) ) {
+                parse_weighted_table_entries( *values, member, destination );
+                return true;
+            }
+            if( const auto values = options.get<sol::optional<sol::table>>( added ) ) {
+                parse_weighted_table_entries( *values, added, destination );
+            }
+            return false;
+        };
+        definition->replace_houses = read_bin( "houses", "add_houses", definition->houses );
+        definition->replace_shops = read_bin( "shops", "add_shops", definition->shops );
+        definition->replace_parks = read_bin( "parks", "add_parks", definition->parks );
         return region_settings_city_definition_handle{ std::move( definition ), transaction->token };
     } );
     content.set_function( "ForestBiomeMapgen", [transaction]( const sol::table & options ) {
@@ -4204,29 +4260,39 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
         for( const region_settings_city_registration &entry : pimpl_->region_settings_cities ) {
             const region_settings_city_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "region_settings_city" );
+            if( !definition.extends.empty() ) {
+                require_valid_id( definition.extends, "region_settings_city parent" );
+                if( check_engine_state && region_settings_city_ids.count( definition.extends ) == 0 &&
+                    !region_settings_city_id( definition.extends ).is_valid() ) {
+                    throw std::runtime_error( "region_settings_city '" + definition.id +
+                                              "' references unknown parent '" + definition.extends + "'" );
+                }
+            }
             if( !region_settings_city_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' is registered more than once per transaction" );
             }
-            if( !definition.city_size_set ) {
+            if( !definition.city_size && definition.extends.empty() ) {
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' requires city_size" );
             }
-            if( !native_int( definition.city_size ) || definition.city_size < 0 || definition.city_size > 16 ) {
+            if( const std::int64_t value = definition.city_size.value_or( 0 );
+                !native_int( value ) || value < 0 || value > 16 ) {
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' city_size must be between 0 and 16" );
             }
-            if( !native_int( definition.city_spacing ) || definition.city_spacing < 0 ||
-                definition.city_spacing > 8 ) {
+            if( const std::int64_t value = definition.city_spacing.value_or( 0 );
+                !native_int( value ) || value < 0 ||
+                value > 8 ) {
                 throw std::runtime_error( "region_settings_city '" + definition.id +
                                           "' city_spacing must be between 0 and 8" );
             }
-            if( !native_int( definition.shop_radius ) || definition.shop_radius < 0 ||
-                !native_int( definition.shop_sigma ) || definition.shop_sigma < 0 ||
-                !native_int( definition.park_radius ) || definition.park_radius < 0 ||
-                !native_int( definition.park_sigma ) || definition.park_sigma < 0 ) {
-                throw std::runtime_error( "region_settings_city '" + definition.id +
-                                          "' radius and sigma values must be non-negative native integers" );
+            for( const auto &field : { definition.shop_radius, definition.shop_sigma,
+                                      definition.park_radius, definition.park_sigma } ) {
+                if( field && ( !native_int( *field ) || *field < 0 ) ) {
+                    throw std::runtime_error( "region_settings_city '" + definition.id +
+                                              "' radius and sigma values must be non-negative native integers" );
+                }
             }
             const auto check_city_bin = [&](
                                             const std::vector<std::pair<std::string, std::int64_t>> &bin,
@@ -4369,6 +4435,14 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
         for( const region_settings_registration &entry : pimpl_->region_settings ) {
             const region_settings_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "region settings" );
+            if( !definition.extends.empty() ) {
+                require_valid_id( definition.extends, "region settings parent" );
+                if( check_engine_state && region_settings_ids.count( definition.extends ) == 0 &&
+                    !region_settings_id( definition.extends ).is_valid() ) {
+                    throw std::runtime_error( "region settings '" + definition.id +
+                                              "' references unknown parent '" + definition.extends + "'" );
+                }
+            }
             if( !region_settings_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "region settings '" + definition.id +
                                           "' is registered more than once per transaction" );
@@ -4413,37 +4487,37 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             };
             require_reference( definition.cities, region_settings_city_ids,
                                region_settings_city_id( definition.cities ).is_valid(),
-                               "city settings", true );
+                               "city settings", definition.extends.empty() );
             require_reference( definition.forest_composition,
                                region_settings_forest_mapgen_ids,
                                region_settings_forest_mapgen_id(
                                    definition.forest_composition ).is_valid(),
                                "forest composition", false );
-            require_reference( definition.forest_trails,
+            require_reference( definition.forest_trails.value_or( "" ),
                                region_settings_forest_trail_ids,
                                region_settings_forest_trail_id(
-                                   definition.forest_trails ).is_valid(),
+                                   definition.forest_trails.value_or( "" ) ).is_valid(),
                                "forest trail settings", false );
             require_reference( definition.weather, index.weather_generator_ids,
                                weather_generator_id( definition.weather ).is_valid(),
                                "weather generator", false );
-            require_reference( definition.forests, region_settings_forest_ids,
-                               region_settings_forest_id( definition.forests ).is_valid(),
+            require_reference( definition.forests.value_or( "" ), region_settings_forest_ids,
+                               region_settings_forest_id( definition.forests.value_or( "" ) ).is_valid(),
                                "forest settings", false );
-            require_reference( definition.rivers, region_settings_river_ids,
-                               region_settings_river_id( definition.rivers ).is_valid(),
+            require_reference( definition.rivers.value_or( "" ), region_settings_river_ids,
+                               region_settings_river_id( definition.rivers.value_or( "" ) ).is_valid(),
                                "river settings", false );
-            require_reference( definition.lakes, region_settings_lake_ids,
-                               region_settings_lake_id( definition.lakes ).is_valid(),
+            require_reference( definition.lakes.value_or( "" ), region_settings_lake_ids,
+                               region_settings_lake_id( definition.lakes.value_or( "" ) ).is_valid(),
                                "lake settings", false );
-            require_reference( definition.ocean, region_settings_ocean_ids,
-                               region_settings_ocean_id( definition.ocean ).is_valid(),
+            require_reference( definition.ocean.value_or( "" ), region_settings_ocean_ids,
+                               region_settings_ocean_id( definition.ocean.value_or( "" ) ).is_valid(),
                                "ocean settings", false );
-            require_reference( definition.highways, region_settings_highway_ids,
-                               region_settings_highway_id( definition.highways ).is_valid(),
+            require_reference( definition.highways.value_or( "" ), region_settings_highway_ids,
+                               region_settings_highway_id( definition.highways.value_or( "" ) ).is_valid(),
                                "highway settings", false );
-            require_reference( definition.ravines, region_settings_ravine_ids,
-                               region_settings_ravine_id( definition.ravines ).is_valid(),
+            require_reference( definition.ravines.value_or( "" ), region_settings_ravine_ids,
+                               region_settings_ravine_id( definition.ravines.value_or( "" ) ).is_valid(),
                                "ravine settings", false );
             require_reference( definition.map_extras, region_settings_map_extras_ids,
                                region_settings_map_extras_id(
@@ -4487,22 +4561,21 @@ bool worldgen_content_transaction::validate( const worldgen_validation_index &in
             check_connection( "sewer connection", definition.sewer_connection );
             check_connection( "subway connection", definition.subway_connection );
             check_connection( "rail connection", definition.rail_connection,
-                              definition.place_railroads );
+                              definition.place_railroads.value_or( false ) );
             check_connection( "intra-city road connection",
                               definition.intra_city_road_connection );
             check_connection( "inter-city road connection",
                               definition.inter_city_road_connection );
-            if( !std::isfinite( definition.max_urbanity ) ||
-                definition.max_urbanity < std::numeric_limits<float>::lowest() ||
-                definition.max_urbanity > std::numeric_limits<float>::max() ) {
+            if( const double value = definition.max_urbanity.value_or( 0.0 );
+                !std::isfinite( value ) || value < std::numeric_limits<float>::lowest() ||
+                value > std::numeric_limits<float>::max() ) {
                 throw std::runtime_error( "region settings '" + definition.id +
                                           "' has max urbanity outside the native float range" );
             }
-            for( const float increase : definition.urbanity_increase ) {
-                if( !std::isfinite( increase ) ) {
-                    throw std::runtime_error( "region settings '" + definition.id +
-                                              "' has non-finite urbanity increase" );
-                }
+            if( definition.npc_spawn_time &&
+                ( !std::isfinite( *definition.npc_spawn_time ) || *definition.npc_spawn_time < 0.0 ) ) {
+                throw std::runtime_error( "region settings '" + definition.id +
+                                          "' requires a finite non-negative NPC spawn time" );
             }
             validate_operation( entry.operation,
                                 region_settings_id( definition.id ).is_valid(),
@@ -4909,102 +4982,106 @@ bool worldgen_content_transaction::apply( std::string &error )
             const region_settings_id id( entry.definition->id );
             pimpl_->region_settings_undo.emplace_back(
                 id, id.is_valid() ? std::optional<::region_settings>( id.obj() ) : std::nullopt );
-            ::region_settings native;
+            const region_settings_definition_data &definition = *entry.definition;
+            ::region_settings native = definition.extends.empty() ?
+                                       ::region_settings() : region_settings_id( definition.extends ).obj();
             native.id = id;
-            if( !entry.definition->default_oter.empty() ) {
+            if( !definition.default_oter.empty() ) {
+                native.finalized = false;
                 for( std::size_t index = 0; index < OVERMAP_LAYERS; ++index ) {
-                    native.default_oter[index] = oter_str_id( entry.definition->default_oter[index] );
+                    native.default_oter[index] = oter_str_id( definition.default_oter[index] );
                 }
             }
-            if( entry.definition->default_groundcover_set ) {
+            if( definition.default_groundcover_set ) {
                 native.default_groundcover.clear();
-                for( const auto &[terrain, weight] : entry.definition->default_groundcover ) {
+                for( const auto &[terrain, weight] : definition.default_groundcover ) {
                     native.default_groundcover.add( ter_id( terrain ), static_cast<int>( weight ) );
                 }
             }
-            if( !entry.definition->cities.empty() ) {
-                native.city_spec = region_settings_city_id( entry.definition->cities );
+            if( !definition.cities.empty() ) {
+                native.city_spec = region_settings_city_id( definition.cities );
             }
-            if( !entry.definition->forest_composition.empty() ) {
+            if( !definition.forest_composition.empty() ) {
                 native.forest_composition = region_settings_forest_mapgen_id(
-                                                entry.definition->forest_composition );
+                                                definition.forest_composition );
             }
-            if( !entry.definition->forest_trails.empty() ) {
-                native.forest_trail = region_settings_forest_trail_id(
-                                          entry.definition->forest_trails );
+            if( !definition.weather.empty() ) {
+                native.weather = weather_generator_id( definition.weather );
             }
-            if( !entry.definition->weather.empty() ) {
-                native.weather = weather_generator_id( entry.definition->weather );
-            }
-            if( !entry.definition->forests.empty() ) {
-                native.overmap_forest = region_settings_forest_id( entry.definition->forests );
-            }
-            if( !entry.definition->rivers.empty() ) {
-                native.overmap_river = region_settings_river_id( entry.definition->rivers );
-            }
-            if( !entry.definition->lakes.empty() ) {
-                native.overmap_lake = region_settings_lake_id( entry.definition->lakes );
-            }
-            if( !entry.definition->ocean.empty() ) {
-                native.overmap_ocean = region_settings_ocean_id( entry.definition->ocean );
-            }
-            if( !entry.definition->highways.empty() ) {
-                native.overmap_highway = region_settings_highway_id( entry.definition->highways );
-            }
-            if( !entry.definition->ravines.empty() ) {
-                native.overmap_ravine = region_settings_ravine_id( entry.definition->ravines );
-            }
-            if( !entry.definition->map_extras.empty() ) {
+            const auto assign_profile = []( auto &destination, const auto &value ) {
+                if( value ) {
+                    if( value->empty() ) {
+                        destination.reset();
+                    } else {
+                        destination.emplace( *value );
+                    }
+                }
+            };
+            assign_profile( native.forest_trail, definition.forest_trails );
+            assign_profile( native.overmap_forest, definition.forests );
+            assign_profile( native.overmap_river, definition.rivers );
+            assign_profile( native.overmap_lake, definition.lakes );
+            assign_profile( native.overmap_ocean, definition.ocean );
+            assign_profile( native.overmap_highway, definition.highways );
+            assign_profile( native.overmap_ravine, definition.ravines );
+            if( !definition.map_extras.empty() ) {
                 native.region_extras = region_settings_map_extras_id(
-                                           entry.definition->map_extras );
+                                           definition.map_extras );
             }
-            if( !entry.definition->terrain_furniture.empty() ) {
+            if( !definition.terrain_furniture.empty() ) {
                 native.region_terrain_and_furniture = region_settings_terrain_furniture_id(
-                        entry.definition->terrain_furniture );
+                        definition.terrain_furniture );
+            }
+            if( definition.replace_blacklist ) {
+                native.overmap_feature_flag.blacklist.clear();
+            }
+            if( definition.replace_whitelist ) {
+                native.overmap_feature_flag.whitelist.clear();
             }
             native.overmap_feature_flag.blacklist.insert(
-                entry.definition->feature_blacklist.begin(),
-                entry.definition->feature_blacklist.end() );
+                definition.feature_blacklist.begin(),
+                definition.feature_blacklist.end() );
             native.overmap_feature_flag.whitelist.insert(
-                entry.definition->feature_whitelist.begin(),
-                entry.definition->feature_whitelist.end() );
-            if( !entry.definition->trail_connection.empty() ) {
+                definition.feature_whitelist.begin(),
+                definition.feature_whitelist.end() );
+            if( definition.replace_connections ) {
+                native.overmap_connection = region_settings_overmap_connection();
+            }
+            if( !definition.trail_connection.empty() ) {
                 native.overmap_connection.trail_connection = overmap_connection_id(
-                            entry.definition->trail_connection );
+                            definition.trail_connection );
             }
-            if( !entry.definition->sewer_connection.empty() ) {
+            if( !definition.sewer_connection.empty() ) {
                 native.overmap_connection.sewer_connection = overmap_connection_id(
-                            entry.definition->sewer_connection );
+                            definition.sewer_connection );
             }
-            if( !entry.definition->subway_connection.empty() ) {
+            if( !definition.subway_connection.empty() ) {
                 native.overmap_connection.subway_connection = overmap_connection_id(
-                            entry.definition->subway_connection );
+                            definition.subway_connection );
             }
-            if( !entry.definition->rail_connection.empty() ) {
+            if( !definition.rail_connection.empty() ) {
                 native.overmap_connection.rail_connection = overmap_connection_id(
-                            entry.definition->rail_connection );
+                            definition.rail_connection );
             }
-            if( !entry.definition->intra_city_road_connection.empty() ) {
+            if( !definition.intra_city_road_connection.empty() ) {
                 native.overmap_connection.intra_city_road_connection = overmap_connection_id(
-                            entry.definition->intra_city_road_connection );
+                            definition.intra_city_road_connection );
             }
-            if( !entry.definition->inter_city_road_connection.empty() ) {
+            if( !definition.inter_city_road_connection.empty() ) {
                 native.overmap_connection.inter_city_road_connection = overmap_connection_id(
-                            entry.definition->inter_city_road_connection );
+                            definition.inter_city_road_connection );
             }
-            native.place_swamps = entry.definition->place_swamps;
-            native.place_roads = entry.definition->place_roads;
-            native.place_railroads = entry.definition->place_railroads;
-            native.place_railroads_before_roads = entry.definition->place_railroads_before_roads;
-            native.place_specials = entry.definition->place_specials;
-            native.neighbor_connections = entry.definition->neighbor_connections;
-            native.max_urban = static_cast<float>( entry.definition->max_urbanity );
-            native.urban_increase = entry.definition->urbanity_increase;
+            assign_region_setting( native.place_swamps, definition.place_swamps );
+            assign_region_setting( native.place_roads, definition.place_roads );
+            assign_region_setting( native.place_railroads, definition.place_railroads );
+            assign_region_setting( native.place_railroads_before_roads, definition.place_railroads_before_roads );
+            assign_region_setting( native.place_specials, definition.place_specials );
+            assign_region_setting( native.neighbor_connections, definition.neighbor_connections );
+            assign_region_setting( native.max_urban, definition.max_urbanity );
+            assign_region_setting( native.urban_increase, definition.urbanity_increase );
+            assign_region_setting( native.npc_spawn_time, definition.npc_spawn_time );
             native.was_loaded = true;
             detail::region_settings_registry().insert( native );
-        }
-        if( !pimpl_->region_settings.empty() ) {
-            detail::region_settings_registry().finalize();
         }
         for( const option_slider_registration &entry : pimpl_->option_sliders ) {
             const option_slider_id id( entry.definition->id );
@@ -5184,25 +5261,30 @@ bool worldgen_content_transaction::apply( std::string &error )
             const region_settings_city_id id( entry.definition->id );
             pimpl_->region_settings_city_undo.emplace_back(
                 id, id.is_valid() ? std::optional<region_settings_city>( id.obj() ) : std::nullopt );
-            region_settings_city native;
+            const region_settings_city_definition_data &definition = *entry.definition;
+            region_settings_city native = definition.extends.empty() ?
+                                          region_settings_city() : region_settings_city_id( definition.extends ).obj();
             native.id = id;
-            native.is_megacity = entry.definition->is_megacity;
-            native.city_size = static_cast<int>( entry.definition->city_size );
-            native.city_spacing = static_cast<int>( entry.definition->city_spacing );
-            native.shop_radius = static_cast<int>( entry.definition->shop_radius );
-            native.shop_sigma = static_cast<int>( entry.definition->shop_sigma );
-            native.park_radius = static_cast<int>( entry.definition->park_radius );
-            native.park_sigma = static_cast<int>( entry.definition->park_sigma );
-            native.name_snippet = entry.definition->name_snippet;
-            for( const auto &[special, weight] : entry.definition->houses ) {
-                native.houses.add( overmap_special_id( special ), static_cast<int>( weight ) );
-            }
-            for( const auto &[special, weight] : entry.definition->shops ) {
-                native.shops.add( overmap_special_id( special ), static_cast<int>( weight ) );
-            }
-            for( const auto &[special, weight] : entry.definition->parks ) {
-                native.parks.add( overmap_special_id( special ), static_cast<int>( weight ) );
-            }
+            assign_region_setting( native.is_megacity, definition.is_megacity );
+            assign_region_setting( native.city_size, definition.city_size );
+            assign_region_setting( native.city_spacing, definition.city_spacing );
+            assign_region_setting( native.shop_radius, definition.shop_radius );
+            assign_region_setting( native.shop_sigma, definition.shop_sigma );
+            assign_region_setting( native.park_radius, definition.park_radius );
+            assign_region_setting( native.park_sigma, definition.park_sigma );
+            assign_region_setting( native.name_snippet, definition.name_snippet );
+            const auto assign_bin = []( building_bin &destination, const auto &items,
+            const bool replace ) {
+                if( replace ) {
+                    destination.clear();
+                }
+                for( const auto &[special, weight] : items ) {
+                    destination.buildings.add_or_replace( overmap_special_id( special ), static_cast<int>( weight ) );
+                }
+            };
+            assign_bin( native.houses, definition.houses, definition.replace_houses );
+            assign_bin( native.shops, definition.shops, definition.replace_shops );
+            assign_bin( native.parks, definition.parks, definition.replace_parks );
             native.was_loaded = true;
             detail::region_settings_city_registry().insert( native );
         }
@@ -5485,9 +5567,6 @@ void worldgen_content_transaction::rollback()
             detail::region_settings_registry().erase( it->first );
         }
     }
-    if( !pimpl_->region_settings_undo.empty() ) {
-        detail::region_settings_registry().finalize();
-    }
     pimpl_->region_settings_undo.clear();
 
     for( auto it = pimpl_->region_settings_ravine_undo.rbegin();
@@ -5695,6 +5774,16 @@ void worldgen_content_transaction::rollback()
 
 void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) const
 {
+    const auto hash_optional = [&]( const auto &value ) {
+        hash_part( state, value ? "specified" : "inherit" );
+        if( value ) {
+            if constexpr( std::is_same_v<std::decay_t<decltype( *value )>, std::string> ) {
+                hash_part( state, *value );
+            } else {
+                hash_part( state, std::to_string( *value ) );
+            }
+        }
+    };
     for( const region_settings_ravine_registration &entry : pimpl_->region_settings_ravines ) {
         hash_part( state, "region_settings_ravine" );
         hash_part( state, operation_name( entry.operation ) );
@@ -5870,6 +5959,7 @@ void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) co
         hash_part( state, "region_settings" );
         hash_part( state, operation_name( entry.operation ) );
         hash_part( state, value.id );
+        hash_part( state, value.extends );
         hash_part( state, "default_oter" );
         hash_part( state, std::to_string( value.default_oter.size() ) );
         for( const std::string &terrain : value.default_oter ) {
@@ -5884,41 +5974,48 @@ void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) co
         }
         hash_part( state, value.cities );
         hash_part( state, value.forest_composition );
-        hash_part( state, value.forest_trails );
+        hash_optional( value.forest_trails );
         hash_part( state, value.weather );
-        hash_part( state, value.forests );
-        hash_part( state, value.rivers );
-        hash_part( state, value.lakes );
-        hash_part( state, value.ocean );
-        hash_part( state, value.highways );
-        hash_part( state, value.ravines );
+        hash_optional( value.forests );
+        hash_optional( value.rivers );
+        hash_optional( value.lakes );
+        hash_optional( value.ocean );
+        hash_optional( value.highways );
+        hash_optional( value.ravines );
         hash_part( state, value.map_extras );
         hash_part( state, value.terrain_furniture );
         hash_part( state, "feature_blacklist" );
+        hash_part( state, value.replace_blacklist ? "replace" : "extend" );
         hash_part( state, std::to_string( value.feature_blacklist.size() ) );
         for( const std::string &flag : value.feature_blacklist ) {
             hash_part( state, flag );
         }
         hash_part( state, "feature_whitelist" );
+        hash_part( state, value.replace_whitelist ? "replace" : "extend" );
         hash_part( state, std::to_string( value.feature_whitelist.size() ) );
         for( const std::string &flag : value.feature_whitelist ) {
             hash_part( state, flag );
         }
+        hash_part( state, value.replace_connections ? "replace" : "extend" );
         hash_part( state, value.trail_connection );
         hash_part( state, value.sewer_connection );
         hash_part( state, value.subway_connection );
         hash_part( state, value.rail_connection );
         hash_part( state, value.intra_city_road_connection );
         hash_part( state, value.inter_city_road_connection );
-        hash_part( state, value.place_swamps ? "true" : "false" );
-        hash_part( state, value.place_roads ? "true" : "false" );
-        hash_part( state, value.place_railroads ? "true" : "false" );
-        hash_part( state, value.place_railroads_before_roads ? "true" : "false" );
-        hash_part( state, value.place_specials ? "true" : "false" );
-        hash_part( state, value.neighbor_connections ? "true" : "false" );
-        hash_part( state, std::to_string( value.max_urbanity ) );
-        for( const float increase : value.urbanity_increase ) {
-            hash_part( state, std::to_string( increase ) );
+        hash_optional( value.place_swamps );
+        hash_optional( value.place_roads );
+        hash_optional( value.place_railroads );
+        hash_optional( value.place_railroads_before_roads );
+        hash_optional( value.place_specials );
+        hash_optional( value.neighbor_connections );
+        hash_optional( value.max_urbanity );
+        hash_optional( value.npc_spawn_time );
+        hash_part( state, value.urbanity_increase ? "specified" : "inherit" );
+        if( value.urbanity_increase ) {
+            for( const float increase : *value.urbanity_increase ) {
+                hash_part( state, std::to_string( increase ) );
+            }
         }
     }
     for( const option_slider_registration &entry : pimpl_->option_sliders ) {
@@ -6041,27 +6138,31 @@ void worldgen_content_transaction::append_fingerprint( std::uint64_t &state ) co
         hash_part( state, "region_settings_city" );
         hash_part( state, operation_name( entry.operation ) );
         hash_part( state, entry.definition->id );
-        hash_part( state, entry.definition->is_megacity ? "true" : "false" );
-        hash_part( state, std::to_string( entry.definition->city_size ) );
-        hash_part( state, std::to_string( entry.definition->city_spacing ) );
-        hash_part( state, std::to_string( entry.definition->shop_radius ) );
-        hash_part( state, std::to_string( entry.definition->shop_sigma ) );
-        hash_part( state, std::to_string( entry.definition->park_radius ) );
-        hash_part( state, std::to_string( entry.definition->park_sigma ) );
-        hash_part( state, entry.definition->name_snippet );
+        hash_part( state, entry.definition->extends );
+        hash_optional( entry.definition->is_megacity );
+        hash_optional( entry.definition->city_size );
+        hash_optional( entry.definition->city_spacing );
+        hash_optional( entry.definition->shop_radius );
+        hash_optional( entry.definition->shop_sigma );
+        hash_optional( entry.definition->park_radius );
+        hash_optional( entry.definition->park_sigma );
+        hash_optional( entry.definition->name_snippet );
         hash_part( state, "houses" );
+        hash_part( state, entry.definition->replace_houses ? "replace" : "extend" );
         hash_part( state, std::to_string( entry.definition->houses.size() ) );
         for( const auto &[special, weight] : entry.definition->houses ) {
             hash_part( state, special );
             hash_part( state, std::to_string( weight ) );
         }
         hash_part( state, "shops" );
+        hash_part( state, entry.definition->replace_shops ? "replace" : "extend" );
         hash_part( state, std::to_string( entry.definition->shops.size() ) );
         for( const auto &[special, weight] : entry.definition->shops ) {
             hash_part( state, special );
             hash_part( state, std::to_string( weight ) );
         }
         hash_part( state, "parks" );
+        hash_part( state, entry.definition->replace_parks ? "replace" : "extend" );
         hash_part( state, std::to_string( entry.definition->parks.size() ) );
         for( const auto &[special, weight] : entry.definition->parks ) {
             hash_part( state, special );

@@ -4123,8 +4123,10 @@ function RegionSettingsHighwayDefinition:road_connection(special_id, weight) end
 function RegionSettingsHighwayDefinition:interchange(special_id, weight) end
 
 ---@class RegionSettingsFeatureFlagOptions
----@field blacklist? string[] Overmap feature flags excluded in this region.
----@field whitelist? string[] Overmap feature flags allowed in this region.
+---@field blacklist? string[] Replace the inherited blacklist.
+---@field whitelist? string[] Replace the inherited whitelist.
+---@field add_blacklist? string[] Add flags to the inherited blacklist.
+---@field add_whitelist? string[] Add flags to the inherited whitelist.
 
 ---@class RegionSettingsConnectionOptions
 ---@field trail_connection? string Overmap connection id used for trails.
@@ -4136,18 +4138,19 @@ function RegionSettingsHighwayDefinition:interchange(special_id, weight) end
 
 ---@class RegionSettingsDefinitionOptions
 ---@field id string Stable region settings id.
+---@field extends? string Snapshot an earlier native region before applying these fields.
 ---@field default_oter? string[] Exactly 21 overmap terrain ids ordered from highest z-level to lowest.
 ---@field default_groundcover? PlatformWeightedEntry[] Weighted terrain ids.
----@field cities string Region settings city id.
+---@field cities? string Region settings city id. Required when there is no parent.
 ---@field forest_composition? string Region settings forest mapgen id.
----@field forest_trails? string Region settings forest trail id.
+---@field forest_trails? string|false Region settings forest trail id. Use false to disable the inherited setting.
 ---@field weather? string Weather generator id.
----@field forests? string Region settings forest id.
----@field rivers? string Region settings river id.
----@field lakes? string Region settings lake id.
----@field ocean? string Region settings ocean id.
----@field highways? string Region settings highway id.
----@field ravines? string Region settings ravine id.
+---@field forests? string|false Region settings forest id. Use false to disable the inherited setting.
+---@field rivers? string|false Region settings river id. Use false to disable the inherited setting.
+---@field lakes? string|false Region settings lake id. Use false to disable the inherited setting.
+---@field ocean? string|false Region settings ocean id. Use false to disable the inherited setting.
+---@field highways? string|false Region settings highway id. Use false to disable the inherited setting.
+---@field ravines? string|false Region settings ravine id. Use false to disable the inherited setting.
 ---@field map_extras? string Region settings map extras id.
 ---@field terrain_furniture? string Region settings terrain furniture id.
 ---@field feature_flag_settings? RegionSettingsFeatureFlagOptions
@@ -4159,6 +4162,7 @@ function RegionSettingsHighwayDefinition:interchange(special_id, weight) end
 ---@field place_specials? boolean Whether overmap special placement is enabled; defaults to true.
 ---@field neighbor_connections? boolean Whether connections may continue into neighboring overmaps; defaults to true.
 ---@field max_urbanity? number Maximum urbanity; defaults to 8.
+---@field npc_spawn_time? number Native NPC spawn time; defaults to 4.
 ---@field urbanity_increase? number[] Exactly four north/east/south/west increases.
 
 ---@class RegionSettingsDefinition
@@ -4194,7 +4198,7 @@ function RegionSettingsDefinition:cities(value) end
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:forest_composition(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:forest_trails(value) end
 
@@ -4202,27 +4206,27 @@ function RegionSettingsDefinition:forest_trails(value) end
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:weather(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:forests(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:rivers(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:lakes(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:ocean(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:highways(value) end
 
----@param value string
+---@param value string|false Use false to disable the inherited setting.
 ---@return RegionSettingsDefinition self
 function RegionSettingsDefinition:ravines(value) end
 
@@ -4571,17 +4575,21 @@ function FactionMissionDefinition:footer(value) end
 
 ---@class RegionSettingsCityDefinitionOptions
 ---@field id string Stable region settings city id.
+---@field extends? string Snapshot an earlier native city profile before applying these fields.
 ---@field is_megacity? boolean
----@field city_size integer Required native city-size bound.
+---@field city_size? integer Native city-size bound. Required when there is no parent.
 ---@field city_spacing? integer
 ---@field shop_radius? integer
 ---@field shop_sigma? integer
 ---@field park_radius? integer
 ---@field park_sigma? integer
 ---@field name_snippet? string
----@field houses? PlatformWeightedEntry[]
----@field shops? PlatformWeightedEntry[]
----@field parks? PlatformWeightedEntry[]
+---@field houses? PlatformWeightedEntry[] Replace the inherited building pool.
+---@field add_houses? PlatformWeightedEntry[] Add or reweight buildings in the inherited pool.
+---@field shops? PlatformWeightedEntry[] Replace the inherited building pool.
+---@field add_shops? PlatformWeightedEntry[] Add or reweight buildings in the inherited pool.
+---@field parks? PlatformWeightedEntry[] Replace the inherited building pool.
+---@field add_parks? PlatformWeightedEntry[] Add or reweight buildings in the inherited pool.
 
 ---@class RegionSettingsCityDefinition
 ---@field id string
