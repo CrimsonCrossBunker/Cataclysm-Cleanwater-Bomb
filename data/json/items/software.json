@@ -1,14 +1,5 @@
 [
   {
-    "id": "abstract_software",
-    "copy-from": "abstract_efile_exclusive",
-    "type": "ITEM",
-    "category": "software",
-    "name": { "str_sp": "abstract software", "//~": "NO_I18N" },
-    "description": { "str": "Copy from this for any software.", "//~": "NO_I18N" },
-    "ememory_size": "1 KB"
-  },
-  {
     "abstract": "abstract_efile",
     "type": "ITEM",
     "category": "e_files",
@@ -21,17 +12,6 @@
     "ememory_size": "1 KB",
     "flags": [ "E_STORABLE", "ZERO_WEIGHT", "NO_DROP", "IRREMOVABLE" ],
     "variables": { "browsed": "false" }
-  },
-  {
-    "abstract": "abstract_efile_exclusive",
-    "copy-from": "abstract_efile",
-    "type": "ITEM",
-    "symbol": "o",
-    "name": { "str": "abstract e-only electronic file", "//~": "NO_I18N" },
-    "description": { "str": "abstract e-only electronic file", "//~": "NO_I18N" },
-    "ememory_size": "1 KB",
-    "delete": { "flags": [ "E_STORABLE" ] },
-    "extend": { "flags": [ "E_STORABLE_EXCLUSIVE" ] }
   },
   {
     "abstract": "abstract_efile_exclusive_copiable",
