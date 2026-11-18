@@ -5028,7 +5028,8 @@ function DamageTypeDefinition:on_damage(handler_id) end
 
 ---@class MaterialDefinitionOptions
 ---@field id string Stable material id.
----@field name? string|LocalizedText Display name; defaults to id. Plural text is rejected.
+---@field copy_from? string Native material or abstract to inherit. Omitted options retain the parent's values.
+---@field name? string|LocalizedText Display name. Fresh definitions default to the id. Plural text is rejected.
 ---@field salvaged_into? string Item id produced by salvage.
 ---@field repaired_with? string|string[] One repair item id or a dense array of repair item ids; repair accepts any one of them.
 ---@field repaired_with_name? string|LocalizedText Display name that overrides the automatic enumeration of the repaired_with items.

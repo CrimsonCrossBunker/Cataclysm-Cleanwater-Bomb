@@ -68,6 +68,7 @@ extern "C" {
 #include "lua_platform_content.h"
 #include "martialarts.h"
 #include "material.h"
+#include "mod_tracker.h"
 #include "math_parser_diag.h"
 #include "math_parser_jmath.h"
 #include "proficiency.h"
@@ -622,12 +623,13 @@ struct material_burn_definition {
 
 struct material_definition_data {
     std::string id;
+    std::string copy_from;
     authored_text name;
     std::string salvaged_into;
     std::vector<std::string> repaired_with;
     authored_text repaired_with_name;
-    authored_text bash_damage_verb = { "damages", std::nullopt };
-    authored_text cut_damage_verb = { "damages", std::nullopt };
+    authored_text bash_damage_verb;
+    authored_text cut_damage_verb;
     std::vector<authored_text> damage_adjectives = {
         { "lightly damaged", std::nullopt }, { "damaged", std::nullopt },
         { "very damaged", std::nullopt }, { "thoroughly damaged", std::nullopt }
@@ -636,20 +638,20 @@ struct material_definition_data {
     std::map<std::string, double> vitamins;
     std::vector<material_burn_definition> burn_data;
     std::vector<std::pair<std::string, double>> burn_products;
-    std::int64_t chip_resistance = 0;
-    std::int64_t breathability = 0;
-    std::int64_t repair_difficulty = 10;
+    std::optional<std::int64_t> chip_resistance;
+    std::optional<std::int64_t> breathability;
+    std::optional<std::int64_t> repair_difficulty;
     std::optional<std::int64_t> wind_resistance;
-    double density = 1.0;
-    double sheet_thickness = 0.0;
-    double specific_heat_liquid = 4.186;
-    double specific_heat_solid = 2.108;
-    double latent_heat = 334.0;
-    double freezing_point = 0.0;
-    bool rotting = false;
-    bool soft = false;
-    bool uncomfortable = false;
-    bool conductive = false;
+    std::optional<double> density;
+    std::optional<double> sheet_thickness;
+    std::optional<double> specific_heat_liquid;
+    std::optional<double> specific_heat_solid;
+    std::optional<double> latent_heat;
+    std::optional<double> freezing_point;
+    std::optional<bool> rotting;
+    std::optional<bool> soft;
+    std::optional<bool> uncomfortable;
+    std::optional<bool> conductive;
     bool has_fuel = false;
     std::int64_t fuel_energy_kilojoules = 0;
     std::string fuel_pump_terrain = "t_null";
@@ -3086,8 +3088,13 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         auto definition = std::make_shared<material_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = read_text_option( options, "name",
-        { definition->id, std::nullopt }, "material name" );
+        definition->copy_from = options.get_or( "copy_from", std::string() );
+        if( !definition->copy_from.empty() ) {
+            definition->damage_adjectives.clear();
+        }
+        const authored_text default_name{ definition->copy_from.empty() ? definition->id : "",
+                                         std::nullopt };
+        definition->name = read_text_option( options, "name", default_name, "material name" );
         definition->salvaged_into = options.get_or( "salvaged_into", std::string() );
         if( const sol::object rw = options["repaired_with"] ) {
             if( rw.is<sol::table>() ) {
@@ -3101,25 +3108,29 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         }
         definition->repaired_with_name = read_text_option( options, "repaired_with_name", {},
                                          "material repair display name" );
-        definition->bash_damage_verb = read_text_option( options, "bash_damage_verb",
-                                       definition->bash_damage_verb,
+        definition->bash_damage_verb = read_text_option( options, "bash_damage_verb", {},
                                        "material bash damage verb" );
-        definition->cut_damage_verb = read_text_option( options, "cut_damage_verb",
-                                      definition->cut_damage_verb,
+        definition->cut_damage_verb = read_text_option( options, "cut_damage_verb", {},
                                       "material cut damage verb" );
-        definition->chip_resistance = options.get_or<std::int64_t>( "chip_resistance", 0 );
-        definition->breathability = options.get_or<std::int64_t>( "breathability", 0 );
-        definition->repair_difficulty = options.get_or<std::int64_t>( "repair_difficulty", 10 );
-        definition->density = options.get_or( "density", 1.0 );
-        definition->sheet_thickness = options.get_or( "sheet_thickness", 0.0 );
-        definition->specific_heat_liquid = options.get_or( "specific_heat_liquid", 4.186 );
-        definition->specific_heat_solid = options.get_or( "specific_heat_solid", 2.108 );
-        definition->latent_heat = options.get_or( "latent_heat", 334.0 );
-        definition->freezing_point = options.get_or( "freezing_point", 0.0 );
-        definition->rotting = options.get_or( "rotting", false );
-        definition->soft = options.get_or( "soft", false );
-        definition->uncomfortable = options.get_or( "uncomfortable", false );
-        definition->conductive = options.get_or( "conductive", false );
+        if( ( options.get<sol::object>( "bash_damage_verb" ).get_type() != sol::type::nil &&
+              definition->bash_damage_verb.empty() ) ||
+            ( options.get<sol::object>( "cut_damage_verb" ).get_type() != sol::type::nil &&
+              definition->cut_damage_verb.empty() ) ) {
+            throw std::runtime_error( "material damage verbs cannot be empty" );
+        }
+        definition->chip_resistance = options.get<std::optional<std::int64_t>>( "chip_resistance" );
+        definition->breathability = options.get<std::optional<std::int64_t>>( "breathability" );
+        definition->repair_difficulty = options.get<std::optional<std::int64_t>>( "repair_difficulty" );
+        definition->density = options.get<std::optional<double>>( "density" );
+        definition->sheet_thickness = options.get<std::optional<double>>( "sheet_thickness" );
+        definition->specific_heat_liquid = options.get<std::optional<double>>( "specific_heat_liquid" );
+        definition->specific_heat_solid = options.get<std::optional<double>>( "specific_heat_solid" );
+        definition->latent_heat = options.get<std::optional<double>>( "latent_heat" );
+        definition->freezing_point = options.get<std::optional<double>>( "freezing_point" );
+        definition->rotting = options.get<std::optional<bool>>( "rotting" );
+        definition->soft = options.get<std::optional<bool>>( "soft" );
+        definition->uncomfortable = options.get<std::optional<bool>>( "uncomfortable" );
+        definition->conductive = options.get<std::optional<bool>>( "conductive" );
         if( const sol::optional<std::int64_t> wind =
                 options.get<sol::optional<std::int64_t>>( "wind_resistance" ) ) {
             definition->wind_resistance = *wind;
@@ -4114,18 +4125,17 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
         for( const material_registration &entry : pimpl_->materials ) {
             const material_definition_data &definition = *entry.definition;
             require_valid_id( definition.id, "material" );
-            if( definition.name.empty() || definition.bash_damage_verb.empty() ||
-                definition.cut_damage_verb.empty() || definition.damage_adjectives.size() < 4 ||
-                definition.chip_resistance < 0 || !native_int( definition.chip_resistance ) ||
-                definition.breathability < 0 ||
-                definition.breathability >= static_cast<std::int64_t>( breathability_rating::last ) ||
-                definition.repair_difficulty < 0 || definition.repair_difficulty > MAX_SKILL ||
-                !finite_native_float( definition.density ) || definition.density <= 0.0 ||
-                !finite_native_float( definition.sheet_thickness ) || definition.sheet_thickness < 0.0 ||
-                !finite_native_float( definition.specific_heat_liquid ) ||
-                !finite_native_float( definition.specific_heat_solid ) ||
-                !finite_native_float( definition.latent_heat ) ||
-                !finite_native_float( definition.freezing_point ) ||
+            if( ( definition.copy_from.empty() && definition.name.empty() ) ||
+                definition.chip_resistance.value_or( 0 ) < 0 || !native_int( definition.chip_resistance.value_or( 0 ) ) ||
+                definition.breathability.value_or( 0 ) < 0 ||
+                definition.breathability.value_or( 0 ) >= static_cast<std::int64_t>( breathability_rating::last ) ||
+                definition.repair_difficulty.value_or( 10 ) < 0 || definition.repair_difficulty.value_or( 10 ) > MAX_SKILL ||
+                !finite_native_float( definition.density.value_or( 1.0 ) ) || definition.density.value_or( 1.0 ) <= 0.0 ||
+                !finite_native_float( definition.sheet_thickness.value_or( 0.0 ) ) || definition.sheet_thickness.value_or( 0.0 ) < 0.0 ||
+                !finite_native_float( definition.specific_heat_liquid.value_or( 4.186 ) ) ||
+                !finite_native_float( definition.specific_heat_solid.value_or( 2.108 ) ) ||
+                !finite_native_float( definition.latent_heat.value_or( 334.0 ) ) ||
+                !finite_native_float( definition.freezing_point.value_or( 0.0 ) ) ||
                 !material_ids.insert( definition.id ).second ) {
                 throw std::runtime_error( "material '" + definition.id +
                                           "' has invalid values or a duplicate registration" );
@@ -4136,7 +4146,7 @@ bool items_content_transaction::validate( const runtime &owner_runtime,
                                           "' has invalid wind resistance" );
             }
             for( const authored_text &adjective : definition.damage_adjectives ) {
-                if( adjective.empty() ) {
+                if( definition.copy_from.empty() && adjective.empty() ) {
                     throw std::runtime_error( "material '" + definition.id +
                                               "' has an empty damage adjective" );
                 }
@@ -5569,55 +5579,129 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                 break;
             }
             case items_content_apply_phase::materials: {
-                for( const material_registration &entry : pimpl_->materials ) {
-                    const material_id id( entry.definition->id );
+                auto &registry = detail::material_registry();
+                const auto find_parent = [&registry]( const std::string & id ) -> const material_type * {
+                    const material_id parent_id( id );
+                    return registry.is_valid( parent_id ) ? &registry.obj( parent_id ) :
+                           registry.find_abstract( id );
+                };
+                std::vector<std::size_t> order;
+                std::string inheritance_error;
+                if( !detail::resolve_platform_inheritance_order( pimpl_->materials,
+                []( const material_registration & entry ) {
+                    return entry.definition->id;
+                }, []( const material_registration & entry ) {
+                    return entry.definition->copy_from;
+                }, [&find_parent]( const std::string & id ) {
+                    return find_parent( id ) != nullptr;
+                }, order, inheritance_error, "material" ) ) {
+                    throw std::runtime_error( inheritance_error );
+                }
+                for( const std::size_t index : order ) {
+                    const material_definition_data &source = *pimpl_->materials[index].definition;
+                    const material_id id( source.id );
                     pimpl_->material_undo.emplace_back(
                         id, id.is_valid() ? std::optional<material_type>( id.obj() ) : std::nullopt );
-                    const material_definition_data &source = *entry.definition;
                     material_type native;
+                    if( !source.copy_from.empty() ) {
+                        native = *find_parent( source.copy_from );
+                    } else {
+                        native._bash_dmg_verb = no_translation( "damages" );
+                        native._cut_dmg_verb = no_translation( "damages" );
+                    }
                     native.id = id;
-                    native.src.emplace_back( id, mod_id( pimpl_->owner ) );
+                    mod_tracker::assign_src( native, pimpl_->owner );
                     native.was_loaded = true;
-                    native._name = source.name.native();
+                    if( !source.name.empty() ) {
+                        native._name = source.name.native();
+                    }
                     if( !source.salvaged_into.empty() ) {
                         native._salvaged_into = itype_id( source.salvaged_into );
                     }
-                    native._repaired_with = { itype_id::NULL_ID() };
-                    for( const std::string &rep : source.repaired_with ) {
-                        native._repaired_with.insert( itype_id( rep ) );
+                    if( !source.repaired_with.empty() ) {
+                        native._repaired_with = { itype_id::NULL_ID() };
+                        for( const std::string &rep : source.repaired_with ) {
+                            native._repaired_with.insert( itype_id( rep ) );
+                        }
                     }
                     if( !source.repaired_with_name.empty() ) {
                         native._repaired_with_name = source.repaired_with_name.native();
                     }
-                    native._chip_resist = static_cast<int>( source.chip_resistance );
-                    native._density = static_cast<float>( source.density );
-                    native._breathability = static_cast<breathability_rating>( source.breathability );
-                    native._wind_resist = source.wind_resistance ?
-                                          std::optional<int>( static_cast<int>( *source.wind_resistance ) ) :
-                                          std::nullopt;
-                    native._specific_heat_liquid = static_cast<float>( source.specific_heat_liquid );
-                    native._specific_heat_solid = static_cast<float>( source.specific_heat_solid );
-                    native._latent_heat = static_cast<float>( source.latent_heat );
-                    native._freeze_point = static_cast<float>( source.freezing_point );
-                    native._rotting = source.rotting;
-                    native._soft = source.soft;
-                    native._uncomfortable = source.uncomfortable;
-                    native._conductive = source.conductive;
-                    native._sheet_thickness = static_cast<float>( source.sheet_thickness );
-                    native._repair_difficulty = static_cast<int>( source.repair_difficulty );
-                    native._bash_dmg_verb = source.bash_damage_verb.native();
-                    native._cut_dmg_verb = source.cut_damage_verb.native();
-                    native._dmg_adj.clear();
-                    for( const authored_text &adjective : source.damage_adjectives ) {
-                        native._dmg_adj.push_back( adjective.native() );
+                    if( source.chip_resistance ) {
+                        native._chip_resist = static_cast<int>( *source.chip_resistance );
+                    }
+                    if( source.breathability ) {
+                        native._breathability = static_cast<breathability_rating>( *source.breathability );
+                    }
+                    if( source.repair_difficulty ) {
+                        native._repair_difficulty = static_cast<int>( *source.repair_difficulty );
+                    }
+                    if( source.density ) {
+                        native._density = static_cast<float>( *source.density );
+                    }
+                    if( source.sheet_thickness ) {
+                        native._sheet_thickness = static_cast<float>( *source.sheet_thickness );
+                    }
+                    if( source.specific_heat_liquid ) {
+                        native._specific_heat_liquid = static_cast<float>( *source.specific_heat_liquid );
+                    }
+                    if( source.specific_heat_solid ) {
+                        native._specific_heat_solid = static_cast<float>( *source.specific_heat_solid );
+                    }
+                    if( source.latent_heat ) {
+                        native._latent_heat = static_cast<float>( *source.latent_heat );
+                    }
+                    if( source.freezing_point ) {
+                        native._freeze_point = static_cast<float>( *source.freezing_point );
+                    }
+                    if( source.rotting ) {
+                        native._rotting = *source.rotting;
+                    }
+                    if( source.soft ) {
+                        native._soft = *source.soft;
+                    }
+                    if( source.uncomfortable ) {
+                        native._uncomfortable = *source.uncomfortable;
+                    }
+                    if( source.conductive ) {
+                        native._conductive = *source.conductive;
+                    }
+                    if( source.wind_resistance ) {
+                        native._wind_resist = static_cast<int>( *source.wind_resistance );
+                    }
+                    if( !source.bash_damage_verb.empty() ) {
+                        native._bash_dmg_verb = source.bash_damage_verb.native();
+                    }
+                    if( !source.cut_damage_verb.empty() ) {
+                        native._cut_dmg_verb = source.cut_damage_verb.native();
+                    }
+                    for( std::size_t level = 0; level < source.damage_adjectives.size(); ++level ) {
+                        const authored_text &adjective = source.damage_adjectives[level];
+                        if( adjective.empty() ) {
+                            continue;
+                        }
+                        if( level > native._dmg_adj.size() ) {
+                            throw std::runtime_error( "material '" + source.id +
+                                                      "' has an undefined intermediate adjective level" );
+                        }
+                        if( level == native._dmg_adj.size() ) {
+                            native._dmg_adj.push_back( adjective.native() );
+                        } else {
+                            native._dmg_adj[level] = adjective.native();
+                        }
                     }
                     for( const auto &[damage_id, amount] : source.resistances ) {
                         const damage_type_id damage_key( damage_id );
                         native._resistances.set_resist( damage_key, static_cast<float>( amount ) );
-                        native._res_was_loaded.push_back( damage_key );
+                        if( !native.has_dedicated_resist( damage_key ) ) {
+                            native._res_was_loaded.push_back( damage_key );
+                        }
                     }
                     for( const auto &[vitamin_key, amount] : source.vitamins ) {
                         native._vitamins[vitamin_id( vitamin_key )] = amount;
+                    }
+                    if( !source.burn_data.empty() ) {
+                        native._burn_data.clear();
                     }
                     for( const material_burn_definition &burn : source.burn_data ) {
                         native._burn_data.push_back( {
@@ -5631,6 +5715,9 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         mat_burn_data default_burn;
                         default_burn.burn = native._resistances.type_resist( damage_heat ) <= 0.0F;
                         native._burn_data.push_back( default_burn );
+                    }
+                    if( !source.burn_products.empty() ) {
+                        native._burn_products.clear();
                     }
                     for( const auto &[product, efficiency] : source.burn_products ) {
                         native._burn_products.emplace_back( itype_id( product ),
@@ -5651,7 +5738,7 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native.fuel.explosion_data.fuel_size_factor =
                             static_cast<float>( source.fuel_size_factor );
                     }
-                    detail::material_registry().insert( native );
+                    registry.insert( native );
                 }
                 break;
             }
@@ -7334,6 +7421,7 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, operation_name( entry.operation ) );
                 const auto &v = *entry.definition;
                 hash_part( state, v.id );
+                hash_part( state, v.copy_from );
                 hash_part( state, v.name );
                 hash_part( state, v.salvaged_into );
                 for( const std::string &rep : v.repaired_with ) {
@@ -7342,20 +7430,20 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                 hash_part( state, v.repaired_with_name );
                 hash_part( state, v.bash_damage_verb );
                 hash_part( state, v.cut_damage_verb );
-                hash_part( state, std::to_string( v.chip_resistance ) );
-                hash_part( state, std::to_string( v.breathability ) );
-                hash_part( state, std::to_string( v.repair_difficulty ) );
+                hash_part( state, v.chip_resistance ? std::to_string( *v.chip_resistance ) : "default" );
+                hash_part( state, v.breathability ? std::to_string( *v.breathability ) : "default" );
+                hash_part( state, v.repair_difficulty ? std::to_string( *v.repair_difficulty ) : "default" );
                 hash_part( state, v.wind_resistance ? std::to_string( *v.wind_resistance ) : "no_wind" );
-                hash_part( state, std::to_string( v.density ) );
-                hash_part( state, std::to_string( v.sheet_thickness ) );
-                hash_part( state, std::to_string( v.specific_heat_liquid ) );
-                hash_part( state, std::to_string( v.specific_heat_solid ) );
-                hash_part( state, std::to_string( v.latent_heat ) );
-                hash_part( state, std::to_string( v.freezing_point ) );
-                hash_part( state, v.rotting ? "rotting" : "stable" );
-                hash_part( state, v.soft ? "soft" : "hard" );
-                hash_part( state, v.uncomfortable ? "uncomfortable" : "comfortable" );
-                hash_part( state, v.conductive ? "conductive" : "insulating" );
+                hash_part( state, v.density ? std::to_string( *v.density ) : "default" );
+                hash_part( state, v.sheet_thickness ? std::to_string( *v.sheet_thickness ) : "default" );
+                hash_part( state, v.specific_heat_liquid ? std::to_string( *v.specific_heat_liquid ) : "default" );
+                hash_part( state, v.specific_heat_solid ? std::to_string( *v.specific_heat_solid ) : "default" );
+                hash_part( state, v.latent_heat ? std::to_string( *v.latent_heat ) : "default" );
+                hash_part( state, v.freezing_point ? std::to_string( *v.freezing_point ) : "default" );
+                hash_part( state, !v.rotting ? "default" : *v.rotting ? "rotting" : "stable" );
+                hash_part( state, !v.soft ? "default" : *v.soft ? "soft" : "hard" );
+                hash_part( state, !v.uncomfortable ? "default" : *v.uncomfortable ? "uncomfortable" : "comfortable" );
+                hash_part( state, !v.conductive ? "default" : *v.conductive ? "conductive" : "insulating" );
                 for( const authored_text &id : v.damage_adjectives ) {
                     hash_part( state, id );
                 }
