@@ -69,12 +69,5 @@
     },
     "display_items": false,
     "display_field": true
-  },
-  {
-    "id": "emit_gum_web",
-    "type": "emit",
-    "field": "fd_gum_web",
-    "intensity": 3,
-    "qty": 18
   }
 ]

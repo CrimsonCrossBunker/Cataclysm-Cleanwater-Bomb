@@ -60,13 +60,6 @@
     "display_field": false
   },
   {
-    "id": "emit_dragon_adult_fright",
-    "type": "emit",
-    "field": "fd_fright",
-    "intensity": 2,
-    "qty": 60
-  },
-  {
     "id": "mon_dragon_black_wyrmling",
     "type": "MONSTER",
     "name": "black dragon wyrmling",

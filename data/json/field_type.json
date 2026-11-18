@@ -2358,14 +2358,6 @@
     "looks_like": "fd_bile"
   },
   {
-    "id": "emit_congealed_light",
-    "type": "emit",
-    "field": "fd_congealed_light",
-    "intensity": 1,
-    "qty": 30,
-    "chance": 85
-  },
-  {
     "type": "effect_type",
     "id": "LIXA_illuminated",
     "name": [ "illuminated" ],

@@ -6673,6 +6673,10 @@ function CcbPlatformContent.Species(options) end
 ---@return EmissionDefinition
 function CcbPlatformContent.Emission(options) end
 
+---Register an emission shared by optional Mods at this Mod's load position.
+---@param definition EmissionDefinition
+function CcbPlatformContent.upsert_emission(definition) end
+
 ---@param options MonsterFactionDefinitionOptions
 ---@return MonsterFactionDefinition
 function CcbPlatformContent.MonsterFaction(options) end

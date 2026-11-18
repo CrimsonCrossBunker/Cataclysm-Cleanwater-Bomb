@@ -152,7 +152,7 @@ translation native_counted_name( const authored_text &name, const std::string &p
     return name.translated ? name.native() : pl_translation( name.raw, plural );
 }
 
-enum class definition_operation : int { add, replace, edit };
+enum class definition_operation : int { add, replace, edit, upsert };
 enum class handle_lifecycle : int { building, committed, discarded };
 
 std::size_t require_dense_array( const sol::table &values,
@@ -309,6 +309,8 @@ const char *operation_name( const definition_operation operation )
             return "replace";
         case definition_operation::edit:
             return "edit";
+        case definition_operation::upsert:
+            return "upsert";
     }
     return "unknown";
 }
@@ -3526,6 +3528,14 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         { "footsteps.", std::nullopt }, "species footsteps" );
         definition->bleeds = options.get_or( "bleeds", std::string( "fd_null" ) );
         return species_definition_handle{ std::move( definition ), pimpl_->token };
+    } );
+    content.set_function( "upsert_emission", [this]( const emission_definition_handle & handle ) {
+        if( handle.token != pimpl_->token ) {
+            throw std::runtime_error( "cannot register an emission definition owned by another Mod" );
+        }
+        require_building_handle( handle.token, *handle.definition, "emission" );
+        handle.definition->registered = true;
+        pimpl_->emissions.push_back( { definition_operation::upsert, handle.definition } );
     } );
     content.set_function( "Emission", [this]( const sol::table & options ) {
         auto definition = std::make_shared<emission_definition_data>();

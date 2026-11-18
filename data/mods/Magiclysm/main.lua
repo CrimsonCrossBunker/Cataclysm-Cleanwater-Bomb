@@ -88,3 +88,5 @@ require("item_enchantments")
 require("sidebar_extensions")
 
 require("construction_groups")
+
+require("field_emissions")

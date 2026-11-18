@@ -85,3 +85,5 @@ require("sidebar_extensions")
 require("scenario_filters")
 
 require("overmap_locations")
+
+require("field_emissions")

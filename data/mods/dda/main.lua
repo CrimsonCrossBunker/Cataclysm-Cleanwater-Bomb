@@ -188,3 +188,5 @@ require("construction_groups")
 require("vehicle_part_categories")
 
 require("overmap_locations")
+
+require("field_emissions")

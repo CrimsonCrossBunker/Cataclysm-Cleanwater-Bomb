@@ -150,3 +150,5 @@ require("sidebar_extensions")
 require("construction_groups")
 
 require("overmap_locations")
+
+require("field_emissions")

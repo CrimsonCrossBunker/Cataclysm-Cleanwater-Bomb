@@ -69,3 +69,5 @@ require("item_enchantments")
 require("weather_generators")
 
 require("overmap_locations")
+
+require("field_emissions")

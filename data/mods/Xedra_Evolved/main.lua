@@ -160,3 +160,5 @@ require("blotted_sun")
 require("sidebar_extensions")
 
 require("construction_groups")
+
+require("field_emissions")
