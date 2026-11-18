@@ -97,6 +97,7 @@ struct level_cache : level_cache_default_zero_members {
         bool vision_transparency_low_profile = false;
         bool outside_cache_dirty = false;
         bool floor_cache_dirty = false;
+        bool vehicle_overlay_dirty = true;
         bool seen_cache_dirty = false;
         bool lightmap_dirty = true;
         // set from next_cache_generation each time generate_lightmap rebuilds

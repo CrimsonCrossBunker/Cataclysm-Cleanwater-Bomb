@@ -2704,6 +2704,7 @@ class vehicle
         bool check_environmental_effects = false; // NOLINT(cata-serialize)
         // "inside" flags are outdated and need refreshing
         bool insides_dirty = true; // NOLINT(cata-serialize)
+        std::uint64_t map_cache_revision = 0; // NOLINT(cata-serialize)
         // Is the vehicle hanging in the air and expected to fall down in the next turn?
         bool is_falling = false;
         // zone_data positions are outdated and need refreshing

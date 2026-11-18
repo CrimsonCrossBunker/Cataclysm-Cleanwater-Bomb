@@ -168,3 +168,31 @@ TEST_CASE( "notify_subscriber_2", "[event]" )
     sub.notify( original_event );
     REQUIRE( sub.found );
 }
+
+TEST_CASE( "event_subscribers_can_opt_out_of_talker_construction", "[event]" )
+{
+    struct value_subscriber : event_subscriber {
+        bool received = false;
+        bool needs_talker() const override {
+            return false;
+        }
+        void notify( const cata::event & ) override {
+            received = true;
+        }
+        void notify( const cata::event &, std::unique_ptr<talker>,
+                     std::unique_ptr<talker> ) override {
+            FAIL( "Value-only subscriber received talkers" );
+        }
+    } values;
+    talker_subscriber context;
+    event_bus bus;
+    bus.subscribe( &values );
+    bus.subscribe( &context );
+    avatar &actor = get_avatar();
+    bus.send_with_talker( &actor, static_cast<Creature *>( nullptr ),
+                         cata::event::make<event_type::character_kills_monster>( character_id( 5 ), zombie, 0 ) );
+    CHECK( values.received );
+    REQUIRE( context.alpha );
+    CHECK( context.alpha->get_creature() == &actor );
+    CHECK_FALSE( context.beta );
+}

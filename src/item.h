@@ -1785,6 +1785,7 @@ class item : public visitable
          * Whether the item should be processed (by calling @ref process).
          */
         bool needs_processing() const;
+        bool has_processing_work() const;
         /**
          * The rate at which an item should be processed, in number of turns between updates.
          */

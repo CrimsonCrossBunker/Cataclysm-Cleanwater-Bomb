@@ -12793,6 +12793,7 @@ void map::build_outside_cache( const int zlev )
         return;
     }
     level_cache &ch = *ch_lazy;
+    ch.vehicle_overlay_dirty = true;
 
     // Make a bigger cache to avoid bounds checking
     // We will later copy it to our regular cache
@@ -12804,6 +12805,7 @@ void map::build_outside_cache( const int zlev )
     if( zlev < 0 ) {
         std::uninitialized_fill_n(
             &outside_cache[0][0], MAPSIZE_X * MAPSIZE_Y, false );
+        ch.outside_cache_dirty = false;
         return;
     }
 
@@ -12953,6 +12955,7 @@ bool map::build_floor_cache( const int zlev )
         return false;
     }
     level_cache &ch = *ch_lazy;
+    ch.vehicle_overlay_dirty = true;
 
     auto &floor_cache = ch.floor_cache;
     std::uninitialized_fill_n(
@@ -13070,17 +13073,45 @@ void map::build_map_cache( const int zlev, bool skip_lightmap )
     const int maxz = zlevels ? max_z() : zlev;
     bool seen_cache_dirty = false;
     bool camera_cache_dirty = false;
+    bool vehicle_overlay_dirty = false;
+    std::size_t vehicle_index = 0;
     for( int z = minz; z <= maxz; z++ ) {
+        if( const level_cache *cache = get_cache_lazy( z ) ) {
+            vehicle_overlay_dirty |= cache->vehicle_overlay_dirty ||
+                                     cache->outside_cache_dirty || cache->floor_cache_dirty ||
+                                     cache->transparency_cache_dirty.any();
+            for( const vehicle *veh : cache->vehicle_list ) {
+                const auto version = std::make_pair( veh, veh->map_cache_revision );
+                if( vehicle_index == vehicle_overlay_versions_.size() ) {
+                    vehicle_overlay_versions_.push_back( version );
+                    vehicle_overlay_dirty = true;
+                } else if( vehicle_overlay_versions_[vehicle_index] != version ) {
+                    vehicle_overlay_versions_[vehicle_index] = version;
+                    vehicle_overlay_dirty = true;
+                }
+                vehicle_overlay_dirty |= veh->map_cache_revision == UINT64_MAX;
+                ++vehicle_index;
+            }
+        } else {
+            vehicle_overlay_dirty = true;
+        }
         build_outside_cache( z );
         build_transparency_cache( z );
         bool floor_cache_was_dirty = build_floor_cache( z );
+        vehicle_overlay_dirty |= get_cache( z ).vehicle_overlay_dirty;
         seen_cache_dirty |= floor_cache_was_dirty;
         seen_cache_dirty |= get_cache( z ).seen_cache_dirty;
     }
-    // needs a separate pass as it changes the caches on neighbour z-levels (e.g. floor_cache);
-    // otherwise such changes might be overwritten by main cache-building logic
-    for( int z = minz; z <= maxz; z++ ) {
-        do_vehicle_caching( z );
+    vehicle_overlay_dirty |= vehicle_index != vehicle_overlay_versions_.size();
+    vehicle_overlay_versions_.resize( vehicle_index );
+    // Reapply overlays after all terrain caches, including floors on adjacent levels.
+    if( vehicle_overlay_dirty ) {
+        for( int z = minz; z <= maxz; z++ ) {
+            do_vehicle_caching( z );
+        }
+        for( int z = minz; z <= maxz; z++ ) {
+            get_cache( z ).vehicle_overlay_dirty = false;
+        }
     }
     for( int z = minz; z <= maxz; z++ ) {
         seen_cache_dirty |= build_vision_transparency_cache( z );

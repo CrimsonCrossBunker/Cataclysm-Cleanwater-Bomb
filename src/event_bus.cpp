@@ -94,7 +94,11 @@ void event_bus::send_with_talker( Creature *alpha, Creature *beta,
                                   const cata::event &e ) const
 {
     for( event_subscriber *s : subscribers ) {
-        s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
+        if( s->needs_talker() ) {
+            s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
+        } else {
+            s->notify( e );
+        }
     }
 }
 
@@ -102,14 +106,22 @@ void event_bus::send_with_talker( Creature *alpha, item_location *beta,
                                   const cata::event &e ) const
 {
     for( event_subscriber *s : subscribers ) {
-        s->notify( e, get_talker_for( alpha ), get_talker_for( beta ) );
+        if( s->needs_talker() ) {
+            s->notify( e, get_talker_for( alpha ), get_talker_for( beta ) );
+        } else {
+            s->notify( e );
+        }
     }
 }
 
 void event_bus::send_with_talker( vehicle *alpha,  Creature *beta, const cata::event &e ) const
 {
     for( event_subscriber *s : subscribers ) {
-        s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
+        if( s->needs_talker() ) {
+            s->notify( e, get_talker_for( alpha ), beta ? get_talker_for( beta ) : nullptr );
+        } else {
+            s->notify( e );
+        }
     }
 }
 namespace

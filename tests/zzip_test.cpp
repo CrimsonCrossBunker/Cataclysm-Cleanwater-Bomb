@@ -432,3 +432,28 @@ TEST_CASE( "zzip_corruption_recovery", "[.][zzip]" )
         }
     }
 }
+
+TEST_CASE( "zzip_repeated_entries_preserve_latest_content", "[zzip][save][regression]" )
+{
+    const std::filesystem::path name( "map.json" );
+    std::shared_ptr<mmap_file> memory = mmap_file::map_writeable_memory( 4096 );
+    std::optional<zzip> archive = zzip::load( memory );
+    REQUIRE( archive );
+    const std::string original( 32768, 'a' );
+    REQUIRE( archive->add_file( name, original ) );
+    const size_t written = archive->get_content_size();
+    for( int i = 0; i < 3; ++i ) {
+        REQUIRE( archive->add_file( name, original ) );
+        CHECK( _view( archive->get_file( name ) ) == original );
+    }
+    archive.reset();
+    archive = zzip::load( memory );
+    REQUIRE( archive );
+    REQUIRE( archive->add_file( name, original ) );
+    CHECK( _view( archive->get_file( name ) ) == original );
+    std::string changed = original;
+    changed.back() = 'b';
+    REQUIRE( archive->add_file( name, changed ) );
+    CHECK( archive->get_content_size() > written );
+    CHECK( _view( archive->get_file( name ) ) == changed );
+}

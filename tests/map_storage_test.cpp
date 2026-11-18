@@ -482,3 +482,30 @@ TEST_CASE( "owned_uniform_maps_persist_without_a_terrain_resolver", "[map_storag
         }
     }
 }
+
+TEST_CASE( "map_storage_repeated_saves_persist_live_mutations", "[map_storage][save]" )
+{
+    const bool compressed = GENERATE( false, true );
+    storage_fixture fixture;
+    mapbuffer buffer( fixture.context( "a", "default", compressed ) );
+    const tripoint_abs_sm base( 0, 0, 0 );
+    insert_quad( buffer, base, ter_t_dirt );
+    buffer.save( false );
+    std::filesystem::path saved;
+    for( const auto &entry : std::filesystem::recursive_directory_iterator( fixture.root ) ) {
+        if( entry.path().extension() == ( compressed ? ".zzip" : ".map" ) ) {
+            saved = entry.path();
+            break;
+        }
+    }
+    REQUIRE_FALSE( saved.empty() );
+    buffer.save( false );
+    submap *sm = buffer.lookup_submap( base );
+    REQUIRE( sm );
+    sm->set_ter( point_sm_ms( 1, 1 ), ter_t_soil );
+    buffer.save( false );
+    buffer.clear();
+    sm = buffer.lookup_submap( base );
+    REQUIRE( sm );
+    CHECK( sm->get_ter( point_sm_ms( 1, 1 ) ) == ter_t_soil );
+}

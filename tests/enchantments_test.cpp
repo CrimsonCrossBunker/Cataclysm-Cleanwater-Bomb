@@ -538,3 +538,22 @@ TEST_CASE( "Enchantment_bodypart_modifiers", "[magic][enchantments][bodypart]" )
     INFO( "hand_l's +0.5 manip must be fully applied on top of the clamped base score" );
     CHECK( guy.get_limb_score( limb_score_manip ) == Approx( manip_before + 0.5f ) );
 }
+
+TEST_CASE( "owned_enchantment_activation_matches_ownership_checked_path", "[enchantment]" )
+{
+    clear_avatar();
+    avatar &you = get_avatar();
+    const item_location owned = you.i_add( item( itype_test_ATTACK_SPEED_ench_item ) );
+    REQUIRE( owned );
+    REQUIRE( you.has_item( *owned ) );
+    for( const enchantment &ench : owned->get_defined_enchantments() ) {
+        CHECK( ench.is_active_for_owned_item( you, *owned ) == ench.is_active( you, *owned ) );
+    }
+    for( const enchant_cache &ench : owned->get_proc_enchantments() ) {
+        CHECK( ench.is_active_for_owned_item( you, *owned ) == ench.is_active( you, *owned ) );
+    }
+    you.recalculate_enchantment_cache();
+    const int speed = you.attack_speed( item( itype_id( "test_2x4" ) ) );
+    you.recalculate_enchantment_cache();
+    CHECK( you.attack_speed( item( itype_id( "test_2x4" ) ) ) == speed );
+}
