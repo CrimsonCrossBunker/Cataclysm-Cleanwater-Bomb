@@ -54,24 +54,6 @@
     "stackable": true
   },
   {
-    "id": "nuts_bolts",
-    "type": "ITEM",
-    "category": "spare_parts",
-    "name": { "str": "nut and bolt", "str_pl": "nuts and bolts" },
-    "description": "A matching nut and bolt.  Useful for securing objects together.",
-    "ascii_picture": "nuts_bolts",
-    "//": "stats from m8 hex bolt 35 mm (+5 mm for head), 17.11 g the weight of bolt, and 3 g for nut.",
-    "weight": "20 g",
-    "volume": "3 ml",
-    "longest_side": "40 mm",
-    "price": "2 USD 74 cent",
-    "price_postapoc": "2 cent",
-    "material": [ "mc_steel" ],
-    "symbol": "=",
-    "color": "cyan",
-    "stackable": true
-  },
-  {
     "id": "rivets",
     "type": "ITEM",
     "subtypes": [ "AMMO" ],
