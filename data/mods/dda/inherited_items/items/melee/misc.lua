@@ -54,3 +54,33 @@ do
     item:fault_group("bladed_whips", {  })
     content.add(item)
 end
+
+do
+    -- Yes, this is smaller than its magazine well. Go with it.
+    local item = content.Item {
+        id = "tazer",
+        category = "weapons",
+        name = ccb.content.plural_text("stun gun", "stun guns"),
+        description = ccb.content.text("A high-powered stun gun.  Use this item to attempt to electrocute an adjacent enemy, temporarily paralyzing them."),
+        mass_milligrams = 151000,
+        volume_ml = 250,
+        price_cents = 14000,
+        price_postapoc_cents = 1500,
+        melee_to_hit = -1,
+        symbol = ";",
+        color = "dark_gray",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("WATER_BREAK")
+    item:clear_use_actions()
+    item:native_use("TAZER")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 6)
+    item:fault_group("electronic_general", {  })
+    item:magazine_well { flags = { "BATTERY_MEDIUM" }, default_magazine = "medium_battery_cell" }
+    item:tool { charges_per_use = 2, ammo_types = { "battery" } }
+    content.add(item)
+end
