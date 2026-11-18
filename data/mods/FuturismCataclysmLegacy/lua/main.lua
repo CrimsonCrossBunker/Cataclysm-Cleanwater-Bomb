@@ -27,3 +27,5 @@ require("lua.disassembly")
 require("lua.weapon_recipes")
 
 require("lua.craft_recipes")
+
+require("item_groups")
