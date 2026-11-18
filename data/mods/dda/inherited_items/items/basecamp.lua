@@ -116,3 +116,18 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- The stationary object needs a larger capacity than the portable base object
+    -- A fake clay kiln used for basecamps.
+    local item = content.Item {
+        id = "fake_clay_kiln",
+        copy_from = "fake_crafting_tool",
+        looks_like = "fake_crafting_tool",
+        name = ccb.content.plural_text("basecamp clay kiln", "basecamp clay kilns"),
+        replace_pockets = true,
+    }
+    item:tool { ammo_types = { "charcoal", "coal" } }
+    item:magazine_pocket { ammo_capacities = { charcoal = 2000, coal = 10000 } }
+    content.add(item)
+end
