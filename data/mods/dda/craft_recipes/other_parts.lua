@@ -1197,3 +1197,32 @@ content.add(content.Recipe {
     :batch_discount(25, 2)
     :result_charges(1)
 )
+
+local function forge_small_sheet(result, steel)
+    return content.Recipe {
+        id = result,
+        result = result,
+        category = "CC_OTHER",
+        subcategory = "CSC_OTHER_PARTS",
+        duration_moves = 1080000,
+        activity_level = BRISK_EXERCISE,
+        autolearn = true,
+        skill = "fabrication",
+        difficulty = 5,
+    }:component(steel, 1)
+        :requirement("blacksmithing_standard", 4)
+        :proficiency("prof_metalworking")
+        :proficiency("prof_blacksmithing")
+        :result_charges(1)
+end
+
+content.add(forge_small_sheet("sheet_metal_small", "lc_steel_chunk"))
+content.add(forge_small_sheet("mc_sheet_metal_small", "mc_steel_chunk"))
+content.add(forge_small_sheet("hc_sheet_metal_small", "hc_steel_chunk"))
+content.add(forge_small_sheet("ch_sheet_metal_small", "lc_steel_chunk"):requirement("carbon", 1))
+content.add(forge_small_sheet("qt_sheet_metal_small", "mc_steel_chunk")
+    :tool("metal_tank", 1)
+    :tool_any({
+        { id = "water", count = 120 },
+        { id = "water_clean", count = 120 },
+    }))
