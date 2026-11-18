@@ -41,6 +41,8 @@ ccb.content.add(ccb.content.Spell {
     id = "perk_insight_spell",
     name = ccb.content.text("Insight"),
     description = "",
+    message = ccb.content.text("You cast %s!"),
+    sound_description = ccb.content.text("an explosion."),
     shape = "blast",
     valid_targets = { "hostile" },
     flags = { "RANDOM_CRITTER", "RANDOM_TARGET", "NO_EXPLOSION_SFX", "SILENT" },
