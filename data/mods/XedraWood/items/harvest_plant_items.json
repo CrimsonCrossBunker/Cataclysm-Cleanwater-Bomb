@@ -74,25 +74,6 @@
   },
   {
     "type": "ITEM",
-    "id": "witchwood_bark",
-    "copy-from": "alder_bark",
-    "name": { "str": "witchwood bark" },
-    "weight": "234 g",
-    "description": "A thin strip of silvery-blue bark harvested from a witchwood tree.  Touching it makes your fingers tingle slightly."
-  },
-  {
-    "type": "ITEM",
-    "id": "starsbreath_harvested",
-    "name": { "str": "stars' breath flower" },
-    "weight": "20 g",
-    "description": "A delicate, silvery-blue flower from the stars' breath plant.",
-    "color": "light_gray",
-    "symbol": ",",
-    "material": [ "veggy" ],
-    "volume": "150 ml"
-  },
-  {
-    "type": "ITEM",
     "subtypes": [ "COMESTIBLE" ],
     "id": "corpsefire_cap",
     "name": { "str": "corpsefire cap" },
@@ -109,19 +90,6 @@
     "spoils_in": "8 days 16 hours",
     "fun": 0,
     "use_action": [ "BLECH" ]
-  },
-  {
-    "type": "ITEM",
-    "id": "tanglevine_root",
-    "name": { "str": "tanglevine root" },
-    "weight": "210 g",
-    "color": "green",
-    "symbol": "%",
-    "description": "A thick, woody root from a tanglevine.  The end glistens as though sap were still flowing through it.",
-    "price": "10 USD",
-    "price_postapoc": "3 USD 10 cent",
-    "material": [ "veggy" ],
-    "volume": "350 ml"
   },
   {
     "type": "ITEM",
