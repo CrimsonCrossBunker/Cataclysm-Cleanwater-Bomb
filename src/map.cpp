@@ -55,6 +55,7 @@
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
+#include "flat_set.h" // IWYU pragma: keep
 #include "finite_water.h"
 #include "fragment_cloud.h"
 #include "fungal_effects.h"
