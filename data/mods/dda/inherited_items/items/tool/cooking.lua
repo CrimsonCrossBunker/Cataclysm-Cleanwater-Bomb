@@ -331,3 +331,225 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- each charcoal is 5mL so it is 900ml total of charcoal (187g charcoal, enough to purify one gallon)
+    -- https://blackblum.com/pages/charcoal-water-filter
+    -- 50g of charcoal for 1 liter of water = 12.5g of charcoal per u of water.  1u charcoal weighs 1.04g, so making it 12:1
+    local item = content.Item {
+        id = "char_purifier",
+        name = ccb.content.plural_text("charcoal water purifier", "charcoal water purifiers"),
+        description = ccb.content.text("Using this item on a container full of water will purify the water using layered charcoal.  Once the charcoal has purified enough water, it will become unusable and can be disassembled and recycled.  Water taken from uncertain sources like a river may be dirty."),
+        mass_milligrams = 1820000,
+        volume_ml = 3750,
+        longest_side_mm = 300,
+        price_cents = 4000,
+        price_postapoc_cents = 2000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:native_use("WATER_PURIFIER")
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { charges_per_use = 12 }
+    item:magazine_pocket { ammo_capacities = { charcoal = 180 } }
+    content.add(item)
+end
+
+do
+    -- each charcoal is 5mL so it is 3600mL total of charcoal (750g charcoal, enough to purify 4 gallons)
+    -- https://blackblum.com/pages/charcoal-water-filter
+    -- 50g of charcoal for 1 liter of water = 12.5g of charcoal per u of water.  1u charcoal weighs 1.04g, so making it 12:1
+    local item = content.Item {
+        id = "char_purifier_clay",
+        name = ccb.content.plural_text("large charcoal water purifier", "large charcoal water purifiers"),
+        looks_like = "clay_hydria",
+        description = ccb.content.text("Using this item on a container full of water will purify the water using layered charcoal.  Once the charcoal has purified enough water, it will become unusable and can be disassembled and recycled.  Water taken from uncertain sources like a river may be dirty."),
+        mass_milligrams = 2300000,
+        volume_ml = 15004,
+        longest_side_mm = 450,
+        price_cents = 4000,
+        price_postapoc_cents = 2000,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("clay", 1)
+    item:clear_use_actions()
+    item:native_use("WATER_PURIFIER")
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 12 }
+    item:magazine_pocket { ammo_capacities = { charcoal = 720 } }
+    content.add(item)
+end
+
+do
+    -- contains up to 2 liters of charcoal. Or the same amount of coal by weight, 1u coal weighs about as much as 1u of charcoal and has the same energy although it is 5x smaller.
+    local item = content.Item {
+        id = "charcoal_cooker",
+        name = ccb.content.plural_text("coal/charcoal cooker", "coal/charcoal cookers"),
+        description = ccb.content.text("A little metal tank for holding coal or charcoal, with a pilot light attached and a pipe to vent toxic coal fumes.  You could use it for cooking food."),
+        mass_milligrams = 450000,
+        volume_ml = 2000,
+        longest_side_mm = 300,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -5,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 3)
+    item:tool { charges_per_use = 5, ammo_types = { "charcoal", "coal" } }
+    item:magazine_pocket { ammo_capacities = { charcoal = 400, coal = 2000 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "esbit_stove",
+        name = ccb.content.plural_text("hexamine stove", "hexamine stoves"),
+        description = ccb.content.text("A lightweight, folding stove designed to use small hexamine tablets for cooking.  Also known as an Esbit stove."),
+        mass_milligrams = 92000,
+        volume_ml = 147,
+        price_cents = 2000,
+        price_postapoc_cents = 100,
+        symbol = ";",
+        color = "light_gray",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:tool { charges_per_use = 2, ammo_types = { "esbit" } }
+    item:magazine_pocket { ammo_capacities = { esbit = 100 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "gasoline_cooker",
+        name = ccb.content.plural_text("gasoline cooker", "gasoline cookers"),
+        description = ccb.content.text("A simple heater powered by gasoline.  It is designed for cooking food."),
+        mass_milligrams = 800000,
+        volume_ml = 1250,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_qualities = true,
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:quality("HOTPLATE", 2)
+    item:clear_use_actions()
+    item:native_use("HEAT_SOLID_ITEMS")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 2, ammo_types = { "gasoline" } }
+    item:magazine_pocket { ammo_capacities = { gasoline = 500 }, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "oil_cooker",
+        name = ccb.content.plural_text("kerosene cooker", "kerosene cookers"),
+        description = ccb.content.text("A simple heater powered by kerosene.  It is designed for cooking food."),
+        mass_milligrams = 2264000,
+        volume_ml = 1250,
+        price_cents = 5000,
+        price_postapoc_cents = 250,
+        melee_to_hit = -4,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("steel", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_use_actions()
+    item:native_use("HOTPLATE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 4)
+    item:tool { charges_per_use = 2, ammo_types = { "lamp_oil" } }
+    item:magazine_pocket { ammo_capacities = { lamp_oil = 800 }, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "oil_press_primitive",
+        name = ccb.content.plural_text("oil-powered manual oil press", "oil-powered manual oil presses"),
+        description = ccb.content.text("A barrel with a large screw press for creating vegetable oil.  A kerosene cooker heats the raw material to increase extraction efficiency."),
+        mass_milligrams = 12000000,
+        volume_ml = 20000,
+        looks_like = "oil_press_manual",
+        price_cents = 12000,
+        price_postapoc_cents = 1000,
+        symbol = ";",
+        color = "green",
+        replace_pockets = true,
+    }
+    item:material("wood", 1)
+    item:clear_melee_damage()
+    item:melee_damage("bash", 7)
+    item:tool { ammo_types = { "lamp_oil" } }
+    item:magazine_pocket { ammo_capacities = { lamp_oil = 800 }, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- Should be 20 but currently recipes do not utilize this value
+    local item = content.Item {
+        id = "popcan_stove",
+        name = ccb.content.plural_text("soda can stove kit", "soda can stove kits"),
+        description = ccb.content.text("An ultra-light alcohol-burning stove with a simmer ring, crafted by hand from a couple of aluminum soda cans.  It comes with a 500 mL plastic bottle to hold concentrated alcohol fuel."),
+        mass_milligrams = 45000,
+        volume_ml = 750,
+        price_cents = 250,
+        price_postapoc_cents = 10,
+        symbol = ";",
+        color = "light_gray",
+        replace_pockets = true,
+    }
+    item:material("aluminum", 1)
+    item:clear_flags()
+    item:flag("ALLOWS_REMOTE_USE")
+    item:clear_use_actions()
+    item:native_use("HOTPLATE")
+    item:clear_melee_damage()
+    item:melee_damage("bash", 1)
+    item:tool { charges_per_use = 3, ammo_types = { "conc_alcohol" } }
+    item:magazine_pocket { ammo_capacities = { conc_alcohol = 500 }, watertight = true, rigid = true }
+    content.add(item)
+end
