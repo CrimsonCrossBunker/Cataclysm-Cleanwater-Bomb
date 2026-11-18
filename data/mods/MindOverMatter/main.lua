@@ -158,3 +158,5 @@ require("disassembly")
 require("craft_recipes")
 
 require("practice_recipes")
+
+require("photokinesis_food_recipes")
