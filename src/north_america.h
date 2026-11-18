@@ -2,11 +2,13 @@
 #ifndef CATA_SRC_NORTH_AMERICA_H
 #define CATA_SRC_NORTH_AMERICA_H
 
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "coordinates.h"
+#include "point.h"
 #include "regional_climate.h"
 #include "type_id.h"
 
@@ -27,7 +29,7 @@ bool available();
 bool active();
 bool offer_starting_city();
 const std::vector<place> &cities();
-const std::vector<size_t> &cities_in( point_abs_om overmap );
+const std::vector<std::size_t> &cities_in( point_abs_om overmap );
 bool suitable_for_highway_intersection( point_abs_om overmap );
 bool military_base_region( point_abs_om overmap, unsigned seed );
 regional_climate::coordinates location( point_abs_ms position );
