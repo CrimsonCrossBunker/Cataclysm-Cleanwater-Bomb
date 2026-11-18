@@ -9,12 +9,12 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
-#include <ios>
-#include <istream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <zconf.h>
 #include <zlib.h>
 
 #include "cata_path.h"
@@ -28,6 +28,7 @@
 #include "native_file_path.h"
 #include "north_america.h"
 #include "path_info.h"
+#include "point.h"
 #include "regional_climate.h"
 
 namespace north_america
