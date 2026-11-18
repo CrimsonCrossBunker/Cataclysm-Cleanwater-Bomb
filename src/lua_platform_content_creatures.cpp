@@ -402,6 +402,7 @@ struct effect_type_definition_data {
     bool harmful_cough = false;
     std::vector<std::pair<int, int>> death_chances;
     std::vector<std::pair<int, int>> resisted_death_chances;
+    std::vector<vitamin_rate_effect> vitamin_modifiers;
     std::map<std::pair<std::string, mod_action>, modifier_data> modifiers;
     std::string apply_memorial_log;
     std::string remove_memorial_log;
@@ -1349,23 +1350,36 @@ struct effect_type_definition_handle {
             require_building_handle( token, *definition, "effect type" );
             static const std::map<std::string, std::string> kinds = {
                 { "pain", "PAIN" }, { "cough", "COUGH" }, { "hurt", "HURT" },
+                { "health", "HEALTH" }, { "health_modifier", "H_MOD" }, { "sleepiness", "SLEEPINESS" },
+                { "painkiller", "PKILL" }, { "radiation", "RAD" }, { "vomiting", "VOMIT" },
+                { "healing", "HEAL_RATE" }, { "dodge", "DODGE" }, { "hit", "HIT" },
+                { "stamina", "STAMINA" }, { "stimulant", "STIM" }, { "perspiration", "PERSPIRATION" },
+                { "bash", "BASH" }, { "cut", "CUT" },
+                { "healing_head", "HEAL_HEAD" }, { "healing_torso", "HEAL_TORSO" },
                 { "strength", "STR" }, { "dexterity", "DEX" },
                 { "perception", "PER" }, { "intelligence", "INT" }, { "speed", "SPEED" }
             };
             static const std::map<std::string, mod_action> actions = {
                 { "amount", mod_action::AMOUNT }, { "minimum", mod_action::MIN },
                 { "maximum", mod_action::MAX }, { "maximum_value", mod_action::MAX_VAL },
+                { "minimum_value", mod_action::MIN_VAL },
                 { "chance_numerator", mod_action::CHANCE_TOP },
                 { "chance_denominator", mod_action::CHANCE_BOT }, { "tick", mod_action::TICK }
             };
             const auto found = actions.find( action );
             const auto effect = kinds.find( kind );
             const bool stat = kind == "strength" || kind == "dexterity" ||
-                              kind == "perception" || kind == "intelligence" || kind == "speed";
+                              kind == "perception" || kind == "intelligence" || kind == "speed" ||
+                              kind == "dodge" || kind == "hit" || kind == "bash" || kind == "cut";
+            const bool healing = kind == "healing" || kind == "healing_head" || kind == "healing_torso";
+            const bool minimum_bound = kind == "health" || kind == "health_modifier" ||
+                                       kind == "sleepiness" || kind == "stimulant" || kind == "perspiration";
+            const bool timed_chance_only = kind == "cough" || kind == "vomiting";
             if( effect == kinds.end() || found == actions.end() ||
-                ( stat && action != "amount" ) ||
+                ( ( stat || healing ) && action != "amount" ) ||
+                ( action == "minimum_value" && !minimum_bound ) ||
                 ( kind == "hurt" && action == "maximum_value" ) ||
-                ( kind == "cough" && action != "chance_numerator" &&
+                ( timed_chance_only && action != "chance_numerator" &&
                   action != "chance_denominator" && action != "tick" ) ) {
                 throw std::runtime_error( "unsupported effect modifier kind or action" );
             }
@@ -1379,6 +1393,68 @@ struct effect_type_definition_handle {
                 throw std::runtime_error( "effect modifier values must be finite" );
             }
             definition->modifiers[ { effect->second, stat ? mod_action::MIN : found->second }] = value;
+            return *this;
+        }
+
+        effect_type_definition_handle &vitamin( const std::string &id, const sol::table &options ) {
+            require_building_handle( token, *definition, "effect type" );
+            if( id.empty() ) {
+                throw std::invalid_argument( "effect vitamin id cannot be empty" );
+            }
+            const auto native_int = []( const sol::object &value ) -> int {
+                if( !value.is<double>() ) {
+                    throw std::invalid_argument( "effect vitamin rates and ticks require integers" );
+                }
+                const double number = value.as<double>();
+                if( number != std::trunc( number ) || number < std::numeric_limits<int>::min() ||
+                    number > std::numeric_limits<int>::max() ) {
+                    throw std::invalid_argument( "effect vitamin rates and ticks require native integers" );
+                }
+                return static_cast<int>( number );
+            };
+            const auto read_rates = [&]( const sol::object &row ) {
+                const sol::table range = row.as<sol::table>();
+                return std::make_pair( native_int( range.get<sol::object>( "minimum" ) ),
+                                       native_int( range.get<sol::object>( "maximum" ) ) );
+            };
+            const auto read_tick = [&]( const sol::object &value ) {
+                const int turns = native_int( value );
+                if( turns <= 0 ) {
+                    throw std::invalid_argument( "effect vitamin tick must be positive" );
+                }
+                return time_duration::from_turns( turns );
+            };
+            const auto read_absorption = []( const sol::object &value ) {
+                const double factor = value.as<double>();
+                if( !std::isfinite( factor ) || std::abs( factor ) > std::numeric_limits<float>::max() ) {
+                    throw std::invalid_argument( "effect vitamin absorption requires a finite native float" );
+                }
+                return static_cast<float>( factor );
+            };
+            const auto read_series = [&]( const char *key, auto &result, const auto &read_value ) {
+                const auto values = options.get<sol::optional<sol::table>>( key );
+                if( values ) {
+                    const std::size_t count = require_dense_array( *values, key, 0, 4096 );
+                    result.clear();
+                    result.reserve( count );
+                    for( std::size_t index = 1; index <= count; ++index ) {
+                        result.push_back( read_value( values->raw_get<sol::object>( index ) ) );
+                    }
+                }
+            };
+
+            vitamin_rate_effect entry;
+            entry.vitamin = vitamin_id( id );
+            read_series( "rates", entry.rate, read_rates );
+            read_series( "tick_turns", entry.tick, read_tick );
+            read_series( "absorption", entry.absorb_mult, read_absorption );
+            entry.red_rate = entry.rate;
+            entry.red_tick = entry.tick;
+            entry.red_absorb_mult = entry.absorb_mult;
+            read_series( "resisted_rates", entry.red_rate, read_rates );
+            read_series( "resisted_tick_turns", entry.red_tick, read_tick );
+            read_series( "resisted_absorption", entry.red_absorb_mult, read_absorption );
+            definition->vitamin_modifiers.push_back( std::move( entry ) );
             return *this;
         }
 
@@ -3120,6 +3196,7 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         "blocks_effect", &effect_type_definition_handle::blocks_effect,
         "death_chance", &effect_type_definition_handle::death_chance,
         "modifier", &effect_type_definition_handle::modifier,
+        "vitamin", &effect_type_definition_handle::vitamin,
         "enchantment", &effect_type_definition_handle::enchantment );
     ccb.new_usertype<monster_attack_definition_handle>(
         "MonsterAttackDefinition", sol::no_constructor,
@@ -4287,6 +4364,12 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
                 throw std::runtime_error( "effect type '" + definition.id +
                                           "' requires a death event for death chances" );
             }
+            for( const vitamin_rate_effect &entry : definition.vitamin_modifiers ) {
+                if( !vitamin_exists( entry.vitamin.str() ) ) {
+                    throw std::runtime_error( "effect type '" + definition.id +
+                                              "' references unknown vitamin '" + entry.vitamin.str() + "'" );
+                }
+            }
             for( const std::string &id : definition.resist_effects ) {
                 if( !effect_exists( id ) ) {
                     throw std::runtime_error( "effect type '" + definition.id +
@@ -5055,6 +5138,7 @@ void creatures_content_transaction::impl::apply_effect_type()
         }
         native.kill_chance = source.death_chances;
         native.red_kill_chance = source.resisted_death_chances;
+        native.vitamin_data = source.vitamin_modifiers;
         native.harmful_cough = source.harmful_cough;
         for( const auto &[key, value] : source.modifiers ) {
             native.mod_data[key.first][native.get_effect_modifier_key( key.second, 0 )] =
@@ -6992,6 +7076,30 @@ void creatures_content_transaction::append_fingerprint(
                 values << std::hexfloat << modifier.base << ',' << modifier.per_intensity << ','
                        << modifier.resisted_base << ',' << modifier.resisted_per_intensity;
                 hash_part( state, values.str() );
+            }
+            for( const vitamin_rate_effect &vitamin : value.vitamin_modifiers ) {
+                hash_part( state, "vitamin" );
+                hash_part( state, vitamin.vitamin.str() );
+                const auto hash_profile = [&]( const auto &rates, const auto &ticks, const auto &absorption ) {
+                    hash_part( state, std::to_string( rates.size() ) );
+                    for( const auto &[minimum, maximum] : rates ) {
+                        hash_part( state, std::to_string( minimum ) );
+                        hash_part( state, std::to_string( maximum ) );
+                    }
+                    hash_part( state, std::to_string( ticks.size() ) );
+                    for( const time_duration tick : ticks ) {
+                        hash_part( state, std::to_string( to_turns<int>( tick ) ) );
+                    }
+                    hash_part( state, std::to_string( absorption.size() ) );
+                    for( const float factor : absorption ) {
+                        std::ostringstream number;
+                        number.imbue( std::locale::classic() );
+                        number << std::hexfloat << factor;
+                        hash_part( state, number.str() );
+                    }
+                };
+                hash_profile( vitamin.rate, vitamin.tick, vitamin.absorb_mult );
+                hash_profile( vitamin.red_rate, vitamin.red_tick, vitamin.red_absorb_mult );
             }
             hash_part( state, value.apply_memorial_log );
             hash_part( state, value.remove_memorial_log );

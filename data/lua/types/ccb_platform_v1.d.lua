@@ -2149,11 +2149,31 @@ function EffectTypeDefinition:death_chance(options) end
 ---@field resisted_base? number Base while resisted; defaults to zero.
 ---@field resisted_per_intensity? number Scaling while resisted; defaults to zero.
 
----@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'
----@param action 'amount'|'minimum'|'maximum'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stat modifiers accept amount only; cough accepts chance_numerator, chance_denominator and tick; hurt excludes maximum_value.
+---@param kind 'pain'|'cough'|'hurt'|'strength'|'dexterity'|'perception'|'intelligence'|'speed'|'health'|'health_modifier'|'sleepiness'|'painkiller'|'radiation'|'vomiting'|'healing'|'healing_head'|'healing_torso'|'dodge'|'hit'|'bash'|'cut'|'stamina'|'stimulant'|'perspiration'
+---@param action 'amount'|'minimum'|'maximum'|'minimum_value'|'maximum_value'|'chance_numerator'|'chance_denominator'|'tick' Stats and healing accept amount only. Cough and vomiting accept chance and tick. Minimum value is supported by health, health modifier, sleepiness, stimulant and perspiration. Hurt accepts neither value bound.
 ---@param options EffectModifierOptions Finite native modifier values; setting the same kind/action replaces its previous value.
 ---@return EffectTypeDefinition self
 function EffectTypeDefinition:modifier(kind, action, options) end
+
+---@class EffectVitaminRate
+---@field minimum integer Inclusive native turn-rate lower endpoint.
+---@field maximum integer Inclusive native turn-rate upper endpoint.
+
+---@class EffectVitaminOptions
+---Each series starts at intensity one and repeats its last element at higher intensities.
+---Omitted resisted series inherit the corresponding normal one. An empty series disables that part.
+---@field rates? EffectVitaminRate[] Signed vitamin changes per tick.
+---@field tick_turns? integer[] Positive turn periods at which to apply each rate.
+---@field absorption? number[] Vitamin absorption multipliers.
+---@field resisted_rates? EffectVitaminRate[]
+---@field resisted_tick_turns? integer[]
+---@field resisted_absorption? number[]
+
+---Append one native vitamin modifier. Multiple modifiers for the same vitamin run in authored order.
+---@param vitamin_id string Existing or same-transaction Vitamin id.
+---@param options EffectVitaminOptions
+---@return EffectTypeDefinition self
+function EffectTypeDefinition:vitamin(vitamin_id, options) end
 
 ---@class WeakpointDefinitionOptions
 ---@field id string Unique weakpoint id within its set.
