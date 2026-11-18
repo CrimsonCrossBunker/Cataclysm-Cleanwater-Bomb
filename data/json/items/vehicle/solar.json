@@ -101,19 +101,6 @@
     "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "battery": 1 } } ]
   },
   {
-    "type": "ITEM",
-    "id": "reinforced_solar_panel",
-    "name": { "str": "vehicle reinforced solar panel" },
-    "description": "A solar panel that has been covered with a pane of reinforced glass to protect the delicate solar cells from zombies or errant baseballs.  The glass causes this panel to produce slightly less power than a normal panel.",
-    "weight": "24153 g",
-    "color": "light_blue",
-    "material": [ "glass", "lc_steel" ],
-    "volume": "6500 ml",
-    "price": "1 kUSD 200 USD",
-    "price_postapoc": "15 USD",
-    "copy-from": "solar_panel"
-  },
-  {
     "//": "Assumed to be ~0.5 m x 0.5 m to fit in a vehicle tile",
     "type": "ITEM",
     "id": "solar_panel_v2",
@@ -131,40 +118,5 @@
     "description": "A collection of four smaller solar panels, ready to convert solar radiation into electric power.  These panels are high-performance, made with monocrystalline silicon cells.",
     "copy-from": "solar_panel_v2",
     "proportional": { "price": 4, "price_postapoc": 4, "weight": 4, "volume": 4, "longest_side": 2 }
-  },
-  {
-    "type": "ITEM",
-    "id": "reinforced_solar_panel_v2",
-    "name": { "str": "vehicle advanced reinforced solar panel" },
-    "description": "An advanced solar panel that has been covered with a pane of reinforced glass to protect the delicate solar cells from zombies or errant baseballs.  The glass causes this panel to produce slightly less power than a normal advanced panel.",
-    "price": "2 kUSD 400 USD",
-    "price_postapoc": "35 USD",
-    "copy-from": "reinforced_solar_panel"
-  },
-  {
-    "type": "ITEM",
-    "id": "solar_cell",
-    "name": { "str": "solar cell" },
-    "description": "A small electronic device that can convert solar radiation into electric power.  This one is a common, inexpensive type made of polycrystalline silicon.",
-    "//": "Standard polycrystalline wafers are ~156 mm square; 15 cm x 15 cm x ~1.1 cm is ~250 ml",
-    "weight": "500 g",
-    "symbol": ";",
-    "volume": "250 ml",
-    "longest_side": "15 cm",
-    "category": "spare_parts",
-    "price": "50 USD",
-    "price_postapoc": "1 USD",
-    "copy-from": "solar_panel",
-    "stackable": true
-  },
-  {
-    "type": "ITEM",
-    "id": "solar_cell_v2",
-    "name": { "str": "advanced solar cell" },
-    "description": "A small electronic device that can convert solar radiation into electric power.  This one is a high-performance type made of monocrystalline silicon.",
-    "price": "150 USD",
-    "price_postapoc": "3 USD",
-    "copy-from": "solar_cell",
-    "stackable": true
   }
 ]
