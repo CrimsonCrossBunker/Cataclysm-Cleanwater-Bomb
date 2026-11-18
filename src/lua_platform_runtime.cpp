@@ -852,10 +852,10 @@ struct trap_definition_data {
     std::int64_t difficulty = 0;
     std::string action;
     std::string spell;
-    std::string memorial_male;
-    std::string memorial_female;
-    std::string trigger_message_u;
-    std::string trigger_message_npc;
+    detail::authored_text memorial_male;
+    detail::authored_text memorial_female;
+    detail::authored_text trigger_message_u;
+    detail::authored_text trigger_message_npc;
     std::set<std::string> flags;
     std::int64_t trap_radius = 0;
     bool benign = false;
@@ -4663,10 +4663,14 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         if( definition->action.empty() && !definition->trigger_handler.empty() ) {
             definition->action = "none";
         }
-        definition->memorial_male = options.get_or( "memorial_male", std::string() );
-        definition->memorial_female = options.get_or( "memorial_female", std::string() );
-        definition->trigger_message_u = options.get_or( "trigger_message_u", std::string() );
-        definition->trigger_message_npc = options.get_or( "trigger_message_npc", std::string() );
+        definition->memorial_male = detail::read_singular_text( options["memorial_male"], {},
+                                    "Trap.memorial_male" );
+        definition->memorial_female = detail::read_singular_text( options["memorial_female"], {},
+                                      "Trap.memorial_female" );
+        definition->trigger_message_u = detail::read_singular_text( options["trigger_message_u"], {},
+                                        "Trap.trigger_message_u" );
+        definition->trigger_message_npc = detail::read_singular_text( options["trigger_message_npc"], {},
+                                          "Trap.trigger_message_npc" );
         definition->trap_radius = options.get_or<std::int64_t>( "trap_radius", 0 );
         definition->benign = options.get_or( "benign", false );
         definition->always_invisible = options.get_or( "always_invisible", false );
@@ -8923,14 +8927,14 @@ bool content_transaction::apply( std::string &error )
             native.lua_platform_mod = pimpl_->owner;
             native.lua_platform_trigger_handler = source.trigger_handler;
             if( !source.memorial_male.empty() && !source.memorial_female.empty() ) {
-                native.memorial_male = no_translation( source.memorial_male );
-                native.memorial_female = no_translation( source.memorial_female );
+                native.memorial_male = source.memorial_male.native();
+                native.memorial_female = source.memorial_female.native();
             }
             if( !source.trigger_message_u.empty() ) {
-                native.trigger_message_u = no_translation( source.trigger_message_u );
+                native.trigger_message_u = source.trigger_message_u.native();
             }
             if( !source.trigger_message_npc.empty() ) {
-                native.trigger_message_npc = no_translation( source.trigger_message_npc );
+                native.trigger_message_npc = source.trigger_message_npc.native();
             }
             for( const std::string &flag : source.flags ) {
                 native._flags.insert( flag_id( flag ) );

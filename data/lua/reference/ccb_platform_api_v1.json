@@ -27134,12 +27134,12 @@
           {
             "line": 4056,
             "name": "memorial_female",
-            "type": "string"
+            "type": "string|LocalizedText"
           },
           {
             "line": 4055,
             "name": "memorial_male",
-            "type": "string"
+            "type": "string|LocalizedText"
           },
           {
             "line": 4047,
@@ -27174,12 +27174,12 @@
           {
             "line": 4058,
             "name": "trigger_message_npc",
-            "type": "string"
+            "type": "string|LocalizedText"
           },
           {
             "line": 4057,
             "name": "trigger_message_u",
-            "type": "string"
+            "type": "string|LocalizedText"
           },
           {
             "line": 4064,

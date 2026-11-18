@@ -4052,10 +4052,10 @@ function MartialArtDefinition:on(handler_id) end
 ---@field difficulty? integer Disarm difficulty from zero through 99; zero means always disarmable.
 ---@field action string Native trap action id, such as `spike` or `none`.
 ---@field spell? string Spell ID used by the native `spell` action.
----@field memorial_male? string Memorial message for male victims; must pair with memorial_female.
----@field memorial_female? string Memorial message for female victims; must pair with memorial_male.
----@field trigger_message_u? string Message shown when the avatar triggers the trap.
----@field trigger_message_npc? string Message shown when an NPC triggers the trap.
+---@field memorial_male? string|LocalizedText Memorial message for male victims; must pair with memorial_female.
+---@field memorial_female? string|LocalizedText Memorial message for female victims; must pair with memorial_male.
+---@field trigger_message_u? string|LocalizedText Message shown when the avatar triggers the trap.
+---@field trigger_message_npc? string|LocalizedText Message shown when an NPC triggers the trap.
 ---@field trap_radius? integer Non-negative trigger radius.
 ---@field benign? boolean Non-dangerous trap without safety queries.
 ---@field always_invisible? boolean Never visible without special search.

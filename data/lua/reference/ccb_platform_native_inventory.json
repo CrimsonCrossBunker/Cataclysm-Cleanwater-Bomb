@@ -1219,7 +1219,7 @@
         "callee": "platform_v1.items_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5781
+          "line": 5785
         },
         "surfaces": [
           "platform_v1"
@@ -1230,7 +1230,7 @@
         "callee": "platform_v1.creatures_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5782
+          "line": 5786
         },
         "surfaces": [
           "platform_v1"
@@ -1241,7 +1241,7 @@
         "callee": "platform_v1.character_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5783
+          "line": 5787
         },
         "surfaces": [
           "platform_v1"
@@ -1252,7 +1252,7 @@
         "callee": "platform_v1.presentation_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5784
+          "line": 5788
         },
         "surfaces": [
           "platform_v1"
@@ -1263,7 +1263,7 @@
         "callee": "platform_v1.worldgen_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5785
+          "line": 5789
         },
         "surfaces": [
           "platform_v1"
@@ -1274,7 +1274,7 @@
         "callee": "platform_v1.world_content_transaction.install_lua_api",
         "source": {
           "path": "src/lua_platform_runtime.cpp",
-          "line": 5786
+          "line": 5790
         },
         "surfaces": [
           "platform_v1"
