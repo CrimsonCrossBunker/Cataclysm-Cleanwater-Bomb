@@ -409,6 +409,18 @@ struct use_context_data {
         character->add_msg_if_player( params, value );
     }
 
+    std::string expand_text( std::string text ) const {
+        const item &used_item = require_item();
+        const Character *character = require_character();
+        const_dialogue context( character != nullptr ? get_const_talker_for( *character ) : nullptr,
+                                get_const_talker_for( used_item_location ) );
+        context.set_value( "id", used_item.typeId().str() );
+        const std::unique_ptr<const_talker> fallback = get_const_talker_for( get_avatar() );
+        parse_tags( text, context.has_alpha ? *context.const_actor( false ) : *fallback,
+                    context.has_beta ? *context.const_actor( true ) : *fallback, context );
+        return text;
+    }
+
     sol::optional<std::string> player_name() const {
         Character *character = require_character();
         if( character == nullptr ) {
@@ -2172,6 +2184,7 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
     ccb.new_usertype<use_context_data>(
         "ItemUseContext", sol::no_constructor,
         "message", &use_context_data::message,
+        "expand_text", &use_context_data::expand_text,
         "player_name", sol::property( &use_context_data::player_name ),
         "item_id", sol::property( &use_context_data::item_id ),
         "character", sol::property( &use_context_data::character_handle ),
@@ -3329,6 +3342,13 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         }
         return static_cast<unsigned int>( owner->random_engine() );
     };
+    const auto require_native_snippet_callback = [weak]() {
+        const std::shared_ptr<runtime> owner = weak.lock();
+        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
+            throw std::runtime_error(
+                "Native snippet randomness is only available inside a runtime callback" );
+        }
+    };
     const auto snippet_record = []( sol::state_view state,
     const snippet_id & id ) {
         sol::table record = state.create_table();
@@ -3398,20 +3418,28 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
                    lua_state, SNIPPET.expand(
                        selected->translated(), next_snippet_seed() ) );
     } );
-    snippets.set_function( "native_random", [require_read, weak](
+    snippets.set_function( "native_random", [require_read, require_native_snippet_callback](
     sol::this_state state, const std::string & category ) {
         require_read();
-        const std::shared_ptr<runtime> owner = weak.lock();
-        if( !owner || !owner->world_is_ready || owner->callback_depth <= 0 ) {
-            throw std::runtime_error(
-                "Native snippet randomness is only available inside a runtime callback" );
-        }
+        require_native_snippet_callback();
         sol::state_view lua_state( state );
         const std::optional<translation> selected = SNIPPET.random_from_category( category );
         if( !selected ) {
             return sol::make_object( lua_state, sol::lua_nil );
         }
         return sol::make_object( lua_state, SNIPPET.expand( selected->translated() ) );
+    } );
+    snippets.set_function( "native_random_id", [require_read, require_native_snippet_callback](
+    const std::string & category ) {
+        require_read();
+        require_native_snippet_callback();
+        return std::string( SNIPPET.random_id_from_category( category ).str() );
+    } );
+    snippets.set_function( "native_expand", [require_read, require_native_snippet_callback](
+    const std::string & text ) {
+        require_read();
+        require_native_snippet_callback();
+        return SNIPPET.expand( text );
     } );
     snippets.set_function( "random_named", [require_read, require_snippet_key,
                                             next_snippet_seed, snippet_record](
@@ -3526,9 +3554,9 @@ void install_runtime_api( const std::shared_ptr<runtime> &value,
         require_write();
         require_snippet_key( id, "services.lore.remember_snippet" );
         const snippet_id native_id( id );
-        if( !SNIPPET.has_snippet_with_id( native_id ) ) {
+        if( !native_id.is_null() && !SNIPPET.has_snippet_with_id( native_id ) ) {
             throw std::invalid_argument(
-                "services.lore.remember_snippet requires an existing identified snippet" );
+                "services.lore.remember_snippet requires an existing identified snippet or the native null id" );
         }
         avatar &player = get_avatar();
         const bool known = player.has_seen_snippet( native_id );

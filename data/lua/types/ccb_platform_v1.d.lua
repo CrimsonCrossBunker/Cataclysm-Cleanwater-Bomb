@@ -873,6 +873,17 @@ function ItemDefinition:clear_flags() end
 ---@return ItemDefinition self
 function ItemDefinition:variants(variants) end
 
+---@class ItemConditionalName
+---@field kind "flag"|"vitamin"|"component"|"component_substring"|"variable"|"snippet"
+---@field key string Flag, vitamin, component ID, component substring, variable key, or snippet category.
+---@field value? string Exactly matched value. Required for variable and snippet rules.
+---@field name string|LocalizedText Name applied on a match. Use %s to include the previously assembled name.
+
+---Replace inherited conditional names. The native item name applies the supplied rules in order.
+---@param rules ItemConditionalName[]
+---@return ItemDefinition self
+function ItemDefinition:conditional_names(rules) end
+
 ---@class ItemAmmunitionDefinitionOptions
 ---@field type string Native ammunition-type id, including a type staged by this Mod.
 ---@field count? integer Positive native signed-int default charges. Omission preserves an inherited slot; a new slot defaults to one.
@@ -5712,6 +5723,11 @@ local ItemUseContext = {}
 ---native Character, the call is a no-op before severity parsing.
 function ItemUseContext:message(text, type) end
 
+---Expand native snippet and dialogue tags with the actual using Character, the item and an id context value.
+---@param text string Native text to expand.
+---@return string
+function ItemUseContext:expand_text(text) end
+
 ---@class FactionDefinitionOptions
 ---@field id string Stable faction id.
 ---@field name? string|LocalizedText Player-facing name; defaults to id. The native faction display uses context-free translation.
@@ -6762,8 +6778,8 @@ function CcbPlatformLoreApi.known_snippets() end
 ---@param id string
 ---@return any
 function CcbPlatformLoreApi.knows_snippet(id) end
----@param id string
----@return any
+---@param id string Existing identified snippet ID or the native "null" sentinel.
+---@return boolean True if the avatar had not recorded the ID.
 function CcbPlatformLoreApi.remember_snippet(id) end
 ---@class CcbPlatformNativeEventsApi
 local CcbPlatformNativeEventsApi = {}
@@ -6851,6 +6867,16 @@ function CcbPlatformSnippetsApi.random(category) end
 ---@param category string Native category id, without extra byte limits.
 ---@return string|nil Localized expanded text; nil for a missing or empty category.
 function CcbPlatformSnippetsApi.native_random(category) end
+
+---Select an identified snippet using the shared native RNG during a live runtime callback.
+---@param category string Native snippet category.
+---@return string Identified snippet ID, or the native "null" sentinel when none can be selected.
+function CcbPlatformSnippetsApi.native_random_id(category) end
+
+---Recursively expand native snippet tags with the shared native RNG during a live runtime callback.
+---@param text string Input text. Dialogue tags are left for the appropriate context to expand.
+---@return string
+function CcbPlatformSnippetsApi.native_expand(text) end
 ---@param category string
 ---@return any
 function CcbPlatformSnippetsApi.random_named(category) end

@@ -380,6 +380,12 @@ struct item_definition_data {
         bool append = false;
         bool expand_snippets = false;
     };
+    struct name_rule {
+        condition_type kind;
+        std::string key;
+        std::string value;
+        authored_text name;
+    };
     struct map_reveal {
         std::int64_t radius = 0;
         std::string atlas_jurisdiction;
@@ -408,6 +414,7 @@ struct item_definition_data {
     std::optional<std::string> snippet_category;
     std::optional<itype_variant_kind> variant_kind;
     std::optional<std::vector<item_variant>> variants;
+    std::optional<std::vector<name_rule>> conditional_names;
     std::optional<std::int64_t> melee_to_hit;
     std::optional<std::int64_t> electronic_size_kb;
     std::optional<bool> stackable;
@@ -1420,6 +1427,46 @@ struct item_definition_handle {
             values.push_back( std::move( variant ) );
         }
         definition->variants = std::move( values );
+        return *this;
+    }
+
+    item_definition_handle &conditional_names( const sol::table &rules ) {
+        require_building_handle( token, *definition, "item" );
+        static const std::map<std::string_view, condition_type> kinds = {
+            { "flag", condition_type::FLAG },
+            { "vitamin", condition_type::VITAMIN },
+            { "component", condition_type::COMPONENT_ID },
+            { "component_substring", condition_type::COMPONENT_ID_SUBSTRING },
+            { "variable", condition_type::VAR },
+            { "snippet", condition_type::SNIPPET_ID },
+        };
+        const std::size_t count = require_dense_array( rules, "item conditional names", 0 );
+        std::vector<item_definition_data::name_rule> staged;
+        staged.reserve( count );
+        for( std::size_t index = 1; index <= count; ++index ) {
+            const sol::table options = rules.raw_get<sol::table>( index );
+            const std::string kind_name = options.get<std::string>( "kind" );
+            const auto kind = kinds.find( kind_name );
+            if( kind == kinds.end() ) {
+                throw std::invalid_argument( "unknown item conditional name kind: " + kind_name );
+            }
+            const std::string key = options.get<std::string>( "key" );
+            const bool compares_value = kind->second == condition_type::VAR ||
+                                        kind->second == condition_type::SNIPPET_ID;
+            const std::string value = compares_value ? options.get<std::string>( "value" ) : "";
+            const sol::object name = options.get<sol::object>( "name" );
+            authored_text label;
+            if( name.is<localized_text>() ) {
+                const localized_text &translated = name.as<const localized_text &>();
+                label = { translated.singular, translated };
+            } else if( name.is<std::string>() ) {
+                label.raw = name.as<std::string>();
+            } else {
+                throw std::invalid_argument( "item conditional names require a string or localized name" );
+            }
+            staged.push_back( { kind->second, key, value, std::move( label ) } );
+        }
+        definition->conditional_names = std::move( staged );
         return *this;
     }
 
@@ -4025,6 +4072,7 @@ void items_content_transaction::install_lua_api( sol::state &lua, sol::table &cc
         "flag", &item_definition_handle::flag,
         "clear_flags", &item_definition_handle::clear_flags,
         "variants", &item_definition_handle::variants,
+        "conditional_names", &item_definition_handle::conditional_names,
         "ammunition", &item_definition_handle::ammunition,
         "comestible", &item_definition_handle::comestible,
         "vitamin", &item_definition_handle::vitamin,
@@ -7890,6 +7938,17 @@ bool items_content_transaction::apply_phase( const items_content_apply_phase pha
                         native->ememory_size = units::from_kilobytes(
                                                    static_cast<units::ememory::value_type>( *definition.electronic_size_kb ) );
                     }
+                    if( definition.conditional_names ) {
+                        native->conditional_names.clear();
+                        native->conditional_names.reserve( definition.conditional_names->size() );
+                        for( const auto &rule : *definition.conditional_names ) {
+                            translation label = rule.name.native();
+                            label.make_plural();
+                            native->conditional_names.push_back( {
+                                rule.kind, rule.key, rule.value, std::move( label )
+                            } );
+                        }
+                    }
                     if( definition.variant_kind ) {
                         native->variant_kind = *definition.variant_kind;
                     }
@@ -9873,6 +9932,17 @@ void items_content_transaction::append_fingerprint( const items_content_fingerpr
                         hash_part( state, std::to_string( variant.weight ) );
                         hash_part( state, variant.append ? "append" : "replace" );
                         hash_part( state, variant.expand_snippets ? "expand" : "keep_snippets" );
+                    }
+                }
+                if( v.conditional_names ) {
+                    hash_part( state, "replace_item_conditional_names" );
+                    hash_part( state, std::to_string( v.conditional_names->size() ) );
+                    for( const auto &rule : *v.conditional_names ) {
+                        hash_part( state, std::to_string( rule.kind ) );
+                        hash_part( state, rule.key );
+                        hash_part( state, rule.value );
+                        hash_part( state, rule.name.raw );
+                        hash_text( rule.name.translated );
                     }
                 }
                 hash_part( state, v.default_container ? "container" : "inherit_container" );
