@@ -5,6 +5,7 @@ local disciplines = require("matrix_awakening_data")
 local portal_outcomes = require("portal_awakening_data")
 local knack_recipes = require("knack_recipe_data")
 local knacks_only = ccb.content.is_mod_active("mom_knacks_only")
+local xedra = ccb.content.is_mod_active("xedra_evolved")
 
 local function value(result)
     if not result.ok then
@@ -308,12 +309,9 @@ local function strength()
 end
 
 local function portal_proof(character)
-    if value(services.inventory.has_worn_flag(character, id("json_flag", "PORTAL_PROOF"))) then
+    if value(services.inventory.has_worn_flag(character, id("json_flag", "PORTAL_PROOF")))
+        or (xedra and value(services.creatures.has_flag_text(character, "MAGICAL_MIND_PROTECTION"))) then
         return true
-    end
-    local mods = services.gameplay.mods
-    if mods.load_order("xedra_evolved") > mods.load_order("mindovermatter") then
-        return value(services.creatures.has_flag_text(character, "MAGICAL_MIND_PROTECTION"))
     end
     if not has_effect(character, "effect_telepathic_psi_armor") then
         return false
@@ -322,7 +320,10 @@ local function portal_proof(character)
     for _, discipline in ipairs(disciplines) do
         highest = math.max(highest, value(services.spells.school_level(character, id("mutation", discipline.trait))))
     end
-    local shield_level = spell_level(character, "telepathic_shield") + spell_level(character, "telepathic_shield_knack")
+    local shield_level = spell_level(character, "telepathic_shield")
+    if not xedra then
+        shield_level = shield_level + spell_level(character, "telepathic_shield_knack")
+    end
     local drain = value(services.needs.get_vitamin(character, id("vitamin", "vitamin_psionic_drain")))
     return shield_level >= drain / 10 + highest / 3 + number(character, "awakening_countup") / 3
 end
