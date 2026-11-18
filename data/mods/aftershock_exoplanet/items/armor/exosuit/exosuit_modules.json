@@ -261,42 +261,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "exo_flashlight_low",
-    "copy-from": "exo_flashlight",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "mounted lamp (low)", "str_pl": "mounted lamps (low)" },
-    "power_draw": "1 W",
-    "revert_to": "exo_flashlight",
-    "use_action": {
-      "ammo_scale": 0,
-      "menu_text": "Turn to high",
-      "type": "transform",
-      "msg": "You turn the lamp on high.",
-      "target": "exo_flashlight_high"
-    },
-    "light": 250,
-    "flags": [ "USE_UPS", "CANT_WEAR", "EXO_SMALL_GADGET", "SPAWN_ACTIVE" ]
-  },
-  {
-    "id": "exo_flashlight_high",
-    "copy-from": "exo_flashlight",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "mounted lamp (high)", "str_pl": "mounted lamps (high)" },
-    "power_draw": "2 W",
-    "revert_to": "exo_flashlight",
-    "use_action": {
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn the lamp off.",
-      "target": "exo_flashlight"
-    },
-    "light": 500,
-    "flags": [ "USE_UPS", "CANT_WEAR", "EXO_SMALL_GADGET", "SPAWN_ACTIVE" ]
-  },
-  {
     "id": "exo_recoil",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
@@ -320,24 +284,6 @@
     },
     "tool_ammo": [ "battery" ],
     "passive_effects": [ { "id": "afs_ench_exo_recoil" } ]
-  },
-  {
-    "id": "exo_recoil_on",
-    "copy-from": "exo_recoil",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "recoil mitigation system (on)", "str_pl": "recoil mitigation systems (on)" },
-    "power_draw": "2 W",
-    "revert_to": "exo_recoil",
-    "use_action": {
-      "ammo_scale": 0,
-      "menu_text": "Turn off",
-      "type": "transform",
-      "msg": "You turn off the recoil mitigation system.",
-      "target": "exo_recoil"
-    },
-    "flags": [ "USE_UPS", "CANT_WEAR", "EXO_SMALL_GADGET", "SPAWN_ACTIVE" ],
-    "max_worn": 1
   },
   {
     "id": "exo_bio_oxygen",
@@ -412,23 +358,6 @@
     "tool_ammo": [ "oxygen" ]
   },
   {
-    "id": "exo_imager",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exosuit structural imager module" },
-    "description": "A compact imaging tool, capable of scanning and visualizing objects hiding behind walls, maintenance panels and all other sort of visual barriers.  While normally used to diagnostic potential faults within the internal systems of spaceships, the ability to peer between obstacles grant it obvious surveillance applications.  It can be mounted to an exosuit helmet.  It can be activated to reveal a small conical area around you.",
-    "weight": "500 g",
-    "volume": "250 ml",
-    "price": "10 kUSD",
-    "material": [ "plastic", "qt_steel" ],
-    "symbol": "(",
-    "color": "yellow",
-    "charges_per_use": 50,
-    "use_action": { "type": "cast_spell", "spell_id": "afs_clairvoyance_cone", "no_fail": true, "level": 5 },
-    "flags": [ "USE_UPS", "CANT_WEAR", "EXO_HELMET_GADGET" ],
-    "melee_damage": { "bash": 6 }
-  },
-  {
     "id": "exo_climb",
     "type": "ITEM",
     "subtypes": [ "TOOL", "ARMOR", "ARTIFACT" ],
@@ -446,51 +375,6 @@
     "passive_effects": [
       { "id": "ITEM_ENCH_aftershock_exoplanet_exo_climb_0" }
     ]
-  },
-  {
-    "id": "exo_jetpack",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exosuit dynamic maneuvering unit" },
-    "description": "A large collection of tanks and nozzles, this module converts hydrogen to plasma, propelling the user between spaceships or across rough terrain and gaps.  The thrust is insufficient for sustained flight in a gravity well, but can still launch you forward at extreme speed and deliver a powerful blow on landing.",
-    "weight": "8750 g",
-    "volume": "10 L",
-    "price": "10 kUSD",
-    "material": [ "vacuum_carbide", "qt_steel" ],
-    "symbol": "(",
-    "color": "light_gray",
-    "use_action": { "type": "cast_spell", "spell_id": "spell_exosuit_jetpack", "no_fail": true, "level": 5 },
-    "charges_per_use": 1,
-    "flags": [ "CANT_WEAR", "EXO_LARGE_GADGET" ],
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE",
-        "description": "This is the maneuvering unit's fuel tank.  Holds up to 10 liters of pressurized fuel.",
-        "rigid": true,
-        "watertight": true,
-        "ammo_restriction": { "ammonia_liquid": 10 }
-      }
-    ],
-    "melee_damage": { "bash": 6 },
-    "tool_ammo": [ "ammonia_liquid" ]
-  },
-  {
-    "id": "exosuit_med_injector",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "exosuit medical injector" },
-    "description": "A combination medical monitor and drug injection system, this module is intended to keep the pilot in the field longer.",
-    "weight": "475 g",
-    "volume": "500 ml",
-    "material": [ "ceramic", "qt_steel" ],
-    "symbol": "!",
-    "color": "white",
-    "flags": [ "CANT_WEAR", "EXO_SMALL_GADGET" ],
-    "max_worn": 1,
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "ampoule": 4 } } ],
-    "charges_per_use": 1,
-    "use_action": [ "JET_INJECTOR" ],
-    "tool_ammo": [ "ampoule" ]
   },
   {
     "id": "exo_trickle_charger",
@@ -556,22 +440,5 @@
       "type": "transform"
     },
     "passive_effects": [ { "id": "afs_ench_exo_AR_module" } ]
-  },
-  {
-    "id": "exo_AR_module_on",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "copy-from": "exo_AR_module",
-    "extend": { "flags": [ "SPAWN_ACTIVE" ] },
-    "name": { "str": "exosuit AR research module (on)", "str_pl": "exosuit AR research modules (on)" },
-    "power_draw": "250 mW",
-    "revert_to": "exo_AR_module",
-    "use_action": {
-      "ammo_scale": 0,
-      "target": "exo_AR_module",
-      "msg": "You deactivate the module.",
-      "menu_text": "Turn off module",
-      "type": "transform"
-    }
   }
 ]
