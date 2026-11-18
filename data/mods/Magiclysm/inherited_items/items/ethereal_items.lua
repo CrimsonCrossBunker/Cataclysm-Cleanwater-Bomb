@@ -404,3 +404,61 @@ do
     item:native_on_tick("RADIO_TICK")
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "pocket_sun",
+        category = "tools",
+        name = ccb.content.plural_text("Pocket Sun", "Pocket Suns"),
+        description = ccb.content.text("A small, capsule-shaped field containing a stable portal to the sun.  You can feel solar energy radiating from it, and it saturates your body."),
+        mass_milligrams = 1000,
+        volume_ml = 1,
+        symbol = "*",
+        color = "yellow",
+        replace_qualities = true,
+        light = 700,
+    }
+    item:material("sunlight", 1)
+    item:quality("BOIL", 2)
+    item:quality("COOK", 3)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "pocket_sun_cover" },
+        message = ccb.content.text("You cover the pocket sun, and now the gap doesn't emit light."),
+        menu_text = ccb.content.text("Cover"),
+    }
+    item:firestarter { moves = 10, moves_slow = 100 }
+    item:clear_flags()
+    item:flag("FIRE")
+    item:flag("TRADER_AVOID")
+    item:tool { crafting_subtype = "fire" }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "pocket_sun_cover",
+        category = "weapons",
+        name = ccb.content.plural_text("Covered Pocket Sun", "Covered Pocket Suns"),
+        description = ccb.content.text("A small, capsule-shaped field containing a stable portal to the sun.  It is currently covered."),
+        mass_milligrams = 1000,
+        volume_ml = 1,
+        symbol = "*",
+        color = "yellow",
+        replace_qualities = true,
+    }
+    item:material("sunlight", 1)
+    item:quality("BOIL", 2)
+    item:quality("COOK", 3)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "pocket_sun" },
+        message = ccb.content.text("You remove the cover on the pocket sun, and now the gap emits light again."),
+        menu_text = ccb.content.text("Relieve"),
+    }
+    item:firestarter { moves = 10, moves_slow = 100 }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:tool()
+    content.add(item)
+end

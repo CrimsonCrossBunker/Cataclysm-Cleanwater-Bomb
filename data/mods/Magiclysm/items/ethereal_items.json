@@ -670,56 +670,6 @@
     "max_worn": 1
   },
   {
-    "id": "pocket_sun",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "tools",
-    "name": { "str": "Pocket Sun" },
-    "description": "A small, capsule-shaped field containing a stable portal to the sun.  You can feel solar energy radiating from it, and it saturates your body.",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "material": [ "sunlight" ],
-    "symbol": "*",
-    "color": "yellow",
-    "qualities": [ [ "BOIL", 2 ], [ "COOK", 3 ] ],
-    "sub": "fire",
-    "use_action": [
-      {
-        "target": "pocket_sun_cover",
-        "msg": "You cover the pocket sun, and now the gap doesn't emit light.",
-        "menu_text": "Cover",
-        "type": "transform"
-      },
-      { "type": "firestarter", "moves": 10, "moves_slow": 100 }
-    ],
-    "light": 700,
-    "flags": [ "FIRE", "TRADER_AVOID" ]
-  },
-  {
-    "id": "pocket_sun_cover",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "Covered Pocket Sun" },
-    "description": "A small, capsule-shaped field containing a stable portal to the sun.  It is currently covered.",
-    "weight": "1 g",
-    "volume": "1 ml",
-    "material": [ "sunlight" ],
-    "symbol": "*",
-    "color": "yellow",
-    "qualities": [ [ "BOIL", 2 ], [ "COOK", 3 ] ],
-    "use_action": [
-      {
-        "target": "pocket_sun",
-        "msg": "You remove the cover on the pocket sun, and now the gap emits light again.",
-        "menu_text": "Relieve",
-        "type": "transform"
-      },
-      { "type": "firestarter", "moves": 10, "moves_slow": 100 }
-    ],
-    "flags": [ "TRADER_AVOID" ]
-  },
-  {
     "id": "alchemist_pocket",
     "type": "ITEM",
     "subtypes": [ "ARMOR" ],
