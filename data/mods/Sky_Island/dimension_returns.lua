@@ -13,6 +13,18 @@ ccb.runtime.handler("void_spider_lair_exit_transport", function(character)
     returning.home(character)
 end)
 
+ccb.runtime.handler("portal_dungeon_return_transport", function(character)
+    local away = state.has_trait(character, "awayfromhome")
+    local target = away and state.string("sky_island_target_region_settings") or "default"
+    local options
+    if not away then options = { npc_travel_radius = 0, npc_travel_filter = "none", item_travel_radius = -1 } end
+    local result = state.checked(services.relocation.travel_to_dimension(target, options))
+    local success = away
+        and services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing the world below.")
+        or services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing your island in the sky.")
+    state.message(character, result.accepted and success or services.translate("You feel a prickle at the edge of your senses."))
+end)
+
 local function unanchored(character)
     return not state.checked(services.inventory.has_worn_flag(character, id("json_flag", "DIMENSIONAL_ANCHOR")))
 end

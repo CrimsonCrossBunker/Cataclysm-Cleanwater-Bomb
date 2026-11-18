@@ -388,53 +388,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_DUNGEON_DIMENSION_RETURN",
-    "condition": { "math": [ "u_monsters_nearby('radius': 8) == 0" ] },
-    "effect": [
-      { "u_add_effect": "blind", "duration": 0 },
-      { "u_add_effect": "effect_temporary_levitation", "duration": 0 },
-      { "u_teleport": { "global_val": "portal_dungeon_original_loc" } },
-      {
-        "if": { "mod_is_loaded": "skyisland" },
-        "then": [
-          {
-            "if": { "u_has_trait": "awayfromhome" },
-            "then": {
-              "u_travel_to_dimension": { "global_val": "sky_island_target_region_settings" },
-              "fail_message": "You feel a prickle at the edge of your senses.",
-              "success_message": "The shifting halls warp and fold on themselves and turn inside out, revealing the world below."
-            },
-            "else": {
-              "u_travel_to_dimension": "default",
-              "npc_travel_radius": 0,
-              "npc_travel_filter": "none",
-              "fail_message": "You feel a prickle at the edge of your senses.",
-              "success_message": "The shifting halls warp and fold on themselves and turn inside out, revealing your island in the sky."
-            }
-          }
-        ],
-        "else": {
-          "u_travel_to_dimension": "default",
-          "npc_travel_radius": 0,
-          "npc_travel_filter": "none",
-          "fail_message": "You feel a prickle at the edge of your senses.",
-          "success_message": "The shifting halls warp and fold on themselves and turn inside out, revealing the shape of the world you know."
-        }
-      },
-      { "clear_dimension": "portal_storm_dungeon_dimension" },
-      { "run_eocs": "EOC_PORTAL_STORM_DUNGEON_DIMENSION_RETURN_REMOVE_ITEM" },
-      { "math": [ "portal_dungeon_level = 0" ] },
-      { "alter_timed_events": "portal_dungeon" }
-    ],
-    "false_effect": { "u_message": "You feel a prickle at the edge of your senses.", "type": "bad" }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_STORM_DUNGEON_DIMENSION_RETURN_REMOVE_ITEM",
-    "effect": [ { "u_remove_item_with": "item_portal_storm_dimension_returner" } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_DUNGEON_REWARD_WEAKENED_INERTIA",
     "effect": { "u_add_effect": "weakened_inertia", "duration": { "math": [ "(portal_dungeon_level + rng(-1, 1)) * time(' 1 d')" ] } }
   },

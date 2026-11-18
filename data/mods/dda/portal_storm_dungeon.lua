@@ -16,6 +16,52 @@ local function snippet(character, category)
     services.messages.add(text, "neutral")
 end
 
+ccb.runtime.handler("portal_dungeon_return_transport", function(character)
+    local result = state.checked(services.relocation.travel_to_dimension("default",
+        { npc_travel_radius = 0, npc_travel_filter = "none", item_travel_radius = -1 }))
+    state.message(character, result.accepted
+        and services.translate("The shifting halls warp and fold on themselves and turn inside out, revealing the shape of the world you know.")
+        or services.translate("You feel a prickle at the edge of your senses."))
+end)
+
+function M.return_to_world(character)
+    if state.checked(services.monsters.count_nearby(state.position(character), nil,
+        { radius = 8, attitude = "hostile" })) ~= 0 then
+        state.message(character, services.translate("You feel a prickle at the edge of your senses."), "bad")
+        return
+    end
+    state.add_effect(character, "blind", 0)
+    state.add_effect(character, "effect_temporary_levitation", 0)
+    character = teleport(character, state.point("portal_dungeon_original_loc"))
+    ccb.runtime.call_character("portal_dungeon_return_transport", character)
+    environment.clear_saved_dimension("portal_storm_dungeon_dimension")
+    state.checked(services.inventory.remove_type(character, id("item", "item_portal_storm_dimension_returner")))
+    state.set("portal_dungeon_level", 0)
+    state.checked(services.world.reschedule_events("portal_dungeon", services.time.duration(0, "turn")))
+end
+
+ccb.runtime.handler("portal_dungeon_return_item", function(payload)
+    if payload.character then M.return_to_world(payload.character) end
+    return 0
+end)
+
+local fragment = ccb.content.Item {
+    id = "item_portal_storm_dimension_returner",
+    name = ccb.content.plural_text("fragment of reality", "fragment of reality"),
+    description = ccb.content.text("You can leave this place, if you want.  Focus on the world you left behind in the storm."),
+    category = "armor", mass_grams = 0, volume_ml = 0,
+    price_cents = 0, price_postapoc_cents = 0,
+    symbol = "V", color = "dark_gray",
+}
+fragment:material("bone", 1)
+fragment:armor()
+for _, flag in ipairs { "INTEGRATED", "ALLOWS_NATURAL_ATTACKS", "UNBREAKABLE", "AURA", "PADDED", "NO_SALVAGE" } do
+    fragment:flag(flag)
+end
+fragment:on_use("portal_dungeon_return_item", ccb.content.text("Activate"),
+    ccb.content.text("Return.  Return.  Return.  Return."))
+ccb.content.add(fragment)
+
 ccb.runtime.handler("portal_dungeon_crawl_due", function(payload)
     if environment.dimension() ~= "portal_storm_dungeon_dimension" then return end
     local character = payload.character
