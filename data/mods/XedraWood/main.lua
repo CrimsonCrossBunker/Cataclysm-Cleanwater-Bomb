@@ -81,3 +81,5 @@ require("stepped_recipes")
 require("retired_recipes")
 
 require("armor_recipes")
+
+require("craft_recipes")

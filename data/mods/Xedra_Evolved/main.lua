@@ -174,3 +174,5 @@ require("food_recipes")
 require("stepped_recipes")
 
 require("armor_recipes")
+
+require("craft_recipes")

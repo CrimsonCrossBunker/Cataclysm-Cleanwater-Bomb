@@ -23,3 +23,5 @@ require("sidebar_extensions")
 require("scenario_filters")
 
 require("overmap_locations")
+
+require("craft_recipes")

@@ -29,60 +29,6 @@
     "looks_like": "welding_rig"
   },
   {
-    "type": "recipe",
-    "activity_level": "MODERATE_EXERCISE",
-    "result": "veh_tools_kitchen",
-    "category": "CC_ELECTRONIC",
-    "subcategory": "CSC_ELECTRONIC_PARTS",
-    "skill_used": "mechanics",
-    "skills_required": [ "electronics", 3 ],
-    "proficiencies": [
-      { "proficiency": "prof_metalworking" },
-      { "proficiency": "prof_welding_basic", "skill_penalty": 0.5 },
-      { "proficiency": "prof_appliance_repair" }
-    ],
-    "difficulty": 3,
-    "time": "1 h",
-    "autolearn": true,
-    "using": [ [ "welding_standard", 10 ] ],
-    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 1 }, { "id": "WRENCH", "level": 1 } ],
-    "components": [
-      [ [ "frame", 1 ] ],
-      [ [ "water_faucet", 1 ] ],
-      [ [ "duct_tape", 100 ] ],
-      [ [ "sheet_metal", 4 ] ],
-      [ [ "pipe_fittings", 8 ] ],
-      [ [ "pipe", 16 ] ],
-      [ [ "hose", 2 ] ],
-      [ [ "power_supply", 2 ] ],
-      [ [ "cable", 14 ] ]
-    ]
-  },
-  {
-    "type": "recipe",
-    "activity_level": "MODERATE_EXERCISE",
-    "result": "veh_tools_workshop",
-    "category": "CC_ELECTRONIC",
-    "subcategory": "CSC_ELECTRONIC_PARTS",
-    "skill_used": "mechanics",
-    "skills_required": [ "electronics", 3 ],
-    "difficulty": 3,
-    "time": "1 h",
-    "autolearn": true,
-    "using": [ [ "welding_standard", 10 ] ],
-    "qualities": [ { "id": "HAMMER", "level": 2 }, { "id": "SAW_M", "level": 1 }, { "id": "WRENCH", "level": 1 } ],
-    "components": [
-      [ [ "frame", 1 ] ],
-      [ [ "duct_tape", 100 ] ],
-      [ [ "sheet_metal", 4 ] ],
-      [ [ "pipe_fittings", 4 ] ],
-      [ [ "pipe", 16 ] ],
-      [ [ "hose", 2 ] ],
-      [ [ "power_supply", 4 ] ],
-      [ [ "cable", 67 ] ]
-    ]
-  },
-  {
     "abstract": "veh_tools_part_abstract",
     "type": "vehicle_part",
     "breaks_into": [

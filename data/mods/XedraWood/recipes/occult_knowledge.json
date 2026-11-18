@@ -1,34 +1,6 @@
 [
   {
     "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "result": "occult_research_intro",
-    "category": "CC_XEDRA",
-    "subcategory": "CSC_XEDRA_RESEARCH",
-    "difficulty": 1,
-    "time": "2h",
-    "autolearn": true,
-    "skill_used": "deduction",
-    "using": [ [ "writing_standard", 1 ] ],
-    "components": [ [ [ "paper", 10 ] ] ],
-    "proficiencies": [ { "proficiency": "prof_occult_exploration", "time_multiplier": 2, "skill_penalty": 1, "required": false } ]
-  },
-  {
-    "type": "recipe",
-    "activity_level": "NO_EXERCISE",
-    "result": "occult_research_minor",
-    "category": "CC_XEDRA",
-    "subcategory": "CSC_XEDRA_RESEARCH",
-    "difficulty": 2,
-    "time": "4h",
-    "autolearn": true,
-    "skill_used": "deduction",
-    "using": [ [ "writing_standard", 1 ] ],
-    "components": [ [ [ "paper", 20 ] ] ],
-    "proficiencies": [ { "proficiency": "prof_occult_exploration", "time_multiplier": 4, "skill_penalty": 1, "required": false } ]
-  },
-  {
-    "type": "recipe",
     "activity_level": "LIGHT_EXERCISE",
     "name": "study occult research notes",
     "id": "study_occult_research",

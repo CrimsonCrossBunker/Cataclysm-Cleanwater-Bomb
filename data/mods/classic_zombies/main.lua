@@ -58,3 +58,5 @@ require("scenario_filters")
 require("construction_groups")
 
 require("retired_recipes")
+
+require("craft_recipes")

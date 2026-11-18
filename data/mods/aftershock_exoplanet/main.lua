@@ -99,3 +99,5 @@ require("retired_recipes")
 require("weapon_recipes")
 
 require("armor_recipes")
+
+require("craft_recipes")

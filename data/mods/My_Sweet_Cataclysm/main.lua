@@ -5,3 +5,5 @@ require("mutation_enchantments")
 require("field_emissions")
 
 require("food_recipes")
+
+require("craft_recipes")

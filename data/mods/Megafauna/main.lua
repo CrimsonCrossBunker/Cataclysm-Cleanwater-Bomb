@@ -64,3 +64,5 @@ definition:entry("mon_dog_samoyed")
 definition:entry("mon_dog_samoyed_pup")
 definition:entry("mon_tiger")
 content.add(definition)
+
+require("craft_recipes")

@@ -21,19 +21,5 @@
     "symbol": "*",
     "color": "light_green",
     "use_action": { "type": "heal", "limb_power": 6, "move_cost": 1500 }
-  },
-  {
-    "result": "immortal_path_evergreen_pill",
-    "type": "recipe",
-    "//": "葳蕤木灵丹配方。autolearn:false——不靠技能自学；改由 EOC_immortal_path_bind_art_traits 的木行分支在学会养荣导引时 u_learn_recipe 直接授予，演示「功法自带配方」。activity_level 是 recipe 的必填字段（见 recipe.cpp）。用 firstaid 技能与常见草木材料，门槛低。材料/产出待平衡。/ Verdant pill recipe. Not autolearned; granted via u_learn_recipe in the Wood branch of EOC_immortal_path_bind_art_traits. activity_level is mandatory on recipes.",
-    "category": "CC_CHEM",
-    "subcategory": "CSC_CHEM_DRUGS",
-    "skill_used": "firstaid",
-    "difficulty": 1,
-    "time": "20 m",
-    "activity_level": "LIGHT_EXERCISE",
-    "autolearn": false,
-    "qualities": [ { "id": "CONTAIN", "level": 1 } ],
-    "components": [ [ [ "wild_herbs", 2 ], [ "medical_gauze", 1 ] ], [ [ "water_clean", 1 ], [ "water", 1 ] ] ]
   }
 ]

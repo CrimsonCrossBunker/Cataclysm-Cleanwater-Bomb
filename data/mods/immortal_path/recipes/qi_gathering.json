@@ -22,19 +22,5 @@
       "//en_us_activation_message": "You take a Qi-Gathering Pill, and a warm spiritual breath gathers in your dantian.",
       "vitamins": [ [ "qi", 60 ] ]
     }
-  },
-  {
-    "result": "immortal_path_qi_gathering_pill",
-    "type": "recipe",
-    "//": "基础聚气丹配方。autolearn:false；由 EOC_immortal_path_ensure_basic_elixir_recipe 在角色踏入炼气后授予。材料沿用早期草木/清水路线，后续可替换为专属灵材。/ Basic Qi-Gathering Pill recipe. Not autolearned; granted by EOC_immortal_path_ensure_basic_elixir_recipe once the character enters Qi Refining. Uses early herb/water components for now; later replaceable with dedicated spirit materials.",
-    "category": "CC_CHEM",
-    "subcategory": "CSC_CHEM_DRUGS",
-    "skill_used": "firstaid",
-    "difficulty": 1,
-    "time": "15 m",
-    "activity_level": "LIGHT_EXERCISE",
-    "autolearn": false,
-    "qualities": [ { "id": "CONTAIN", "level": 1 } ],
-    "components": [ [ [ "wild_herbs", 2 ], [ "tea_bark", 1 ] ], [ [ "water_clean", 1 ], [ "water", 1 ] ] ]
   }
 ]
