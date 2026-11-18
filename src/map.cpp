@@ -4,21 +4,22 @@
 
 #define MP_ENABLED
 #include <algorithm>
-#include <limits>
 #include <array>
 #include <climits>
 #include <cmath>
 #include <cstdlib>
+#include <initializer_list>
+#include <iterator>
+#include <limits>
+#include <numeric>
 #include <optional>
 #include <ostream>
 #include <queue>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <utility>
 
 #include "active_item_cache.h"
-#include "ammo.h"
 #include "ammo_effect.h"
 #include "avatar.h"
 #include "basecamp.h"
@@ -38,7 +39,6 @@
 #include "construction.h"
 #include "coordinates.h"
 #include "craft_reservation.h"
-#include "coords_fwd.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cuboid_rectangle.h"
@@ -48,11 +48,14 @@
 #include "debug.h"
 #include "do_turn.h"
 #include "drawing_primitives.h"
+#include "effect_source.h"
+#include "enum_conversions.h"
 #include "enums.h"
 #include "explosion.h"
 #include "field.h"
 #include "field_type.h"
 #include "flag.h"
+#include "flat_set.h" // IWYU pragma: keep
 #include "finite_water.h"
 #include "fragment_cloud.h"
 #include "fungal_effects.h"
@@ -68,24 +71,32 @@
 #include "item_group.h"
 #include "item_location.h"
 #include "item_source.h"
+#include "item_stack.h"
+#include "item_transformation.h"
+#include "item_uid.h"
 #include "item_wakeup.h"
 #include "itype.h"
 #include "iuse.h"
 #include "iuse_actor.h"
+#include "level_cache.h"
 #include "lightmap.h"
 #include "line.h"
+#include "lru_cache.h"
 #include "magic_ter_furn_transform.h"
 #include "map_accessories.h"
 #include "map_iterator.h"
+#include "map_viewpoint.h"
 #include "map_visibility.h"
 #include "map_memory.h"
+#include "map_scale_constants.h"
 #include "map_selector.h"
 #include "map_simulation_regions.h"
 #include "mapbuffer.h"
 #include "mapdata.h"
 #include "north_america_elevation.h"
-#include "mapgen.h"
-#include "material.h"
+#include "mapgen_primitives.h"
+#include "maptile_fwd.h"
+#include "mdarray.h"
 #ifdef MP_ENABLED
     #include "mp_gamestate.h"
 #endif
@@ -101,18 +112,23 @@
 #include "mtype.h"
 #include "north_america.h"
 #include "north_america_soil.h"
+#include "npc.h"
 #include "options.h"
 #include "output.h"
 #include "overmap.h"
 #include "overmap_map_data_cache.h"
 #include "overmapbuffer.h"
 #include "pathfinding.h"
+#include "plant_climate.h"
+#include "player_activity.h"
 #include "pocket_type.h"
+#include "point.h"
 #include "power_network.h"
 #include "profiling.h"
 #include "projectile.h"
 #include "ranged.h"
 #include "relic.h"
+#include "requirements.h"
 #include "ret_val.h"
 #include "rng.h"
 #include "safe_reference.h"
@@ -122,25 +138,31 @@
 #include "string_formatter.h"
 #include "submap.h"
 #include "tileray.h"
+#include "translation.h"
 #include "translations.h"
 #include "trap.h"
+#include "type_id.h"
 #include "ui_manager.h"
+#include "uilist.h"
 #include "units.h"
 #include "units_utility.h"
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
 #include "vehicle_selector.h"
+#include "vehicle_uid.h"
 #include "viewer.h"
+#include "visitable.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 #include "weather.h"
 #include "weighted_list.h"
 
 #if defined(TILES)
-    #include "cata_tiles.h" // all animation functions will be pushed out to a cata_tiles function in some manner
     #include "sdltiles.h"
 #endif
+
+class weather_generator;
 
 static const ammo_effect_str_id ammo_effect_IGNITE( "IGNITE" );
 static const ammo_effect_str_id ammo_effect_INCENDIARY( "INCENDIARY" );

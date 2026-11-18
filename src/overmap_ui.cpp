@@ -1,6 +1,5 @@
 #include "overmap_ui.h"
 
-#include <enum_conversions.h>
 #include <map_scale_constants.h>
 #include <memory_fast.h>
 #include <monster.h>
@@ -42,6 +41,7 @@
 #include "debug.h"
 #include "debug_menu.h"
 #include "display.h"
+#include "enum_conversions.h"
 #include "flexbuffer_json.h"
 #include "game.h"
 #include "game_constants.h"

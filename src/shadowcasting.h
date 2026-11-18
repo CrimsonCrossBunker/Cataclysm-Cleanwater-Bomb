@@ -16,6 +16,7 @@
 
 struct fragment_cloud;
 
+
 // For light we store four values, depending on the direction that the light
 // comes from.  This allows us to determine whether the side of the wall the
 // player is looking at is lit.

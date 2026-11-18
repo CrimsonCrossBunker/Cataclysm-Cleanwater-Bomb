@@ -1,6 +1,4 @@
 #include "vehicle.h" // IWYU pragma: associated
-#include "vehicle_control.h"
-#include "character_action_guard.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +15,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -32,7 +31,6 @@
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "material.h"
 #include "messages.h"
@@ -40,6 +38,7 @@
 #include "options.h"
 #include "point.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "tileray.h"
@@ -49,6 +48,8 @@
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
+#include "vehicle_control.h"
+#include "vehicle_turning.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
@@ -2275,11 +2276,12 @@ bool vehicle::level_vehicle( map &here )
         }
         const tripoint_bub_ms part_pos = bub_part_pos( here, prt );
         if( no_support.find( part_pos.z() ) == no_support.end() ) {
-            no_support[part_pos.z()] = part_pos.z() > here.min_z();
+            no_support[part_pos.z()] = true;
         }
         if( no_support[part_pos.z()] ) {
+            const tripoint_bub_ms below = part_pos + tripoint::below;
             no_support[part_pos.z()] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
-                                       !here.supports_above( part_pos + tripoint::below );
+                                       ( !here.inbounds( below ) || !here.supports_above( below ) );
         }
         if( !is_on_ramp &&
             ( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tripoint_bub_ms( part_pos.x(), part_pos.y(),
@@ -2333,10 +2335,6 @@ void vehicle::check_falling_or_floating()
     is_flying = false;
 
     auto has_support = [&here]( const tripoint_bub_ms & position, const bool water_supports ) {
-        // if we're at the bottom of the z-levels, we're supported
-        if( position.z() == here.min_z() ) {
-            return true;
-        }
         // water counts as support if we're swimming and checking to see if we're falling, but
         // not to see if the wheels are supported at all
         if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_SWIMMABLE, position ) ) {
@@ -2345,8 +2343,8 @@ void vehicle::check_falling_or_floating()
         if( !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, position ) ) {
             return true;
         }
-        tripoint_bub_ms below( position + tripoint::below );
-        return here.supports_above( below );
+        const tripoint_bub_ms below = position + tripoint::below;
+        return here.inbounds( below ) && here.supports_above( below );
     };
     // Check under the wheels, if they're supported nothing else matters.
     int supported_wheels = 0;

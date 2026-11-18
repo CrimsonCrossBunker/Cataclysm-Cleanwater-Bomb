@@ -1005,13 +1005,14 @@ static const oter_id *atlas_outlying_terrain( int z )
     }
     // Resolve string IDs again after a data reload. The returned reference has
     // the same lifetime as other overmap terrain lookups on the owning thread.
-    static thread_local std::pair<oter_id, oter_id> terrain_ids;
+    static thread_local oter_id rock_id; // NOLINT(cata-static-int_id-constants)
+    static thread_local oter_id air_id; // NOLINT(cata-static-int_id-constants)
     if( z < 0 ) {
-        terrain_ids.first = oter_deep_rock.id();
-        return &terrain_ids.first;
+        rock_id = oter_deep_rock.id();
+        return &rock_id;
     }
-    terrain_ids.second = oter_open_air.id();
-    return &terrain_ids.second;
+    air_id = oter_open_air.id();
+    return &air_id;
 }
 
 om_vision_level overmapbuffer::seen( const tripoint_abs_omt &p )

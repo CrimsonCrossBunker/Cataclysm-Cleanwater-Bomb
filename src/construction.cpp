@@ -14,18 +14,23 @@
 #include <utility>
 
 #include "action.h"
+#include "activity_actor.h"
 #include "activity_actor_definitions.h"
-#include "character_action_guard.h"
 #include "avatar.h"
 #include "build_reqs.h"
+#include "cached_options.h"
 #include "calendar.h"
 #include "cata_scope_helpers.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
+#include "character_id.h"
+#include "clone_ptr.h"
 #include "color.h"
 #include "construction_category.h"
 #include "construction_group.h"
 #include "coordinates.h"
+#include "craft_command.h"
 #include "craft_reservation.h"
 #include "crafting.h"
 #include "creature.h"
@@ -47,10 +52,10 @@
 #include "item_group.h"
 #include "iteminfo_query.h"
 #include "iuse.h"
+#include "json.h"
 #include "lua_platform_content.h"
 #include "map.h"
 #include "map_iterator.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "memory_fast.h"
 #include "messages.h"
@@ -67,9 +72,9 @@
 #include "requirements.h"
 #include "rng.h"
 #include "skill.h"
-#include "temp_crafting_inventory.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "temp_crafting_inventory.h"
 #include "translation_cache.h"
 #include "translations.h"
 #include "trap.h"
@@ -84,7 +89,6 @@
 #include "vpart_position.h"
 
 #if defined(TILES)
-    #include "cached_options.h"    // for use_tiles
     #include "cata_tiles.h"        // for cata_tiles
     #include "cuboid_rectangle.h"  // for half_open_rectangle
     #include "cursesport.h"        // for get_scaling_factor (??)
@@ -1186,7 +1190,7 @@ std::vector<const construction *> player_can_build_valid_constructions( Characte
     // check all with the same group to see if player can build any
     // if so, it will be added to the result
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             result.push_back( con );
         }
@@ -1199,7 +1203,7 @@ bool player_can_build( Character &you, const temp_crafting_inventory &inv,
 {
     // check all with the same group to see if player can build any
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( player_can_build( you, inv, *con ) ) {
             return true;
         }
@@ -1230,7 +1234,7 @@ bool player_can_see_to_build( Character &you, const construction_group_str_id &g
         return true;
     }
     std::vector<const construction *> cons = constructions_by_group( group );
-    for( const construction*&con : cons ) {
+    for( const construction *&con : cons ) {
         if( con->dark_craftable ) {
             return true;
         }
@@ -1548,7 +1552,7 @@ bool build_construction_activity_actor::prepare_owned_turn( Character &who )
     if( !site || site->uid != site_uid || site->id != construction_type.id() ) {
         return false;
     }
-    const auto &built = construction_type.obj();
+    const construction &built = construction_type.obj();
     if( !decision.empty() ) {
         return true;
     }
@@ -1556,12 +1560,12 @@ bool build_construction_activity_actor::prepare_owned_turn( Character &who )
         get_option<bool>( "QUERY_DECONSTRUCT" ) ) {
         std::string detail;
         if( here.has_furn( at ) ) {
-            const auto &f = here.furn( at ).obj();
+            const furn_t &f = here.furn( at ).obj();
             if( f.deconstruct && !f.base_item.is_null() ) {
                 detail = f.deconstruct->potential_deconstruct_items( f );
             }
         } else {
-            const auto &t = here.ter( at ).obj();
+            const ter_t &t = here.ter( at ).obj();
             if( t.deconstruct && !t.base_item.is_null() ) {
                 detail = t.deconstruct->potential_deconstruct_items( t );
             }

@@ -24,7 +24,6 @@
 #include <subbodypart.h>
 #include <tool_activity_target.h>
 #include <type_id.h>
-#include <vehicle_power_connection.h>
 #include <visitable.h>
 #include <weighted_list.h>
 
@@ -154,6 +153,7 @@
 #include "value_ptr.h"
 #include "veh_type.h"
 #include "vehicle.h"
+#include "vehicle_power_connection.h"
 #include "vehicle_selector.h"
 #include "viewer.h"
 #include "vitamin.h"

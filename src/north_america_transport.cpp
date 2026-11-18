@@ -50,23 +50,23 @@ static const oter_str_id oter_atlas_avenue_flank_ns( "atlas_avenue_flank_ns" );
 static const oter_str_id oter_road_ew( "road_ew" );
 static const oter_str_id oter_road_ns( "road_ns" );
 
-static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_atlas_raised_bridge_deck( "atlas_raised_bridge_deck" );
+static const oter_type_str_id oter_type_atlas_road_bridge( "atlas_road_bridge" );
 static const oter_type_str_id oter_type_bridge( "bridge" );
-static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
-static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
-static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
-static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
-static const ter_str_id ter_t_open_air( "t_open_air" );
 static const oter_type_str_id oter_type_road( "road" );
 
 static const ter_str_id ter_t_atlas_pavement_white( "t_atlas_pavement_white" );
 static const ter_str_id ter_t_concrete_wall( "t_concrete_wall" );
 static const ter_str_id ter_t_grass( "t_grass" );
 static const ter_str_id ter_t_guardrail( "t_guardrail" );
+static const ter_str_id ter_t_guardrail_hw_air( "t_guardrail_hw_air" );
+static const ter_str_id ter_t_open_air( "t_open_air" );
 static const ter_str_id ter_t_pavement( "t_pavement" );
+static const ter_str_id ter_t_pavement_hw_air( "t_pavement_hw_air" );
 static const ter_str_id ter_t_pavement_y( "t_pavement_y" );
+static const ter_str_id ter_t_pavement_y_hw_air( "t_pavement_y_hw_air" );
 static const ter_str_id ter_t_sidewalk( "t_sidewalk" );
+static const ter_str_id ter_t_sidewalk_hw_air( "t_sidewalk_hw_air" );
 static const ter_str_id ter_t_water_moving_dp( "t_water_moving_dp" );
 
 static const vgroup_id VehicleGroup_highway( "highway" );
@@ -643,8 +643,8 @@ static void draw_curve_support( mapgendata &dat, const oter_id &deck )
     const auto curve = deck_centerline( deck->get_line() );
     if( !curve.empty() ) {
         const point pier = curve[curve.size() / 2];
-        dat.m.draw_square_ter( ter_t_concrete_wall.id(), point_bub_ms( pier - point( 1, 1 ) ),
-                               point_bub_ms( pier + point( 1, 1 ) ), dat.zlevel() );
+        dat.m.draw_square_ter( ter_t_concrete_wall.id(), point_bub_ms( pier - point::south_east ),
+                               point_bub_ms( pier + point::south_east ), dat.zlevel() );
     }
 }
 
