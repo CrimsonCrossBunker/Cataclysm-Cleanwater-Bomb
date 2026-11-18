@@ -235,3 +235,35 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    -- This is calculated from medium weight cotton at 203 GSM, with a size of 6 inches square
+    local item = content.Item {
+        id = "cotton_patchwork",
+        category = "spare_parts",
+        name = ccb.content.plural_text("cotton patch", "cotton patches"),
+        description = ccb.content.text("A 6-inch square cotton patch, suitable for repairing and tailoring clothing."),
+        mass_milligrams = 3000,
+        volume_ml = 6,
+        price_cents = 200,
+        price_postapoc_cents = 2,
+        symbol = ",",
+        replace_qualities = true,
+        color = "white",
+        stackable = true,
+    }
+    item:material("cotton", 1)
+    item:quality("SIEVE", 1)
+    item:quality("STRAIN", 2)
+    item:clear_use_actions()
+    item:heal {
+        move_cost = 200,
+        bleed = 1,
+        used_up_item = { id = "cotton_patchwork", quantity = 1, flags = { "FILTHY" } },
+    }
+    item:native_use("WASH_HARD_ITEMS")
+    item:clear_flags()
+    item:flag("NO_SALVAGE")
+    item:tool()
+    content.add(item)
+end

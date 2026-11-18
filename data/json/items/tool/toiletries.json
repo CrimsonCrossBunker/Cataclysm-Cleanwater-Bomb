@@ -41,34 +41,6 @@
     "tool_ammo": [ "battery" ]
   },
   {
-    "id": "cotton_patchwork",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "spare_parts",
-    "name": { "str": "cotton patch", "str_pl": "cotton patches" },
-    "description": "A 6-inch square cotton patch, suitable for repairing and tailoring clothing.",
-    "weight": "3 g",
-    "volume": "6 ml",
-    "//": "This is calculated from medium weight cotton at 203 GSM, with a size of 6 inches square",
-    "price": "2 USD",
-    "price_postapoc": "2 cent",
-    "material": [ "cotton" ],
-    "symbol": ",",
-    "qualities": [ [ "SIEVE", 1 ], [ "STRAIN", 2 ] ],
-    "color": "white",
-    "use_action": [
-      {
-        "type": "heal",
-        "move_cost": 200,
-        "bleed": 1,
-        "used_up_item": { "id": "cotton_patchwork", "quantity": 1, "flags": [ "FILTHY" ] }
-      },
-      "WASH_HARD_ITEMS"
-    ],
-    "flags": [ "NO_SALVAGE" ],
-    "stackable": true
-  },
-  {
     "id": "shavingkit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
