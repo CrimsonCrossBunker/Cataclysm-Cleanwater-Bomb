@@ -68,6 +68,7 @@ class dimension_world
         void load( const JsonObject &jo, const std::string_view &src );
         void finalize();
         static void finalize_all();
+        static void reset_all();
         static void load_dimensions( const JsonObject &jo, const std::string &src );
 };
 

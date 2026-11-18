@@ -710,6 +710,7 @@ void DynamicDataLoader::unload_data()
     construction_groups::reset();
     damage_type::reset();
     damage_info_order::reset();
+    dimension_world::reset_all();
     disease_type::reset();
     dreams.clear();
     emit::reset();

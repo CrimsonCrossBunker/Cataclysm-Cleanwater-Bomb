@@ -189,7 +189,14 @@ void dimension_world::finalize()
 
 void dimension_world::finalize_all()
 {
+    dimension_regions_factory.finalize();
     dimension_factory.finalize();
+}
+
+void dimension_world::reset_all()
+{
+    dimension_factory.reset();
+    dimension_regions_factory.reset();
 }
 
 template<typename T>

@@ -5022,6 +5022,7 @@ bool worldgen_content_transaction::apply( std::string &error )
             detail::option_slider_registry().finalize();
         }
 
+        // Resolve dimension layouts in the global finalizer once all Mods are installed.
         for( const dimension_region_layout_registration &entry :
              pimpl_->dimension_region_layouts ) {
             const dimension_region_layout_id id( entry.definition->id );
@@ -5031,9 +5032,6 @@ bool worldgen_content_transaction::apply( std::string &error )
             detail::dimension_region_layout_registry().insert(
                 detail::make_dimension_region_layout_native( *entry.definition ) );
         }
-        if( !pimpl_->dimension_region_layouts.empty() ) {
-            detail::dimension_region_layout_registry().finalize();
-        }
 
         for( const dimension_registration &entry : pimpl_->dimensions ) {
             const dimension_id id( entry.definition->id );
@@ -5041,9 +5039,6 @@ bool worldgen_content_transaction::apply( std::string &error )
                 id, id.is_valid() ? std::optional<dimension_world>( id.obj() ) : std::nullopt );
             detail::dimension_registry().insert(
                 detail::make_dimension_native( *entry.definition ) );
-        }
-        if( !pimpl_->dimensions.empty() ) {
-            detail::dimension_registry().finalize();
         }
 
         for( const omt_placeholder_registration &entry : pimpl_->omt_placeholders ) {
@@ -5454,9 +5449,6 @@ void worldgen_content_transaction::rollback()
             detail::dimension_registry().erase( it->first );
         }
     }
-    if( !pimpl_->dimension_undo.empty() ) {
-        detail::dimension_registry().finalize();
-    }
     pimpl_->dimension_undo.clear();
 
     for( auto it = pimpl_->dimension_region_layout_undo.rbegin();
@@ -5466,9 +5458,6 @@ void worldgen_content_transaction::rollback()
         } else {
             detail::dimension_region_layout_registry().erase( it->first );
         }
-    }
-    if( !pimpl_->dimension_region_layout_undo.empty() ) {
-        detail::dimension_region_layout_registry().finalize();
     }
     pimpl_->dimension_region_layout_undo.clear();
 
