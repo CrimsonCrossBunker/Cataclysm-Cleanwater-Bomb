@@ -1208,6 +1208,20 @@ void overmap::generate( const std::vector<const overmap *> &neighbor_overmaps,
         requires_over = generate_over( z );
     } while( requires_over && ( ++z <= OVERMAP_HEIGHT ) );
 
+    if( atlas ) {
+        const point_abs_omt origin = global_base_point();
+        for( int y = 0; y < OMAPY; ++y ) {
+            for( int x = 0; x < OMAPX; ++x ) {
+                const tripoint_om_omt p( x, y, 0 );
+                const oter_id original = ter( p );
+                const oter_id habitat = north_america::wilderness_terrain( origin + p.xy().raw(), original );
+                if( habitat != original ) {
+                    ter_set( p, habitat );
+                }
+            }
+        }
+    }
+
     // Place the monsters, now that the terrain is laid out
     place_mongroups();
     place_radios();
@@ -2523,7 +2537,9 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 return 1;
             }
             const auto &tile = network[p.y() * OMAPX + p.x()];
-            const int width = tile.lanes >= 6 ? static_cast<int>( tile.lanes / 2 ) :
+            const bool mapped_highway = tile.mapped_connections != 0 && tile.lanes >= 4 &&
+                                        ( settings->place_roads || settings->overmap_highway );
+            const int width = mapped_highway ? static_cast<int>( tile.lanes / 2 ) :
                               generate_city_streets && tile.street == north_america::urban_road::arterial ? 2 : 1;
             const int first = -( width - 1 ) / 2;
             for( int offset = first; offset < first + width; ++offset ) {
@@ -2533,7 +2549,7 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 const tripoint_om_omt side = at( across + offset, along );
                 if( !inbounds( side ) || network[side.y() * OMAPX + side.x()].connections ||
                     north_america::is_avenue_flank( ter( side ) ) || !can_build_street( side ) ||
-                    ( width == 2 && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
+                    ( !mapped_highway && !north_america::in_urban_footprint( origin + side.xy().raw() ) ) ) {
                     return 1;
                 }
             }
@@ -2552,7 +2568,9 @@ void overmap::place_atlas_roads( const std::vector<north_america::road_cell> &ne
                 while( end < length && width_at( across, end ) == width ) {
                     ++end;
                 }
-                if( end - begin >= north_america::min_wide_road_run ) {
+                const int minimum = width >= 3 ? north_america::min_wide_highway_run :
+                                    north_america::min_wide_road_run;
+                if( end - begin >= minimum || ( width >= 3 && ( begin == 0 || end == length ) ) ) {
                     const int first = -( width - 1 ) / 2;
                     for( int along = begin; along < end; ++along ) {
                         for( int offset = first; offset < first + width; ++offset ) {
