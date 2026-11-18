@@ -44,7 +44,7 @@ static void CheckDecl( LargeStackObjectCheck &Check, const MatchFinder::MatchRes
         return;
     }
 
-    if( !MatchedDecl->isLocalVarDeclOrParm() ) {
+    if( MatchedDecl->getStorageDuration() != SD_Automatic ) {
         return;
     }
 
