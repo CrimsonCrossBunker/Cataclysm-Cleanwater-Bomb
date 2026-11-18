@@ -650,3 +650,183 @@ do
     item:tool()
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "notched_plank",
+        category = "spare_parts",
+        name = ccb.content.plural_text("notched plank", "notched planks"),
+        description = ccb.content.text("A quarter of a wooden plank with notches cut into it, used with a fire drill to create embers."),
+        symbol = "/",
+        color = "brown",
+        looks_like = "2x4",
+        mass_milligrams = 610000,
+        volume_ml = 1035,
+        longest_side_mm = 300,
+        price_cents = 500,
+        price_postapoc_cents = 5,
+        replace_pockets = true,
+    }
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("NO_RELOAD")
+    item:flag("NO_UNLOAD")
+    item:tool()
+    item:magazine_pocket { ammo_capacities = { notch = 24 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "notched_stick",
+        category = "spare_parts",
+        name = ccb.content.plural_text("notched stick", "notched sticks"),
+        description = ccb.content.text("A wooden stick with notches cut into it, used with a fire drill to create embers."),
+        symbol = "/",
+        color = "brown",
+        looks_like = "stick",
+        mass_milligrams = 375000,
+        volume_ml = 625,
+        longest_side_mm = 320,
+        price_cents = 500,
+        price_postapoc_cents = 5,
+        replace_pockets = true,
+    }
+    item:material("wood", 1)
+    item:clear_flags()
+    item:flag("NO_RELOAD")
+    item:flag("NO_UNLOAD")
+    item:tool()
+    item:magazine_pocket { ammo_capacities = { notch = 10 } }
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "teargas_sprayer",
+        name = ccb.content.plural_text("tear gas sprayer", "tear gas sprayers"),
+        description = ccb.content.text("A pocket sized plastic canister filled with a pressurized tear gas spray, a step above oleoresin capsicum pepper spray in terms of potency.  Most commonly used by law enforcement and bear-wary hikers, but it became more common in recent months due to anxiety over the riots.  Probably won't do much against a zombie, but should give anything still breathing a rather nasty surprise and give you time to get away.  It contains enough spray for about twenty seconds of continuous application."),
+        mass_milligrams = 96000,
+        volume_ml = 100,
+        longest_side_mm = 90,
+        price_cents = 1000,
+        price_postapoc_cents = 150,
+        symbol = ";",
+        color = "red",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_flags()
+    item:flag("NO_UNLOAD")
+    item:flag("NO_RELOAD")
+    item:flag("BELT_CLIP")
+    item:clear_use_actions()
+    item:native_use("MACE")
+    item:tool { charges_per_use = 1, ammo_types = { "teargas_spray" } }
+    item:magazine_pocket { ammo_capacities = { teargas_spray = 10 }, airtight = true, watertight = true, rigid = true }
+    content.add(item)
+end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "c4_payload",
+        category = "weapons",
+        name = content.plural_text("C-4 payload", "C-4 payloads"),
+        description = content.text("This is a dummy item used by c4 hacks.  You should never see it outside of debug."),
+        symbol = "*",
+        color = "dark_gray",
+    }
+    item:clear_use_actions()
+    item:transform_on_use { result = { target = "c4armed", timer_turns = 10 } }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("BOMB")
+    item:flag("GRENADE")
+    item:flag("ZERO_WEIGHT")
+    item:tool()
+    content.add(item)
+end
+
+do
+    -- NO_I18N
+    -- NO_I18N
+    local item = content.Item {
+        id = "tear_gas_payload",
+        category = "weapons",
+        name = content.plural_text("tear gas payload", "tear gas payloads"),
+        description = content.text("This is a dummy item used by tear gas hacks.  You should never see it outside of debug."),
+        symbol = "*",
+        color = "dark_gray",
+    }
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "tear_gas_payload_act", timer_turns = 5 },
+        message = ccb.content.text("You pull the pin on the %s."),
+    }
+    item:clear_flags()
+    item:flag("TRADER_AVOID")
+    item:flag("BOMB")
+    item:flag("GRENADE")
+    item:flag("ZERO_WEIGHT")
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "toilet_travel",
+        name = ccb.content.plural_text("travel toilet", "travel toilets"),
+        description = ccb.content.text("A portable plastic toilet, designed to use plastic bags for waste instead of plumbing."),
+        mass_milligrams = 1587000,
+        volume_ml = 27651,
+        longest_side_mm = 330,
+        price_cents = 2500,
+        price_postapoc_cents = 400,
+        symbol = ";",
+        color = "white",
+        replace_pockets = true,
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "toilet_travel_folded" },
+        menu_text = ccb.content.text("Collapse"),
+        message = ccb.content.text("You collapse the toilet for transport."),
+    }
+    item:container_pocket {
+        max_volume_ml = 22712,
+        max_weight_milligrams = 6000000,
+        watertight = false,
+        rigid = true,
+        open_container = true,
+        max_item_length_mm = 280,
+    }
+    item:tool()
+    content.add(item)
+end
+
+do
+    local item = content.Item {
+        id = "toilet_travel_folded",
+        name = ccb.content.plural_text("folded travel toilet", "folded travel toilets"),
+        description = ccb.content.text("A portable plastic toilet.  It has been collapsed for easy transport."),
+        mass_milligrams = 1587000,
+        volume_ml = 2000,
+        longest_side_mm = 280,
+        price_cents = 2500,
+        price_postapoc_cents = 400,
+        symbol = ";",
+        color = "white",
+    }
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "toilet_travel" },
+        menu_text = ccb.content.text("Collapse"),
+        message = ccb.content.text("You unfold the travel toilet."),
+    }
+    item:tool()
+    content.add(item)
+end

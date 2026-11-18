@@ -47,44 +47,6 @@
     "explode_in_fire": true
   },
   {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "notched_plank",
-    "category": "spare_parts",
-    "name": { "str": "notched plank" },
-    "description": "A quarter of a wooden plank with notches cut into it, used with a fire drill to create embers.",
-    "symbol": "/",
-    "color": "brown",
-    "looks_like": "2x4",
-    "weight": "610 g",
-    "volume": "1035 ml",
-    "longest_side": "30 cm",
-    "price": "5 USD",
-    "price_postapoc": "5 cent",
-    "material": [ "wood" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "notch": 24 } } ],
-    "flags": [ "NO_RELOAD", "NO_UNLOAD" ]
-  },
-  {
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "id": "notched_stick",
-    "category": "spare_parts",
-    "name": { "str": "notched stick" },
-    "description": "A wooden stick with notches cut into it, used with a fire drill to create embers.",
-    "symbol": "/",
-    "color": "brown",
-    "looks_like": "stick",
-    "weight": "375 g",
-    "volume": "625 ml",
-    "longest_side": "32 cm",
-    "price": "5 USD",
-    "price_postapoc": "5 cent",
-    "material": [ "wood" ],
-    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "notch": 10 } } ],
-    "flags": [ "NO_RELOAD", "NO_UNLOAD" ]
-  },
-  {
     "id": "fur_rollmat",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -362,63 +324,6 @@
     "flags": [ "FIRESTARTER", "ZOOM" ]
   },
   {
-    "id": "teargas_sprayer",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "tear gas sprayer" },
-    "description": "A pocket sized plastic canister filled with a pressurized tear gas spray, a step above oleoresin capsicum pepper spray in terms of potency.  Most commonly used by law enforcement and bear-wary hikers, but it became more common in recent months due to anxiety over the riots.  Probably won't do much against a zombie, but should give anything still breathing a rather nasty surprise and give you time to get away.  It contains enough spray for about twenty seconds of continuous application.",
-    "weight": "96 g",
-    "volume": "100 ml",
-    "longest_side": "9 cm",
-    "price": "10 USD",
-    "price_postapoc": "1 USD 50 cent",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "red",
-    "pocket_data": [
-      {
-        "pocket_type": "MAGAZINE",
-        "airtight": true,
-        "watertight": true,
-        "rigid": true,
-        "ammo_restriction": { "teargas_spray": 10 }
-      }
-    ],
-    "charges_per_use": 1,
-    "flags": [ "NO_UNLOAD", "NO_RELOAD", "BELT_CLIP" ],
-    "use_action": [ "MACE" ],
-    "tool_ammo": "teargas_spray"
-  },
-  {
-    "id": "c4_payload",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "C-4 payload", "//~": "NO_I18N" },
-    "description": { "str": "This is a dummy item used by c4 hacks.  You should never see it outside of debug.", "//~": "NO_I18N" },
-    "symbol": "*",
-    "color": "dark_gray",
-    "use_action": { "target": "c4armed", "target_timer": "10 seconds", "type": "transform" },
-    "flags": [ "TRADER_AVOID", "BOMB", "GRENADE", "ZERO_WEIGHT" ]
-  },
-  {
-    "id": "tear_gas_payload",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "category": "weapons",
-    "name": { "str": "tear gas payload", "//~": "NO_I18N" },
-    "description": { "str": "This is a dummy item used by tear gas hacks.  You should never see it outside of debug.", "//~": "NO_I18N" },
-    "symbol": "*",
-    "color": "dark_gray",
-    "use_action": {
-      "target": "tear_gas_payload_act",
-      "msg": "You pull the pin on the %s.",
-      "target_timer": "5 seconds",
-      "type": "transform"
-    },
-    "flags": [ "TRADER_AVOID", "BOMB", "GRENADE", "ZERO_WEIGHT" ]
-  },
-  {
     "id": "tear_gas_payload_act",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
@@ -470,54 +375,6 @@
     ],
     "use_action": { "menu_text": "Extend", "type": "transform", "target": "teleumbrella-extended", "msg": "You open your umbrella." },
     "melee_damage": { "bash": 3 }
-  },
-  {
-    "id": "toilet_travel",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "travel toilet" },
-    "description": "A portable plastic toilet, designed to use plastic bags for waste instead of plumbing.",
-    "weight": "1587 g",
-    "volume": "27651 ml",
-    "longest_side": "33 cm",
-    "price": "25 USD",
-    "price_postapoc": "4 USD",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "white",
-    "use_action": {
-      "menu_text": "Collapse",
-      "type": "transform",
-      "target": "toilet_travel_folded",
-      "msg": "You collapse the toilet for transport."
-    },
-    "pocket_data": [
-      {
-        "pocket_type": "CONTAINER",
-        "watertight": false,
-        "rigid": true,
-        "open_container": true,
-        "max_item_length": "28 cm",
-        "max_contains_volume": "22712 ml",
-        "max_contains_weight": "6 kg"
-      }
-    ]
-  },
-  {
-    "id": "toilet_travel_folded",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "folded travel toilet" },
-    "description": "A portable plastic toilet.  It has been collapsed for easy transport.",
-    "weight": "1587 g",
-    "volume": "2 L",
-    "longest_side": "28 cm",
-    "price": "25 USD",
-    "price_postapoc": "4 USD",
-    "material": [ "plastic" ],
-    "symbol": ";",
-    "color": "white",
-    "use_action": { "menu_text": "Collapse", "type": "transform", "target": "toilet_travel", "msg": "You unfold the travel toilet." }
   },
   {
     "id": "whistle_multitool",
