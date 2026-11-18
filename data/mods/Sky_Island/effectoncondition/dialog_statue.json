@@ -1,61 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_progresscheck",
-    "//": "Displays the player's progress and upgrades.",
-    "effect": [
-      {
-        "switch": { "math": [ "islandrank" ] },
-        "cases": [
-          { "case": 0, "effect": [ { "math": [ "islandrank_readable = 0" ] } ] },
-          { "case": 1, "effect": [ { "math": [ "islandrank_readable = 0" ] } ] },
-          { "case": 2, "effect": [ { "math": [ "islandrank_readable = 1" ] } ] },
-          { "case": 3, "effect": [ { "math": [ "islandrank_readable = 1" ] } ] },
-          { "case": 4, "effect": [ { "math": [ "islandrank_readable = 2" ] } ] }
-        ]
-      },
-      {
-        "switch": { "math": [ "hardmissions" ] },
-        "cases": [
-          { "case": 0, "effect": [ { "math": [ "hardmissions_readable = 1" ] } ] },
-          { "case": 10, "effect": [ { "math": [ "hardmissions_readable = 2" ] } ] },
-          { "case": 15, "effect": [ { "math": [ "hardmissions_readable = 3" ] } ] }
-        ]
-      },
-      { "math": [ "totalstarts = 1 + basementsunlocked + roofsunlocked + labsunlocked" ] },
-      { "math": [ "totalexits = 1 + bonusexits" ] },
-      {
-        "u_message": "Island Rank: <global_val:islandrank_readable> of 2\nExpedition Lengths: <global_val:longerraids> of 2\nExpedition Starts: <global_val:totalstarts> of 4\nBonus Pulses: <global_val:bonuspulses> of 7\nTarget reveal distance: <global_val:scoutingdistancetargets> of 22\nLanding reveal distance: <global_val:scoutingdistancelanding> of 48\nWarpcloak duration in seconds: <global_val:invistime> of 150\nSlaughter missions unlocked: <global_val:slaughterunlocked> of 1\nExits per expedition: <global_val:totalexits> of 5\nMissions per expedition: <global_val:bonusmissions> of 5\nMission tiers unlocked: <global_val:hardmissions_readable> of 3",
-        "popup": true
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_statcheck",
-    "//": "Displays the player's expedition stats.",
-    "effect": [
-      { "math": [ "readablepulselimit = 8 + bonuspulses" ] },
-      { "math": [ "readabledisintegrationlimit = 12 + bonuspulses" ] },
-      {
-        "u_message": "Total expeditions: <global_val:raidstotal>\nWins: <global_val:raidswon>\nLosses: <global_val:raidslost>\nMissions complete: <u_val:missionswon>\nSlaughter missions complete: <global_val:slaughterswon>\n\nCurrent difficulty settings:\nWarpsickness at: <global_val:readablepulselimit> pulses.\nDisintegration at: <global_val:readabledisintegrationlimit> pulses.\nDefault pulse length: <global_val:readablesicknessintervals> minutes.",
-        "popup": true
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_buildcheck",
-    "//": "Displays the player's current constructions.",
-    "effect": [
-      {
-        "u_message": "Entrance: <global_val:skyisland_build_base> of 1\nMain Room: <global_val:skyisland_build_bigroom> of 4",
-        "popup": true
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_difficultycheck",
     "effect": [
       {

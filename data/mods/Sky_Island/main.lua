@@ -20,6 +20,8 @@ require("raid_warp")
 
 require("raid_consumables")
 
+require("raid_services")
+
 require("raid_death")
 
 require("island_defenses")

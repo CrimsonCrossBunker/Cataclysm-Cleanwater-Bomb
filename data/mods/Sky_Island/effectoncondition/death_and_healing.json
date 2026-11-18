@@ -1,33 +1,6 @@
 [
   {
     "type": "effect_on_condition",
-    "id": "EOC_HEAL_NEWBIE",
-    "//": "Runs when using the HEAL function from the Heart of the Island.  Runs a checklist.  If you're under a certain amount of won raids, it heals you for free.  If you're over and you have 4 warp shards, it takes those and heals you.  If you can't pay, it does nothing.",
-    "condition": { "math": [ "islandrank == 0" ] },
-    "effect": [
-      { "run_eocs": [ "EOC_healall" ] },
-      {
-        "u_message": "The island's grace heals you at no charge.\nThis effect will only be free until you have survived 10 expeditions.",
-        "popup": true
-      }
-    ],
-    "false_effect": [
-      {
-        "if": { "u_has_items": { "item": "warptoken", "count": 4 } },
-        "then": [
-          {
-            "u_message": "The warp shards you were holding dissipate into a mist and swirl in tiny vortices around your body.  The price is paid, and you are healed.",
-            "popup": true
-          },
-          { "run_eocs": [ "EOC_healall" ] },
-          { "u_consume_item": "warptoken", "count": 4 }
-        ],
-        "else": [ { "u_message": "You must have the required payment on your person to be healed.", "popup": true } ]
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_healall",
     "//": "Just a simple EOC to bring all your HP to full, while not addressing most other health factors.  Can only be used at home.",
     "condition": { "not": { "u_has_trait": "awayfromhome" } },

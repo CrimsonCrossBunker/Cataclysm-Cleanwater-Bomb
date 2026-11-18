@@ -85,67 +85,6 @@
   },
   {
     "type": "talk_topic",
-    "id": "SKYISLAND_SERVICES",
-    "dynamic_line": "How may I help?",
-    "responses": [
-      {
-        "text": "Heal me.  (Free)",
-        "condition": { "math": [ "islandrank == 0" ] },
-        "effect": [ { "run_eocs": [ "EOC_HEAL_NEWBIE" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "Heal me.  (Costs 4 Warp Shards)",
-        "condition": { "math": [ "islandrank != 0" ] },
-        "effect": [ { "run_eocs": [ "EOC_HEAL_NEWBIE" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "End an active portal storm.",
-        "effect": [
-          { "run_eocs": [ "EOC_CANCEL_PORTAL_STORM" ] },
-          { "u_message": "The air crackles with static electricity, then stabilizes.", "popup": true }
-        ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "Save me from danger.",
-        "effect": [
-          { "math": [ "u_spell_level('island_hostile_eviction') = 1" ] },
-          { "math": [ "u_spell_level('island_close_tear_and_portal') = 1" ] },
-          {
-            "u_message": "You now have the power to close holes in existence and banish hostiles from the island until your next expedition.",
-            "popup": true
-          }
-        ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "View my expedition stats.",
-        "effect": [ { "run_eocs": [ "EOC_statcheck" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "View my upgrade stats.",
-        "effect": [ { "run_eocs": [ "EOC_progresscheck" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "View my construction stats.",
-        "effect": [ { "run_eocs": [ "EOC_buildcheck" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      {
-        "text": "Change my difficulty settings.",
-        "effect": [ { "run_eocs": [ "EOC_difficultycheck" ] } ],
-        "topic": "SKYISLAND_SERVICES"
-      },
-      { "text": "Let's return to discussing upgrades.", "topic": "SKYISLAND_UPGRADE" },
-      { "text": "That's all.  Goodbye.", "topic": "TALK_DONE" }
-    ]
-  },
-  {
-    "type": "talk_topic",
     "id": "SKYISLAND_UPGRADES_RAIDS",
     "dynamic_line": "By empowering the warp obelisk, you can expand the quality and variety of available expeditions.",
     "responses": [

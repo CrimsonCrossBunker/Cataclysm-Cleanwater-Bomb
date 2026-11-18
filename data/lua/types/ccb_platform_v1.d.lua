@@ -9236,6 +9236,13 @@ function CcbSpellsApi.effective_level(character, raw_spell_id) end
 ---@return CcbResult result value contains before and after snapshots, each absent when the spell is not known at that point.
 function CcbSpellsApi.set_level(character, spell, level) end
 
+---Set the experience of a known spell through native rules; unknown spells return not_known.
+---@param character GameHandle Exact live Character handle.
+---@param spell GameId GameId<spell>.
+---@param experience integer Native experience from zero through 1000000000.
+---@return CcbResult result `value` contains before and after spell snapshots.
+function CcbSpellsApi.set_experience(character, spell, experience) end
+
 ---Forget a known spell through native level removal.
 ---@param character GameHandle Exact live Character handle.
 ---@param spell GameId GameId<spell>.
