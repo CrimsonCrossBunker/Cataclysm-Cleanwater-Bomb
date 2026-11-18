@@ -1,16 +1,9 @@
-#include "map_viewpoint.h"
 #include "ranged.h"
-#include "ranged_actions.h"
-#include "sling.h"
-#include "mp_gamestate.h"
-#include "mp_client_conn.h"
-#include "fault.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
-#include <coordinates.h>
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
@@ -38,6 +31,7 @@
 #include "character.h"
 #include "character_id.h"
 #include "color.h"
+#include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
@@ -50,6 +44,7 @@
 #include "event_bus.h"
 #include "explosion.h"
 #include "explosion_light.h"
+#include "fault.h"
 #include "flag.h"
 #include "game.h"
 #include "game_constants.h"
@@ -68,13 +63,15 @@
 #include "magic_enchantment.h"
 #include "magic_type.h"
 #include "map.h"
-#include "map_scale_constants.h"
+#include "map_viewpoint.h"
 #include "mapdata.h"
 #include "math_defines.h"
 #include "memory_fast.h"
 #include "messages.h"
 #include "monster.h"
 #include "move_mode.h"
+#include "mp_client_conn.h"
+#include "mp_gamestate.h"
 #include "mtype.h"
 #include "npc.h"
 #include "options.h"
@@ -84,10 +81,12 @@
 #include "pocket_type.h"
 #include "point.h"
 #include "projectile.h"
+#include "ranged_actions.h"
 #include "ret_val.h"
 #include "riding_config.h"
 #include "rng.h"
 #include "skill.h"
+#include "sling.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "translation.h"

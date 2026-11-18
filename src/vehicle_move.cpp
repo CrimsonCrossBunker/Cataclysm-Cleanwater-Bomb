@@ -1,6 +1,4 @@
 #include "vehicle.h" // IWYU pragma: associated
-#include "vehicle_control.h"
-#include "character_action_guard.h"
 
 #include <algorithm>
 #include <array>
@@ -17,6 +15,7 @@
 #include "cata_assert.h"
 #include "cata_utility.h"
 #include "character.h"
+#include "character_action_guard.h"
 #include "coordinates.h"
 #include "creature.h"
 #include "creature_tracker.h"
@@ -32,7 +31,6 @@
 #include "line.h"
 #include "map.h"
 #include "map_iterator.h"
-#include "map_scale_constants.h"
 #include "mapdata.h"
 #include "material.h"
 #include "messages.h"
@@ -40,6 +38,7 @@
 #include "options.h"
 #include "point.h"
 #include "rng.h"
+#include "safe_reference.h"
 #include "sounds.h"
 #include "string_formatter.h"
 #include "tileray.h"
@@ -49,6 +48,8 @@
 #include "units.h"
 #include "units_utility.h"
 #include "veh_type.h"
+#include "vehicle_control.h"
+#include "vehicle_turning.h"
 #include "vpart_position.h"
 #include "vpart_range.h"
 
