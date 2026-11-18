@@ -1,3 +1,5 @@
+require("region_settings")
+
 require("dimensions")
 
 require("snippets")

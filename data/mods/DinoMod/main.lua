@@ -1,3 +1,5 @@
+require("region_settings")
+
 require("vitamins")
 
 require("snippets")

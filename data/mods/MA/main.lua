@@ -1,3 +1,5 @@
+require("region_settings")
+
 local content = require("ccb").content
 
 local function add_city(options)

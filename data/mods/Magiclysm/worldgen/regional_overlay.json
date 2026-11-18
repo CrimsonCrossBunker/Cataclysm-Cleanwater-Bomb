@@ -1,14 +1,5 @@
 [
   {
-    "type": "region_settings_city",
-    "id": "default",
-    "copy-from": "default",
-    "extend": {
-      "houses": [ [ "house_technomancer", 20 ], [ "house_elf_01", 50 ], [ "wizard_tower_1", 10 ], [ "wizard_tower_2", 20 ] ],
-      "shops": [ [ "magiclysm_augmentation_clinic", 100 ], [ "magic_shop", 100 ], [ "used_bookstore", 225 ], [ "magic_academy", 150 ] ]
-    }
-  },
-  {
     "type": "region_terrain_furniture",
     "id": "default_t_region_groundcover_swamp",
     "copy-from": "default_t_region_groundcover_swamp",

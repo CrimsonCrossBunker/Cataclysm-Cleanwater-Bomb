@@ -141,14 +141,5 @@
         "ravine_bottom_forest"
       ]
     }
-  },
-  {
-    "type": "region_settings",
-    "id": "default",
-    "copy-from": "default",
-    "cities": "no_cities",
-    "highways": null,
-    "place_roads": false,
-    "feature_flag_settings": { "blacklist": [ "LAB", "MAN_MADE", "MILITARY", "URBAN", "FARM", "EXODII", "EXTRADIMENSIONAL" ], "whitelist": [  ] }
   }
 ]

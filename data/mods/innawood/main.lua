@@ -1,3 +1,5 @@
+require("region_settings")
+
 local ccb = require("ccb")
 local content = ccb.content
 

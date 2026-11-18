@@ -1,3 +1,5 @@
+require("region_settings")
+
 require("dimensions")
 
 local ccb = require("ccb")

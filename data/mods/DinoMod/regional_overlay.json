@@ -118,11 +118,5 @@
         [ "mx_portal_dino_europe", 3 ]
       ]
     }
-  },
-  {
-    "type": "region_settings_city",
-    "id": "default",
-    "copy-from": "default",
-    "extend": { "parks": [ [ "dinozoo", 25 ] ] }
   }
 ]

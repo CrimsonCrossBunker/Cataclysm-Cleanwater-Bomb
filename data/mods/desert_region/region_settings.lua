@@ -1,0 +1,36 @@
+local content = require("ccb").content
+
+content.replace(content.RegionSettings {
+    id = "default",
+    extends = "default",
+    ocean = false,
+    highways = false,
+    default_oter = {
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "open_air",
+        "field",
+        "sandstone",
+        "sandstone",
+        "empty_rock",
+        "empty_rock",
+        "deep_rock",
+        "deep_rock",
+        "deep_rock",
+        "deep_rock",
+        "deep_rock",
+        "deep_rock",
+    },
+    default_groundcover = { { "t_region_groundcover", 1 } },
+    feature_flag_settings = {
+        blacklist = { "WASP", "BEE", "ANT", "FUNGAL", "TRIFFID", "FARM", "EXTRADIMENSIONAL" },
+        whitelist = {},
+    },
+})

@@ -27,29 +27,6 @@
     "forest_threshold_limit": 0.6
   },
   {
-    "type": "region_settings_city",
-    "id": "default",
-    "copy-from": "default",
-    "//": "Increased hunting store chance, decreased gun store/mil surplus chances.",
-    "extend": {
-      "shops": [
-        [ "s_hunting", 300 ],
-        [ "s_gun_a", 350 ],
-        [ "s_gun_b", 150 ],
-        [ "mil_surplus", 20 ],
-        [ "mil_surplus_1", 20 ],
-        [ "mil_surplus_2", 20 ]
-      ]
-    }
-  },
-  {
-    "type": "region_settings",
-    "id": "default",
-    "copy-from": "default",
-    "urbanity_increase": [ -1, 0, 0, -1 ],
-    "feature_flag_settings": { "whitelist": [ "CLASSIC" ] }
-  },
-  {
     "type": "region_terrain_furniture",
     "id": "default_t_region_tree_forest_dense",
     "ter_id": "t_region_tree_forest_dense",
