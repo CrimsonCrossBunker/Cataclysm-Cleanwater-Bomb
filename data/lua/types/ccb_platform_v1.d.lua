@@ -5916,7 +5916,13 @@ function CcbPlatformContent.MathFunction(options) end
 ---@return MissionDefinition
 function CcbPlatformContent.Mission(options) end
 
+---@class MutationActivationPayload
+---@field character GameHandle Exact activating Character.
+---@field mutation GameId Native mutation ID.
+
 ---@class MutationDefinitionOptions
+---@field on_activate? string Registered handler called after native activation costs with a MutationActivationPayload. Requires active=true.
+---@field activation_stays_on? boolean Keep the mutation powered after on_activate. Defaults to false.
 ---@field id string
 ---@field name string|LocalizedText
 ---@field description string|LocalizedText

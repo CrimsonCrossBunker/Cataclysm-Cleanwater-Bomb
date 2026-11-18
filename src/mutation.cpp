@@ -851,8 +851,7 @@ void Character::activate_cached_mutation( const trait_id &mut )
     map &here = get_map();
 
     const mutation_branch &mdata = mut.obj();
-    trait_data &tdata = cached_mutations[mut];
-    const bool was_powered = tdata.powered;
+    trait_data &initial = cached_mutations[mut];
     int cost = mdata.cost;
     // You can take yourself halfway to Near Death levels of hunger/thirst.
     // Sleepiness can go to Exhausted.
@@ -864,13 +863,13 @@ void Character::activate_cached_mutation( const trait_id &mut )
     }
 
     trait_flag_cache.clear();
-    if( tdata.powered && tdata.charge > 0_turns ) {
+    if( initial.powered && initial.charge > 0_turns ) {
         // Already-on units just lose a bit of charge
-        tdata.charge -= 1_turns;
+        initial.charge -= 1_turns;
     } else {
         // Not-on units, or those with zero charge, have to pay the power cost
         if( mdata.cooldown > 0_turns ) {
-            tdata.charge = mdata.cooldown - 1_turns;
+            initial.charge = mdata.cooldown - 1_turns;
         }
         if( mdata.hunger ) {
             // burn some energy
@@ -888,30 +887,38 @@ void Character::activate_cached_mutation( const trait_id &mut )
         if( mdata.stamina ) {
             mod_stamina( -cost );
         }
-        tdata.powered = true;
+        initial.powered = true;
         recalc_sight_limits();
-    }
-
-    if( !was_powered && tdata.powered ) {
     }
 
     if( !mut->enchantments.empty() ) {
         recalculate_enchantment_cache();
     }
 
-    if( !mut->activated_eocs.empty() ) {
-        for( const effect_on_condition_id &eoc : mut->activated_eocs ) {
+    if( !mdata.activated_eocs.empty() || mdata.platform_on_activate ) {
+        for( const effect_on_condition_id &eoc : mdata.activated_eocs ) {
             dialogue d( get_talker_for( *this ), nullptr );
             d.set_value( "this", mut.str() );
             eoc->activate_activation_only( d, "a mutation activation", "mutation being activated", "mutation" );
         }
-        // if the activation EOCs are not just setup for processing then turn the mutation off
-        tdata.powered = mut->activated_is_setup;
+        if( mdata.platform_on_activate ) {
+            mdata.platform_on_activate( *this );
+        }
+        const auto current = cached_mutations.find( mut );
+        if( current == cached_mutations.end() ) {
+            return;
+        }
+        current->second.powered = mdata.activated_is_setup;
     }
     cata::lua_platform::dispatch_native_hook( "on_mutation_activated", {
         { "character", static_cast<const Character *>( this ) },
         { "mutation", cata::lua_platform::native_callback_id{ "mutation", mut.str() } }
     } );
+    const auto current = cached_mutations.find( mut );
+    if( current == cached_mutations.end() ) {
+        return;
+    }
+    trait_data &tdata = current->second;
 
     if( mdata.transform ) {
         const cata::value_ptr<mut_transform> trans = mdata.transform;

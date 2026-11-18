@@ -1810,6 +1810,32 @@ void invoke_mission_phase_handler(
     }
 }
 
+void invoke_mutation_activation_handler(
+    const std::string_view mod_id, const std::string_view mutation_id,
+    const std::string_view handler_id, Character &character )
+{
+    const std::shared_ptr<runtime> owner = find_active_runtime( mod_id );
+    if( !owner || !owner->world_is_ready ) {
+        return;
+    }
+    const auto handler = owner->handlers.find( std::string( handler_id ) );
+    if( handler == owner->handlers.end() || owner->callback_depth >= 16 ) {
+        DebugLog( D_ERROR, D_MAIN ) << "Lua-first mutation activation unavailable for '"
+                                    << mod_id << ':' << handler_id << "'";
+        return;
+    }
+    sol::table payload = platform_callback_payload( *owner, {
+        { "character", static_cast<const Character *>( &character ) },
+        { "mutation", cata::lua_platform::native_callback_id{ "mutation", std::string( mutation_id ) } }
+    } );
+    sol::protected_function callback = handler->second.callback;
+    callback_scope guard( *owner, &character );
+    const sol::protected_function_result result = callback( payload );
+    if( !result.valid() ) {
+        report_callback_error( *owner, handler_id, result );
+    }
+}
+
 std::optional<bool> invoke_mutation_condition_handler(
     const std::string_view mod_id, const std::string_view mutation_id,
     const std::string_view handler_id, const const_dialogue &dialogue )

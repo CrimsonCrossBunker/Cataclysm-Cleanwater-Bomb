@@ -1085,6 +1085,8 @@ struct mutation_definition_data {
     std::optional<mutation_transform_definition_data> transform;
     std::optional<mutation_personality_definition_data> personality;
     authored_text activation_message;
+    std::string activation_handler;
+    bool activation_stays_on = false;
     std::string scent_type;
     std::string spawn_item;
     authored_text spawn_item_message;
@@ -3575,6 +3577,8 @@ void creatures_content_transaction::install_lua_api( sol::state &lua, sol::table
         definition->dummy = options.get_or( "dummy", false );
         definition->activation_message = read_text_option( options, "activation_message", {},
                                          "mutation activation message" );
+        definition->activation_handler = options.get_or( "on_activate", std::string() );
+        definition->activation_stays_on = options.get_or( "activation_stays_on", false );
         definition->scent_type = options.get_or( "scent_type", std::string() );
         definition->spawn_item = options.get_or( "spawn_item", std::string() );
         definition->spawn_item_message = read_text_option( options, "spawn_item_message", {},
@@ -4494,6 +4498,11 @@ bool creatures_content_transaction::validate( const runtime &owner_runtime,
         }
         for( const auto &entry : pimpl_->mutations ) {
             const auto &definition = *entry.definition;
+            if( !definition.activation_handler.empty() &&
+                ( !definition.active || owner_runtime.handlers.count( definition.activation_handler ) == 0 ) ) {
+                throw std::runtime_error( "mutation '" + definition.id +
+                                          "' requires active=true and a registered activation handler" );
+            }
             for( const std::string &id : definition.prereqs ) {
                 if( !mutation_exists( id ) ) {
                     throw std::runtime_error( "mutation '" + definition.id +
@@ -5680,6 +5689,13 @@ void creatures_content_transaction::impl::apply_mutation()
         native.activation_msg = source.activation_message.empty() ?
                                 no_translation( "You activate your %s." ) :
                                 source.activation_message.native();
+        if( !source.activation_handler.empty() ) {
+            native.activated_is_setup = source.activation_stays_on;
+            native.platform_on_activate = [owner = this->owner, mutation = source.id,
+                                             handler = source.activation_handler]( Character & character ) {
+                detail::invoke_mutation_activation_handler( owner, mutation, handler, character );
+            };
+        }
         if( !source.scent_type.empty() ) {
             native.scent_typeid = scenttype_id( source.scent_type );
         }
@@ -7149,6 +7165,11 @@ void creatures_content_transaction::append_fingerprint(
             hash_part( state, value.description );
             hash_part( state, "activation_message" );
             hash_part( state, value.activation_message );
+            if( !value.activation_handler.empty() ) {
+                hash_part( state, "on_activate" );
+                hash_part( state, value.activation_handler );
+                hash_part( state, value.activation_stays_on ? "stays_on" : "one_shot" );
+            }
             if( value.transform ) {
                 hash_part( state, "transform_message" );
                 hash_part( state, value.transform->message );

@@ -458,6 +458,9 @@ void invoke_mission_phase_handler(
     std::string_view mod_id, std::string_view mission_type,
     std::string_view phase, std::string_view handler_id,
     mission *active_mission, Character &character );
+void invoke_mutation_activation_handler(
+    std::string_view mod_id, std::string_view mutation_id,
+    std::string_view handler_id, Character &character );
 std::optional<bool> invoke_mutation_condition_handler(
     std::string_view mod_id, std::string_view mutation_id,
     std::string_view handler_id, const const_dialogue &dialogue );

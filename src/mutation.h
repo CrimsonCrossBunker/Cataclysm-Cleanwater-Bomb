@@ -296,7 +296,8 @@ struct mutation_branch {
         std::map<mtype_id, int> moncams;
         /** effect_on_conditions triggered when this mutation activates */
         std::vector<effect_on_condition_id> activated_eocs;
-        // if the above activated eocs should be run without turning on the mutation
+        std::function<void( Character & )> platform_on_activate;
+        // Keep the mutation powered after its activation actions.
         bool activated_is_setup = false;
         /** effect_on_conditions triggered while this mutation is active */
         std::vector<effect_on_condition_id> processed_eocs;
