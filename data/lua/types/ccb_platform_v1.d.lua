@@ -9628,10 +9628,11 @@ function CcbCharactersApi.hp(character, body_part) end
 
 ---Assign raw HP directly without healing, affliction removal or a maximum-HP clamp.
 ---@param character GameHandle Exact live Character.
----@param body_part GameId GameId<body_part> present on the Character.
+---@param body_part GameId Registered GameId<body_part>; must be present unless native_fallback is true.
 ---@param hp integer Native signed-int HP value.
+---@param native_fallback? boolean Use the native best-match anatomy lookup, including equivalent or secondary parts.
 ---@return CcbResult result value contains body_part, before, after, maximum and changed.
-function CcbCharactersApi.set_hp(character, body_part, hp) end
+function CcbCharactersApi.set_hp(character, body_part, hp, native_fallback) end
 
 ---Read the native raw HP sum for all, major or minor body parts.
 ---@param character GameHandle Exact live Character.
@@ -11341,6 +11342,18 @@ function CcbNeedsApi.set_vitamin(character, id, amount) end
 ---@param delta integer Signed change to raw pain.
 ---@return CcbResult result `value` is the updated raw pain.
 function CcbNeedsApi.modify_raw_pain(character, delta) end
+
+---@class CcbHealthDeltas
+---@field lifestyle? integer Native lifestyle delta within -200..200.
+---@field daily_health? integer Daily health delta within -200..200; requires daily_health_cap.
+---@field daily_health_cap? integer Native daily health cap within -200..200; requires daily_health.
+---@field health_tally? integer Native health tally delta within -1000000..1000000.
+
+---Apply the supplied health adjustments through native Character setters.
+---@param character GameHandle Exact live Character handle.
+---@param deltas CcbHealthDeltas At least one adjustment must be supplied.
+---@return CcbResult result `value` contains before and after health snapshots.
+function CcbNeedsApi.modify_health(character, deltas) end
 
 ---Adjust stored calories through native calorie accounting.
 ---@param character GameHandle Exact live Character handle.
@@ -14366,6 +14379,14 @@ function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 ---@param options? CcbMonsterPopulationOptions
 ---@return CcbResult result value contains native tracked spawned and visible counts.
 function CcbSpawnsApi.population(monster_type, position, options) end
+
+---Choose a loaded hostile monster near the avatar and place a hallucination of its type near position.
+---One candidate uses no selection draw. Placement uses native randomized searches 1..10 tiles from position.
+---@param position TripointCoord Loaded absolute map-square center.
+---@param target_range integer Maximum native distance from the avatar when selecting candidates.
+---@param lifespan TimeDuration Native lifetime within 0 turns..10000 days; zero uses native defaults.
+---@return boolean spawned True when a hallucination was placed.
+function CcbSpawnsApi.hostile_hallucination(position, target_range, lifespan) end
 
 ---@class CcbNpcSpawnOptions
 ---@field min_radius? integer Native placement radius, 0..60; defaults to zero.

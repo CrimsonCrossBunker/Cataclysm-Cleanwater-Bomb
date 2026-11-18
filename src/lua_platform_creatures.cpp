@@ -1159,11 +1159,14 @@ void require_id_kind( const script_game_id &id, const std::string &kind,
 
 bodypart_id character_body_part(
     const Character &character, const script_game_id &requested,
-    const std::string &api_name )
+    const std::string &api_name, const bool native_fallback = false )
 {
     require_id_kind( requested, "body_part", api_name );
     const bodypart_id result =
         bodypart_str_id( requested.value() ).id();
+    if( native_fallback ) {
+        return result;
+    }
     const std::vector<bodypart_id> available =
         character.get_all_body_parts();
     if( std::find( available.begin(), available.end(), result ) ==
@@ -1376,6 +1379,7 @@ sol::table character_enchantment_value(
 sol::table set_character_hp(
     sol::this_state lua, const game_handle &handle,
     const script_game_id &requested_body_part, const int requested_hp,
+    const bool native_fallback,
     const game_handle_runtime &runtime_generation,
     const std::size_t world_generation )
 {
@@ -1389,7 +1393,7 @@ sol::table set_character_hp(
     }
     const bodypart_id part = character_body_part(
                                  *character, requested_body_part,
-                                 "services.characters.set_hp" );
+                                 "services.characters.set_hp", native_fallback );
     const int before = character->get_part_hp_cur( part );
     character->set_part_hp_cur( part, requested_hp );
     const int after = character->get_part_hp_cur( part );
@@ -5130,10 +5134,10 @@ void install_creature_api(
         "set_hp",
         [current_runtime_generation, current_world_generation, require_write](
             sol::this_state lua_state, const game_handle & handle,
-    const script_game_id & body_part, const int hp ) {
+    const script_game_id & body_part, const int hp, const sol::optional<bool> &native_fallback ) {
         require_write();
         return set_character_hp(
-                   lua_state, handle, body_part, hp,
+                   lua_state, handle, body_part, hp, native_fallback.value_or( false ),
                    current_runtime_generation(),
                    current_world_generation() );
     } );

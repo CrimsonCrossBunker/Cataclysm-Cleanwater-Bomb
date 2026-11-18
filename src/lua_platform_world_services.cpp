@@ -17,6 +17,7 @@ extern "C" {
 #include <vpart_position.h>
 #include <vpart_range.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -627,6 +628,37 @@ sol::table spawn_monster_population(
     result["spawned"] = spawned;
     result["visible"] = visible;
     return make_game_value_result( state, sol::make_object( state, std::move( result ) ) );
+}
+
+bool spawn_hostile_hallucination(
+    const script_tripoint_coord &position, const int target_range,
+    const script_time_duration &requested_lifespan )
+{
+    constexpr std::string_view api_name = "services.spawns.hostile_hallucination";
+    const time_duration duration = requested_lifespan.to_native();
+    if( duration < 0_turns || duration > maximum_hallucination_lifespan ) {
+        throw std::invalid_argument(
+            "services.spawns.hostile_hallucination lifespan must be within 0 turns..10000 days" );
+    }
+    map &here = require_active_map( api_name );
+    const tripoint_bub_ms center = require_loaded_position( here, position, api_name );
+    const avatar &observer = get_avatar();
+    const tripoint_bub_ms origin = observer.pos_bub();
+    const std::vector<Creature *> candidates = g->get_creatures_if( [&]( const Creature & candidate ) {
+        return candidate.is_monster() && candidate.pos_bub() != origin &&
+               std::round( rl_dist_exact( origin, candidate.pos_bub() ) ) <= target_range &&
+               observer.attitude_to( candidate ) == Creature::Attitude::HOSTILE;
+    } );
+    if( candidates.empty() ) {
+        return false;
+    }
+    const int choice = candidates.size() == 1 ? 0 : rng( 0, candidates.size() - 1 );
+    const mtype_id type = candidates[choice]->as_monster()->type->id;
+    const std::optional<time_duration> lifespan = duration == 0_turns ?
+            std::nullopt : std::optional<time_duration>( duration );
+    tripoint_bub_ms point;
+    return g->find_nearby_spawn_point( center, type, 1, 10, point, false, false, false ) &&
+           g->spawn_hallucination( point, type, lifespan );
 }
 
 sol::table spawn_configured_monster(
@@ -3025,6 +3057,14 @@ void install_game_world_service_api(
         require_write();
         require_active_callback( has_active_callback, "services.spawns.population" );
         return spawn_monster_population( lua, type, position, options );
+    } );
+    spawns.set_function(
+        "hostile_hallucination",
+    [require_write, has_active_callback]( const script_tripoint_coord & position, const int range,
+    const script_time_duration & lifespan ) {
+        require_write();
+        require_active_callback( has_active_callback, "services.spawns.hostile_hallucination" );
+        return spawn_hostile_hallucination( position, range, lifespan );
     } );
     spawns.set_function(
         "monster_configured",
