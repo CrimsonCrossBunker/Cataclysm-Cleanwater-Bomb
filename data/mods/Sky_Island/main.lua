@@ -30,6 +30,8 @@ require("effects")
 
 require("mutations")
 
+require("monster_definitions")
+
 require("monster_groups")
 
 require("expedition_timer")

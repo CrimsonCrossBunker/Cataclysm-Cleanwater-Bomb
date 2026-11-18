@@ -1,3 +1,5 @@
+require("monster_definitions")
+
 require("item_migrations")
 
 require("item_blacklists")

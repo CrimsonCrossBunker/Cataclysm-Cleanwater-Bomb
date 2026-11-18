@@ -266,5 +266,10 @@ do
     group:group("pocket_cigar", 15)
     group:group("misc_smoking_legal", 30)
     group:item("dog_tag", 40)
-    content.add(group)
+    -- No Hope supplies the same drop table for the shared monster.
+    if content.is_mod_active("no_hope") then
+        content.replace(group)
+    else
+        content.add(group)
+    end
 end
