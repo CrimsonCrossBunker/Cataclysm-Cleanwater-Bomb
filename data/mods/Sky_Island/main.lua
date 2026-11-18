@@ -41,3 +41,5 @@ require("island_start")
 require("island_legacy_load")
 
 require("island_heart")
+
+require("island_construction_repairs")
