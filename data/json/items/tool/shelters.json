@@ -1,22 +1,5 @@
 [
   {
-    "id": "damaged_shelter_kit",
-    "type": "ITEM",
-    "subtypes": [ "TOOL" ],
-    "name": { "str": "damaged shelter kit" },
-    "description": "A disassembled small shelter made of sticks and skins.  It's been damaged and needs to be repaired before you can set it up.",
-    "weight": "1360 g",
-    "volume": "7500 ml",
-    "longest_side": "90 cm",
-    "price": "20 USD",
-    "price_postapoc": "50 cent",
-    "to_hit": { "grip": "none", "length": "short", "surface": "any", "balance": "clumsy" },
-    "material": [ "wood", "leather" ],
-    "symbol": ";",
-    "color": "brown",
-    "melee_damage": { "bash": 4 }
-  },
-  {
     "id": "large_tent_kit",
     "type": "ITEM",
     "subtypes": [ "TOOL" ],
