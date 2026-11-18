@@ -50,9 +50,11 @@ local function unfold(actor)
     end
 end
 
-local function register_spell(direction, name, description, index)
+local function register_hallway_trap(direction, name, description, index)
     local key = direction == 1 and "back" or "forward"
-    local handler = "lixa_" .. key .. "_" .. index
+    local suffix = key .. "_" .. index
+    local handler = "lixa_" .. suffix
+    local spell = "spell_LIXA_" .. suffix
     local variable = "LIXA_tp_" .. key
     local destination = "LIXA_" .. key .. "_tp_" .. index
 
@@ -73,7 +75,7 @@ local function register_spell(direction, name, description, index)
     end)
 
     content.add(content.Spell {
-        id = "spell_LIXA_" .. key .. "_" .. index,
+        id = spell,
         name = name,
         description = description,
         valid_targets = { "self", "hostile", "ally" },
@@ -85,9 +87,23 @@ local function register_spell(direction, name, description, index)
         min_aoe = 1,
         max_aoe = 1,
     }:lua_impact(handler))
+
+    content.add(content.Trap {
+        id = "tr_LIXA_" .. suffix,
+        name = "",
+        color = "green",
+        symbol = "#",
+        visibility = 99,
+        always_invisible = true,
+        avoidance = 99,
+        difficulty = 99,
+        trap_radius = 0,
+        action = "spell",
+        spell = spell,
+    }:flag("UNDODGEABLE"):flag("UNCONSUMED"))
 end
 
 for index = 1, 16 do
-    register_spell(1, "LIXA Back Teleport", "Teleports the victim backwards.", index)
-    register_spell(2, "LIXA Forward Teleport", "Teleports the victim forwards.", index)
+    register_hallway_trap(1, "LIXA Back Teleport", "Teleports the victim backwards.", index)
+    register_hallway_trap(2, "LIXA Forward Teleport", "Teleports the victim forwards.", index)
 end
