@@ -13,57 +13,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_EARLY_MESSAGES",
-    "recurrence": [ "1 minutes", "30 minutes" ],
-    "global": true,
-    "condition": {
-      "and": [ { "is_weather": "early_portal_storm" }, "u_can_see", "u_is_outside", { "not": { "u_has_effect": "sleep" } } ]
-    },
-    "deactivate_condition": { "not": { "is_weather": "early_portal_storm" } },
-    "effect": {
-      "switch": { "math": [ "distance('u', portal_storm_center)" ] },
-      "cases": [
-        {
-          "case": 0,
-          "effect": {
-            "if": "u_is_outside",
-            "then": {
-              "if": "is_day",
-              "then": { "u_message": "PORTAL_STORM_DAY_MESSAGES_3", "snippet": true },
-              "else": { "u_message": "PORTAL_STORM_NIGHT_MESSAGES_3", "snippet": true }
-            },
-            "else": { "u_message": "PORTAL_STORM_INDOOR_MESSAGES_3", "snippet": true }
-          }
-        },
-        {
-          "case": { "global_val": "portal_storm_distance", "default": 50 },
-          "effect": {
-            "if": "u_is_outside",
-            "then": {
-              "if": "is_day",
-              "then": { "u_message": "PORTAL_STORM_DAY_MESSAGES_2", "snippet": true },
-              "else": { "u_message": "PORTAL_STORM_NIGHT_MESSAGES_2", "snippet": true }
-            },
-            "else": { "u_message": "PORTAL_STORM_INDOOR_MESSAGES_2", "snippet": true }
-          }
-        },
-        {
-          "case": { "global_val": "portal_storm_near_distance", "default": 100 },
-          "effect": {
-            "if": "u_is_outside",
-            "then": {
-              "if": "is_day",
-              "then": { "u_message": "PORTAL_STORM_DAY_MESSAGES_1", "snippet": true },
-              "else": { "u_message": "PORTAL_STORM_NIGHT_MESSAGES_1", "snippet": true }
-            },
-            "else": { "u_message": "PORTAL_STORM_INDOOR_MESSAGES_1", "snippet": true }
-          }
-        }
-      ]
-    }
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CAUSE_EARLY_PORTAL_STORM",
     "global": true,
     "//": "This sets up all the variables for the start of an early portal storm.",
@@ -202,65 +151,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_EFFECTS_PASSIVE",
-    "//": "Passive effects not directly dangerous to the player.",
-    "recurrence": [ "20 seconds", "55 seconds" ],
-    "global": true,
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "and": [ { "is_weather": "distant_portal_storm" }, { "x_in_y_chance": { "x": 5, "y": 10 } } ] },
-            { "and": [ { "is_weather": "near_portal_storm" }, { "x_in_y_chance": { "x": 8, "y": 10 } } ] },
-            { "is_weather": "portal_storm" }
-          ]
-        },
-        { "math": [ "portal_dungeon_level == 0" ] }
-      ]
-    },
-    "deactivate_condition": { "not": { "is_weather": "portal_storm" } },
-    "effect": {
-      "weighted_list_eocs": [
-        [ "EOC_PORTAL_GRASS_CHANGE", 10 ],
-        [ "EOC_PORTAL_LIGHT", 2 ],
-        [ "EOC_PORTAL_ABSENCE", 4 ],
-        [ "EOC_PORTAL_IMPOSSIBLE_SHAPE", 5 ],
-        [ "EOC_PORTAL_FLATLANDER", 5 ],
-        [ "EOC_PORTAL_MEMORIES", 1 ],
-        [ "EOC_PORTAL_GIANT_APPENDAGE", 1 ],
-        [ "EOC_PORTAL_NPC", 1 ]
-      ]
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_EFFECTS_IRE",
-    "//": "Being outside generates IRE which can be spent on more dangerous entities.  The closer to the storm center the more likely IRE is",
-    "recurrence": [ "5 seconds", "20 seconds" ],
-    "global": true,
-    "condition": {
-      "and": [
-        {
-          "or": [
-            { "and": [ { "is_weather": "distant_portal_storm" }, { "x_in_y_chance": { "x": 3, "y": 10 } } ] },
-            { "and": [ { "is_weather": "near_portal_storm" }, { "x_in_y_chance": { "x": 7, "y": 10 } } ] },
-            { "is_weather": "portal_storm" }
-          ]
-        },
-        { "math": [ "portal_dungeon_level == 0" ] },
-        "u_is_outside",
-        { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_PORTAL_PROOF" }
-      ]
-    },
-    "deactivate_condition": {
-      "not": {
-        "or": [ { "is_weather": "distant_portal_storm" }, { "is_weather": "near_portal_storm" }, { "is_weather": "portal_storm" } ]
-      }
-    },
-    "effect": [ { "math": [ "u_ire++" ] }, { "u_message": "PORTAL_STORM_WITNESSED", "snippet": true } ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_EFFECTS_CENTER",
     "recurrence": [ "45 seconds", "1 minutes" ],
     "global": true,
@@ -276,77 +166,6 @@
     },
     "deactivate_condition": { "not": { "is_weather": "portal_storm" } },
     "effect": [ { "open_dialogue": { "topic": "TALK_PORTAL_STORM" } }, { "math": [ "talked_to_storm = 1" ] } ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_IMPOSSIBLE_SHAPE",
-    "effect": {
-      "u_spawn_monster": "mon_impossible_shape",
-      "real_count": 1,
-      "hallucination_count": 1,
-      "outdoor_only": true,
-      "min_radius": 3,
-      "max_radius": 20,
-      "lifespan": [ "1 minutes", "3 minutes" ],
-      "spawn_message": "You cannot remember how the impossible shape came to be here.  The pain in your head suggests that that's a good thing.",
-      "spawn_message_plural": "You cannot remember how the impossible shapes came to be here.  The pain in your head suggests that that's a good thing."
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_FLATLANDER",
-    "effect": {
-      "u_spawn_monster": "mon_flatlander",
-      "real_count": 1,
-      "hallucination_count": 1,
-      "outdoor_only": true,
-      "min_radius": 3,
-      "max_radius": 20,
-      "lifespan": [ "1 minutes", "3 minutes" ],
-      "spawn_message": "something glides into your field of vision out of thin air, slipping between the space between atoms.",
-      "spawn_message_plural": "several things glide into your field of vision out of thin air, slipping between the spaces between atoms."
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_GIANT_APPENDAGE",
-    "effect": {
-      "u_spawn_monster": "mon_giant_appendage",
-      "real_count": 1,
-      "hallucination_count": 3,
-      "outdoor_only": true,
-      "min_radius": 3,
-      "max_radius": 20,
-      "lifespan": [ "5 seconds", "45 seconds" ],
-      "spawn_message": "A gigantic limb tears its way into reality.",
-      "spawn_message_plural": "Gigantic limbs tear their way into reality around you."
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_MEMORIES",
-    "effect": {
-      "u_spawn_monster": "mon_memory",
-      "real_count": 10,
-      "hallucination_count": 10,
-      "outdoor_only": true,
-      "lifespan": [ "5 seconds", "2 minutes" ],
-      "spawn_message": "A flickering silhouette appears nearby.",
-      "spawn_message_plural": "Human silhouettes appear and surround you."
-    }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_ABSENCE",
-    "effect": {
-      "u_spawn_monster": "mon_absence",
-      "real_count": 1,
-      "outdoor_only": true,
-      "min_radius": 3,
-      "max_radius": 20,
-      "lifespan": [ "45 seconds", "5 minutes" ],
-      "spawn_message": "The very notion of empty space is made a cruel joke.  Nearby nothing becomes even less."
-    }
   },
   {
     "type": "effect_on_condition",
@@ -383,26 +202,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_PORTAL_LIGHT",
-    "//": "If its night make it bright, if its day make it dark.",
-    "effect": [
-      {
-        "if": "is_day",
-        "then": { "custom_light_level": 0, "length": [ "1 minutes", { "math": [ "ps_str * time(' 1 m')" ] } ] },
-        "else": { "custom_light_level": 125, "length": [ "1 minutes", { "math": [ "ps_str * time(' 1 m')" ] } ] }
-      },
-      {
-        "if": "u_is_outside",
-        "then": {
-          "if": "is_day",
-          "then": { "u_message": "The sun is snuffed out like a candle.", "type": "bad" },
-          "else": { "u_message": "Some of the stars grow so bright that they hurt to look at.", "type": "bad" }
-        }
-      }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_PORTAL_INCORPOREAL",
     "condition": { "and": [ { "test_eoc": "EOC_PORTAL_STORM_CONDITION_FLAG_PORTAL_PROOF" }, { "not": "u_driving" } ] },
     "effect": [
@@ -413,47 +212,6 @@
       },
       { "u_add_effect": "incorporeal", "duration": { "math": [ "ps_str * time(' 1 s')" ] } }
     ]
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_GRASS_CHANGE",
-    "global": true,
-    "effect": [
-      { "math": [ "ps_transform_radius = ps_str + 5" ] },
-      {
-        "u_location_variable": { "global_val": "grass_transform" },
-        "min_radius": 1,
-        "max_radius": 15,
-        "outdoor_only": true
-      },
-      {
-        "u_make_sound": "a high-pitched squeal.",
-        "target_var": { "global_val": "grass_transform" },
-        "volume": 60,
-        "type": "alert"
-      },
-      {
-        "u_transform_radius": { "global_val": "ps_transform_radius", "default": 5 },
-        "ter_furn_transform": "portal_grass_transform",
-        "target_var": { "global_val": "grass_transform" }
-      },
-      {
-        "u_transform_radius": { "global_val": "ps_transform_radius", "default": 5 },
-        "ter_furn_transform": "portal_alien_grass_transform",
-        "target_var": { "global_val": "grass_transform" },
-        "time_in_future": [ "30 seconds", "5 minutes" ]
-      }
-    ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "portal_grass_transform",
-    "terrain": [ { "result": [ "t_grass_alien" ], "valid_terrain": [ "t_grass" ] } ]
-  },
-  {
-    "type": "ter_furn_transform",
-    "id": "portal_alien_grass_transform",
-    "terrain": [ { "result": [ "t_grass" ], "valid_terrain": [ "t_grass_alien" ] } ]
   },
   {
     "type": "effect_on_condition",
@@ -844,22 +602,6 @@
     "type": "effect_on_condition",
     "id": "EOC_PORTAL_DUNGEON_PUNISHMENT_NARROW_VIEWPOINT",
     "effect": { "u_add_effect": "narrow_viewpoint", "duration": { "global_val": "ps_effect_length" } }
-  },
-  {
-    "type": "effect_on_condition",
-    "id": "EOC_PORTAL_NPC",
-    "effect": [
-      {
-        "u_spawn_npc": "portal_person",
-        "hallucination_count": 2,
-        "outdoor_only": true,
-        "min_radius": 3,
-        "max_radius": 5,
-        "lifespan": [ "1 minutes", "3 minutes" ],
-        "spawn_message": "A person steps nearby from somewhere else.",
-        "spawn_message_plural": "Several identical people walk nearby from nowhere."
-      }
-    ]
   },
   {
     "type": "effect_on_condition",

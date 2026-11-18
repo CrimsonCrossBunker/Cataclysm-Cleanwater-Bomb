@@ -159,6 +159,8 @@ require("inner_cabin_door")
 
 require("portal_active_effects")
 
+require("portal_passive_effects")
+
 require("highland_incense_content")
 
 require("highland_incense")
