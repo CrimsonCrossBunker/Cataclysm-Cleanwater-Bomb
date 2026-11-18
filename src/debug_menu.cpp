@@ -1874,7 +1874,7 @@ static void teleport_short()
     add_msg( _( "You teleport to point %s." ), new_pos.to_string() );
 }
 
-bool debug_menu::teleport_to_overmap( tripoint_abs_omt where )
+bool teleport_to_overmap( tripoint_abs_omt where )
 {
     if( north_america::elevation_active() ) {
         const float selected = north_america::altitude_at( where );
