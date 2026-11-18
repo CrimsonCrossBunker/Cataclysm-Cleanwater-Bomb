@@ -2853,9 +2853,12 @@ struct blacklist_definition_handle {
 
 struct map_extra_definition_data {
     std::string id;
-    std::string name;
-    std::string description;
+    detail::authored_text name;
+    detail::authored_text description;
     std::string generator_id;
+    map_extra_method generator_method = map_extra_method::null;
+    map_extra_visibility visibility = map_extra_visibility::none;
+    std::optional<std::pair<int, int>> z_levels;
     std::string symbol;
     std::string color;
     std::set<std::string> flags;
@@ -4742,9 +4745,28 @@ void content_transaction::install_lua_api( sol::state &lua, sol::table &ccb,
         }
         auto definition = std::make_shared<map_extra_definition_data>();
         definition->id = options.get_or( "id", std::string() );
-        definition->name = options.get_or( "name", std::string() );
-        definition->description = options.get_or( "description", std::string() );
+        definition->name = detail::read_singular_text( options["name"], {}, "MapExtra.name" );
+        definition->description = detail::read_singular_text( options["description"], {},
+                                  "MapExtra.description" );
         definition->generator_id = options.get_or( "generator_id", std::string() );
+        definition->generator_method = io::string_to_enum<map_extra_method>(
+                                           options.get_or( "generator_method", std::string( "null" ) ) );
+        definition->visibility = io::string_to_enum<map_extra_visibility>(
+                                     options.get_or( "autonote_visibility", std::string( "none" ) ) );
+        if( definition->generator_method != map_extra_method::null && definition->generator_id.empty() ) {
+            throw std::invalid_argument( "MapExtra generator_method requires a generator_id" );
+        }
+        if( const sol::optional<sol::table> levels =
+                options.get<sol::optional<sol::table>>( "z_levels" ) ) {
+            require_dense_array( *levels, "MapExtra.z_levels", 2, 2 );
+            const lua_Integer minimum = levels->raw_get<lua_Integer>( 1 );
+            const lua_Integer maximum = levels->raw_get<lua_Integer>( 2 );
+            if( minimum > maximum || minimum < std::numeric_limits<int>::min() ||
+                maximum > std::numeric_limits<int>::max() ) {
+                throw std::invalid_argument( "MapExtra.z_levels requires an ascending pair of integers" );
+            }
+            definition->z_levels.emplace( static_cast<int>( minimum ), static_cast<int>( maximum ) );
+        }
         definition->symbol = options.get_or( "symbol", std::string() );
         definition->color = options.get_or( "color", std::string() );
         return map_extra_definition_handle{
@@ -9016,9 +9038,13 @@ bool content_transaction::apply( std::string &error )
             const map_extra_definition_data &source = *entry.definition;
             map_extra native;
             native.id = id;
-            native.name_ = no_translation( source.name );
-            native.description_ = no_translation( source.description );
+            native.src.emplace_back( id, mod_id( pimpl_->owner ) );
+            native.name_ = source.name.native();
+            native.description_ = source.description.native();
             native.generator_id = source.generator_id;
+            native.generator_method = source.generator_method;
+            native.visibility = source.visibility;
+            native.min_max_zlevel_ = source.z_levels;
             if( !source.symbol.empty() ) {
                 native.symbol = UTF8_getch( source.symbol );
             }

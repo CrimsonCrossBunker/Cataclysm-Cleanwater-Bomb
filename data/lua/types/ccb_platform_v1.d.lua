@@ -3461,9 +3461,12 @@ function BlacklistDefinition:species(species_id) end
 
 ---@class MapExtraDefinitionOptions
 ---@field id string Stable map-extra id.
----@field name string Player-facing map-extra name.
----@field description? string Map-extra description.
----@field generator_id? string Native generator id; empty means no generator.
+---@field name string|LocalizedText Player-facing map-extra name.
+---@field description? string|LocalizedText Map-extra description.
+---@field generator_id? string ID in the selected native generator registry.
+---@field generator_method? 'null'|'map_extra_function'|'mapgen'|'update_mapgen' Defaults to `null`.
+---@field autonote_visibility? 'none'|'always'|'vague'|'outlines'|'details'|'full'|'same_tile' Defaults to `none`.
+---@field z_levels? integer[] Inclusive minimum and maximum z levels. Defaults to all levels.
 ---@field symbol? string Single map symbol character.
 ---@field color? string Native color name.
 
