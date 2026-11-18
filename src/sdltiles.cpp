@@ -4655,7 +4655,7 @@ void cata_cursesport::curses_drawwindow( const catacurses::window &w )
 
         // game::w_terrain can be drawn by the tilecontext.
         // skip the normal drawing code for it.
-        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) && get_map().z_origin() == 0 ) {
+        if( get_option<bool>( "RENDER3D_EXPERIMENTAL" ) ) {
             const SDL_FRect dest3d{
                 static_cast<float>( win->pos.x * fontwidth ),
                 static_cast<float>( win->pos.y * fontheight ),
