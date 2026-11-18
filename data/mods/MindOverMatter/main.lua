@@ -176,3 +176,5 @@ require("contemplation_recipes.telepathy_practice")
 require("contemplation_recipes.teleportation_practice")
 require("contemplation_recipes.vitakinesis_practice")
 require("contemplation_recipes.obsolete_recipes")
+
+require("psychic_research")

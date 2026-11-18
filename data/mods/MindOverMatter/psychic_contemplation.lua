@@ -3,6 +3,7 @@ local content = ccb.content
 local services = ccb.services
 local id = services.types.id
 local concentration = require("psychic_concentration")
+local training = require("psychic_training")
 
 local learning = "effect_psi_learning_new_power"
 local studying = "effect_psi_studying_power"
@@ -51,11 +52,6 @@ local function vitamin(character, name)
     return checked(services.needs.get_vitamin(character, id("vitamin", name)))
 end
 
-local function add_attunement(character, amount)
-    local next_value = math.modf(vitamin(character, "vitamin_psionic_drain") + amount)
-    checked(services.needs.set_vitamin(character, id("vitamin", "vitamin_psionic_drain"), next_value))
-end
-
 local function message(character, text_value, level)
     if character.subtype ~= "npc" then
         services.messages.add(text_value, level)
@@ -75,19 +71,6 @@ end
 
 local function set_focus(character, focus)
     checked(services.needs.set(character, { focus = focus }))
-end
-
-local function apply_learning_focus(character)
-    local focus = checked(services.needs.get(character)).focus
-    if focus >= 75 then
-        set_focus(character, focus - 50)
-    elseif focus >= 50 then
-        set_focus(character, focus - 25)
-    elseif focus >= 34 then
-        set_focus(character, focus - 10)
-    elseif focus >= 30 then
-        set_focus(character, focus - 5)
-    end
 end
 
 local function start_contemplating(character, new_power)
@@ -181,7 +164,7 @@ end, 1)
 ccb.runtime.handler(attunement_due, function(payload)
     local character = payload.character
     if has_effect(character, studying) then
-        add_attunement(character, services.random.native_int(0, 2))
+        training.add_attunement(character, services.random.native_int(0, 2))
         local kcal = 1.2 * number(character, selected_difficulty) * services.random.native_float(0.3, 1.7)
             * number(character, "nether_attunement_power_scaling")
         if intensity(character, "effect_nether_attunement_extra_kcal") > 0 then
@@ -253,7 +236,7 @@ ccb.runtime.handler(learn_due, function(payload)
             "You just couldn't manage to grasp the technique.  You'll have to try again."
         ))
     end
-    add_attunement(character, services.random.native_float(difficulty * 10, difficulty * 20))
+    training.add_attunement(character, services.random.native_float(difficulty * 10, difficulty * 20))
     checked(services.effects.remove(character, id("effect", learning)))
     checked(services.activities.cancel(character))
 end, 1)
@@ -276,7 +259,7 @@ ccb.runtime.handler(completion, function(payload)
                 queue(character, 180, 180, attunement_due)
             elseif recipe.learning == "discover" then
                 start_contemplating(character, true)
-                apply_learning_focus(character)
+                training.spend_focus(character)
                 local horizon = (number(character, selected_difficulty) + 2) * 60 * 60
                 local earliest = math.modf(horizon * 0.8)
                 local latest = math.modf(horizon * 1.2)
