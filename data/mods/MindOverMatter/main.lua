@@ -90,6 +90,9 @@ require("ammunition_types")
 
 require("ammo_effects")
 require("mutation_artifact")
+require("artifact_effects")
+require("artifact_spells")
+require("drained_crystal")
 
 require("tool_qualities")
 

@@ -652,18 +652,6 @@
   },
   {
     "type": "effect_on_condition",
-    "id": "EOC_DRAINED_MATRIX",
-    "effect": [
-      {
-        "u_message": "You gaze into the strange crystal and the light slowly grows brighter.  You become aware of your skin, of every cut and bruise and scrape, of the food sitting in your stomach and the air moving in and out of your lungs.  The sensation grows rapidly until your stomach feels like it will burst and every brush of clothing on your skin is like rasping sandpaper.  As the light fades from the crystal, a searing pains fills your head.",
-        "popup": true
-      },
-      { "u_add_effect": "psionic_overload", "duration": "1 hours" },
-      { "u_add_effect": "stunned", "duration": 10 }
-    ]
-  },
-  {
-    "type": "effect_on_condition",
     "id": "EOC_CORUSCATING_MATRIX",
     "condition": { "not": { "u_has_trait": "CANNOT_GAIN_PSIONICS" } },
     "effect": [
