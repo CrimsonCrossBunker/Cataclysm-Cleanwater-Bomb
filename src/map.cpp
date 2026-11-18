@@ -11442,7 +11442,7 @@ void map::grow_plant( const tripoint_bub_ms &p )
     grow_plant( p, &get_avatar() );
 }
 
-void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
+void map::grow_plant( const tripoint_bub_ms &p, Character *grower, bool finish_crop_interval )
 {
     const furn_t &initial_furn = this->furn( p ).obj();
     if( !initial_furn.has_flag( ter_furn_flag::TFLAG_PLANT ) ) {
@@ -11495,7 +11495,7 @@ void map::grow_plant( const tripoint_bub_ms &p, Character *grower )
     const int initial_max_water = iexamine::get_plant_max_water( initial_furn );
     if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
         effective_growth_time = update_crop_climate( *this, p, *seed, initial_furn, crop_growth_speed,
-                                crop_water_consumption );
+                                crop_water_consumption, finish_crop_interval );
     } else if( initial_max_water > 0 ) {
         const time_point last_check = iexamine::get_plant_last_water_check( *seed );
         if( !seed->has_var( "seed_effective_growth_turns" ) ||

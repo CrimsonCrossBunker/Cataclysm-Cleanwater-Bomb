@@ -9,6 +9,7 @@
 #include <item_uid.h>
 #include <item_unload.h>
 #include <plant_climate.h>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
@@ -119,6 +120,8 @@ static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const quality_id qual_DIG( "DIG" );
+static const quality_id qual_DRILL( "DRILL" );
+static const quality_id qual_HAMMER( "HAMMER" );
 
 static const skill_id skill_survival( "survival" );
 
@@ -131,8 +134,6 @@ ter_furn_transform_ter_test_plant_seedling_to_mature( "ter_test_plant_seedling_t
 
 static const ter_str_id ter_t_dirt( "t_dirt" );
 static const ter_str_id ter_t_dirtmound( "t_dirtmound" );
-static const ter_str_id ter_t_fungus( "t_fungus" );
-static const ter_str_id ter_t_marloss( "t_marloss" );
 static const ter_str_id ter_t_tree_apple( "t_tree_apple" );
 static const ter_str_id ter_t_tree_hickory( "t_tree_hickory" );
 static const ter_str_id ter_t_tree_hickory_dead( "t_tree_hickory_dead" );
@@ -149,7 +150,6 @@ static const trait_id trait_THRESH_MYCUS( "THRESH_MYCUS" );
 
 static const vproto_id vehicle_prototype_autotractor( "autotractor" );
 static const vproto_id vehicle_prototype_oldtractor( "oldtractor" );
-
 
 namespace
 {
@@ -172,10 +172,47 @@ struct plant_event_subscriber : public event_subscriber {
     std::function<void( const cata::event & )> on_event;
 };
 
+struct consumption_event_subscriber : public event_subscriber {
+    using event_subscriber::notify;
+    std::function<void( const cata::event & )> callback;
+    void notify( const cata::event &event ) override {
+        if( event.type() == event_type::character_consumes_item ) {
+            callback( event );
+        }
+    }
+};
+
+struct damage_event_subscriber : public event_subscriber {
+    using event_subscriber::notify;
+    std::function<void()> callback;
+    int wakes = 0;
+    void notify( const cata::event &event ) override {
+        if( event.type() == event_type::character_takes_damage ) {
+            callback();
+        } else if( event.type() == event_type::character_wakes_up ) {
+            ++wakes;
+        }
+    }
+};
+
 void reset_test_globals()
 {
     global_variables &globvars = get_globals();
     globvars.clear_global_values();
+}
+
+time_point date_in_season( season_type season )
+{
+    time_point date = calendar::turn_zero + 12_hours;
+    const time_point end = date + calendar::year_length();
+    for( ; date < end; date += 1_days ) {
+        if( season_of_year( date ) == season && season_of_year( date - 2_days ) == season &&
+            season_of_year( date + 2_days ) == season ) {
+            break;
+        }
+    }
+    REQUIRE( date < end );
+    return date;
 }
 
 } // namespace
@@ -1460,12 +1497,12 @@ TEST_CASE( "terrain_growth_fertilize_checks_season_and_existing_state",
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
-    calendar::turn = calendar::turn_zero + calendar::season_length();
+    calendar::turn = date_in_season( SUMMER );
     ret_val<void> wrong_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( !wrong_season.success() );
     CHECK( wrong_season.str().find( "correct season" ) != std::string::npos );
 
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     ret_val<void> correct_season = multi_farm_activity_actor::can_fertilize( u, plot );
     CHECK( correct_season.success() );
 
@@ -1499,7 +1536,7 @@ TEST_CASE( "terrain_growth_can_fertilize_syncs_expired_growth",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
 
     terrain_growth_state state;
@@ -1528,7 +1565,7 @@ TEST_CASE( "terrain_growth_fertilize_ignores_loose_seed_items",
     } );
 
     const tripoint_bub_ms plot = u.pos_bub() + tripoint::east;
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     here.ter_set( plot, ter_test_t_terrain_growth_seed );
     here.add_item( plot, item( itype_test_seed_simple ) );
     u.i_add( item( itype_fertilizer_commercial, calendar::turn ) );
@@ -1962,14 +1999,13 @@ TEST_CASE( "spore_exposure_uses_each_players_body_with_the_same_native_random_se
     }
     CHECK( capture_rng_state() == host_rng );
     int exposed_parts = 0;
-    const efftype_id &spores = effect_spores;
     for( const char *name : {
              "head", "torso", "arm_l", "arm_r", "leg_l", "leg_r"
          } ) {
         const bodypart_id part( name );
-        CHECK( remote.get_effect_int( spores, part ) == host.get_effect_int( spores, part ) );
-        CHECK( remote.get_effect_dur( spores, part ) == host.get_effect_dur( spores, part ) );
-        exposed_parts += remote.has_effect( spores, part );
+        CHECK( remote.get_effect_int( effect_spores, part ) == host.get_effect_int( effect_spores, part ) );
+        CHECK( remote.get_effect_dur( effect_spores, part ) == host.get_effect_dur( effect_spores, part ) );
+        exposed_parts += remote.has_effect( effect_spores, part );
     }
     CHECK( exposed_parts > 0 );
 }
@@ -2243,17 +2279,16 @@ TEST_CASE( "wild_harvest_owns_its_worker_and_depletes_the_observed_plant_once",
     REQUIRE( host.activity.actor );
     const auto yield_count = [&]() {
         int count = 0;
-        const itype_id &apple = itype_apple;
         for( Character *who : {
                  static_cast<Character *>( &host ), static_cast<Character *>( &remote )
              } ) {
             for( const item *value : who->items_with( [&]( const item & candidate ) {
-            return candidate.typeId() == apple;
+            return candidate.typeId() == itype_apple;
             } ) ) {
                 count += value->count();
             }
             for( const item &value : here.i_at( who->pos_bub() ) ) {
-                if( value.typeId() == apple ) {
+                if( value.typeId() == itype_apple ) {
                     count += value.count();
                 }
             }
@@ -2380,16 +2415,7 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     here.ter_set( tree, ter_t_tree_apple );
     worker.assign_activity( harvest_activity_actor( tree ) );
     REQUIRE( worker.activity.actor );
-    class observer : public event_subscriber
-    {
-        public:
-            std::function<void( const cata::event & )> callback;
-            void notify( const cata::event &event ) override {
-                if( event.type() == event_type::character_consumes_item ) {
-                    callback( event );
-                }
-            }
-    } sub;
+    consumption_event_subscriber sub;
     int events = 0;
     int remaining_at_callback = 0;
     const character_id worker_id = worker.getID();
@@ -2432,12 +2458,31 @@ TEST_CASE( "harvest_self_care_callbacks_cannot_erase_new_work_or_the_remaining_y
     }
 }
 
+TEST_CASE( "plant_examine_actions_remain_distinct_after_linking", "[plant][examine]" )
+{
+    const std::array<std::pair<furn_str_id, iexamine_examine_function>, 3> flowers = {{
+            { furn_f_mutpoppy, iexamine::flower_poppy },
+            { furn_f_dahlia, iexamine::flower_dahlia },
+            { furn_f_flower_marloss, iexamine::flower_marloss }
+        }
+    };
+    for( const auto &flower : flowers ) {
+        CAPTURE( flower.first );
+        for( const auto &candidate : flowers ) {
+            CAPTURE( candidate.first );
+            CHECK( flower.first.obj().has_examine( candidate.second ) ==
+                   ( flower.first == candidate.first ) );
+        }
+        CHECK_FALSE( flower.first.obj().has_examine( iexamine::flower_cactus ) );
+    }
+}
+
 TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
            "[plant][harvest][multiplayer]" )
 {
     const restore_on_out_of_scope restore_rng( rng_get_engine() );
     const restore_on_out_of_scope restore_time( calendar::turn );
-    calendar::turn = calendar::turn_zero + 12_hours;
+    calendar::turn = date_in_season( SPRING );
     clear_avatar();
     clear_map_without_vision();
     map &here = get_map();
@@ -2452,8 +2497,7 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
         clear_npcs();
     } );
     const tripoint_bub_ms flower = remote.pos_bub() + tripoint::east;
-    const furn_str_id &dahlia = furn_f_dahlia;
-    here.furn_set( flower, dahlia );
+    here.furn_set( flower, furn_f_dahlia );
     farming_command choice = capture_farming_command( remote, here, here.get_abs( flower ),
                              farming_action::flower );
     const auto yield = [&]( Character & who, const itype_id & type ) {
@@ -2475,21 +2519,21 @@ TEST_CASE( "special_flower_choices_are_authoritative_and_deplete_only_once",
         const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( capture_rng_state() == random_before );
-        CHECK( here.furn( flower ) == dahlia );
+        CHECK( here.furn( flower ) == furn_f_dahlia );
         CHECK( yield( remote, itype_seed_dahlia ) == 0 );
     }
     SECTION( "winter_and_forged_nectar_choices_are_rejected_without_rng" ) {
-        calendar::turn = calendar::turn_zero + 3 * calendar::season_length() + 12_hours;
+        calendar::turn = date_in_season( WINTER );
         REQUIRE( season_of_year( calendar::turn ) == WINTER );
         const std::string random_before = capture_rng_state();
         CHECK_FALSE( execute_farming_command( remote, choice ) );
-        calendar::turn = calendar::turn_zero + 12_hours;
+        calendar::turn = date_in_season( SPRING );
         choice.drink = true;
         choice.pick = false;
         REQUIRE_FALSE( iexamine_helper::can_drink_nectar( remote ) );
         CHECK_FALSE( execute_farming_command( remote, choice ) );
         CHECK( capture_rng_state() == random_before );
-        CHECK( here.furn( flower ) == dahlia );
+        CHECK( here.furn( flower ) == furn_f_dahlia );
     }
     SECTION( "changed_surface_rejects_an_old_choice" ) {
         here.furn_set( flower, furn_f_mutpoppy );
@@ -2598,18 +2642,22 @@ TEST_CASE( "special_tree_harvest_uses_native_traits_and_tools_of_the_operator",
     clear_character( remote, true );
     remote.setpos( here, host.pos_bub() + tripoint::south );
     remote.set_moves( 100 );
+    clear_items( 0 );
+    REQUIRE( here.i_at( host.pos_bub() ).empty() );
+    REQUIRE( here.i_at( remote.pos_bub() ).empty() );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = remote.pos_bub() + tripoint::east;
     SECTION( "marloss_offering_depends_on_remote_traits_not_host_traits" ) {
-        here.ter_set( tree, ter_t_marloss );
+        const bool is_tree = GENERATE( false, true );
+        here.ter_set( tree, ter_str_id( is_tree ? "t_marloss_tree" : "t_marloss" ) );
         host.set_mutation( trait_THRESH_MYCUS );
         remote.set_mutation( trait_THRESH_MARLOSS );
         const farming_command choice = capture_farming_command( remote, here, here.get_abs( tree ),
                                        farming_action::marloss );
         REQUIRE( execute_farming_command( remote, choice ) );
-        CHECK( here.ter( tree ) == ter_t_fungus );
+        CHECK( here.ter( tree ) == ter_str_id( is_tree ? "t_tree_fungal" : "t_fungus" ) );
         REQUIRE( here.i_at( remote.pos_bub() ).size() == 1 );
         CHECK( here.i_at( remote.pos_bub() ).begin()->typeId() == itype_mycus_fruit );
         CHECK( here.i_at( host.pos_bub() ).empty() );
@@ -2662,19 +2710,7 @@ TEST_CASE( "plant_damage_events_can_remove_the_victim_or_start_replacement_work"
         remove_worker = true;
     }
     SECTION( "new_activity_is_not_cancelled_by_the_old_damage_operation" ) {}
-    class observer : public event_subscriber
-    {
-        public:
-            std::function<void()> callback;
-            int wakes = 0;
-            void notify( const cata::event &event ) override {
-                if( event.type() == event_type::character_takes_damage ) {
-                    callback();
-                } else if( event.type() == event_type::character_wakes_up ) {
-                    ++wakes;
-                }
-            }
-    } sub;
+    damage_event_subscriber sub;
     int calls = 0;
     sub.callback = [&]() {
         ++calls;
@@ -2715,14 +2751,14 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
-    remote.worn.wear_item( remote, item( itype_debug_backpack ), false, false );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
-    here.ter_set( tree, ter_t_tree_maple );
     here.i_clear( tree );
+    here.ter_set( tree, ter_t_tree_maple );
     host.i_add( item( itype_hand_drill ) );
     host.i_add( item( itype_hammer ) );
     item_location tap = remote.i_add( item( itype_tree_spile ) );
@@ -2743,6 +2779,9 @@ TEST_CASE( "maple_tapping_uses_owned_supplies_and_removes_only_installed_items",
     CHECK( remote.get_moves() == 10000 );
     remote.i_add( item( itype_hand_drill ) );
     remote.i_add( item( itype_hammer ) );
+    remote.invalidate_crafting_inventory();
+    REQUIRE( remote.has_quality( qual_DRILL ) );
+    REQUIRE( remote.has_quality( qual_HAMMER ) );
     REQUIRE( execute_farming_command( remote, choice ) );
     CHECK( remote.get_moves() == 10000 - to_moves<int>( 20_seconds ) );
     CHECK( host.get_moves() == 10000 );
@@ -2783,16 +2822,16 @@ TEST_CASE( "maple_container_choices_preserve_partial_sap_and_reject_stale_items"
     const tripoint_bub_ms origin = host.pos_bub() + tripoint::south;
     npc &remote = spawn_npc( origin.xy(), "test_talker" );
     clear_character( remote, true );
+    remote.wear_item( item( itype_debug_backpack ), false );
     remote.setpos( here, origin );
     remote.set_moves( 10000 );
     host.set_moves( 10000 );
-    remote.worn.wear_item( remote, item( itype_debug_backpack ), false, false );
     const on_out_of_scope cleanup( []() {
         clear_npcs();
     } );
     const tripoint_bub_ms tree = origin + tripoint::east;
-    here.ter_set( tree, ter_t_tree_maple_tapped );
     here.i_clear( tree );
+    here.ter_set( tree, ter_t_tree_maple_tapped );
     here.add_item_unprocessed( tree, item( itype_tree_spile ) );
     item bottle( itype_bottle_plastic );
     item sap( itype_maple_sap, calendar::turn, 2 );

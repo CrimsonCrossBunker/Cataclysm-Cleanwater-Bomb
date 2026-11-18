@@ -2,7 +2,6 @@
 #include <item_uid.h>
 #include <ret_val.h>
 #include <safe_reference.h>
-#include <tool_activity_target.h>
 #include <type_id.h>
 #include <algorithm>
 #include <array>
@@ -31,9 +30,9 @@
 #include "cached_options.h"
 #include "calendar.h"
 #include "cata_utility.h"
-#include "charcoal_kiln.h"
 #include "character.h"
 #include "character_action_guard.h"
+#include "charcoal_kiln.h"
 #include "color.h"
 #include "condition.h"
 #include "construction.h"
@@ -76,18 +75,14 @@
 #include "input_popup.h"
 #include "inventory.h"
 #include "item.h"
-#include "item_components.h"
 #include "item_consumption.h"
 #include "item_location.h"
 #include "item_source.h"
 #include "item_unload.h"
 #include "itype.h"
-#include "tool_activity_target.h"
-#include "terrain_examine.h"
 #include "iuse.h"
 #include "iuse_actor.h"
 #include "keg.h"
-#include "liquid_transfer.h"
 #include "lua_platform_hooks.h"
 #include "lua_platform_runtime.h"
 #include "magic_teleporter_list.h"
@@ -113,6 +108,7 @@
 #include "overmap_ui.h"
 #include "overmapbuffer.h"
 #include "pimpl.h"
+#include "plant_climate.h"
 #include "player_activity.h"
 #include "point.h"
 #include "recipe.h"
@@ -125,8 +121,10 @@
 #include "string_formatter.h"
 #include "talker.h"  // IWYU pragma: keep
 #include "temp_crafting_inventory.h"
+#include "terrain_examine.h"
 #include "tileray.h"
 #include "timed_event.h"
+#include "tool_activity_target.h"
 #include "translation.h"
 #include "translations.h"
 #include "trap.h"
@@ -158,20 +156,15 @@ static const character_modifier_id character_modifier_obstacle_climb_mod( "obsta
 
 static const climbing_aid_id climbing_aid_furn_CLIMBABLE( "furn_CLIMBABLE" );
 
-static const damage_type_id damage_bash( "bash" );
-
 static const efftype_id effect_antibiotic( "antibiotic" );
 static const efftype_id effect_bite( "bite" );
 static const efftype_id effect_bleed( "bleed" );
-static const efftype_id effect_bouldering( "bouldering" );
 static const efftype_id effect_disinfected( "disinfected" );
-static const efftype_id effect_gliding( "gliding" );
 static const efftype_id effect_incorporeal( "incorporeal" );
 static const efftype_id effect_infected( "infected" );
 static const efftype_id effect_mending( "mending" );
 static const efftype_id effect_pblue( "pblue" );
 static const efftype_id effect_sleep( "sleep" );
-static const efftype_id effect_slow_descent( "slow_descent" );
 static const efftype_id effect_strong_antibiotic( "strong_antibiotic" );
 static const efftype_id effect_strong_antibiotic_visible( "strong_antibiotic_visible" );
 static const efftype_id effect_tetanus( "tetanus" );
@@ -213,7 +206,6 @@ static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
 
 static const json_character_flag json_flag_GLIDE( "GLIDE" );
-static const json_character_flag json_flag_LEVITATION( "LEVITATION" );
 static const json_character_flag json_flag_PAIN_IMMUNE( "PAIN_IMMUNE" );
 static const json_character_flag
 json_flag_TEMPORARY_SHAPESHIFT_NO_HANDS( "TEMPORARY_SHAPESHIFT_NO_HANDS" );
@@ -258,8 +250,6 @@ static const requirement_id requirement_data_anesthetic( "anesthetic" );
 static const requirement_id requirement_data_cvd_diamond( "cvd_diamond" );
 static const requirement_id requirement_data_superalloy_forge( "superalloy_forge" );
 
-static const skill_id skill_chemistry( "chemistry" );
-static const skill_id skill_cooking( "cooking" );
 static const skill_id skill_fabrication( "fabrication" );
 static const skill_id skill_survival( "survival" );
 static const skill_id skill_traps( "traps" );
@@ -2454,7 +2444,7 @@ void iexamine_helper::handle_harvest( Character &you, item_location source, bool
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
     const tripoint_abs_ms origin = you.pos_abs();
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     if( !source || source.where() != item_location::type::map || source.has_parent() ||
         source.pos_abs() != origin ) {
         return;
@@ -2666,7 +2656,7 @@ void iexamine::fertilize_terrain( Character &you, const tripoint_bub_ms &examp )
         return;
     }
     if( !cata_mp::is_client_mode() ) {
-        const auto generation = you.activity.identity_generation();
+        const std::uint64_t generation = you.activity.identity_generation();
         const ret_val<void> eligible = multi_farm_activity_actor::can_fertilize( you, examp );
         if( !lifetime || !context || you.activity.identity_generation() != generation ) {
             return;
@@ -2891,7 +2881,7 @@ void iexamine::clear_overgrown( Character &you, const tripoint_bub_ms &examp )
     }
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     here.grow_plant( examp, &you );
     if( !lifetime || !context || you.activity.identity_generation() != generation ||
         !is_plant_overgrown( here, examp ) || !here.furn( examp )->plant ) {
@@ -2923,7 +2913,7 @@ void iexamine::harvest_plant_ex( Character &you, const tripoint_bub_ms &examp )
     }
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     here.grow_plant( examp, &you );
     if( lifetime && context && you.activity.identity_generation() == generation &&
         is_plant_harvestable( here, examp ) ) {
@@ -3028,7 +3018,7 @@ void iexamine::harvest_plant( Character &you, const tripoint_bub_ms &examp, bool
     if( !lifetime || !context ) {
         return;
     }
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     you.add_msg_if_player( m_neutral, _( "You harvest the plant." ) );
     get_event_bus().send<event_type::character_harvests_plant>(
         you.getID(), plot.raw(), seed_type, furniture, plant_count, seed_count );
@@ -3089,7 +3079,7 @@ void iexamine::fertilize_plant( Character &you, const tripoint_bub_ms &tile,
 {
     const character_action_guard lifetime( you );
     const auto context = get_map().get_context_reference();
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     ret_val<void> can_fert = can_fertilize( you, tile, fertilizer );
     if( !lifetime || !context || you.activity.identity_generation() != generation ) {
         return;
@@ -3124,7 +3114,7 @@ void iexamine::aggie_plant( Character &you, const tripoint_bub_ms &examp )
     map &here = get_map();
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
-    const auto generation = you.activity.identity_generation();
+    const std::uint64_t generation = you.activity.identity_generation();
     if( !cata_mp::is_client_mode() ) {
         here.grow_plant( examp, &you );
     }
@@ -3245,6 +3235,7 @@ int iexamine::get_plant_water( const item &seed )
 void iexamine::set_plant_water( item &seed, int water )
 {
     seed.set_var( "seed_water", std::max( 0, water ) );
+    seed.erase_var( "crop_irrigation_fraction" );
 }
 
 int iexamine::get_seed_water_consumption( const item &seed )
@@ -3274,6 +3265,7 @@ int iexamine::get_plant_effective_growth_turns( const item &seed )
 void iexamine::set_plant_effective_growth_turns( item &seed, int turns )
 {
     seed.set_var( "seed_effective_growth_turns", std::max( 0, turns ) );
+    seed.erase_var( "crop_growth_fraction" );
 }
 
 void iexamine::set_plant_effective_growth_time( item &seed, time_duration effective,
@@ -3294,16 +3286,31 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     }
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
+    item *seed = get_seed_at( here, examp );
+    if( !seed ) {
+        you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
+        return;
+    }
+    if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+        const int64_t identity = seed->uid().get_value();
+        const itype_id original_type = seed->typeId();
+        const std::uint64_t generation = you.activity.identity_generation();
+        here.grow_plant( examp, &you, true );
+        if( !lifetime || !context || you.activity.identity_generation() != generation ||
+            !reachable_crop( you, here, examp ) ) {
+            return;
+        }
+        seed = get_seed_at( here, examp );
+        if( !seed || seed->uid().get_value() != identity || seed->typeId() != original_type ||
+            !here.furn( examp )->plant ) {
+            return;
+        }
+    }
     const tool_activity_target plot = tool_activity_target::capture( here, here.get_abs( examp ) );
     const furn_t &furn = here.furn( examp ).obj();
     const int max_water = get_plant_max_water( furn );
     if( max_water <= 0 ) {
         you.add_msg_if_player( m_info, _( "This %s cannot hold water." ), furn.name() );
-        return;
-    }
-    item *seed = get_seed_at( here, examp );
-    if( !seed ) {
-        you.add_msg_if_player( m_info, _( "There is no plant here to water." ) );
         return;
     }
     const item_source original = capture_item_source( you,
@@ -3332,8 +3339,13 @@ void iexamine::water_plant( Character &you, const tripoint_bub_ms &examp )
     if( !watered->has_var( "seed_last_water_check" ) ) {
         set_plant_last_water_check( *watered, calendar::turn );
     }
-    set_plant_water( *watered, std::min( max_water,
-                                         get_plant_water( *watered ) + irrigation::WATER_PER_POUR ) );
+    const double fraction = watered->get_var( "crop_irrigation_fraction", 0.0 );
+    const int new_water = std::min( max_water,
+                                    get_plant_water( *watered ) + irrigation::WATER_PER_POUR );
+    set_plant_water( *watered, new_water );
+    if( new_water < max_water ) {
+        watered->set_var( "crop_irrigation_fraction", fraction );
+    }
     const itype_id seed_type = watered->typeId();
     const int stage_idx = get_plant_current_stage_idx_from_effective( here,
                           here.get_bub( plot.position ) );
@@ -3375,6 +3387,30 @@ bool iexamine::can_water_plant( Character &you, const tripoint_bub_ms &examp )
            you.has_charges( itype_water, 1, craft_reservation::usable_by_automation );
 }
 
+bool iexamine::plant_needs_water( Character &you, const tripoint_bub_ms &examp )
+{
+    map &here = get_map();
+    item *seed = get_seed_at( here, examp );
+    if( !seed || !seed->type->seed->climate || seed->type->seed->get_harvest_stage_idx() <= 0 ) {
+        return can_water_plant( you, examp );
+    }
+    const character_action_guard lifetime( you );
+    const auto context = here.get_context_reference();
+    const std::uint64_t generation = you.activity.identity_generation();
+    const int64_t identity = seed->uid().get_value();
+    here.grow_plant( examp, &you );
+    if( !lifetime || !context || you.activity.identity_generation() != generation ) {
+        return false;
+    }
+    seed = get_seed_at( here, examp );
+    if( !seed || seed->uid().get_value() != identity || !can_water_plant( you, examp ) ||
+        !seed->type->seed->climate || seed->type->seed->get_harvest_stage_idx() <= 0 ) {
+        return false;
+    }
+    const crop_water_status status = get_crop_water_status( here, examp, *seed );
+    return status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm;
+}
+
 int iexamine::rain_water_for_weather( const weather_type_id &weather )
 {
     if( !weather->rains || weather->precip == precip_class::none ) {
@@ -3406,6 +3442,32 @@ std::string iexamine::plant_water_description( map &here, const tripoint_bub_ms 
         // Defensive sync: make sure displayed water/age matches the authoritative
         // effective growth time before any UI reads it.
         here.grow_plant( p );
+        seed = get_seed_at( here, p );
+        if( !seed || !here.furn( p )->plant ) {
+            return std::string();
+        }
+        if( seed->type->seed->climate && seed->type->seed->get_harvest_stage_idx() > 0 ) {
+            const crop_water_status status = get_crop_water_status( here, p, *seed );
+            std::string desc = string_format(
+                                   _( "Soil water: <color_cyan>%.1f</color>/<color_cyan>%.1f</color> mm\n"
+                                      "Irrigation reserve: <color_cyan>%d</color>/<color_cyan>%d</color>\n"
+                                      "Daily water demand: <color_cyan>%.1f</color> mm\n%s" ),
+                                   status.soil_moisture_mm, status.soil_capacity_mm,
+                                   get_plant_water( *seed ), get_plant_max_water( here.furn( p ).obj() ),
+                                   status.daily_need_mm,
+                                   plant_age_description( *seed, here.furn( p )->plant->growth_multiplier ) );
+            if( status.soil_moisture_mm + status.irrigation_mm < status.daily_need_mm ) {
+                desc += _( "\n<color_yellow>Water supply is below one day's demand.</color>" );
+            } else {
+                desc += _( "\n<color_green>Water supply covers one day's demand.</color>" );
+            }
+            if( status.temperature_limited ) {
+                desc += _( "\n<color_yellow>Temperature limits growth.</color>" );
+            }
+            desc += is_plant_fertilized( *seed ) ? _( "\n<color_green>Fertilized.</color>" ) :
+                    _( "\n<color_light_gray>Not fertilized.</color>" );
+            return desc;
+        }
         const int current_water = get_plant_water( *seed );
         const int base_consumption = get_seed_water_consumption( *seed );
         const float consumption_mult = get_plant_water_consumption_multiplier( furn );
@@ -3697,7 +3759,7 @@ void iexamine::run_plant_lifecycle_event(
     }
     // Lifecycle handlers can erase the plant and actor. All payload and hook
     // selection belongs to this phase, not references into the mutable map.
-    const item snapshot = seed;
+    const item snapshot = item( seed );
     const eoc_collection seed_hooks = *seed_eocs;
     const furn_t &furniture = source_furniture ? source_furniture->obj() :
                               here.furn( plant_pos ).obj();
@@ -3750,7 +3812,7 @@ static void pick_firestarter_and_fire( Character &you, const tripoint_bub_ms &ex
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
     const tripoint_abs_ms origin = you.pos_abs();
-    const auto observed = tool_activity_target::capture( here, here.get_abs( examp ) );
+    const tool_activity_target observed = tool_activity_target::capture( here, here.get_abs( examp ) );
     const auto still_at_station = [&]() {
         return lifetime && context && you.pos_abs() == origin && observed.matches( here );
     };
@@ -3817,8 +3879,8 @@ static void pick_firestarter_and_fire( Character &you, const tripoint_bub_ms &ex
             }
         }
     } else if( st == firestarter_actor::start_type::KILN ) {
-        const auto command = charcoal_kiln::capture( you, here, examp,
-                             charcoal_kiln::operation::fire_bionic );
+        const charcoal_kiln::command command = charcoal_kiln::capture( you, here, examp,
+                                               charcoal_kiln::operation::fire_bionic );
         if( !you.is_avatar() || !cata_mp::client_kiln_command( command ) ) {
             charcoal_kiln::execute( you, here, command );
         }
@@ -4082,7 +4144,8 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
     }
     const character_action_guard lifetime( who );
     const auto context = here.get_context_reference();
-    const auto observed = fermentation_vessel::capture( who, here, pos, operation::recover );
+    const fermentation_vessel::command observed = fermentation_vessel::capture( who, here, pos,
+            operation::recover );
     const auto still_there = [&]() {
         return lifetime && context && who.pos_abs() == observed.origin &&
                observed.target.matches( here );
@@ -4112,7 +4175,8 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         return;
     }
     if( closed && input ) {
-        auto command = fermentation_vessel::capture( who, here, pos, operation::finish, &*input );
+        fermentation_vessel::command command = fermentation_vessel::capture( who, here, pos,
+                                               operation::finish, &*input );
         const time_duration remaining = fermentation_vessel::duration( vessel, *input ) - input->age();
         who.add_msg_if_player( compost ? _( "There's a tank of %s set to ferment there." ) :
                                _( "There's a vat of %s set to ferment there." ), input->tname() );
@@ -4153,6 +4217,7 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         item_location source = liquids.front();
         if( liquids.size() > 1 ) {
             std::vector<std::string> choices;
+            choices.reserve( liquids.size() );
             for( const item_location &liquid : liquids ) {
                 choices.push_back( liquid->display_name() );
             }
@@ -4165,8 +4230,10 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         if( !source ) {
             return;
         }
-        auto command = fermentation_vessel::capture( who, here, pos, operation::drain, &*source );
-        const auto choice = query_liquid_destination( *source, &*source, command.batch, true );
+        fermentation_vessel::command command = fermentation_vessel::capture( who, here, pos,
+                                               operation::drain, &*source );
+        const unload_liquid_choice choice = query_liquid_destination( *source, &*source, command.batch,
+                                            true );
         if( !still_there() || !source || choice.kind == LD_NULL ||
             ( choice.kind == LD_CONSUME && !who.will_eat( *source, true ).success() ) ||
             !still_there() ) {
@@ -4180,8 +4247,9 @@ void examine_fermentation_vessel( Character &who, const tripoint_bub_ms &pos, bo
         return;
     }
 
-    auto command = fermentation_vessel::capture( who, here, pos, operation::deposit,
-                   input ? &*input : nullptr );
+    fermentation_vessel::command command = fermentation_vessel::capture( who, here, pos,
+                                           operation::deposit,
+                                           input ? &*input : nullptr );
     std::map<itype_id, std::vector<item_source>> supplies;
     const auto carried = compost ? who.cache_get_items_with( "is_compostable", &item::is_compostable ) :
                          who.cache_get_items_with( "is_brewable", &item::is_brewable );
@@ -4315,6 +4383,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         size_t index = 0;
         if( batches.size() > 1 ) {
             std::vector<std::string> names;
+            names.reserve( batches.size() );
             for( const item_location &liquid : batches ) {
                 names.push_back( liquid->tname() );
             }
@@ -4345,6 +4414,7 @@ void iexamine::keg( Character &you, const tripoint_bub_ms &examp )
         auto selected = supplies.begin();
         if( supplies.size() > 1 ) {
             std::vector<std::string> names;
+            names.reserve( supplies.size() );
             for( const auto &entry : supplies ) {
                 names.push_back( item::nname( entry.first ) );
             }
@@ -4520,8 +4590,8 @@ std::optional<farming_command> query_maple_work( Character &who,
     const character_action_guard lifetime( who );
     map &here = get_map();
     const auto context = here.get_context_reference();
-    const auto origin = who.pos_abs();
-    const auto generation = who.activity.identity_generation();
+    const tripoint_abs_ms origin = who.pos_abs();
+    const std::uint64_t generation = who.activity.identity_generation();
     farming_command choice = capture_farming_command( who, here, here.get_abs( position ),
                              farming_action::maple_tap );
     const auto valid = [&]() {
@@ -5437,8 +5507,8 @@ void iexamine::ledge( Character &you, const tripoint_bub_ms &examp )
         return;
     }
     const character_action_guard lifetime( you );
-    const auto origin = you.pos_abs();
-    const auto ledge_position = here.get_abs( examp );
+    const tripoint_abs_ms origin = you.pos_abs();
+    const tripoint_abs_ms ledge_position = here.get_abs( examp );
     const tripoint_bub_ms pos = you.pos_bub( here );
 
     tripoint_bub_ms jump_target( pos.x() + 2 * sgn( examp.x() - pos.x() ),
@@ -6214,7 +6284,8 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
     }
     const character_action_guard lifetime( you );
     const auto context = here.get_context_reference();
-    const auto observed = smoking_rack::capture( you, here, examp, operation::recover );
+    const smoking_rack::command observed = smoking_rack::capture( you, here, examp,
+                                           operation::recover );
     const auto still_at_rack = [&]() {
         return lifetime && context && you.pos_abs() == observed.origin &&
                observed.target.matches( here ) &&
@@ -6357,7 +6428,7 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
             if( !still_at_rack() ) {
                 return;
             }
-            auto command = observed;
+            smoking_rack::command command = observed;
             command.action = operation::load_food;
             for( const auto &selection : selected ) {
                 if( selection.first ) {
@@ -6387,7 +6458,7 @@ void iexamine::smoker_options( Character &you, const tripoint_bub_ms &examp )
                 query_int( quantity, true, _( "Put how many of the %s into the %s?" ),
                            itype_charcoal->nname( maximum ), f->name() ) &&
                 still_at_rack() && quantity > 0 && quantity <= maximum ) {
-                auto command = observed;
+                smoking_rack::command command = observed;
                 command.action = operation::load_fuel;
                 command.items.push_back( { source, quantity } );
                 submit_smoking_rack_choice( you, here, command );

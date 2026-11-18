@@ -4098,6 +4098,12 @@ A flat multiplier on the harvest count of the plant. For numbers greater than on
 
 (Optional) A multiplier applied to the seed's daily `water_consumption` for plants growing in this furniture.  Values greater than 1.0 make the plant consume water faster (e.g. a drier or more porous planter), while values less than 1.0 make it consume water slower.  Defaults to 1.0.  The effective daily consumption is also clamped to a minimum of 1.
 
+For seeds with `crop_climate`, this multiplier instead scales the climate profile's water demand. Rain enters the soil reserve rather than `max_water_storage`; irrigation supplies only the soil's water deficit. The irrigation limit and point conversion retain their gameplay units, not a literal inventory-water volume. Climate water and growth are integrated on clock-aligned hourly steps, retaining fractional progress. Actions that change the crop also settle the partial hour before applying their changes. Reads retain the unfinished hour. Soil capacity does not scale with season length or water-consumption options.
+
+##### `soil_source`
+
+(Optional) Soil properties for climate-profile crops. `terrain` uses the tile's soil texture, including its storage, infiltration, drainage and root-growth modifiers. `substrate` uses the default planting medium regardless of the terrain underneath. The default, `inherit`, follows the `base` furniture; without an explicit source in that chain it falls back to `terrain`. An explicit value on a growth stage overrides its base. This field does not affect seeds without `crop_climate`.
+
 ##### Plant lifecycle EOCs
 
 (Optional) Each of these fields is an array of `effect_on_condition` ids (or inline EOC definitions) that run at the corresponding lifecycle event.  Furniture EOCs run before seed EOCs.

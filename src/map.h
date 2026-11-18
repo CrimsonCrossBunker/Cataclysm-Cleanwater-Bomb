@@ -2132,7 +2132,8 @@ class map
         void grow_plant( const tripoint_bub_ms &p );
         // An explicit nullptr advances unattended machinery's crops without
         // attributing character lifecycle effects to the local avatar.
-        void grow_plant( const tripoint_bub_ms &p, Character *grower );
+        void grow_plant( const tripoint_bub_ms &p, Character *grower,
+                         bool finish_crop_interval = false );
         void grow_terrain_plant( const tripoint_bub_ms &p );
         /**
          * Produce sap on tapped maple trees

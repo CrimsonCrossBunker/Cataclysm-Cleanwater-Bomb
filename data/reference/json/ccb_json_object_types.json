@@ -4,7 +4,7 @@
   "inventory_kind": "json_object_types",
   "source": {
     "project": "Cataclysm-Cleanwater-Bomb",
-    "source_fingerprint": "sha256:cc125cdcea9795491b890a7043a6b6282828e68d7058d4206ca748af94bbc26c",
+    "source_fingerprint": "sha256:00eb05eff6d43dcde1397b765ee94eea3f283501c2a024278e0cb6adac94b991",
     "contract_roots": [
       "data/core",
       "data/json",
@@ -5307,7 +5307,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4505
+            "line": 4511
           }
         ],
         "confidence": "lexical_only"
@@ -6231,7 +6231,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4706
+            "line": 4712
           }
         ],
         "confidence": "lexical_only"
@@ -6408,7 +6408,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4469
+            "line": 4475
           }
         ],
         "confidence": "lexical_only"
@@ -9534,7 +9534,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4348
+            "line": 4354
           }
         ],
         "confidence": "lexical_only"
@@ -11166,7 +11166,7 @@
         "evidence": [
           {
             "path": "doc/JSON/JSON_INFO.md",
-            "line": 4665
+            "line": 4671
           }
         ],
         "confidence": "lexical_only"
