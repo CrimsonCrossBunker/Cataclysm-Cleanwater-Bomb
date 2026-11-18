@@ -110,3 +110,52 @@ do
     item:tool { power_milliwatts = 900000 }
     content.add(item)
 end
+
+do
+    local item = content.Item {
+        id = "combatsaw_spear_off",
+        category = "weapons",
+        name = ccb.content.plural_text("chainsaw spear (off)", "chainsaw spears (off)"),
+        description = ccb.content.text("A hand-made lightened engine, with chain blades on a long stick.  The only reason it works without falling apart is because your calculations can't be wrong."),
+        mass_milligrams = 3300000,
+        volume_ml = 2250,
+        longest_side_mm = 2200,
+        melee_to_hit = -1,
+        symbol = "/",
+        color = "light_gray",
+        weapon_categories = { "POLEARMS", "SPEARS" },
+        techniques = { "SWEEP", "IMPALE", "SPIN" },
+        replace_pockets = true,
+        charged_qualities = { { id = "CUT", level = 1 }, { id = "SAW_W", level = 2 }, { id = "BUTCHER", level = -50 } },
+    }
+    item:clear_melee_damage()
+    item:melee_damage("bash", 8)
+    item:melee_damage("cut", 1)
+    item:material("aluminum", 1)
+    item:material("plastic", 1)
+    item:clear_use_actions()
+    item:transform_on_use {
+        result = { target = "combatsaw_spear_on" },
+        message = ccb.content.text("You turn on the %s."),
+        need_charges = 1,
+        need_charges_message = ccb.content.text("The batteries are dead."),
+    }
+    item:clear_flags()
+    item:flag("SPEAR")
+    item:flag("REACH_ATTACK")
+    item:flag("SHEATH_SPEAR")
+    item:flag("DURABLE_MELEE")
+    item:flag("TRADER_AVOID")
+    item:flag("NONCONDUCTIVE")
+    item:flag("MUNDANE")
+    item:flag("INVENTOR_CRAFTED")
+    item:tool { charges_per_use = 1, ammo_types = { "battery" } }
+    item:magazine_well {
+        max_volume_ml = 20000,
+        max_weight_milligrams = 20000000,
+        rigid = true,
+        allowed_flags = { "BATTERY_MEDIUM", "BATTERY_HEAVY" },
+        default_magazine = "medium_battery_cell",
+    }
+    content.add(item)
+end
