@@ -7,7 +7,7 @@
     "root_class": "CcbPlatformV1"
   },
   "lua_luals": {
-    "class_count": 865,
+    "class_count": 866,
     "classes": [
       {
         "fields": [
@@ -7508,12 +7508,12 @@
       {
         "fields": [
           {
-            "line": 13524,
+            "line": 13542,
             "name": "remove_corpse",
             "type": "boolean"
           },
           {
-            "line": 13525,
+            "line": 13543,
             "name": "suppress_message",
             "type": "boolean"
           }
@@ -8580,6 +8580,56 @@
           }
         ],
         "name": "CcbNpcSnapshot"
+      },
+      {
+        "fields": [
+          {
+            "line": 13526,
+            "name": "hallucination",
+            "type": "boolean"
+          },
+          {
+            "line": 13524,
+            "name": "indoor_only",
+            "type": "boolean"
+          },
+          {
+            "line": 13529,
+            "name": "lifespan",
+            "type": "TimeDuration|{minimum:TimeDuration,maximum:TimeDuration}"
+          },
+          {
+            "line": 13522,
+            "name": "max_radius",
+            "type": "integer"
+          },
+          {
+            "line": 13521,
+            "name": "min_radius",
+            "type": "integer"
+          },
+          {
+            "line": 13525,
+            "name": "open_air_allowed",
+            "type": "boolean"
+          },
+          {
+            "line": 13523,
+            "name": "outdoor_only",
+            "type": "boolean"
+          },
+          {
+            "line": 13528,
+            "name": "traits",
+            "type": "GameId[]"
+          },
+          {
+            "line": 13527,
+            "name": "unique_id",
+            "type": "string"
+          }
+        ],
+        "name": "CcbNpcSpawnOptions"
       },
       {
         "fields": [],
@@ -25658,7 +25708,7 @@
         "name": "ZoneTypeDefinitionOptions"
       }
     ],
-    "function_count": 1499,
+    "function_count": 1500,
     "functions": [
       {
         "line": "3367",
@@ -27257,19 +27307,19 @@
         "parameters": "owner, token, step"
       },
       {
-        "line": "13531",
+        "line": "13549",
         "name": "die",
         "owner": "CcbMonstersApi",
         "parameters": "monster, options"
       },
       {
-        "line": "13537",
+        "line": "13555",
         "name": "seeing_position",
         "owner": "CcbMonstersApi",
         "parameters": "position, radius"
       },
       {
-        "line": "13542",
+        "line": "13560",
         "name": "set_friendly",
         "owner": "CcbMonstersApi",
         "parameters": "monster, friendly"
@@ -30843,6 +30893,12 @@
         "name": "monster",
         "owner": "CcbSpawnsApi",
         "parameters": "monster_type, position, radius, upgrade"
+      },
+      {
+        "line": "13536",
+        "name": "npc",
+        "owner": "CcbSpawnsApi",
+        "parameters": "template, position, options"
       },
       {
         "line": "13518",

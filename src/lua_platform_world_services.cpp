@@ -764,6 +764,7 @@ struct npc_spawn_options {
     std::string unique_id;
     std::vector<trait_id> traits;
     std::optional<time_duration> lifespan;
+    std::optional<time_duration> maximum_lifespan;
 };
 
 npc_spawn_options read_npc_spawn_options(
@@ -826,6 +827,28 @@ npc_spawn_options read_npc_spawn_options(
                     "services.spawns.npc unique_id exceeds its bounded string contract" );
             }
         } else if( key == "lifespan" ) {
+            if( value.get_type() == sol::type::table ) {
+                const sol::table range = value.as<sol::table>();
+                for( const auto &endpoint : range ) {
+                    if( endpoint.first.get_type() != sol::type::string ||
+                        ( endpoint.first.as<std::string>() != "minimum" &&
+                          endpoint.first.as<std::string>() != "maximum" ) ) {
+                        throw std::invalid_argument( "services.spawns.npc lifespan range accepts only minimum and maximum" );
+                    }
+                }
+                const sol::object minimum = range.raw_get<sol::object>( "minimum" );
+                const sol::object maximum = range.raw_get<sol::object>( "maximum" );
+                if( !minimum.is<script_time_duration>() || !maximum.is<script_time_duration>() ) {
+                    throw std::invalid_argument( "services.spawns.npc lifespan range requires TimeDuration endpoints" );
+                }
+                result.lifespan = minimum.as<script_time_duration>().to_native();
+                result.maximum_lifespan = maximum.as<script_time_duration>().to_native();
+                if( *result.lifespan < 0_turns || *result.maximum_lifespan < *result.lifespan ||
+                    *result.maximum_lifespan > maximum_hallucination_lifespan ) {
+                    throw std::invalid_argument( "services.spawns.npc lifespan range must have ordered endpoints within 0 turns..10000 days" );
+                }
+                continue;
+            }
             if( !value.is<script_time_duration>() ) {
                 throw std::invalid_argument(
                     "services.spawns.npc lifespan must be a TimeDuration" );
@@ -918,10 +941,18 @@ sol::table spawn_npc(
     }
     std::string unique_id = options.unique_id;
     std::vector<trait_id> traits = options.traits;
+    std::optional<time_duration> lifespan = options.lifespan;
+    if( options.maximum_lifespan ) {
+        lifespan = time_duration::from_turns( rng( to_turns<int>( *options.lifespan ),
+                                             to_turns<int>( *options.maximum_lifespan ) ) );
+        if( *lifespan == 0_turns ) {
+            lifespan.reset();
+        }
+    }
     if( !g->spawn_npc(
             spawn_point,
             npc_template_id( requested_template.value() ),
-            unique_id, traits, options.lifespan ) ) {
+            unique_id, traits, lifespan ) ) {
         return make_game_error_result( state, {
             "spawn_rejected",
             "Native NPC spawning rejected the request"
@@ -944,6 +975,9 @@ sol::table spawn_npc(
     value["unique_id"] = spawned->get_unique_id();
     value["position"] = absolute_position( *spawned );
     value["hallucination"] = spawned->is_hallucination();
+    const Creature *tracked = get_creature_tracker().creature_at( spawn_point );
+    value["tracked"] = tracked != nullptr;
+    value["visible"] = tracked && get_avatar().sees( here, *tracked );
     return make_game_value_result(
                state, sol::make_object(
                    state, std::move( value ) ) );

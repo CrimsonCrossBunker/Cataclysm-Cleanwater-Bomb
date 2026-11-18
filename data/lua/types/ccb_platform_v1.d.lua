@@ -13517,6 +13517,24 @@ function CcbSpawnsApi.monster(monster_type, position, radius, upgrade) end
 ---@return CcbResult result value contains native tracked spawned and visible counts.
 function CcbSpawnsApi.population(monster_type, position, options) end
 
+---@class CcbNpcSpawnOptions
+---@field min_radius? integer Native placement radius, 0..60; defaults to zero.
+---@field max_radius? integer Native placement radius, 0..60; defaults to zero and cannot be below min_radius.
+---@field outdoor_only? boolean Restrict native placement to outdoor tiles.
+---@field indoor_only? boolean Restrict native placement to indoor tiles; mutually exclusive with outdoor_only.
+---@field open_air_allowed? boolean Permit native open-air placement.
+---@field hallucination? boolean Add the native HALLUCINATION trait and clear unique_id.
+---@field unique_id? string Optional unique NPC ID, at most 256 bytes and without embedded NUL.
+---@field traits? GameId[] Dense GameId<mutation> array, at most 128 entries.
+---@field lifespan? TimeDuration|{minimum:TimeDuration,maximum:TimeDuration} A positive constant up to 10000 days, or an inclusive native integer range within 0 turns..10000 days. Range endpoints must be ordered. A range draws only after a valid placement is found, before native NPC creation; equal endpoints still draw. A zero draw uses the native default lifetime.
+
+---Spawn one native NPC from its template. Compose loops in Lua to create groups.
+---@param template GameId GameId<npc_template>.
+---@param position TripointCoord Loaded absolute map-square placement center.
+---@param options? CcbNpcSpawnOptions
+---@return CcbResult result Value contains handle, template, id, unique_id, position and hallucination. tracked/visible follow the native default creature tracker and active Avatar vision. Expected placement failures use blocked, spawn_rejected or spawn_unavailable.
+function CcbSpawnsApi.npc(template, position, options) end
+
 ---@class CcbMonstersApi
 local CcbMonstersApi = {}
 
